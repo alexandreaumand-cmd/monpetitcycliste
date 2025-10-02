@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, TrendingUp, Trash2, CheckCircle2, Edit2, Clock, Lock, Users } from "lucide-react";
+import { Loader2, TrendingUp, Trash2, CheckCircle2, Edit2, Clock, Lock } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
@@ -14,8 +14,6 @@ import { useDebounce } from "use-debounce";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { BidHistory } from "./BidHistory";
 
 interface AuctionBidFormProps {
   auction: {
@@ -138,40 +136,6 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
       return data || { draft_count: 0, draft_sum: 0 };
     }
   });
-
-  // Get all managers rosters for this phase
-  const { data: allManagersRosters = [] } = useQuery({
-    queryKey: ['all-managers-rosters', auction.phase_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('rosters')
-        .select(`
-          *,
-          coureurs(nom, equipe),
-          managers(nom)
-        `)
-        .eq('phase_id', auction.phase_id)
-        .order('manager_id');
-
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
-  // Group rosters by manager
-  const rostersByManager = allManagersRosters
-    .filter((r: any) => r.manager_id !== managerId)
-    .reduce((acc: any, roster: any) => {
-      const managerId = roster.manager_id;
-      if (!acc[managerId]) {
-        acc[managerId] = {
-          managerName: roster.managers?.nom || 'Inconnu',
-          rosters: []
-        };
-      }
-      acc[managerId].rosters.push(roster);
-      return acc;
-    }, {});
 
   useEffect(() => {
     if (selectedCoureur && !bidAmount && !editingBidId) {
@@ -396,46 +360,6 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
 
   return (
     <div className="space-y-4">
-      {/* Historique des enchères */}
-      <BidHistory managerId={managerId} phaseId={auction.phase_id} />
-
-      {/* Rosters des autres managers */}
-      {Object.keys(rostersByManager).length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Équipes des autres managers
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {Object.entries(rostersByManager).map(([managerId, data]: [string, any]) => (
-              <Collapsible key={managerId}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
-                    <span className="font-medium">{data.managerName}</span>
-                    <Badge variant="secondary">{data.rosters.length} coureur(s)</Badge>
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2 space-y-2 px-2">
-                  {data.rosters.map((roster: any) => (
-                    <div key={roster.id} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
-                      <div>
-                        <p className="font-medium">{roster.coureurs.nom}</p>
-                        <p className="text-muted-foreground text-xs">{roster.coureurs.equipe}</p>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {parseFloat(roster.prix_signature.toString()).toFixed(0)} €
-                      </Badge>
-                    </div>
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
       {/* Show submitted bids if any */}
       {submittedBids.length > 0 && (
         <Card>

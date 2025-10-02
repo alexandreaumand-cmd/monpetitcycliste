@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { AuctionBidForm } from "./AuctionBidForm";
+import { AuctionTabs } from "./AuctionTabs";
 
 interface AuctionsListProps {
   managerId: string;
@@ -46,15 +46,6 @@ export const AuctionsList = ({ managerId }: AuctionsListProps) => {
     );
   }
 
-  return (
-    <div className="space-y-4">
-      {activeAuctions.map((auction) => (
-        <AuctionBidForm
-          key={auction.id}
-          auction={auction}
-          managerId={managerId}
-        />
-      ))}
-    </div>
-  );
+  // Show only the first active auction with tabs
+  return <AuctionTabs auction={activeAuctions[0]} managerId={managerId} />;
 };
