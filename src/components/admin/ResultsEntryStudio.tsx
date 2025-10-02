@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useDebounce } from "use-debounce";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,42 +89,6 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
   });
 
   const allStagesCompleted = !isOneDay && (stageCompletion?.etapes_saisies ?? 0) >= course.nb_etapes;
-
-  // Fetch all riders (client-side search)
-  const { data: allRiders } = useQuery({
-    queryKey: ['all-riders-for-results'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('coureurs')
-        .select(`
-          id,
-          nom,
-          equipe,
-          rosters!left(
-            coureur_id,
-            managers(nom)
-          )
-        `)
-        .order('nom');
-      
-      if (error) throw error;
-      
-      return data.map(c => {
-        const roster = Array.isArray(c.rosters) && c.rosters.length > 0 
-          ? c.rosters.find((r: any) => r.coureur_id === c.id)
-          : null;
-        
-        return {
-          value: c.id,
-          label: c.nom,
-          equipe: c.equipe,
-          is_in_roster: !!roster,
-          roster_manager_nom: roster?.managers?.nom || null,
-        };
-      });
-    },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
 
   // Scoring rules query
   const { data: scoringRules } = useQuery({
@@ -583,9 +548,9 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
                       <tr key={index} className="hover:bg-muted/50">
                         <td className="px-4 py-2 text-sm font-medium">{row.position}</td>
                         <td className="px-4 py-2">
-                          <RiderCombobox
-                            riders={allRiders || []}
+                          <ServerRiderSearch
                             value={row.coureur_id}
+                            riderName={row.coureur_nom}
                             onChange={(id, name) => handleRiderChange(index, id, name)}
                           />
                         </td>
@@ -658,28 +623,44 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
   );
 };
 
-// Simple client-side rider combobox
-type RiderOption = {
-  value: string;
-  label: string;
-  equipe: string | null;
-  is_in_roster: boolean;
-  roster_manager_nom: string | null;
-};
-
-const RiderCombobox = ({
-  riders,
+// Server-side rider search with debounce
+const ServerRiderSearch = ({
   value,
+  riderName,
   onChange,
 }: {
-  riders: RiderOption[];
   value: string | null;
+  riderName: string | null;
   onChange: (riderId: string | null, riderName: string | null) => void;
 }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  
-  const selectedRider = riders.find(r => r.value === value);
+  const [debouncedSearch] = useDebounce(search, 200);
+
+  const { data: riders, isLoading } = useQuery({
+    queryKey: ['rider-search-results', debouncedSearch],
+    queryFn: async () => {
+      let query = supabase
+        .from('coureurs')
+        .select('id, nom')
+        .order('nom')
+        .limit(50);
+
+      // Apply search filter if query is not empty
+      if (debouncedSearch && debouncedSearch.trim()) {
+        query = query.ilike('nom', `%${debouncedSearch.trim()}%`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return data.map(c => ({
+        value: c.id,
+        label: c.nom,
+      }));
+    },
+    enabled: open, // Only fetch when dropdown is open
+  });
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -690,8 +671,8 @@ const RiderCombobox = ({
           aria-expanded={open}
           className="w-full justify-between"
         >
-          {selectedRider ? (
-            <span className="truncate">{selectedRider.label}</span>
+          {value && riderName ? (
+            <span className="truncate">{riderName}</span>
           ) : (
             <span className="text-muted-foreground">Sélectionner un coureur...</span>
           )}
@@ -699,19 +680,21 @@ const RiderCombobox = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0" align="start">
-        <Command shouldFilter={true}>
+        <Command shouldFilter={false}>
           <CommandInput 
             placeholder="Rechercher un coureur..." 
             value={search}
             onValueChange={setSearch}
           />
           <CommandList>
-            <CommandEmpty>Aucun coureur trouvé.</CommandEmpty>
+            <CommandEmpty>
+              {isLoading ? "Recherche en cours..." : "Aucun coureur trouvé."}
+            </CommandEmpty>
             <CommandGroup>
-              {riders.map((rider) => (
+              {riders?.map((rider) => (
                 <CommandItem
                   key={rider.value}
-                  value={rider.label}
+                  value={rider.value}
                   onSelect={() => {
                     onChange(rider.value, rider.label);
                     setOpen(false);
@@ -723,14 +706,7 @@ const RiderCombobox = ({
                       value === rider.value ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  <div className="flex items-center justify-between flex-1">
-                    <span>{rider.label}</span>
-                    {rider.is_in_roster && rider.roster_manager_nom && (
-                      <Badge variant="secondary" className="ml-2 text-xs">
-                        {rider.roster_manager_nom}
-                      </Badge>
-                    )}
-                  </div>
+                  <span>{rider.label}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
