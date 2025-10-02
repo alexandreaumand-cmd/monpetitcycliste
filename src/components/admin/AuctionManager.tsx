@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Zap } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export const AuctionManager = () => {
   const { toast } = useToast();
@@ -22,6 +23,7 @@ export const AuctionManager = () => {
       const { data, error } = await supabase
         .from('phases')
         .select('*')
+        .eq('statut', 'active')
         .order('date_debut', { ascending: false });
       
       if (error) throw error;
@@ -43,6 +45,46 @@ export const AuctionManager = () => {
       
       if (error) throw error;
       return data;
+    }
+  });
+
+  // Get the active phase and next round number
+  const activePhase = phases?.[0];
+  const nextRoundNumber = (activeAuctions?.filter(a => a.phase_id === activePhase?.id).length || 0) + 1;
+
+  const quickLaunchAuction = useMutation({
+    mutationFn: async () => {
+      if (!activePhase) {
+        throw new Error("Aucune phase active. Veuillez d'abord activer une phase.");
+      }
+
+      const deadlineAt = new Date();
+      deadlineAt.setHours(deadlineAt.getHours() + 24);
+
+      const { error } = await supabase
+        .from('auctions')
+        .insert({
+          phase_id: activePhase.id,
+          round_number: nextRoundNumber,
+          deadline_at: deadlineAt.toISOString(),
+          statut: 'open'
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['active-auctions'] });
+      toast({
+        title: "Enchère lancée ! 🚀",
+        description: `Tour ${nextRoundNumber} ouvert avec 24h de deadline`
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   });
 
@@ -121,9 +163,55 @@ export const AuctionManager = () => {
 
   return (
     <div className="space-y-6">
+      {/* Quick Launch Section */}
+      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-primary" />
+            Lancement Rapide
+          </CardTitle>
+          <CardDescription>
+            {activePhase ? (
+              <>Phase active: {new Date(activePhase.date_debut).toLocaleDateString()} - {new Date(activePhase.date_fin).toLocaleDateString()}</>
+            ) : (
+              "Aucune phase active"
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {activePhase ? (
+            <>
+              <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg">
+                <div>
+                  <p className="font-medium">Prochain tour: {nextRoundNumber}</p>
+                  <p className="text-sm text-muted-foreground">Deadline: 24h automatique</p>
+                </div>
+                <Badge variant="outline">{activePhase.budget} € de budget</Badge>
+              </div>
+              <Button
+                onClick={() => quickLaunchAuction.mutate()}
+                disabled={quickLaunchAuction.isPending}
+                size="lg"
+                className="w-full"
+              >
+                {quickLaunchAuction.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Zap className="mr-2 h-4 w-4" />
+                Lancer le Tour {nextRoundNumber}
+              </Button>
+            </>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-muted-foreground mb-4">Aucune phase active. Veuillez d'abord activer une phase dans l'onglet Saisons.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Advanced Options */}
       <Card>
         <CardHeader>
-          <CardTitle>Lancer une nouvelle enchère</CardTitle>
+          <CardTitle>Options avancées</CardTitle>
+          <CardDescription>Personnaliser les paramètres de l'enchère</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
