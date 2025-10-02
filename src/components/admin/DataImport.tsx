@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Loader2 } from "lucide-react";
 
-type TableType = 'coureurs' | 'scoring_rules' | 'courses' | 'managers';
+type TableType = 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates';
 
 export const DataImport = () => {
   const [selectedTable, setSelectedTable] = useState<TableType>('coureurs');
@@ -70,6 +70,30 @@ export const DataImport = () => {
     scoring_rules: 'Barèmes (Scoring Rules)',
     courses: 'Courses (Races)',
     managers: 'Managers',
+    course_dates: 'Dates des Courses',
+  };
+
+  const handleComputePhases = async () => {
+    setImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('compute-phases');
+
+      if (error) throw error;
+
+      toast({
+        title: "Calcul des phases réussi",
+        description: data.message,
+      });
+    } catch (error) {
+      console.error('Compute phases error:', error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors du calcul des phases",
+        variant: "destructive",
+      });
+    } finally {
+      setImporting(false);
+    }
   };
 
   return (
@@ -138,6 +162,18 @@ export const DataImport = () => {
           )}
         </Button>
 
+        {selectedTable === 'course_dates' && (
+          <Button
+            onClick={handleComputePhases}
+            disabled={importing}
+            variant="outline"
+            className="w-full"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Assigner phases par dates
+          </Button>
+        )}
+
         <div className="text-sm text-muted-foreground space-y-1">
           <p className="font-medium">Format attendu par table:</p>
           <ul className="list-disc list-inside space-y-1 text-xs">
@@ -145,6 +181,7 @@ export const DataImport = () => {
             <li><strong>Barèmes:</strong> id, Catégorie, Type classement, Place, Points, Type</li>
             <li><strong>Courses:</strong> id, Course, Race Type, Race Category</li>
             <li><strong>Managers:</strong> Nom manager, Sponsor</li>
+            <li><strong>Dates des Courses:</strong> id, Course, date_debut, date_fin</li>
           </ul>
         </div>
       </CardContent>

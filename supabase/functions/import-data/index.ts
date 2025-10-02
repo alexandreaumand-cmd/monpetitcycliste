@@ -6,7 +6,7 @@ const corsHeaders = {
 }
 
 interface ImportRequest {
-  table: 'coureurs' | 'scoring_rules' | 'courses' | 'managers'
+  table: 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates'
   data: string // CSV content
 }
 
@@ -51,6 +51,100 @@ Deno.serve(async (req) => {
     
     let imported = 0
     let errors = 0
+    let updatedById = 0
+    let updatedByName = 0
+    let unknown = 0
+
+    // Special handling for course_dates
+    if (table === 'course_dates') {
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i])
+        
+        try {
+          const obj: any = {}
+          for (let j = 0; j < headers.length; j++) {
+            obj[headers[j].trim()] = values[j]?.trim() || null
+          }
+
+          const courseId = obj['id']
+          const courseName = obj['Course']
+          const dateDebut = obj['date_debut'] || null
+          const dateFin = obj['date_fin'] || null
+
+          // Try to match by ID first
+          const { data: byIdData, error: byIdError } = await supabaseClient
+            .from('courses')
+            .update({ date_debut: dateDebut, date_fin: dateFin })
+            .eq('id', courseId)
+            .select()
+
+          if (byIdError) {
+            console.error(`Error updating by ID row ${i}:`, byIdError)
+            errors++
+            continue
+          }
+
+          if (byIdData && byIdData.length > 0) {
+            updatedById++
+            imported++
+          } else if (courseName) {
+            // Try to match by normalized name
+            const normalized = normalizeName(courseName)
+            
+            // Get all courses and match client-side (since normalize function isn't in DB)
+            const { data: allCourses, error: fetchError } = await supabaseClient
+              .from('courses')
+              .select('id, nom')
+
+            if (fetchError) {
+              console.error(`Error fetching courses for name match:`, fetchError)
+              errors++
+              continue
+            }
+
+            const matchedCourse = allCourses?.find(c => 
+              normalizeName(c.nom) === normalized
+            )
+
+            if (matchedCourse) {
+              const { error: updateError } = await supabaseClient
+                .from('courses')
+                .update({ date_debut: dateDebut, date_fin: dateFin })
+                .eq('id', matchedCourse.id)
+
+              if (updateError) {
+                console.error(`Error updating by name row ${i}:`, updateError)
+                errors++
+              } else {
+                updatedByName++
+                imported++
+              }
+            } else {
+              console.log(`No match found for: ${courseName} (id: ${courseId})`)
+              unknown++
+            }
+          } else {
+            unknown++
+          }
+        } catch (err) {
+          console.error(`Error processing row ${i}:`, err)
+          errors++
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          imported, 
+          errors,
+          updatedById,
+          updatedByName,
+          unknown,
+          message: `Updated ${imported} courses (${updatedById} by ID, ${updatedByName} by name). ${unknown} not matched, ${errors} errors.` 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     for (let i = 1; i < lines.length; i++) {
       const values = parseCSVLine(lines[i])
@@ -215,4 +309,19 @@ function normalizeTypeClassement(type: string): string | null {
   if (lowerType.includes('combatif') || lowerType.includes('combativity')) return null; // Ignore combativity
   
   return null; // Unknown type, skip
+}
+
+function normalizeName(name: string): string {
+  if (!name) return '';
+  
+  // Remove accents
+  const withoutAccents = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  
+  // Convert to lowercase, trim, and collapse multiple spaces
+  return withoutAccents
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ');
 }
