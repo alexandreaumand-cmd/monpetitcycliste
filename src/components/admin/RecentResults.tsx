@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
-import { ResultsEntryDrawer } from "./ResultsEntryDrawer";
+import { ResultsEntryStudio } from "./ResultsEntryStudio";
 import { Calendar, Trophy, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ type Course = {
   course_id: string;
   course_nom: string;
   categorie: string;
-  type_course: string;
+  type_course: "One day" | "Stage race";
   date_debut: string;
   date_fin: string;
   nb_etapes: number;
@@ -35,7 +35,7 @@ export const RecentResults = () => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [searchFilter, setSearchFilter] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [studioOpen, setStudioOpen] = useState(false);
 
   // Fetch recent courses
   const { data: recentCourses, isLoading } = useQuery({
@@ -54,7 +54,7 @@ export const RecentResults = () => {
         course_id: c.id,
         course_nom: c.nom,
         categorie: c.categorie,
-        type_course: c.type_course || 'one day race',
+        type_course: c.type_course === 'stage races' ? 'Stage race' : 'One day',
         date_debut: c.date_debut || '',
         date_fin: c.date_fin || '',
         nb_etapes: c.type_course === 'stage races' 
@@ -105,9 +105,9 @@ export const RecentResults = () => {
     return true;
   });
 
-  const handleOpenDrawer = (course: Course) => {
+  const handleOpenStudio = (course: Course) => {
     setSelectedCourse(course);
-    setDrawerOpen(true);
+    setStudioOpen(true);
   };
 
   return (
@@ -158,8 +158,8 @@ export const RecentResults = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les types</SelectItem>
-            <SelectItem value="one day race">Course d'un jour</SelectItem>
-            <SelectItem value="stage races">Course à étapes</SelectItem>
+            <SelectItem value="One day">Course d'un jour</SelectItem>
+            <SelectItem value="Stage race">Course à étapes</SelectItem>
           </SelectContent>
         </Select>
 
@@ -184,7 +184,7 @@ export const RecentResults = () => {
         <div className="grid gap-4">
           {filteredCourses?.map((course) => {
             const status = resultsStatusMap?.[course.course_id];
-            const isStageRace = course.type_course === 'stage races';
+            const isStageRace = course.type_course === 'Stage race';
             
             return (
               <Card key={course.course_id}>
@@ -200,7 +200,7 @@ export const RecentResults = () => {
                         <Badge variant="outline">{isStageRace ? 'Course à étapes' : 'Course d\'un jour'}</Badge>
                       </div>
                     </div>
-                    <Button onClick={() => handleOpenDrawer(course)}>
+                    <Button onClick={() => handleOpenStudio(course)}>
                       Saisir / Corriger
                     </Button>
                   </div>
@@ -270,11 +270,10 @@ export const RecentResults = () => {
         </div>
       )}
 
-      {selectedCourse && (
-        <ResultsEntryDrawer
-          open={drawerOpen}
-          onOpenChange={setDrawerOpen}
+      {selectedCourse && studioOpen && (
+        <ResultsEntryStudio
           course={selectedCourse}
+          onClose={() => setStudioOpen(false)}
         />
       )}
     </div>
