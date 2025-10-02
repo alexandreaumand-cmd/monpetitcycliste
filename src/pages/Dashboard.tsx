@@ -14,6 +14,7 @@ import { SeasonManager } from "@/components/admin/SeasonManager";
 import { RoundManager } from "@/components/admin/RoundManager";
 import { AnnouncementManager } from "@/components/admin/AnnouncementManager";
 import { ResultsEntry } from "@/components/admin/ResultsEntry";
+import { RecentResults } from "@/components/admin/RecentResults";
 import { MyTeam } from "@/components/team/MyTeam";
 import { UpcomingCourses } from "@/components/courses/UpcomingCourses";
 
@@ -177,9 +178,9 @@ const Dashboard = () => {
                   <AnnouncementManager />
                 </TabsContent>
 
-                <TabsContent value="results" className="space-y-4">
-                  <ResultsEntry />
-                </TabsContent>
+            <TabsContent value="results" className="space-y-4">
+              <RecentResults />
+            </TabsContent>
 
                 <TabsContent value="seasons" className="space-y-4">
                   <SeasonManager />
