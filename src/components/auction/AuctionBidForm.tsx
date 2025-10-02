@@ -10,6 +10,7 @@ import { Loader2, TrendingUp } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { useDebounce } from "use-debounce";
 
 interface AuctionBidFormProps {
   auction: {
@@ -27,6 +28,8 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
   const [selectedCoureur, setSelectedCoureur] = useState<any>(null);
   const [bidAmount, setBidAmount] = useState("");
   const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
   // Normalize string: remove accents and convert to lowercase
   const normalizeString = (str: string) => 
@@ -39,13 +42,21 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
     return normalizedValue.includes(normalizedSearch) ? 1 : 0;
   };
 
-  const { data: coureurs } = useQuery({
-    queryKey: ['coureurs'],
+  const { data: coureurs, isLoading: loadingCoureurs } = useQuery({
+    queryKey: ['coureurs-search', debouncedSearchTerm],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('coureurs')
-        .select('*')
-        .order('nom');
+        .select('*');
+      
+      if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
+        const normalizedSearch = `%${debouncedSearchTerm}%`;
+        query = query.or(`nom.ilike.${normalizedSearch},equipe.ilike.${normalizedSearch}`);
+      }
+      
+      const { data, error } = await query
+        .order('nom')
+        .limit(50);
       
       if (error) throw error;
       return data;
@@ -209,10 +220,24 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
               </Button>
             </PopoverTrigger>
             <PopoverContent className="p-0 w-[400px]" align="start">
-              <Command filter={filterFunction}>
-                <CommandInput placeholder="Rechercher un coureur..." />
+              <Command filter={filterFunction} shouldFilter={false}>
+                <CommandInput 
+                  placeholder="Rechercher un coureur..." 
+                  value={searchTerm}
+                  onValueChange={setSearchTerm}
+                />
                 <CommandList>
-                  <CommandEmpty>Aucun coureur trouvé</CommandEmpty>
+                  <CommandEmpty>
+                    {loadingCoureurs ? (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    ) : debouncedSearchTerm.length < 2 ? (
+                      "Tapez au moins 2 lettres pour rechercher"
+                    ) : (
+                      "Aucun coureur trouvé"
+                    )}
+                  </CommandEmpty>
                   <CommandGroup>
                     {coureurs?.map((coureur) => (
                       <CommandItem
@@ -221,6 +246,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                         onSelect={() => {
                           setSelectedCoureur(coureur);
                           setOpen(false);
+                          setSearchTerm("");
                         }}
                       >
                         <div className="flex items-center justify-between w-full">
