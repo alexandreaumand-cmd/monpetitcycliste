@@ -291,17 +291,25 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
         (serverScoringRules || []).map((r) => [r.place, r.points])
       );
 
+      // Properly cast etape_numero: number for Etape, null otherwise
+      const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
+
       // Upsert race_results
       const mappedTypeForUpsert = typeClassementMap[classementType] as "Etape" | "General" | "Jeune" | "Montagne" | "Points";
-      const raceResultsToUpsert = validRows.map((row) => ({
-        course_id: course.course_id,
-        type_classement: mappedTypeForUpsert,
-        etape_numero: etapeNumero,
-        coureur_id: row.coureur_id!,
-        position: row.statut === "finished" ? row.position : null,
-        statut: row.statut,
-        date_classement: dateClassement,
-      }));
+      const raceResultsToUpsert = validRows.map((row) => {
+        const isFinished = row.statut === "finished";
+        const positionValue = isFinished ? Number(row.position) : null;
+        
+        return {
+          course_id: course.course_id,
+          type_classement: mappedTypeForUpsert,
+          etape_numero: etapeNumeroValue,
+          coureur_id: row.coureur_id!,
+          position: positionValue,
+          statut: row.statut,
+          date_classement: dateClassement,
+        };
+      });
 
       const { error: upsertError } = await supabase
         .from("race_results")
@@ -311,40 +319,49 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
 
       if (upsertError) throw upsertError;
 
-      // Delete old points_ledger entries
-      const { error: deleteError } = await supabase
+      // Delete old points_ledger entries with proper null handling
+      let deleteQuery = supabase
         .from("points_ledger")
         .delete()
         .eq("course_id", course.course_id)
-        .eq("type_classement", mappedTypeForUpsert)
-        .eq("etape_numero", etapeNumero);
+        .eq("type_classement", mappedTypeForUpsert);
 
+      if (etapeNumeroValue !== null) {
+        deleteQuery = deleteQuery.eq("etape_numero", etapeNumeroValue);
+      } else {
+        deleteQuery = deleteQuery.is("etape_numero", null);
+      }
+
+      const { error: deleteError } = await deleteQuery;
       if (deleteError) throw deleteError;
 
       // Insert new points_ledger entries
       const pointsLedger = [];
       for (const row of validRows) {
-        const points =
-          row.statut === "finished" ? scoringMap.get(row.position) || 0 : 0;
+        const isFinished = row.statut === "finished";
+        const points = isFinished ? scoringMap.get(row.position) || 0 : 0;
 
-        // Find manager_id via rosters
-        const { data: roster } = await supabase
-          .from("rosters")
-          .select("manager_id")
-          .eq("phase_id", course.phase_id)
-          .eq("coureur_id", row.coureur_id!)
-          .maybeSingle();
+        // Only create ledger entries for riders with points
+        if (points > 0) {
+          // Find manager_id via rosters
+          const { data: roster } = await supabase
+            .from("rosters")
+            .select("manager_id")
+            .eq("phase_id", course.phase_id)
+            .eq("coureur_id", row.coureur_id!)
+            .maybeSingle();
 
-        if (roster) {
-          pointsLedger.push({
-            course_id: course.course_id,
-            type_classement: typeClassementMap[classementType],
-            etape_numero: etapeNumero,
-            coureur_id: row.coureur_id!,
-            phase_id: course.phase_id,
-            manager_id: roster.manager_id,
-            points,
-          });
+          if (roster) {
+            pointsLedger.push({
+              course_id: course.course_id,
+              type_classement: typeClassementMap[classementType],
+              etape_numero: etapeNumeroValue,
+              coureur_id: row.coureur_id!,
+              phase_id: course.phase_id,
+              manager_id: roster.manager_id,
+              points,
+            });
+          }
         }
       }
 
