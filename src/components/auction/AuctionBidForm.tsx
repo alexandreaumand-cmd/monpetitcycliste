@@ -101,45 +101,36 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
     }
   });
 
-  const { data: budget, isLoading: loadingBudget } = useQuery({
-    queryKey: ['manager-budget', managerId, auction.phase_id, draftBids.length, submittedBids.length],
+  // Get manager phase status (slots, budget)
+  const { data: phaseStatus, isLoading: loadingBudget } = useQuery({
+    queryKey: ['manager-phase-status', managerId, auction.phase_id],
     queryFn: async () => {
-      // Get phase budget
-      const { data: phase, error: phaseError } = await supabase
-        .from('phases')
-        .select('budget, max_coureurs')
-        .eq('id', auction.phase_id)
+      const { data, error } = await supabase
+        .from('manager_phase_status')
+        .select('*')
+        .eq('manager_id', managerId)
+        .eq('phase_id', auction.phase_id)
         .single();
 
-      if (phaseError) throw phaseError;
+      if (error) throw error;
+      return data;
+    }
+  });
 
-      // Get spent amount from rosters
-      const { data: rosters, error: rosterError } = await supabase
-        .from('rosters')
-        .select('prix_signature')
+  // Get current round drafts summary
+  const { data: roundDrafts } = useQuery({
+    queryKey: ['current-round-drafts', managerId, auction.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('current_round_drafts')
+        .select('*')
         .eq('manager_id', managerId)
-        .eq('phase_id', auction.phase_id);
+        .eq('auction_id', auction.id)
+        .maybeSingle();
 
-      if (rosterError) throw rosterError;
-
-      const spentOnRosters = rosters?.reduce((sum, r) => sum + parseFloat(r.prix_signature.toString()), 0) || 0;
-      
-      // Calculate reserved budget from draft and submitted bids
-      const reservedInDrafts = draftBids.reduce((sum: number, b: any) => sum + parseFloat(b.montant.toString()), 0);
-      const reservedInSubmitted = submittedBids.reduce((sum: number, b: any) => sum + parseFloat(b.montant.toString()), 0);
-      
-      const totalReserved = spentOnRosters + reservedInDrafts + reservedInSubmitted;
-      const remaining = parseFloat(phase.budget.toString()) - totalReserved;
-
-      return {
-        total: parseFloat(phase.budget.toString()),
-        spent: spentOnRosters,
-        reserved: reservedInDrafts + reservedInSubmitted,
-        remaining,
-        maxCoureurs: phase.max_coureurs || 30
-      };
-    },
-    enabled: true
+      if (error) throw error;
+      return data || { draft_count: 0, draft_sum: 0 };
+    }
   });
 
   useEffect(() => {
@@ -159,8 +150,41 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
         throw new Error(`Le montant doit être au moins ${selectedCoureur.prix_initial}`);
       }
 
-      if (budget && amount > budget.remaining) {
+      if (phaseStatus && amount > parseFloat(phaseStatus.budget_restant.toString())) {
         throw new Error("Budget insuffisant");
+      }
+
+      // Check if adding a new bid would exceed slots_restants
+      if (!editingBidId && phaseStatus && roundDrafts) {
+        if (roundDrafts.draft_count >= phaseStatus.slots_restants) {
+          throw new Error(`Vous avez déjà saisi ${phaseStatus.slots_restants} enchère(s) pour ce round.`);
+        }
+      }
+
+      // Check if coureur already in rosters
+      const { data: existingRoster } = await supabase
+        .from('rosters')
+        .select('id')
+        .eq('phase_id', auction.phase_id)
+        .eq('coureur_id', selectedCoureur.id)
+        .maybeSingle();
+
+      if (existingRoster) {
+        throw new Error("Ce coureur a déjà été attribué à un manager dans cette phase.");
+      }
+
+      // Check for duplicates in draft bids (excluding current editing bid)
+      const { data: existingBid } = await supabase
+        .from('bids')
+        .select('id')
+        .eq('manager_id', managerId)
+        .eq('auction_id', auction.id)
+        .eq('coureur_id', selectedCoureur.id)
+        .eq('statut', 'draft')
+        .maybeSingle();
+
+      if (existingBid && existingBid.id !== editingBidId) {
+        throw new Error("Vous avez déjà une enchère en brouillon pour ce coureur.");
       }
 
       if (editingBidId) {
@@ -192,7 +216,8 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['draft-bids'] });
-      queryClient.invalidateQueries({ queryKey: ['manager-budget'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-phase-status'] });
+      queryClient.invalidateQueries({ queryKey: ['current-round-drafts'] });
       toast({
         title: editingBidId ? "Enchère modifiée" : "Enchère ajoutée",
         description: editingBidId ? "Votre enchère a été modifiée" : "Votre enchère a été ajoutée aux brouillons"
@@ -221,7 +246,8 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['draft-bids'] });
-      queryClient.invalidateQueries({ queryKey: ['manager-budget'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-phase-status'] });
+      queryClient.invalidateQueries({ queryKey: ['current-round-drafts'] });
       toast({
         title: "Enchère supprimée",
         description: "L'enchère a été supprimée"
@@ -238,8 +264,51 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
 
   const submitAllBids = useMutation({
     mutationFn: async () => {
+      if (!phaseStatus) {
+        throw new Error("Impossible de charger le statut de votre phase");
+      }
+
       if (draftBids.length === 0) {
         throw new Error("Aucune enchère en brouillon");
+      }
+
+      // Validation stricte: le nombre d'enchères doit être égal à slots_restants
+      if (draftBids.length !== phaseStatus.slots_restants) {
+        throw new Error(`Tu dois soumettre exactement ${phaseStatus.slots_restants} enchère(s).`);
+      }
+
+      // Validation stricte: la somme doit être égale au budget_restant
+      const draftSum = draftBids.reduce((sum: number, b: any) => sum + parseFloat(b.montant.toString()), 0);
+      const budgetRestant = parseFloat(phaseStatus.budget_restant.toString());
+      
+      // Allow small rounding errors (< 1 euro)
+      if (Math.abs(draftSum - budgetRestant) >= 1) {
+        throw new Error(`La somme de tes offres (${draftSum.toFixed(0)} €) doit être égale à ton budget restant (${budgetRestant.toFixed(0)} €).`);
+      }
+
+      // Vérifier que chaque montant >= prix_initial
+      for (const bid of draftBids) {
+        if (parseFloat(bid.montant.toString()) < parseFloat(bid.coureurs.prix_initial.toString())) {
+          throw new Error(`Le montant pour ${bid.coureurs.nom} doit être au moins ${bid.coureurs.prix_initial} €`);
+        }
+      }
+
+      // Vérifier qu'aucun coureur n'est déjà attribué
+      const coureurIds = draftBids.map((b: any) => b.coureur_id);
+      const { data: existingRosters } = await supabase
+        .from('rosters')
+        .select('coureur_id')
+        .eq('phase_id', auction.phase_id)
+        .in('coureur_id', coureurIds);
+
+      if (existingRosters && existingRosters.length > 0) {
+        throw new Error("Un ou plusieurs coureurs ont déjà été attribués dans cette phase.");
+      }
+
+      // Vérifier qu'il n'y a pas de doublons
+      const uniqueCoureurIds = new Set(coureurIds);
+      if (uniqueCoureurIds.size !== coureurIds.length) {
+        throw new Error("Vous avez des doublons dans vos enchères.");
       }
 
       // Update all draft bids to pending
@@ -254,7 +323,8 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['draft-bids'] });
       queryClient.invalidateQueries({ queryKey: ['submitted-bids'] });
-      queryClient.invalidateQueries({ queryKey: ['manager-budget'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-phase-status'] });
+      queryClient.invalidateQueries({ queryKey: ['current-round-drafts'] });
       setShowSubmitDialog(false);
       toast({
         title: "Enchères validées",
@@ -282,13 +352,14 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
     setBidAmount("");
   };
 
-  const totalBidsCount = draftBids.length + submittedBids.length;
-  const canAddMore = budget ? totalBidsCount < budget.maxCoureurs : false;
+  // Roster complet check
+  const rosterComplet = phaseStatus ? phaseStatus.slots_restants === 0 : false;
   
   // Validation conditions for submitting bids
-  const hasExactCoureurs = budget ? totalBidsCount === budget.maxCoureurs : false;
-  const budgetFullyUsed = budget ? Math.abs(budget.remaining) < 1 : false; // Allow small rounding errors
-  const canSubmitBids = hasExactCoureurs && budgetFullyUsed && draftBids.length > 0;
+  const hasExactSlots = phaseStatus && roundDrafts ? draftBids.length === phaseStatus.slots_restants : false;
+  const budgetFullyUsed = phaseStatus && roundDrafts ? Math.abs(parseFloat(phaseStatus.budget_restant.toString()) - roundDrafts.draft_sum) < 1 : false;
+  const canSubmitBids = hasExactSlots && budgetFullyUsed && draftBids.length > 0;
+  const canAddMore = phaseStatus && roundDrafts ? roundDrafts.draft_count < phaseStatus.slots_restants : false;
 
   return (
     <div className="space-y-4">
@@ -331,22 +402,55 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
           <CardTitle className="flex items-center justify-between flex-wrap gap-2">
             <span>Préparer mes enchères - Tour {auction.round_number}</span>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-sm">
-                {totalBidsCount}/{budget?.maxCoureurs || 30} coureurs
-              </Badge>
               {loadingBudget ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Badge variant={budget && budget.remaining < 0 ? "destructive" : "secondary"} className="text-sm">
-                  Budget: {budget?.remaining.toFixed(0) || '0'} €
-                </Badge>
-              )}
+              ) : phaseStatus ? (
+                <>
+                  <Badge variant="outline" className="text-sm">
+                    Slots: {phaseStatus.slots_restants}
+                  </Badge>
+                  <Badge variant={parseFloat(phaseStatus.budget_restant.toString()) < 0 ? "destructive" : "secondary"} className="text-sm">
+                    Budget: {parseFloat(phaseStatus.budget_restant.toString()).toFixed(0)} €
+                  </Badge>
+                </>
+              ) : null}
             </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Roster complet alert */}
+          {rosterComplet && (
+            <Alert className="bg-green-50 border-green-200">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                ✅ Roster complet pour cette phase ({phaseStatus?.roster_count}/{phaseStatus?.max_coureurs} coureurs)
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!rosterComplet && phaseStatus && (
+            <Alert>
+              <TrendingUp className="h-4 w-4" />
+              <AlertDescription>
+                <div className="flex flex-col gap-1">
+                  <div>Slots à saisir ce round : <strong>{phaseStatus.slots_restants}</strong></div>
+                  <div>Budget restant : <strong>{parseFloat(phaseStatus.budget_restant.toString()).toFixed(0)} €</strong></div>
+                  {roundDrafts && (
+                    <div className="mt-2 text-sm">
+                      <div className={roundDrafts.draft_count !== phaseStatus.slots_restants ? "text-orange-600" : "text-green-600"}>
+                        Lignes : {roundDrafts.draft_count} / {phaseStatus.slots_restants}
+                      </div>
+                      <div className={Math.abs(parseFloat(phaseStatus.budget_restant.toString()) - roundDrafts.draft_sum) >= 1 ? "text-orange-600" : "text-green-600"}>
+                        Somme : {roundDrafts.draft_sum.toFixed(0)} / {parseFloat(phaseStatus.budget_restant.toString()).toFixed(0)} €
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
           {/* List of draft bids */}
-          {draftBids.length > 0 && (
+          {!rosterComplet && draftBids.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-base">Enchères en préparation ({draftBids.length})</Label>
@@ -369,7 +473,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                           <AlertDialogDescription>
                             Vous êtes sur le point de soumettre {draftBids.length} enchère(s) pour un montant total de {draftBids.reduce((sum: number, b: any) => sum + parseFloat(b.montant.toString()), 0).toFixed(0)} €.
                             <br /><br />
-                            Budget restant après validation: {budget ? (budget.remaining).toFixed(0) : '0'} €
+                            Budget restant après validation: {phaseStatus ? parseFloat(phaseStatus.budget_restant.toString()).toFixed(0) : '0'} €
                             <br /><br />
                             Une fois validées, vous ne pourrez plus les modifier.
                           </AlertDialogDescription>
@@ -382,16 +486,16 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                    {!canSubmitBids && draftBids.length > 0 && (
+                    {!canSubmitBids && draftBids.length > 0 && phaseStatus && (
                       <div className="text-xs text-muted-foreground text-right">
-                        {!hasExactCoureurs && (
+                        {!hasExactSlots && (
                           <div className="text-orange-600">
-                            ⚠️ Vous devez avoir exactement {budget?.maxCoureurs || 30} coureurs ({totalBidsCount}/{budget?.maxCoureurs || 30})
+                            ⚠️ Vous devez soumettre exactement {phaseStatus.slots_restants} enchère(s)
                           </div>
                         )}
-                        {!budgetFullyUsed && (
+                        {!budgetFullyUsed && roundDrafts && (
                           <div className="text-orange-600">
-                            ⚠️ Vous devez utiliser tout votre budget (reste: {budget?.remaining.toFixed(0) || 0} €)
+                            ⚠️ La somme doit être égale au budget restant ({parseFloat(phaseStatus.budget_restant.toString()).toFixed(0)} €, actuellement: {roundDrafts.draft_sum.toFixed(0)} €)
                           </div>
                         )}
                       </div>
@@ -434,7 +538,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
           )}
 
           {/* Add/Edit bid form */}
-          {canAddMore || editingBidId ? (
+          {!rosterComplet && (canAddMore || editingBidId) ? (
             <>
               <div className="space-y-2">
                 <Label>{editingBidId ? "Modifier l'enchère" : "Ajouter une enchère"}</Label>
@@ -527,9 +631,9 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                     />
                   </div>
 
-                  {budget && bidAmount && parseFloat(bidAmount) > budget.remaining && (
+                  {phaseStatus && bidAmount && parseFloat(bidAmount) > parseFloat(phaseStatus.budget_restant.toString()) && (
                     <p className="text-sm text-destructive">
-                      ⚠️ Budget insuffisant (reste: {budget.remaining.toFixed(0)} €)
+                      ⚠️ Budget insuffisant (reste: {parseFloat(phaseStatus.budget_restant.toString()).toFixed(0)} €)
                     </p>
                   )}
 
@@ -554,11 +658,11 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                 </>
               )}
             </>
-          ) : (
+          ) : !rosterComplet ? (
             <div className="text-center py-4 text-muted-foreground">
-              Vous avez atteint le nombre maximum de coureurs ({budget?.maxCoureurs || 30})
+              Vous avez atteint le nombre maximum d'enchères pour ce round ({phaseStatus?.slots_restants || 0})
             </div>
-          )}
+          ) : null}
 
           <div className="text-xs text-muted-foreground text-center pt-2 border-t">
             Deadline: {new Date(auction.deadline_at).toLocaleString()}

@@ -73,6 +73,13 @@ export type Database = {
             foreignKeyName: "annonces_winning_manager_id_fkey"
             columns: ["winning_manager_id"]
             isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "annonces_winning_manager_id_fkey"
+            columns: ["winning_manager_id"]
+            isOneToOne: false
             referencedRelation: "managers"
             referencedColumns: ["id"]
           },
@@ -111,6 +118,13 @@ export type Database = {
             foreignKeyName: "auctions_phase_id_fkey"
             columns: ["phase_id"]
             isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
             referencedRelation: "phases"
             referencedColumns: ["id"]
           },
@@ -139,6 +153,13 @@ export type Database = {
           payload_json?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "audits_actor_manager_id_fkey"
+            columns: ["actor_manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
           {
             foreignKeyName: "audits_actor_manager_id_fkey"
             columns: ["actor_manager_id"]
@@ -193,6 +214,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "coureurs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
           },
           {
             foreignKeyName: "bids_manager_id_fkey"
@@ -265,6 +293,13 @@ export type Database = {
           wt_tier?: Database["public"]["Enums"]["wt_tier_type"] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
           {
             foreignKeyName: "courses_phase_id_fkey"
             columns: ["phase_id"]
@@ -402,8 +437,22 @@ export type Database = {
             foreignKeyName: "points_ledger_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
             referencedRelation: "managers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
           },
           {
             foreignKeyName: "points_ledger_phase_id_fkey"
@@ -503,8 +552,22 @@ export type Database = {
             foreignKeyName: "rosters_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
             referencedRelation: "managers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rosters_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
           },
           {
             foreignKeyName: "rosters_phase_id_fkey"
@@ -583,6 +646,50 @@ export type Database = {
       }
     }
     Views: {
+      current_round_drafts: {
+        Row: {
+          auction_id: string | null
+          draft_count: number | null
+          draft_sum: number | null
+          manager_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bids_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manager_phase_status: {
+        Row: {
+          budget_depense: number | null
+          budget_initial: number | null
+          budget_restant: number | null
+          manager_id: string | null
+          max_coureurs: number | null
+          phase_id: string | null
+          roster_count: number | null
+          slots_restants: number | null
+        }
+        Relationships: []
+      }
       v_course_points_theoriques: {
         Row: {
           categorie: string | null
