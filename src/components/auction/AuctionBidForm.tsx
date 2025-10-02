@@ -6,14 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, TrendingUp, Trash2, CheckCircle2, Edit2, Clock, Lock } from "lucide-react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Loader2, TrendingUp, Trash2, CheckCircle2, Edit2, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useDebounce } from "use-debounce";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RiderAutocomplete } from "@/components/shared/RiderAutocomplete";
 
 interface AuctionBidFormProps {
   auction: {
@@ -30,47 +28,9 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
   const queryClient = useQueryClient();
   const [selectedCoureur, setSelectedCoureur] = useState<any>(null);
   const [bidAmount, setBidAmount] = useState("");
-  const [open, setOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [editingBidId, setEditingBidId] = useState<string | null>(null);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
 
-  // Normalize string: remove accents and convert to lowercase
-  const normalizeString = (str: string) => 
-    str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-
-  // Custom filter function for Command component
-  const filterFunction = (value: string, search: string) => {
-    const normalizedValue = normalizeString(value);
-    const normalizedSearch = normalizeString(search);
-    return normalizedValue.includes(normalizedSearch) ? 1 : 0;
-  };
-
-  const { data: coureurs, isLoading: loadingCoureurs } = useQuery({
-    queryKey: ['coureurs-disponibilite', debouncedSearchTerm, auction.phase_id],
-    queryFn: async () => {
-      let query = supabase
-        .from('coureurs_disponibilite')
-        .select('*')
-        .eq('phase_id', auction.phase_id);
-      
-      if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
-        const normalizedSearch = normalizeString(debouncedSearchTerm);
-        query = query.ilike('search_text', `%${normalizedSearch}%`);
-      }
-      
-      // Pas de filtre sur is_taken - on veut TOUS les coureurs
-      // Tri : disponibles en premier, puis par nom
-      const { data, error } = await query
-        .order('is_taken', { ascending: true })
-        .order('coureur_nom', { ascending: true })
-        .limit(50);
-      
-      if (error) throw error;
-      return data;
-    }
-  });
 
   const { data: draftBids = [], isLoading: loadingDraftBids } = useQuery({
     queryKey: ['draft-bids', auction.id, managerId],
@@ -142,6 +102,26 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
       setBidAmount(selectedCoureur.prix_initial.toString());
     }
   }, [selectedCoureur, editingBidId]);
+
+  // Handle rider selection from autocomplete
+  const handleRiderSelect = (riderId: string | null, riderName: string | null) => {
+    if (riderId && riderName) {
+      // Fetch full rider details
+      supabase
+        .from('coureurs_disponibilite')
+        .select('*')
+        .eq('coureur_id', riderId)
+        .eq('phase_id', auction.phase_id)
+        .single()
+        .then(({ data, error }) => {
+          if (!error && data) {
+            setSelectedCoureur(data);
+          }
+        });
+    } else {
+      setSelectedCoureur(null);
+    }
+  };
 
   const addOrUpdateBid = useMutation({
     mutationFn: async () => {
@@ -539,79 +519,14 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
             <>
               <div className="space-y-2">
                 <Label>{editingBidId ? "Modifier l'enchère" : "Ajouter une enchère"}</Label>
-                <Popover open={open} onOpenChange={setOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      {selectedCoureur ? (
-                        <div className="flex items-center justify-between w-full">
-                          <span>{selectedCoureur.nom}</span>
-                          <span className="text-muted-foreground text-sm">{selectedCoureur.equipe}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Sélectionner un coureur...</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-0 w-[400px]" align="start">
-                    <Command filter={filterFunction} shouldFilter={false}>
-                      <CommandInput 
-                        placeholder="Rechercher un coureur..." 
-                        value={searchTerm}
-                        onValueChange={setSearchTerm}
-                      />
-                      <CommandList>
-                        <CommandEmpty>
-                          {loadingCoureurs ? (
-                            <div className="flex items-center justify-center py-6">
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            </div>
-                          ) : debouncedSearchTerm.length < 2 ? (
-                            "Tapez au moins 2 lettres pour rechercher"
-                          ) : (
-                            "Aucun coureur trouvé"
-                          )}
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {coureurs?.map((coureur) => (
-                            <CommandItem
-                              key={coureur.coureur_id}
-                              value={`${coureur.coureur_nom} ${coureur.coureur_equipe || ''}`}
-                              onSelect={() => {
-                                if (!coureur.is_taken) {
-                                  setSelectedCoureur(coureur);
-                                  setOpen(false);
-                                  setSearchTerm("");
-                                }
-                              }}
-                              disabled={coureur.is_taken}
-                              className={coureur.is_taken ? "opacity-60 cursor-not-allowed" : ""}
-                            >
-                              <div className="flex items-center justify-between w-full gap-2">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <p className="font-medium">{coureur.coureur_nom}</p>
-                                    {coureur.is_taken && (
-                                      <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-                                        <Lock className="h-3 w-3" />
-                                        Pris par {coureur.taken_by_manager_nom}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">{coureur.coureur_equipe}</p>
-                                </div>
-                                {!coureur.is_taken && (
-                                  <Badge variant="secondary">
-                                    Min: {parseFloat(coureur.prix_initial.toString()).toFixed(0)} €
-                                  </Badge>
-                                )}
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <RiderAutocomplete
+                  phaseId={auction.phase_id}
+                  value={selectedCoureur?.coureur_id || null}
+                  riderName={selectedCoureur?.coureur_nom || null}
+                  onChange={handleRiderSelect}
+                  allowTaken={false}
+                  showTakenTag={true}
+                />
               </div>
 
               {selectedCoureur && (
