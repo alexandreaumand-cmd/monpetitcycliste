@@ -13,6 +13,7 @@ import { AuctionsList } from "@/components/auction/AuctionsList";
 import { SeasonManager } from "@/components/admin/SeasonManager";
 import { RoundManager } from "@/components/admin/RoundManager";
 import { AnnouncementManager } from "@/components/admin/AnnouncementManager";
+import { ResultsEntry } from "@/components/admin/ResultsEntry";
 import { MyTeam } from "@/components/team/MyTeam";
 import { UpcomingCourses } from "@/components/courses/UpcomingCourses";
 
@@ -177,14 +178,7 @@ const Dashboard = () => {
                 </TabsContent>
 
                 <TabsContent value="results" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Gestion des résultats</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Button variant="outline" className="w-full">Saisir des résultats</Button>
-                    </CardContent>
-                  </Card>
+                  <ResultsEntry />
                 </TabsContent>
 
                 <TabsContent value="seasons" className="space-y-4">
