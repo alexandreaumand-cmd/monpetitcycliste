@@ -238,6 +238,7 @@ export type Database = {
           statut: Database["public"]["Enums"]["race_statut"] | null
           type_course: string | null
           uci_code: string | null
+          wt_tier: Database["public"]["Enums"]["wt_tier_type"] | null
         }
         Insert: {
           categorie: string
@@ -249,6 +250,7 @@ export type Database = {
           statut?: Database["public"]["Enums"]["race_statut"] | null
           type_course?: string | null
           uci_code?: string | null
+          wt_tier?: Database["public"]["Enums"]["wt_tier_type"] | null
         }
         Update: {
           categorie?: string
@@ -260,6 +262,7 @@ export type Database = {
           statut?: Database["public"]["Enums"]["race_statut"] | null
           type_course?: string | null
           uci_code?: string | null
+          wt_tier?: Database["public"]["Enums"]["wt_tier_type"] | null
         }
         Relationships: [
           {
@@ -583,9 +586,11 @@ export type Database = {
       v_course_points_theoriques: {
         Row: {
           categorie: string | null
+          categorie_for_points: string | null
           course_id: string | null
           date_debut: string | null
           date_fin: string | null
+          is_uwt: boolean | null
           nb_etapes_estimees: number | null
           nb_jours: number | null
           nom: string | null
@@ -598,12 +603,14 @@ export type Database = {
           points_pts: number | null
           points_total: number | null
           type_course: string | null
+          wt_tier: Database["public"]["Enums"]["wt_tier_type"] | null
         }
         Relationships: []
       }
       v_scoring_totals_by_category: {
         Row: {
-          categorie: string | null
+          categorie_norm: string | null
+          categorie_original: string | null
           sum_etape: number | null
           sum_gc: number | null
           sum_jeune: number | null
@@ -629,6 +636,18 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      normalize_text: {
+        Args: { txt: string }
+        Returns: string
+      }
+      unaccent: {
+        Args: { "": string }
+        Returns: string
+      }
+      unaccent_init: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
     }
     Enums: {
       app_role: "manager" | "admin"
@@ -649,6 +668,15 @@ export type Database = {
       race_statut: "scheduled" | "completed"
       result_statut: "finished" | "dnf" | "dns" | "dsq"
       type_classement: "Etape" | "General" | "Points" | "Montagne" | "Jeune"
+      wt_tier_type:
+        | "GT"
+        | "Monument"
+        | "WT_Tours_1"
+        | "WT_Tours_2"
+        | "WT_Tours_3"
+        | "WT_Classiques_1"
+        | "WT_Classiques_2"
+        | "WT_Classiques_3"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -796,6 +824,16 @@ export const Constants = {
       race_statut: ["scheduled", "completed"],
       result_statut: ["finished", "dnf", "dns", "dsq"],
       type_classement: ["Etape", "General", "Points", "Montagne", "Jeune"],
+      wt_tier_type: [
+        "GT",
+        "Monument",
+        "WT_Tours_1",
+        "WT_Tours_2",
+        "WT_Tours_3",
+        "WT_Classiques_1",
+        "WT_Classiques_2",
+        "WT_Classiques_3",
+      ],
     },
   },
 } as const

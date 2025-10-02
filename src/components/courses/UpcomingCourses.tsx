@@ -15,6 +15,7 @@ interface CourseData {
   course_id: string;
   nom: string;
   categorie: string;
+  categorie_for_points: string;
   type_course: string;
   date_debut: string;
   date_fin: string;
@@ -28,6 +29,8 @@ interface CourseData {
   points_mont: number;
   points_jeune: number;
   points_etapes_unitaire: number;
+  is_uwt: boolean;
+  wt_tier: string | null;
 }
 
 export const UpcomingCourses = () => {

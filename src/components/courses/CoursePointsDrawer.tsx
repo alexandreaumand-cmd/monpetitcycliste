@@ -7,6 +7,7 @@ interface CourseData {
   course_id: string;
   nom: string;
   categorie: string;
+  categorie_for_points: string;
   type_course: string;
   nb_etapes_estimees: number;
   points_total: number;
@@ -16,6 +17,8 @@ interface CourseData {
   points_mont: number;
   points_jeune: number;
   points_etapes_unitaire: number;
+  is_uwt: boolean;
+  wt_tier: string | null;
 }
 
 interface CoursePointsDrawerProps {
@@ -82,7 +85,15 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
           <SheetDescription>Détail des points à gagner</SheetDescription>
           <div className="flex flex-wrap gap-2 pt-2">
             <Badge variant="outline">{course.categorie}</Badge>
+            {course.categorie_for_points !== course.categorie && (
+              <Badge variant="secondary">{course.categorie_for_points}</Badge>
+            )}
             <Badge variant="outline">{course.type_course}</Badge>
+            {course.is_uwt && course.points_total === 0 && (
+              <Badge variant="destructive" className="gap-1">
+                ⚠️ Config UWT manquante
+              </Badge>
+            )}
           </div>
         </SheetHeader>
 
@@ -134,6 +145,11 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
               <strong>Note :</strong> Le nombre d'étapes est estimé à partir des dates de course.
               Les points finaux dépendent du barème de la catégorie et des classements réellement disputés.
             </p>
+            {course.is_uwt && course.points_total === 0 && (
+              <p className="mt-2 text-destructive font-medium">
+                ⚠️ Cette course UWT nécessite une configuration du champ <code>wt_tier</code> dans la table courses pour calculer les points.
+              </p>
+            )}
           </div>
         </div>
       </SheetContent>
