@@ -10,6 +10,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { DataImport } from "@/components/admin/DataImport";
 import { AuctionManager } from "@/components/admin/AuctionManager";
 import { AuctionsList } from "@/components/auction/AuctionsList";
+import { SeasonManager } from "@/components/admin/SeasonManager";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -202,14 +203,7 @@ const Dashboard = () => {
                 </TabsContent>
 
                 <TabsContent value="seasons" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Gestion des saisons et phases</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Button variant="outline" className="w-full">Gérer les saisons et phases</Button>
-                    </CardContent>
-                  </Card>
+                  <SeasonManager />
                 </TabsContent>
 
                 <TabsContent value="users" className="space-y-4">
