@@ -8,6 +8,8 @@ import { LogOut, Trophy, Users, Calendar, BarChart3, Shield } from "lucide-react
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { DataImport } from "@/components/admin/DataImport";
+import { AuctionManager } from "@/components/admin/AuctionManager";
+import { AuctionsList } from "@/components/auction/AuctionsList";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -110,20 +112,8 @@ const Dashboard = () => {
             )}
           </TabsList>
 
-          <TabsContent value="encheres" className="space-y-6">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>Enchères en Cours</CardTitle>
-                <CardDescription>
-                  Participez aux enchères pour recruter vos coureurs
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                  Aucune enchère en cours pour le moment
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="encheres" className="space-y-4">
+            {manager && <AuctionsList managerId={manager.id} />}
           </TabsContent>
 
           <TabsContent value="equipe" className="space-y-6">
@@ -175,73 +165,64 @@ const Dashboard = () => {
           </TabsContent>
 
           {isAdmin && (
-            <TabsContent value="admin" className="space-y-6">
-              <Card className="shadow-card border-secondary/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-secondary" />
-                    Administration
-                  </CardTitle>
-                  <CardDescription>
-                    Gérez les enchères, importez les résultats et administrez la plateforme
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="mb-6">
-                    <DataImport />
-                  </div>
-                  
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <Card className="bg-muted/50">
-                      <CardHeader>
-                        <CardTitle className="text-lg">Gestion des Enchères</CardTitle>
-                        <CardDescription>Ouvrir et fermer les rounds d'enchères</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Button className="w-full">
-                          Gérer les Enchères
-                        </Button>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card className="bg-muted/50">
-                      <CardHeader>
-                        <CardTitle className="text-lg">Import de Résultats</CardTitle>
-                        <CardDescription>Importer les résultats des courses</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Button className="w-full" variant="secondary">
-                          Importer les Résultats
-                        </Button>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card className="bg-muted/50">
-                      <CardHeader>
-                        <CardTitle className="text-lg">Gestion des Phases</CardTitle>
-                        <CardDescription>Créer et gérer les phases de la saison</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Button className="w-full" variant="outline">
-                          Gérer les Phases
-                        </Button>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card className="bg-muted/50">
-                      <CardHeader>
-                        <CardTitle className="text-lg">Utilisateurs</CardTitle>
-                        <CardDescription>Gérer les managers et les rôles</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Button className="w-full" variant="outline">
-                          Gérer les Utilisateurs
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </CardContent>
-              </Card>
+            <TabsContent value="admin" className="space-y-4">
+              <Tabs defaultValue="data" className="w-full">
+                <TabsList className="grid w-full grid-cols-5">
+                  <TabsTrigger value="data">Données</TabsTrigger>
+                  <TabsTrigger value="auctions">Enchères</TabsTrigger>
+                  <TabsTrigger value="results">Résultats</TabsTrigger>
+                  <TabsTrigger value="seasons">Saisons</TabsTrigger>
+                  <TabsTrigger value="users">Utilisateurs</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="data" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Importer des données CSV</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <DataImport />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="auctions" className="space-y-4">
+                  <AuctionManager />
+                </TabsContent>
+
+                <TabsContent value="results" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Gestion des résultats</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Button variant="outline" className="w-full">Saisir des résultats</Button>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="seasons" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Gestion des saisons et phases</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Button variant="outline" className="w-full">Gérer les saisons et phases</Button>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="users" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Gestion des managers</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Button variant="outline" className="w-full">Gérer les managers</Button>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </TabsContent>
           )}
         </Tabs>
