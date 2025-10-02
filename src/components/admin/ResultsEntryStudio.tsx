@@ -87,28 +87,6 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
 
   const allStagesCompleted = !isOneDay && (stageCompletion?.etapes_saisies ?? 0) >= course.nb_etapes;
 
-  // Fetch roster mapping for this phase (coureur_id -> manager_nom)
-  const { data: rosterMap } = useQuery({
-    queryKey: ['roster-map', course.phase_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('rosters')
-        .select(`
-          coureur_id,
-          managers(nom)
-        `)
-        .eq('phase_id', course.phase_id);
-      
-      if (error) throw error;
-      
-      return data.reduce((acc, r) => {
-        acc[r.coureur_id] = r.managers?.nom || null;
-        return acc;
-      }, {} as Record<string, string | null>);
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-
   // Scoring rules query
   const { data: scoringRules } = useQuery({
     queryKey: ["scoring-rules-studio", course.course_id, classementType],
@@ -567,26 +545,14 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
                       <tr key={index} className="hover:bg-muted/50">
                         <td className="px-4 py-2 text-sm font-medium">{row.position}</td>
                         <td className="px-4 py-2">
-                          <div className="space-y-2">
-                            <RiderAutocomplete
-                              phaseId={course.phase_id}
-                              value={row.coureur_id}
-                              riderName={row.coureur_nom}
-                              onChange={(id, name) => handleRiderChange(index, id, name)}
-                              allowTaken={true}
-                              showTakenTag={true}
-                            />
-                            
-                            {/* Info badges */}
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                Manager: {row.coureur_id && rosterMap?.[row.coureur_id] ? rosterMap[row.coureur_id] : '—'}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                Barème: {scoringRules?.find(g => g.place === row.position)?.points ?? 0} pts
-                              </Badge>
-                            </div>
-                          </div>
+                          <RiderAutocomplete
+                            phaseId={course.phase_id}
+                            value={row.coureur_id}
+                            riderName={row.coureur_nom}
+                            onChange={(id, name) => handleRiderChange(index, id, name)}
+                            allowTaken={true}
+                            showTakenTag={true}
+                          />
                         </td>
                         <td className="px-4 py-2">
                           <Select

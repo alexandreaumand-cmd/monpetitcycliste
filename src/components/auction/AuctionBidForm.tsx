@@ -99,24 +99,25 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
 
   useEffect(() => {
     if (selectedCoureur && !bidAmount && !editingBidId) {
-      setBidAmount(selectedCoureur.prix_initial?.toString() || "");
+      setBidAmount(selectedCoureur.prix_initial.toString());
     }
   }, [selectedCoureur, editingBidId]);
 
   // Handle rider selection from autocomplete
-  const handleRiderSelect = async (riderId: string | null, riderName: string | null) => {
+  const handleRiderSelect = (riderId: string | null, riderName: string | null) => {
     if (riderId && riderName) {
-      // Fetch full rider details from coureurs_disponibilite
-      const { data, error } = await supabase
+      // Fetch full rider details
+      supabase
         .from('coureurs_disponibilite')
         .select('*')
         .eq('coureur_id', riderId)
         .eq('phase_id', auction.phase_id)
-        .single();
-      
-      if (!error && data) {
-        setSelectedCoureur(data);
-      }
+        .single()
+        .then(({ data, error }) => {
+          if (!error && data) {
+            setSelectedCoureur(data);
+          }
+        });
     } else {
       setSelectedCoureur(null);
     }
@@ -316,21 +317,10 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
     }
   });
 
-  const handleEditBid = async (bid: any) => {
+  const handleEditBid = (bid: any) => {
     setEditingBidId(bid.id);
+    setSelectedCoureur(bid.coureurs);
     setBidAmount(bid.montant.toString());
-    
-    // Fetch the full coureur data from coureurs_disponibilite
-    const { data, error } = await supabase
-      .from('coureurs_disponibilite')
-      .select('*')
-      .eq('coureur_id', bid.coureur_id)
-      .eq('phase_id', auction.phase_id)
-      .single();
-    
-    if (!error && data) {
-      setSelectedCoureur(data);
-    }
   };
 
   const handleCancelEdit = () => {
