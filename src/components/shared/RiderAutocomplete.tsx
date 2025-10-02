@@ -37,7 +37,7 @@ export const RiderAutocomplete = ({
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
   const { data: coureurs, isLoading } = useQuery({
-    queryKey: ['coureurs-disponibilite', debouncedSearchTerm, phaseId],
+    queryKey: ['coureurs-disponibilite', debouncedSearchTerm, phaseId, open],
     queryFn: async () => {
       const q = (debouncedSearchTerm || "").trim();
 
@@ -46,6 +46,7 @@ export const RiderAutocomplete = ({
         .from('coureurs')
         .select('id, nom, equipe, prix_initial');
 
+      // Apply filter only if search has 2+ chars
       if (q.length >= 2) {
         coureursQuery = coureursQuery.ilike('nom', `%${q}%`);
       }
@@ -104,6 +105,7 @@ export const RiderAutocomplete = ({
 
       return result;
     },
+    enabled: open, // Only fetch when popover is open
     staleTime: 0,
     gcTime: 0,
   });
