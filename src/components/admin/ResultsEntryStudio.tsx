@@ -125,37 +125,46 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  // Scoring rules query
+  // Scoring rules query using normalized views
   const { data: scoringRules } = useQuery({
     queryKey: ["scoring-rules-studio", course.course_id, classementType],
     queryFn: async () => {
-      const { data: courseData } = await supabase
-        .from("courses")
-        .select("categorie")
-        .eq("id", course.course_id)
-        .single();
-
-      if (!courseData) return [];
-
-      const typeClassementMap: Record<ClassementType, string> = {
+      // Map classement type to canonical form
+      const typeMap: Record<ClassementType, string> = {
         Etape: "Etape",
         General: "General",
         Points: "Points",
         Montagne: "Montagne",
         Jeune: "Jeune",
       };
+      const typeCanon = typeMap[classementType];
 
-      const mappedType = typeClassementMap[classementType] as "Etape" | "General" | "Jeune" | "Montagne" | "Points";
-      
-      const { data, error } = await supabase
-        .from("scoring_rules")
+      // First, get the normalized category for this course
+      const { data: courseNorm, error: courseError } = await supabase
+        .from("courses_for_points_norm")
+        .select("cat_canon")
+        .eq("id", course.course_id)
+        .single();
+
+      if (courseError || !courseNorm) {
+        console.error('Error fetching course category:', courseError);
+        return [];
+      }
+
+      // Then fetch scoring rules using normalized category
+      const { data: rulesData, error: rulesError } = await supabase
+        .from("scoring_rules_norm")
         .select("place, points")
-        .eq("categorie", courseData.categorie)
-        .eq("type_classement", mappedType)
+        .eq("cat_canon", courseNorm.cat_canon)
+        .eq("type_canon", typeCanon)
         .order("place");
 
-      if (error) throw error;
-      return data || [];
+      if (rulesError) {
+        console.error('Error fetching scoring rules:', rulesError);
+        return [];
+      }
+
+      return rulesData || [];
     },
     staleTime: 0,
     gcTime: 0,
