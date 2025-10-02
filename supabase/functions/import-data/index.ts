@@ -193,10 +193,10 @@ function sanitizeId(name: string): string {
 
 function mapClassementType(type: string): string {
   const mapping: Record<string, string> = {
-    'Classement Général': 'general',
+    'Classement Général': 'gc',
     'Classement Etape': 'stage',
     'Classement Vert': 'points',
-    'Classement Montagne': 'mountain',
+    'Classement Montagne': 'kom',
     'Classement Jeune': 'youth',
     'Super Combatif': 'combativity'
   }
