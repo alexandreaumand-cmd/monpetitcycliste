@@ -37,7 +37,7 @@ export const RiderAutocomplete = ({
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
   const { data: coureurs, isLoading } = useQuery({
-    queryKey: ['coureurs-disponibilite', debouncedSearchTerm, phaseId, open],
+    queryKey: ['coureurs-disponibilite', debouncedSearchTerm, phaseId],
     queryFn: async () => {
       let query = supabase
         .from('coureurs_disponibilite')
@@ -60,7 +60,8 @@ export const RiderAutocomplete = ({
       if (error) throw error;
       return data || [];
     },
-    enabled: open, // Only fetch when dropdown is open
+    staleTime: 0, // Pas de cache
+    gcTime: 0,
   });
 
   return (
@@ -133,7 +134,7 @@ export const RiderAutocomplete = ({
                       </div>
                       {showTakenTag && isTaken && coureur.taken_by_manager_nom && (
                         <Badge variant="secondary" className="ml-2 text-xs">
-                          {coureur.taken_by_manager_nom}
+                          Pris par {coureur.taken_by_manager_nom}
                         </Badge>
                       )}
                     </div>
