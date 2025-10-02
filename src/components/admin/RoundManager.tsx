@@ -72,6 +72,42 @@ export const RoundManager = () => {
     enabled: !!currentAuction?.id
   });
 
+  const { data: managersStatus } = useQuery({
+    queryKey: ['managers-status', currentAuction?.id],
+    queryFn: async () => {
+      if (!currentAuction?.id) return null;
+
+      const { data: managers } = await supabase
+        .from('managers')
+        .select('id, nom')
+        .order('nom');
+
+      if (!managers) return null;
+
+      const statusPromises = managers.map(async (manager) => {
+        const { data: bids } = await supabase
+          .from('bids')
+          .select('statut')
+          .eq('auction_id', currentAuction.id)
+          .eq('manager_id', manager.id);
+
+        const hasPending = bids?.some(b => b.statut === 'pending');
+        const hasDraft = bids?.some(b => b.statut === 'draft');
+        const bidCount = bids?.length || 0;
+
+        return {
+          ...manager,
+          validated: hasPending,
+          hasDraft,
+          bidCount
+        };
+      });
+
+      return Promise.all(statusPromises);
+    },
+    enabled: !!currentAuction?.id
+  });
+
   const closeRoundMutation = useMutation({
     mutationFn: async (auction_id: string) => {
       const { data, error } = await supabase.functions.invoke('clore-round', {
@@ -185,6 +221,37 @@ export const RoundManager = () => {
                     <div className="text-center">
                       <p className="text-sm text-muted-foreground">Égalités</p>
                       <p className="text-xl font-bold text-orange-600">{stats.egalites}</p>
+                    </div>
+                  </div>
+                )}
+
+                {managersStatus && currentAuction.statut === 'open' && (
+                  <div className="pt-4 border-t space-y-3">
+                    <h4 className="font-semibold">État des enchères des managers</h4>
+                    
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">✅ Enchères validées ({managersStatus.filter(m => m.validated).length})</p>
+                        <div className="flex flex-wrap gap-2">
+                          {managersStatus.filter(m => m.validated).map(manager => (
+                            <Badge key={manager.id} variant="default" className="gap-1">
+                              {manager.nom}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">⏳ En attente ({managersStatus.filter(m => !m.validated).length})</p>
+                        <div className="flex flex-wrap gap-2">
+                          {managersStatus.filter(m => !m.validated).map(manager => (
+                            <Badge key={manager.id} variant="secondary" className="gap-1">
+                              {manager.nom}
+                              {manager.hasDraft && ` (${manager.bidCount} draft)`}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
