@@ -59,9 +59,17 @@ Deno.serve(async (req) => {
         const record = mapToTableFormat(table, headers, values)
         
         if (record) {
-          const { error } = await supabaseClient
-            .from(table)
-            .upsert(record, { onConflict: 'id' })
+          // For scoring_rules, upsert based on unique constraint (categorie, type_classement, place)
+          const { error } = table === 'scoring_rules'
+            ? await supabaseClient
+                .from(table)
+                .upsert(record, { 
+                  onConflict: 'categorie,type_classement,place',
+                  ignoreDuplicates: false 
+                })
+            : await supabaseClient
+                .from(table)
+                .upsert(record, { onConflict: 'id' })
 
           if (error) {
             console.error(`Error importing row ${i}:`, error)
@@ -142,13 +150,16 @@ function mapToTableFormat(
       }
     
     case 'scoring_rules':
+      const typeClassement = normalizeTypeClassement(obj['Type classement']);
+      if (!typeClassement) return null; // Skip invalid rows
+      
       return {
-        id: obj['id'],
+        id: obj['id'] || `${obj['Catégorie']}_${typeClassement}_${obj['Place']}`.toLowerCase().replace(/\s+/g, '_'),
         categorie: obj['Catégorie'],
-        type_classement: mapClassementType(obj['Type classement']),
+        type_classement: typeClassement,
         place: parseInt(obj['Place']) || 0,
-        points: parseInt(obj['Points']) || 0,
-        type: obj['Type']
+        points: Math.floor(parseFloat(obj['Points']) || 0),
+        type: obj['Type'] || null
       }
     
     case 'courses':
@@ -191,14 +202,16 @@ function sanitizeId(name: string): string {
     .replace(/^_+|_+$/g, '')
 }
 
-function mapClassementType(type: string): string {
-  const mapping: Record<string, string> = {
-    'Classement Général': 'gc',
-    'Classement Etape': 'stage',
-    'Classement Vert': 'points',
-    'Classement Montagne': 'kom',
-    'Classement Jeune': 'youth',
-    'Super Combatif': 'combativity'
-  }
-  return mapping[type] || type
+function normalizeTypeClassement(type: string): string | null {
+  const lowerType = type.toLowerCase();
+  
+  // Map to allowed enum values: General, Etape, Points, Montagne, Jeune
+  if (lowerType.includes('général') || lowerType.includes('general')) return 'General';
+  if (lowerType.includes('étape') || lowerType.includes('etape') || lowerType.includes('stage')) return 'Etape';
+  if (lowerType.includes('vert') || lowerType.includes('points')) return 'Points';
+  if (lowerType.includes('montagne') || lowerType.includes('kom')) return 'Montagne';
+  if (lowerType.includes('jeune') || lowerType.includes('youth')) return 'Jeune';
+  if (lowerType.includes('combatif') || lowerType.includes('combativity')) return null; // Ignore combativity
+  
+  return null; // Unknown type, skip
 }
