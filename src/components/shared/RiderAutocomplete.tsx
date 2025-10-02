@@ -59,7 +59,6 @@ export const RiderAutocomplete = ({
       if (error) throw error;
       return data;
     },
-    enabled: open, // Only fetch when dropdown is open
   });
 
   return (
