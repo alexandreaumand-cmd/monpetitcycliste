@@ -203,6 +203,7 @@ function sanitizeId(name: string): string {
 }
 
 function normalizeTypeClassement(type: string): string | null {
+  if (!type) return null; // Handle undefined/null values
   const lowerType = type.toLowerCase();
   
   // Map to allowed enum values: General, Etape, Points, Montagne, Jeune

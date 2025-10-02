@@ -1,0 +1,345 @@
+id,Catégorie,Type classement,Place,Points,Type
+1,WT GT,Classement Général,1,1600,stage races
+2,WT GT,Classement Général,2,1280,stage races
+3,WT GT,Classement Général,3,1040,stage races
+4,WT GT,Classement Général,4,800,stage races
+5,WT GT,Classement Général,5,600,stage races
+6,WT GT,Classement Général,6,480,stage races
+7,WT GT,Classement Général,7,400,stage races
+8,WT GT,Classement Général,8,340,stage races
+9,WT GT,Classement Général,9,290,stage races
+10,WT GT,Classement Général,10,240,stage races
+11,WT GT,Classement Général,11,200,stage races
+12,WT GT,Classement Général,12,160,stage races
+13,WT GT,Classement Général,13,120,stage races
+14,WT GT,Classement Général,14,95,stage races
+15,WT GT,Classement Général,15,80,stage races
+16,WT GT,Classement Etape,1,300,stage races
+17,WT GT,Classement Etape,2,240,stage races
+18,WT GT,Classement Etape,3,195,stage races
+19,WT GT,Classement Etape,4,150,stage races
+20,WT GT,Classement Etape,5,120,stage races
+21,WT GT,Classement Etape,6,90,stage races
+22,WT GT,Classement Etape,7,60,stage races
+23,WT GT,Classement Etape,8,45,stage races
+24,WT GT,Classement Etape,9,35,stage races
+25,WT GT,Classement Etape,10,30,stage races
+26,WT GT,Classement Vert,1,300,stage races
+27,WT GT,Classement Vert,2,250,stage races
+28,WT GT,Classement Vert,3,200,stage races
+29,WT GT,Classement Vert,4,150,stage races
+30,WT GT,Classement Vert,5,135,stage races
+31,WT GT,Classement Vert,6,120,stage races
+32,WT GT,Classement Vert,7,100,stage races
+33,WT GT,Classement Vert,8,80,stage races
+34,WT GT,Classement Vert,9,60,stage races
+35,WT GT,Classement Vert,10,40,stage races
+36,WT GT,Classement Montagne,1,300,stage races
+37,WT GT,Classement Montagne,2,250,stage races
+38,WT GT,Classement Montagne,3,200,stage races
+39,WT GT,Classement Montagne,4,150,stage races
+40,WT GT,Classement Montagne,5,125,stage races
+41,WT GT,Classement Jeune,1,150,stage races
+42,WT GT,Classement Jeune,2,90,stage races
+43,WT GT,Classement Jeune,3,50,stage races
+44,WT GT,Super Combatif,1,150,stage races
+45,WT Monument,Classement Général,1,1200,one day race
+46,WT Monument,Classement Général,2,960,one day race
+47,WT Monument,Classement Général,3,780,one day race
+48,WT Monument,Classement Général,4,600,one day race
+49,WT Monument,Classement Général,5,450,one day race
+50,WT Monument,Classement Général,6,360,one day race
+51,WT Monument,Classement Général,7,300,one day race
+52,WT Monument,Classement Général,8,250,one day race
+53,WT Monument,Classement Général,9,215,one day race
+54,WT Monument,Classement Général,10,180,one day race
+55,WT Monument,Classement Général,11,150,one day race
+56,WT Monument,Classement Général,12,120,one day race
+57,WT Monument,Classement Général,13,90,one day race
+58,WT Monument,Classement Général,14,75,one day race
+59,WT Monument,Classement Général,15,60,one day race
+60,Classiques WT Cat 1,Classement Général,1,800,one day race
+61,Classiques WT Cat 1,Classement Général,2,640,one day race
+62,Classiques WT Cat 1,Classement Général,3,520,one day race
+63,Classiques WT Cat 1,Classement Général,4,400,one day race
+64,Classiques WT Cat 1,Classement Général,5,300,one day race
+65,Classiques WT Cat 1,Classement Général,6,240,one day race
+66,Classiques WT Cat 1,Classement Général,7,200,one day race
+67,Classiques WT Cat 1,Classement Général,8,170,one day race
+68,Classiques WT Cat 1,Classement Général,9,145,one day race
+69,Classiques WT Cat 1,Classement Général,10,120,one day race
+70,Classiques WT Cat 1,Classement Général,11,100,one day race
+71,Classiques WT Cat 1,Classement Général,12,80,one day race
+72,Classiques WT Cat 1,Classement Général,13,60,one day race
+73,Classiques WT Cat 1,Classement Général,14,50,one day race
+74,Classiques WT Cat 1,Classement Général,15,40,one day race
+75,Classiques WT Cat 2,Classement Général,1,550,one day race
+76,Classiques WT Cat 2,Classement Général,2,440,one day race
+77,Classiques WT Cat 2,Classement Général,3,360,one day race
+78,Classiques WT Cat 2,Classement Général,4,275,one day race
+79,Classiques WT Cat 2,Classement Général,5,205,one day race
+80,Classiques WT Cat 2,Classement Général,6,165,one day race
+81,Classiques WT Cat 2,Classement Général,7,140,one day race
+82,Classiques WT Cat 2,Classement Général,8,115,one day race
+83,Classiques WT Cat 2,Classement Général,9,100,one day race
+84,Classiques WT Cat 2,Classement Général,10,80,one day race
+85,Classiques WT Cat 2,Classement Général,11,70,one day race
+86,Classiques WT Cat 2,Classement Général,12,55,one day race
+87,Classiques WT Cat 2,Classement Général,13,40,one day race
+88,Classiques WT Cat 2,Classement Général,14,35,one day race
+89,Classiques WT Cat 2,Classement Général,15,30,one day race
+90,Classiques WT Cat 3,Classement Général,1,350,one day race
+91,Classiques WT Cat 3,Classement Général,2,280,one day race
+92,Classiques WT Cat 3,Classement Général,3,230,one day race
+93,Classiques WT Cat 3,Classement Général,4,175,one day race
+94,Classiques WT Cat 3,Classement Général,5,130,one day race
+95,Classiques WT Cat 3,Classement Général,6,105,one day race
+96,Classiques WT Cat 3,Classement Général,7,90,one day race
+97,Classiques WT Cat 3,Classement Général,8,75,one day race
+98,Classiques WT Cat 3,Classement Général,9,60,one day race
+99,Classiques WT Cat 3,Classement Général,10,50,one day race
+100,Classiques WT Cat 3,Classement Général,11,45,one day race
+101,Classiques WT Cat 3,Classement Général,12,35,one day race
+102,Classiques WT Cat 3,Classement Général,13,25,one day race
+103,Classiques WT Cat 3,Classement Général,14,20,one day race
+104,Classiques WT Cat 3,Classement Général,15,15,one day race
+105,Tours WT Cat 1,Classement Général,1,800,stage races
+106,Tours WT Cat 1,Classement Général,2,640,stage races
+107,Tours WT Cat 1,Classement Général,3,520,stage races
+108,Tours WT Cat 1,Classement Général,4,400,stage races
+109,Tours WT Cat 1,Classement Général,5,300,stage races
+110,Tours WT Cat 1,Classement Général,6,240,stage races
+111,Tours WT Cat 1,Classement Général,7,200,stage races
+112,Tours WT Cat 1,Classement Général,8,170,stage races
+113,Tours WT Cat 1,Classement Général,9,145,stage races
+114,Tours WT Cat 1,Classement Général,10,120,stage races
+115,Tours WT Cat 1,Classement Général,11,100,stage races
+116,Tours WT Cat 1,Classement Général,12,80,stage races
+117,Tours WT Cat 1,Classement Général,13,60,stage races
+118,Tours WT Cat 1,Classement Général,14,50,stage races
+119,Tours WT Cat 1,Classement Général,15,40,stage races
+120,Tours WT Cat 2,Classement Général,1,550,stage races
+121,Tours WT Cat 2,Classement Général,2,440,stage races
+122,Tours WT Cat 2,Classement Général,3,360,stage races
+123,Tours WT Cat 2,Classement Général,4,275,stage races
+124,Tours WT Cat 2,Classement Général,5,205,stage races
+125,Tours WT Cat 2,Classement Général,6,165,stage races
+126,Tours WT Cat 2,Classement Général,7,140,stage races
+127,Tours WT Cat 2,Classement Général,8,115,stage races
+128,Tours WT Cat 2,Classement Général,9,100,stage races
+129,Tours WT Cat 2,Classement Général,10,80,stage races
+130,Tours WT Cat 2,Classement Général,11,70,stage races
+131,Tours WT Cat 2,Classement Général,12,55,stage races
+132,Tours WT Cat 2,Classement Général,13,40,stage races
+133,Tours WT Cat 2,Classement Général,14,35,stage races
+134,Tours WT Cat 2,Classement Général,15,30,stage races
+135,Tours WT Cat 3,Classement Général,1,350,stage races
+136,Tours WT Cat 3,Classement Général,2,280,stage races
+137,Tours WT Cat 3,Classement Général,3,230,stage races
+138,Tours WT Cat 3,Classement Général,4,175,stage races
+139,Tours WT Cat 3,Classement Général,5,130,stage races
+140,Tours WT Cat 3,Classement Général,6,105,stage races
+141,Tours WT Cat 3,Classement Général,7,90,stage races
+142,Tours WT Cat 3,Classement Général,8,75,stage races
+143,Tours WT Cat 3,Classement Général,9,60,stage races
+144,Tours WT Cat 3,Classement Général,10,50,stage races
+145,Tours WT Cat 3,Classement Général,11,45,stage races
+146,Tours WT Cat 3,Classement Général,12,35,stage races
+147,Tours WT Cat 3,Classement Général,13,25,stage races
+148,Tours WT Cat 3,Classement Général,14,20,stage races
+149,Tours WT Cat 3,Classement Général,15,15,stage races
+150,Tours WT Cat 1,Classement Etape,1,250,stage races
+151,Tours WT Cat 1,Classement Etape,2,200,stage races
+152,Tours WT Cat 1,Classement Etape,3,165,stage races
+153,Tours WT Cat 1,Classement Etape,4,125,stage races
+154,Tours WT Cat 1,Classement Etape,5,100,stage races
+155,Tours WT Cat 1,Classement Etape,6,75,stage races
+156,Tours WT Cat 1,Classement Etape,7,50,stage races
+157,Tours WT Cat 1,Classement Etape,8,40,stage races
+158,Tours WT Cat 1,Classement Etape,9,30,stage races
+159,Tours WT Cat 1,Classement Etape,10,25,stage races
+160,Tours WT Cat 2,Classement Etape,1,220,stage races
+161,Tours WT Cat 2,Classement Etape,2,175,stage races
+162,Tours WT Cat 2,Classement Etape,3,145,stage races
+163,Tours WT Cat 2,Classement Etape,4,115,stage races
+164,Tours WT Cat 2,Classement Etape,5,90,stage races
+165,Tours WT Cat 2,Classement Etape,6,70,stage races
+166,Tours WT Cat 2,Classement Etape,7,45,stage races
+167,Tours WT Cat 2,Classement Etape,8,35,stage races
+168,Tours WT Cat 2,Classement Etape,9,25,stage races
+169,Tours WT Cat 2,Classement Etape,10,20,stage races
+170,Tours WT Cat 3,Classement Etape,1,180,stage races
+171,Tours WT Cat 3,Classement Etape,2,150,stage races
+172,Tours WT Cat 3,Classement Etape,3,120,stage races
+173,Tours WT Cat 3,Classement Etape,4,90,stage races
+174,Tours WT Cat 3,Classement Etape,5,75,stage races
+175,Tours WT Cat 3,Classement Etape,6,60,stage races
+176,Tours WT Cat 3,Classement Etape,7,40,stage races
+177,Tours WT Cat 3,Classement Etape,8,30,stage races
+178,Tours WT Cat 3,Classement Etape,9,20,stage races
+179,Tours WT Cat 3,Classement Etape,10,15,stage races
+180,Tours WT Cat 1,Classement Vert,1,150,stage races
+181,Tours WT Cat 2,Classement Vert,1,120,stage races
+182,Tours WT Cat 3,Classement Vert,1,80,stage races
+183,Tours WT Cat 1,Classement Montagne,1,150,stage races
+184,Tours WT Cat 2,Classement Montagne,1,120,stage races
+185,Tours WT Cat 3,Classement Montagne,1,80,stage races
+186,Tours WT Cat 1,Classement Jeune,1,100,stage races
+187,Tours WT Cat 2,Classement Jeune,1,75,stage races
+188,Tours WT Cat 3,Classement Jeune,1,50,stage races
+189,2.pro,Classement Général,1,250,stage races
+190,2.pro,Classement Général,2,200,stage races
+191,2.pro,Classement Général,3,150,stage races
+192,2.pro,Classement Général,4,120,stage races
+193,2.pro,Classement Général,5,100,stage races
+194,2.pro,Classement Général,6,85,stage races
+195,2.pro,Classement Général,7,70,stage races
+196,2.pro,Classement Général,8,60,stage races
+197,2.pro,Classement Général,9,50,stage races
+198,2.pro,Classement Général,10,40,stage races
+199,2.1,Classement Général,1,200,stage races
+200,2.1,Classement Général,2,150,stage races
+201,2.1,Classement Général,3,100,stage races
+202,2.1,Classement Général,4,90,stage races
+203,2.1,Classement Général,5,80,stage races
+204,2.1,Classement Général,6,70,stage races
+205,2.1,Classement Général,7,60,stage races
+206,2.1,Classement Général,8,50,stage races
+207,2.1,Classement Général,9,40,stage races
+208,2.1,Classement Général,10,30,stage races
+209,2.pro,Classement Vert,1,50,stage races
+210,2.1,Classement Vert,1,25,stage races
+211,2.pro,Classement Montagne,1,50,stage races
+212,2.1,Classement Montagne,1,25,stage races
+213,2.pro,Classement Jeune,1,30,stage races
+214,2.1,Classement Jeune,1,15,stage races
+215,Tours WT Cat 1,Classement Etape,1,250,stage races
+216,Tours WT Cat 1,Classement Etape,2,200,stage races
+217,Tours WT Cat 1,Classement Etape,3,165,stage races
+218,Tours WT Cat 1,Classement Etape,4,125,stage races
+219,Tours WT Cat 1,Classement Etape,5,100,stage races
+220,Tours WT Cat 1,Classement Etape,6,75,stage races
+221,Tours WT Cat 1,Classement Etape,7,50,stage races
+222,Tours WT Cat 1,Classement Etape,8,40,stage races
+223,Tours WT Cat 1,Classement Etape,9,30,stage races
+224,Tours WT Cat 1,Classement Etape,10,25,stage races
+225,Tours WT Cat 2,Classement Etape,1,220,stage races
+226,Tours WT Cat 2,Classement Etape,2,175,stage races
+227,Tours WT Cat 2,Classement Etape,3,145,stage races
+228,Tours WT Cat 2,Classement Etape,4,115,stage races
+229,Tours WT Cat 2,Classement Etape,5,90,stage races
+230,Tours WT Cat 2,Classement Etape,6,70,stage races
+231,Tours WT Cat 2,Classement Etape,7,45,stage races
+232,Tours WT Cat 2,Classement Etape,8,35,stage races
+233,Tours WT Cat 2,Classement Etape,9,25,stage races
+234,Tours WT Cat 2,Classement Etape,10,20,stage races
+235,Tours WT Cat 3,Classement Etape,1,180,stage races
+236,Tours WT Cat 3,Classement Etape,2,150,stage races
+237,Tours WT Cat 3,Classement Etape,3,120,stage races
+238,Tours WT Cat 3,Classement Etape,4,90,stage races
+239,Tours WT Cat 3,Classement Etape,5,75,stage races
+240,Tours WT Cat 3,Classement Etape,6,60,stage races
+241,Tours WT Cat 3,Classement Etape,7,40,stage races
+242,Tours WT Cat 3,Classement Etape,8,30,stage races
+243,Tours WT Cat 3,Classement Etape,9,20,stage races
+244,Tours WT Cat 3,Classement Etape,10,15,stage races
+245,2.pro,Classement Etape,1,150,stage races
+246,2.pro,Classement Etape,2,125,stage races
+247,2.pro,Classement Etape,3,100,stage races
+248,2.pro,Classement Etape,4,75,stage races
+249,2.pro,Classement Etape,5,60,stage races
+250,2.pro,Classement Etape,6,45,stage races
+251,2.pro,Classement Etape,7,30,stage races
+252,2.pro,Classement Etape,8,20,stage races
+253,2.pro,Classement Etape,9,15,stage races
+254,2.pro,Classement Etape,10,10,stage races
+255,2.1,Classement Etape,1,100,stage races
+256,2.1,Classement Etape,2,80,stage races
+257,2.1,Classement Etape,3,65,stage races
+258,2.1,Classement Etape,4,50,stage races
+259,2.1,Classement Etape,5,40,stage races
+260,2.1,Classement Etape,6,30,stage races
+261,2.1,Classement Etape,7,20,stage races
+262,2.1,Classement Etape,8,15,stage races
+263,2.1,Classement Etape,9,10,stage races
+264,2.1,Classement Etape,10,5,stage races
+265,1.pro,Classement Général,1,150,one day race
+266,1.pro,Classement Général,2,125,one day race
+267,1.pro,Classement Général,3,100,one day race
+268,1.pro,Classement Général,4,75,one day race
+269,1.pro,Classement Général,5,60,one day race
+270,1.pro,Classement Général,6,45,one day race
+271,1.pro,Classement Général,7,30,one day race
+272,1.pro,Classement Général,8,20,one day race
+273,1.pro,Classement Général,9,15,one day race
+274,1.pro,Classement Général,10,10,one day race
+275,1.1,Classement Etape,1,100,one day race
+276,1.1,Classement Etape,2,80,one day race
+277,1.1,Classement Etape,3,65,one day race
+278,1.1,Classement Etape,4,50,one day race
+279,1.1,Classement Etape,5,40,one day race
+280,1.1,Classement Etape,6,30,one day race
+281,1.1,Classement Etape,7,20,one day race
+282,1.1,Classement Etape,8,15,one day race
+283,1.1,Classement Etape,9,10,one day race
+284,1.1,Classement Etape,10,5,one day race
+285,WC RR,Classement Général,1,1200,one day race
+286,WC RR,Classement Général,2,960,one day race
+287,WC RR,Classement Général,3,780,one day race
+288,WC RR,Classement Général,4,600,one day race
+289,WC RR,Classement Général,5,450,one day race
+290,WC RR,Classement Général,6,360,one day race
+291,WC RR,Classement Général,7,300,one day race
+292,WC RR,Classement Général,8,250,one day race
+293,WC RR,Classement Général,9,215,one day race
+294,WC RR,Classement Général,10,180,one day race
+295,WC RR,Classement Général,11,150,one day race
+296,WC RR,Classement Général,12,120,one day race
+297,WC RR,Classement Général,13,90,one day race
+298,WC RR,Classement Général,14,75,one day race
+299,WC RR,Classement Général,15,60,one day race
+300,WC ITT,Classement Général,1,400,one day race
+301,WC ITT,Classement Général,2,320,one day race
+302,WC ITT,Classement Général,3,260,one day race
+303,WC ITT,Classement Général,4,200,one day race
+304,WC ITT,Classement Général,5,150,one day race
+305,WC ITT,Classement Général,6,120,one day race
+306,WC ITT,Classement Général,7,100,one day race
+307,WC ITT,Classement Général,8,85,one day race
+308,WC ITT,Classement Général,9,70,one day race
+309,WC ITT,Classement Général,10,60,one day race
+310,WC ITT,Classement Général,11,50,one day race
+311,WC ITT,Classement Général,12,40,one day race
+312,WC ITT,Classement Général,13,30,one day race
+313,WC ITT,Classement Général,14,25,one day race
+314,WC ITT,Classement Général,15,20,one day race
+315,EC RR,Classement Général,1,400,one day race
+316,EC RR,Classement Général,2,320,one day race
+317,EC RR,Classement Général,3,260,one day race
+318,EC RR,Classement Général,4,200,one day race
+319,EC RR,Classement Général,5,150,one day race
+320,EC RR,Classement Général,6,120,one day race
+321,EC RR,Classement Général,7,100,one day race
+322,EC RR,Classement Général,8,85,one day race
+323,EC RR,Classement Général,9,70,one day race
+324,EC RR,Classement Général,10,60,one day race
+325,EC RR,Classement Général,11,50,one day race
+326,EC RR,Classement Général,12,40,one day race
+327,EC RR,Classement Général,13,30,one day race
+328,EC RR,Classement Général,14,25,one day race
+329,EC RR,Classement Général,15,20,one day race
+330,EC ITT,Classement Général,1,200,one day race
+331,EC ITT,Classement Général,2,160,one day race
+332,EC ITT,Classement Général,3,130,one day race
+333,EC ITT,Classement Général,4,100,one day race
+334,EC ITT,Classement Général,5,75,one day race
+335,EC ITT,Classement Général,6,60,one day race
+336,EC ITT,Classement Général,7,50,one day race
+337,EC ITT,Classement Général,8,45,one day race
+338,EC ITT,Classement Général,9,35,one day race
+339,EC ITT,Classement Général,10,30,one day race
+340,EC ITT,Classement Général,11,25,one day race
+341,EC ITT,Classement Général,12,20,one day race
+342,EC ITT,Classement Général,13,15,one day race
+343,EC ITT,Classement Général,14,12.5,one day race
+344,EC ITT,Classement Général,15,10,one day race
