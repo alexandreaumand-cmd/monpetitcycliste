@@ -203,26 +203,34 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                 <CommandList>
                   <CommandEmpty>Aucun coureur trouvé</CommandEmpty>
                   <CommandGroup>
-                    {coureurs?.map((coureur) => (
-                      <CommandItem
-                        key={coureur.id}
-                        value={coureur.nom}
-                        onSelect={() => {
-                          setSelectedCoureur(coureur);
-                          setOpen(false);
-                        }}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <div>
-                            <p className="font-medium">{coureur.nom}</p>
-                            <p className="text-sm text-muted-foreground">{coureur.equipe}</p>
+                    {coureurs?.map((coureur) => {
+                      // Normalize search string: remove accents and lowercase
+                      const normalizeString = (str: string) => 
+                        str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                      
+                      const searchValue = `${normalizeString(coureur.nom)} ${normalizeString(coureur.equipe || '')}`;
+                      
+                      return (
+                        <CommandItem
+                          key={coureur.id}
+                          value={searchValue}
+                          onSelect={() => {
+                            setSelectedCoureur(coureur);
+                            setOpen(false);
+                          }}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <div>
+                              <p className="font-medium">{coureur.nom}</p>
+                              <p className="text-sm text-muted-foreground">{coureur.equipe}</p>
+                            </div>
+                            <Badge variant="secondary">
+                              Min: {parseFloat(coureur.prix_initial.toString()).toFixed(0)} €
+                            </Badge>
                           </div>
-                          <Badge variant="secondary">
-                            Min: {parseFloat(coureur.prix_initial.toString()).toFixed(0)} €
-                          </Badge>
-                        </div>
-                      </CommandItem>
-                    ))}
+                        </CommandItem>
+                      );
+                    })}
                   </CommandGroup>
                 </CommandList>
               </Command>
