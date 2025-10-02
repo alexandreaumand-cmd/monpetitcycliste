@@ -574,40 +574,53 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
                     <tr>
                       <th className="px-4 py-3 text-left text-sm font-medium w-20">Pos</th>
                       <th className="px-4 py-3 text-left text-sm font-medium">Coureur</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium w-32">Manager</th>
                       <th className="px-4 py-3 text-left text-sm font-medium w-40">Statut</th>
                       <th className="px-4 py-3 text-right text-sm font-medium w-24">Points</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {resultRows.map((row, index) => (
-                      <tr key={index} className="hover:bg-muted/50">
-                        <td className="px-4 py-2 text-sm font-medium">{row.position}</td>
-                        <td className="px-4 py-2">
-                          <RiderCombobox
-                            riders={allRiders || []}
-                            value={row.coureur_id}
-                            onChange={(id, name) => handleRiderChange(index, id, name)}
-                          />
-                        </td>
-                        <td className="px-4 py-2">
-                          <Select
-                            value={row.statut}
-                            onValueChange={(val) => handleStatutChange(index, val as ResultStatut)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="finished">Finished</SelectItem>
-                              <SelectItem value="dnf">DNF</SelectItem>
-                              <SelectItem value="dns">DNS</SelectItem>
-                              <SelectItem value="dsq">DSQ</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td className="px-4 py-2 text-right text-sm font-medium">{row.points}</td>
-                      </tr>
-                    ))}
+                    {resultRows.map((row, index) => {
+                      const selectedRider = allRiders?.find(r => r.value === row.coureur_id);
+                      return (
+                        <tr key={index} className="hover:bg-muted/50">
+                          <td className="px-4 py-2 text-sm font-medium">{row.position}</td>
+                          <td className="px-4 py-2">
+                            <RiderCombobox
+                              riders={allRiders || []}
+                              value={row.coureur_id}
+                              onChange={(id, name) => handleRiderChange(index, id, name)}
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            {selectedRider?.is_in_roster && selectedRider.roster_manager_nom ? (
+                              <Badge variant="secondary" className="text-xs">
+                                {selectedRider.roster_manager_nom}
+                              </Badge>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2">
+                            <Select
+                              value={row.statut}
+                              onValueChange={(val) => handleStatutChange(index, val as ResultStatut)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="finished">Finished</SelectItem>
+                                <SelectItem value="dnf">DNF</SelectItem>
+                                <SelectItem value="dns">DNS</SelectItem>
+                                <SelectItem value="dsq">DSQ</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="px-4 py-2 text-right text-sm font-medium">{row.points}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
