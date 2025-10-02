@@ -62,8 +62,11 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
         query = query.ilike('search_text', `%${normalizedSearch}%`);
       }
       
+      // Pas de filtre sur is_taken - on veut TOUS les coureurs
+      // Tri : disponibles en premier, puis par nom
       const { data, error } = await query
-        .order('coureur_nom')
+        .order('is_taken', { ascending: true })
+        .order('coureur_nom', { ascending: true })
         .limit(50);
       
       if (error) throw error;
