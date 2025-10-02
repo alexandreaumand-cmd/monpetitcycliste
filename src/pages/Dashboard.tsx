@@ -13,10 +13,10 @@ import { AuctionsList } from "@/components/auction/AuctionsList";
 import { SeasonManager } from "@/components/admin/SeasonManager";
 import { RoundManager } from "@/components/admin/RoundManager";
 import { AnnouncementManager } from "@/components/admin/AnnouncementManager";
-import { ResultsEntry } from "@/components/admin/ResultsEntry";
-import { RecentResults } from "@/components/admin/RecentResults";
+import { ResultsPlaceholder } from "@/components/admin/ResultsPlaceholder";
 import { MyTeam } from "@/components/team/MyTeam";
 import { UpcomingCourses } from "@/components/courses/UpcomingCourses";
+import { featureFlags } from "@/lib/featureFlags";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -178,9 +178,15 @@ const Dashboard = () => {
                   <AnnouncementManager />
                 </TabsContent>
 
-            <TabsContent value="results" className="space-y-4">
-              <RecentResults />
-            </TabsContent>
+                <TabsContent value="results" className="space-y-4">
+                  {featureFlags.results_v1_enabled ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      Section Résultats V1 (ancienne version)
+                    </div>
+                  ) : (
+                    <ResultsPlaceholder />
+                  )}
+                </TabsContent>
 
                 <TabsContent value="seasons" className="space-y-4">
                   <SeasonManager />
