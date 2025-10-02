@@ -14,6 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      annonces: {
+        Row: {
+          auction_id: string
+          coureur_id: string
+          created_at: string | null
+          id: string
+          losers_json: Json | null
+          published: boolean | null
+          published_at: string | null
+          round_number: number
+          type: string
+          winning_amount: number | null
+          winning_manager_id: string | null
+        }
+        Insert: {
+          auction_id: string
+          coureur_id: string
+          created_at?: string | null
+          id?: string
+          losers_json?: Json | null
+          published?: boolean | null
+          published_at?: string | null
+          round_number: number
+          type: string
+          winning_amount?: number | null
+          winning_manager_id?: string | null
+        }
+        Update: {
+          auction_id?: string
+          coureur_id?: string
+          created_at?: string | null
+          id?: string
+          losers_json?: Json | null
+          published?: boolean | null
+          published_at?: string | null
+          round_number?: number
+          type?: string
+          winning_amount?: number | null
+          winning_manager_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annonces_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "annonces_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "annonces_winning_manager_id_fkey"
+            columns: ["winning_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auctions: {
         Row: {
           closed_at: string | null

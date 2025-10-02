@@ -11,7 +11,8 @@ import { DataImport } from "@/components/admin/DataImport";
 import { AuctionManager } from "@/components/admin/AuctionManager";
 import { AuctionsList } from "@/components/auction/AuctionsList";
 import { SeasonManager } from "@/components/admin/SeasonManager";
-
+import { RoundManager } from "@/components/admin/RoundManager";
+import { AnnouncementManager } from "@/components/admin/AnnouncementManager";
 import { MyTeam } from "@/components/team/MyTeam";
 
 const Dashboard = () => {
@@ -158,9 +159,10 @@ const Dashboard = () => {
           {isAdmin && (
             <TabsContent value="admin" className="space-y-4">
               <Tabs defaultValue="data" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="data">Données</TabsTrigger>
-                  <TabsTrigger value="auctions">Enchères</TabsTrigger>
+                  <TabsTrigger value="rounds">Rounds</TabsTrigger>
+                  <TabsTrigger value="annonces">Annonces</TabsTrigger>
                   <TabsTrigger value="results">Résultats</TabsTrigger>
                   <TabsTrigger value="seasons">Saisons</TabsTrigger>
                   <TabsTrigger value="users">Utilisateurs</TabsTrigger>
@@ -177,8 +179,12 @@ const Dashboard = () => {
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="auctions" className="space-y-4">
-                  <AuctionManager />
+                <TabsContent value="rounds" className="space-y-4">
+                  <RoundManager />
+                </TabsContent>
+
+                <TabsContent value="annonces" className="space-y-4">
+                  <AnnouncementManager />
                 </TabsContent>
 
                 <TabsContent value="results" className="space-y-4">
