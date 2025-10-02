@@ -88,7 +88,13 @@ export const RiderAutocomplete = ({
           />
           <CommandList>
             <CommandEmpty>
-              {isLoading ? "Recherche en cours..." : "Aucun coureur trouvé."}
+              {isLoading ? (
+                "Recherche en cours..."
+              ) : debouncedSearchTerm.length > 0 && debouncedSearchTerm.length < 2 ? (
+                "Tapez au moins 2 lettres pour rechercher"
+              ) : (
+                "Aucun coureur trouvé"
+              )}
             </CommandEmpty>
             <CommandGroup>
               {coureurs?.map((coureur) => {
