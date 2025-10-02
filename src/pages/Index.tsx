@@ -15,7 +15,7 @@ const Index = () => {
     {
       icon: Users,
       title: "Gestion d'Équipe",
-      description: "Gérez votre roadster de 30 coureurs avec un budget de 2200€"
+      description: "Gérez votre roster de 30 coureurs avec un budget de 2200€"
     },
     {
       icon: TrendingUp,
@@ -37,7 +37,7 @@ const Index = () => {
         <div className="container relative mx-auto px-4 py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-primary via-primary-light to-accent bg-clip-text text-transparent">
-              Mon Petit Cycliste
+              Fantasy Cycling League
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
               Créez votre équipe, participez aux enchères et dominez le classement avec vos coureurs favoris

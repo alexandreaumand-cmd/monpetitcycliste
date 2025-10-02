@@ -30,84 +30,35 @@ export const RiderAutocomplete = ({
   onChange,
   disabled = false,
   showTakenTag = true,
-  allowTaken = true,
+  allowTaken = false,
 }: RiderAutocompleteProps) => {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
   const { data: coureurs, isLoading } = useQuery({
-    queryKey: ['coureurs-disponibilite', debouncedSearchTerm, phaseId, open],
+    queryKey: ['coureurs-disponibilite', debouncedSearchTerm, phaseId],
     queryFn: async () => {
-      const q = (debouncedSearchTerm || "").trim();
-
-      // 1) Fetch riders from base table 'coureurs'
-      let coureursQuery = supabase
-        .from('coureurs')
-        .select('id, nom, equipe, prix_initial');
-
-      // Apply filter only if search has 2+ chars
-      if (q.length >= 2) {
-        coureursQuery = coureursQuery.ilike('nom', `%${q}%`);
-      }
-
-      const { data: baseRiders, error: ridersError } = await coureursQuery
-        .order('nom', { ascending: true })
-        .limit(50);
-
-      if (ridersError) throw ridersError;
-
-      // 2) Fetch roster assignments for the phase to annotate availability + manager name
-      const { data: rosters, error: rostersError } = await supabase
-        .from('rosters')
-        .select('coureur_id, manager_id')
+      let query = supabase
+        .from('coureurs_disponibilite')
+        .select('*')
         .eq('phase_id', phaseId);
-
-      if (rostersError) throw rostersError;
-
-      const managerIds = Array.from(new Set((rosters || []).map((r: any) => r.manager_id).filter(Boolean)));
-      let managersMap: Record<string, string> = {};
-
-      if (managerIds.length > 0) {
-        const { data: managers, error: managersError } = await supabase
-          .from('managers')
-          .select('id, nom')
-          .in('id', managerIds as string[]);
-
-        if (managersError) throw managersError;
-        managersMap = Object.fromEntries((managers || []).map((m: any) => [m.id as string, m.nom as string]));
+      
+      if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
+        const normalizedSearch = normalizeString(debouncedSearchTerm);
+        query = query.ilike('search_text', `%${normalizedSearch}%`);
       }
-
-      const rosterMap = new Map<string, string | null>();
-      (rosters || []).forEach((r: any) => {
-        if (r.coureur_id) {
-          const managerName = r.manager_id ? managersMap[r.manager_id as string] : null;
-          if (!rosterMap.has(r.coureur_id)) {
-            rosterMap.set(r.coureur_id, managerName || null);
-          }
-        }
-      });
-
-      const result = (baseRiders || []).map((c: any) => ({
-        coureur_id: c.id,
-        coureur_nom: c.nom,
-        coureur_equipe: c.equipe ?? null,
-        prix_initial: c.prix_initial ?? null,
-        is_taken: rosterMap.has(c.id),
-        taken_by_manager_nom: rosterMap.get(c.id) || null,
-      }));
-
-      // Sort: available first, then by name asc
-      result.sort((a: any, b: any) => {
-        if (a.is_taken !== b.is_taken) return a.is_taken ? 1 : -1;
-        return a.coureur_nom.localeCompare(b.coureur_nom);
-      });
-
-      return result;
+      
+      // Pas de filtre sur is_taken - on veut TOUS les coureurs
+      // Tri : disponibles en premier, puis par nom
+      const { data, error } = await query
+        .order('is_taken', { ascending: true })
+        .order('coureur_nom', { ascending: true })
+        .limit(50);
+      
+      if (error) throw error;
+      return data;
     },
-    enabled: open, // Only fetch when popover is open
-    staleTime: 0,
-    gcTime: 0,
   });
 
   return (
@@ -137,13 +88,7 @@ export const RiderAutocomplete = ({
           />
           <CommandList>
             <CommandEmpty>
-              {isLoading ? (
-                "Recherche en cours..."
-              ) : debouncedSearchTerm.length > 0 && debouncedSearchTerm.length < 2 ? (
-                "Tapez au moins 2 lettres pour rechercher"
-              ) : (
-                "Aucun coureur trouvé"
-              )}
+              {isLoading ? "Recherche en cours..." : "Aucun coureur trouvé."}
             </CommandEmpty>
             <CommandGroup>
               {coureurs?.map((coureur) => {
@@ -180,7 +125,7 @@ export const RiderAutocomplete = ({
                       </div>
                       {showTakenTag && isTaken && coureur.taken_by_manager_nom && (
                         <Badge variant="secondary" className="ml-2 text-xs">
-                          Pris par {coureur.taken_by_manager_nom}
+                          {coureur.taken_by_manager_nom}
                         </Badge>
                       )}
                     </div>
