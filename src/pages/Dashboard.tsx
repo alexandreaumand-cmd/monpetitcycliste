@@ -11,7 +11,7 @@ import { DataImport } from "@/components/admin/DataImport";
 import { AuctionManager } from "@/components/admin/AuctionManager";
 import { AuctionsList } from "@/components/auction/AuctionsList";
 import { SeasonManager } from "@/components/admin/SeasonManager";
-import { MyBidsHistory } from "@/components/auction/MyBidsHistory";
+
 import { MyTeam } from "@/components/team/MyTeam";
 
 const Dashboard = () => {
@@ -116,12 +116,7 @@ const Dashboard = () => {
           </TabsList>
 
           <TabsContent value="encheres" className="space-y-4">
-            {manager && (
-              <div className="space-y-6">
-                <AuctionsList managerId={manager.id} />
-                <MyBidsHistory managerId={manager.id} />
-              </div>
-            )}
+            {manager && <AuctionsList managerId={manager.id} />}
           </TabsContent>
 
           <TabsContent value="equipe" className="space-y-6">
