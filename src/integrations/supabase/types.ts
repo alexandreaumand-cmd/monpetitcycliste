@@ -1088,18 +1088,6 @@ export type Database = {
           phase_id: string | null
           round_number: number | null
         }
-        Insert: {
-          closed_at?: string | null
-          id?: string | null
-          phase_id?: string | null
-          round_number?: number | null
-        }
-        Update: {
-          closed_at?: string | null
-          id?: string | null
-          phase_id?: string | null
-          round_number?: number | null
-        }
         Relationships: [
           {
             foreignKeyName: "auctions_phase_id_fkey"
