@@ -1,1 +1,4 @@
 project_id = "oisfvryhpovwxaxqbmow"
+
+[functions.import-data]
+verify_jwt = true

@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogOut, Trophy, Users, Calendar, BarChart3, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
+import { DataImport } from "@/components/admin/DataImport";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -186,6 +187,10 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="mb-6">
+                    <DataImport />
+                  </div>
+                  
                   <div className="grid gap-4 md:grid-cols-2">
                     <Card className="bg-muted/50">
                       <CardHeader>
