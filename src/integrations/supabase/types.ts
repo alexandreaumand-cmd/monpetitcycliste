@@ -88,6 +88,7 @@ export type Database = {
         Row: {
           auction_id: string | null
           coureur_id: string | null
+          created_at: string | null
           id: string
           manager_id: string | null
           montant: number
@@ -97,6 +98,7 @@ export type Database = {
         Insert: {
           auction_id?: string | null
           coureur_id?: string | null
+          created_at?: string | null
           id?: string
           manager_id?: string | null
           montant: number
@@ -106,6 +108,7 @@ export type Database = {
         Update: {
           auction_id?: string | null
           coureur_id?: string | null
+          created_at?: string | null
           id?: string
           manager_id?: string | null
           montant?: number

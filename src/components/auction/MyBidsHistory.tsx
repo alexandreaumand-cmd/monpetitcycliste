@@ -57,8 +57,12 @@ export const MyBidsHistory = ({ managerId }: MyBidsHistoryProps) => {
         return <Badge className="bg-green-500"><CheckCircle2 className="h-3 w-3 mr-1" />Gagné</Badge>;
       case 'lost':
         return <Badge variant="secondary"><XCircle className="h-3 w-3 mr-1" />Perdu</Badge>;
-      default:
+      case 'pending':
         return <Badge variant="outline"><Clock className="h-3 w-3 mr-1" />En attente</Badge>;
+      case 'draft':
+        return <Badge variant="outline">Brouillon</Badge>;
+      default:
+        return <Badge variant="outline">Inconnu</Badge>;
     }
   };
 

@@ -6,13 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, TrendingUp, Trash2, CheckCircle2, Edit2 } from "lucide-react";
+import { Loader2, TrendingUp, Trash2, CheckCircle2, Edit2, Clock } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { useDebounce } from "use-debounce";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AuctionBidFormProps {
   auction: {
@@ -297,6 +298,13 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <Alert className="mb-4">
+            <Clock className="h-4 w-4" />
+            <AlertDescription>
+              Vos enchères ont été soumises et sont en attente de traitement. 
+              Vous pourrez voir les résultats dans l'historique une fois que l'administrateur aura traité ce tour d'enchères.
+            </AlertDescription>
+          </Alert>
           <div className="space-y-3">
             {submittedBids.map((bid: any) => (
               <div key={bid.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
@@ -309,9 +317,6 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                 </Badge>
               </div>
             ))}
-            <p className="text-sm text-muted-foreground text-center pt-2">
-              Enchères en attente de traitement
-            </p>
           </div>
         </CardContent>
       </Card>
