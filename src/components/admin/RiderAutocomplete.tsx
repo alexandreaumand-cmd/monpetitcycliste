@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useDebounce } from "use-debounce";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -28,43 +29,54 @@ export const RiderAutocomplete = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 200);
 
-  const { data: riders } = useQuery({
-    queryKey: ['riders-lookup', phaseId],
+  const { data: riders, isLoading } = useQuery({
+    queryKey: ['riders-lookup-admin', phaseId, debouncedSearchQuery],
     queryFn: async () => {
-      const { data: coureurs, error: coureursError } = await supabase
+      // Server-side search using unaccent for better matching
+      let query = supabase
         .from('coureurs')
-        .select('id, nom')
-        .order('nom');
+        .select(`
+          id,
+          nom,
+          rosters!left(
+            coureur_id,
+            managers(nom)
+          )
+        `)
+        .eq('rosters.phase_id', phaseId);
 
-      if (coureursError) throw coureursError;
+      // Apply search filter if query is not empty
+      if (debouncedSearchQuery && debouncedSearchQuery.trim()) {
+        // Use the normalize_text function for accent-insensitive search
+        const normalizedQuery = debouncedSearchQuery.toLowerCase().trim();
+        query = query.or(`nom.ilike.%${normalizedQuery}%`);
+      }
 
-      const { data: rosters, error: rostersError } = await supabase
-        .from('rosters')
-        .select('coureur_id, managers(nom)')
-        .eq('phase_id', phaseId);
+      const { data: coureurs, error } = await query
+        .order('nom')
+        .limit(50);
 
-      if (rostersError) throw rostersError;
+      if (error) throw error;
 
-      const rosterMap = new Map(
-        rosters?.map(r => [
-          r.coureur_id,
-          (r.managers as any)?.nom || null
-        ]) || []
-      );
-
-      return coureurs.map(c => ({
-        coureur_id: c.id,
-        coureur_nom: c.nom,
-        is_in_roster: rosterMap.has(c.id),
-        roster_manager_nom: rosterMap.get(c.id) || null,
-      })) as Rider[];
+      // Transform the data
+      return coureurs.map(c => {
+        const roster = Array.isArray(c.rosters) && c.rosters.length > 0 
+          ? c.rosters.find((r: any) => r.coureur_id === c.id)
+          : null;
+        
+        return {
+          coureur_id: c.id,
+          coureur_nom: c.nom,
+          is_in_roster: !!roster,
+          roster_manager_nom: roster?.managers?.nom || null,
+        };
+      }) as Rider[];
     },
+    staleTime: 0,
+    gcTime: 0,
   });
-
-  const filteredRiders = riders?.filter(r => 
-    r.coureur_nom.toLowerCase().includes(searchQuery.toLowerCase())
-  ).slice(0, 50); // Limit to 50 for performance
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -91,9 +103,11 @@ export const RiderAutocomplete = ({
             onValueChange={setSearchQuery}
           />
           <CommandList>
-            <CommandEmpty>Aucun coureur trouvé.</CommandEmpty>
+            <CommandEmpty>
+              {isLoading ? "Recherche en cours..." : "Aucun coureur trouvé."}
+            </CommandEmpty>
             <CommandGroup>
-              {filteredRiders?.map((rider) => (
+              {riders?.map((rider) => (
                 <CommandItem
                   key={rider.coureur_id}
                   value={rider.coureur_id}
