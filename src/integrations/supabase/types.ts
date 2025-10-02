@@ -389,6 +389,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "points_ledger_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_course_points_theoriques"
+            referencedColumns: ["course_id"]
+          },
+          {
             foreignKeyName: "points_ledger_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
@@ -449,6 +456,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_course_points_theoriques"
+            referencedColumns: ["course_id"]
           },
         ]
       }
@@ -566,7 +580,38 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_course_points_theoriques: {
+        Row: {
+          categorie: string | null
+          course_id: string | null
+          date_debut: string | null
+          date_fin: string | null
+          nb_etapes_estimees: number | null
+          nb_jours: number | null
+          nom: string | null
+          phase_index: number | null
+          points_etapes: number | null
+          points_etapes_unitaire: number | null
+          points_gc: number | null
+          points_jeune: number | null
+          points_mont: number | null
+          points_pts: number | null
+          points_total: number | null
+          type_course: string | null
+        }
+        Relationships: []
+      }
+      v_scoring_totals_by_category: {
+        Row: {
+          categorie: string | null
+          sum_etape: number | null
+          sum_gc: number | null
+          sum_jeune: number | null
+          sum_montagne: number | null
+          sum_points: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_my_roles: {
