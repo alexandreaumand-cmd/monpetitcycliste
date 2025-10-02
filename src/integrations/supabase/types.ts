@@ -360,6 +360,21 @@ export type Database = {
           },
         ]
       }
+      category_aliases: {
+        Row: {
+          alias: string
+          canon: string
+        }
+        Insert: {
+          alias: string
+          canon: string
+        }
+        Update: {
+          alias?: string
+          canon?: string
+        }
+        Relationships: []
+      }
       coureurs: {
         Row: {
           equipe: string | null
@@ -594,6 +609,20 @@ export type Database = {
             foreignKeyName: "points_ledger_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
+            referencedRelation: "courses_for_points_norm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_bareme_missing_all"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
             referencedRelation: "v_course_points_theoriques"
             referencedColumns: ["course_id"]
           },
@@ -720,6 +749,20 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_for_points_norm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_bareme_missing_all"
             referencedColumns: ["id"]
           },
           {
@@ -1022,6 +1065,46 @@ export type Database = {
         }
         Relationships: []
       }
+      courses_for_points_norm: {
+        Row: {
+          cat_canon: string | null
+          cat_raw: string | null
+          id: string | null
+          nom: string | null
+          phase_id: string | null
+          type_course: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       current_round_drafts: {
         Row: {
           auction_id: string | null
@@ -1323,6 +1406,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      scoring_rules_norm: {
+        Row: {
+          cat_canon: string | null
+          place: number | null
+          points: number | null
+          type_canon: string | null
+        }
+        Relationships: []
+      }
+      v_bareme_missing_all: {
+        Row: {
+          cat_canon: string | null
+          categorie: string | null
+          id: string | null
+          nom: string | null
+        }
+        Relationships: []
       }
       v_course_points_theoriques: {
         Row: {
