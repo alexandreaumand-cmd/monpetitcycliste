@@ -215,6 +215,12 @@ export const UpcomingCourses = () => {
                       )}
                       <Badge variant="outline">{course.categorie}</Badge>
                       <Badge variant="outline">{course.type_course}</Badge>
+                      {course.is_uwt && course.points_total === 0 && (
+                        <Badge variant="destructive" className="gap-1">
+                          <span>⚠️</span>
+                          Config UWT
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
