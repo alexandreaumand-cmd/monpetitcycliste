@@ -37,14 +37,15 @@ export const RiderAutocomplete = ({
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
   const { data: coureurs, isLoading } = useQuery({
-    queryKey: ['coureurs-disponibilite', debouncedSearchTerm, phaseId],
+    queryKey: ['coureurs-disponibilite', debouncedSearchTerm, phaseId, open],
     queryFn: async () => {
       let query = supabase
         .from('coureurs_disponibilite')
         .select('*')
         .eq('phase_id', phaseId);
       
-      if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
+      // Recherche : si searchTerm >= 2 chars, on filtre, sinon on affiche les 50 premiers
+      if (debouncedSearchTerm && debouncedSearchTerm.trim().length >= 2) {
         const normalizedSearch = normalizeString(debouncedSearchTerm);
         query = query.ilike('search_text', `%${normalizedSearch}%`);
       }
@@ -57,8 +58,9 @@ export const RiderAutocomplete = ({
         .limit(50);
       
       if (error) throw error;
-      return data;
+      return data || [];
     },
+    enabled: open, // Only fetch when dropdown is open
   });
 
   return (
