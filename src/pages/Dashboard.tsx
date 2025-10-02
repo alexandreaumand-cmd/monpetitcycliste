@@ -11,6 +11,8 @@ import { DataImport } from "@/components/admin/DataImport";
 import { AuctionManager } from "@/components/admin/AuctionManager";
 import { AuctionsList } from "@/components/auction/AuctionsList";
 import { SeasonManager } from "@/components/admin/SeasonManager";
+import { MyBidsHistory } from "@/components/auction/MyBidsHistory";
+import { MyTeam } from "@/components/team/MyTeam";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -114,23 +116,16 @@ const Dashboard = () => {
           </TabsList>
 
           <TabsContent value="encheres" className="space-y-4">
-            {manager && <AuctionsList managerId={manager.id} />}
+            {manager && (
+              <div className="space-y-6">
+                <AuctionsList managerId={manager.id} />
+                <MyBidsHistory managerId={manager.id} />
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="equipe" className="space-y-6">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>Mon Équipe</CardTitle>
-                <CardDescription>
-                  Gérez votre roster de coureurs
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                  Vous n'avez pas encore de coureurs
-                </div>
-              </CardContent>
-            </Card>
+            {manager && <MyTeam managerId={manager.id} />}
           </TabsContent>
 
           <TabsContent value="courses" className="space-y-6">
