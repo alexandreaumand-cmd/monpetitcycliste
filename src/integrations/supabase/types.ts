@@ -521,7 +521,13 @@ export type Database = {
     Enums: {
       app_role: "manager" | "admin"
       auction_statut: "open" | "closed"
-      bid_statut: "pending" | "won" | "lost" | "invalid" | "carried_over"
+      bid_statut:
+        | "pending"
+        | "won"
+        | "lost"
+        | "invalid"
+        | "carried_over"
+        | "draft"
       phase_statut:
         | "draft"
         | "auction_open"
@@ -660,7 +666,14 @@ export const Constants = {
     Enums: {
       app_role: ["manager", "admin"],
       auction_statut: ["open", "closed"],
-      bid_statut: ["pending", "won", "lost", "invalid", "carried_over"],
+      bid_statut: [
+        "pending",
+        "won",
+        "lost",
+        "invalid",
+        "carried_over",
+        "draft",
+      ],
       phase_statut: [
         "draft",
         "auction_open",
