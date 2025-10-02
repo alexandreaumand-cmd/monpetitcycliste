@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Zap } from "lucide-react";
+import { Loader2, Zap, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const AuctionManager = () => {
   const { toast } = useToast();
@@ -51,6 +52,24 @@ export const AuctionManager = () => {
   // Get the active phase and next round number
   const activePhase = phases?.[0];
   const nextRoundNumber = (activeAuctions?.filter(a => a.phase_id === activePhase?.id).length || 0) + 1;
+
+  // Get manager status for active phase
+  const { data: managersStatus = [] } = useQuery({
+    queryKey: ['managers-rosters-status', activePhase?.id],
+    queryFn: async () => {
+      if (!activePhase) return [];
+
+      const { data, error } = await supabase
+        .from('managers_rosters_status')
+        .select('*')
+        .eq('phase_id', activePhase.id)
+        .order('manager_nom');
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!activePhase
+  });
 
   const quickLaunchAuction = useMutation({
     mutationFn: async () => {
@@ -161,6 +180,34 @@ export const AuctionManager = () => {
     );
   }
 
+  // Helper function to determine manager status
+  const getManagerStatus = (manager: any) => {
+    const slotsMatch = manager.pending_count === manager.slots_restants;
+    const budgetMatch = Math.abs(parseFloat(manager.budget_restant.toString()) - parseFloat(manager.pending_sum.toString())) < 1;
+    
+    if (manager.slots_restants === 0) {
+      return {
+        label: "Complet",
+        variant: "default" as const,
+        icon: <CheckCircle2 className="h-3 w-3" />
+      };
+    }
+    
+    if (slotsMatch && budgetMatch) {
+      return {
+        label: "Prêt",
+        variant: "default" as const,
+        icon: <CheckCircle2 className="h-3 w-3" />
+      };
+    }
+    
+    return {
+      label: "En attente",
+      variant: "secondary" as const,
+      icon: <Clock className="h-3 w-3" />
+    };
+  };
+
   return (
     <div className="space-y-6">
       {/* Quick Launch Section */}
@@ -262,6 +309,72 @@ export const AuctionManager = () => {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Manager Status for Active Phase */}
+      {activePhase && managersStatus.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>État des managers - Round en cours</CardTitle>
+            <CardDescription>
+              Suivi de la soumission des enchères pour le round actif
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Manager</TableHead>
+                  <TableHead className="text-center">Slots restants</TableHead>
+                  <TableHead className="text-center">Enchères pending</TableHead>
+                  <TableHead className="text-center">Budget restant</TableHead>
+                  <TableHead className="text-center">Statut</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {managersStatus
+                  .sort((a, b) => {
+                    // Sort: "En attente" first, then by manager name
+                    const statusA = getManagerStatus(a);
+                    const statusB = getManagerStatus(b);
+                    if (statusA.label === "En attente" && statusB.label !== "En attente") return -1;
+                    if (statusA.label !== "En attente" && statusB.label === "En attente") return 1;
+                    return a.manager_nom.localeCompare(b.manager_nom);
+                  })
+                  .map((manager) => {
+                    const status = getManagerStatus(manager);
+                    return (
+                      <TableRow key={manager.manager_id}>
+                        <TableCell className="font-medium">{manager.manager_nom}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline">{manager.slots_restants}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className={manager.pending_count !== manager.slots_restants ? "text-orange-600" : "text-green-600"}>
+                            {manager.pending_count} / {manager.slots_restants}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className={Math.abs(parseFloat(manager.budget_restant.toString()) - parseFloat(manager.pending_sum.toString())) >= 1 ? "text-orange-600" : "text-green-600"}>
+                            {parseFloat(manager.pending_sum.toString()).toFixed(0)} / {parseFloat(manager.budget_restant.toString()).toFixed(0)} €
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge 
+                            variant={status.variant}
+                            className="flex items-center gap-1 justify-center"
+                          >
+                            {status.icon}
+                            {status.label}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

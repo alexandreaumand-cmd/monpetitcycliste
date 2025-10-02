@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, TrendingUp, Trash2, CheckCircle2, Edit2, Clock } from "lucide-react";
+import { Loader2, TrendingUp, Trash2, CheckCircle2, Edit2, Clock, Lock, Users } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,8 @@ import { useDebounce } from "use-debounce";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { BidHistory } from "./BidHistory";
 
 interface AuctionBidFormProps {
   auction: {
@@ -48,19 +50,20 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
   };
 
   const { data: coureurs, isLoading: loadingCoureurs } = useQuery({
-    queryKey: ['coureurs-search', debouncedSearchTerm],
+    queryKey: ['coureurs-disponibilite', debouncedSearchTerm, auction.phase_id],
     queryFn: async () => {
       let query = supabase
-        .from('coureurs')
-        .select('*');
+        .from('coureurs_disponibilite')
+        .select('*')
+        .eq('phase_id', auction.phase_id);
       
       if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
-        const normalizedSearch = `%${debouncedSearchTerm}%`;
-        query = query.or(`nom.ilike.${normalizedSearch},equipe.ilike.${normalizedSearch}`);
+        const normalizedSearch = normalizeString(debouncedSearchTerm);
+        query = query.ilike('search_text', `%${normalizedSearch}%`);
       }
       
       const { data, error } = await query
-        .order('nom')
+        .order('coureur_nom')
         .limit(50);
       
       if (error) throw error;
@@ -133,6 +136,40 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
     }
   });
 
+  // Get all managers rosters for this phase
+  const { data: allManagersRosters = [] } = useQuery({
+    queryKey: ['all-managers-rosters', auction.phase_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('rosters')
+        .select(`
+          *,
+          coureurs(nom, equipe),
+          managers(nom)
+        `)
+        .eq('phase_id', auction.phase_id)
+        .order('manager_id');
+
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Group rosters by manager
+  const rostersByManager = allManagersRosters
+    .filter((r: any) => r.manager_id !== managerId)
+    .reduce((acc: any, roster: any) => {
+      const managerId = roster.manager_id;
+      if (!acc[managerId]) {
+        acc[managerId] = {
+          managerName: roster.managers?.nom || 'Inconnu',
+          rosters: []
+        };
+      }
+      acc[managerId].rosters.push(roster);
+      return acc;
+    }, {});
+
   useEffect(() => {
     if (selectedCoureur && !bidAmount && !editingBidId) {
       setBidAmount(selectedCoureur.prix_initial.toString());
@@ -145,8 +182,13 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
         throw new Error("Veuillez sélectionner un coureur");
       }
 
+      // Check if coureur is taken
+      if (selectedCoureur.is_taken) {
+        throw new Error(`Ce coureur a déjà été attribué à ${selectedCoureur.taken_by_manager_nom}`);
+      }
+
       const amount = parseFloat(bidAmount);
-      if (isNaN(amount) || amount < parseFloat(selectedCoureur.prix_initial)) {
+      if (isNaN(amount) || amount < parseFloat(selectedCoureur.prix_initial.toString())) {
         throw new Error(`Le montant doit être au moins ${selectedCoureur.prix_initial}`);
       }
 
@@ -161,25 +203,13 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
         }
       }
 
-      // Check if coureur already in rosters
-      const { data: existingRoster } = await supabase
-        .from('rosters')
-        .select('id')
-        .eq('phase_id', auction.phase_id)
-        .eq('coureur_id', selectedCoureur.id)
-        .maybeSingle();
-
-      if (existingRoster) {
-        throw new Error("Ce coureur a déjà été attribué à un manager dans cette phase.");
-      }
-
       // Check for duplicates in draft bids (excluding current editing bid)
       const { data: existingBid } = await supabase
         .from('bids')
         .select('id')
         .eq('manager_id', managerId)
         .eq('auction_id', auction.id)
-        .eq('coureur_id', selectedCoureur.id)
+        .eq('coureur_id', selectedCoureur.coureur_id)
         .eq('statut', 'draft')
         .maybeSingle();
 
@@ -192,7 +222,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
         const { error } = await supabase
           .from('bids')
           .update({
-            coureur_id: selectedCoureur.id,
+            coureur_id: selectedCoureur.coureur_id,
             montant: amount,
           })
           .eq('id', editingBidId);
@@ -205,7 +235,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
           .insert({
             auction_id: auction.id,
             manager_id: managerId,
-            coureur_id: selectedCoureur.id,
+            coureur_id: selectedCoureur.coureur_id,
             montant: amount,
             round_number: auction.round_number,
             statut: 'draft'
@@ -363,6 +393,46 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
 
   return (
     <div className="space-y-4">
+      {/* Historique des enchères */}
+      <BidHistory managerId={managerId} phaseId={auction.phase_id} />
+
+      {/* Rosters des autres managers */}
+      {Object.keys(rostersByManager).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Équipes des autres managers
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Object.entries(rostersByManager).map(([managerId, data]: [string, any]) => (
+              <Collapsible key={managerId}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    <span className="font-medium">{data.managerName}</span>
+                    <Badge variant="secondary">{data.rosters.length} coureur(s)</Badge>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2 space-y-2 px-2">
+                  {data.rosters.map((roster: any) => (
+                    <div key={roster.id} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
+                      <div>
+                        <p className="font-medium">{roster.coureurs.nom}</p>
+                        <p className="text-muted-foreground text-xs">{roster.coureurs.equipe}</p>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {parseFloat(roster.prix_signature.toString()).toFixed(0)} €
+                      </Badge>
+                    </div>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Show submitted bids if any */}
       {submittedBids.length > 0 && (
         <Card>
@@ -577,22 +647,36 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                         <CommandGroup>
                           {coureurs?.map((coureur) => (
                             <CommandItem
-                              key={coureur.id}
-                              value={`${coureur.nom} ${coureur.equipe || ''}`}
+                              key={coureur.coureur_id}
+                              value={`${coureur.coureur_nom} ${coureur.coureur_equipe || ''}`}
                               onSelect={() => {
-                                setSelectedCoureur(coureur);
-                                setOpen(false);
-                                setSearchTerm("");
+                                if (!coureur.is_taken) {
+                                  setSelectedCoureur(coureur);
+                                  setOpen(false);
+                                  setSearchTerm("");
+                                }
                               }}
+                              disabled={coureur.is_taken}
+                              className={coureur.is_taken ? "opacity-60 cursor-not-allowed" : ""}
                             >
-                              <div className="flex items-center justify-between w-full">
-                                <div>
-                                  <p className="font-medium">{coureur.nom}</p>
-                                  <p className="text-sm text-muted-foreground">{coureur.equipe}</p>
+                              <div className="flex items-center justify-between w-full gap-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-medium">{coureur.coureur_nom}</p>
+                                    {coureur.is_taken && (
+                                      <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                                        <Lock className="h-3 w-3" />
+                                        Pris par {coureur.taken_by_manager_nom}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">{coureur.coureur_equipe}</p>
                                 </div>
-                                <Badge variant="secondary">
-                                  Min: {parseFloat(coureur.prix_initial.toString()).toFixed(0)} €
-                                </Badge>
+                                {!coureur.is_taken && (
+                                  <Badge variant="secondary">
+                                    Min: {parseFloat(coureur.prix_initial.toString()).toFixed(0)} €
+                                  </Badge>
+                                )}
                               </div>
                             </CommandItem>
                           ))}
@@ -608,13 +692,13 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                   <div className="p-3 bg-muted rounded-lg space-y-1">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Équipe:</span>
-                      <span className="font-medium">{selectedCoureur.equipe}</span>
+                      <span className="font-medium">{selectedCoureur.coureur_equipe}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Cote minimum:</span>
                       <span className="font-medium flex items-center gap-1">
                         <TrendingUp className="h-3 w-3" />
-                        {parseFloat(selectedCoureur.prix_initial).toFixed(0)} €
+                        {parseFloat(selectedCoureur.prix_initial.toString()).toFixed(0)} €
                       </span>
                     </div>
                   </div>
