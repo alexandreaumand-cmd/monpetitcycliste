@@ -14,6 +14,7 @@ import { SeasonManager } from "@/components/admin/SeasonManager";
 import { RoundManager } from "@/components/admin/RoundManager";
 import { AnnouncementManager } from "@/components/admin/AnnouncementManager";
 import { MyTeam } from "@/components/team/MyTeam";
+import { UpcomingCourses } from "@/components/courses/UpcomingCourses";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -125,19 +126,7 @@ const Dashboard = () => {
           </TabsContent>
 
           <TabsContent value="courses" className="space-y-6">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>Calendrier des Courses</CardTitle>
-                <CardDescription>
-                  Consultez les courses à venir et les résultats
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                  Aucune course programmée pour le moment
-                </div>
-              </CardContent>
-            </Card>
+            <UpcomingCourses />
           </TabsContent>
 
           <TabsContent value="classement" className="space-y-6">
