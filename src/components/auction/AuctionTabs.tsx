@@ -7,6 +7,8 @@ import { BidHistory } from "./BidHistory";
 import { AuctionTeamsGrid } from "./AuctionTeamsGrid";
 import { AuctionHeader } from "./AuctionHeader";
 import { AuctionSidePanel } from "./AuctionSidePanel";
+import { NextAuctionCard } from "./NextAuctionCard";
+import { LastRoundResults } from "./LastRoundResults";
 import { useState } from "react";
 import { CheckCircle2, Users } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -116,8 +118,8 @@ export const AuctionTabs = ({ auction, managerId }: AuctionTabsProps) => {
         onRefresh={handleRefresh}
       />
 
-      <div className="container py-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="container py-6 space-y-6">
+        <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Enchères</h1>
           <AuctionSidePanel 
             phaseId={auction.phase_id}
@@ -126,6 +128,12 @@ export const AuctionTabs = ({ auction, managerId }: AuctionTabsProps) => {
             onOpenChange={setSidePanelOpen}
           />
         </div>
+
+        {/* Next auction card */}
+        <NextAuctionCard phaseId={auction.phase_id} />
+
+        {/* Last round results */}
+        <LastRoundResults phaseId={auction.phase_id} managerId={managerId} />
 
         {isReady && (
           <Alert className="mb-4 border-green-500 bg-green-50 dark:bg-green-950/20">

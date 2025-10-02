@@ -63,6 +63,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "annonces_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "last_closed_auction"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "annonces_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "next_auction_info"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "annonces_coureur_id_fkey"
             columns: ["coureur_id"]
             isOneToOne: false
@@ -75,6 +89,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
             referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "annonces_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "annonces_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "annonces_winning_manager_id_fkey"
+            columns: ["winning_manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
           },
           {
             foreignKeyName: "annonces_winning_manager_id_fkey"
@@ -105,6 +140,7 @@ export type Database = {
           created_at: string | null
           deadline_at: string
           id: string
+          opens_at: string | null
           phase_id: string | null
           round_number: number
           statut: Database["public"]["Enums"]["auction_statut"] | null
@@ -114,6 +150,7 @@ export type Database = {
           created_at?: string | null
           deadline_at: string
           id?: string
+          opens_at?: string | null
           phase_id?: string | null
           round_number: number
           statut?: Database["public"]["Enums"]["auction_statut"] | null
@@ -123,6 +160,7 @@ export type Database = {
           created_at?: string | null
           deadline_at?: string
           id?: string
+          opens_at?: string | null
           phase_id?: string | null
           round_number?: number
           statut?: Database["public"]["Enums"]["auction_statut"] | null
@@ -181,6 +219,13 @@ export type Database = {
           payload_json?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "audits_actor_manager_id_fkey"
+            columns: ["actor_manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
           {
             foreignKeyName: "audits_actor_manager_id_fkey"
             columns: ["actor_manager_id"]
@@ -244,6 +289,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bids_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "last_closed_auction"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bids_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "next_auction_info"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "bids_coureur_id_fkey"
             columns: ["coureur_id"]
             isOneToOne: false
@@ -256,6 +315,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
             referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "bids_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "bids_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
           },
           {
             foreignKeyName: "bids_manager_id_fkey"
@@ -490,6 +570,20 @@ export type Database = {
             referencedColumns: ["coureur_id"]
           },
           {
+            foreignKeyName: "points_ledger_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
             foreignKeyName: "points_ledger_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
@@ -502,6 +596,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_course_points_theoriques"
             referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
           },
           {
             foreignKeyName: "points_ledger_manager_id_fkey"
@@ -601,6 +702,20 @@ export type Database = {
             referencedColumns: ["coureur_id"]
           },
           {
+            foreignKeyName: "race_results_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "race_results_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
             foreignKeyName: "race_results_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
@@ -652,6 +767,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
             referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "rosters_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "rosters_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
           },
           {
             foreignKeyName: "rosters_manager_id_fkey"
@@ -830,6 +966,27 @@ export type Database = {
             referencedColumns: ["coureur_id"]
           },
           {
+            foreignKeyName: "bids_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "bids_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
             foreignKeyName: "bids_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
@@ -881,6 +1038,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bids_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "last_closed_auction"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bids_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "next_auction_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
             foreignKeyName: "bids_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
@@ -900,6 +1078,98 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "managers_rosters_status"
             referencedColumns: ["manager_id"]
+          },
+        ]
+      }
+      last_closed_auction: {
+        Row: {
+          closed_at: string | null
+          id: string | null
+          phase_id: string | null
+          round_number: number | null
+        }
+        Insert: {
+          closed_at?: string | null
+          id?: string | null
+          phase_id?: string | null
+          round_number?: number | null
+        }
+        Update: {
+          closed_at?: string | null
+          id?: string | null
+          phase_id?: string | null
+          round_number?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      last_round_winners: {
+        Row: {
+          coureur_equipe: string | null
+          coureur_id: string | null
+          coureur_nom: string | null
+          manager_gagnant: string | null
+          manager_id: string | null
+          montant_gagnant: number | null
+          phase_id: string | null
+          round_number: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -930,6 +1200,141 @@ export type Database = {
           slots_restants: number | null
         }
         Relationships: []
+      }
+      my_last_round_bids: {
+        Row: {
+          bid_id: string | null
+          coureur_equipe: string | null
+          coureur_id: string | null
+          coureur_nom: string | null
+          manager_id: string | null
+          my_bid: number | null
+          outcome: Database["public"]["Enums"]["bid_outcome"] | null
+          phase_id: string | null
+          round_number: number | null
+          winning_amount: number | null
+          winning_manager: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+        ]
+      }
+      next_auction_info: {
+        Row: {
+          deadline_at: string | null
+          id: string | null
+          label: string | null
+          opens_at: string | null
+          phase_id: string | null
+          round_number: number | null
+          statut: Database["public"]["Enums"]["auction_statut"] | null
+          target_time: string | null
+        }
+        Insert: {
+          deadline_at?: string | null
+          id?: string | null
+          label?: never
+          opens_at?: string | null
+          phase_id?: string | null
+          round_number?: number | null
+          statut?: Database["public"]["Enums"]["auction_statut"] | null
+          target_time?: never
+        }
+        Update: {
+          deadline_at?: string | null
+          id?: string | null
+          label?: never
+          opens_at?: string | null
+          phase_id?: string | null
+          round_number?: number | null
+          statut?: Database["public"]["Enums"]["auction_statut"] | null
+          target_time?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_course_points_theoriques: {
         Row: {
@@ -999,7 +1404,8 @@ export type Database = {
     }
     Enums: {
       app_role: "manager" | "admin"
-      auction_statut: "open" | "closed"
+      auction_statut: "open" | "closed" | "scheduled"
+      bid_outcome: "won" | "lost" | "carried_over"
       bid_statut:
         | "pending"
         | "won"
@@ -1153,7 +1559,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["manager", "admin"],
-      auction_statut: ["open", "closed"],
+      auction_statut: ["open", "closed", "scheduled"],
+      bid_outcome: ["won", "lost", "carried_over"],
       bid_statut: [
         "pending",
         "won",
