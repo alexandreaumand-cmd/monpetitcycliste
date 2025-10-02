@@ -8,7 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { RiderAutocomplete } from "@/components/shared/RiderAutocomplete";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save } from "lucide-react";
 import { format } from "date-fns";
@@ -545,13 +548,10 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
                       <tr key={index} className="hover:bg-muted/50">
                         <td className="px-4 py-2 text-sm font-medium">{row.position}</td>
                         <td className="px-4 py-2">
-                          <RiderAutocomplete
-                            phaseId={course.phase_id}
+                          <ServerRiderSearch
                             value={row.coureur_id}
                             riderName={row.coureur_nom}
                             onChange={(id, name) => handleRiderChange(index, id, name)}
-                            allowTaken={true}
-                            showTakenTag={true}
                           />
                         </td>
                         <td className="px-4 py-2">
@@ -620,5 +620,99 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
         </div>
       )}
     </div>
+  );
+};
+
+// Server-side rider search with debounce
+const ServerRiderSearch = ({
+  value,
+  riderName,
+  onChange,
+}: {
+  value: string | null;
+  riderName: string | null;
+  onChange: (riderId: string | null, riderName: string | null) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch] = useDebounce(search, 200);
+
+  const { data: riders, isLoading } = useQuery({
+    queryKey: ['rider-search-results', debouncedSearch],
+    queryFn: async () => {
+      let query = supabase
+        .from('coureurs')
+        .select('id, nom')
+        .order('nom')
+        .limit(50);
+
+      // Apply search filter if query is not empty
+      if (debouncedSearch && debouncedSearch.trim()) {
+        query = query.ilike('nom', `%${debouncedSearch.trim()}%`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return data.map(c => ({
+        value: c.id,
+        label: c.nom,
+      }));
+    },
+    enabled: open, // Only fetch when dropdown is open
+  });
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+        >
+          {value && riderName ? (
+            <span className="truncate">{riderName}</span>
+          ) : (
+            <span className="text-muted-foreground">Sélectionner un coureur...</span>
+          )}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[400px] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput 
+            placeholder="Rechercher un coureur..." 
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            <CommandEmpty>
+              {isLoading ? "Recherche en cours..." : "Aucun coureur trouvé."}
+            </CommandEmpty>
+            <CommandGroup>
+              {riders?.map((rider) => (
+                <CommandItem
+                  key={rider.value}
+                  value={rider.value}
+                  onSelect={() => {
+                    onChange(rider.value, rider.label);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === rider.value ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <span>{rider.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 };
