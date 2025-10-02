@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Drawer,
@@ -17,7 +17,9 @@ import { toast } from "sonner";
 import { RiderAutocomplete } from "./RiderAutocomplete";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { X, AlertCircle } from "lucide-react";
 
 type Course = {
   course_id: string;
@@ -39,6 +41,7 @@ type ResultRow = {
   coureur_nom: string | null;
   statut: StatutType;
   points: number;
+  grid_version?: string;
 };
 
 type ScoringRule = {
@@ -59,13 +62,24 @@ export const ResultsEntryDrawer = ({
   const [etapeNumero, setEtapeNumero] = useState<number>(1);
   const [resultRows, setResultRows] = useState<ResultRow[]>([]);
   const [gridPrepared, setGridPrepared] = useState(false);
+  const requestIdRef = useRef(0);
+  const [currentRequestId, setCurrentRequestId] = useState(0);
   const queryClient = useQueryClient();
 
   const isStageRace = course.type_course === 'stage races';
 
-  // Fetch scoring rules
-  const { data: scoringRules } = useQuery({
-    queryKey: ['scoring-rules', course.categorie, classementType, course.type_course],
+  // Centralized state key - force re-render on any parameter change
+  const sel_key = `${course.course_id}|${classementType}|${classementType === 'Etape' ? etapeNumero : 0}`;
+
+  // Reset UI strictly on classification or stage change
+  useEffect(() => {
+    setResultRows([]);
+    setGridPrepared(false);
+  }, [sel_key]);
+
+  // Fetch scoring rules - NO CACHE (staleTime: 0)
+  const { data: scoringRules, isLoading: isLoadingRules, error: rulesError } = useQuery({
+    queryKey: ['scoring-rules', sel_key],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('scoring_rules')
@@ -79,11 +93,13 @@ export const ResultsEntryDrawer = ({
       return (data || []) as ScoringRule[];
     },
     enabled: open,
+    staleTime: 0,
+    gcTime: 0,
   });
 
   // Fetch existing results
   const { data: existingResults } = useQuery({
-    queryKey: ['existing-results', course.course_id, classementType, etapeNumero],
+    queryKey: ['existing-results', sel_key],
     queryFn: async () => {
       let query = supabase
         .from('race_results')
@@ -101,6 +117,7 @@ export const ResultsEntryDrawer = ({
       return data;
     },
     enabled: open && gridPrepared,
+    staleTime: 0,
   });
 
   const handlePrepareGrid = () => {
@@ -109,30 +126,43 @@ export const ResultsEntryDrawer = ({
       return;
     }
 
-    // If existing results, use them
-    if (existingResults?.length) {
-      const rows: ResultRow[] = existingResults.map(r => ({
-        position: r.position || 0,
-        coureur_id: r.coureur_id,
-        coureur_nom: (r.coureurs as any)?.nom || null,
-        statut: r.statut as StatutType,
-        points: scoringRules.find(sr => sr.place === r.position)?.points || 0,
-      }));
+    // Increment request ID to prevent race conditions
+    requestIdRef.current += 1;
+    const thisRequestId = requestIdRef.current;
+    setCurrentRequestId(thisRequestId);
+
+    // Build grid with version tracking
+    const buildGrid = () => {
+      if (existingResults?.length) {
+        const rows: ResultRow[] = existingResults.map(r => ({
+          position: r.position || 0,
+          coureur_id: r.coureur_id,
+          coureur_nom: (r.coureurs as any)?.nom || null,
+          statut: r.statut as StatutType,
+          points: scoringRules.find(sr => sr.place === r.position)?.points || 0,
+          grid_version: sel_key,
+        }));
+        return rows;
+      } else {
+        const maxPlace = Math.max(...scoringRules.map(sr => sr.place));
+        const rows: ResultRow[] = Array.from({ length: maxPlace }, (_, i) => ({
+          position: i + 1,
+          coureur_id: null,
+          coureur_nom: null,
+          statut: 'finished' as StatutType,
+          points: scoringRules.find(sr => sr.place === i + 1)?.points || 0,
+          grid_version: sel_key,
+        }));
+        return rows;
+      }
+    };
+
+    // Only apply if this is still the latest request
+    const rows = buildGrid();
+    if (thisRequestId === requestIdRef.current) {
       setResultRows(rows);
-    } else {
-      // Create empty grid based on scoring rules
-      const maxPlace = Math.max(...scoringRules.map(sr => sr.place));
-      const rows: ResultRow[] = Array.from({ length: maxPlace }, (_, i) => ({
-        position: i + 1,
-        coureur_id: null,
-        coureur_nom: null,
-        statut: 'finished' as StatutType,
-        points: scoringRules.find(sr => sr.place === i + 1)?.points || 0,
-      }));
-      setResultRows(rows);
+      setGridPrepared(true);
     }
-    
-    setGridPrepared(true);
   };
 
   const handleRiderChange = (position: number, riderId: string | null, riderName: string | null) => {
@@ -165,11 +195,27 @@ export const ResultsEntryDrawer = ({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const validRows = resultRows.filter(r => r.coureur_id);
+      const validRows = resultRows.filter(r => r.coureur_id && r.grid_version === sel_key);
       
       if (validRows.length === 0) {
         throw new Error("Aucun résultat à sauvegarder");
       }
+
+      // SERVER-SIDE: Reload scoring grid to recalculate points (source of truth)
+      const { data: serverScoringRules, error: rulesError } = await supabase
+        .from('scoring_rules')
+        .select('*')
+        .eq('categorie', course.categorie)
+        .eq('type_classement', classementType)
+        .eq('type', course.type_course)
+        .order('place');
+
+      if (rulesError) throw rulesError;
+      if (!serverScoringRules?.length) {
+        throw new Error("Barème introuvable sur le serveur");
+      }
+
+      const scoringMap = new Map(serverScoringRules.map(sr => [sr.place, sr.points]));
 
       // Calculate date_classement
       const dateClassement = classementType === 'Etape'
@@ -205,10 +251,14 @@ export const ResultsEntryDrawer = ({
 
       if (deleteError) throw deleteError;
 
-      // Insert new points
+      // Insert new points (recalculated server-side)
       const pointsToInsert = [];
       for (const row of validRows) {
-        if (row.statut !== 'finished' || row.points === 0) continue;
+        if (row.statut !== 'finished') continue;
+
+        // SERVER RECALCULATION of points
+        const serverPoints = scoringMap.get(row.position) || 0;
+        if (serverPoints === 0) continue;
 
         // Find manager via rosters
         const { data: roster } = await supabase
@@ -226,7 +276,7 @@ export const ResultsEntryDrawer = ({
             phase_id: course.phase_id,
             type_classement: classementType,
             etape_numero: classementType === 'Etape' ? etapeNumero : null,
-            points: row.points,
+            points: serverPoints, // SERVER-SIDE recalculated
           });
         }
       }
@@ -262,6 +312,16 @@ export const ResultsEntryDrawer = ({
 
   const handleClassementChange = (value: ClassementType) => {
     setClassementType(value);
+    // Reset etape if switching away from Etape
+    if (value !== 'Etape') {
+      setEtapeNumero(1);
+    }
+    setGridPrepared(false);
+    setResultRows([]);
+  };
+
+  const handleEtapeChange = (value: string) => {
+    setEtapeNumero(parseInt(value));
     setGridPrepared(false);
     setResultRows([]);
   };
@@ -275,7 +335,7 @@ export const ResultsEntryDrawer = ({
             {classementType === 'Etape' && ` (Étape ${etapeNumero})`}
           </DrawerTitle>
           <DrawerDescription>
-            Saisie rapide des résultats
+            Saisie rapide des résultats • Clé: {sel_key}
           </DrawerDescription>
         </DrawerHeader>
 
@@ -305,7 +365,7 @@ export const ResultsEntryDrawer = ({
                 {classementType === 'Etape' && (
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Numéro d'étape</label>
-                    <Select value={etapeNumero.toString()} onValueChange={(v) => setEtapeNumero(parseInt(v))}>
+                    <Select value={etapeNumero.toString()} onValueChange={handleEtapeChange}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -320,15 +380,48 @@ export const ResultsEntryDrawer = ({
                   </div>
                 )}
 
-                <Button onClick={handlePrepareGrid} className="w-full">
-                  Préparer la saisie
+                <Button 
+                  onClick={handlePrepareGrid} 
+                  className="w-full"
+                  disabled={isLoadingRules || !scoringRules?.length}
+                >
+                  {isLoadingRules ? 'Chargement du barème...' : 'Préparer la saisie'}
                 </Button>
               </div>
 
-              {/* Barème preview */}
+              {/* Barème preview or error */}
+              {isLoadingRules && (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              )}
+
+              {rulesError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Erreur de chargement du barème: {rulesError.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {!isLoadingRules && !rulesError && scoringRules?.length === 0 && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Aucun barème disponible pour {classementType} / {course.categorie} ({course.type_course}).
+                    Vérifiez la configuration des barèmes.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {scoringRules && scoringRules.length > 0 && (
-                <div className="rounded-md border p-4 space-y-2">
-                  <h4 className="font-medium text-sm">Barème de points (aperçu)</h4>
+                <div className="rounded-md border p-4 space-y-2" key={sel_key}>
+                  <h4 className="font-medium text-sm">
+                    Barème actuel • {course.categorie} / {classementType}
+                  </h4>
                   <div className="grid grid-cols-5 gap-2 text-sm">
                     {scoringRules.slice(0, 10).map((rule) => (
                       <div key={rule.place} className="flex justify-between">
@@ -350,7 +443,7 @@ export const ResultsEntryDrawer = ({
                 </Button>
               </div>
 
-              <div className="rounded-md border">
+              <div className="rounded-md border" key={sel_key}>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -362,49 +455,51 @@ export const ResultsEntryDrawer = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {resultRows.map((row) => (
-                      <TableRow key={row.position}>
-                        <TableCell className="font-medium">{row.position}</TableCell>
-                        <TableCell>
-                          <RiderAutocomplete
-                            phaseId={course.phase_id}
-                            value={row.coureur_id}
-                            riderName={row.coureur_nom}
-                            onChange={(id, name) => handleRiderChange(row.position, id, name)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Select 
-                            value={row.statut} 
-                            onValueChange={(v) => handleStatutChange(row.position, v as StatutType)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="finished">Finished</SelectItem>
-                              <SelectItem value="dnf">DNF</SelectItem>
-                              <SelectItem value="dns">DNS</SelectItem>
-                              <SelectItem value="dsq">DSQ</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold text-primary">
-                          {row.points}
-                        </TableCell>
-                        <TableCell>
-                          {row.coureur_id && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveRow(row.position)}
+                    {resultRows
+                      .filter(row => row.grid_version === sel_key)
+                      .map((row) => (
+                        <TableRow key={`${sel_key}-${row.position}`}>
+                          <TableCell className="font-medium">{row.position}</TableCell>
+                          <TableCell>
+                            <RiderAutocomplete
+                              phaseId={course.phase_id}
+                              value={row.coureur_id}
+                              riderName={row.coureur_nom}
+                              onChange={(id, name) => handleRiderChange(row.position, id, name)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Select 
+                              value={row.statut} 
+                              onValueChange={(v) => handleStatutChange(row.position, v as StatutType)}
                             >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="finished">Finished</SelectItem>
+                                <SelectItem value="dnf">DNF</SelectItem>
+                                <SelectItem value="dns">DNS</SelectItem>
+                                <SelectItem value="dsq">DSQ</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-primary">
+                            {row.points}
+                          </TableCell>
+                          <TableCell>
+                            {row.coureur_id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveRow(row.position)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
                   </TableBody>
                 </Table>
               </div>
