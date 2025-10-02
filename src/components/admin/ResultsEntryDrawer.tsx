@@ -53,13 +53,17 @@ export const ResultsEntryDrawer = ({
   open,
   onOpenChange,
   course,
+  initialClassement,
+  initialEtape,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   course: Course;
+  initialClassement?: ClassementType;
+  initialEtape?: number;
 }) => {
-  const [classementType, setClassementType] = useState<ClassementType>("General");
-  const [etapeNumero, setEtapeNumero] = useState<number>(1);
+  const [classementType, setClassementType] = useState<ClassementType>(initialClassement || "General");
+  const [etapeNumero, setEtapeNumero] = useState<number>(initialEtape || 1);
   const [resultRows, setResultRows] = useState<ResultRow[]>([]);
   const [gridPrepared, setGridPrepared] = useState(false);
   const requestIdRef = useRef(0);
