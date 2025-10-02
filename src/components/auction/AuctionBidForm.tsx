@@ -284,6 +284,11 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
 
   const totalBidsCount = draftBids.length + submittedBids.length;
   const canAddMore = budget ? totalBidsCount < budget.maxCoureurs : false;
+  
+  // Validation conditions for submitting bids
+  const hasExactCoureurs = budget ? totalBidsCount === budget.maxCoureurs : false;
+  const budgetFullyUsed = budget ? Math.abs(budget.remaining) < 1 : false; // Allow small rounding errors
+  const canSubmitBids = hasExactCoureurs && budgetFullyUsed && draftBids.length > 0;
 
   return (
     <div className="space-y-4">
@@ -346,32 +351,52 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
               <div className="flex items-center justify-between">
                 <Label className="text-base">Enchères en préparation ({draftBids.length})</Label>
                 {draftBids.length > 0 && (
-                  <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
-                    <AlertDialogTrigger asChild>
-                      <Button size="sm" className="gap-2">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Valider toutes mes enchères
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Confirmer la validation</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Vous êtes sur le point de soumettre {draftBids.length} enchère(s) pour un montant total de {draftBids.reduce((sum: number, b: any) => sum + parseFloat(b.montant.toString()), 0).toFixed(0)} €.
-                          <br /><br />
-                          Budget restant après validation: {budget ? (budget.remaining).toFixed(0) : '0'} €
-                          <br /><br />
-                          Une fois validées, vous ne pourrez plus les modifier.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Annuler</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => submitAllBids.mutate()}>
-                          Confirmer
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <div className="flex flex-col items-end gap-2">
+                    <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          size="sm" 
+                          className="gap-2"
+                          disabled={!canSubmitBids}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Valider toutes mes enchères
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confirmer la validation</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Vous êtes sur le point de soumettre {draftBids.length} enchère(s) pour un montant total de {draftBids.reduce((sum: number, b: any) => sum + parseFloat(b.montant.toString()), 0).toFixed(0)} €.
+                            <br /><br />
+                            Budget restant après validation: {budget ? (budget.remaining).toFixed(0) : '0'} €
+                            <br /><br />
+                            Une fois validées, vous ne pourrez plus les modifier.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annuler</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => submitAllBids.mutate()}>
+                            Confirmer
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    {!canSubmitBids && draftBids.length > 0 && (
+                      <div className="text-xs text-muted-foreground text-right">
+                        {!hasExactCoureurs && (
+                          <div className="text-orange-600">
+                            ⚠️ Vous devez avoir exactement {budget?.maxCoureurs || 30} coureurs ({totalBidsCount}/{budget?.maxCoureurs || 30})
+                          </div>
+                        )}
+                        {!budgetFullyUsed && (
+                          <div className="text-orange-600">
+                            ⚠️ Vous devez utiliser tout votre budget (reste: {budget?.remaining.toFixed(0) || 0} €)
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
