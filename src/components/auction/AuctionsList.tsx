@@ -2,21 +2,22 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { AuctionTabs } from "./AuctionTabs";
+import { AuctionPage } from "./AuctionPage";
 
 interface AuctionsListProps {
   managerId: string;
 }
 
 export const AuctionsList = ({ managerId }: AuctionsListProps) => {
-  const { data: activeAuctions, isLoading } = useQuery({
-    queryKey: ['my-active-auctions'],
+  const { data: activePhases, isLoading } = useQuery({
+    queryKey: ['my-active-phases'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('auctions')
-        .select('*')
-        .eq('statut', 'open')
-        .order('created_at', { ascending: false });
+        .from('phases')
+        .select('id')
+        .eq('statut', 'active')
+        .order('date_debut', { ascending: false })
+        .limit(1);
       
       if (error) throw error;
       return data;
@@ -31,7 +32,7 @@ export const AuctionsList = ({ managerId }: AuctionsListProps) => {
     );
   }
 
-  if (!activeAuctions || activeAuctions.length === 0) {
+  if (!activePhases || activePhases.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -39,13 +40,13 @@ export const AuctionsList = ({ managerId }: AuctionsListProps) => {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-center py-8">
-            Aucune enchère en cours pour le moment
+            Aucune phase active pour le moment
           </p>
         </CardContent>
       </Card>
     );
   }
 
-  // Show only the first active auction with tabs
-  return <AuctionTabs auction={activeAuctions[0]} managerId={managerId} />;
+  // Show auction page for the active phase
+  return <AuctionPage phaseId={activePhases[0].id} managerId={managerId} />;
 };
