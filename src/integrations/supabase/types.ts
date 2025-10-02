@@ -210,7 +210,6 @@ export type Database = {
           email: string | null
           id: string
           nom: string
-          role: Database["public"]["Enums"]["app_role"] | null
           sponsor: string | null
           user_id: string | null
         }
@@ -219,7 +218,6 @@ export type Database = {
           email?: string | null
           id?: string
           nom: string
-          role?: Database["public"]["Enums"]["app_role"] | null
           sponsor?: string | null
           user_id?: string | null
         }
@@ -228,7 +226,6 @@ export type Database = {
           email?: string | null
           id?: string
           nom?: string
-          role?: Database["public"]["Enums"]["app_role"] | null
           sponsor?: string | null
           user_id?: string | null
         }
@@ -479,12 +476,47 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_my_roles: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["app_role"][]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "manager" | "admin"
