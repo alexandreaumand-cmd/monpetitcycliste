@@ -28,6 +28,17 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
   const [bidAmount, setBidAmount] = useState("");
   const [open, setOpen] = useState(false);
 
+  // Normalize string: remove accents and convert to lowercase
+  const normalizeString = (str: string) => 
+    str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+  // Custom filter function for Command component
+  const filterFunction = (value: string, search: string) => {
+    const normalizedValue = normalizeString(value);
+    const normalizedSearch = normalizeString(search);
+    return normalizedValue.includes(normalizedSearch) ? 1 : 0;
+  };
+
   const { data: coureurs } = useQuery({
     queryKey: ['coureurs'],
     queryFn: async () => {
@@ -198,39 +209,31 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
               </Button>
             </PopoverTrigger>
             <PopoverContent className="p-0 w-[400px]" align="start">
-              <Command>
+              <Command filter={filterFunction}>
                 <CommandInput placeholder="Rechercher un coureur..." />
                 <CommandList>
                   <CommandEmpty>Aucun coureur trouvé</CommandEmpty>
                   <CommandGroup>
-                    {coureurs?.map((coureur) => {
-                      // Normalize search string: remove accents and lowercase
-                      const normalizeString = (str: string) => 
-                        str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-                      
-                      const searchValue = `${normalizeString(coureur.nom)} ${normalizeString(coureur.equipe || '')}`;
-                      
-                      return (
-                        <CommandItem
-                          key={coureur.id}
-                          value={searchValue}
-                          onSelect={() => {
-                            setSelectedCoureur(coureur);
-                            setOpen(false);
-                          }}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div>
-                              <p className="font-medium">{coureur.nom}</p>
-                              <p className="text-sm text-muted-foreground">{coureur.equipe}</p>
-                            </div>
-                            <Badge variant="secondary">
-                              Min: {parseFloat(coureur.prix_initial.toString()).toFixed(0)} €
-                            </Badge>
+                    {coureurs?.map((coureur) => (
+                      <CommandItem
+                        key={coureur.id}
+                        value={`${coureur.nom} ${coureur.equipe || ''}`}
+                        onSelect={() => {
+                          setSelectedCoureur(coureur);
+                          setOpen(false);
+                        }}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div>
+                            <p className="font-medium">{coureur.nom}</p>
+                            <p className="text-sm text-muted-foreground">{coureur.equipe}</p>
                           </div>
-                        </CommandItem>
-                      );
-                    })}
+                          <Badge variant="secondary">
+                            Min: {parseFloat(coureur.prix_initial.toString()).toFixed(0)} €
+                          </Badge>
+                        </div>
+                      </CommandItem>
+                    ))}
                   </CommandGroup>
                 </CommandList>
               </Command>
