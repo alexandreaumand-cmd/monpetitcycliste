@@ -1,0 +1,197 @@
+id,Course,Race Type,Race Category
+1, Santos Tour Down Under,stage races,Tours WT Cat 2
+2, Gran Premio Castellón - Ruta de la Cerámica,one day race,1.1
+3, Clàssica Comunitat Valenciana 1969 - Gran Premi València,one day race,1.1
+4, AlUla Tour,stage races,2.1
+5, Trofeo Calvià,one day race,1.1
+6, Trofeo Felanitx-Ses Salines,one day race,1.1
+7, Surf Coast Classic - Men,one day race,1.1
+8, Trofeo Serra Tramuntana,one day race,1.1
+9, Trofeo Andratx - Pollença,one day race,1.1
+10, Cadel Evans Great Ocean Road Race - Men,one day race,Classiques WT Cat 3
+11, Grand Prix Cycliste de Marseille La Marseillaise,one day race,1.1
+12, Trofeo Palma,one day race,1.1
+13, Etoile de Bessèges - Tour du Gard,stage races,2.1
+14, Volta a la Comunitat Valenciana,stage races,2.Pro
+15, Tour of Oman,stage races,2.Pro
+16, Muscat Classic,one day race,1.1
+17, Tour de la Provence,stage races,2.1
+18, Vuelta a la Región de Murcia “Costa Cálida”,one day race,1.1
+19, Clasica de Almeria ME,one day race,1.Pro
+20, Figueira Champions Classic,one day race,1.Pro
+21, UAE Tour,stage races,Tours WT Cat 2
+22, Clásica Jaén,one day race,1.1
+23, Volta ao Algarve em Bicicleta,stage races,2.Pro
+24, Vuelta a Andalucia Ruta Ciclista Del Sol,stage races,2.Pro
+25, Classic Var,one day race,1.1
+26, Tour des Alpes-Maritimes,stage races,2.1
+27, Tour du Rwanda,stage races,2.1
+28, O Gran Camiño - The Historical Route,stage races,2.1
+29, Omloop Nieuwsblad,one day race,Classiques WT Cat 2
+30, Faun-Ardèche Classic,one day race,1.Pro
+31, Faun Drome Classic,one day race,1.Pro
+32, Kuurne - Brussel - Kuurne,one day race,1.Pro
+33, Ename Samyn Classic,one day race,1.1
+34, Trofeo Laigueglia,one day race,1.Pro
+35, Strade Bianche,one day race,Classiques WT Cat 1
+36, Grand Prix Criquielion,one day race,1.1
+37, Paris-Nice,stage races,Tours WT Cat 1
+38, Grote prijs Jean - Pierre Monseré,one day race,1.1
+39, Tirreno-Adriatico,stage races,Tours WT Cat 1
+40, Betcity Elfstedenrace,stage races,2.1
+41, Tour de Taiwan,stage races,2.1
+42, Danilith Nokere Koerse,one day race,1.Pro
+43, Milano - Torino,one day race,1.Pro
+44, Grand Prix de Denain - Porte du Hainaut,one day race,1.Pro
+45, Bredene Koksijde Classic,one day race,1.Pro
+46, Milano-Sanremo,one day race,WT Monument
+47, Classic Loire Atlantique,one day race,1.1
+48, Cholet Agglo Tour,one day race,1.1
+49, The Princess Maha Chakri Sirindhorn's Cup Tour of Thailand,stage races,2.1
+50, Volta Ciclista a Catalunya,stage races,Tours WT Cat 1
+51, Settimana Internazionale Coppi e Bartali,stage races,2.1
+52, Classic Brugge-De Panne,one day race,Classiques WT Cat 3
+53, E3 Saxo Classic,one day race,Classiques WT Cat 1
+54, Gent-Wevelgem in Flanders Fields,one day race,Classiques WT Cat 2
+55, G.P. Emilia,one day race,1.1
+56, La Roue Tourangelle Centre Val de Loire - Groupama P.V.L.,one day race,1.1
+57, Dwars door Vlaanderen - A travers la Flandre,one day race,Classiques WT Cat 3
+58, ΔΕΗ Ιnternational Tour of Hellas,stage races,2.1
+59, Paris - Camembert,one day race,1.1
+60, La Route Adélie de Vitré,one day race,1.1
+61, Gran Premio Miguel Indurain,one day race,1.Pro
+62, Volta NXT Classic,one day race,1.1
+63, Ronde van Vlaanderen,one day race,WT Monument
+64, Itzulia Basque Country,stage races,Tours WT Cat 1
+65, Tour of Hainan,stage races,2.Pro
+66, Région Pays de la Loire Tour,stage races,2.1
+67, Scheldeprijs,one day race,1.Pro
+68, Paris-Roubaix,one day race,WT Monument
+69, Il Giro d'Abruzzo,stage races,2.1
+70, Ronde van Limburg,one day race,1.1
+71, De Brabantse Pijl - La Flèche Brabançonne,one day race,1.Pro
+72, Classic Grand Besançon Doubs,one day race,1.1
+73, Tour du Jura Cycliste,one day race,1.1
+74, Amstel Gold Race,one day race,Classiques WT Cat 1
+75, Tour du Doubs,one day race,1.1
+76, Tour of the Alps,stage races,2.Pro
+77, La Flèche Wallonne,one day race,Classiques WT Cat 1
+78, Vuelta Asturias Julio Alvarez Mendo,stage races,2.1
+79, Liège-Bastogne-Liège,one day race,WT Monument
+80, Presidential Cycling Tour of Turkiye,stage races,2.Pro
+81, Tour de Romandie,stage races,Tours WT Cat 2
+82, Eschborn-Frankfurt,one day race,Classiques WT Cat 3
+83, Lotto Famenne Ardenne Classic,one day race,1.1
+84, Boucles de l'Aulne - Châteaulin,one day race,1.1
+85, Giro d'Italia,stage races,WT GT
+86, Tour du Finistère Pays de Quimper,one day race,1.1
+87, Grand Prix du Morbihan,one day race,1.Pro
+88, Tro-Bro Léon,one day race,1.Pro
+89, Classique Dunkerque / Grand prix des Hauts de France,one day race,1.Pro
+90, 4 Jours de Dunkerque / Grand Prix des Hauts de France,stage races,2.Pro
+91, Tour de Hongrie,stage races,2.Pro
+92, Rund um Köln,one day race,1.1
+93, Grande Prémio Internacional Beiras e Serra da Estrela,stage races,2.1
+94, Veenendaal - Veenendaal,one day race,1.Pro
+95, Veenendaal-Veenendaal,one day race,1.1
+96, Antwerp Port Epic Ladies,one day race,1.Pro
+97, Antwerp Port Epic / Sels Trophy,one day race,1.1
+98, Tour of Estonia,stage races,2.1
+99, Circuit de Wallonie,one day race,1.1
+100, Boucles de la Mayenne - Crédit Mutuel,stage races,2.Pro
+101, Tour of Norway,stage races,2.Pro
+102, Marcel Kint Classic,one day race,1.1
+103, Tour of Slovenia,stage races,2.Pro
+104, Mercan'Tour Classic Alpes-Maritimes,one day race,1.1
+105, Heylen Vastgoed Heistse Pijl,one day race,1.1
+106, Critérium du Dauphiné,stage races,Tours WT Cat 1
+107, Brussels Cycling Classic,one day race,1.Pro
+108, ZLM Tour,stage races,2.1
+109, Grosser Preis des Kantons Aargau,one day race,1.1
+110, Duracell Dwars door het Hageland,one day race,1.Pro
+111, Elfstedenronde Brugge,one day race,1.1
+112, SPAR Flanders Diamond Tour,one day race,1.1
+113, Tour de Suisse,stage races,Tours WT Cat 1
+114, CIC - Mont Ventoux,one day race,1.Pro
+115, Baloise Belgium Tour,stage races,2.Pro
+116, La Route d'Occitanie - CIC,stage races,2.1
+117, Copenhagen Sprint,one day race,Classiques WT Cat 3
+118, Andorra MoraBanc Clàssica,one day race,1.1
+119, Giro dell'Appennino,one day race,1.1
+120,Les CN,one day race,CN
+121, Sibiu Cycling Tour,stage races,2.1
+122, Tour de France,stage races,WT GT
+123, Tour of Magnificent Qinghai,stage races,2.Pro
+124, Tour of Austria,stage races,2.1
+125, La Picto - Charentaise,one day race,1.1
+126, Clásica Terres de l´Ebre,one day race,1.1
+127, Prueba Villafranca - Ordiziako Klasika,one day race,1.1
+128, Ethias-Tour de Wallonie,stage races,2.Pro
+129, Vuelta a Castilla y Leon,one day race,1.1
+130, Donostia San Sebastian Klasikoa,one day race,Classiques WT Cat 2
+131, Circuito de Getxo - Memorial Hermanos Otxoa,one day race,1.1
+132, Tour de Pologne,stage races,Tours WT Cat 3
+133, Vuelta a Burgos,stage races,2.Pro
+134, Tour de l'Ain,stage races,2.1
+135, Arctic Race of Norway,stage races,2.Pro
+136, PostNord Tour of Denmark,stage races,2.Pro
+137, Czech Tour,stage races,2.1
+138, Circuit Franco-Belge,one day race,1.Pro
+139, Druivenkoers - Overijse,one day race,1.1
+140, ADAC Cyclassics,one day race,Classiques WT Cat 3
+141, La Polynormande,one day race,1.1
+142, Tour du Limousin-Périgord - Nouvelle Aquitaine,stage races,2.1
+143, Lidl Deutschland Tour,stage races,2.Pro
+144, Renewi Tour,stage races,Tours WT Cat 2
+145, Trans-Himalaya Cycling Race,stage races,2.1
+146, GP Lucien Van Impe,one day race,1.1
+147, La Vuelta Ciclista a España,stage races,WT GT
+148, Tour Poitou - Charentes en Nouvelle Aquitaine,stage races,2.1
+149, Muur Classic Geraardsbergen,one day race,1.1
+150, Bretagne Classic - Ouest-France,one day race,Classiques WT Cat 3
+151, Lloyds Bank Tour of Britain Men,stage races,2.Pro
+152, Tour of İstanbul,stage races,2.1
+153, Maryland Cycling Classic,one day race,1.Pro
+154, GP Industria & Artigianato,one day race,1.Pro
+155, Giro della Toscana - Memorial Alfredo Martini,one day race,1.1
+156, Gran Premio città di Peccioli - Coppa Sabatini,one day race,1.Pro
+157, Grand Prix Cycliste de Québec,one day race,Classiques WT Cat 2
+158, Memorial Marco Pantani,one day race,1.1
+159, GP de Fourmies / La Voix du Nord,one day race,1.Pro
+160, Grand Prix Cycliste de Montréal,one day race,Classiques WT Cat 2
+161, Trofeo Matteotti,one day race,1.1
+162, Okolo Slovenska / Tour de Slovaquie,stage races,2.1
+163, Grand Prix de Wallonie,one day race,1.Pro
+164, Skoda Tour de Luxembourg,stage races,2.Pro
+165, Kampioenschap van Vlaanderen,one day race,1.1
+166, SUPER 8 Classic,one day race,1.Pro
+167, World Championships ME - ITT,one day race,WC ITT
+168, Giro della Romagna,one day race,1.1
+169, Gooikse Pijl,one day race,1.1
+170, Grand Prix d'Isbergues - Pas de Calais,one day race,1.1
+171, Omloop van het Houtland,one day race,1.1
+172, World Championships ME - Road Race,one day race,WC RR
+173, Petronas Le Tour de Langkawi,stage races,2.Pro
+174, Paris-Chauny,one day race,1.1
+175, CRO Race,stage races,2.1
+176,European Continental Championships ME - ITT,one day race,EC ITT
+177, Sparkassen Münsterland Giro,one day race,1.Pro
+178, Giro dell'Emilia,one day race,1.Pro
+179,European Continental Championships ME - Road Race,one day race,EC RR
+180, Coppa Agostoni - Giro delle Brianze,one day race,1.1
+181, Coppa Bernocchi - GP Banco BPM,one day race,1.Pro
+182, Tre Valli Varesine,one day race,1.Pro
+183, Binche - Chimay - Binche / Mémorial Frank Vandenbroucke,one day race,1.1
+184, Gran Piemonte,one day race,1.Pro
+185, Paris - Bourges,one day race,1.1
+186, Tour de Kyushu,stage races,2.1
+187, Il Lombardia,one day race,WT Monument
+188, Tour de Vendée,one day race,1.1
+189, Paris - Tours Elite,one day race,1.Pro
+190, Trofeo Baracchi,one day race,1.1
+191, Gree-Tour of Guangxi,stage races,Tours WT Cat 3
+192, Tour of Holland,stage races,2.1
+193, Giro del Veneto,one day race,1.Pro
+194, Utsunomiya Japan Cup Road Race,one day race,1.Pro
+195, Veneto Classic,one day race,1.Pro
+196, Chrono des Nations,one day race,1.1
