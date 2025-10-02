@@ -285,46 +285,42 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
   const totalBidsCount = draftBids.length + submittedBids.length;
   const canAddMore = budget ? totalBidsCount < budget.maxCoureurs : false;
 
-  // If there are submitted bids, show them in read-only mode
-  if (submittedBids.length > 0 && draftBids.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Vos enchères validées - Tour {auction.round_number}</span>
-            <Badge variant="secondary" className="text-base">
-              {submittedBids.length} enchère(s)
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert className="mb-4">
-            <Clock className="h-4 w-4" />
-            <AlertDescription>
-              Vos enchères ont été soumises et sont en attente de traitement. 
-              Vous pourrez voir les résultats dans l'historique une fois que l'administrateur aura traité ce tour d'enchères.
-            </AlertDescription>
-          </Alert>
-          <div className="space-y-3">
-            {submittedBids.map((bid: any) => (
-              <div key={bid.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                <div>
-                  <p className="font-medium">{bid.coureurs.nom}</p>
-                  <p className="text-sm text-muted-foreground">{bid.coureurs.equipe}</p>
-                </div>
-                <Badge variant="outline" className="text-lg">
-                  {parseFloat(bid.montant.toString()).toFixed(0)} €
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-4">
+      {/* Show submitted bids if any */}
+      {submittedBids.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Vos enchères validées - Tour {auction.round_number}</span>
+              <Badge variant="secondary" className="text-base">
+                {submittedBids.length} enchère(s)
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert className="mb-4">
+              <Clock className="h-4 w-4" />
+              <AlertDescription>
+                Vos enchères ont été soumises et sont en attente de traitement.
+              </AlertDescription>
+            </Alert>
+            <div className="space-y-3">
+              {submittedBids.map((bid: any) => (
+                <div key={bid.id} className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                  <div>
+                    <p className="font-medium">{bid.coureurs.nom}</p>
+                    <p className="text-sm text-muted-foreground">{bid.coureurs.equipe}</p>
+                  </div>
+                  <Badge variant="outline" className="text-lg">
+                    {parseFloat(bid.montant.toString()).toFixed(0)} €
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between flex-wrap gap-2">
