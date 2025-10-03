@@ -2652,6 +2652,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_clean_courses_phases: {
+        Args: { p_confirm_phrase: string }
+        Returns: Json
+      }
       admin_result_check_unique: {
         Args: {
           p_course_id: string
