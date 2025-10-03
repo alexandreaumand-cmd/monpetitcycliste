@@ -1,10 +1,9 @@
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X, Medal } from "lucide-react";
+import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
-import { ManagerResultsDrawer } from "@/components/manager/ManagerResultsDrawer";
 
 interface HeaderProps {
   manager: any;
@@ -22,7 +21,6 @@ const navLinks = [
 export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [resultsDrawerOpen, setResultsDrawerOpen] = useState(false);
   
   const allLinks = isAdmin 
     ? [...navLinks, { label: 'Admin', href: '/dashboard/admin', icon: Shield }]
@@ -72,33 +70,10 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                 </Link>
               );
             })}
-            {manager && (
-              <button
-                type="button"
-                onClick={() => setResultsDrawerOpen(true)}
-                className={cn(
-                  "px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-2",
-                  "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                )}
-              >
-                <Medal className="h-4 w-4" />
-                Résultats
-              </button>
-            )}
           </nav>
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
-            {manager && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setResultsDrawerOpen(true)}
-                className="md:hidden"
-              >
-                <Medal className="h-4 w-4" />
-              </Button>
-            )}
             <Button variant="outline" size="sm" onClick={onSignOut} className="hidden sm:flex">
               <LogOut className="mr-2 h-4 w-4" />
               Déconnexion
@@ -149,31 +124,10 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                   </Link>
                 );
               })}
-              {manager && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setResultsDrawerOpen(true);
-                    setMobileMenuOpen(false);
-                  }}
-                  className="justify-start"
-                >
-                  <Medal className="mr-2 h-4 w-4" />
-                  Résultats
-                </Button>
-              )}
             </div>
           </nav>
         )}
       </div>
-      
-      {manager && (
-        <ManagerResultsDrawer
-          open={resultsDrawerOpen}
-          onOpenChange={setResultsDrawerOpen}
-          managerId={manager.id}
-        />
-      )}
     </header>
   );
 };
