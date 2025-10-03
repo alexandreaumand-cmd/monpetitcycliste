@@ -76,7 +76,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
-            {!isAdmin && manager && (
+            {manager && (
               <>
                 <Button 
                   variant="outline" 
@@ -147,7 +147,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                   </Link>
                 );
               })}
-              {!isAdmin && manager && (
+              {manager && (
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -165,7 +165,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
         )}
       </div>
       
-      {!isAdmin && manager && (
+      {manager && (
         <ManagerResultsDrawer
           open={resultsDrawerOpen}
           onOpenChange={setResultsDrawerOpen}
