@@ -249,51 +249,6 @@ export const TeamScoring = ({ phaseId, saisonId }: TeamScoringProps) => {
         </CardContent>
       </Card>
 
-      {/* Stats Cards */}
-      {teamData && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Trophy className="h-4 w-4" />
-                Total de points
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{teamData.totals.points_total}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                Moyenne / course
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {teamData.totals.courses_count > 0
-                  ? Math.round(teamData.totals.points_total / teamData.totals.courses_count)
-                  : 0}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Courses scorées
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{teamData.totals.courses_count}</div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
       {/* Riders Table */}
       <Card>
         <CardHeader>
