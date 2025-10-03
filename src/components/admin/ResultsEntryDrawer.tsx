@@ -101,30 +101,8 @@ export const ResultsEntryDrawer = ({
     gcTime: 0,
   });
 
-  // Fetch existing results
-  const { data: existingResults } = useQuery({
-    queryKey: ['existing-results', sel_key],
-    queryFn: async () => {
-      let query = supabase
-        .from('race_results')
-        .select('*, coureurs(nom)')
-        .eq('course_id', course.course_id)
-        .eq('type_classement', classementType);
-      
-      if (classementType === 'Etape') {
-        query = query.eq('etape_numero', etapeNumero);
-      }
-      
-      const { data, error } = await query.order('position', { ascending: true });
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: open && gridPrepared,
-    staleTime: 0,
-  });
 
-  const handlePrepareGrid = () => {
+  const handlePrepareGrid = async () => {
     if (!scoringRules?.length) {
       toast.error("Aucun barème disponible pour cette catégorie");
       return;
@@ -135,30 +113,61 @@ export const ResultsEntryDrawer = ({
     const thisRequestId = requestIdRef.current;
     setCurrentRequestId(thisRequestId);
 
+    // Fetch existing results first
+    let query = supabase
+      .from('race_results')
+      .select('*, coureurs(nom)')
+      .eq('course_id', course.course_id)
+      .eq('type_classement', classementType);
+    
+    if (classementType === 'Etape') {
+      query = query.eq('etape_numero', etapeNumero);
+    } else {
+      query = query.is('etape_numero', null);
+    }
+    
+    const { data: existingData, error: existingError } = await query.order('position', { ascending: true, nullsFirst: false });
+    
+    if (existingError) {
+      console.error('Error loading existing results:', existingError);
+    }
+
     // Build grid with version tracking
     const buildGrid = () => {
-      if (existingResults?.length) {
-        const rows: ResultRow[] = existingResults.map(r => ({
-          position: r.position || 0,
+      const maxPlace = Math.max(...scoringRules.map(sr => sr.place));
+      const rows: ResultRow[] = [];
+
+      // Finished riders (with positions)
+      const finishedResults = existingData?.filter(r => r.statut === 'finished' && r.position) || [];
+      
+      for (let i = 1; i <= maxPlace; i++) {
+        const existing = finishedResults.find(r => r.position === i);
+        const points = scoringRules.find(sr => sr.place === i)?.points || 0;
+        
+        rows.push({
+          position: i,
+          coureur_id: existing?.coureur_id || null,
+          coureur_nom: existing ? (existing.coureurs as any)?.nom || null : null,
+          statut: 'finished' as StatutType,
+          points,
+          grid_version: sel_key,
+        });
+      }
+
+      // Non-finished riders (DNF/DNS/DSQ) - add at the end
+      const nonFinishedResults = existingData?.filter(r => r.statut !== 'finished') || [];
+      nonFinishedResults.forEach(r => {
+        rows.push({
+          position: 0, // No position for non-finished
           coureur_id: r.coureur_id,
           coureur_nom: (r.coureurs as any)?.nom || null,
           statut: r.statut as StatutType,
-          points: scoringRules.find(sr => sr.place === r.position)?.points || 0,
+          points: 0,
           grid_version: sel_key,
-        }));
-        return rows;
-      } else {
-        const maxPlace = Math.max(...scoringRules.map(sr => sr.place));
-        const rows: ResultRow[] = Array.from({ length: maxPlace }, (_, i) => ({
-          position: i + 1,
-          coureur_id: null,
-          coureur_nom: null,
-          statut: 'finished' as StatutType,
-          points: scoringRules.find(sr => sr.place === i + 1)?.points || 0,
-          grid_version: sel_key,
-        }));
-        return rows;
-      }
+        });
+      });
+
+      return rows;
     };
 
     // Only apply if this is still the latest request
@@ -169,32 +178,26 @@ export const ResultsEntryDrawer = ({
     }
   };
 
-  const handleRiderChange = (position: number, riderId: string | null, riderName: string | null) => {
-    setResultRows(prev => prev.map(row => 
-      row.position === position 
+  const handleRiderChange = (index: number, riderId: string | null, riderName: string | null) => {
+    setResultRows(prev => prev.map((row, i) => 
+      i === index 
         ? { ...row, coureur_id: riderId, coureur_nom: riderName }
         : row
     ));
   };
 
-  const handleStatutChange = (position: number, statut: StatutType) => {
-    setResultRows(prev => prev.map(row => 
-      row.position === position 
-        ? { 
-            ...row, 
-            statut,
-            points: statut === 'finished' ? (scoringRules?.find(sr => sr.place === position)?.points || 0) : 0
-          }
-        : row
-    ));
+  const handleStatutChange = (index: number, statut: StatutType) => {
+    setResultRows(prev => prev.map((row, i) => {
+      if (i !== index) return row;
+      const points = statut === 'finished' 
+        ? (scoringRules?.find(sr => sr.place === row.position)?.points || 0) 
+        : 0;
+      return { ...row, statut, points };
+    }));
   };
 
-  const handleRemoveRow = (position: number) => {
-    setResultRows(prev => prev.map(row => 
-      row.position === position 
-        ? { ...row, coureur_id: null, coureur_nom: null, statut: 'finished' as StatutType }
-        : row
-    ));
+  const handleRemoveRow = (index: number) => {
+    setResultRows(prev => prev.filter((_, i) => i !== index));
   };
 
   const saveMutation = useMutation({
@@ -203,6 +206,14 @@ export const ResultsEntryDrawer = ({
       
       if (validRows.length === 0) {
         throw new Error("Aucun résultat à sauvegarder");
+      }
+
+      // Check for duplicates among finished riders
+      const finishedRiders = validRows.filter(r => r.statut === 'finished');
+      const coureurIds = finishedRiders.map(r => r.coureur_id);
+      const duplicates = coureurIds.filter((id, idx) => coureurIds.indexOf(id) !== idx);
+      if (duplicates.length > 0) {
+        throw new Error("Doublons détectés dans la saisie");
       }
 
       // SERVER-SIDE: Reload scoring grid to recalculate points (source of truth)
@@ -226,16 +237,37 @@ export const ResultsEntryDrawer = ({
         ? new Date(new Date(course.date_debut).getTime() + (etapeNumero - 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         : course.date_fin;
 
-      // Upsert race_results
-      const resultsToUpsert = validRows.map(row => ({
-        course_id: course.course_id,
-        coureur_id: row.coureur_id!,
-        type_classement: classementType,
-        etape_numero: classementType === 'Etape' ? etapeNumero : null,
-        position: row.statut === 'finished' ? row.position : null,
-        statut: row.statut,
-        date_classement: dateClassement,
-      }));
+      // Fetch manager_id for each rider first
+      const riderManagerMap = new Map<string, string | null>();
+      for (const row of validRows) {
+        const { data: roster } = await supabase
+          .from('rosters')
+          .select('manager_id')
+          .eq('phase_id', course.phase_id)
+          .eq('coureur_id', row.coureur_id!)
+          .maybeSingle();
+        
+        riderManagerMap.set(row.coureur_id!, roster?.manager_id || null);
+      }
+
+      // Upsert race_results with manager_id and points
+      const resultsToUpsert = validRows.map(row => {
+        const isFinished = row.statut === 'finished';
+        const positionValue = isFinished && row.position > 0 ? row.position : null;
+        const points = isFinished && row.position > 0 ? (scoringMap.get(row.position) || 0) : 0;
+        
+        return {
+          course_id: course.course_id,
+          coureur_id: row.coureur_id!,
+          type_classement: classementType,
+          etape_numero: classementType === 'Etape' ? etapeNumero : null,
+          position: positionValue,
+          statut: row.statut,
+          date_classement: dateClassement,
+          manager_id: riderManagerMap.get(row.coureur_id!),
+          points,
+        };
+      });
 
       const { error: resultsError } = await supabase
         .from('race_results')
@@ -246,37 +278,36 @@ export const ResultsEntryDrawer = ({
       if (resultsError) throw resultsError;
 
       // Delete old points for this classification
-      const { error: deleteError } = await supabase
+      let deleteQuery = supabase
         .from('points_ledger')
         .delete()
         .eq('course_id', course.course_id)
-        .eq('type_classement', classementType)
-        .eq('etape_numero', classementType === 'Etape' ? etapeNumero : null);
+        .eq('type_classement', classementType);
 
+      if (classementType === 'Etape') {
+        deleteQuery = deleteQuery.eq('etape_numero', etapeNumero);
+      } else {
+        deleteQuery = deleteQuery.is('etape_numero', null);
+      }
+
+      const { error: deleteError } = await deleteQuery;
       if (deleteError) throw deleteError;
 
       // Insert new points (recalculated server-side)
       const pointsToInsert = [];
       for (const row of validRows) {
-        if (row.statut !== 'finished') continue;
+        if (row.statut !== 'finished' || row.position === 0) continue;
 
         // SERVER RECALCULATION of points
         const serverPoints = scoringMap.get(row.position) || 0;
         if (serverPoints === 0) continue;
 
-        // Find manager via rosters
-        const { data: roster } = await supabase
-          .from('rosters')
-          .select('manager_id')
-          .eq('phase_id', course.phase_id)
-          .eq('coureur_id', row.coureur_id!)
-          .maybeSingle();
-
-        if (roster) {
+        const managerId = riderManagerMap.get(row.coureur_id!);
+        if (managerId) {
           pointsToInsert.push({
             course_id: course.course_id,
             coureur_id: row.coureur_id!,
-            manager_id: roster.manager_id,
+            manager_id: managerId,
             phase_id: course.phase_id,
             type_classement: classementType,
             etape_numero: classementType === 'Etape' ? etapeNumero : null,
@@ -305,9 +336,7 @@ export const ResultsEntryDrawer = ({
         (result.skipped > 0 ? `, ${result.skipped} coureurs sans manager` : '')
       );
       queryClient.invalidateQueries({ queryKey: ['results-status'] });
-      queryClient.invalidateQueries({ queryKey: ['existing-results'] });
-      setGridPrepared(false);
-      setResultRows([]);
+      handlePrepareGrid(); // Reload grid with fresh data
     },
     onError: (error: Error) => {
       toast.error(`Erreur: ${error.message}`);
@@ -438,13 +467,18 @@ export const ResultsEntryDrawer = ({
               )}
             </div>
           ) : (
-            <div className="space-y-4">
+              <div className="space-y-4">
               {/* Step 2: Entry table */}
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">2. Saisie des résultats</h3>
-                <Button variant="outline" size="sm" onClick={() => setGridPrepared(false)}>
-                  Changer de classement
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handlePrepareGrid}>
+                    Recharger depuis BDD
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setGridPrepared(false)}>
+                    Changer de classement
+                  </Button>
+                </div>
               </div>
 
               <div className="rounded-md border" key={sel_key}>
@@ -461,21 +495,21 @@ export const ResultsEntryDrawer = ({
                   <TableBody>
                     {resultRows
                       .filter(row => row.grid_version === sel_key)
-                      .map((row) => (
-                        <TableRow key={`${sel_key}-${row.position}`}>
-                          <TableCell className="font-medium">{row.position}</TableCell>
+                      .map((row, index) => (
+                        <TableRow key={`${sel_key}-${row.position}-${index}`}>
+                          <TableCell className="font-medium">{row.position || '—'}</TableCell>
                           <TableCell>
                             <RiderAutocomplete
                               phaseId={course.phase_id}
                               value={row.coureur_id}
                               riderName={row.coureur_nom}
-                              onChange={(id, name) => handleRiderChange(row.position, id, name)}
+                              onChange={(id, name) => handleRiderChange(index, id, name)}
                             />
                           </TableCell>
                           <TableCell>
                             <Select 
                               value={row.statut} 
-                              onValueChange={(v) => handleStatutChange(row.position, v as StatutType)}
+                              onValueChange={(v) => handleStatutChange(index, v as StatutType)}
                             >
                               <SelectTrigger>
                                 <SelectValue />
