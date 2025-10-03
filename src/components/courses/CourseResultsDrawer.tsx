@@ -7,11 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Search, Calculator, Loader2 } from "lucide-react";
+import { Calendar, Search } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useToast } from "@/hooks/use-toast";
-import { useUserRole } from "@/hooks/useUserRole";
 
 interface CourseMeta {
   course_nom: string;
@@ -50,9 +48,6 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [topN, setTopN] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isComputingPoints, setIsComputingPoints] = useState(false);
-  const { toast } = useToast();
-  const { isAdmin } = useUserRole();
 
   useEffect(() => {
     if (open && courseId) {
@@ -94,36 +89,6 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
       console.error('Error loading course meta:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleComputePoints = async () => {
-    if (!courseId) return;
-    
-    setIsComputingPoints(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('compute-points', {
-        body: { course_id: courseId }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "✅ Points recalculés",
-        description: `${data.total_rows} entrées de points créées`,
-      });
-
-      // Reload results
-      await loadResults();
-    } catch (error) {
-      console.error('Error computing points:', error);
-      toast({
-        title: "Erreur",
-        description: error instanceof Error ? error.message : "Erreur lors du calcul des points",
-        variant: "destructive",
-      });
-    } finally {
-      setIsComputingPoints(false);
     }
   };
 
@@ -215,41 +180,18 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
         </DrawerHeader>
 
         <div className="px-4 pb-4 space-y-4 overflow-y-auto">
-          {/* Type selector pills and compute button */}
-          <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
-            <div className="flex gap-2 flex-wrap">
-              {meta?.types_disponibles?.map((type) => (
-                <Button
-                  key={type}
-                  variant={selectedType === type ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleTypeChange(type)}
-                >
-                  {type}
-                </Button>
-              ))}
-            </div>
-            
-            {isAdmin && (
+          {/* Type selector pills */}
+          <div className="flex gap-2 flex-wrap">
+            {meta?.types_disponibles?.map((type) => (
               <Button
-                variant="outline"
+                key={type}
+                variant={selectedType === type ? "default" : "outline"}
                 size="sm"
-                onClick={handleComputePoints}
-                disabled={isComputingPoints}
+                onClick={() => handleTypeChange(type)}
               >
-                {isComputingPoints ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Calcul...
-                  </>
-                ) : (
-                  <>
-                    <Calculator className="mr-2 h-4 w-4" />
-                    Recalculer points
-                  </>
-                )}
+                {type}
               </Button>
-            )}
+            ))}
           </div>
 
           {/* Etape selector if applicable */}
