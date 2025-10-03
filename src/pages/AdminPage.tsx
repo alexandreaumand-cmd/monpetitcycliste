@@ -7,7 +7,6 @@ import { CoursesResetManager } from "@/components/admin/CoursesResetManager";
 import { RoundManager } from "@/components/admin/RoundManager";
 import { AnnouncementManager } from "@/components/admin/AnnouncementManager";
 import { RecentResults } from "@/components/admin/RecentResults";
-import { OneDayRacesManager } from "@/components/admin/OneDayRacesManager";
 import { SeasonManager } from "@/components/admin/SeasonManager";
 import { MaintenancePanel } from "@/components/admin/MaintenancePanel";
 import { PointsComputeManager } from "@/components/admin/PointsComputeManager";
@@ -18,8 +17,7 @@ const adminTabs = [
   { label: 'Import Courses', path: 'courses-import' },
   { label: 'Rounds', path: 'rounds' },
   { label: 'Annonces', path: 'annonces' },
-  { label: 'Courses d\'un jour', path: 'results-oneday' },
-  { label: 'Courses à étapes', path: 'results' },
+  { label: 'Résultats', path: 'results' },
   { label: 'Saisons', path: 'seasons' },
   { label: 'Utilisateurs', path: 'users' },
   { label: 'Maintenance', path: 'maintenance' },
@@ -77,7 +75,6 @@ export const AdminPage = () => {
         
         <Route path="rounds" element={<RoundManager />} />
         <Route path="annonces" element={<AnnouncementManager />} />
-        <Route path="results-oneday" element={<OneDayRacesManager />} />
         <Route path="results" element={<RecentResults />} />
         <Route path="seasons" element={<SeasonManager />} />
         <Route path="maintenance" element={<MaintenancePanel />} />
