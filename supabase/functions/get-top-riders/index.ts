@@ -104,8 +104,9 @@ Deno.serve(async (req) => {
     // Limit results
     items = items.slice(0, limit);
 
-    // Fetch owners if phase_id is provided
+    // Fetch owners based on phase_id
     if (phase_id) {
+      // Case A: Specific phase - get owners for that phase only
       const riderIds = items.map(r => r.rider_id);
       
       const { data: rostersData, error: rostersError } = await supabase
@@ -123,7 +124,6 @@ Deno.serve(async (req) => {
       if (rostersError) {
         console.error('Error fetching rosters:', rostersError);
       } else {
-        // Map owners to riders
         const ownersMap = new Map();
         rostersData?.forEach((roster: any) => {
           if (!ownersMap.has(roster.coureur_id)) {
@@ -139,6 +139,100 @@ Deno.serve(async (req) => {
           ...rider,
           owners: ownersMap.get(rider.rider_id) || [],
         }));
+      }
+    } else {
+      // Case B: All phases - get deduplicated owners + owners by phase
+      const riderIds = items.map(r => r.rider_id);
+      
+      // Build query for rosters
+      let rostersQuery = supabase
+        .from('rosters')
+        .select(`
+          coureur_id,
+          phase_id,
+          managers:manager_id (
+            id,
+            nom
+          ),
+          phases:phase_id (
+            id,
+            index_dans_saison,
+            saison_id
+          )
+        `)
+        .in('coureur_id', riderIds);
+
+      // Filter by saison if provided
+      if (saison_id) {
+        const { data: phases } = await supabase
+          .from('phases')
+          .select('id')
+          .eq('saison_id', saison_id);
+        
+        if (phases && phases.length > 0) {
+          const phaseIds = phases.map(p => p.id);
+          rostersQuery = rostersQuery.in('phase_id', phaseIds);
+        }
+      }
+
+      const { data: rostersData, error: rostersError } = await rostersQuery;
+
+      if (rostersError) {
+        console.error('Error fetching rosters for all phases:', rostersError);
+      } else {
+        // Build owners_all (deduplicated) and owners_by_phase
+        const ownersAllMap = new Map();
+        const ownersByPhaseMap = new Map();
+
+        rostersData?.forEach((roster: any) => {
+          const coureurId = roster.coureur_id;
+          const managerId = roster.managers?.id;
+          const managerNom = roster.managers?.nom || 'Inconnu';
+          const phaseId = roster.phase_id;
+          const phaseIndex = roster.phases?.index_dans_saison;
+
+          // Initialize maps if not exists
+          if (!ownersAllMap.has(coureurId)) {
+            ownersAllMap.set(coureurId, new Map());
+          }
+          if (!ownersByPhaseMap.has(coureurId)) {
+            ownersByPhaseMap.set(coureurId, []);
+          }
+
+          // Add to owners_all (deduplicated by manager_id)
+          if (!ownersAllMap.get(coureurId).has(managerId)) {
+            ownersAllMap.get(coureurId).set(managerId, {
+              manager_id: managerId,
+              manager_nom: managerNom,
+            });
+          }
+
+          // Add to owners_by_phase
+          ownersByPhaseMap.get(coureurId).push({
+            manager_id: managerId,
+            manager_nom: managerNom,
+            phase_id: phaseId,
+            phase_index: phaseIndex,
+          });
+        });
+
+        items = items.map(rider => {
+          const ownersAllSet = ownersAllMap.get(rider.rider_id);
+          const ownersByPhase = ownersByPhaseMap.get(rider.rider_id) || [];
+
+          return {
+            ...rider,
+            owners_all: ownersAllSet ? Array.from(ownersAllSet.values()).sort((a: any, b: any) => 
+              a.manager_nom.localeCompare(b.manager_nom)
+            ) : [],
+            owners_by_phase: ownersByPhase.sort((a: any, b: any) => {
+              // Sort by manager name first, then by phase index
+              const nameCompare = a.manager_nom.localeCompare(b.manager_nom);
+              if (nameCompare !== 0) return nameCompare;
+              return (a.phase_index || 0) - (b.phase_index || 0);
+            }),
+          };
+        });
       }
     }
 

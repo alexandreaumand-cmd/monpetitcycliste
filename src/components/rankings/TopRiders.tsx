@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Star, Users, TrendingUp } from "lucide-react";
+import { Star, Users, TrendingUp, Info } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 
 type TopRidersProps = {
@@ -20,6 +21,11 @@ type RiderOwner = {
   manager_nom: string;
 };
 
+type RiderOwnerByPhase = RiderOwner & {
+  phase_id: string;
+  phase_index: number;
+};
+
 type TopRider = {
   rider_id: string;
   rider_nom: string;
@@ -27,6 +33,8 @@ type TopRider = {
   total_points: number;
   courses_count: number;
   owners?: RiderOwner[];
+  owners_all?: RiderOwner[];
+  owners_by_phase?: RiderOwnerByPhase[];
 };
 
 type RiderPointDetail = {
@@ -157,6 +165,7 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
 
                     {/* Managers section */}
                     {phaseId ? (
+                      // Case A: Specific phase selected
                       rider.owners && rider.owners.length > 0 ? (
                         <div className="pt-2 border-t">
                           <p className="text-xs text-muted-foreground mb-1">Managers</p>
@@ -179,11 +188,61 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
                         </div>
                       )
                     ) : (
-                      <div className="pt-2 border-t">
-                        <p className="text-xs text-muted-foreground italic">
-                          Sélectionnez une phase pour voir les managers
-                        </p>
-                      </div>
+                      // Case B: All phases (phase_id = null)
+                      rider.owners_all && rider.owners_all.length > 0 ? (
+                        <div className="pt-2 border-t">
+                          <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                            Managers (toutes phases)
+                          </p>
+                          <div className="flex flex-wrap gap-1 items-center">
+                            {rider.owners_all.slice(0, 2).map((owner) => (
+                              <Badge key={owner.manager_id} variant="outline" className="text-xs">
+                                {owner.manager_nom}
+                              </Badge>
+                            ))}
+                            {rider.owners_all.length > 2 && (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Badge 
+                                    variant="secondary" 
+                                    className="text-xs cursor-pointer hover:bg-secondary/80"
+                                  >
+                                    +{rider.owners_all.length - 2}
+                                    <Info className="h-3 w-3 ml-1" />
+                                  </Badge>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80">
+                                  <div className="space-y-2">
+                                    <h4 className="font-semibold text-sm">Propriétaires par phase</h4>
+                                    <div className="max-h-48 overflow-y-auto">
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow>
+                                            <TableHead className="text-xs">Manager</TableHead>
+                                            <TableHead className="text-xs">Phase</TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {rider.owners_by_phase?.map((owner, idx) => (
+                                            <TableRow key={idx}>
+                                              <TableCell className="text-xs">{owner.manager_nom}</TableCell>
+                                              <TableCell className="text-xs">P{owner.phase_index}</TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="pt-2 border-t">
+                          <p className="text-xs text-muted-foreground">Aucun manager</p>
+                        </div>
+                      )
                     )}
                   </CardContent>
                 </Card>
@@ -212,13 +271,48 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
                 {selectedRider.rider_equipe}
               </p>
             )}
-            {phaseId && selectedRider?.owners && selectedRider.owners.length > 0 && (
+            
+            {/* Display owners based on context */}
+            {phaseId && selectedRider?.owners && selectedRider.owners.length > 0 ? (
               <div className="pt-2">
                 <p className="text-sm font-medium">
-                  Propriétaire(s) (Phase) : {selectedRider.owners.map(o => o.manager_nom).join(', ')}
+                  Propriétaire(s) — Phase : {selectedRider.owners.map(o => o.manager_nom).join(', ')}
                 </p>
               </div>
-            )}
+            ) : !phaseId && selectedRider?.owners_all && selectedRider.owners_all.length > 0 ? (
+              <div className="pt-2 space-y-2">
+                <p className="text-sm font-medium">
+                  Propriétaire(s) — Toutes phases : {selectedRider.owners_all.map(o => o.manager_nom).join(', ')}
+                </p>
+                {selectedRider.owners_by_phase && selectedRider.owners_by_phase.length > 0 && (
+                  <div className="mt-2">
+                    <details className="text-xs">
+                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                        Voir détail par phase
+                      </summary>
+                      <div className="mt-2 max-h-32 overflow-y-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-xs">Manager</TableHead>
+                              <TableHead className="text-xs">Phase</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {selectedRider.owners_by_phase.map((owner, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell className="text-xs">{owner.manager_nom}</TableCell>
+                                <TableCell className="text-xs">P{owner.phase_index}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </details>
+                  </div>
+                )}
+              </div>
+            ) : null}
           </SheetHeader>
 
           <div className="mt-6 space-y-4">
