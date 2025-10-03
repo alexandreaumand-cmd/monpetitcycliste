@@ -164,6 +164,7 @@ export const ResultsEntry = () => {
       {courseData && studioOpen && (
         <ResultsEntryStudio
           course={courseData}
+          mode="create"
           onClose={() => setStudioOpen(false)}
         />
       )}

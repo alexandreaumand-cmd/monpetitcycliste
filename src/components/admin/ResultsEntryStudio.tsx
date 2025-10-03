@@ -41,10 +41,11 @@ type ResultRow = {
 
 type StudioProps = {
   course: CourseData;
+  mode: 'create' | 'edit';
   onClose: () => void;
 };
 
-export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
+export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"stages" | "finals">("stages");
   const [currentStage, setCurrentStage] = useState(1);
@@ -229,7 +230,7 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isDirty]);
 
-  const handlePrepareGrid = () => {
+  const handlePrepareGrid = async () => {
     if (!scoringRules || scoringRules.length === 0) {
       toast({
         title: "Barème introuvable",
@@ -243,18 +244,52 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
     const newRequestId = ++requestIdRef.current;
     setCurrentRequestId(newRequestId);
 
-    const rows: ResultRow[] = Array.from({ length: maxPlace }, (_, i) => {
-      const position = i + 1;
-      const rule = scoringRules.find((r) => r.place === position);
-      return {
-        position,
-        coureur_id: null,
-        coureur_nom: null,
-        statut: "finished" as ResultStatut,
-        points: rule?.points || 0,
-        grid_version: sel_key,
-      };
-    });
+    let rows: ResultRow[] = [];
+
+    if (mode === 'edit') {
+      // Mode Corriger: Load existing results
+      try {
+        const { data: existingResults, error } = await supabase.rpc('results_course_rows', {
+          p_course_id: course.course_id,
+          p_type_classement: classementType,
+          p_etape_numero: activeTab === 'stages' ? currentStage : null
+        });
+
+        if (error) throw error;
+
+        // Use existing results, fill points from scoring rules
+        rows = (existingResults || []).map((r: any) => ({
+          position: r.row_position,
+          coureur_id: r.coureur_id,
+          coureur_nom: r.coureur_nom,
+          statut: r.statut,
+          points: scoringRules.find(sr => sr.place === r.row_position)?.points || 0,
+          grid_version: sel_key,
+        }));
+      } catch (err: any) {
+        console.error('Error loading existing results:', err);
+        toast({
+          title: "Erreur",
+          description: err.message || "Impossible de charger les résultats existants",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      // Mode Saisir: Empty grid based on scoring rules
+      rows = Array.from({ length: maxPlace }, (_, i) => {
+        const position = i + 1;
+        const rule = scoringRules.find((r) => r.place === position);
+        return {
+          position,
+          coureur_id: null,
+          coureur_nom: null,
+          statut: "finished" as ResultStatut,
+          points: rule?.points || 0,
+          grid_version: sel_key,
+        };
+      });
+    }
 
     if (newRequestId === currentRequestId || newRequestId > currentRequestId) {
       setResultRows(rows);
@@ -504,6 +539,9 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
               <Badge variant="outline">{course.categorie}</Badge>
               <Badge variant={course.type_course === "One day" ? "secondary" : "default"}>
                 {course.type_course}
+              </Badge>
+              <Badge variant={mode === 'create' ? 'default' : 'outline'}>
+                {mode === 'create' ? 'Saisie' : 'Correction'}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground mt-1">

@@ -36,6 +36,7 @@ export const RecentResults = () => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [searchFilter, setSearchFilter] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [studioMode, setStudioMode] = useState<'create' | 'edit'>('create');
   const [studioOpen, setStudioOpen] = useState(false);
 
   // Fetch recent courses
@@ -109,8 +110,9 @@ export const RecentResults = () => {
     return true;
   });
 
-  const handleOpenStudio = (course: Course) => {
+  const handleOpenStudio = (course: Course, mode: 'create' | 'edit') => {
     setSelectedCourse(course);
+    setStudioMode(mode);
     setStudioOpen(true);
   };
 
@@ -204,9 +206,17 @@ export const RecentResults = () => {
                         <Badge variant="outline">{courseIsStageRace ? 'Course à étapes' : 'Course d\'un jour'}</Badge>
                       </div>
                     </div>
-                    <Button onClick={() => handleOpenStudio(course)}>
-                      Saisir / Corriger
-                    </Button>
+                    <div className="flex gap-2">
+                      {!status?.nb_lignes_gc && !status?.nb_lignes_etapes ? (
+                        <Button onClick={() => handleOpenStudio(course, 'create')}>
+                          Saisir
+                        </Button>
+                      ) : (
+                        <Button variant="outline" onClick={() => handleOpenStudio(course, 'edit')}>
+                          Corriger
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -277,6 +287,7 @@ export const RecentResults = () => {
       {selectedCourse && studioOpen && (
         <ResultsEntryStudio
           course={selectedCourse}
+          mode={studioMode}
           onClose={() => setStudioOpen(false)}
         />
       )}
