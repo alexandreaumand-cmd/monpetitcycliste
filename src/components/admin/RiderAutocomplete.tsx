@@ -78,8 +78,8 @@ export const RiderAutocomplete = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0" align="start">
-        <Command>
-          <CommandInput 
+        <Command shouldFilter={false}>
+          <CommandInput
             placeholder="Rechercher un coureur..." 
             value={searchQuery}
             onValueChange={setSearchQuery}
@@ -96,7 +96,7 @@ export const RiderAutocomplete = ({
               {riders?.map((rider) => (
                 <CommandItem
                   key={rider.coureur_id}
-                  value={rider.coureur_id}
+                  value={rider.coureur_nom}
                   onSelect={() => {
                     onChange(rider.coureur_id, rider.coureur_nom);
                     setOpen(false);
