@@ -180,7 +180,8 @@ export const DataImport = () => {
             <li><strong>Coureurs:</strong> Coureur, Equipe, Prix initial, id</li>
             <li><strong>Barèmes:</strong> id, Catégorie, Type classement, Place, Points, Type</li>
             <li><strong>Courses (format simple):</strong> id, Course, Race Type, Race Category</li>
-            <li><strong>Courses (format complet):</strong> id;nom;categorie;type_course;date_debut;date_fin;phase_id;statut;uci_code;wt_tier</li>
+            <li><strong>Courses (format complet):</strong> id,nom,date_debut,date_fin,categorie,type_course,pays,phase_id</li>
+            <li className="text-xs text-muted-foreground ml-6">phase_id peut être "Phase 1", "Phase 2", etc. (sera converti en UUID)</li>
             <li><strong>Managers:</strong> Nom manager, Sponsor</li>
             <li><strong>Dates des Courses:</strong> id, Course, date_debut, date_fin</li>
           </ul>

@@ -148,11 +148,39 @@ Deno.serve(async (req) => {
       )
     }
 
+    // For courses, fetch phases for mapping
+    let phaseMap: { [key: string]: string } = {}
+    if (table === 'courses') {
+      const { data: phases, error: phasesError } = await supabaseClient
+        .from('phases')
+        .select('id, index_dans_saison')
+        .order('index_dans_saison')
+      
+      if (!phasesError && phases) {
+        phases.forEach((phase: { id: string; index_dans_saison: number }) => {
+          phaseMap[`Phase ${phase.index_dans_saison}`] = phase.id
+        })
+        console.log('Phase mapping:', phaseMap)
+      }
+    }
+
     for (let i = 1; i < lines.length; i++) {
       const values = parseCSVLine(lines[i], separator)
       
       try {
-        const record = mapToTableFormat(table, headers, values)
+        let record = mapToTableFormat(table, headers, values)
+        
+        // Map phase names to UUIDs for courses
+        if (table === 'courses' && record.phase_id) {
+          const phaseName = record.phase_id
+          if (phaseMap[phaseName]) {
+            record.phase_id = phaseMap[phaseName]
+            console.log(`Mapped ${phaseName} to ${record.phase_id}`)
+          } else if (phaseName && !phaseName.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            console.warn(`Phase "${phaseName}" not found in mapping, setting to null`)
+            record.phase_id = null
+          }
+        }
         
         if (record) {
           // For scoring_rules, upsert based on unique constraint (categorie, type_classement, place)
@@ -263,7 +291,7 @@ function mapToTableFormat(
       const hasNewFormat = headers.includes('nom') || headers.includes('date_debut')
       
       if (hasNewFormat) {
-        // New format: id;nom;categorie;type_course;date_debut;date_fin;phase_id;statut;uci_code;wt_tier
+        // New format: supports pays column and phase name mapping
         return {
           id: obj['id'] || null,
           nom: obj['nom']?.trim(),
@@ -271,10 +299,11 @@ function mapToTableFormat(
           type_course: obj['type_course']?.trim() || null,
           date_debut: obj['date_debut']?.trim() || null,
           date_fin: obj['date_fin']?.trim() || null,
-          phase_id: obj['phase_id']?.trim() || null,
+          phase_id: obj['phase_id']?.trim() || null, // Will be mapped later
           statut: obj['statut']?.trim() || 'scheduled',
           uci_code: obj['uci_code']?.trim() || null,
-          wt_tier: obj['wt_tier']?.trim() || null
+          wt_tier: obj['wt_tier']?.trim() || null,
+          pays: obj['pays']?.trim() || null
         }
       } else {
         // Old format: id, Course, Race Type, Race Category
@@ -288,7 +317,8 @@ function mapToTableFormat(
           date_fin: null,
           phase_id: null,
           uci_code: null,
-          wt_tier: null
+          wt_tier: null,
+          pays: null
         }
       }
     

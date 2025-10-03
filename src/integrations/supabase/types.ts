@@ -511,6 +511,7 @@ export type Database = {
           date_fin: string | null
           id: string
           nom: string
+          pays: string | null
           phase_id: string | null
           statut: Database["public"]["Enums"]["race_statut"] | null
           type_course: string | null
@@ -523,6 +524,7 @@ export type Database = {
           date_fin?: string | null
           id: string
           nom: string
+          pays?: string | null
           phase_id?: string | null
           statut?: Database["public"]["Enums"]["race_statut"] | null
           type_course?: string | null
@@ -535,6 +537,7 @@ export type Database = {
           date_fin?: string | null
           id?: string
           nom?: string
+          pays?: string | null
           phase_id?: string | null
           statut?: Database["public"]["Enums"]["race_statut"] | null
           type_course?: string | null
