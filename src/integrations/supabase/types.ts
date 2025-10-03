@@ -2565,6 +2565,14 @@ export type Database = {
       }
     }
     Functions: {
+      admin_results_reset_all: {
+        Args: { p_confirm_phrase: string }
+        Returns: Json
+      }
+      admin_results_reset_preview: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_my_roles: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"][]
