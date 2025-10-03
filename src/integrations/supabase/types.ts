@@ -691,6 +691,7 @@ export type Database = {
           date_classement: string
           etape_numero: number | null
           id: string
+          points: number
           position: number | null
           statut: Database["public"]["Enums"]["result_statut"] | null
           type_classement: Database["public"]["Enums"]["type_classement"]
@@ -701,6 +702,7 @@ export type Database = {
           date_classement: string
           etape_numero?: number | null
           id?: string
+          points?: number
           position?: number | null
           statut?: Database["public"]["Enums"]["result_statut"] | null
           type_classement: Database["public"]["Enums"]["type_classement"]
@@ -711,6 +713,7 @@ export type Database = {
           date_classement?: string
           etape_numero?: number | null
           id?: string
+          points?: number
           position?: number | null
           statut?: Database["public"]["Enums"]["result_statut"] | null
           type_classement?: Database["public"]["Enums"]["type_classement"]
