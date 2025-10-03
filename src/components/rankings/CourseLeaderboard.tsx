@@ -19,7 +19,7 @@ interface CourseLeaderboardProps {
 }
 
 export const CourseLeaderboard = ({ phaseId, saisonId }: CourseLeaderboardProps) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchCourse, setSearchCourse] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string>("tous");
@@ -46,7 +46,7 @@ export const CourseLeaderboard = ({ phaseId, saisonId }: CourseLeaderboardProps)
         body: {
           saison_id: saisonId,
           phase_id: phaseId,
-          category: selectedCategory || null,
+          category: selectedCategory === "all" ? null : selectedCategory,
           search: searchCourse || null,
           limit: 100,
           offset: 0
@@ -159,7 +159,7 @@ export const CourseLeaderboard = ({ phaseId, saisonId }: CourseLeaderboardProps)
                   <SelectValue placeholder="Toutes" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Toutes</SelectItem>
+                  <SelectItem value="all">Toutes</SelectItem>
                   {filterOptions?.categories.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
