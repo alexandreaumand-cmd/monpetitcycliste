@@ -1,9 +1,10 @@
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X } from "lucide-react";
+import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X, Medal } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
+import { ManagerResultsDrawer } from "@/components/manager/ManagerResultsDrawer";
 
 interface HeaderProps {
   manager: any;
@@ -21,6 +22,7 @@ const navLinks = [
 export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [resultsDrawerOpen, setResultsDrawerOpen] = useState(false);
   
   const allLinks = isAdmin 
     ? [...navLinks, { label: 'Admin', href: '/dashboard/admin', icon: Shield }]
@@ -74,6 +76,17 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
+            {!isAdmin && manager && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setResultsDrawerOpen(true)}
+                className="hidden md:flex"
+              >
+                <Medal className="mr-2 h-4 w-4" />
+                Résultats
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={onSignOut} className="hidden sm:flex">
               <LogOut className="mr-2 h-4 w-4" />
               Déconnexion
@@ -124,10 +137,31 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                   </Link>
                 );
               })}
+              {!isAdmin && manager && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setResultsDrawerOpen(true);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="justify-start"
+                >
+                  <Medal className="mr-2 h-4 w-4" />
+                  Résultats
+                </Button>
+              )}
             </div>
           </nav>
         )}
       </div>
+      
+      {!isAdmin && manager && (
+        <ManagerResultsDrawer
+          open={resultsDrawerOpen}
+          onOpenChange={setResultsDrawerOpen}
+          managerId={manager.id}
+        />
+      )}
     </header>
   );
 };
