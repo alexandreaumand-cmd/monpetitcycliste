@@ -2580,6 +2580,29 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      manager_coureur_points_detail: {
+        Args: { p_coureur_id: string; p_phase_id?: string }
+        Returns: {
+          course_nom: string
+          date_classement: string
+          etape_numero: number
+          points: number
+          total_points: number
+          type_classement: string
+        }[]
+      }
+      manager_my_team: {
+        Args: { p_phase_id?: string }
+        Returns: {
+          cote_initiale: number
+          coureur_id: string
+          equipe: string
+          nom: string
+          points_total: number
+          prix_achat: number
+          ratio_points_par_prix: number
+        }[]
+      }
       normalize_text: {
         Args: { txt: string }
         Returns: string

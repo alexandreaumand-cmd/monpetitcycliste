@@ -67,7 +67,7 @@ const Dashboard = () => {
         <Routes>
           <Route index element={<Navigate to="/dashboard/encheres" replace />} />
           <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
-          <Route path="mon-equipe" element={manager && <MyTeam managerId={manager.id} />} />
+          <Route path="mon-equipe" element={<MyTeam />} />
           <Route path="courses" element={<UpcomingCourses />} />
           <Route path="resultats" element={<ResultsPage />} />
           <Route path="classement" element={<Rankings />} />
