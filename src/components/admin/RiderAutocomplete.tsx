@@ -45,10 +45,11 @@ export const RiderAutocomplete = ({
   } = useInfiniteQuery({
     queryKey: ['riders-lookup-paginated', phaseId, debouncedSearchQuery],
     queryFn: async ({ pageParam = 0 }) => {
+      const query = (debouncedSearchQuery?.trim().length ?? 0) >= 2 ? debouncedSearchQuery : '';
       const { data, error } = await supabase
         .rpc('search_riders_paginated', {
           p_phase_id: phaseId,
-          p_query: debouncedSearchQuery || '',
+          p_query: query,
           p_page: pageParam,
           p_page_size: PAGE_SIZE,
         });
@@ -81,21 +82,28 @@ export const RiderAutocomplete = ({
 
   // Infinite scroll observer
   useEffect(() => {
+    if (!open) return;
+    const root = scrollRef.current;
     const target = observerTarget.current;
-    if (!target) return;
+    if (!root || !target) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+        const first = entries[0];
+        if (first.isIntersecting && hasNextPage && !isFetchingNextPage) {
           fetchNextPage();
         }
       },
-      { threshold: 0.1 }
+      {
+        root,
+        rootMargin: "0px 0px 200px 0px",
+        threshold: 0,
+      }
     );
 
     observer.observe(target);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [open, riders.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -162,6 +170,13 @@ export const RiderAutocomplete = ({
                 {isFetchingNextPage && (
                   <div className="flex items-center justify-center py-2">
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+                {hasNextPage && !isFetchingNextPage && (
+                  <div className="flex items-center justify-center py-2">
+                    <Button variant="ghost" size="sm" onClick={() => fetchNextPage()}>
+                      Charger plus
+                    </Button>
                   </div>
                 )}
               </CommandGroup>
