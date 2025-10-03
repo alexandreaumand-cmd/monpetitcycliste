@@ -191,6 +191,13 @@ export const ResultsEntryDrawer = ({
     }
   };
 
+  // Auto-load grid when opening and scoring rules are ready
+  useEffect(() => {
+    if (open && !gridPrepared && !isLoadingRules && (scoringRules?.length || 0) > 0) {
+      handlePrepareGrid();
+    }
+  }, [open, sel_key, gridPrepared, isLoadingRules, scoringRules]);
+
   const handleRiderChange = (index: number, riderId: string | null, riderName: string | null) => {
     setResultRows(prev => prev.map((row, i) => 
       i === index 
@@ -543,7 +550,7 @@ export const ResultsEntryDrawer = ({
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleRemoveRow(row.position)}
+                                onClick={() => handleRemoveRow(index)}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
