@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Star, Users, TrendingUp, Info } from "lucide-react";
+import { Star, Users, TrendingUp, Info, ArrowUpDown, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 type TopRidersProps = {
   phaseId?: string | null;
@@ -37,18 +38,30 @@ type TopRider = {
   owners_by_phase?: RiderOwnerByPhase[];
 };
 
-type RiderPointDetail = {
+type RiderPointRow = {
+  phase_label: string;
   course_nom: string;
-  type_classement: string;
-  etape_numero: number | null;
+  place: number | null;
   points: number;
-  date_classement: string;
-  total_points: number;
+};
+
+type RiderPointsTableData = {
+  rider: {
+    id: string;
+    nom: string;
+    equipe: string;
+    total_points: number;
+  };
+  rows: RiderPointRow[];
+  total: number;
 };
 
 export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
   const [selectedRider, setSelectedRider] = useState<TopRider | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortColumn, setSortColumn] = useState<keyof RiderPointRow>("points");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const { data: riders, isLoading } = useQuery({
     queryKey: ["top-riders", phaseId, limit],
@@ -65,27 +78,102 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
     },
   });
 
-  const { data: riderDetails, isLoading: isLoadingDetails } = useQuery({
-    queryKey: ["rider-details", selectedRider?.rider_id, phaseId],
+  const { data: riderPointsData, isLoading: isLoadingDetails } = useQuery({
+    queryKey: ["rider-points-table", selectedRider?.rider_id, phaseId],
     queryFn: async () => {
       if (!selectedRider) return null;
 
-      const { data, error } = await supabase.functions.invoke('manager-coureur-points-detail', {
+      const { data, error } = await supabase.functions.invoke('get-rider-points-table', {
         body: {
-          coureur_id: selectedRider.rider_id,
+          rider_id: selectedRider.rider_id,
           phase_id: phaseId,
         },
       });
 
       if (error) throw error;
-      return data as RiderPointDetail[] || [];
+      return data as RiderPointsTableData;
     },
     enabled: !!selectedRider,
   });
 
+  // Filter and sort rows
+  const filteredAndSortedRows = useMemo(() => {
+    if (!riderPointsData?.rows) return [];
+
+    let filtered = riderPointsData.rows;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(row =>
+        row.course_nom.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      const aVal = a[sortColumn];
+      const bVal = b[sortColumn];
+
+      // Handle nulls for place
+      if (sortColumn === "place") {
+        if (aVal === null && bVal === null) return 0;
+        if (aVal === null) return sortDirection === "asc" ? 1 : -1;
+        if (bVal === null) return sortDirection === "asc" ? -1 : 1;
+      }
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        return sortDirection === "asc" 
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+
+      return 0;
+    });
+
+    return sorted;
+  }, [riderPointsData, searchTerm, sortColumn, sortDirection]);
+
+  const handleSort = (column: keyof RiderPointRow) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection(column === "points" ? "desc" : "asc");
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (!riderPointsData) return;
+
+    const csv = [
+      ['Phase', 'Course', 'Place', 'Points'],
+      ...riderPointsData.rows.map(row => [
+        row.phase_label,
+        row.course_nom,
+        row.place?.toString() || '—',
+        row.points.toString(),
+      ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedRider?.rider_nom}_points.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleRiderClick = (rider: TopRider) => {
     setSelectedRider(rider);
     setDetailsOpen(true);
+    setSearchTerm("");
+    setSortColumn("points");
+    setSortDirection("desc");
   };
 
   const maxPoints = riders?.[0]?.total_points || 1;
@@ -108,7 +196,7 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
     );
   }
 
-  const totalPoints = riderDetails?.[0]?.total_points || 0;
+  
 
   return (
     <>
@@ -259,11 +347,11 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
 
       {/* Rider Details Drawer */}
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              {selectedRider?.rider_nom}
+              Détail — {selectedRider?.rider_nom}
             </SheetTitle>
             {selectedRider?.rider_equipe && (
               <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -316,60 +404,109 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
           </SheetHeader>
 
           <div className="mt-6 space-y-4">
+            {/* Total Points Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Total Points</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">{totalPoints}</p>
+                <p className="text-3xl font-bold">{riderPointsData?.rider.total_points || 0}</p>
               </CardContent>
             </Card>
 
-            {isLoadingDetails ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : riderDetails && riderDetails.length > 0 ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Détail des points</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Course</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Étape</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-right">Points</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {riderDetails.map((detail, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell className="font-medium">{detail.course_nom}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{detail.type_classement}</Badge>
-                          </TableCell>
-                          <TableCell>{detail.etape_numero || '—'}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {detail.date_classement ? format(new Date(detail.date_classement), 'dd/MM/yyyy') : '—'}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">{detail.points}</TableCell>
+            {/* Points Table */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Détail des points par course</CardTitle>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleExportCSV}
+                    disabled={!riderPointsData?.rows.length}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Exporter CSV
+                  </Button>
+                </div>
+                <Input
+                  placeholder="Rechercher une course..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="mt-2"
+                />
+              </CardHeader>
+              <CardContent>
+                {isLoadingDetails ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                  </div>
+                ) : filteredAndSortedRows.length > 0 ? (
+                  <div className="max-h-96 overflow-y-auto">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-background z-10">
+                        <TableRow>
+                          <TableHead 
+                            className="cursor-pointer select-none"
+                            onClick={() => handleSort("phase_label")}
+                          >
+                            <div className="flex items-center gap-1">
+                              Phase
+                              <ArrowUpDown className="h-3 w-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer select-none"
+                            onClick={() => handleSort("course_nom")}
+                          >
+                            <div className="flex items-center gap-1">
+                              Course
+                              <ArrowUpDown className="h-3 w-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="cursor-pointer select-none"
+                            onClick={() => handleSort("place")}
+                          >
+                            <div className="flex items-center gap-1">
+                              Place
+                              <ArrowUpDown className="h-3 w-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead 
+                            className="text-right cursor-pointer select-none"
+                            onClick={() => handleSort("points")}
+                          >
+                            <div className="flex items-center justify-end gap-1">
+                              Points
+                              <ArrowUpDown className="h-3 w-3" />
+                            </div>
+                          </TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                Aucun détail disponible
-              </div>
-            )}
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAndSortedRows.map((row, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>
+                              <Badge variant="outline">{row.phase_label}</Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">{row.course_nom}</TableCell>
+                            <TableCell>{row.place !== null ? row.place : '—'}</TableCell>
+                            <TableCell className="text-right font-semibold">{row.points}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {searchTerm ? 'Aucun résultat pour cette recherche' : 'Aucun point sur cette période'}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </SheetContent>
       </Sheet>
