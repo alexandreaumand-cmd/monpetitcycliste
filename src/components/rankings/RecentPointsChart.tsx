@@ -12,37 +12,35 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const RecentPointsChart = () => {
   const [days, setDays] = useState<number>(30);
 
-  const { data: pointsData, isLoading } = useQuery({
-    queryKey: ["recent-points", days],
+  const { data: seriesData, isLoading } = useQuery({
+    queryKey: ["cumulative-points", days],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("v_recent_points")
-        .select("*")
-        .gte("jour", new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString());
+      const { data, error } = await supabase.functions.invoke("get-cumulative-points-series", {
+        body: { days, topN: 5 }
+      });
       
       if (error) throw error;
       return data;
     },
   });
 
-  // Transform data for recharts
-  const chartData = pointsData?.reduce((acc, item) => {
-    const dateKey = format(new Date(item.jour), "dd MMM", { locale: fr });
-    const existing = acc.find(d => d.date === dateKey);
-    
-    if (existing) {
-      existing[item.manager_nom] = item.points_jour;
-    } else {
-      acc.push({
-        date: dateKey,
-        [item.manager_nom]: item.points_jour,
+  // Transform data for recharts - sort by date ascending (oldest to newest)
+  const chartData = seriesData?.series?.[0]?.points
+    ?.map((p: any) => {
+      const dateObj = new Date(p.date);
+      const formattedDate = format(dateObj, "dd MMM", { locale: fr });
+      const dataPoint: any = { date: formattedDate, fullDate: p.date };
+      
+      seriesData.series.forEach((s: any) => {
+        const point = s.points.find((pt: any) => pt.date === p.date);
+        dataPoint[s.manager_nom] = point?.value || 0;
       });
-    }
-    
-    return acc;
-  }, [] as any[]) || [];
+      
+      return dataPoint;
+    })
+    .sort((a: any, b: any) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime()) || [];
 
-  const managers = [...new Set(pointsData?.map(d => d.manager_nom) || [])];
+  const managers = seriesData?.series?.map((s: any) => s.manager_nom) || [];
   const colors = ["#8b5cf6", "#06b6d4", "#f59e0b", "#10b981", "#ef4444", "#ec4899"];
 
   if (isLoading) {
@@ -68,7 +66,7 @@ export const RecentPointsChart = () => {
               <TrendingUp className="h-5 w-5" />
               Évolution des points
             </CardTitle>
-            <CardDescription>Points gagnés par jour</CardDescription>
+            <CardDescription>Points cumulés</CardDescription>
           </div>
           <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
             <SelectTrigger className="w-32">
