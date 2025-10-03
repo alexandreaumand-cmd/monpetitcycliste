@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/logo.png";
 
 interface HeaderProps {
   manager: any;
@@ -35,15 +36,15 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-14">
           {/* Logo/Title */}
-          <Link to="/dashboard" className="flex flex-col">
-            <h1 className="text-lg font-bold gradient-primary bg-clip-text text-transparent">
-              Fantasy Cycling
-            </h1>
+          <Link to="/dashboard" className="flex items-center gap-3">
+            <img src={logo} alt="Mon Petit Cycliste" className="h-10 w-10 object-contain" />
             {manager && (
-              <p className="text-xs text-muted-foreground hidden sm:block">
-                {manager.nom} {manager.sponsor && `• ${manager.sponsor}`}
-                {isAdmin && <span className="ml-1 text-secondary font-semibold">• Admin</span>}
-              </p>
+              <div className="flex flex-col">
+                <p className="text-xs text-muted-foreground hidden sm:block">
+                  {manager.nom} {manager.sponsor && `• ${manager.sponsor}`}
+                  {isAdmin && <span className="ml-1 text-secondary font-semibold">• Admin</span>}
+                </p>
+              </div>
             )}
           </Link>
 
