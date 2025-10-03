@@ -31,6 +31,7 @@ type ResultRow = {
   position: number;
   coureur_id: string | null;
   coureur_nom: string | null;
+  manager_nom: string | null;
   statut: ResultStatut;
   points: number;
   grid_version?: string;
@@ -223,6 +224,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           position: r.row_position,
           coureur_id: r.coureur_id,
           coureur_nom: r.coureur_nom,
+          manager_nom: r.manager_nom,
           statut: r.statut,
           points: scoringRules.find(sr => sr.place === r.row_position)?.points || 0,
           grid_version: sel_key,
@@ -245,6 +247,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           position,
           coureur_id: null,
           coureur_nom: null,
+          manager_nom: null,
           statut: "finished" as ResultStatut,
           points: rule?.points || 0,
           grid_version: sel_key,
@@ -463,10 +466,10 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     });
   };
 
-  const handleRiderChange = (index: number, riderId: string | null, riderName: string | null) => {
+  const handleRiderChange = (index: number, riderId: string | null, riderName: string | null, managerNom: string | null = null) => {
     setResultRows((prev) =>
       prev.map((row, i) =>
-        i === index ? { ...row, coureur_id: riderId, coureur_nom: riderName } : row
+        i === index ? { ...row, coureur_id: riderId, coureur_nom: riderName, manager_nom: managerNom } : row
       )
     );
     setIsDirty(true);
@@ -654,18 +657,18 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                             value={row.coureur_id}
                             onSelect={(coureur) => {
                               if (coureur) {
-                                handleRiderChange(index, coureur.coureur_id, coureur.coureur_nom);
+                                handleRiderChange(index, coureur.coureur_id, coureur.coureur_nom, coureur.taken_by_manager_nom);
                               } else {
-                                handleRiderChange(index, null, null);
+                                handleRiderChange(index, null, null, null);
                               }
                             }}
                             showTakenRiders={true}
                           />
                         </td>
                         <td className="px-4 py-2">
-                          {row.coureur_id ? (
+                          {row.manager_nom ? (
                             <Badge variant="secondary" className="text-xs">
-                              —
+                              {row.manager_nom}
                             </Badge>
                           ) : (
                             <span className="text-sm text-muted-foreground">—</span>
