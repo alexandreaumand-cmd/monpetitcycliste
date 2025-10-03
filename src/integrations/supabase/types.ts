@@ -864,6 +864,8 @@ export type Database = {
           position: number | null
           statut: Database["public"]["Enums"]["result_statut"] | null
           type_classement: Database["public"]["Enums"]["type_classement"]
+          updated_at: string | null
+          updated_by_manager_id: string | null
         }
         Insert: {
           coureur_id?: string | null
@@ -876,6 +878,8 @@ export type Database = {
           position?: number | null
           statut?: Database["public"]["Enums"]["result_statut"] | null
           type_classement: Database["public"]["Enums"]["type_classement"]
+          updated_at?: string | null
+          updated_by_manager_id?: string | null
         }
         Update: {
           coureur_id?: string | null
@@ -888,6 +892,8 @@ export type Database = {
           position?: number | null
           statut?: Database["public"]["Enums"]["result_statut"] | null
           type_classement?: Database["public"]["Enums"]["type_classement"]
+          updated_at?: string | null
+          updated_by_manager_id?: string | null
         }
         Relationships: [
           {
@@ -1036,6 +1042,268 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_recent_points"
             referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_updated_by_manager_id_fkey"
+            columns: ["updated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_updated_by_manager_id_fkey"
+            columns: ["updated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_updated_by_manager_id_fkey"
+            columns: ["updated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_results_updated_by_manager_id_fkey"
+            columns: ["updated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_updated_by_manager_id_fkey"
+            columns: ["updated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_updated_by_manager_id_fkey"
+            columns: ["updated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_updated_by_manager_id_fkey"
+            columns: ["updated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
+        ]
+      }
+      race_results_history: {
+        Row: {
+          action_type: string
+          change_reason: string | null
+          changed_at: string
+          changed_by_manager_id: string
+          coureur_id: string
+          course_id: string
+          etape_numero: number | null
+          id: string
+          new_position: number | null
+          new_statut: Database["public"]["Enums"]["result_statut"] | null
+          old_position: number | null
+          old_statut: Database["public"]["Enums"]["result_statut"] | null
+          race_result_id: string | null
+          type_classement: Database["public"]["Enums"]["type_classement"]
+        }
+        Insert: {
+          action_type: string
+          change_reason?: string | null
+          changed_at?: string
+          changed_by_manager_id: string
+          coureur_id: string
+          course_id: string
+          etape_numero?: number | null
+          id?: string
+          new_position?: number | null
+          new_statut?: Database["public"]["Enums"]["result_statut"] | null
+          old_position?: number | null
+          old_statut?: Database["public"]["Enums"]["result_statut"] | null
+          race_result_id?: string | null
+          type_classement: Database["public"]["Enums"]["type_classement"]
+        }
+        Update: {
+          action_type?: string
+          change_reason?: string | null
+          changed_at?: string
+          changed_by_manager_id?: string
+          coureur_id?: string
+          course_id?: string
+          etape_numero?: number | null
+          id?: string
+          new_position?: number | null
+          new_statut?: Database["public"]["Enums"]["result_statut"] | null
+          old_position?: number | null
+          old_statut?: Database["public"]["Enums"]["result_statut"] | null
+          race_result_id?: string | null
+          type_classement?: Database["public"]["Enums"]["type_classement"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_coureur"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_coureur"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "fk_coureur"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "fk_coureur"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "fk_coureur"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "fk_coureur"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_by_phase"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "fk_coureur"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_global"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "fk_course"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_course"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_for_points_norm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_course"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_bareme_missing_all"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_course"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_course_points_theoriques"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "fk_course"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_recent_results"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "fk_course"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_upcoming_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_course"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "race_results_history_changed_by_manager_id_fkey"
+            columns: ["changed_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_history_changed_by_manager_id_fkey"
+            columns: ["changed_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_history_changed_by_manager_id_fkey"
+            columns: ["changed_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_results_history_changed_by_manager_id_fkey"
+            columns: ["changed_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_history_changed_by_manager_id_fkey"
+            columns: ["changed_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_history_changed_by_manager_id_fkey"
+            columns: ["changed_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_history_changed_by_manager_id_fkey"
+            columns: ["changed_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_history_race_result_id_fkey"
+            columns: ["race_result_id"]
+            isOneToOne: false
+            referencedRelation: "race_results"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_results_history_race_result_id_fkey"
+            columns: ["race_result_id"]
+            isOneToOne: false
+            referencedRelation: "v_race_results_editable"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2006,6 +2274,224 @@ export type Database = {
         }
         Relationships: []
       }
+      v_race_results_editable: {
+        Row: {
+          coureur_equipe: string | null
+          coureur_id: string | null
+          coureur_nom: string | null
+          course_id: string | null
+          date_classement: string | null
+          etape_numero: number | null
+          id: string | null
+          manager_id: string | null
+          manager_nom: string | null
+          points: number | null
+          position: number | null
+          statut: Database["public"]["Enums"]["result_statut"] | null
+          type_classement: Database["public"]["Enums"]["type_classement"] | null
+          updated_at: string | null
+          updated_by_manager_id: string | null
+          updated_by_nom: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "race_results_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_results_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "race_results_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "race_results_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "race_results_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "race_results_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_by_phase"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "race_results_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_global"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "race_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_for_points_norm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_bareme_missing_all"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_course_points_theoriques"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "race_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_recent_results"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "race_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_upcoming_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "race_results_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_results_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_updated_by_manager_id_fkey"
+            columns: ["updated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_updated_by_manager_id_fkey"
+            columns: ["updated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_updated_by_manager_id_fkey"
+            columns: ["updated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_results_updated_by_manager_id_fkey"
+            columns: ["updated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_updated_by_manager_id_fkey"
+            columns: ["updated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_updated_by_manager_id_fkey"
+            columns: ["updated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_updated_by_manager_id_fkey"
+            columns: ["updated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
+        ]
+      }
       v_recent_points: {
         Row: {
           jour: string | null
@@ -2097,6 +2583,59 @@ export type Database = {
       normalize_text: {
         Args: { txt: string }
         Returns: string
+      }
+      results_course_meta: {
+        Args: { p_course_id: string }
+        Returns: {
+          categorie: string
+          course_nom: string
+          date_debut: string
+          date_fin: string
+          etapes_disponibles: number[]
+          types_disponibles: Database["public"]["Enums"]["type_classement"][]
+        }[]
+      }
+      results_course_table: {
+        Args: {
+          p_course_id: string
+          p_etape_numero?: number
+          p_manager_id?: string
+          p_type_classement: Database["public"]["Enums"]["type_classement"]
+        }
+        Returns: {
+          coureur_id: string
+          coureur_nom: string
+          equipe: string
+          is_my_rider: boolean
+          manager_id: string
+          manager_nom: string
+          points_officiels: number
+          points_theoriques: number
+          race_result_id: string
+          row_position: number
+          statut: Database["public"]["Enums"]["result_statut"]
+        }[]
+      }
+      results_recent_races: {
+        Args: {
+          p_limit?: number
+          p_manager_id?: string
+          p_phase_id?: string
+          p_saison_id?: string
+          p_search?: string
+        }
+        Returns: {
+          categorie: string
+          course_id: string
+          date_debut: string
+          date_fin: string
+          has_points: boolean
+          last_result_at: string
+          my_points: number
+          nom: string
+          phase_id: string
+          types: Database["public"]["Enums"]["type_classement"][]
+        }[]
       }
       search_riders_for_results: {
         Args: { p_phase_id: string; p_query?: string }

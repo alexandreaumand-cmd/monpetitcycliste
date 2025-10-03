@@ -309,7 +309,7 @@ export const ResultsPage = () => {
                           key={idx}
                           className={row.is_my_rider ? 'bg-primary/10' : ''}
                         >
-                          <TableCell>{row.position || '-'}</TableCell>
+                          <TableCell>{row.row_position || '-'}</TableCell>
                           <TableCell>{getStatutBadge(row.statut)}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
