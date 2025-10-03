@@ -6,7 +6,6 @@ import { RoundManager } from "@/components/admin/RoundManager";
 import { AnnouncementManager } from "@/components/admin/AnnouncementManager";
 import { RecentResults } from "@/components/admin/RecentResults";
 import { SeasonManager } from "@/components/admin/SeasonManager";
-import { ResultsEditor } from "@/components/admin/ResultsEditor";
 import { cn } from "@/lib/utils";
 
 const adminTabs = [
@@ -14,7 +13,6 @@ const adminTabs = [
   { label: 'Rounds', path: 'rounds' },
   { label: 'Annonces', path: 'annonces' },
   { label: 'Résultats', path: 'results' },
-  { label: 'Éditeur résultats', path: 'results-editor' },
   { label: 'Saisons', path: 'seasons' },
   { label: 'Utilisateurs', path: 'users' },
 ];
@@ -62,7 +60,6 @@ export const AdminPage = () => {
         <Route path="rounds" element={<RoundManager />} />
         <Route path="annonces" element={<AnnouncementManager />} />
         <Route path="results" element={<RecentResults />} />
-        <Route path="results-editor" element={<ResultsEditor />} />
         <Route path="seasons" element={<SeasonManager />} />
         
         <Route path="users" element={
