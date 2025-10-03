@@ -186,6 +186,13 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
     }
   }, [sel_key, activeTab, etapeNumero, course.date_debut, course.date_fin]);
 
+  // Auto-prepare grid when scoring rules are loaded
+  useEffect(() => {
+    if (scoringRules && scoringRules.length > 0 && !gridPrepared) {
+      handlePrepareGrid();
+    }
+  }, [scoringRules, gridPrepared]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -578,17 +585,6 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
                 Aucun barème trouvé pour {course.categorie} / {classementType}
               </AlertDescription>
             </Alert>
-          )}
-
-          {scoringRules && scoringRules.length > 0 && !gridPrepared && (
-            <div className="mb-4">
-              <Button onClick={handlePrepareGrid} size="lg">
-                Préparer la saisie
-              </Button>
-              <p className="text-sm text-muted-foreground mt-2">
-                Barème: {course.categorie} / {classementType} ({scoringRules.length} places)
-              </p>
-            </div>
           )}
 
           {/* Results Table */}
