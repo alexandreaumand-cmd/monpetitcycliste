@@ -29,13 +29,12 @@ export const RiderAutocomplete = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 200);
 
-  // Ne charge RIEN tant qu'on n'a pas tapé au moins 2 caractères
   const { data: riders, isLoading } = useQuery({
     queryKey: ['riders-lookup-admin', phaseId, debouncedSearchQuery],
     queryFn: async () => {
-      // Double garde-fou : ne lance même pas la requête si < 2 caractères
+      // Ne recherche que si au moins 2 caractères
       if (!debouncedSearchQuery || debouncedSearchQuery.trim().length < 2) {
         return [];
       }
@@ -43,11 +42,12 @@ export const RiderAutocomplete = ({
       const { data, error } = await supabase
         .rpc('search_riders_for_results', {
           p_phase_id: phaseId,
-          p_query: debouncedSearchQuery.trim()
+          p_query: debouncedSearchQuery
         });
 
       if (error) throw error;
 
+      // Transform the data to match the expected format
       return (data || []).map(r => ({
         coureur_id: r.coureur_id,
         coureur_nom: r.coureur_nom,
@@ -57,14 +57,8 @@ export const RiderAutocomplete = ({
     },
     staleTime: 0,
     gcTime: 0,
-    // Désactive complètement la requête si < 2 caractères
     enabled: (debouncedSearchQuery?.trim().length ?? 0) >= 2,
   });
-
-  // Items avec garde-fou côté UI : si < 2 chars, renvoie tableau vide
-  const displayedRiders = (debouncedSearchQuery?.trim().length ?? 0) >= 2 
-    ? (riders || []) 
-    : [];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -84,17 +78,11 @@ export const RiderAutocomplete = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[400px] p-0" align="start">
-        <Command shouldFilter={false}>
+        <Command>
           <CommandInput 
             placeholder="Rechercher un coureur..." 
             value={searchQuery}
-            onValueChange={(newValue) => {
-              setSearchQuery(newValue);
-              // On Clear : vide la recherche
-              if (!newValue) {
-                setSearchQuery('');
-              }
-            }}
+            onValueChange={setSearchQuery}
           />
           <CommandList>
             <CommandEmpty>
@@ -105,14 +93,13 @@ export const RiderAutocomplete = ({
                   : "Aucun coureur trouvé."}
             </CommandEmpty>
             <CommandGroup>
-              {displayedRiders.map((rider) => (
+              {riders?.map((rider) => (
                 <CommandItem
                   key={rider.coureur_id}
                   value={rider.coureur_id}
                   onSelect={() => {
                     onChange(rider.coureur_id, rider.coureur_nom);
                     setOpen(false);
-                    setSearchQuery(''); // Clear après sélection
                   }}
                 >
                   <Check
@@ -133,10 +120,6 @@ export const RiderAutocomplete = ({
               ))}
             </CommandGroup>
           </CommandList>
-          {/* Debug temporaire */}
-          <div className="px-2 py-1 text-xs text-muted-foreground border-t">
-            DBG q="{searchQuery}" · n={displayedRiders.length}
-          </div>
         </Command>
       </PopoverContent>
     </Popover>
