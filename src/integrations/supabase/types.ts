@@ -691,6 +691,7 @@ export type Database = {
           date_classement: string
           etape_numero: number | null
           id: string
+          manager_id: string | null
           points: number
           position: number | null
           statut: Database["public"]["Enums"]["result_statut"] | null
@@ -702,6 +703,7 @@ export type Database = {
           date_classement: string
           etape_numero?: number | null
           id?: string
+          manager_id?: string | null
           points?: number
           position?: number | null
           statut?: Database["public"]["Enums"]["result_statut"] | null
@@ -713,6 +715,7 @@ export type Database = {
           date_classement?: string
           etape_numero?: number | null
           id?: string
+          manager_id?: string | null
           points?: number
           position?: number | null
           statut?: Database["public"]["Enums"]["result_statut"] | null
@@ -774,6 +777,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_course_points_theoriques"
             referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "race_results_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_results_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
           },
         ]
       }

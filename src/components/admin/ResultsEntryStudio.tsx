@@ -310,11 +310,25 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
       // Properly cast etape_numero: number for Etape, null otherwise
       const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
 
-      // Upsert race_results
+      // Fetch manager_id for each rider first
+      const riderManagerMap = new Map<string, string | null>();
+      for (const row of validRows) {
+        const { data: roster } = await supabase
+          .from("rosters")
+          .select("manager_id")
+          .eq("phase_id", course.phase_id)
+          .eq("coureur_id", row.coureur_id!)
+          .maybeSingle();
+        
+        riderManagerMap.set(row.coureur_id!, roster?.manager_id || null);
+      }
+
+      // Upsert race_results with manager_id and points
       const mappedTypeForUpsert = typeClassementMap[classementType] as "Etape" | "General" | "Jeune" | "Montagne" | "Points";
       const raceResultsToUpsert = validRows.map((row) => {
         const isFinished = row.statut === "finished";
         const positionValue = isFinished ? Number(row.position) : null;
+        const points = isFinished ? scoringMap.get(row.position) || 0 : 0;
         
         return {
           course_id: course.course_id,
@@ -324,6 +338,8 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
           position: positionValue,
           statut: row.statut,
           date_classement: dateClassement,
+          manager_id: riderManagerMap.get(row.coureur_id!),
+          points,
         };
       });
 
