@@ -33,7 +33,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
           <Card key={i}>
             <CardContent className="p-6">
@@ -67,7 +67,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {kpis.map((kpi) => (
         <Card key={kpi.label}>
           <CardContent className="p-6">

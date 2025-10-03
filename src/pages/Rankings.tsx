@@ -69,13 +69,10 @@ export default function Rankings() {
               </Select>
             </div>
           </CardHeader>
-        </Card>
+      </Card>
 
-        {/* KPIs */}
-        <RankingsKPIs phaseId={selectedPhase} />
-
-        {/* Main Content */}
-        <Tabs defaultValue="standings" className="space-y-6">
+      {/* Main Content */}
+      <Tabs defaultValue="standings" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 max-w-2xl">
             <TabsTrigger value="standings">Classement</TabsTrigger>
             <TabsTrigger value="riders">Top Coureurs</TabsTrigger>
@@ -115,6 +112,12 @@ export default function Rankings() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* KPIs Section */}
+        <section aria-labelledby="kpi-section-title" className="mt-8">
+          <h2 id="kpi-section-title" className="sr-only">Aperçu des points</h2>
+          <RankingsKPIs phaseId={selectedPhase} />
+        </section>
 
         {/* Manager Details Drawer */}
         <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
