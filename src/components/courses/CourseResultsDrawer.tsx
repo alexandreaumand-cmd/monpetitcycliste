@@ -7,11 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Search, Calculator } from "lucide-react";
+import { Calendar, Search } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useUserRole } from "@/hooks/useUserRole";
-import { useToast } from "@/hooks/use-toast";
 
 interface CourseMeta {
   course_nom: string;
@@ -43,8 +41,6 @@ interface CourseResultsDrawerProps {
 }
 
 export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResultsDrawerProps) => {
-  const { isAdmin } = useUserRole();
-  const { toast } = useToast();
   const [meta, setMeta] = useState<CourseMeta | null>(null);
   const [results, setResults] = useState<ResultRow[]>([]);
   const [selectedType, setSelectedType] = useState<string>("");
@@ -52,7 +48,6 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [topN, setTopN] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [computing, setComputing] = useState(false);
 
   useEffect(() => {
     if (open && courseId) {
@@ -130,45 +125,6 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     }
   };
 
-  const handleComputePoints = async () => {
-    if (!courseId) return;
-    
-    setComputing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('compute-points', {
-        body: { course_id: courseId }
-      });
-
-      if (error) throw error;
-
-      const missingCount = data.missing_bareme?.length || 0;
-      const message = missingCount > 0
-        ? `${data.rows_upserted} points calculés. ⚠️ ${missingCount} barèmes manquants.`
-        : `${data.rows_upserted} points calculés avec succès.`;
-
-      toast({
-        title: "✓ Calcul terminé",
-        description: message,
-      });
-
-      if (missingCount > 0) {
-        console.warn('Missing bareme:', data.missing_bareme);
-      }
-
-      // Reload results
-      await loadResults();
-    } catch (error: any) {
-      console.error('Error computing points:', error);
-      toast({
-        title: "Erreur",
-        description: error.message || "Erreur lors du calcul des points",
-        variant: "destructive",
-      });
-    } finally {
-      setComputing(false);
-    }
-  };
-
   // Client-side filtering
   const filteredResults = results.filter(r => {
     if (!searchQuery) return true;
@@ -200,10 +156,10 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[90vh]">
         <DrawerHeader>
-          <DrawerTitle className="flex items-center justify-between gap-3">
-            <div className="flex flex-col items-start gap-1">
-              {meta ? (
-                <>
+          <DrawerTitle className="flex items-center gap-3">
+            {meta ? (
+              <>
+                <div className="flex flex-col items-start gap-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xl font-bold">{meta.course_nom}</span>
                     <Badge variant="outline">{meta.categorie}</Badge>
@@ -215,21 +171,10 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                       <> - {format(new Date(meta.date_fin), 'dd MMM yyyy', { locale: fr })}</>
                     )}
                   </div>
-                </>
-              ) : (
-                <Skeleton className="h-6 w-64" />
-              )}
-            </div>
-            {isAdmin && (
-              <Button
-                onClick={handleComputePoints}
-                disabled={computing}
-                size="sm"
-                variant="outline"
-              >
-                <Calculator className="h-4 w-4 mr-2" />
-                {computing ? "Calcul..." : "Recalculer points"}
-              </Button>
+                </div>
+              </>
+            ) : (
+              <Skeleton className="h-6 w-64" />
             )}
           </DrawerTitle>
         </DrawerHeader>

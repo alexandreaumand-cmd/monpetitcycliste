@@ -5,6 +5,3 @@ verify_jwt = true
 
 [functions.reset-courses]
 verify_jwt = true
-
-[functions.compute-points]
-verify_jwt = true

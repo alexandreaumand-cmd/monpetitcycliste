@@ -2659,14 +2659,6 @@ export type Database = {
         Args: { p_confirm_phrase: string }
         Returns: Json
       }
-      admin_compute_points_for_course: {
-        Args: { p_course_id: string }
-        Returns: Json
-      }
-      admin_recompute_points_for_phase: {
-        Args: { p_phase_id: string }
-        Returns: Json
-      }
       admin_result_check_unique: {
         Args: {
           p_course_id: string
@@ -2703,10 +2695,6 @@ export type Database = {
       }
       admin_results_reset_preview: {
         Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      course_points_summary: {
-        Args: { p_course_id: string; p_manager_id?: string }
         Returns: Json
       }
       get_my_roles: {
