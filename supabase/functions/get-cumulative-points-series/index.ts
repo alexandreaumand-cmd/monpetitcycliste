@@ -37,39 +37,48 @@ Deno.serve(async (req) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - (days - 1));
 
-    // Build the WHERE clause for points_ledger
-    let whereConditions = `created_at >= '${startDate.toISOString()}' AND created_at <= '${endDate.toISOString()}'`;
-    
+    // Get points with course dates
+    let query = supabaseClient
+      .from('points_ledger')
+      .select(`
+        manager_id,
+        points,
+        managers(nom),
+        courses!inner(date_fin, date_debut)
+      `);
+
     if (phase_id) {
-      whereConditions += ` AND phase_id = '${phase_id}'`;
+      query = query.eq('phase_id', phase_id);
     } else if (saison_id) {
-      // Need to join with phases to filter by saison
       const { data: phaseIds } = await supabaseClient
         .from('phases')
         .select('id')
         .eq('saison_id', saison_id);
       
       if (phaseIds && phaseIds.length > 0) {
-        const ids = phaseIds.map(p => `'${p.id}'`).join(',');
-        whereConditions += ` AND phase_id IN (${ids})`;
+        const ids = phaseIds.map(p => p.id);
+        query = query.in('phase_id', ids);
       }
     }
 
-    // Get daily points per manager
-    const { data: dailyPoints, error: dailyError } = await supabaseClient
-      .from('points_ledger')
-      .select('manager_id, created_at, points, managers(nom)')
-      .gte('created_at', startDate.toISOString())
-      .lte('created_at', endDate.toISOString());
+    const { data: pointsData, error: pointsError } = await query;
 
-    if (dailyError) throw dailyError;
+    if (pointsError) throw pointsError;
 
-    // Aggregate points by manager and date
+    // Aggregate points by manager and date (using course date)
     const pointsByManagerAndDate = new Map<string, Map<string, { points: number; nom: string }>>();
     const managerNames = new Map<string, string>();
 
-    dailyPoints?.forEach((row: any) => {
-      const date = new Date(row.created_at).toISOString().split('T')[0];
+    pointsData?.forEach((row: any) => {
+      const courseDate = row.courses?.date_fin || row.courses?.date_debut;
+      if (!courseDate) return;
+      
+      const date = new Date(courseDate).toISOString().split('T')[0];
+      const dateObj = new Date(date);
+      
+      // Filter by date range
+      if (dateObj < startDate || dateObj > endDate) return;
+      
       const managerId = row.manager_id;
       const managerNom = row.managers?.nom || 'Unknown';
       
