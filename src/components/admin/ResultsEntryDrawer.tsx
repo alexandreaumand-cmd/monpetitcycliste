@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { RiderAutocomplete } from "./RiderAutocomplete";
+import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -523,11 +523,17 @@ export const ResultsEntryDrawer = ({
                         <TableRow key={`${sel_key}-${row.position}-${index}`}>
                           <TableCell className="font-medium">{row.position || '—'}</TableCell>
                           <TableCell>
-                            <RiderAutocomplete
+                            <CoureursCombobox
                               phaseId={course.phase_id}
                               value={row.coureur_id}
-                              riderName={row.coureur_nom}
-                              onChange={(id, name) => handleRiderChange(index, id, name)}
+                              onSelect={(coureur) => {
+                                if (coureur) {
+                                  handleRiderChange(index, coureur.coureur_id, coureur.coureur_nom);
+                                } else {
+                                  handleRiderChange(index, null, null);
+                                }
+                              }}
+                              showTakenRiders={true}
                             />
                           </TableCell>
                           <TableCell>
