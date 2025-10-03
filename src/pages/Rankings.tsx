@@ -12,6 +12,7 @@ import { RecentPointsChart } from "@/components/rankings/RecentPointsChart";
 import { RankingsKPIs } from "@/components/rankings/RankingsKPIs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { TeamScoring } from "@/components/rankings/TeamScoring";
+import { CourseLeaderboard } from "@/components/rankings/CourseLeaderboard";
 
 export default function Rankings() {
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
@@ -74,11 +75,12 @@ export default function Rankings() {
 
       {/* Main Content */}
       <Tabs defaultValue="standings" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+          <TabsList className="grid w-full grid-cols-5 max-w-3xl">
             <TabsTrigger value="standings">Classement</TabsTrigger>
             <TabsTrigger value="riders">Top Coureurs</TabsTrigger>
             <TabsTrigger value="timeline">Chronologie</TabsTrigger>
             <TabsTrigger value="team">Détail par équipe</TabsTrigger>
+            <TabsTrigger value="course">Par course</TabsTrigger>
           </TabsList>
 
           <TabsContent value="standings" className="space-y-4">
@@ -98,6 +100,10 @@ export default function Rankings() {
 
           <TabsContent value="team" className="space-y-4">
             <TeamScoring phaseId={selectedPhase} saisonId={null} />
+          </TabsContent>
+
+          <TabsContent value="course" className="space-y-4">
+            <CourseLeaderboard phaseId={selectedPhase} saisonId={null} />
           </TabsContent>
         </Tabs>
 
