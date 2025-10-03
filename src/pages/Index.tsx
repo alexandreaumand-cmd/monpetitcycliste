@@ -106,9 +106,15 @@ const Index = () => {
             <h1 className="text-5xl md:text-7xl font-bold mb-6 text-foreground animate-fade-in">
               Mon Petit Cycliste
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-8 animate-fade-in">
+            <p className="text-xl md:text-2xl text-muted-foreground mb-6 animate-fade-in">
               Participe aux enchères, compose ton équipe et marque des points avec les résultats réels des courses.
             </p>
+            
+            <div className="mb-8 animate-fade-in">
+              <Badge variant="default" className="px-6 py-3 text-lg gradient-primary text-white shadow-elegant">
+                Fini le tableau de l&apos;enfer
+              </Badge>
+            </div>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8 animate-fade-in">
               {user ? (
@@ -151,9 +157,6 @@ const Index = () => {
               <Badge variant="secondary" className="px-4 py-2 text-base">
                 <Calendar className="mr-2 h-4 w-4" />
                 5 phases / an
-              </Badge>
-              <Badge variant="default" className="px-4 py-2 text-base gradient-primary text-white">
-                Fini le tableau de l&apos;enfer
               </Badge>
             </div>
           </div>
