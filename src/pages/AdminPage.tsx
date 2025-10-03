@@ -9,6 +9,7 @@ import { AnnouncementManager } from "@/components/admin/AnnouncementManager";
 import { RecentResults } from "@/components/admin/RecentResults";
 import { SeasonManager } from "@/components/admin/SeasonManager";
 import { MaintenancePanel } from "@/components/admin/MaintenancePanel";
+import { PointsComputeManager } from "@/components/admin/PointsComputeManager";
 import { cn } from "@/lib/utils";
 
 const adminTabs = [
@@ -52,14 +53,17 @@ export const AdminPage = () => {
         <Route index element={<Navigate to="/dashboard/admin/data" replace />} />
         
         <Route path="data" element={
-          <Card>
-            <CardHeader>
-              <CardTitle>Importer des données CSV</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DataImport />
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Importer des données CSV</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DataImport />
+              </CardContent>
+            </Card>
+            <PointsComputeManager />
+          </div>
         } />
         
         <Route path="courses-import" element={

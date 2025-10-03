@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Search } from "lucide-react";
+import { Calendar, Search, Calculator } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface CourseMeta {
   course_nom: string;
@@ -48,6 +50,9 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [topN, setTopN] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [computing, setComputing] = useState(false);
+  const { toast } = useToast();
+  const { isAdmin } = useUserRole();
 
   useEffect(() => {
     if (open && courseId) {
@@ -125,6 +130,36 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     }
   };
 
+  const handleComputePoints = async () => {
+    if (!courseId) return;
+
+    setComputing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('compute-points', {
+        body: { course_id: courseId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "✅ Calcul terminé",
+        description: `${data.rows_upserted} points calculés`
+      });
+
+      // Reload results to show updated points
+      loadResults();
+    } catch (error: any) {
+      console.error('Error computing points:', error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de calculer les points",
+        variant: "destructive"
+      });
+    } finally {
+      setComputing(false);
+    }
+  };
+
   // Client-side filtering
   const filteredResults = results.filter(r => {
     if (!searchQuery) return true;
@@ -156,7 +191,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[90vh]">
         <DrawerHeader>
-          <DrawerTitle className="flex items-center gap-3">
+          <DrawerTitle className="flex items-center justify-between gap-3">
             {meta ? (
               <>
                 <div className="flex flex-col items-start gap-1">
@@ -172,6 +207,17 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                     )}
                   </div>
                 </div>
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleComputePoints}
+                    disabled={computing}
+                  >
+                    <Calculator className="h-4 w-4 mr-2" />
+                    {computing ? "Calcul..." : "Recalculer"}
+                  </Button>
+                )}
               </>
             ) : (
               <Skeleton className="h-6 w-64" />
