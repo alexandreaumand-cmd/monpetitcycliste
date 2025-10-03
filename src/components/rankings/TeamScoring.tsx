@@ -98,36 +98,6 @@ export const TeamScoring = ({ phaseId, saisonId }: TeamScoringProps) => {
     setDetailsOpen(true);
   };
 
-  if (!selectedManager) {
-    return (
-      <Card>
-        <CardContent className="py-12">
-          <div className="text-center space-y-4">
-            <Users className="h-12 w-12 mx-auto text-muted-foreground" />
-            <div>
-              <p className="text-lg font-medium">Choisissez une équipe</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Sélectionnez un manager pour afficher les coureurs scorés
-              </p>
-            </div>
-            <Select value={selectedManager} onValueChange={setSelectedManager}>
-              <SelectTrigger className="w-64 mx-auto">
-                <SelectValue placeholder="Sélectionner un manager" />
-              </SelectTrigger>
-              <SelectContent>
-                {managers?.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.nom}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   const getScopeLabel = () => {
     if (phaseId) return "Phase courante";
     if (saisonId) return "Saison";
@@ -250,7 +220,20 @@ export const TeamScoring = ({ phaseId, saisonId }: TeamScoringProps) => {
       </Card>
 
       {/* Riders Table */}
-      <Card>
+      {!selectedManager ? (
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center space-y-2">
+              <Users className="h-12 w-12 mx-auto text-muted-foreground" />
+              <p className="text-lg font-medium">Sélectionnez un manager ci-dessus</p>
+              <p className="text-sm text-muted-foreground">
+                pour voir le détail des coureurs scorés
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
         <CardHeader>
           <CardTitle>Coureurs scorés</CardTitle>
           <CardDescription>
@@ -313,6 +296,8 @@ export const TeamScoring = ({ phaseId, saisonId }: TeamScoringProps) => {
           )}
         </CardContent>
       </Card>
+
+      )}
 
       {/* Rider Details Drawer */}
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
