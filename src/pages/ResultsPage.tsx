@@ -5,11 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, Trophy, Calendar, Search, Medal, Star } from "lucide-react";
+import { Loader2, Trophy, Calendar, Search, Medal, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { useDebounce } from "use-debounce";
 
 interface Race {
   course_id: string;
@@ -17,23 +17,28 @@ interface Race {
   categorie: string;
   date_debut: string;
   date_fin: string;
+  last_result_at: string;
   types: string[];
-  my_points: number;
-  has_points: boolean;
 }
 
-interface RaceResult {
-  race_result_id: string;
+interface RaceMeta {
+  course_nom: string;
+  categorie: string;
+  date_debut: string;
+  date_fin: string;
+  types_disponibles: string[];
+  etapes_disponibles: number[];
+}
+
+interface ResultRow {
   row_position: number | null;
   statut: string;
   coureur_id: string;
   coureur_nom: string;
   equipe: string;
-  manager_id: string | null;
   manager_nom: string | null;
-  points_theoriques: number;
   points_officiels: number | null;
-  is_my_rider: boolean;
+  points_theoriques: number;
 }
 
 export const ResultsPage = () => {
@@ -41,61 +46,76 @@ export const ResultsPage = () => {
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSaison, setSelectedSaison] = useState<string>("all");
-  const [selectedPhase, setSelectedPhase] = useState<string>("all");
+  const [debouncedSearch] = useDebounce(searchQuery, 300);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   
-  // Detail view state
+  // Drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedRace, setSelectedRace] = useState<Race | null>(null);
-  const [raceMeta, setRaceMeta] = useState<any>(null);
+  const [raceMeta, setRaceMeta] = useState<RaceMeta | null>(null);
   const [selectedType, setSelectedType] = useState<string>("");
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
-  const [results, setResults] = useState<RaceResult[]>([]);
+  const [results, setResults] = useState<ResultRow[]>([]);
   const [loadingResults, setLoadingResults] = useState(false);
-  const [myRidersFirst, setMyRidersFirst] = useState(false);
+  const [riderSearchQuery, setRiderSearchQuery] = useState("");
 
   useEffect(() => {
-    loadRaces();
-  }, [selectedSaison, selectedPhase, searchQuery]);
+    loadRaces(true);
+  }, [debouncedSearch]);
 
   useEffect(() => {
     if (selectedRace && selectedType) {
       loadRaceResults();
     }
-  }, [selectedRace, selectedType, selectedEtape]);
+  }, [selectedType, selectedEtape]);
 
-  const loadRaces = async () => {
-    setLoading(true);
+  const loadRaces = async (reset: boolean = false) => {
+    if (reset) {
+      setLoading(true);
+      setOffset(0);
+    } else {
+      setLoadingMore(true);
+    }
+
     try {
-      const { data, error } = await supabase.functions.invoke('results-recent-races', {
+      const currentOffset = reset ? 0 : offset;
+      const { data, error } = await supabase.functions.invoke('results-courses-with-entries', {
         body: { 
+          search: debouncedSearch || null,
           limit: 24,
-          search: searchQuery || null,
-          saison_id: selectedSaison !== "all" ? selectedSaison : null,
-          phase_id: selectedPhase !== "all" ? selectedPhase : null
+          offset: currentOffset
         }
       });
 
       if (error) throw error;
-      const racesList = data.races || [];
-      setRaces(racesList);
       
-      // Auto-select first race if none selected
-      if (racesList.length > 0 && !selectedRace) {
-        selectRace(racesList[0]);
+      if (reset) {
+        setRaces(data.races || []);
+      } else {
+        setRaces(prev => [...prev, ...(data.races || [])]);
+      }
+      
+      setHasMore(data.has_more || false);
+      if (!reset) {
+        setOffset(currentOffset + 24);
       }
     } catch (error) {
       console.error('Error loading races:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
-  const selectRace = async (race: Race) => {
+  const openRaceDrawer = async (race: Race) => {
     setSelectedRace(race);
+    setDrawerOpen(true);
     setLoadingResults(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('results-course-meta', {
+      const { data, error } = await supabase.functions.invoke('results-course-meta-v2', {
         body: { course_id: race.course_id }
       });
 
@@ -126,7 +146,7 @@ export const ResultsPage = () => {
 
     setLoadingResults(true);
     try {
-      const { data, error } = await supabase.functions.invoke('results-course-table', {
+      const { data, error } = await supabase.functions.invoke('results-course-rows', {
         body: {
           course_id: selectedRace.course_id,
           type_classement: selectedType,
@@ -163,49 +183,23 @@ export const ResultsPage = () => {
     return <Badge variant={variant}>{label}</Badge>;
   };
 
-  const displayedResults = myRidersFirst 
-    ? [...results].sort((a, b) => {
-        if (a.is_my_rider && !b.is_my_rider) return -1;
-        if (!a.is_my_rider && b.is_my_rider) return 1;
-        return 0;
-      })
+  const filteredResults = riderSearchQuery
+    ? results.filter(r => r.coureur_nom.toLowerCase().includes(riderSearchQuery.toLowerCase()))
     : results;
 
   return (
     <div className="space-y-6">
-      {/* Header with filters */}
+      {/* Header */}
       <div className="sticky top-0 z-10 bg-background pb-4 border-b">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h1 className="text-3xl font-bold">Résultats</h1>
-            <p className="text-muted-foreground">
-              {races.length} course{races.length > 1 ? 's' : ''} avec résultats
-            </p>
-          </div>
+        <div className="mb-4">
+          <h1 className="text-3xl font-bold">Résultats</h1>
+          <p className="text-muted-foreground">
+            Courses avec résultats disponibles
+          </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Select value={selectedSaison} onValueChange={setSelectedSaison}>
-            <SelectTrigger>
-              <SelectValue placeholder="Toutes les saisons" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes les saisons</SelectItem>
-              {/* Will be populated from DB later */}
-            </SelectContent>
-          </Select>
-          
-          <Select value={selectedPhase} onValueChange={setSelectedPhase}>
-            <SelectTrigger>
-              <SelectValue placeholder="Toutes les phases" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes les phases</SelectItem>
-              {/* Will be populated from DB later */}
-            </SelectContent>
-          </Select>
-          
-          <div className="relative md:col-span-2">
+        <div className="flex gap-4">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher une course..."
@@ -214,260 +208,258 @@ export const ResultsPage = () => {
               className="pl-9"
             />
           </div>
+          {searchQuery && (
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setSearchQuery("");
+                setOffset(0);
+              }}
+            >
+              Réinitialiser
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Master: Grille des courses */}
-        <div className="lg:col-span-1 space-y-4">
-          <h2 className="text-xl font-semibold">Courses récentes</h2>
-          
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Skeleton key={i} className="h-32 w-full" />
-              ))}
-            </div>
-          ) : races.length === 0 ? (
-            <Card className="p-8 text-center">
-              <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="font-semibold mb-2">Aucune course trouvée</h3>
-              <p className="text-sm text-muted-foreground">
-                Aucune course avec résultats pour ces filtres
-              </p>
+      {/* Grid of race cards */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <Skeleton key={i} className="h-48 w-full" />
+          ))}
+        </div>
+      ) : races.length === 0 ? (
+        <Card className="p-12 text-center">
+          <Trophy className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h3 className="text-lg font-semibold mb-2">Aucune course trouvée</h3>
+          <p className="text-muted-foreground mb-4">
+            {searchQuery 
+              ? "Aucune course avec résultats ne correspond à votre recherche"
+              : "Aucune course avec résultats disponible pour le moment"}
+          </p>
+          {searchQuery && (
+            <Button variant="outline" onClick={() => setSearchQuery("")}>
+              Réinitialiser la recherche
+            </Button>
+          )}
+        </Card>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {races.map((race) => (
+              <Card 
+                key={race.course_id}
+                className="cursor-pointer transition-all hover:shadow-lg hover:scale-105"
+                onClick={() => openRaceDrawer(race)}
+              >
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base line-clamp-2">{race.nom}</CardTitle>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Calendar className="h-3 w-3" />
+                    {new Date(race.date_debut).toLocaleDateString('fr-FR')} 
+                    {' → '}
+                    {new Date(race.date_fin).toLocaleDateString('fr-FR')}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Badge variant="secondary">{race.categorie}</Badge>
+                  
+                  <div className="flex flex-wrap gap-1">
+                    {race.types.map((type) => (
+                      <Badge key={type} variant="outline" className="text-xs">
+                        {type}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {hasMore && (
+            <div className="text-center pt-4">
               <Button 
                 variant="outline" 
-                className="mt-4"
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedSaison("all");
-                  setSelectedPhase("all");
-                }}
+                onClick={() => loadRaces(false)}
+                disabled={loadingMore}
               >
-                Réinitialiser
+                {loadingMore ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Chargement...
+                  </>
+                ) : (
+                  'Charger plus'
+                )}
               </Button>
-            </Card>
-          ) : (
-            <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
-              {races.map((race) => (
-                <Card 
-                  key={race.course_id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedRace?.course_id === race.course_id ? 'ring-2 ring-primary' : ''
-                  }`}
-                  onClick={() => selectRace(race)}
-                >
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">{race.nom}</CardTitle>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(race.date_debut).toLocaleDateString('fr-FR')} 
-                      {' → '}
-                      {new Date(race.date_fin).toLocaleDateString('fr-FR')}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex flex-wrap gap-1">
-                      {race.types.map((type) => (
-                        <Badge key={type} variant="outline" className="text-xs">
-                          {type}
-                        </Badge>
-                      ))}
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <Badge variant="secondary">{race.categorie}</Badge>
-                      {race.has_points ? (
-                        <div className="text-xs font-medium flex items-center gap-1">
-                          <Medal className="h-3 w-3" />
-                          Mes points: {race.my_points}
-                        </div>
-                      ) : (
-                        <div className="text-xs text-muted-foreground">
-                          Points en attente
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
             </div>
           )}
-        </div>
+        </>
+      )}
 
-        {/* Detail: Classement de la course */}
-        <div className="lg:col-span-2 space-y-4">
-          {selectedRace ? (
-            <>
-              <div className="space-y-4">
-                <div>
-                  <h2 className="text-2xl font-bold">{selectedRace.nom}</h2>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                    <Badge variant="secondary">{selectedRace.categorie}</Badge>
-                    <span>•</span>
-                    <Calendar className="h-4 w-4" />
-                    {new Date(selectedRace.date_debut).toLocaleDateString('fr-FR')} 
-                    {' - '}
-                    {new Date(selectedRace.date_fin).toLocaleDateString('fr-FR')}
-                  </div>
-                </div>
-
-                {/* Type selector pills */}
-                <div className="flex flex-wrap gap-2">
-                  {raceMeta?.types_disponibles?.map((type: string) => (
-                    <Button
-                      key={type}
-                      variant={selectedType === type ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setSelectedType(type);
-                        if (type !== "Etape") setSelectedEtape(null);
-                      }}
-                    >
-                      {type}
-                    </Button>
-                  ))}
-                </div>
-
-                {/* Etape selector if applicable */}
-                {selectedType === "Etape" && raceMeta?.etapes_disponibles?.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Label>Étape:</Label>
-                    <Select 
-                      value={selectedEtape?.toString() || ""} 
-                      onValueChange={(v) => setSelectedEtape(parseInt(v))}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {raceMeta.etapes_disponibles.map((etape: number) => (
-                          <SelectItem key={etape} value={etape.toString()}>
-                            Étape {etape}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* My riders first toggle */}
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="my-riders-first"
-                    checked={myRidersFirst}
-                    onCheckedChange={setMyRidersFirst}
-                  />
-                  <Label htmlFor="my-riders-first" className="cursor-pointer">
-                    Mes coureurs en premier
-                  </Label>
-                </div>
+      {/* Drawer for race details */}
+      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader className="border-b">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <DrawerTitle className="text-2xl">{raceMeta?.course_nom || selectedRace?.nom}</DrawerTitle>
+                <DrawerDescription className="flex items-center gap-2 mt-1">
+                  <Badge variant="secondary">{raceMeta?.categorie || selectedRace?.categorie}</Badge>
+                  <span>•</span>
+                  <Calendar className="h-4 w-4" />
+                  {raceMeta && (
+                    <>
+                      {new Date(raceMeta.date_debut).toLocaleDateString('fr-FR')} 
+                      {' - '}
+                      {new Date(raceMeta.date_fin).toLocaleDateString('fr-FR')}
+                    </>
+                  )}
+                </DrawerDescription>
               </div>
+              <DrawerClose asChild>
+                <Button variant="ghost" size="icon">
+                  <X className="h-4 w-4" />
+                </Button>
+              </DrawerClose>
+            </div>
 
-              {/* Results grid */}
-              {loadingResults ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <Skeleton key={i} className="h-40 w-full" />
-                  ))}
-                </div>
-              ) : displayedResults.length === 0 ? (
-                <Card className="p-12 text-center">
-                  <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="font-semibold mb-2">Aucun classement disponible</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Pas de résultats pour ce type de classement
-                  </p>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[calc(100vh-400px)] overflow-y-auto pr-2">
-                  {displayedResults.map((result) => (
-                    <Card 
-                      key={result.race_result_id}
-                      className={`relative ${
-                        result.is_my_rider ? 'ring-2 ring-primary/50 bg-primary/5' : ''
-                      }`}
-                    >
-                      {result.is_my_rider && (
-                        <div className="absolute top-2 right-2">
-                          <Badge variant="outline" className="gap-1">
-                            <Star className="h-3 w-3 fill-current" />
-                            Mon équipe
+            {/* Type selector pills */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {raceMeta?.types_disponibles?.map((type: string) => (
+                <Button
+                  key={type}
+                  variant={selectedType === type ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setSelectedType(type);
+                    if (type !== "Etape") setSelectedEtape(null);
+                  }}
+                >
+                  {type}
+                </Button>
+              ))}
+            </div>
+
+            {/* Etape selector + rider search */}
+            <div className="flex gap-4 mt-4">
+              {selectedType === "Etape" && raceMeta?.etapes_disponibles?.length > 0 && (
+                <Select 
+                  value={selectedEtape?.toString() || ""} 
+                  onValueChange={(v) => setSelectedEtape(parseInt(v))}
+                >
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Sélectionner étape" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {raceMeta.etapes_disponibles.map((etape: number) => (
+                      <SelectItem key={etape} value={etape.toString()}>
+                        Étape {etape}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher un coureur..."
+                  value={riderSearchQuery}
+                  onChange={(e) => setRiderSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+          </DrawerHeader>
+
+          {/* Results grid */}
+          <div className="p-6 overflow-y-auto">
+            {loadingResults ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Skeleton key={i} className="h-40 w-full" />
+                ))}
+              </div>
+            ) : filteredResults.length === 0 ? (
+              <div className="text-center py-12">
+                <Trophy className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">
+                  {riderSearchQuery ? "Aucun coureur trouvé" : "Aucun classement disponible"}
+                </h3>
+                <p className="text-muted-foreground">
+                  {riderSearchQuery 
+                    ? "Essayez avec un autre nom" 
+                    : "Pas de résultats pour ce type de classement"}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredResults.map((result, idx) => (
+                  <Card key={`${result.coureur_id}-${idx}`}>
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-4">
+                        {/* Avatar */}
+                        <Avatar className="h-14 w-14 flex-shrink-0">
+                          <AvatarFallback className="text-base font-bold">
+                            {getInitials(result.coureur_nom)}
+                          </AvatarFallback>
+                        </Avatar>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0 space-y-2">
+                          {/* Position or Status */}
+                          <div>
+                            {result.row_position ? (
+                              <div className="inline-flex items-center justify-center bg-primary text-primary-foreground rounded-full h-8 w-8 text-base font-bold">
+                                {result.row_position}
+                              </div>
+                            ) : (
+                              getStatutBadge(result.statut)
+                            )}
+                          </div>
+
+                          {/* Rider name */}
+                          <div className="font-bold text-base truncate">
+                            {result.coureur_nom}
+                          </div>
+
+                          {/* Team */}
+                          <Badge variant="secondary" className="text-xs">
+                            {result.equipe || 'Équipe inconnue'}
                           </Badge>
-                        </div>
-                      )}
-                      
-                      <CardContent className="pt-6">
-                        <div className="flex items-start gap-4">
-                          {/* Avatar */}
-                          <Avatar className="h-16 w-16">
-                            <AvatarFallback className="text-lg font-bold">
-                              {getInitials(result.coureur_nom)}
-                            </AvatarFallback>
-                          </Avatar>
 
-                          {/* Info */}
-                          <div className="flex-1 min-w-0 space-y-2">
-                            {/* Position or Status */}
-                            <div>
-                              {result.row_position ? (
-                                <div className="inline-flex items-center justify-center bg-primary text-primary-foreground rounded-full h-8 w-8 text-lg font-bold">
-                                  {result.row_position}
-                                </div>
-                              ) : (
-                                getStatutBadge(result.statut)
-                              )}
-                            </div>
+                          {/* Manager */}
+                          <div className="text-xs text-muted-foreground truncate">
+                            {result.manager_nom || '—'}
+                          </div>
 
-                            {/* Rider name */}
-                            <div className="font-bold text-lg truncate">
-                              {result.coureur_nom}
-                            </div>
-
-                            {/* Team */}
-                            <Badge variant="secondary" className="text-xs">
-                              {result.equipe || 'Équipe inconnue'}
+                          {/* Points */}
+                          <div className="flex items-center gap-2">
+                            <Medal className="h-4 w-4 text-primary flex-shrink-0" />
+                            <span className="font-bold text-lg">
+                              {result.points_officiels !== null 
+                                ? result.points_officiels 
+                                : result.points_theoriques}
+                            </span>
+                            <Badge 
+                              variant={result.points_officiels !== null ? "default" : "secondary"}
+                              className="text-xs"
+                            >
+                              {result.points_officiels !== null ? "Officiel" : "Barème"}
                             </Badge>
-
-                            {/* Manager */}
-                            <div className="text-sm text-muted-foreground">
-                              Manager: {result.manager_nom || '—'}
-                            </div>
-
-                            {/* Points */}
-                            <div className="flex items-center gap-2">
-                              <Medal className="h-4 w-4 text-primary" />
-                              <span className="font-bold text-xl">
-                                {result.points_officiels !== null 
-                                  ? result.points_officiels 
-                                  : result.points_theoriques}
-                              </span>
-                              <Badge 
-                                variant={result.points_officiels !== null ? "default" : "secondary"}
-                                className="text-xs"
-                              >
-                                {result.points_officiels !== null ? "Officiel" : "Barème"}
-                              </Badge>
-                            </div>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <Card className="p-12 text-center">
-              <Trophy className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">Sélectionnez une course</h3>
-              <p className="text-muted-foreground">
-                Choisissez une course dans la liste pour voir les classements
-              </p>
-            </Card>
-          )}
-        </div>
-      </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };

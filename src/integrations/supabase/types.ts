@@ -2595,6 +2595,34 @@ export type Database = {
           types_disponibles: Database["public"]["Enums"]["type_classement"][]
         }[]
       }
+      results_course_meta_v2: {
+        Args: { p_course_id: string }
+        Returns: {
+          categorie: string
+          course_nom: string
+          date_debut: string
+          date_fin: string
+          etapes_disponibles: number[]
+          types_disponibles: string[]
+        }[]
+      }
+      results_course_rows: {
+        Args: {
+          p_course_id: string
+          p_etape_numero?: number
+          p_type_classement: Database["public"]["Enums"]["type_classement"]
+        }
+        Returns: {
+          coureur_id: string
+          coureur_nom: string
+          equipe: string
+          manager_nom: string
+          points_officiels: number
+          points_theoriques: number
+          row_position: number
+          statut: Database["public"]["Enums"]["result_statut"]
+        }[]
+      }
       results_course_table: {
         Args: {
           p_course_id: string
@@ -2614,6 +2642,18 @@ export type Database = {
           race_result_id: string
           row_position: number
           statut: Database["public"]["Enums"]["result_statut"]
+        }[]
+      }
+      results_courses_with_entries: {
+        Args: { p_limit?: number; p_offset?: number; p_search?: string }
+        Returns: {
+          categorie: string
+          course_id: string
+          date_debut: string
+          date_fin: string
+          last_result_at: string
+          nom: string
+          types: string[]
         }[]
       }
       results_latest_feed: {
