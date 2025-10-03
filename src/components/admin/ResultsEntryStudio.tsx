@@ -15,7 +15,6 @@ import { toast } from "@/hooks/use-toast";
 import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { RiderAutocomplete } from "./RiderAutocomplete";
 
 type CourseData = {
   course_id: string;
@@ -90,6 +89,41 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
 
   const allStagesCompleted = !isOneDay && (stageCompletion?.etapes_saisies ?? 0) >= course.nb_etapes;
 
+  // Fetch all riders (client-side search)
+  const { data: allRiders } = useQuery({
+    queryKey: ['all-riders-for-results'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('coureurs')
+        .select(`
+          id,
+          nom,
+          equipe,
+          rosters!left(
+            coureur_id,
+            managers(nom)
+          )
+        `)
+        .order('nom');
+      
+      if (error) throw error;
+      
+      return data.map(c => {
+        const roster = Array.isArray(c.rosters) && c.rosters.length > 0 
+          ? c.rosters.find((r: any) => r.coureur_id === c.id)
+          : null;
+        
+        return {
+          value: c.id,
+          label: c.nom,
+          equipe: c.equipe,
+          is_in_roster: !!roster,
+          roster_manager_nom: roster?.managers?.nom || null,
+        };
+      });
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
 
   // Scoring rules query using normalized views
   const { data: scoringRules } = useQuery({
@@ -562,24 +596,36 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
                     <tr>
                       <th className="px-4 py-3 text-left text-sm font-medium w-20">Pos</th>
                       <th className="px-4 py-3 text-left text-sm font-medium">Coureur</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium w-32">Manager</th>
                       <th className="px-4 py-3 text-right text-sm font-medium w-24">Points</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {resultRows.map((row, index) => (
-                      <tr key={index} className="hover:bg-muted/50">
-                        <td className="px-4 py-2 text-sm font-medium">{row.position}</td>
-                        <td className="px-4 py-2">
-                          <RiderAutocomplete
-                            phaseId={course.phase_id}
-                            value={row.coureur_id}
-                            riderName={row.coureur_nom}
-                            onChange={(id, name) => handleRiderChange(index, id, name)}
-                          />
-                        </td>
-                        <td className="px-4 py-2 text-right text-sm font-medium">{row.points}</td>
-                      </tr>
-                    ))}
+                    {resultRows.map((row, index) => {
+                      const selectedRider = allRiders?.find(r => r.value === row.coureur_id);
+                      return (
+                        <tr key={index} className="hover:bg-muted/50">
+                          <td className="px-4 py-2 text-sm font-medium">{row.position}</td>
+                          <td className="px-4 py-2">
+                            <RiderCombobox
+                              riders={allRiders || []}
+                              value={row.coureur_id}
+                              onChange={(id, name) => handleRiderChange(index, id, name)}
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            {selectedRider?.is_in_roster && selectedRider.roster_manager_nom ? (
+                              <Badge variant="secondary" className="text-xs">
+                                {selectedRider.roster_manager_nom}
+                              </Badge>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-right text-sm font-medium">{row.points}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -630,3 +676,85 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
   );
 };
 
+// Simple client-side rider combobox
+type RiderOption = {
+  value: string;
+  label: string;
+  equipe: string | null;
+  is_in_roster: boolean;
+  roster_manager_nom: string | null;
+};
+
+const RiderCombobox = ({
+  riders,
+  value,
+  onChange,
+}: {
+  riders: RiderOption[];
+  value: string | null;
+  onChange: (riderId: string | null, riderName: string | null) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  
+  const selectedRider = riders.find(r => r.value === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+        >
+          {selectedRider ? (
+            <span className="truncate">{selectedRider.label}</span>
+          ) : (
+            <span className="text-muted-foreground">Sélectionner un coureur...</span>
+          )}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[400px] p-0" align="start">
+        <Command shouldFilter={true}>
+          <CommandInput 
+            placeholder="Rechercher un coureur..." 
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            <CommandEmpty>Aucun coureur trouvé.</CommandEmpty>
+            <CommandGroup>
+              {riders.map((rider) => (
+                <CommandItem
+                  key={rider.value}
+                  value={rider.label}
+                  onSelect={() => {
+                    onChange(rider.value, rider.label);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === rider.value ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <div className="flex items-center justify-between flex-1">
+                    <span>{rider.label}</span>
+                    {rider.is_in_roster && rider.roster_manager_nom && (
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {rider.roster_manager_nom}
+                      </Badge>
+                    )}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
