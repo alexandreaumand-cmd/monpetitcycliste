@@ -34,10 +34,15 @@ export const RiderAutocomplete = ({
   const { data: riders, isLoading } = useQuery({
     queryKey: ['riders-lookup-admin', phaseId, debouncedSearchQuery],
     queryFn: async () => {
+      // Ne recherche que si au moins 2 caractères
+      if (!debouncedSearchQuery || debouncedSearchQuery.trim().length < 2) {
+        return [];
+      }
+
       const { data, error } = await supabase
         .rpc('search_riders_for_results', {
           p_phase_id: phaseId,
-          p_query: debouncedSearchQuery || ''
+          p_query: debouncedSearchQuery
         });
 
       if (error) throw error;
@@ -52,6 +57,7 @@ export const RiderAutocomplete = ({
     },
     staleTime: 0,
     gcTime: 0,
+    enabled: (debouncedSearchQuery?.trim().length ?? 0) >= 2,
   });
 
   return (
@@ -80,7 +86,11 @@ export const RiderAutocomplete = ({
           />
           <CommandList>
             <CommandEmpty>
-              {isLoading ? "Recherche en cours..." : "Aucun coureur trouvé."}
+              {isLoading 
+                ? "Recherche en cours..." 
+                : searchQuery.trim().length < 2 
+                  ? "Tapez au moins 2 lettres" 
+                  : "Aucun coureur trouvé."}
             </CommandEmpty>
             <CommandGroup>
               {riders?.map((rider) => (
