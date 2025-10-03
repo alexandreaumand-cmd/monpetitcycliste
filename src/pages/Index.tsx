@@ -32,9 +32,13 @@ const Index = () => {
   const { data: upcomingCourses } = useQuery({
     queryKey: ['home-upcoming-courses'],
     queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
-        .from('v_home_upcoming_courses')
-        .select('*');
+        .from('v_course_points_theoriques')
+        .select('*')
+        .gte('date_debut', today)
+        .order('date_debut', { ascending: true })
+        .limit(6);
       if (error) throw error;
       return data || [];
     }
@@ -178,7 +182,7 @@ const Index = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {upcomingCourses?.map((course) => (
-              <Card key={course.id} className="hover:shadow-elegant transition-smooth">
+              <Card key={course.course_id} className="hover:shadow-elegant transition-smooth">
                 <CardHeader>
                   <div className="flex justify-between items-start mb-2">
                     <CardTitle className="text-lg">{course.nom}</CardTitle>
@@ -194,11 +198,11 @@ const Index = () => {
                 <CardContent>
                   <div className="text-sm text-muted-foreground mb-3">
                     {format(new Date(course.date_debut), 'd MMM', { locale: fr })} 
-                    {course.date_fin !== course.date_debut && 
+                    {course.date_fin && course.date_fin !== course.date_debut && 
                       ` → ${format(new Date(course.date_fin), 'd MMM', { locale: fr })}`
                     }
                   </div>
-                  {course.points_total && (
+                  {course.points_total !== null && course.points_total !== undefined && (
                     <div className="text-sm font-medium">
                       <Award className="inline h-4 w-4 mr-1 text-primary" />
                       {course.points_total} points à gagner
