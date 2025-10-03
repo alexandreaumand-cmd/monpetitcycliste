@@ -72,30 +72,32 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                 </Link>
               );
             })}
+            {manager && (
+              <button
+                type="button"
+                onClick={() => setResultsDrawerOpen(true)}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-2",
+                  "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <Medal className="h-4 w-4" />
+                Résultats
+              </button>
+            )}
           </nav>
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
             {manager && (
-              <>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setResultsDrawerOpen(true)}
-                  className="hidden md:flex"
-                >
-                  <Medal className="mr-2 h-4 w-4" />
-                  Résultats
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setResultsDrawerOpen(true)}
-                  className="md:hidden"
-                >
-                  <Medal className="h-4 w-4" />
-                </Button>
-              </>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setResultsDrawerOpen(true)}
+                className="md:hidden"
+              >
+                <Medal className="h-4 w-4" />
+              </Button>
             )}
             <Button variant="outline" size="sm" onClick={onSignOut} className="hidden sm:flex">
               <LogOut className="mr-2 h-4 w-4" />
