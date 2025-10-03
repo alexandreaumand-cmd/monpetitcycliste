@@ -179,10 +179,14 @@ export const DataImport = () => {
           <ul className="list-disc list-inside space-y-1 text-xs">
             <li><strong>Coureurs:</strong> Coureur, Equipe, Prix initial, id</li>
             <li><strong>Barèmes:</strong> id, Catégorie, Type classement, Place, Points, Type</li>
-            <li><strong>Courses:</strong> id, Course, Race Type, Race Category</li>
+            <li><strong>Courses (format simple):</strong> id, Course, Race Type, Race Category</li>
+            <li><strong>Courses (format complet):</strong> id;nom;categorie;type_course;date_debut;date_fin;phase_id;statut;uci_code;wt_tier</li>
             <li><strong>Managers:</strong> Nom manager, Sponsor</li>
             <li><strong>Dates des Courses:</strong> id, Course, date_debut, date_fin</li>
           </ul>
+          <p className="text-xs mt-2 text-orange-600">
+            <strong>Note:</strong> Le format CSV détecte automatiquement le séparateur (virgule ou point-virgule).
+          </p>
         </div>
       </CardContent>
     </Card>

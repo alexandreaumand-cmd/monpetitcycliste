@@ -45,9 +45,11 @@ Deno.serve(async (req) => {
 
     console.log(`Importing data to table: ${table}`)
 
-    // Parse CSV
+    // Parse CSV - detect separator (comma or semicolon)
     const lines = csvData.trim().split('\n')
-    const headers = lines[0].split(',')
+    const firstLine = lines[0]
+    const separator = firstLine.includes(';') ? ';' : ','
+    const headers = firstLine.split(separator).map(h => h.trim())
     
     let imported = 0
     let errors = 0
@@ -58,7 +60,7 @@ Deno.serve(async (req) => {
     // Special handling for course_dates
     if (table === 'course_dates') {
       for (let i = 1; i < lines.length; i++) {
-        const values = parseCSVLine(lines[i])
+        const values = parseCSVLine(lines[i], separator)
         
         try {
           const obj: any = {}
@@ -147,7 +149,7 @@ Deno.serve(async (req) => {
     }
 
     for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i])
+      const values = parseCSVLine(lines[i], separator)
       
       try {
         const record = mapToTableFormat(table, headers, values)
@@ -200,7 +202,7 @@ Deno.serve(async (req) => {
   }
 })
 
-function parseCSVLine(line: string): string[] {
+function parseCSVLine(line: string, separator: string = ','): string[] {
   const result = []
   let current = ''
   let inQuotes = false
@@ -210,7 +212,7 @@ function parseCSVLine(line: string): string[] {
     
     if (char === '"') {
       inQuotes = !inQuotes
-    } else if (char === ',' && !inQuotes) {
+    } else if (char === separator && !inQuotes) {
       result.push(current.trim())
       current = ''
     } else {
@@ -257,16 +259,37 @@ function mapToTableFormat(
       }
     
     case 'courses':
-      return {
-        id: obj['id'],
-        nom: obj['Course']?.trim(),
-        type_course: obj['Race Type'],
-        categorie: obj['Race Category'],
-        statut: 'scheduled',
-        date_debut: null,
-        date_fin: null,
-        phase_id: null,
-        uci_code: null
+      // Support both old format (Course, Race Type, Race Category) and new format (all fields)
+      const hasNewFormat = headers.includes('nom') || headers.includes('date_debut')
+      
+      if (hasNewFormat) {
+        // New format: id;nom;categorie;type_course;date_debut;date_fin;phase_id;statut;uci_code;wt_tier
+        return {
+          id: obj['id'] || null,
+          nom: obj['nom']?.trim(),
+          categorie: obj['categorie']?.trim() || null,
+          type_course: obj['type_course']?.trim() || null,
+          date_debut: obj['date_debut']?.trim() || null,
+          date_fin: obj['date_fin']?.trim() || null,
+          phase_id: obj['phase_id']?.trim() || null,
+          statut: obj['statut']?.trim() || 'scheduled',
+          uci_code: obj['uci_code']?.trim() || null,
+          wt_tier: obj['wt_tier']?.trim() || null
+        }
+      } else {
+        // Old format: id, Course, Race Type, Race Category
+        return {
+          id: obj['id'],
+          nom: obj['Course']?.trim(),
+          type_course: obj['Race Type'],
+          categorie: obj['Race Category'],
+          statut: 'scheduled',
+          date_debut: null,
+          date_fin: null,
+          phase_id: null,
+          uci_code: null,
+          wt_tier: null
+        }
       }
     
     case 'managers':
