@@ -1482,6 +1482,14 @@ export type Database = {
         Args: { txt: string }
         Returns: string
       }
+      search_riders_for_results: {
+        Args: { p_phase_id: string; p_query?: string }
+        Returns: {
+          coureur_id: string
+          coureur_nom: string
+          manager_nom: string
+        }[]
+      }
       unaccent: {
         Args: { "": string }
         Returns: string

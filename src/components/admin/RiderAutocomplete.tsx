@@ -34,45 +34,21 @@ export const RiderAutocomplete = ({
   const { data: riders, isLoading } = useQuery({
     queryKey: ['riders-lookup-admin', phaseId, debouncedSearchQuery],
     queryFn: async () => {
-      // Server-side search using unaccent for better matching
-      let query = supabase
-        .from('coureurs')
-        .select(`
-          id,
-          nom,
-          rosters!left(
-            coureur_id,
-            managers(nom)
-          )
-        `)
-        .eq('rosters.phase_id', phaseId);
-
-      // Apply search filter if query is not empty
-      if (debouncedSearchQuery && debouncedSearchQuery.trim()) {
-        // Use the normalize_text function for accent-insensitive search
-        const normalizedQuery = debouncedSearchQuery.toLowerCase().trim();
-        query = query.or(`nom.ilike.%${normalizedQuery}%`);
-      }
-
-      const { data: coureurs, error } = await query
-        .order('nom')
-        .limit(50);
+      const { data, error } = await supabase
+        .rpc('search_riders_for_results', {
+          p_phase_id: phaseId,
+          p_query: debouncedSearchQuery || ''
+        });
 
       if (error) throw error;
 
-      // Transform the data
-      return coureurs.map(c => {
-        const roster = Array.isArray(c.rosters) && c.rosters.length > 0 
-          ? c.rosters.find((r: any) => r.coureur_id === c.id)
-          : null;
-        
-        return {
-          coureur_id: c.id,
-          coureur_nom: c.nom,
-          is_in_roster: !!roster,
-          roster_manager_nom: roster?.managers?.nom || null,
-        };
-      }) as Rider[];
+      // Transform the data to match the expected format
+      return (data || []).map(r => ({
+        coureur_id: r.coureur_id,
+        coureur_nom: r.coureur_nom,
+        is_in_roster: !!r.manager_nom,
+        roster_manager_nom: r.manager_nom,
+      })) as Rider[];
     },
     staleTime: 0,
     gcTime: 0,
