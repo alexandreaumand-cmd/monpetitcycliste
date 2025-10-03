@@ -16,7 +16,7 @@ export const RecentPointsChart = () => {
     queryKey: ["cumulative-points", days],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("get-cumulative-points-series", {
-        body: { days, topN: 5 }
+        body: { days, topN: 10 }
       });
       
       if (error) throw error;
