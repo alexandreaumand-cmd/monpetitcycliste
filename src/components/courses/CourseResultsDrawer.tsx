@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Search } from "lucide-react";
+import { Calendar, Search, Calculator } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useUserRole } from "@/hooks/useUserRole";
+import { toast } from "@/hooks/use-toast";
 
 interface CourseMeta {
   course_nom: string;
@@ -41,6 +43,7 @@ interface CourseResultsDrawerProps {
 }
 
 export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResultsDrawerProps) => {
+  const { isAdmin } = useUserRole();
   const [meta, setMeta] = useState<CourseMeta | null>(null);
   const [results, setResults] = useState<ResultRow[]>([]);
   const [selectedType, setSelectedType] = useState<string>("");
@@ -48,6 +51,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [topN, setTopN] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [computing, setComputing] = useState(false);
 
   useEffect(() => {
     if (open && courseId) {
@@ -125,6 +129,51 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     }
   };
 
+  const handleComputePoints = async () => {
+    if (!courseId) return;
+    
+    setComputing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('compute-points', {
+        body: { course_id: courseId }
+      });
+
+      if (error) throw error;
+
+      const result = data as {
+        success: boolean;
+        rows_upserted: number;
+        missing_bareme: Array<{ categorie: string; type_classement: string; place: number }>;
+      };
+
+      if (result.missing_bareme && result.missing_bareme.length > 0) {
+        toast({
+          title: "Points recalculés avec avertissements",
+          description: `${result.rows_upserted} entrées mises à jour. Barèmes manquants détectés.`,
+          variant: "default",
+        });
+        console.warn('Missing bareme:', result.missing_bareme);
+      } else {
+        toast({
+          title: "Points recalculés",
+          description: `${result.rows_upserted} entrées mises à jour avec succès`,
+        });
+      }
+
+      // Reload results
+      await loadResults();
+    } catch (error) {
+      console.error('Error computing points:', error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Erreur lors du calcul des points",
+        variant: "destructive",
+      });
+    } finally {
+      setComputing(false);
+    }
+  };
+
   // Client-side filtering
   const filteredResults = results.filter(r => {
     if (!searchQuery) return true;
@@ -180,6 +229,20 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
         </DrawerHeader>
 
         <div className="px-4 pb-4 space-y-4 overflow-y-auto">
+          {/* Recalculate button for admins */}
+          {isAdmin && (
+            <Button
+              onClick={handleComputePoints}
+              disabled={computing}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              <Calculator className="h-4 w-4 mr-2" />
+              {computing ? "Calcul en cours..." : "Recalculer points"}
+            </Button>
+          )}
+
           {/* Type selector pills */}
           <div className="flex gap-2 flex-wrap">
             {meta?.types_disponibles?.map((type) => (
