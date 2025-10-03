@@ -766,13 +766,6 @@ export type Database = {
             foreignKeyName: "points_ledger_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
-            referencedRelation: "v_home_upcoming_courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "points_ledger_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
             referencedRelation: "v_manager_breakdown"
             referencedColumns: ["course_id"]
           },
@@ -920,13 +913,6 @@ export type Database = {
             foreignKeyName: "race_result_sets_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
-            referencedRelation: "v_home_upcoming_courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "race_result_sets_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
             referencedRelation: "v_manager_breakdown"
             referencedColumns: ["course_id"]
           },
@@ -1062,13 +1048,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_home_recent_results"
             referencedColumns: ["course_id"]
-          },
-          {
-            foreignKeyName: "race_results_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "v_home_upcoming_courses"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "race_results_course_id_fkey"
@@ -1317,13 +1296,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_home_recent_results"
             referencedColumns: ["course_id"]
-          },
-          {
-            foreignKeyName: "fk_course"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "v_home_upcoming_courses"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "fk_course"
@@ -2208,48 +2180,6 @@ export type Database = {
         }
         Relationships: []
       }
-      v_home_upcoming_courses: {
-        Row: {
-          categorie: string | null
-          date_debut: string | null
-          date_fin: string | null
-          id: string | null
-          nom: string | null
-          phase_id: string | null
-          points_total: number | null
-          type_course: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "courses_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["phase_id"]
-          },
-          {
-            foreignKeyName: "courses_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "manager_phase_status"
-            referencedColumns: ["phase_id"]
-          },
-          {
-            foreignKeyName: "courses_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "managers_rosters_status"
-            referencedColumns: ["phase_id"]
-          },
-          {
-            foreignKeyName: "courses_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "phases"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       v_manager_breakdown: {
         Row: {
           coureur_id: string | null
@@ -2467,13 +2397,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_home_recent_results"
             referencedColumns: ["course_id"]
-          },
-          {
-            foreignKeyName: "race_results_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "v_home_upcoming_courses"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "race_results_course_id_fkey"
