@@ -2,6 +2,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Trophy, TrendingUp, Mountain, Award, Star } from "lucide-react";
+import { isStageRace } from "@/lib/courseType";
 
 interface CourseData {
   course_id: string;
@@ -37,7 +38,7 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       icon: TrendingUp,
       color: "text-blue-600",
       bgColor: "bg-blue-100",
-      detail: course.type_course === 'Stage race' 
+      detail: isStageRace(course.type_course)
         ? `${course.nb_etapes_estimees} × ${course.points_etapes_unitaire} pts`
         : null
     },

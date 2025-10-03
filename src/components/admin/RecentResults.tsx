@@ -9,6 +9,7 @@ import { ResultsEntryStudio } from "./ResultsEntryStudio";
 import { Calendar, Trophy, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { normalizeCourseType, isStageRace } from "@/lib/courseType";
 
 type Course = {
   course_id: string;
@@ -50,19 +51,22 @@ export const RecentResults = () => {
       
       if (error) throw error;
       
-      return (data || []).map(c => ({
-        course_id: c.id,
-        course_nom: c.nom,
-        categorie: c.categorie,
-        type_course: c.type_course === 'stage races' ? 'Stage race' : 'One day',
-        date_debut: c.date_debut || '',
-        date_fin: c.date_fin || '',
-        nb_etapes: c.type_course === 'stage races' 
-          ? Math.max(1, Math.ceil((new Date(c.date_fin || c.date_debut).getTime() - new Date(c.date_debut).getTime()) / (1000 * 60 * 60 * 24)) + 1)
-          : 1,
-        phase_id: c.phase_id || '',
-        phase_nom: ''
-      })) as Course[];
+      return (data || []).map(c => {
+        const normalized = normalizeCourseType(c.type_course);
+        return {
+          course_id: c.id,
+          course_nom: c.nom,
+          categorie: c.categorie,
+          type_course: normalized.display,
+          date_debut: c.date_debut || '',
+          date_fin: c.date_fin || '',
+          nb_etapes: normalized.isStage
+            ? Math.max(1, Math.ceil((new Date(c.date_fin || c.date_debut).getTime() - new Date(c.date_debut).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+            : 1,
+          phase_id: c.phase_id || '',
+          phase_nom: ''
+        };
+      }) as Course[];
     },
   });
 
@@ -184,7 +188,7 @@ export const RecentResults = () => {
         <div className="grid gap-4">
           {filteredCourses?.map((course) => {
             const status = resultsStatusMap?.[course.course_id];
-            const isStageRace = course.type_course === 'Stage race';
+            const courseIsStageRace = isStageRace(course.type_course);
             
             return (
               <Card key={course.course_id}>
@@ -197,7 +201,7 @@ export const RecentResults = () => {
                       </CardTitle>
                       <div className="flex gap-2 flex-wrap">
                         <Badge variant="secondary">{course.categorie}</Badge>
-                        <Badge variant="outline">{isStageRace ? 'Course à étapes' : 'Course d\'un jour'}</Badge>
+                        <Badge variant="outline">{courseIsStageRace ? 'Course à étapes' : 'Course d\'un jour'}</Badge>
                       </div>
                     </div>
                     <Button onClick={() => handleOpenStudio(course)}>
@@ -215,7 +219,7 @@ export const RecentResults = () => {
 
                   {/* Status */}
                   <div className="space-y-3">
-                    {isStageRace ? (
+                    {courseIsStageRace ? (
                       <>
                         <div className="space-y-1">
                           <div className="flex items-center justify-between text-sm">

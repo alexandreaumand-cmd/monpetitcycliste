@@ -10,6 +10,7 @@ import { Calendar, Trophy, Clock, MapPin } from "lucide-react";
 import { CoursePointsDrawer } from "./CoursePointsDrawer";
 import { format, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
+import { normalizeCourseType, isStageRace } from "@/lib/courseType";
 
 interface CourseData {
   course_id: string;
@@ -72,7 +73,9 @@ export const UpcomingCourses = () => {
     const matchesSearch = course.nom.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPhase = phaseFilter === "all" || course.phase_index?.toString() === phaseFilter;
     const matchesCategory = categoryFilter === "all" || course.categorie === categoryFilter;
-    const matchesType = typeFilter === "all" || course.type_course === typeFilter;
+    
+    const normalized = normalizeCourseType(course.type_course);
+    const matchesType = typeFilter === "all" || normalized.display === typeFilter;
     
     return matchesSearch && matchesPhase && matchesCategory && matchesType;
   })?.sort((a, b) => {
@@ -200,7 +203,8 @@ export const UpcomingCourses = () => {
           {filteredAndSortedCourses.map(course => {
             const daysUntil = differenceInDays(new Date(course.date_debut), new Date());
             const daysLabel = daysUntil === 0 ? "Aujourd'hui" : `J-${daysUntil}`;
-            const etapesLabel = course.type_course === 'Stage race' 
+            const normalized = normalizeCourseType(course.type_course);
+            const etapesLabel = normalized.isStage
               ? `${course.nb_etapes_estimees} étapes` 
               : "Course d'un jour";
 
@@ -214,7 +218,7 @@ export const UpcomingCourses = () => {
                         <Badge variant="secondary">Phase {course.phase_index}</Badge>
                       )}
                       <Badge variant="outline">{course.categorie}</Badge>
-                      <Badge variant="outline">{course.type_course}</Badge>
+                      <Badge variant="outline">{normalized.display}</Badge>
                       {course.is_uwt && course.points_total === 0 && (
                         <Badge variant="destructive" className="gap-1">
                           <span>⚠️</span>

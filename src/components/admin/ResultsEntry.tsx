@@ -6,8 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ResultsEntryStudio } from "./ResultsEntryStudio";
+import { normalizeCourseType } from "@/lib/courseType";
 
-type RaceType = "stage races" | "one day race";
+type RaceType = "stage" | "oneday";
 
 type CourseData = {
   course_id: string;
@@ -31,10 +32,11 @@ export const ResultsEntry = () => {
     queryFn: async () => {
       if (!selectedRaceType) return [];
       
+      const ilike = selectedRaceType === 'stage' ? '%stage%' : '%one%';
       const { data, error } = await supabase
         .from('courses')
         .select('*')
-        .eq('type_course', selectedRaceType)
+        .ilike('type_course', ilike)
         .order('date_debut', { ascending: false });
       
       if (error) throw error;
@@ -68,7 +70,7 @@ export const ResultsEntry = () => {
         course_id: data.id,
         course_nom: data.nom,
         categorie: data.categorie,
-        type_course: data.type_course === "stage races" ? "Stage race" : "One day",
+        type_course: normalizeCourseType(data.type_course).display,
         date_debut: data.date_debut,
         date_fin: data.date_fin,
         nb_etapes: Math.max(1, daysDiff),
@@ -111,8 +113,8 @@ export const ResultsEntry = () => {
                 <SelectValue placeholder="Sélectionner le type de course" />
               </SelectTrigger>
               <SelectContent className="bg-background">
-                <SelectItem value="one day race">Course d'un jour</SelectItem>
-                <SelectItem value="stage races">Course à étapes</SelectItem>
+                <SelectItem value="oneday">Course d'un jour</SelectItem>
+                <SelectItem value="stage">Course à étapes</SelectItem>
               </SelectContent>
             </Select>
           </div>

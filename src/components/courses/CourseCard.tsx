@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Trophy, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { normalizeCourseType } from "@/lib/courseType";
 
 interface CourseCardProps {
   course: {
@@ -24,7 +25,8 @@ interface CourseCardProps {
 
 export const CourseCard = ({ course, daysUntil, onShowDetails }: CourseCardProps) => {
   const durationLabel = `${course.nb_jours} j`;
-  const etapesLabel = course.type_course === 'Stage race' 
+  const normalized = normalizeCourseType(course.type_course);
+  const etapesLabel = normalized.isStage
     ? `${course.nb_etapes_estimees} étapes` 
     : "Course d'un jour";
 
@@ -41,7 +43,7 @@ export const CourseCard = ({ course, daysUntil, onShowDetails }: CourseCardProps
               <Badge variant="secondary">Phase {course.phase_index}</Badge>
             )}
             <Badge variant="outline">{course.categorie}</Badge>
-            <Badge variant="outline">{course.type_course}</Badge>
+            <Badge variant="outline">{normalized.display}</Badge>
           </div>
         </div>
       </CardHeader>

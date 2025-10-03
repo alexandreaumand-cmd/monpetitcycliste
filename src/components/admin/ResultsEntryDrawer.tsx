@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { X, AlertCircle } from "lucide-react";
+import { normalizeCourseType, isStageRace } from "@/lib/courseType";
 
 type Course = {
   course_id: string;
@@ -70,7 +71,7 @@ export const ResultsEntryDrawer = ({
   const [currentRequestId, setCurrentRequestId] = useState(0);
   const queryClient = useQueryClient();
 
-  const isStageRace = course.type_course === 'stage races';
+  const courseIsStageRace = isStageRace(course.type_course);
 
   // Centralized state key - force re-render on any parameter change
   const sel_key = `${course.course_id}|${classementType}|${classementType === 'Etape' ? etapeNumero : 0}`;
@@ -85,12 +86,14 @@ export const ResultsEntryDrawer = ({
   const { data: scoringRules, isLoading: isLoadingRules, error: rulesError } = useQuery({
     queryKey: ['scoring-rules', sel_key],
     queryFn: async () => {
+      const normalized = normalizeCourseType(course.type_course);
+      
       const { data, error } = await supabase
         .from('scoring_rules')
         .select('*')
         .eq('categorie', course.categorie)
         .eq('type_classement', classementType)
-        .eq('type', course.type_course)
+        .eq('type', normalized.canonicalForRules)
         .order('place');
       
       if (error) throw error;
@@ -237,12 +240,13 @@ export const ResultsEntryDrawer = ({
       }
 
       // SERVER-SIDE: Reload scoring grid to recalculate points (source of truth)
+      const normalized = normalizeCourseType(course.type_course);
       const { data: serverScoringRules, error: rulesError } = await supabase
         .from('scoring_rules')
         .select('*')
         .eq('categorie', course.categorie)
         .eq('type_classement', classementType)
-        .eq('type', course.type_course)
+        .eq('type', normalized.canonicalForRules)
         .order('place');
 
       if (rulesError) throw rulesError;
@@ -401,7 +405,7 @@ export const ResultsEntryDrawer = ({
                 
                 <Tabs value={classementType} onValueChange={(v) => handleClassementChange(v as ClassementType)}>
                   <TabsList className="grid w-full grid-cols-5">
-                    {isStageRace ? (
+                    {courseIsStageRace ? (
                       <>
                         <TabsTrigger value="Etape">Étape</TabsTrigger>
                         <TabsTrigger value="General">GC</TabsTrigger>
