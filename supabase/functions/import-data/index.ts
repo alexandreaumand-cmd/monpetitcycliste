@@ -53,12 +53,21 @@ Deno.serve(async (req) => {
       cleanedData = cleanedData.slice(1)
     }
     
+    // Normalize line endings
+    cleanedData = cleanedData.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    
     // Parse CSV - detect separator (comma or semicolon)
-    const lines = cleanedData.trim().split('\n')
+    let lines = cleanedData.trim().split('\n')
+    
+    // Unwrap globally quoted lines (Excel export issue)
+    lines = lines.map(line => unwrapGlobalQuotes(line))
+    
     const firstLine = lines[0]
     
-    // Detect separator
-    const separator = firstLine.includes(';') ? ';' : ','
+    // Detect separator after unwrapping
+    const commaCount = (firstLine.match(/,/g) || []).length
+    const semicolonCount = (firstLine.match(/;/g) || []).length
+    const separator = semicolonCount > commaCount ? ';' : ','
     
     // Parse and normalize headers
     const rawHeaders = parseCSVLine(firstLine, separator)
@@ -300,52 +309,55 @@ Deno.serve(async (req) => {
       
       console.log(`Available phases: ${phases.map(p => `Phase ${p.index_dans_saison}`).join(', ')}`)
       
-      // Map column names to standard fields
-      const columnMap: { [key: string]: string } = {}
-      headers.forEach((h, idx) => {
-        const normalized = h.trim().toLowerCase().replace(/\s+/g, '_')
-        
-        // Map synonyms to target columns
-        if (['id'].includes(normalized)) columnMap['id'] = rawHeaders[idx]
-        if (['nom', 'course', 'event', 'race', 'intitule', 'name'].includes(normalized)) columnMap['nom'] = rawHeaders[idx]
-        if (['categorie', 'category', 'uci_cat', 'class'].includes(normalized)) columnMap['categorie'] = rawHeaders[idx]
-        if (['type_course', 'type', 'race_type', 'discipline'].includes(normalized)) columnMap['type_course'] = rawHeaders[idx]
-        if (['date_debut', 'date', 'start', 'start_date', 'from'].includes(normalized)) columnMap['date_debut'] = rawHeaders[idx]
-        if (['date_fin', 'end', 'end_date', 'to'].includes(normalized)) columnMap['date_fin'] = rawHeaders[idx]
-        if (['phase_id', 'phase', 'phaseuuid', 'id_phase'].includes(normalized)) columnMap['phase_id'] = rawHeaders[idx]
-        if (['pays', 'country'].includes(normalized)) columnMap['pays'] = rawHeaders[idx]
-        if (['statut', 'status'].includes(normalized)) columnMap['statut'] = rawHeaders[idx]
-        if (['wt_tier', 'tier'].includes(normalized)) columnMap['wt_tier'] = rawHeaders[idx]
-        if (['uci_code', 'code'].includes(normalized)) columnMap['uci_code'] = rawHeaders[idx]
-      })
+      // Build column index map with synonym support
+      const getColumnIndex = (aliases: string[]): number => {
+        for (const alias of aliases) {
+          const idx = headers.findIndex(h => h.trim().toLowerCase().replace(/\s+/g, '_') === alias.toLowerCase())
+          if (idx >= 0) return idx
+        }
+        return -1
+      }
       
-      console.log('Column mapping:', columnMap)
+      const idxId = getColumnIndex(['id'])
+      const idxNom = getColumnIndex(['nom', 'course', 'event', 'race', 'intitule', 'name'])
+      const idxCategorie = getColumnIndex(['categorie', 'category', 'uci_cat', 'class'])
+      const idxTypeCourse = getColumnIndex(['type_course', 'type', 'race_type', 'discipline'])
+      const idxDateDebut = getColumnIndex(['date_debut', 'date', 'start', 'start_date', 'from'])
+      const idxDateFin = getColumnIndex(['date_fin', 'end', 'end_date', 'to'])
+      const idxPhaseId = getColumnIndex(['phase_id', 'phase', 'phaseuuid', 'id_phase'])
+      const idxPays = getColumnIndex(['pays', 'country'])
+      const idxStatut = getColumnIndex(['statut', 'status'])
+      const idxWtTier = getColumnIndex(['wt_tier', 'tier'])
+      const idxUciCode = getColumnIndex(['uci_code', 'code'])
+      
+      console.log(`Column indices - nom:${idxNom}, date_debut:${idxDateDebut}, phase_id:${idxPhaseId}`)
       
       const coursesToInsert: any[] = []
       const errorDetails: string[] = []
       const seen = new Set<string>() // For deduplication
       const unmappedPhases = new Set<string>()
+      const mappedPhaseIds: string[] = []
       
       for (let i = 1; i < lines.length; i++) {
         const values = parseCSVLine(lines[i], separator)
         
-        const obj: any = {}
-        rawHeaders.forEach((h, j) => {
-          obj[h] = values[j]?.trim() || null
-        })
+        // Skip empty lines
+        if (values.length === 0 || values.every(v => !v || v.trim().length === 0)) {
+          continue
+        }
         
-        // Extract values using column mapping
-        const nom = obj[columnMap['nom']]?.trim()
-        const categorie = obj[columnMap['categorie']]?.trim() || null
-        const type_course = obj[columnMap['type_course']]?.trim() || null
-        let date_debut = obj[columnMap['date_debut']]?.trim() || null
-        let date_fin = obj[columnMap['date_fin']]?.trim() || null
-        const phase_input = obj[columnMap['phase_id']]?.trim() || null
-        const pays = obj[columnMap['pays']]?.trim() || null
-        const statut = obj[columnMap['statut']]?.trim() || 'scheduled'
-        const wt_tier = obj[columnMap['wt_tier']]?.trim() || null
-        const uci_code = obj[columnMap['uci_code']]?.trim() || null
-        let rawId = obj[columnMap['id']]?.trim()
+        // Extract values using column indices
+        const nom = idxNom >= 0 ? values[idxNom]?.trim() : null
+        const categorie = idxCategorie >= 0 ? values[idxCategorie]?.trim() || null : null
+        const type_course = idxTypeCourse >= 0 ? values[idxTypeCourse]?.trim() || null : null
+        let date_debut = idxDateDebut >= 0 ? values[idxDateDebut]?.trim() || null : null
+        let date_fin = idxDateFin >= 0 ? values[idxDateFin]?.trim() || null : null
+        const phase_input = idxPhaseId >= 0 ? values[idxPhaseId]?.trim() || null : null
+        const pays = idxPays >= 0 ? values[idxPays]?.trim() || null : null
+        const statut = idxStatut >= 0 ? values[idxStatut]?.trim() || 'scheduled' : 'scheduled'
+        const wt_tier = idxWtTier >= 0 ? values[idxWtTier]?.trim() || null : null
+        const uci_code = idxUciCode >= 0 ? values[idxUciCode]?.trim() || null : null
+        let rawId = idxId >= 0 ? values[idxId]?.trim() : null
         
         // Skip empty rows
         if (!nom || nom.length === 0) {
@@ -385,6 +397,7 @@ Deno.serve(async (req) => {
           // Check if already a UUID
           if (phase_input.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
             phase_id = phase_input
+            mappedPhaseIds.push(phase_id)
           } else {
             // Try to extract phase number
             const phaseMatch = phase_input.match(/^(?:Phase\s*)?(\d+)$/i)
@@ -393,6 +406,7 @@ Deno.serve(async (req) => {
               const phase = phasesByIndex.get(phaseNum)
               if (phase) {
                 phase_id = phase.id
+                mappedPhaseIds.push(phase_id)
               } else {
                 unmappedPhases.add(phase_input)
                 errorDetails.push(`Row ${i + 1}: Phase "${phase_input}" not found`)
@@ -446,6 +460,10 @@ Deno.serve(async (req) => {
         console.log(`⚠️  Unmapped phases: ${Array.from(unmappedPhases).join(', ')}`)
       }
       
+      // Get first 3 distinct mapped phase IDs for diagnostics
+      const distinctPhaseIds = [...new Set(mappedPhaseIds)].slice(0, 3)
+      console.log(`📊 Sample mapped phase_ids: ${distinctPhaseIds.join(', ')}`)
+      
       return new Response(
         JSON.stringify({
           success: true,
@@ -453,6 +471,7 @@ Deno.serve(async (req) => {
           errors,
           errorDetails: errorDetails.slice(0, 10),
           unmappedPhases: Array.from(unmappedPhases),
+          sampleMappedPhaseIds: distinctPhaseIds,
           message: `Imported ${imported} courses with ${errors} errors. ${unmappedPhases.size > 0 ? `Unmapped phases: ${Array.from(unmappedPhases).join(', ')}` : ''}`
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -513,6 +532,22 @@ Deno.serve(async (req) => {
     )
   }
 })
+
+function unwrapGlobalQuotes(line: string): string {
+  // Remove leading/trailing whitespace
+  const trimmed = line.trim()
+  
+  // Check if the entire line is wrapped in quotes and contains separators inside
+  if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length > 2) {
+    const inner = trimmed.slice(1, -1)
+    // Only unwrap if the inner content has comma or semicolon (looks like CSV data)
+    if (inner.includes(',') || inner.includes(';')) {
+      return inner
+    }
+  }
+  
+  return trimmed
+}
 
 function parseCSVLine(line: string, separator: string = ','): string[] {
   const result = []
