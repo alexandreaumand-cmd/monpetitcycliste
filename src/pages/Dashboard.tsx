@@ -65,7 +65,7 @@ const Dashboard = () => {
       
       <main className="container mx-auto px-4 py-8">
         <Routes>
-          <Route index element={<Navigate to="/dashboard/encheres" replace />} />
+          <Route index element={<Navigate to="/dashboard/classement" replace />} />
           <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
           <Route path="mon-equipe" element={<MyTeam />} />
           <Route path="courses" element={<UpcomingCourses />} />

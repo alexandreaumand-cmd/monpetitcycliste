@@ -18,22 +18,25 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [nom, setNom] = useState("");
   const [sponsor, setSponsor] = useState("");
+  
+  const searchParams = new URLSearchParams(window.location.search);
+  const nextUrl = searchParams.get('next') || '/dashboard/classement';
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/dashboard");
+        navigate(nextUrl);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        navigate("/dashboard");
+        navigate(nextUrl);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, nextUrl]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +47,7 @@ const Auth = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}${nextUrl}`,
         },
       });
 

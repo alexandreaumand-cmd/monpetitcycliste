@@ -127,7 +127,7 @@ const Index = () => {
                 <Button 
                   size="lg" 
                   className="gradient-primary text-white hover:opacity-90 transition-smooth shadow-elegant text-lg px-8"
-                  onClick={() => navigate('/dashboard')}
+                  onClick={() => navigate('/dashboard/classement')}
                 >
                   Accéder au Dashboard
                   <ArrowRight className="ml-2 h-5 w-5" />
