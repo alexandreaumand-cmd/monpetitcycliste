@@ -412,9 +412,13 @@ function mapToTableFormat(
       
       if (hasNewFormat) {
         // New format: supports pays column and phase name mapping
+        // Generate ID from nom if id is empty or null
+        const courseNom = obj['nom']?.trim()
+        const courseId = obj['id']?.trim() || (courseNom ? sanitizeId(courseNom) : null)
+        
         return {
-          id: obj['id'] || null,
-          nom: obj['nom']?.trim(),
+          id: courseId,
+          nom: courseNom,
           categorie: obj['categorie']?.trim() || null,
           type_course: obj['type_course']?.trim() || null,
           date_debut: obj['date_debut']?.trim() || null,
