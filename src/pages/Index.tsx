@@ -2,6 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Trophy, Users, TrendingUp, Award } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import logo from "@/assets/logo.png";
+import heroImage from "@/assets/hero-cycling.jpg";
+import climbingImage from "@/assets/cyclist-climbing.jpg";
+import victoryImage from "@/assets/team-victory.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -32,32 +36,36 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 gradient-hero opacity-10" />
-        <div className="container relative mx-auto px-4 py-24 md:py-32">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-primary via-primary-light to-accent bg-clip-text text-transparent">
-              Mon Petit Cycliste
-            </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Créez votre équipe, participez aux enchères et dominez le classement avec vos coureurs favoris
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg" 
-                className="gradient-primary text-white hover:opacity-90 transition-smooth shadow-elegant text-lg px-8"
-                onClick={() => navigate('/auth')}
-              >
-                Commencer Maintenant
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="border-primary text-primary hover:bg-primary/10 transition-smooth text-lg px-8"
-              >
-                En Savoir Plus
-              </Button>
-            </div>
+      <section className="relative overflow-hidden h-screen">
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${heroImage})` }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background" />
+        </div>
+        <div className="container relative mx-auto px-4 h-full flex flex-col justify-center items-center text-center">
+          <img src={logo} alt="Mon Petit Cycliste" className="h-32 w-32 mb-8 animate-fade-in" />
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 text-foreground animate-fade-in">
+            Mon Petit Cycliste
+          </h1>
+          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-fade-in">
+            Créez votre équipe, participez aux enchères et dominez le classement avec vos coureurs favoris
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in">
+            <Button 
+              size="lg" 
+              className="gradient-primary text-white hover:opacity-90 transition-smooth shadow-elegant text-lg px-8"
+              onClick={() => navigate('/auth')}
+            >
+              Commencer Maintenant
+            </Button>
+            <Button 
+              size="lg" 
+              variant="outline"
+              className="border-primary text-primary hover:bg-primary/10 transition-smooth text-lg px-8"
+            >
+              En Savoir Plus
+            </Button>
           </div>
         </div>
       </section>
@@ -87,6 +95,40 @@ const Index = () => {
                 </Card>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* Image Showcase Section */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+            <div className="relative overflow-hidden rounded-lg shadow-elegant group">
+              <img 
+                src={climbingImage} 
+                alt="Cycliste en montagne" 
+                className="w-full h-80 object-cover transition-transform duration-500 group-hover:scale-110"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent flex items-end p-6">
+                <div>
+                  <h3 className="text-2xl font-bold text-foreground mb-2">Performance Individuelle</h3>
+                  <p className="text-muted-foreground">Suivez les exploits de vos coureurs</p>
+                </div>
+              </div>
+            </div>
+            <div className="relative overflow-hidden rounded-lg shadow-elegant group">
+              <img 
+                src={victoryImage} 
+                alt="Équipe victorieuse" 
+                className="w-full h-80 object-cover transition-transform duration-500 group-hover:scale-110"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent flex items-end p-6">
+                <div>
+                  <h3 className="text-2xl font-bold text-foreground mb-2">Succès d'Équipe</h3>
+                  <p className="text-muted-foreground">Célébrez les victoires ensemble</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
