@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -102,10 +103,10 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
       <Card className="w-full max-w-md shadow-elegant">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl gradient-primary bg-clip-text text-transparent">
-            Fantasy Cycling
-          </CardTitle>
+        <CardHeader className="text-center space-y-4">
+          <div className="flex justify-center">
+            <img src={logo} alt="Mon Petit Cycliste" className="h-32 w-32 object-contain" />
+          </div>
           <CardDescription>
             Connectez-vous pour gérer votre équipe
           </CardDescription>
