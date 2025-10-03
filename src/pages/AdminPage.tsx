@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { DataImport } from "@/components/admin/DataImport";
 import { CoursesImportManager } from "@/components/admin/CoursesImportManager";
 import { CoursesResetManager } from "@/components/admin/CoursesResetManager";
+import { PointsComputeManager } from "@/components/admin/PointsComputeManager";
 import { RoundManager } from "@/components/admin/RoundManager";
 import { AnnouncementManager } from "@/components/admin/AnnouncementManager";
 import { RecentResults } from "@/components/admin/RecentResults";
@@ -66,6 +67,7 @@ export const AdminPage = () => {
           <div className="space-y-6">
             <CoursesResetManager />
             <CoursesImportManager />
+            <PointsComputeManager />
           </div>
         } />
         
