@@ -2,6 +2,8 @@ import { Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataImport } from "@/components/admin/DataImport";
+import { CoursesImportManager } from "@/components/admin/CoursesImportManager";
+import { CoursesResetManager } from "@/components/admin/CoursesResetManager";
 import { RoundManager } from "@/components/admin/RoundManager";
 import { AnnouncementManager } from "@/components/admin/AnnouncementManager";
 import { RecentResults } from "@/components/admin/RecentResults";
@@ -11,6 +13,7 @@ import { cn } from "@/lib/utils";
 
 const adminTabs = [
   { label: 'Données', path: 'data' },
+  { label: 'Import Courses', path: 'courses-import' },
   { label: 'Rounds', path: 'rounds' },
   { label: 'Annonces', path: 'annonces' },
   { label: 'Résultats', path: 'results' },
@@ -57,6 +60,13 @@ export const AdminPage = () => {
               <DataImport />
             </CardContent>
           </Card>
+        } />
+        
+        <Route path="courses-import" element={
+          <div className="space-y-6">
+            <CoursesResetManager />
+            <CoursesImportManager />
+          </div>
         } />
         
         <Route path="rounds" element={<RoundManager />} />
