@@ -45,11 +45,24 @@ Deno.serve(async (req) => {
 
     console.log(`Importing data to table: ${table}`)
 
+    // Detect and clean CSV data
+    let cleanedData = csvData
+    
+    // Remove BOM if present
+    if (cleanedData.charCodeAt(0) === 0xFEFF) {
+      cleanedData = cleanedData.slice(1)
+    }
+    
     // Parse CSV - detect separator (comma or semicolon)
-    const lines = csvData.trim().split('\n')
+    const lines = cleanedData.trim().split('\n')
     const firstLine = lines[0]
+    
+    // Detect separator
     const separator = firstLine.includes(';') ? ';' : ','
-    const headers = firstLine.split(separator).map(h => h.trim())
+    
+    // Parse and normalize headers
+    const rawHeaders = parseCSVLine(firstLine, separator)
+    const headers = rawHeaders.map(h => h.trim().toLowerCase().replace(/\s+/g, '_'))
     
     let imported = 0
     let errors = 0
@@ -268,39 +281,190 @@ Deno.serve(async (req) => {
       )
     }
 
-    // For courses, fetch phases for mapping
-    let phaseMap: { [key: string]: string } = {}
+    // Special handling for courses - robust import with phase mapping
     if (table === 'courses') {
+      console.log('🔧 Processing courses with robust import...')
+      
+      // Fetch all phases for mapping
       const { data: phases, error: phasesError } = await supabaseClient
         .from('phases')
-        .select('id, index_dans_saison')
+        .select('id, index_dans_saison, date_debut, date_fin')
         .order('index_dans_saison')
       
-      if (!phasesError && phases) {
-        phases.forEach((phase: { id: string; index_dans_saison: number }) => {
-          phaseMap[`Phase ${phase.index_dans_saison}`] = phase.id
-        })
-        console.log('Phase mapping:', phaseMap)
+      if (phasesError || !phases) {
+        throw new Error('Failed to fetch phases for mapping')
       }
+      
+      // Build phase mapping
+      const phasesByIndex = new Map(phases.map(p => [p.index_dans_saison, p]))
+      
+      console.log(`Available phases: ${phases.map(p => `Phase ${p.index_dans_saison}`).join(', ')}`)
+      
+      // Map column names to standard fields
+      const columnMap: { [key: string]: string } = {}
+      headers.forEach((h, idx) => {
+        const normalized = h.trim().toLowerCase().replace(/\s+/g, '_')
+        
+        // Map synonyms to target columns
+        if (['id'].includes(normalized)) columnMap['id'] = rawHeaders[idx]
+        if (['nom', 'course', 'event', 'race', 'intitule', 'name'].includes(normalized)) columnMap['nom'] = rawHeaders[idx]
+        if (['categorie', 'category', 'uci_cat', 'class'].includes(normalized)) columnMap['categorie'] = rawHeaders[idx]
+        if (['type_course', 'type', 'race_type', 'discipline'].includes(normalized)) columnMap['type_course'] = rawHeaders[idx]
+        if (['date_debut', 'date', 'start', 'start_date', 'from'].includes(normalized)) columnMap['date_debut'] = rawHeaders[idx]
+        if (['date_fin', 'end', 'end_date', 'to'].includes(normalized)) columnMap['date_fin'] = rawHeaders[idx]
+        if (['phase_id', 'phase', 'phaseuuid', 'id_phase'].includes(normalized)) columnMap['phase_id'] = rawHeaders[idx]
+        if (['pays', 'country'].includes(normalized)) columnMap['pays'] = rawHeaders[idx]
+        if (['statut', 'status'].includes(normalized)) columnMap['statut'] = rawHeaders[idx]
+        if (['wt_tier', 'tier'].includes(normalized)) columnMap['wt_tier'] = rawHeaders[idx]
+        if (['uci_code', 'code'].includes(normalized)) columnMap['uci_code'] = rawHeaders[idx]
+      })
+      
+      console.log('Column mapping:', columnMap)
+      
+      const coursesToInsert: any[] = []
+      const errorDetails: string[] = []
+      const seen = new Set<string>() // For deduplication
+      const unmappedPhases = new Set<string>()
+      
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i], separator)
+        
+        const obj: any = {}
+        rawHeaders.forEach((h, j) => {
+          obj[h] = values[j]?.trim() || null
+        })
+        
+        // Extract values using column mapping
+        const nom = obj[columnMap['nom']]?.trim()
+        const categorie = obj[columnMap['categorie']]?.trim() || null
+        const type_course = obj[columnMap['type_course']]?.trim() || null
+        let date_debut = obj[columnMap['date_debut']]?.trim() || null
+        let date_fin = obj[columnMap['date_fin']]?.trim() || null
+        const phase_input = obj[columnMap['phase_id']]?.trim() || null
+        const pays = obj[columnMap['pays']]?.trim() || null
+        const statut = obj[columnMap['statut']]?.trim() || 'scheduled'
+        const wt_tier = obj[columnMap['wt_tier']]?.trim() || null
+        const uci_code = obj[columnMap['uci_code']]?.trim() || null
+        let rawId = obj[columnMap['id']]?.trim()
+        
+        // Skip empty rows
+        if (!nom || nom.length === 0) {
+          continue
+        }
+        
+        // Parse dates flexibly
+        date_debut = parseFlexibleDate(date_debut)
+        date_fin = parseFlexibleDate(date_fin)
+        
+        // Validate date_debut is present
+        if (!date_debut) {
+          errorDetails.push(`Row ${i + 1}: Missing or invalid date_debut for "${nom}"`)
+          errors++
+          continue
+        }
+        
+        // Ensure date_fin >= date_debut
+        if (!date_fin) {
+          date_fin = date_debut
+        } else if (date_fin < date_debut) {
+          date_fin = date_debut
+        }
+        
+        // Deduplicate by (nom, date_debut)
+        const dedupeKey = `${nom}|${date_debut}`
+        if (seen.has(dedupeKey)) {
+          errorDetails.push(`Row ${i + 1}: Duplicate course "${nom}" on ${date_debut}`)
+          errors++
+          continue
+        }
+        seen.add(dedupeKey)
+        
+        // Map phase_id
+        let phase_id = null
+        if (phase_input) {
+          // Check if already a UUID
+          if (phase_input.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            phase_id = phase_input
+          } else {
+            // Try to extract phase number
+            const phaseMatch = phase_input.match(/^(?:Phase\s*)?(\d+)$/i)
+            if (phaseMatch) {
+              const phaseNum = parseInt(phaseMatch[1], 10)
+              const phase = phasesByIndex.get(phaseNum)
+              if (phase) {
+                phase_id = phase.id
+              } else {
+                unmappedPhases.add(phase_input)
+                errorDetails.push(`Row ${i + 1}: Phase "${phase_input}" not found`)
+              }
+            } else {
+              unmappedPhases.add(phase_input)
+              errorDetails.push(`Row ${i + 1}: Phase "${phase_input}" not recognized`)
+            }
+          }
+        }
+        
+        // Generate ID from nom if empty
+        if (!rawId || rawId.length === 0) {
+          rawId = sanitizeId(nom)
+        }
+        
+        coursesToInsert.push({
+          id: rawId,
+          nom,
+          categorie,
+          type_course,
+          date_debut,
+          date_fin,
+          phase_id,
+          pays,
+          statut,
+          wt_tier,
+          uci_code
+        })
+      }
+      
+      // Batch upsert
+      if (coursesToInsert.length > 0) {
+        const { error: insertError } = await supabaseClient
+          .from('courses')
+          .upsert(coursesToInsert, {
+            onConflict: 'id',
+            ignoreDuplicates: false
+          })
+        
+        if (insertError) {
+          console.error('Batch insert error:', insertError)
+          throw new Error(`Failed to insert courses: ${insertError.message}`)
+        }
+        
+        imported = coursesToInsert.length
+      }
+      
+      console.log(`✅ Imported ${imported} courses, ${errors} errors`)
+      if (unmappedPhases.size > 0) {
+        console.log(`⚠️  Unmapped phases: ${Array.from(unmappedPhases).join(', ')}`)
+      }
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          imported,
+          errors,
+          errorDetails: errorDetails.slice(0, 10),
+          unmappedPhases: Array.from(unmappedPhases),
+          message: `Imported ${imported} courses with ${errors} errors. ${unmappedPhases.size > 0 ? `Unmapped phases: ${Array.from(unmappedPhases).join(', ')}` : ''}`
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
+    // For other tables (coureurs, scoring_rules, managers)
     for (let i = 1; i < lines.length; i++) {
       const values = parseCSVLine(lines[i], separator)
       
       try {
         let record = mapToTableFormat(table, headers, values)
-        
-        // Map phase names to UUIDs for courses
-        if (table === 'courses' && record.phase_id) {
-          const phaseName = record.phase_id
-          if (phaseMap[phaseName]) {
-            record.phase_id = phaseMap[phaseName]
-            console.log(`Mapped ${phaseName} to ${record.phase_id}`)
-          } else if (phaseName && !phaseName.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            console.warn(`Phase "${phaseName}" not found in mapping, setting to null`)
-            record.phase_id = null
-          }
-        }
         
         if (record) {
           // For scoring_rules, upsert based on unique constraint (categorie, type_classement, place)
@@ -502,4 +666,51 @@ function normalizeName(name: string): string {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, ' ');
+}
+
+function parseFlexibleDate(dateStr: string | null): string | null {
+  if (!dateStr || dateStr.trim().length === 0) return null
+  
+  const cleaned = dateStr.trim()
+  
+  // Already in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
+    return cleaned
+  }
+  
+  // Try DD/MM/YYYY
+  const ddmmyyyyMatch = cleaned.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/)
+  if (ddmmyyyyMatch) {
+    const day = ddmmyyyyMatch[1].padStart(2, '0')
+    const month = ddmmyyyyMatch[2].padStart(2, '0')
+    const year = ddmmyyyyMatch[3]
+    // Assume DD/MM/YYYY (European format)
+    return `${year}-${month}-${day}`
+  }
+  
+  // Try MM/DD/YYYY (American format) - less common in cycling
+  const mmddyyyyMatch = cleaned.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/)
+  if (mmddyyyyMatch) {
+    const first = mmddyyyyMatch[1].padStart(2, '0')
+    const second = mmddyyyyMatch[2].padStart(2, '0')
+    const year = mmddyyyyMatch[3]
+    // If first number > 12, must be DD/MM
+    if (parseInt(first) > 12) {
+      return `${year}-${second}-${first}`
+    }
+    // Otherwise assume MM/DD
+    return `${year}-${first}-${second}`
+  }
+  
+  // Try YYYY/MM/DD
+  const yyyymmddMatch = cleaned.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/)
+  if (yyyymmddMatch) {
+    const year = yyyymmddMatch[1]
+    const month = yyyymmddMatch[2].padStart(2, '0')
+    const day = yyyymmddMatch[3].padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  
+  console.warn(`Unable to parse date: ${dateStr}`)
+  return null
 }
