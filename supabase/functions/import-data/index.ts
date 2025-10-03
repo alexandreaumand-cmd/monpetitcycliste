@@ -146,21 +146,11 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Remove duplicates, keeping last occurrence per coureur-phase pair
-      const uniqueRosters = new Map();
-      rostersToInsert.forEach(roster => {
-        const key = `${roster.coureur_id}-${roster.phase_id}`;
-        uniqueRosters.set(key, roster);
-      });
-
-      const finalRosters = Array.from(uniqueRosters.values());
-      console.log(`📊 ${rostersToInsert.length} rosters parsed, ${finalRosters.length} unique (${rostersToInsert.length - finalRosters.length} duplicates removed)`);
-
       // Batch upsert
-      if (finalRosters.length > 0) {
+      if (rostersToInsert.length > 0) {
         const { error: insertError } = await supabaseClient
           .from('rosters')
-          .upsert(finalRosters, {
+          .upsert(rostersToInsert, {
             onConflict: 'coureur_id,phase_id',
             ignoreDuplicates: false,
           });
@@ -170,7 +160,7 @@ Deno.serve(async (req) => {
           throw new Error(`Failed to insert rosters: ${insertError.message}`);
         }
 
-        imported = finalRosters.length;
+        imported = rostersToInsert.length;
       }
 
       console.log(`✅ Imported ${imported} rosters, ${errors} errors`);
