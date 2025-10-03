@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -37,6 +38,7 @@ interface PointDetail {
 type SortBy = 'points' | 'ratio' | 'prix';
 
 export const MyTeam = () => {
+  const { toast } = useToast();
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>('points');
@@ -54,14 +56,39 @@ export const MyTeam = () => {
   const loadTeam = async () => {
     setLoading(true);
     try {
+      // Récupérer la session pour obtenir le token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.error('No session found');
+        toast({
+          title: "Erreur d'authentification",
+          description: "Vous devez être connecté pour voir votre équipe",
+          variant: "destructive"
+        });
+        setCoureurs([]);
+        setLoading(false);
+        return;
+      }
+
+      // Appeler la fonction avec le token d'authentification
       const { data, error } = await supabase.functions.invoke('manager-my-team', {
-        body: { phase_id: null }
+        body: { phase_id: null },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (error) throw error;
       setCoureurs(data.coureurs || []);
     } catch (error) {
       console.error('Error loading team:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger votre équipe",
+        variant: "destructive"
+      });
+      setCoureurs([]);
     } finally {
       setLoading(false);
     }
@@ -73,14 +100,37 @@ export const MyTeam = () => {
     setLoadingDetail(true);
 
     try {
+      // Récupérer la session pour obtenir le token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.error('No session found');
+        toast({
+          title: "Erreur d'authentification",
+          description: "Impossible de charger les détails",
+          variant: "destructive"
+        });
+        setLoadingDetail(false);
+        return;
+      }
+
+      // Appeler la fonction avec le token d'authentification
       const { data, error } = await supabase.functions.invoke('manager-coureur-points-detail', {
-        body: { coureur_id: coureur.coureur_id, phase_id: null }
+        body: { coureur_id: coureur.coureur_id, phase_id: null },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (error) throw error;
       setPointsDetail(data.history || []);
     } catch (error) {
       console.error('Error loading coureur detail:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les détails du coureur",
+        variant: "destructive"
+      });
     } finally {
       setLoadingDetail(false);
     }
