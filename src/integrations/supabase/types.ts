@@ -105,6 +105,27 @@ export type Database = {
             referencedColumns: ["coureur_id"]
           },
           {
+            foreignKeyName: "annonces_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "annonces_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_by_phase"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "annonces_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_global"
+            referencedColumns: ["coureur_id"]
+          },
+          {
             foreignKeyName: "annonces_winning_manager_id_fkey"
             columns: ["winning_manager_id"]
             isOneToOne: false
@@ -130,6 +151,27 @@ export type Database = {
             columns: ["winning_manager_id"]
             isOneToOne: false
             referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "annonces_winning_manager_id_fkey"
+            columns: ["winning_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "annonces_winning_manager_id_fkey"
+            columns: ["winning_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "annonces_winning_manager_id_fkey"
+            columns: ["winning_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
             referencedColumns: ["manager_id"]
           },
         ]
@@ -247,6 +289,27 @@ export type Database = {
             referencedRelation: "managers_rosters_status"
             referencedColumns: ["manager_id"]
           },
+          {
+            foreignKeyName: "audits_actor_manager_id_fkey"
+            columns: ["actor_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "audits_actor_manager_id_fkey"
+            columns: ["actor_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "audits_actor_manager_id_fkey"
+            columns: ["actor_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
         ]
       }
       bids: {
@@ -331,6 +394,27 @@ export type Database = {
             referencedColumns: ["coureur_id"]
           },
           {
+            foreignKeyName: "bids_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "bids_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_by_phase"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "bids_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_global"
+            referencedColumns: ["coureur_id"]
+          },
+          {
             foreignKeyName: "bids_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
@@ -356,6 +440,27 @@ export type Database = {
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
             referencedColumns: ["manager_id"]
           },
         ]
@@ -599,6 +704,27 @@ export type Database = {
             referencedColumns: ["coureur_id"]
           },
           {
+            foreignKeyName: "points_ledger_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_by_phase"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_global"
+            referencedColumns: ["coureur_id"]
+          },
+          {
             foreignKeyName: "points_ledger_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
@@ -627,6 +753,13 @@ export type Database = {
             referencedColumns: ["course_id"]
           },
           {
+            foreignKeyName: "points_ledger_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["course_id"]
+          },
+          {
             foreignKeyName: "points_ledger_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
@@ -652,6 +785,27 @@ export type Database = {
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
             referencedColumns: ["manager_id"]
           },
           {
@@ -751,6 +905,27 @@ export type Database = {
             referencedColumns: ["coureur_id"]
           },
           {
+            foreignKeyName: "race_results_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "race_results_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_by_phase"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "race_results_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_global"
+            referencedColumns: ["coureur_id"]
+          },
+          {
             foreignKeyName: "race_results_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
@@ -779,6 +954,13 @@ export type Database = {
             referencedColumns: ["course_id"]
           },
           {
+            foreignKeyName: "race_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["course_id"]
+          },
+          {
             foreignKeyName: "race_results_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
@@ -804,6 +986,27 @@ export type Database = {
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
             referencedColumns: ["manager_id"]
           },
         ]
@@ -860,6 +1063,27 @@ export type Database = {
             referencedColumns: ["coureur_id"]
           },
           {
+            foreignKeyName: "rosters_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "rosters_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_by_phase"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "rosters_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_global"
+            referencedColumns: ["coureur_id"]
+          },
+          {
             foreignKeyName: "rosters_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
@@ -885,6 +1109,27 @@ export type Database = {
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
             referencedColumns: ["manager_id"]
           },
           {
@@ -1057,6 +1302,27 @@ export type Database = {
             referencedColumns: ["coureur_id"]
           },
           {
+            foreignKeyName: "bids_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "bids_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_by_phase"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "bids_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_global"
+            referencedColumns: ["coureur_id"]
+          },
+          {
             foreignKeyName: "bids_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
@@ -1082,6 +1348,27 @@ export type Database = {
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
             referencedColumns: ["manager_id"]
           },
         ]
@@ -1194,6 +1481,27 @@ export type Database = {
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
             referencedColumns: ["manager_id"]
           },
         ]
@@ -1377,6 +1685,27 @@ export type Database = {
             referencedRelation: "managers_rosters_status"
             referencedColumns: ["manager_id"]
           },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "bids_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
         ]
       }
       next_auction_info: {
@@ -1483,6 +1812,129 @@ export type Database = {
         }
         Relationships: []
       }
+      v_manager_breakdown: {
+        Row: {
+          coureur_id: string | null
+          coureur_nom: string | null
+          course_id: string | null
+          course_nom: string | null
+          date_debut: string | null
+          date_fin: string | null
+          etape_numero: number | null
+          manager_id: string | null
+          manager_nom: string | null
+          points: number | null
+          type_classement: Database["public"]["Enums"]["type_classement"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "points_ledger_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
+        ]
+      }
+      v_manager_standings_by_phase: {
+        Row: {
+          courses_count: number | null
+          manager_id: string | null
+          manager_nom: string | null
+          phase_id: string | null
+          total_points: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_manager_standings_total: {
+        Row: {
+          courses_count: number | null
+          manager_id: string | null
+          manager_nom: string | null
+          total_points: number | null
+        }
+        Relationships: []
+      }
+      v_recent_points: {
+        Row: {
+          jour: string | null
+          manager_id: string | null
+          manager_nom: string | null
+          points_jour: number | null
+        }
+        Relationships: []
+      }
       v_scoring_totals_by_category: {
         Row: {
           categorie_norm: string | null
@@ -1492,6 +1944,56 @@ export type Database = {
           sum_jeune: number | null
           sum_montagne: number | null
           sum_points: number | null
+        }
+        Relationships: []
+      }
+      v_top_riders_by_phase: {
+        Row: {
+          coureur_equipe: string | null
+          coureur_id: string | null
+          coureur_nom: string | null
+          courses_count: number | null
+          phase_id: string | null
+          total_points: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_top_riders_global: {
+        Row: {
+          coureur_equipe: string | null
+          coureur_id: string | null
+          coureur_nom: string | null
+          courses_count: number | null
+          total_points: number | null
         }
         Relationships: []
       }
@@ -1531,6 +2033,14 @@ export type Database = {
       unaccent_init: {
         Args: { "": unknown }
         Returns: unknown
+      }
+      verify_course_save: {
+        Args: { p_course_id: string }
+        Returns: {
+          manager_attribs: number
+          result_count: number
+          result_scored: number
+        }[]
       }
     }
     Enums: {

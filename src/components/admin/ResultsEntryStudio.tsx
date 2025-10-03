@@ -277,6 +277,10 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
         throw new Error("Doublons détectés dans la saisie");
       }
 
+      let resultRowsCount = 0;
+      let resultRowsPositive = 0;
+      let managerRowsCount = 0;
+
       // Server-side recalculation of points
       const { data: courseData } = await supabase
         .from("courses")
@@ -403,18 +407,38 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
           .insert(pointsLedger);
 
         if (insertError) throw insertError;
+        managerRowsCount = pointsLedger.length;
       }
 
-      return { inserted: validRows.length, ledger: pointsLedger.length };
+      resultRowsCount = validRows.length;
+      resultRowsPositive = validRows.filter(r => r.statut === "finished" && scoringMap.get(r.position)).length;
+
+      // Verification check
+      const { data: verifyData } = await supabase.rpc("verify_course_save", {
+        p_course_id: course.course_id,
+      });
+
+      return { 
+        inserted: validRows.length, 
+        ledger: pointsLedger.length,
+        result_rows: resultRowsCount,
+        result_rows_positive: resultRowsPositive,
+        manager_rows: managerRowsCount,
+        verify: verifyData?.[0] || null,
+      };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["stage-completion"] });
       queryClient.invalidateQueries({ queryKey: ["results-status"] });
+      queryClient.invalidateQueries({ queryKey: ["manager-standings"] });
+      queryClient.invalidateQueries({ queryKey: ["top-riders"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-points"] });
+      queryClient.invalidateQueries({ queryKey: ["rankings-kpis"] });
 
       const label = activeTab === "stages" ? `ÉTAPE ${currentStage}` : classementType.toUpperCase();
       toast({
-        title: "Résultats enregistrés",
-        description: `${label} — ${data.inserted} lignes · ${data.ledger} points attribués`,
+        title: "✅ Résultats enregistrés",
+        description: `${label} — ${data.manager_rows} attributions créées · ${data.result_rows_positive} lignes scorées / ${data.result_rows} résultats`,
       });
       setIsDirty(false);
     },

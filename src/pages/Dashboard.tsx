@@ -17,6 +17,7 @@ import { ResultsEntry } from "@/components/admin/ResultsEntry";
 import { RecentResults } from "@/components/admin/RecentResults";
 import { MyTeam } from "@/components/team/MyTeam";
 import { UpcomingCourses } from "@/components/courses/UpcomingCourses";
+import Rankings from "./Rankings";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -132,19 +133,7 @@ const Dashboard = () => {
           </TabsContent>
 
           <TabsContent value="classement" className="space-y-6">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle>Classement Général</CardTitle>
-                <CardDescription>
-                  Comparez vos performances avec les autres managers
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                  Le classement sera disponible une fois les courses commencées
-                </div>
-              </CardContent>
-            </Card>
+            <Rankings />
           </TabsContent>
 
           {isAdmin && (
