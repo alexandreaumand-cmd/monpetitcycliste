@@ -102,9 +102,9 @@ const Index = () => {
         
         <div className="container relative mx-auto px-4 py-20">
           <div className="max-w-4xl mx-auto text-center">
-            <img src={logo} alt="Velo Fantasy Quest" className="h-24 w-24 mx-auto mb-6 animate-fade-in" />
+            <img src={logo} alt="Mon Petit Cycliste" className="h-24 w-24 mx-auto mb-6 animate-fade-in" />
             <h1 className="text-5xl md:text-7xl font-bold mb-6 text-foreground animate-fade-in">
-              Velo Fantasy Quest
+              Mon Petit Cycliste
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground mb-8 animate-fade-in">
               Participe aux enchères, compose ton équipe et marque des points avec les résultats réels des courses.
@@ -363,7 +363,7 @@ const Index = () => {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <img src={logo} alt="Logo" className="h-8 w-8" />
-              <span className="font-semibold">© 2025 Velo Fantasy Quest</span>
+              <span className="font-semibold">© 2025 Mon Petit Cycliste</span>
             </div>
             <div className="flex gap-6 text-sm text-muted-foreground">
               <a href="#" className="hover:text-foreground transition-colors">Règles</a>
