@@ -1,0 +1,216 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface RequestBody {
+  manager_id: string;
+  phase_id?: string | null;
+  saison_id?: string | null;
+  search?: string | null;
+  limit?: number | null;
+  offset?: number | null;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        auth: {
+          persistSession: false,
+        },
+      }
+    );
+
+    const { 
+      manager_id, 
+      phase_id, 
+      saison_id, 
+      search, 
+      limit = 50, 
+      offset = 0 
+    }: RequestBody = await req.json();
+
+    console.log('get-team-scoring called with:', { manager_id, phase_id, saison_id, search, limit, offset });
+
+    if (!manager_id) {
+      throw new Error('manager_id is required');
+    }
+
+    // Get manager info
+    const { data: manager, error: managerError } = await supabaseClient
+      .from('managers')
+      .select('id, nom')
+      .eq('id', manager_id)
+      .single();
+
+    if (managerError) throw managerError;
+
+    // Build roster scope - get relevant phase IDs
+    let phaseIds: string[] = [];
+    if (phase_id) {
+      phaseIds = [phase_id];
+    } else if (saison_id) {
+      const { data: phases } = await supabaseClient
+        .from('phases')
+        .select('id')
+        .eq('saison_id', saison_id);
+      phaseIds = phases?.map(p => p.id) || [];
+    } else {
+      const { data: allPhases } = await supabaseClient
+        .from('phases')
+        .select('id');
+      phaseIds = allPhases?.map(p => p.id) || [];
+    }
+
+    if (phaseIds.length === 0) {
+      return new Response(JSON.stringify({
+        team: { manager_id, manager_nom: manager.nom },
+        scope: { phase_id, saison_id },
+        totals: { points_total: 0, riders_count: 0, courses_count: 0 },
+        items: [],
+        pagination: { limit, offset, has_more: false }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Get roster coureurs for this manager in scope
+    const { data: rosterCoureurs, error: rosterError } = await supabaseClient
+      .from('rosters')
+      .select('coureur_id')
+      .eq('manager_id', manager_id)
+      .in('phase_id', phaseIds);
+
+    if (rosterError) throw rosterError;
+
+    const coureurIds = [...new Set(rosterCoureurs?.map(r => r.coureur_id) || [])];
+
+    if (coureurIds.length === 0) {
+      return new Response(JSON.stringify({
+        team: { manager_id, manager_nom: manager.nom },
+        scope: { phase_id, saison_id },
+        totals: { points_total: 0, riders_count: 0, courses_count: 0 },
+        items: [],
+        pagination: { limit, offset, has_more: false }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Get points for these coureurs in scope
+    let pointsQuery = supabaseClient
+      .from('points_ledger')
+      .select('coureur_id, course_id, points, created_at')
+      .eq('manager_id', manager_id)
+      .in('phase_id', phaseIds)
+      .in('coureur_id', coureurIds);
+
+    const { data: pointsData, error: pointsError } = await pointsQuery;
+
+    if (pointsError) throw pointsError;
+
+    // Aggregate by coureur
+    const coureurStats = new Map<string, {
+      points_total: number;
+      courses: Set<string>;
+      last_scored_at: string | null;
+    }>();
+
+    pointsData?.forEach((row) => {
+      if (!coureurStats.has(row.coureur_id)) {
+        coureurStats.set(row.coureur_id, {
+          points_total: 0,
+          courses: new Set(),
+          last_scored_at: null
+        });
+      }
+      const stats = coureurStats.get(row.coureur_id)!;
+      stats.points_total += row.points;
+      stats.courses.add(row.course_id);
+      if (!stats.last_scored_at || row.created_at > stats.last_scored_at) {
+        stats.last_scored_at = row.created_at;
+      }
+    });
+
+    // Filter coureurs with points > 0
+    const coureurIdsWithPoints = Array.from(coureurStats.keys()).filter(
+      id => coureurStats.get(id)!.points_total > 0
+    );
+
+    // Get coureur details
+    let coureursQuery = supabaseClient
+      .from('coureurs')
+      .select('id, nom, equipe')
+      .in('id', coureurIdsWithPoints);
+
+    if (search && search.trim()) {
+      coureursQuery = coureursQuery.ilike('nom', `%${search}%`);
+    }
+
+    const { data: coureurs, error: coureursError } = await coureursQuery;
+
+    if (coureursError) throw coureursError;
+
+    // Build items array
+    const items = coureurs?.map(c => {
+      const stats = coureurStats.get(c.id)!;
+      return {
+        rider_id: c.id,
+        rider_nom: c.nom,
+        rider_equipe: c.equipe,
+        points_total: stats.points_total,
+        nb_courses: stats.courses.size,
+        last_scored_at: stats.last_scored_at
+      };
+    }).sort((a, b) => {
+      if (b.points_total !== a.points_total) {
+        return b.points_total - a.points_total;
+      }
+      return a.rider_nom.localeCompare(b.rider_nom);
+    }) || [];
+
+    // Calculate totals
+    const totals = {
+      points_total: items.reduce((sum, item) => sum + item.points_total, 0),
+      riders_count: items.length,
+      courses_count: new Set(pointsData?.map(p => p.course_id) || []).size
+    };
+
+    // Pagination
+    const actualOffset = offset ?? 0;
+    const actualLimit = limit ?? 50;
+    const paginatedItems = items.slice(actualOffset, actualOffset + actualLimit);
+    const has_more = items.length > actualOffset + actualLimit;
+
+    const response = {
+      team: { manager_id, manager_nom: manager.nom },
+      scope: { phase_id, saison_id },
+      totals,
+      items: paginatedItems,
+      pagination: { limit: actualLimit, offset: actualOffset, has_more }
+    };
+
+    console.log('Returning team scoring:', response);
+
+    return new Response(JSON.stringify(response), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('Error in get-team-scoring:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});

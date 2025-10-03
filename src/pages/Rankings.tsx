@@ -11,6 +11,7 @@ import { ManagerBreakdown } from "@/components/rankings/ManagerBreakdown";
 import { RecentPointsChart } from "@/components/rankings/RecentPointsChart";
 import { RankingsKPIs } from "@/components/rankings/RankingsKPIs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { TeamScoring } from "@/components/rankings/TeamScoring";
 
 export default function Rankings() {
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
@@ -77,7 +78,7 @@ export default function Rankings() {
             <TabsTrigger value="standings">Classement</TabsTrigger>
             <TabsTrigger value="riders">Top Coureurs</TabsTrigger>
             <TabsTrigger value="timeline">Chronologie</TabsTrigger>
-            <TabsTrigger value="phase">Par Phase</TabsTrigger>
+            <TabsTrigger value="team">Détail par équipe</TabsTrigger>
           </TabsList>
 
           <TabsContent value="standings" className="space-y-4">
@@ -95,21 +96,8 @@ export default function Rankings() {
             <RecentPointsChart />
           </TabsContent>
 
-          <TabsContent value="phase" className="space-y-4">
-            {selectedPhase ? (
-              <ManagerStandings 
-                phaseId={selectedPhase} 
-                onManagerClick={handleManagerClick}
-              />
-            ) : (
-              <Card>
-                <CardContent className="py-12">
-                  <p className="text-center text-muted-foreground">
-                    Veuillez sélectionner une phase pour voir le classement détaillé
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+          <TabsContent value="team" className="space-y-4">
+            <TeamScoring phaseId={selectedPhase} saisonId={null} />
           </TabsContent>
         </Tabs>
 
