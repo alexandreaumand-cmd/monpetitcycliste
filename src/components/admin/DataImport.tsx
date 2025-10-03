@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Loader2 } from "lucide-react";
 
-type TableType = 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates';
+type TableType = 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates' | 'rosters';
 
 export const DataImport = () => {
   const [selectedTable, setSelectedTable] = useState<TableType>('coureurs');
@@ -71,6 +71,7 @@ export const DataImport = () => {
     courses: 'Courses (Races)',
     managers: 'Managers',
     course_dates: 'Dates des Courses',
+    rosters: 'Rosters (Équipes)',
   };
 
   const handleComputePhases = async () => {
@@ -184,6 +185,7 @@ export const DataImport = () => {
             <li className="text-xs text-muted-foreground ml-6">phase_id peut être "Phase 1", "Phase 2", etc. (sera converti en UUID)</li>
             <li><strong>Managers:</strong> Nom manager, Sponsor</li>
             <li><strong>Dates des Courses:</strong> id, Course, date_debut, date_fin</li>
+            <li><strong>Rosters:</strong> Coureur, Propriétaire, Phase, Prix</li>
           </ul>
           <p className="text-xs mt-2 text-orange-600">
             <strong>Note:</strong> Le format CSV détecte automatiquement le séparateur (virgule ou point-virgule).
