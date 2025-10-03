@@ -75,64 +75,124 @@ Deno.serve(async (req) => {
 async function handleRecentRaces(supabase: any, managerId: string, params: any) {
   const { saison_id, phase_id, search, limit = 10 } = params
 
-  let query = `
-    SELECT DISTINCT ON (c.id)
-      c.id as course_id,
-      c.nom,
-      c.date_debut,
-      c.date_fin,
-      c.categorie,
-      c.phase_id,
-      MAX(rr.date_classement) as last_result_at,
-      ARRAY_AGG(DISTINCT rr.type_classement) as types,
-      COALESCE(SUM(pl.points) FILTER (WHERE pl.manager_id = $1), 0) as my_points,
-      EXISTS(SELECT 1 FROM points_ledger WHERE course_id = c.id) as has_points
-    FROM courses c
-    INNER JOIN race_results rr ON rr.course_id = c.id
-    LEFT JOIN points_ledger pl ON pl.course_id = c.id AND pl.manager_id = $1
-  `
+  // Build query for races with results
+  let racesQuery = supabase
+    .from('race_results')
+    .select('course_id, date_classement')
+    .order('date_classement', { ascending: false })
 
-  const queryParams: any[] = [managerId]
-  let paramIndex = 2
+  const { data: resultsData, error: resultsError } = await racesQuery
 
-  if (phase_id) {
-    query += ` WHERE c.phase_id = $${paramIndex}`
-    queryParams.push(phase_id)
-    paramIndex++
-  } else if (saison_id) {
-    query += ` INNER JOIN phases p ON p.id = c.phase_id WHERE p.saison_id = $${paramIndex}`
-    queryParams.push(saison_id)
-    paramIndex++
-  }
-
-  if (search) {
-    query += phase_id || saison_id ? ' AND' : ' WHERE'
-    query += ` c.nom ILIKE $${paramIndex}`
-    queryParams.push(`%${search}%`)
-    paramIndex++
-  }
-
-  query += `
-    GROUP BY c.id, c.nom, c.date_debut, c.date_fin, c.categorie, c.phase_id
-    ORDER BY c.id, last_result_at DESC NULLS LAST, c.date_fin DESC
-    LIMIT $${paramIndex}
-  `
-  queryParams.push(limit)
-
-  const { data, error } = await supabase.rpc('exec_sql', {
-    sql: query,
-    params: queryParams
-  })
-
-  if (error) {
-    console.error('Error fetching recent races:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
+  if (resultsError) {
+    console.error('Error fetching race results:', resultsError)
+    return new Response(JSON.stringify({ error: resultsError.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 
-  return new Response(JSON.stringify({ races: data || [] }), {
+  // Get unique course IDs
+  const courseIds = [...new Set(resultsData?.map((r: any) => r.course_id) || [])]
+  
+  if (courseIds.length === 0) {
+    return new Response(JSON.stringify({ races: [] }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  // Get course details
+  let coursesQuery = supabase
+    .from('courses')
+    .select(`
+      id,
+      nom,
+      date_debut,
+      date_fin,
+      categorie,
+      phase_id,
+      phases!inner(saison_id)
+    `)
+    .in('id', courseIds.slice(0, 50)) // Limit to 50 courses
+
+  if (phase_id) {
+    coursesQuery = coursesQuery.eq('phase_id', phase_id)
+  } else if (saison_id) {
+    coursesQuery = coursesQuery.eq('phases.saison_id', saison_id)
+  }
+
+  if (search) {
+    coursesQuery = coursesQuery.ilike('nom', `%${search}%`)
+  }
+
+  const { data: courses, error: coursesError } = await coursesQuery
+
+  if (coursesError) {
+    console.error('Error fetching courses:', coursesError)
+    return new Response(JSON.stringify({ error: coursesError.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  // For each course, get additional data
+  const racesWithData = await Promise.all(
+    courses?.slice(0, limit).map(async (course: any) => {
+      // Get types of classifications available
+      const { data: typesData } = await supabase
+        .from('race_results')
+        .select('type_classement')
+        .eq('course_id', course.id)
+
+      const types = [...new Set(typesData?.map((t: any) => t.type_classement) || [])]
+
+      // Get last result date
+      const { data: lastResultData } = await supabase
+        .from('race_results')
+        .select('date_classement')
+        .eq('course_id', course.id)
+        .order('date_classement', { ascending: false })
+        .limit(1)
+        .single()
+
+      // Get my points for this course
+      const { data: pointsData } = await supabase
+        .from('points_ledger')
+        .select('points')
+        .eq('course_id', course.id)
+        .eq('manager_id', managerId)
+
+      const my_points = pointsData?.reduce((sum: number, p: any) => sum + (p.points || 0), 0) || 0
+
+      // Check if any points exist for this course
+      const { data: hasPointsData } = await supabase
+        .from('points_ledger')
+        .select('id')
+        .eq('course_id', course.id)
+        .limit(1)
+
+      return {
+        course_id: course.id,
+        nom: course.nom,
+        date_debut: course.date_debut,
+        date_fin: course.date_fin,
+        categorie: course.categorie,
+        phase_id: course.phase_id,
+        last_result_at: lastResultData?.date_classement || null,
+        types,
+        my_points,
+        has_points: (hasPointsData?.length || 0) > 0
+      }
+    }) || []
+  )
+
+  // Sort by last_result_at desc
+  racesWithData.sort((a, b) => {
+    if (!a.last_result_at) return 1
+    if (!b.last_result_at) return -1
+    return new Date(b.last_result_at).getTime() - new Date(a.last_result_at).getTime()
+  })
+
+  return new Response(JSON.stringify({ races: racesWithData }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 }
