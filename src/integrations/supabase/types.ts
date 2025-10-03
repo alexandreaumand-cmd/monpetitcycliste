@@ -756,6 +756,20 @@ export type Database = {
             foreignKeyName: "points_ledger_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
+            referencedRelation: "v_home_recent_results"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_upcoming_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
             referencedRelation: "v_manager_breakdown"
             referencedColumns: ["course_id"]
           },
@@ -952,6 +966,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_course_points_theoriques"
             referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "race_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_recent_results"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "race_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_upcoming_courses"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "race_results_course_id_fkey"
@@ -1811,6 +1839,58 @@ export type Database = {
           wt_tier: Database["public"]["Enums"]["wt_tier_type"] | null
         }
         Relationships: []
+      }
+      v_home_recent_results: {
+        Row: {
+          course_id: string | null
+          course_nom: string | null
+          date_fin: string | null
+          top3: Json | null
+          total_points: number | null
+        }
+        Relationships: []
+      }
+      v_home_upcoming_courses: {
+        Row: {
+          categorie: string | null
+          date_debut: string | null
+          date_fin: string | null
+          id: string | null
+          nom: string | null
+          phase_id: string | null
+          points_total: number | null
+          type_course: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_manager_breakdown: {
         Row: {
