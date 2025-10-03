@@ -334,7 +334,7 @@ Deno.serve(async (req) => {
       
       const coursesToInsert: any[] = []
       const errorDetails: string[] = []
-      const seen = new Set<string>() // For deduplication
+      const seenKeys = new Map<string, number>() // Track (nom, date_debut) -> line number for better error messages
       const unmappedPhases = new Set<string>()
       const mappedPhaseIds: string[] = []
       
@@ -359,7 +359,7 @@ Deno.serve(async (req) => {
         const uci_code = idxUciCode >= 0 ? values[idxUciCode]?.trim() || null : null
         let rawId = idxId >= 0 ? values[idxId]?.trim() : null
         
-        // Skip empty rows
+        // Skip empty rows (no nom)
         if (!nom || nom.length === 0) {
           continue
         }
@@ -382,14 +382,15 @@ Deno.serve(async (req) => {
           date_fin = date_debut
         }
         
-        // Deduplicate by (nom, date_debut)
-        const dedupeKey = `${nom}|${date_debut}`
-        if (seen.has(dedupeKey)) {
-          errorDetails.push(`Row ${i + 1}: Duplicate course "${nom}" on ${date_debut}`)
+        // Deduplicate by (nom, date_debut) - keep first occurrence
+        const dedupeKey = `${nom.toLowerCase()}|${date_debut}`
+        if (seenKeys.has(dedupeKey)) {
+          const firstOccurrence = seenKeys.get(dedupeKey)
+          errorDetails.push(`Row ${i + 1}: Duplicate course "${nom}" on ${date_debut} (first seen at row ${firstOccurrence})`)
           errors++
           continue
         }
-        seen.add(dedupeKey)
+        seenKeys.set(dedupeKey, i + 1)
         
         // Map phase_id
         let phase_id = null
