@@ -6,7 +6,7 @@ const corsHeaders = {
 }
 
 interface ImportRequest {
-  table: 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates'
+  table: 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates' | 'rosters'
   data: string // CSV content
 }
 
@@ -56,6 +56,126 @@ Deno.serve(async (req) => {
     let updatedById = 0
     let updatedByName = 0
     let unknown = 0
+
+    // Special handling for rosters
+    if (table === 'rosters') {
+      console.log('🔧 Processing rosters...');
+      
+      // Fetch all coureurs, managers, and phases
+      const [coureursRes, managersRes, phasesRes] = await Promise.all([
+        supabaseClient.from('coureurs').select('id, nom'),
+        supabaseClient.from('managers').select('id, nom'),
+        supabaseClient.from('phases').select('id, index_dans_saison'),
+      ]);
+
+      if (coureursRes.error || managersRes.error || phasesRes.error) {
+        throw new Error('Failed to fetch reference data');
+      }
+
+      // Build lookup maps
+      const coureursByName = new Map(
+        coureursRes.data.map(c => [normalizeName(c.nom), c.id])
+      );
+      const managersByName = new Map(
+        managersRes.data.map(m => [m.nom.trim(), m.id])
+      );
+      const phasesByIndex = new Map(
+        phasesRes.data.map(p => [p.index_dans_saison, p.id])
+      );
+
+      const rostersToInsert: any[] = [];
+      const errorDetails: string[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i], separator);
+        
+        const obj: any = {};
+        for (let j = 0; j < headers.length; j++) {
+          obj[headers[j].trim()] = values[j]?.trim() || null;
+        }
+
+        const coureurName = obj['Coureur'];
+        const proprietaire = obj['Propriétaire'];
+        const phaseStr = obj['Phase'];
+        const prixStr = obj['Prix'];
+
+        if (!coureurName || !proprietaire || !phaseStr || !prixStr) {
+          errorDetails.push(`Row ${i}: Missing data`);
+          errors++;
+          continue;
+        }
+
+        // Match coureur
+        const coureurId = coureursByName.get(normalizeName(coureurName));
+        if (!coureurId) {
+          errorDetails.push(`Row ${i}: Coureur not found: ${coureurName}`);
+          errors++;
+          continue;
+        }
+
+        // Match manager
+        const managerId = managersByName.get(proprietaire);
+        if (!managerId) {
+          errorDetails.push(`Row ${i}: Manager not found: ${proprietaire}`);
+          errors++;
+          continue;
+        }
+
+        // Match phase
+        const phaseIndex = parseInt(phaseStr, 10);
+        const phaseId = phasesByIndex.get(phaseIndex);
+        if (!phaseId) {
+          errorDetails.push(`Row ${i}: Phase not found: ${phaseStr}`);
+          errors++;
+          continue;
+        }
+
+        // Parse prix
+        const prix = parseFloat(prixStr.replace(',', '.'));
+        if (isNaN(prix)) {
+          errorDetails.push(`Row ${i}: Invalid prix: ${prixStr}`);
+          errors++;
+          continue;
+        }
+
+        rostersToInsert.push({
+          coureur_id: coureurId,
+          manager_id: managerId,
+          phase_id: phaseId,
+          prix_signature: prix,
+        });
+      }
+
+      // Batch upsert
+      if (rostersToInsert.length > 0) {
+        const { error: insertError } = await supabaseClient
+          .from('rosters')
+          .upsert(rostersToInsert, {
+            onConflict: 'coureur_id,phase_id',
+            ignoreDuplicates: false,
+          });
+
+        if (insertError) {
+          console.error('Batch insert error:', insertError);
+          throw new Error(`Failed to insert rosters: ${insertError.message}`);
+        }
+
+        imported = rostersToInsert.length;
+      }
+
+      console.log(`✅ Imported ${imported} rosters, ${errors} errors`);
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          imported,
+          errors,
+          errorDetails: errorDetails.slice(0, 10), // First 10 errors
+          message: `Imported ${imported} rosters with ${errors} errors`,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Special handling for course_dates
     if (table === 'course_dates') {
@@ -134,7 +254,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      return new Response(
+    return new Response(
         JSON.stringify({ 
           success: true, 
           imported, 
