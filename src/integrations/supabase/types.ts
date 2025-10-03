@@ -852,6 +852,83 @@ export type Database = {
           },
         ]
       }
+      race_result_sets: {
+        Row: {
+          course_id: string
+          created_at: string
+          created_by: string
+          etape_numero: number | null
+          id: string
+          type_classement: Database["public"]["Enums"]["type_classement"]
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          created_by: string
+          etape_numero?: number | null
+          id?: string
+          type_classement: Database["public"]["Enums"]["type_classement"]
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          created_by?: string
+          etape_numero?: number | null
+          id?: string
+          type_classement?: Database["public"]["Enums"]["type_classement"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "race_result_sets_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_result_sets_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_for_points_norm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_result_sets_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_bareme_missing_all"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_result_sets_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_course_points_theoriques"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "race_result_sets_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_recent_results"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "race_result_sets_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_upcoming_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "race_result_sets_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["course_id"]
+          },
+        ]
+      }
       race_results: {
         Row: {
           coureur_id: string | null
@@ -862,6 +939,7 @@ export type Database = {
           manager_id: string | null
           points: number
           position: number | null
+          result_set_id: string | null
           statut: Database["public"]["Enums"]["result_statut"] | null
           type_classement: Database["public"]["Enums"]["type_classement"]
           updated_at: string | null
@@ -876,6 +954,7 @@ export type Database = {
           manager_id?: string | null
           points?: number
           position?: number | null
+          result_set_id?: string | null
           statut?: Database["public"]["Enums"]["result_statut"] | null
           type_classement: Database["public"]["Enums"]["type_classement"]
           updated_at?: string | null
@@ -890,6 +969,7 @@ export type Database = {
           manager_id?: string | null
           points?: number
           position?: number | null
+          result_set_id?: string | null
           statut?: Database["public"]["Enums"]["result_statut"] | null
           type_classement?: Database["public"]["Enums"]["type_classement"]
           updated_at?: string | null
@@ -1042,6 +1122,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_recent_points"
             referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "race_results_result_set_id_fkey"
+            columns: ["result_set_id"]
+            isOneToOne: false
+            referencedRelation: "race_result_sets"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "race_results_updated_by_manager_id_fkey"
@@ -2565,6 +2652,36 @@ export type Database = {
       }
     }
     Functions: {
+      admin_result_check_unique: {
+        Args: {
+          p_course_id: string
+          p_etape_numero?: number
+          p_type_classement: Database["public"]["Enums"]["type_classement"]
+        }
+        Returns: Json
+      }
+      admin_result_create_lot: {
+        Args: {
+          p_course_id: string
+          p_etape_numero: number
+          p_rows: Json
+          p_type_classement: Database["public"]["Enums"]["type_classement"]
+        }
+        Returns: Json
+      }
+      admin_result_status: {
+        Args: { p_course_id: string }
+        Returns: Json
+      }
+      admin_result_update_lot: {
+        Args: {
+          p_course_id: string
+          p_etape_numero: number
+          p_rows: Json
+          p_type_classement: Database["public"]["Enums"]["type_classement"]
+        }
+        Returns: Json
+      }
       admin_results_reset_all: {
         Args: { p_confirm_phrase: string }
         Returns: Json
