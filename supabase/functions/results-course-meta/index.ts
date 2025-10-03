@@ -35,8 +35,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Call the database function
-    const { data, error } = await supabase.rpc('results_course_meta', {
+    // Call the database function (using v2)
+    const { data, error } = await supabase.rpc('results_course_meta_v2', {
       p_course_id: course_id
     });
 

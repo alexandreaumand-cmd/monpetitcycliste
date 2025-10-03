@@ -8,7 +8,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2, Trophy, Calendar, Search, Medal, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { useDebounce } from "use-debounce";
 
 interface Race {
@@ -30,7 +37,7 @@ interface RaceMeta {
   etapes_disponibles: number[];
 }
 
-interface ResultRow {
+interface RaceRow {
   row_position: number | null;
   statut: string;
   coureur_id: string;
@@ -42,7 +49,6 @@ interface ResultRow {
 }
 
 export const ResultsPage = () => {
-  // Master view state
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,9 +63,10 @@ export const ResultsPage = () => {
   const [raceMeta, setRaceMeta] = useState<RaceMeta | null>(null);
   const [selectedType, setSelectedType] = useState<string>("");
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
-  const [results, setResults] = useState<ResultRow[]>([]);
+  const [results, setResults] = useState<RaceRow[]>([]);
+  const [filteredResults, setFilteredResults] = useState<RaceRow[]>([]);
   const [loadingResults, setLoadingResults] = useState(false);
-  const [riderSearchQuery, setRiderSearchQuery] = useState("");
+  const [drawerSearch, setDrawerSearch] = useState("");
 
   useEffect(() => {
     loadRaces(true);
@@ -69,23 +76,35 @@ export const ResultsPage = () => {
     if (selectedRace && selectedType) {
       loadRaceResults();
     }
-  }, [selectedType, selectedEtape]);
+  }, [selectedRace, selectedType, selectedEtape]);
 
-  const loadRaces = async (reset: boolean = false) => {
+  useEffect(() => {
+    // Filter results by drawer search
+    if (drawerSearch) {
+      const query = drawerSearch.toLowerCase();
+      setFilteredResults(results.filter(r => 
+        r.coureur_nom.toLowerCase().includes(query)
+      ));
+    } else {
+      setFilteredResults(results);
+    }
+  }, [results, drawerSearch]);
+
+  const loadRaces = async (reset = false) => {
     if (reset) {
       setLoading(true);
       setOffset(0);
+      setRaces([]);
     } else {
       setLoadingMore(true);
     }
 
     try {
-      const currentOffset = reset ? 0 : offset;
       const { data, error } = await supabase.functions.invoke('results-courses-with-entries', {
         body: { 
           search: debouncedSearch || null,
           limit: 24,
-          offset: currentOffset
+          offset: reset ? 0 : offset
         }
       });
 
@@ -99,7 +118,7 @@ export const ResultsPage = () => {
       
       setHasMore(data.has_more || false);
       if (!reset) {
-        setOffset(currentOffset + 24);
+        setOffset(prev => prev + 24);
       }
     } catch (error) {
       console.error('Error loading races:', error);
@@ -113,25 +132,28 @@ export const ResultsPage = () => {
     setSelectedRace(race);
     setDrawerOpen(true);
     setLoadingResults(true);
+    setDrawerSearch("");
 
     try {
-      const { data, error } = await supabase.functions.invoke('results-course-meta-v2', {
+      const { data, error } = await supabase.functions.invoke('results-course-meta', {
         body: { course_id: race.course_id }
       });
 
       if (error) throw error;
-      setRaceMeta(data.meta);
+      
+      const meta = data.meta;
+      setRaceMeta(meta);
       
       // Set default type (General preferred, or first available)
-      const defaultType = data.meta?.types_disponibles?.includes("General") 
+      const defaultType = meta?.types_disponibles?.includes("General") 
         ? "General" 
-        : data.meta?.types_disponibles?.[0] || "";
+        : meta?.types_disponibles?.[0] || "";
       
       setSelectedType(defaultType);
       
       // If Etape, select last stage
-      if (defaultType === "Etape" && data.meta?.etapes_disponibles?.length > 0) {
-        setSelectedEtape(data.meta.etapes_disponibles[data.meta.etapes_disponibles.length - 1]);
+      if (defaultType === "Etape" && meta?.etapes_disponibles?.length > 0) {
+        setSelectedEtape(meta.etapes_disponibles[meta.etapes_disponibles.length - 1]);
       } else {
         setSelectedEtape(null);
       }
@@ -183,46 +205,40 @@ export const ResultsPage = () => {
     return <Badge variant={variant}>{label}</Badge>;
   };
 
-  const filteredResults = riderSearchQuery
-    ? results.filter(r => r.coureur_nom.toLowerCase().includes(riderSearchQuery.toLowerCase()))
-    : results;
-
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with search */}
       <div className="sticky top-0 z-10 bg-background pb-4 border-b">
-        <div className="mb-4">
-          <h1 className="text-3xl font-bold">Résultats</h1>
-          <p className="text-muted-foreground">
-            Courses avec résultats disponibles
-          </p>
-        </div>
-        
-        <div className="flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher une course..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-3xl font-bold">Résultats</h1>
+            <p className="text-muted-foreground">
+              {races.length} course{races.length > 1 ? 's' : ''} avec résultats
+            </p>
           </div>
           {searchQuery && (
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setSearchQuery("");
-                setOffset(0);
-              }}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSearchQuery("")}
             >
               Réinitialiser
             </Button>
           )}
         </div>
+        
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher une course..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
       </div>
 
-      {/* Grid of race cards */}
+      {/* Grille des courses */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
@@ -234,9 +250,7 @@ export const ResultsPage = () => {
           <Trophy className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-semibold mb-2">Aucune course trouvée</h3>
           <p className="text-muted-foreground mb-4">
-            {searchQuery 
-              ? "Aucune course avec résultats ne correspond à votre recherche"
-              : "Aucune course avec résultats disponible pour le moment"}
+            Aucune course avec résultats{searchQuery ? " pour cette recherche" : ""}
           </p>
           {searchQuery && (
             <Button variant="outline" onClick={() => setSearchQuery("")}>
@@ -253,7 +267,7 @@ export const ResultsPage = () => {
                 className="cursor-pointer transition-all hover:shadow-lg hover:scale-105"
                 onClick={() => openRaceDrawer(race)}
               >
-                <CardHeader className="pb-3">
+                <CardHeader>
                   <CardTitle className="text-base line-clamp-2">{race.nom}</CardTitle>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Calendar className="h-3 w-3" />
@@ -278,15 +292,15 @@ export const ResultsPage = () => {
           </div>
 
           {hasMore && (
-            <div className="text-center pt-4">
-              <Button 
-                variant="outline" 
+            <div className="flex justify-center pt-4">
+              <Button
                 onClick={() => loadRaces(false)}
                 disabled={loadingMore}
+                variant="outline"
               >
                 {loadingMore ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Chargement...
                   </>
                 ) : (
@@ -298,23 +312,24 @@ export const ResultsPage = () => {
         </>
       )}
 
-      {/* Drawer for race details */}
+      {/* Drawer détail */}
       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DrawerContent className="max-h-[90vh]">
           <DrawerHeader className="border-b">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <DrawerTitle className="text-2xl">{raceMeta?.course_nom || selectedRace?.nom}</DrawerTitle>
-                <DrawerDescription className="flex items-center gap-2 mt-1">
-                  <Badge variant="secondary">{raceMeta?.categorie || selectedRace?.categorie}</Badge>
-                  <span>•</span>
-                  <Calendar className="h-4 w-4" />
+                <DrawerDescription>
                   {raceMeta && (
-                    <>
-                      {new Date(raceMeta.date_debut).toLocaleDateString('fr-FR')} 
-                      {' - '}
-                      {new Date(raceMeta.date_fin).toLocaleDateString('fr-FR')}
-                    </>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge variant="secondary">{raceMeta.categorie}</Badge>
+                      <span className="text-sm flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(raceMeta.date_debut).toLocaleDateString('fr-FR')} 
+                        {' - '}
+                        {new Date(raceMeta.date_fin).toLocaleDateString('fr-FR')}
+                      </span>
+                    </div>
                   )}
                 </DrawerDescription>
               </div>
@@ -326,56 +341,61 @@ export const ResultsPage = () => {
             </div>
 
             {/* Type selector pills */}
-            <div className="flex flex-wrap gap-2 mt-4">
-              {raceMeta?.types_disponibles?.map((type: string) => (
-                <Button
-                  key={type}
-                  variant={selectedType === type ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setSelectedType(type);
-                    if (type !== "Etape") setSelectedEtape(null);
-                  }}
-                >
-                  {type}
-                </Button>
-              ))}
-            </div>
+            {raceMeta && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {raceMeta.types_disponibles?.map((type) => (
+                  <Button
+                    key={type}
+                    variant={selectedType === type ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setSelectedType(type);
+                      if (type !== "Etape") setSelectedEtape(null);
+                    }}
+                  >
+                    {type}
+                  </Button>
+                ))}
+              </div>
+            )}
 
-            {/* Etape selector + rider search */}
-            <div className="flex gap-4 mt-4">
-              {selectedType === "Etape" && raceMeta?.etapes_disponibles?.length > 0 && (
+            {/* Etape selector if applicable */}
+            {selectedType === "Etape" && raceMeta?.etapes_disponibles && raceMeta.etapes_disponibles.length > 0 && (
+              <div className="flex items-center gap-2 mt-3">
+                <label className="text-sm font-medium">Étape:</label>
                 <Select 
                   value={selectedEtape?.toString() || ""} 
                   onValueChange={(v) => setSelectedEtape(parseInt(v))}
                 >
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Sélectionner étape" />
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {raceMeta.etapes_disponibles.map((etape: number) => (
+                    {raceMeta.etapes_disponibles.map((etape) => (
                       <SelectItem key={etape} value={etape.toString()}>
                         Étape {etape}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              )}
-              
-              <div className="relative flex-1">
+              </div>
+            )}
+
+            {/* Search riders */}
+            {results.length > 0 && (
+              <div className="relative mt-4">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Rechercher un coureur..."
-                  value={riderSearchQuery}
-                  onChange={(e) => setRiderSearchQuery(e.target.value)}
+                  value={drawerSearch}
+                  onChange={(e) => setDrawerSearch(e.target.value)}
                   className="pl-9"
                 />
               </div>
-            </div>
+            )}
           </DrawerHeader>
 
-          {/* Results grid */}
-          <div className="p-6 overflow-y-auto">
+          <div className="overflow-y-auto p-6">
             {loadingResults ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -384,14 +404,10 @@ export const ResultsPage = () => {
               </div>
             ) : filteredResults.length === 0 ? (
               <div className="text-center py-12">
-                <Trophy className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">
-                  {riderSearchQuery ? "Aucun coureur trouvé" : "Aucun classement disponible"}
-                </h3>
-                <p className="text-muted-foreground">
-                  {riderSearchQuery 
-                    ? "Essayez avec un autre nom" 
-                    : "Pas de résultats pour ce type de classement"}
+                <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="font-semibold mb-2">Aucun résultat</h3>
+                <p className="text-sm text-muted-foreground">
+                  {drawerSearch ? "Aucun coureur trouvé pour cette recherche" : "Pas de classement disponible pour ce type"}
                 </p>
               </div>
             ) : (
@@ -400,19 +416,17 @@ export const ResultsPage = () => {
                   <Card key={`${result.coureur_id}-${idx}`}>
                     <CardContent className="pt-6">
                       <div className="flex items-start gap-4">
-                        {/* Avatar */}
                         <Avatar className="h-14 w-14 flex-shrink-0">
                           <AvatarFallback className="text-base font-bold">
                             {getInitials(result.coureur_nom)}
                           </AvatarFallback>
                         </Avatar>
 
-                        {/* Info */}
                         <div className="flex-1 min-w-0 space-y-2">
                           {/* Position or Status */}
                           <div>
                             {result.row_position ? (
-                              <div className="inline-flex items-center justify-center bg-primary text-primary-foreground rounded-full h-8 w-8 text-base font-bold">
+                              <div className="inline-flex items-center justify-center bg-primary text-primary-foreground rounded-full h-7 w-7 text-base font-bold">
                                 {result.row_position}
                               </div>
                             ) : (
@@ -431,9 +445,11 @@ export const ResultsPage = () => {
                           </Badge>
 
                           {/* Manager */}
-                          <div className="text-xs text-muted-foreground truncate">
-                            {result.manager_nom || '—'}
-                          </div>
+                          {result.manager_nom && (
+                            <div className="text-xs text-muted-foreground truncate">
+                              {result.manager_nom}
+                            </div>
+                          )}
 
                           {/* Points */}
                           <div className="flex items-center gap-2">
@@ -447,7 +463,7 @@ export const ResultsPage = () => {
                               variant={result.points_officiels !== null ? "default" : "secondary"}
                               className="text-xs"
                             >
-                              {result.points_officiels !== null ? "Officiel" : "Barème"}
+                              {result.points_officiels !== null ? "Off." : "Barème"}
                             </Badge>
                           </div>
                         </div>

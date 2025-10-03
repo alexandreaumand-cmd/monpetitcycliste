@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
-    const has_more = (races?.length || 0) === limit;
+    const has_more = races && races.length === limit;
 
     return new Response(JSON.stringify({ races: races || [], has_more }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
