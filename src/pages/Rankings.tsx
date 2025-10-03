@@ -9,7 +9,6 @@ import { ManagerStandings } from "@/components/rankings/ManagerStandings";
 import { TopRiders } from "@/components/rankings/TopRiders";
 import { ManagerBreakdown } from "@/components/rankings/ManagerBreakdown";
 import { RecentPointsChart } from "@/components/rankings/RecentPointsChart";
-import { CumulativePointsChart } from "@/components/rankings/CumulativePointsChart";
 import { RankingsKPIs } from "@/components/rankings/RankingsKPIs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
@@ -93,7 +92,7 @@ export default function Rankings() {
           </TabsContent>
 
           <TabsContent value="timeline" className="space-y-4">
-            <CumulativePointsChart phaseId={selectedPhase} />
+            <RecentPointsChart />
           </TabsContent>
 
           <TabsContent value="phase" className="space-y-4">
