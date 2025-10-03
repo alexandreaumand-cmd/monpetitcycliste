@@ -113,6 +113,12 @@ export const ResultsEntryDrawer = ({
     const thisRequestId = requestIdRef.current;
     setCurrentRequestId(thisRequestId);
 
+    console.log('🔍 Loading existing results for:', {
+      course_id: course.course_id,
+      classementType,
+      etapeNumero: classementType === 'Etape' ? etapeNumero : null
+    });
+
     // Fetch existing results first
     let query = supabase
       .from('race_results')
@@ -128,8 +134,15 @@ export const ResultsEntryDrawer = ({
     
     const { data: existingData, error: existingError } = await query.order('position', { ascending: true, nullsFirst: false });
     
+    console.log('📊 Existing results loaded:', {
+      count: existingData?.length || 0,
+      data: existingData,
+      error: existingError
+    });
+    
     if (existingError) {
       console.error('Error loading existing results:', existingError);
+      toast.error(`Erreur chargement: ${existingError.message}`);
     }
 
     // Build grid with version tracking
