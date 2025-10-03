@@ -2616,6 +2616,27 @@ export type Database = {
           statut: Database["public"]["Enums"]["result_statut"]
         }[]
       }
+      results_latest_feed: {
+        Args: { p_limit?: number }
+        Returns: {
+          coureur_id: string
+          coureur_nom: string
+          course_categorie: string
+          course_id: string
+          course_nom: string
+          equipe: string
+          etape_numero: number
+          is_official_points: boolean
+          manager_id: string
+          manager_nom: string
+          points_affiches: number
+          points_officiels: number
+          result_date: string
+          row_position: number
+          statut: Database["public"]["Enums"]["result_statut"]
+          type_classement: Database["public"]["Enums"]["type_classement"]
+        }[]
+      }
       results_recent_races: {
         Args: {
           p_limit?: number
