@@ -46,6 +46,13 @@ export const RiderAutocomplete = ({
     queryKey: ['riders-lookup-paginated', phaseId, debouncedSearchQuery],
     queryFn: async ({ pageParam = 0 }) => {
       const query = (debouncedSearchQuery?.trim().length ?? 0) >= 2 ? debouncedSearchQuery : '';
+      const started = performance.now();
+      console.debug('[RiderAutocomplete] queryFn start', {
+        pageParam,
+        PAGE_SIZE,
+        q: query,
+        raw: debouncedSearchQuery,
+      });
       const { data, error } = await supabase
         .rpc('search_riders_paginated', {
           p_phase_id: phaseId,
@@ -54,18 +61,31 @@ export const RiderAutocomplete = ({
           p_page_size: PAGE_SIZE,
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[RiderAutocomplete] queryFn error', error);
+        throw error;
+      }
+
+      const mapped = (data || []).map(r => ({
+        coureur_id: r.coureur_id,
+        coureur_nom: r.coureur_nom,
+        is_in_roster: !!r.manager_nom,
+        roster_manager_nom: r.manager_nom,
+        total_count: r.total_count,
+      })) as Rider[];
+      const totalCount = data?.[0]?.total_count || 0;
+      const duration = Math.round(performance.now() - started);
+      console.debug('[RiderAutocomplete] queryFn done', {
+        pageParam,
+        returned: mapped.length,
+        totalCount,
+        durationMs: duration,
+      });
 
       return {
-        riders: (data || []).map(r => ({
-          coureur_id: r.coureur_id,
-          coureur_nom: r.coureur_nom,
-          is_in_roster: !!r.manager_nom,
-          roster_manager_nom: r.manager_nom,
-          total_count: r.total_count,
-        })) as Rider[],
+        riders: mapped,
         nextPage: pageParam + 1,
-        totalCount: data?.[0]?.total_count || 0,
+        totalCount,
       };
     },
     getNextPageParam: (lastPage) => {
@@ -91,6 +111,7 @@ export const RiderAutocomplete = ({
       (entries) => {
         const first = entries[0];
         if (first.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          console.debug('[RiderAutocomplete] auto-fetch next page');
           fetchNextPage();
         }
       },
@@ -174,7 +195,10 @@ export const RiderAutocomplete = ({
                 )}
                 {hasNextPage && !isFetchingNextPage && (
                   <div className="flex items-center justify-center py-2">
-                    <Button variant="ghost" size="sm" onClick={() => fetchNextPage()}>
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      console.debug('[RiderAutocomplete] manual load more click');
+                      fetchNextPage();
+                    }}>
                       Charger plus
                     </Button>
                   </div>
