@@ -42,36 +42,19 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .single();
 
-    // Get course metadata
-    const { data: meta, error: metaError } = await supabase.rpc('results_course_meta', {
-      p_course_id: course_id
-    });
+    const managerId = manager?.id || null;
 
-    if (metaError) throw metaError;
-
-    const metaResult = Array.isArray(meta) && meta.length > 0 ? meta[0] : null;
-
-    // Get course table data
-    const { data: rows, error: tableError } = await supabase.rpc('results_course_table', {
+    // Call the database function
+    const { data: rows, error } = await supabase.rpc('results_course_table', {
       p_course_id: course_id,
       p_type_classement: type_classement,
       p_etape_numero: etape_numero || null,
-      p_manager_id: manager?.id || null
+      p_manager_id: managerId
     });
 
-    if (tableError) throw tableError;
+    if (error) throw error;
 
-    return new Response(JSON.stringify({
-      rows: rows || [],
-      meta: metaResult || {
-        course_nom: '',
-        categorie: '',
-        date_debut: null,
-        date_fin: null,
-        types_disponibles: [],
-        etapes_disponibles: []
-      }
-    }), {
+    return new Response(JSON.stringify({ rows: rows || [] }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 

@@ -20,8 +20,8 @@ export const ResultsPage = () => {
   const [selectedRace, setSelectedRace] = useState<any>(null);
   const [selectedType, setSelectedType] = useState<string>("");
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
-  const [raceResults, setRaceResults] = useState<any>(null);
-  const [leaderboard, setLeaderboard] = useState<any>(null);
+  const [courseMeta, setCourseMeta] = useState<any>(null);
+  const [raceResults, setRaceResults] = useState<any[]>([]);
   const [loadingRaces, setLoadingRaces] = useState(false);
   const [loadingResults, setLoadingResults] = useState(false);
 
@@ -41,8 +41,8 @@ export const ResultsPage = () => {
 
   useEffect(() => {
     if (selectedRace && selectedType) {
+      loadCourseMeta();
       loadRaceResults();
-      loadLeaderboard();
     }
   }, [selectedRace, selectedType, selectedEtape]);
 
@@ -89,15 +89,46 @@ export const ResultsPage = () => {
     }
   };
 
-  const handleSelectRace = (race: any) => {
+  const handleSelectRace = async (race: any) => {
     setSelectedRace(race);
-    // Default to "General" if available, otherwise first type
-    const defaultType = race.types.includes('General') ? 'General' : race.types[0];
-    setSelectedType(defaultType);
+    // Load meta first to get available types
+    try {
+      const { data, error } = await supabase.functions.invoke('results-course-meta', {
+        body: { course_id: race.course_id }
+      });
+      
+      if (error) throw error;
+      
+      const meta = data.meta;
+      setCourseMeta(meta);
+      
+      // Default to "General" if available, otherwise first type
+      const defaultType = meta.types_disponibles.includes('General') ? 'General' : meta.types_disponibles[0];
+      setSelectedType(defaultType);
+      
+      // If Etape, select the last one
+      if (defaultType === 'Etape' && meta.etapes_disponibles.length > 0) {
+        setSelectedEtape(meta.etapes_disponibles[meta.etapes_disponibles.length - 1]);
+      } else {
+        setSelectedEtape(null);
+      }
+    } catch (error) {
+      console.error('Error loading course meta:', error);
+    }
+  };
+
+  const loadCourseMeta = async () => {
+    if (!selectedRace) return;
     
-    // If Etape, select the last one
-    if (defaultType === 'Etape') {
-      setSelectedEtape(null); // Will be set after loading results
+    try {
+      const { data, error } = await supabase.functions.invoke('results-course-meta', {
+        body: { course_id: selectedRace.course_id }
+      });
+
+      if (error) throw error;
+      setCourseMeta(data.meta);
+    } catch (error) {
+      console.error('Error loading course meta:', error);
     }
   };
 
@@ -115,33 +146,11 @@ export const ResultsPage = () => {
       });
 
       if (error) throw error;
-      setRaceResults(data);
-      
-      // Auto-select last etape if not already selected
-      if (selectedType === 'Etape' && !selectedEtape && data.meta.etapes_disponibles.length > 0) {
-        setSelectedEtape(data.meta.etapes_disponibles[data.meta.etapes_disponibles.length - 1]);
-      }
+      setRaceResults(data.rows || []);
     } catch (error) {
       console.error('Error loading race results:', error);
     } finally {
       setLoadingResults(false);
-    }
-  };
-
-  const loadLeaderboard = async () => {
-    if (!selectedRace) return;
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('results-course-leaderboard', {
-        body: {
-          course_id: selectedRace.course_id
-        }
-      });
-
-      if (error) throw error;
-      setLeaderboard(data);
-    } catch (error) {
-      console.error('Error loading leaderboard:', error);
     }
   };
 
@@ -250,33 +259,32 @@ export const ResultsPage = () => {
 
         {/* Right column - Race details */}
         <div className="lg:col-span-2 space-y-4">
-          {selectedRace && (
+          {selectedRace && courseMeta && (
             <>
               <div className="space-y-2">
-                <h2 className="text-2xl font-bold">{raceResults?.meta.course_nom}</h2>
+                <h2 className="text-2xl font-bold">{courseMeta.course_nom}</h2>
                 <p className="text-muted-foreground">
-                  {raceResults && format(new Date(raceResults.meta.date_debut), 'dd MMM', { locale: fr })} → {raceResults && format(new Date(raceResults.meta.date_fin), 'dd MMM yyyy', { locale: fr })}
+                  {courseMeta && format(new Date(courseMeta.date_debut), 'dd MMM', { locale: fr })} → {courseMeta && format(new Date(courseMeta.date_fin), 'dd MMM yyyy', { locale: fr })}
                 </p>
-                <Badge>{raceResults?.meta.categorie}</Badge>
+                <Badge>{courseMeta.categorie}</Badge>
               </div>
 
-              {/* Type tabs */}
               <Tabs value={selectedType} onValueChange={setSelectedType}>
                 <TabsList>
-                  {raceResults?.meta.types_disponibles.map((type: string) => (
+                  {courseMeta.types_disponibles.map((type: string) => (
                     <TabsTrigger key={type} value={type}>{type}</TabsTrigger>
                   ))}
                 </TabsList>
               </Tabs>
 
               {/* Etape selector */}
-              {selectedType === 'Etape' && raceResults?.meta.etapes_disponibles.length > 0 && (
+              {selectedType === 'Etape' && courseMeta.etapes_disponibles && courseMeta.etapes_disponibles.length > 0 && (
                 <Select value={selectedEtape?.toString() || ""} onValueChange={(v) => setSelectedEtape(parseInt(v))}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Sélectionner étape" />
                   </SelectTrigger>
                   <SelectContent>
-                    {raceResults.meta.etapes_disponibles.map((num: number) => (
+                    {courseMeta.etapes_disponibles.map((num: number) => (
                       <SelectItem key={num} value={num.toString()}>
                         Étape {num}
                       </SelectItem>
@@ -290,7 +298,7 @@ export const ResultsPage = () => {
                 <div className="flex justify-center p-8">
                   <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
-              ) : raceResults && (
+              ) : raceResults && raceResults.length > 0 && (
                 <Card className="overflow-hidden">
                   <Table>
                     <TableHeader>
@@ -304,8 +312,8 @@ export const ResultsPage = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {raceResults.rows.map((row: any, idx: number) => (
-                        <TableRow 
+                      {raceResults.map((row: any, idx: number) => (
+                        <TableRow
                           key={idx}
                           className={row.is_my_rider ? 'bg-primary/10' : ''}
                         >
@@ -332,34 +340,6 @@ export const ResultsPage = () => {
                             ) : '-'}
                           </TableCell>
                           <TableCell>{row.manager_nom || '—'}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </Card>
-              )}
-
-              {/* Leaderboard */}
-              {leaderboard && leaderboard.leaders.length > 0 && (
-                <Card className="p-4">
-                  <h3 className="text-lg font-semibold mb-4">
-                    Classement managers
-                    {!leaderboard.is_official && (
-                      <Badge variant="secondary" className="ml-2 text-xs">Points théoriques en attente de calcul</Badge>
-                    )}
-                  </h3>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Manager</TableHead>
-                        <TableHead className="text-right">Points</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {leaderboard.leaders.map((leader: any, idx: number) => (
-                        <TableRow key={idx}>
-                          <TableCell>{leader.manager_nom}</TableCell>
-                          <TableCell className="text-right font-semibold">{leader.total_points}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

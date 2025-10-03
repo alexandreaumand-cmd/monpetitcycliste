@@ -35,13 +35,15 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .single();
 
-    // Call the PostgreSQL function
+    const managerId = manager?.id || null;
+
+    // Call the database function
     const { data: races, error } = await supabase.rpc('results_recent_races', {
       p_saison_id: saison_id || null,
       p_phase_id: phase_id || null,
       p_search: search || null,
       p_limit: limit,
-      p_manager_id: manager?.id || null
+      p_manager_id: managerId
     });
 
     if (error) throw error;
