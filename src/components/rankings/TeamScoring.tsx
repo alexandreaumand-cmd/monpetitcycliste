@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, Target, Eye } from "lucide-react";
+import { Trophy, Users, Target, Eye, TrendingUp, Medal, Award } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -22,6 +23,23 @@ export const TeamScoring = ({ phaseId, saisonId }: TeamScoringProps) => {
   const [search, setSearch] = useState("");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedRider, setSelectedRider] = useState<{id: string, nom: string} | null>(null);
+
+  // Get my team KPIs
+  const { data: myKpis, isLoading: kpisLoading } = useQuery({
+    queryKey: ["my-team-kpis", phaseId, saisonId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("get-my-team-kpis", {
+        body: {
+          manager_id: null,
+          phase_id: phaseId,
+          saison_id: saisonId
+        }
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const { data: managers } = useQuery({
     queryKey: ["managers-list"],
@@ -110,8 +128,92 @@ export const TeamScoring = ({ phaseId, saisonId }: TeamScoringProps) => {
     );
   }
 
+  const getScopeLabel = () => {
+    if (phaseId) return "Phase courante";
+    if (saisonId) return "Saison";
+    return "Toutes phases";
+  };
+
   return (
     <div className="space-y-6">
+      {/* My Team KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {kpisLoading ? (
+          <>
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardHeader className="pb-3">
+                  <Skeleton className="h-4 w-32" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-8 w-24" />
+                  <Skeleton className="h-3 w-20 mt-2" />
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        ) : (
+          <>
+            {/* KPI #1: Total Points */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Total de points
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{myKpis?.total_points || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1">{getScopeLabel()}</p>
+              </CardContent>
+            </Card>
+
+            {/* KPI #2: Top Rider */}
+            <Card 
+              className={myKpis?.top_rider_id ? "cursor-pointer hover:bg-accent transition-colors" : ""}
+              onClick={() => {
+                if (myKpis?.top_rider_id && myKpis?.top_rider_nom) {
+                  handleShowDetails(myKpis.top_rider_id, myKpis.top_rider_nom);
+                }
+              }}
+            >
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Medal className="h-4 w-4" />
+                  Top coureur
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {myKpis?.top_rider_nom ? (
+                  <>
+                    <div className="text-lg font-bold truncate">{myKpis.top_rider_nom}</div>
+                    <p className="text-sm text-muted-foreground">{myKpis.top_rider_points} pts</p>
+                  </>
+                ) : (
+                  <div className="text-2xl text-muted-foreground">—</div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* KPI #3: Current Rank */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Award className="h-4 w-4" />
+                  Classement actuel
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {myKpis?.my_rank ? `#${myKpis.my_rank}` : '—'} / {myKpis?.managers_count || 0}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{getScopeLabel()}</p>
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
+
       {/* Filters */}
       <Card>
         <CardHeader>
