@@ -3,10 +3,11 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { Trophy, Calendar } from "lucide-react";
+import { Calendar, Search } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -20,7 +21,8 @@ interface CourseMeta {
 }
 
 interface ResultRow {
-  row_position: number;
+  race_result_id: string;
+  row_position: number | null;
   statut: string;
   coureur_id: string;
   coureur_nom: string;
@@ -29,9 +31,7 @@ interface ResultRow {
   manager_nom: string | null;
   points_officiels: number | null;
   points_theoriques: number;
-  points: number;
   is_my_rider: boolean;
-  has_official_points: boolean;
 }
 
 interface CourseResultsDrawerProps {
@@ -45,9 +45,9 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [results, setResults] = useState<ResultRow[]>([]);
   const [selectedType, setSelectedType] = useState<string>("");
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
-  const [limit, setLimit] = useState(10);
+  const [topN, setTopN] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [hasOfficialPoints, setHasOfficialPoints] = useState(false);
 
   useEffect(() => {
     if (open && courseId) {
@@ -59,7 +59,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     if (meta && selectedType) {
       loadResults();
     }
-  }, [selectedType, selectedEtape, limit, meta]);
+  }, [selectedType, selectedEtape, meta]);
 
   const loadMeta = async () => {
     if (!courseId) return;
@@ -75,7 +75,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
       if (data?.meta) {
         setMeta(data.meta);
         
-        // Set default type
+        // Set default type (prefer General, otherwise first available)
         const types = data.meta.types_disponibles || [];
         const defaultType = types.includes('General') ? 'General' : types[0];
         setSelectedType(defaultType);
@@ -97,19 +97,17 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('results-course-top', {
+      const { data, error } = await supabase.functions.invoke('results-course-table', {
         body: {
           course_id: courseId,
           type_classement: selectedType,
-          etape_numero: selectedType === 'Etape' ? selectedEtape : null,
-          limit
+          etape_numero: selectedType === 'Etape' ? selectedEtape : null
         }
       });
 
       if (error) throw error;
 
       setResults(data?.rows || []);
-      setHasOfficialPoints(data?.has_official_points || false);
     } catch (error) {
       console.error('Error loading results:', error);
       setResults([]);
@@ -127,6 +125,33 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     }
   };
 
+  // Client-side filtering
+  const filteredResults = results.filter(r => {
+    if (!searchQuery) return true;
+    const search = searchQuery.toLowerCase();
+    return r.coureur_nom.toLowerCase().includes(search) || 
+           r.equipe?.toLowerCase().includes(search);
+  });
+
+  // Split finished and non-finished
+  const finishedResults = filteredResults
+    .filter(r => r.statut === 'finished' && r.row_position !== null)
+    .slice(0, topN);
+  
+  const nonFinishedResults = filteredResults
+    .filter(r => r.statut !== 'finished' || r.row_position === null);
+
+  const displayedResults = [...finishedResults, ...nonFinishedResults];
+
+  const getStatutBadge = (statut: string) => {
+    const variants: Record<string, { label: string; variant: "destructive" | "secondary" | "outline" }> = {
+      dnf: { label: "DNF", variant: "destructive" },
+      dns: { label: "DNS", variant: "secondary" },
+      dsq: { label: "DSQ", variant: "outline" }
+    };
+    return variants[statut.toLowerCase()] || null;
+  };
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[90vh]">
@@ -134,10 +159,9 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
           <DrawerTitle className="flex items-center gap-3">
             {meta ? (
               <>
-                <Trophy className="h-5 w-5 text-primary" />
                 <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2">
-                    <span>{meta.course_nom}</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xl font-bold">{meta.course_nom}</span>
                     <Badge variant="outline">{meta.categorie}</Badge>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground font-normal">
@@ -156,7 +180,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
         </DrawerHeader>
 
         <div className="px-4 pb-4 space-y-4 overflow-y-auto">
-          {/* Type and Etape selectors */}
+          {/* Type selector pills */}
           <div className="flex gap-2 flex-wrap">
             {meta?.types_disponibles?.map((type) => (
               <Button
@@ -170,6 +194,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
             ))}
           </div>
 
+          {/* Etape selector if applicable */}
           {selectedType === 'Etape' && meta?.etapes_disponibles && (
             <Select
               value={selectedEtape?.toString() || ""}
@@ -188,20 +213,39 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
             </Select>
           )}
 
-          {/* Limit selector */}
-          <div className="flex gap-2">
-            <span className="text-sm text-muted-foreground self-center">Top:</span>
-            {[10, 15, 25].map((n) => (
+          {/* Top N selector */}
+          <div className="flex gap-2 items-center flex-wrap">
+            <span className="text-sm text-muted-foreground">Top:</span>
+            {[10, 15, 25, 50].map((n) => (
               <Button
                 key={n}
-                variant={limit === n ? "default" : "outline"}
+                variant={topN === n ? "default" : "outline"}
                 size="sm"
-                onClick={() => setLimit(n)}
+                onClick={() => setTopN(n)}
               >
                 {n}
               </Button>
             ))}
           </div>
+
+          {/* Search box */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher coureur ou équipe..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          {/* Results count */}
+          {!loading && displayedResults.length > 0 && (
+            <div className="text-sm text-muted-foreground">
+              Affichage de {displayedResults.length} résultat{displayedResults.length > 1 ? 's' : ''}
+              {searchQuery && ` sur ${results.length} total`}
+            </div>
+          )}
 
           {/* Results table */}
           {loading ? (
@@ -210,73 +254,98 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : results.length === 0 ? (
+          ) : displayedResults.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              Pas de résultats disponibles pour cette sélection
+              {results.length === 0 
+                ? "Aucun résultat pour ce classement" 
+                : "Aucun résultat ne correspond à votre recherche"}
             </div>
           ) : (
             <div className="border rounded-lg overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-16">Pos.</TableHead>
+                    <TableHead className="w-24">Pos./Statut</TableHead>
                     <TableHead>Coureur</TableHead>
                     <TableHead className="hidden md:table-cell">Équipe</TableHead>
-                    <TableHead className="text-right">
-                      Points
-                      {hasOfficialPoints && (
-                        <Badge variant="secondary" className="ml-2 text-xs">Officiels</Badge>
-                      )}
-                    </TableHead>
+                    <TableHead className="text-right">Points</TableHead>
                     <TableHead className="hidden sm:table-cell">Manager</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {results.map((row) => (
-                    <TableRow
-                      key={row.coureur_id}
-                      className={row.is_my_rider ? "bg-primary/5" : ""}
-                    >
-                      <TableCell className="font-medium">
-                        {row.row_position <= 3 ? (
-                          <div className="flex items-center gap-1">
-                            <Trophy className={`h-4 w-4 ${
-                              row.row_position === 1 ? 'text-yellow-500' :
-                              row.row_position === 2 ? 'text-gray-400' :
-                              'text-amber-600'
-                            }`} />
-                            {row.row_position}
+                  {displayedResults.map((row) => {
+                    const isFinished = row.statut === 'finished' && row.row_position !== null;
+                    const statutBadge = getStatutBadge(row.statut);
+                    const hasOfficialPoints = row.points_officiels !== null;
+                    const points = hasOfficialPoints ? row.points_officiels : row.points_theoriques;
+                    
+                    return (
+                      <TableRow
+                        key={row.race_result_id}
+                        className={row.is_my_rider ? "bg-primary/5 border-l-2 border-l-primary" : ""}
+                      >
+                        <TableCell className="font-medium">
+                          {isFinished ? (
+                            <div className="flex items-center gap-2">
+                              {row.row_position && row.row_position <= 3 && (
+                                <span className={`text-lg ${
+                                  row.row_position === 1 ? "text-yellow-500" :
+                                  row.row_position === 2 ? "text-gray-400" :
+                                  "text-amber-600"
+                                }`}>
+                                  {row.row_position === 1 ? "🥇" : 
+                                   row.row_position === 2 ? "🥈" : "🥉"}
+                                </span>
+                              )}
+                              <span>{row.row_position}</span>
+                            </div>
+                          ) : statutBadge ? (
+                            <Badge variant={statutBadge.variant}>
+                              {statutBadge.label}
+                            </Badge>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{row.coureur_nom}</span>
+                              {row.is_my_rider && (
+                                <Badge variant="default" className="text-xs">Mon équipe</Badge>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground md:hidden">{row.equipe}</span>
                           </div>
-                        ) : (
-                          row.row_position
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{row.coureur_nom}</span>
-                          <span className="text-xs text-muted-foreground md:hidden">{row.equipe}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-muted-foreground">
-                        {row.equipe}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {row.points}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        {row.manager_nom ? (
-                          <div className="flex items-center gap-1">
-                            <span>{row.manager_nom}</span>
-                            {row.is_my_rider && (
-                              <Badge variant="default" className="text-xs">Mon équipe</Badge>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {row.equipe && (
+                            <Badge variant="outline" className="text-xs">
+                              {row.equipe}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isFinished ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <span className="font-semibold text-lg">{points}</span>
+                              <Badge 
+                                variant={hasOfficialPoints ? "default" : "secondary"}
+                                className="text-xs"
+                              >
+                                {hasOfficialPoints ? "Officiel" : "Barème"}
+                              </Badge>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
+                          {row.manager_nom || "—"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
