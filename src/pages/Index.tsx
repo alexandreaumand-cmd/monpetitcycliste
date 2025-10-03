@@ -152,6 +152,9 @@ const Index = () => {
                 <Calendar className="mr-2 h-4 w-4" />
                 5 phases / an
               </Badge>
+              <Badge variant="default" className="px-4 py-2 text-base gradient-primary text-white">
+                Fini le tableau de l&apos;enfer
+              </Badge>
             </div>
           </div>
         </div>
