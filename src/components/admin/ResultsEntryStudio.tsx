@@ -270,6 +270,11 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
         throw new Error("Aucune ligne à enregistrer");
       }
 
+      // Check phase_id is set
+      if (!course.phase_id) {
+        throw new Error("Cette course n'est pas assignée à une phase. Impossible d'attribuer les points aux managers.");
+      }
+
       // Check for duplicates
       const coureurIds = validRows.map((r) => r.coureur_id);
       const duplicates = coureurIds.filter((id, idx) => coureurIds.indexOf(id) !== idx);
