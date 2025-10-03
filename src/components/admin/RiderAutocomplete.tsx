@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useDebounce } from "use-debounce";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,7 @@ type Rider = {
   coureur_nom: string;
   is_in_roster: boolean;
   roster_manager_nom: string | null;
+  total_count?: number;
 };
 
 export const RiderAutocomplete = ({
@@ -29,36 +30,72 @@ export const RiderAutocomplete = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery] = useDebounce(searchQuery, 200);
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const observerTarget = useRef<HTMLDivElement>(null);
 
-  const { data: riders, isLoading } = useQuery({
-    queryKey: ['riders-lookup-admin', phaseId, debouncedSearchQuery],
-    queryFn: async () => {
-      // Ne recherche que si au moins 2 caractères
-      if (!debouncedSearchQuery || debouncedSearchQuery.trim().length < 2) {
-        return [];
-      }
+  const PAGE_SIZE = 50;
 
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useInfiniteQuery({
+    queryKey: ['riders-lookup-paginated', phaseId, debouncedSearchQuery],
+    queryFn: async ({ pageParam = 0 }) => {
       const { data, error } = await supabase
-        .rpc('search_riders_for_results', {
+        .rpc('search_riders_paginated', {
           p_phase_id: phaseId,
-          p_query: debouncedSearchQuery
+          p_query: debouncedSearchQuery || '',
+          p_page: pageParam,
+          p_page_size: PAGE_SIZE,
         });
 
       if (error) throw error;
 
-      // Transform the data to match the expected format
-      return (data || []).map(r => ({
-        coureur_id: r.coureur_id,
-        coureur_nom: r.coureur_nom,
-        is_in_roster: !!r.manager_nom,
-        roster_manager_nom: r.manager_nom,
-      })) as Rider[];
+      return {
+        riders: (data || []).map(r => ({
+          coureur_id: r.coureur_id,
+          coureur_nom: r.coureur_nom,
+          is_in_roster: !!r.manager_nom,
+          roster_manager_nom: r.manager_nom,
+          total_count: r.total_count,
+        })) as Rider[],
+        nextPage: pageParam + 1,
+        totalCount: data?.[0]?.total_count || 0,
+      };
     },
-    staleTime: 0,
-    gcTime: 0,
-    enabled: (debouncedSearchQuery?.trim().length ?? 0) >= 2,
+    getNextPageParam: (lastPage) => {
+      const totalPages = Math.ceil(lastPage.totalCount / PAGE_SIZE);
+      return lastPage.nextPage < totalPages ? lastPage.nextPage : undefined;
+    },
+    initialPageParam: 0,
+    staleTime: 30000,
   });
+
+  // Flatten all pages into a single rider array
+  const riders = data?.pages.flatMap(page => page.riders) || [];
+  const totalCount = data?.pages[0]?.totalCount || 0;
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const target = observerTarget.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -84,41 +121,51 @@ export const RiderAutocomplete = ({
             value={searchQuery}
             onValueChange={setSearchQuery}
           />
-          <CommandList>
+          <CommandList ref={scrollRef} className="max-h-[300px] overflow-y-auto">
             <CommandEmpty>
               {isLoading 
                 ? "Recherche en cours..." 
-                : searchQuery.trim().length < 2 
-                  ? "Tapez au moins 2 lettres" 
-                  : "Aucun coureur trouvé."}
+                : "Aucun coureur trouvé."}
             </CommandEmpty>
-            <CommandGroup>
-              {riders?.map((rider) => (
-                <CommandItem
-                  key={rider.coureur_id}
-                  value={rider.coureur_nom}
-                  onSelect={() => {
-                    onChange(rider.coureur_id, rider.coureur_nom);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === rider.coureur_id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <div className="flex items-center justify-between flex-1">
-                    <span>{rider.coureur_nom}</span>
-                    {rider.is_in_roster && rider.roster_manager_nom && (
-                      <Badge variant="secondary" className="ml-2 text-xs">
-                        {rider.roster_manager_nom}
-                      </Badge>
-                    )}
+            {riders.length > 0 && (
+              <CommandGroup>
+                <div className="px-2 py-1 text-xs text-muted-foreground">
+                  {riders.length} / {totalCount} coureurs
+                </div>
+                {riders.map((rider) => (
+                  <CommandItem
+                    key={rider.coureur_id}
+                    value={rider.coureur_nom}
+                    onSelect={() => {
+                      onChange(rider.coureur_id, rider.coureur_nom);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === rider.coureur_id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <div className="flex items-center justify-between flex-1">
+                      <span>{rider.coureur_nom}</span>
+                      {rider.is_in_roster && rider.roster_manager_nom && (
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          {rider.roster_manager_nom}
+                        </Badge>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
+                {/* Infinite scroll trigger */}
+                <div ref={observerTarget} className="h-4 w-full" />
+                {isFetchingNextPage && (
+                  <div className="flex items-center justify-center py-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
+                )}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>

@@ -2819,6 +2819,20 @@ export type Database = {
           manager_nom: string
         }[]
       }
+      search_riders_paginated: {
+        Args: {
+          p_page?: number
+          p_page_size?: number
+          p_phase_id: string
+          p_query?: string
+        }
+        Returns: {
+          coureur_id: string
+          coureur_nom: string
+          manager_nom: string
+          total_count: number
+        }[]
+      }
       unaccent: {
         Args: { "": string }
         Returns: string
