@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, Users, TrendingUp, Award, Calendar, Megaphone, ArrowRight } from "lucide-react";
+import { Trophy, Users, TrendingUp, Award, Calendar, Megaphone, ArrowRight, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -111,8 +111,10 @@ const Index = () => {
             </p>
             
             <div className="mb-8 animate-fade-in">
-              <Badge variant="default" className="px-6 py-3 text-lg gradient-primary text-white shadow-elegant">
+              <Badge className="px-6 py-3 text-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg hover:shadow-xl transition-shadow border-2 border-amber-300">
+                <Star className="mr-2 h-5 w-5 fill-white" />
                 Fini le tableau de l&apos;enfer
+                <Star className="ml-2 h-5 w-5 fill-white" />
               </Badge>
             </div>
             
