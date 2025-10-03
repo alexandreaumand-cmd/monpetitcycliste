@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
         coureursRes.data.map(c => [normalizeName(c.nom), c.id])
       );
       const managersByName = new Map(
-        managersRes.data.map(m => [m.nom.trim(), m.id])
+        managersRes.data.map(m => [normalizeName(m.nom), m.id])
       );
       const phasesByIndex = new Map(
         phasesRes.data.map(p => [p.index_dans_saison, p.id])
@@ -113,8 +113,8 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Match manager
-        const managerId = managersByName.get(proprietaire);
+        // Match manager (normalize name)
+        const managerId = managersByName.get(normalizeName(proprietaire));
         if (!managerId) {
           errorDetails.push(`Row ${i}: Manager not found: ${proprietaire}`);
           errors++;
