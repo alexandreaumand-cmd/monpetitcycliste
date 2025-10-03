@@ -7,7 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { RiderAutocomplete } from "./RiderAutocomplete";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save } from "lucide-react";
 import { format } from "date-fns";
@@ -603,14 +606,13 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
                       return (
                         <tr key={index} className="hover:bg-muted/50">
                           <td className="px-4 py-2 text-sm font-medium">{row.position}</td>
-                        <td className="px-4 py-2">
-                          <RiderAutocomplete
-                            phaseId={course.phase_id}
-                            value={row.coureur_id}
-                            riderName={row.coureur_nom}
-                            onChange={(id, name) => handleRiderChange(index, id, name)}
-                          />
-                        </td>
+                          <td className="px-4 py-2">
+                            <RiderCombobox
+                              riders={allRiders || []}
+                              value={row.coureur_id}
+                              onChange={(id, name) => handleRiderChange(index, id, name)}
+                            />
+                          </td>
                           <td className="px-4 py-2">
                             {selectedRider?.is_in_roster && selectedRider.roster_manager_nom ? (
                               <Badge variant="secondary" className="text-xs">
@@ -674,3 +676,85 @@ export const ResultsEntryStudio = ({ course, onClose }: StudioProps) => {
   );
 };
 
+// Simple client-side rider combobox
+type RiderOption = {
+  value: string;
+  label: string;
+  equipe: string | null;
+  is_in_roster: boolean;
+  roster_manager_nom: string | null;
+};
+
+const RiderCombobox = ({
+  riders,
+  value,
+  onChange,
+}: {
+  riders: RiderOption[];
+  value: string | null;
+  onChange: (riderId: string | null, riderName: string | null) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  
+  const selectedRider = riders.find(r => r.value === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+        >
+          {selectedRider ? (
+            <span className="truncate">{selectedRider.label}</span>
+          ) : (
+            <span className="text-muted-foreground">Sélectionner un coureur...</span>
+          )}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[400px] p-0" align="start">
+        <Command shouldFilter={true}>
+          <CommandInput 
+            placeholder="Rechercher un coureur..." 
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            <CommandEmpty>Aucun coureur trouvé.</CommandEmpty>
+            <CommandGroup>
+              {riders.map((rider) => (
+                <CommandItem
+                  key={rider.value}
+                  value={rider.label}
+                  onSelect={() => {
+                    onChange(rider.value, rider.label);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === rider.value ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <div className="flex items-center justify-between flex-1">
+                    <span>{rider.label}</span>
+                    {rider.is_in_roster && rider.roster_manager_nom && (
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {rider.roster_manager_nom}
+                      </Badge>
+                    )}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
