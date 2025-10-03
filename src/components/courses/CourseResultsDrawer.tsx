@@ -11,7 +11,7 @@ import { Calendar, Search, Calculator } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useUserRole } from "@/hooks/useUserRole";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface CourseMeta {
   course_nom: string;
@@ -44,6 +44,7 @@ interface CourseResultsDrawerProps {
 
 export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResultsDrawerProps) => {
   const { isAdmin } = useUserRole();
+  const { toast } = useToast();
   const [meta, setMeta] = useState<CourseMeta | null>(null);
   const [results, setResults] = useState<ResultRow[]>([]);
   const [selectedType, setSelectedType] = useState<string>("");
@@ -140,29 +141,23 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
 
       if (error) throw error;
 
-      const result = data as {
-        success: boolean;
-        rows_upserted: number;
-        missing_bareme: Array<{ categorie: string; type_classement: string; place: number }>;
-      };
+      const missingCount = data.missing_bareme?.length || 0;
+      const message = missingCount > 0
+        ? `${data.rows_upserted} points calculés. ⚠️ ${missingCount} barèmes manquants.`
+        : `${data.rows_upserted} points calculés avec succès.`;
 
-      if (result.missing_bareme && result.missing_bareme.length > 0) {
-        toast({
-          title: "Points recalculés avec avertissements",
-          description: `${result.rows_upserted} entrées mises à jour. Barèmes manquants détectés.`,
-          variant: "default",
-        });
-        console.warn('Missing bareme:', result.missing_bareme);
-      } else {
-        toast({
-          title: "Points recalculés",
-          description: `${result.rows_upserted} entrées mises à jour avec succès`,
-        });
+      toast({
+        title: "✓ Calcul terminé",
+        description: message,
+      });
+
+      if (missingCount > 0) {
+        console.warn('Missing bareme:', data.missing_bareme);
       }
 
       // Reload results
       await loadResults();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error computing points:', error);
       toast({
         title: "Erreur",
@@ -205,10 +200,10 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[90vh]">
         <DrawerHeader>
-          <DrawerTitle className="flex items-center gap-3">
-            {meta ? (
-              <>
-                <div className="flex flex-col items-start gap-1">
+          <DrawerTitle className="flex items-center justify-between gap-3">
+            <div className="flex flex-col items-start gap-1">
+              {meta ? (
+                <>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xl font-bold">{meta.course_nom}</span>
                     <Badge variant="outline">{meta.categorie}</Badge>
@@ -220,29 +215,26 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                       <> - {format(new Date(meta.date_fin), 'dd MMM yyyy', { locale: fr })}</>
                     )}
                   </div>
-                </div>
-              </>
-            ) : (
-              <Skeleton className="h-6 w-64" />
+                </>
+              ) : (
+                <Skeleton className="h-6 w-64" />
+              )}
+            </div>
+            {isAdmin && (
+              <Button
+                onClick={handleComputePoints}
+                disabled={computing}
+                size="sm"
+                variant="outline"
+              >
+                <Calculator className="h-4 w-4 mr-2" />
+                {computing ? "Calcul..." : "Recalculer points"}
+              </Button>
             )}
           </DrawerTitle>
         </DrawerHeader>
 
         <div className="px-4 pb-4 space-y-4 overflow-y-auto">
-          {/* Recalculate button for admins */}
-          {isAdmin && (
-            <Button
-              onClick={handleComputePoints}
-              disabled={computing}
-              variant="outline"
-              size="sm"
-              className="w-full"
-            >
-              <Calculator className="h-4 w-4 mr-2" />
-              {computing ? "Calcul en cours..." : "Recalculer points"}
-            </Button>
-          )}
-
           {/* Type selector pills */}
           <div className="flex gap-2 flex-wrap">
             {meta?.types_disponibles?.map((type) => (

@@ -1,24 +1,24 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "@/hooks/use-toast";
-import { Calculator, AlertTriangle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Calculator, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export const PointsComputeManager = () => {
   const [selectedPhase, setSelectedPhase] = useState<string>("");
-  const [computing, setComputing] = useState(false);
+  const [isComputing, setIsComputing] = useState(false);
+  const { toast } = useToast();
 
   const { data: phases } = useQuery({
     queryKey: ["phases-list"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("phases")
-        .select("id, index_dans_saison")
-        .order("index_dans_saison", { ascending: false });
+        .select("id, index_dans_saison, date_debut, date_fin, statut")
+        .order("date_debut", { ascending: false });
       
       if (error) throw error;
       return data;
@@ -35,8 +35,7 @@ export const PointsComputeManager = () => {
       return;
     }
 
-    setComputing(true);
-
+    setIsComputing(true);
     try {
       const { data, error } = await supabase.functions.invoke('compute-points', {
         body: { phase_id: selectedPhase }
@@ -44,17 +43,11 @@ export const PointsComputeManager = () => {
 
       if (error) throw error;
 
-      const result = data as {
-        success: boolean;
-        courses_processed: number;
-        total_rows: number;
-      };
-
       toast({
-        title: "Calcul réussi",
-        description: `${result.courses_processed} courses traitées, ${result.total_rows} entrées créées/mises à jour`,
+        title: "✓ Calcul terminé",
+        description: `${data.courses_processed} courses traitées, ${data.total_rows} lignes de points créées`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error computing points:', error);
       toast({
         title: "Erreur",
@@ -62,7 +55,7 @@ export const PointsComputeManager = () => {
         variant: "destructive",
       });
     } finally {
-      setComputing(false);
+      setIsComputing(false);
     }
   };
 
@@ -73,39 +66,37 @@ export const PointsComputeManager = () => {
           <Calculator className="h-5 w-5" />
           Calcul des Points
         </CardTitle>
+        <CardDescription>
+          Recalculer tous les points d'une phase à partir des résultats et barèmes
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Le calcul des points utilise les barèmes (scoring_rules) et attribue les points aux managers 
-            selon les rosters de la phase de la course.
-          </AlertDescription>
-        </Alert>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <AlertCircle className="h-4 w-4" />
+          <span>Le calcul utilise strictement scoring_rules et la phase de la course</span>
+        </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Sélectionner une phase</label>
+        <div className="flex gap-2">
           <Select value={selectedPhase} onValueChange={setSelectedPhase}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choisir une phase" />
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="Sélectionner une phase" />
             </SelectTrigger>
             <SelectContent>
               {phases?.map((phase) => (
                 <SelectItem key={phase.id} value={phase.id}>
-                  Phase {phase.index_dans_saison}
+                  Phase {phase.index_dans_saison} ({phase.statut})
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </div>
 
-        <Button 
-          onClick={handleComputePhase}
-          disabled={computing || !selectedPhase}
-          className="w-full"
-        >
-          {computing ? "Calcul en cours..." : "Recalculer tous les points de la phase"}
-        </Button>
+          <Button
+            onClick={handleComputePhase}
+            disabled={!selectedPhase || isComputing}
+          >
+            {isComputing ? "Calcul..." : "Recalculer"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
