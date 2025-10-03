@@ -1,6 +1,6 @@
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X } from "lucide-react";
+import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X, FileText } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
@@ -15,6 +15,7 @@ const navLinks = [
   { label: 'Enchères', href: '/dashboard/encheres', icon: Trophy },
   { label: 'Mon Équipe', href: '/dashboard/mon-equipe', icon: Users },
   { label: 'Courses', href: '/dashboard/courses', icon: Calendar },
+  { label: 'Résultats', href: '/dashboard/resultats', icon: FileText },
   { label: 'Classement', href: '/dashboard/classement', icon: BarChart3 },
 ];
 

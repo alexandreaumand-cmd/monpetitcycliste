@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { AuctionsList } from "@/components/auction/AuctionsList";
 import { MyTeam } from "@/components/team/MyTeam";
 import { UpcomingCourses } from "@/components/courses/UpcomingCourses";
+import { ManagerResults } from "@/components/manager/ManagerResults";
 import Rankings from "./Rankings";
 import { AdminPage } from "./AdminPage";
 
@@ -68,6 +69,7 @@ const Dashboard = () => {
           <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
           <Route path="mon-equipe" element={manager && <MyTeam managerId={manager.id} />} />
           <Route path="courses" element={<UpcomingCourses />} />
+          <Route path="resultats" element={<ManagerResults />} />
           <Route path="classement" element={<Rankings />} />
           {isAdmin && <Route path="admin/*" element={<AdminPage />} />}
         </Routes>
