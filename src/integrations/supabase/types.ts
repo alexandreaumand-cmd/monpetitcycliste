@@ -506,7 +506,7 @@ export type Database = {
       }
       courses: {
         Row: {
-          categorie: string
+          categorie: string | null
           date_debut: string | null
           date_fin: string | null
           id: string
@@ -519,7 +519,7 @@ export type Database = {
           wt_tier: Database["public"]["Enums"]["wt_tier_type"] | null
         }
         Insert: {
-          categorie: string
+          categorie?: string | null
           date_debut?: string | null
           date_fin?: string | null
           id: string
@@ -532,7 +532,7 @@ export type Database = {
           wt_tier?: Database["public"]["Enums"]["wt_tier_type"] | null
         }
         Update: {
-          categorie?: string
+          categorie?: string | null
           date_debut?: string | null
           date_fin?: string | null
           id?: string
