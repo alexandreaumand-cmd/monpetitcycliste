@@ -414,7 +414,8 @@ function mapToTableFormat(
         // New format: supports pays column and phase name mapping
         // Generate ID from nom if id is empty or null
         const courseNom = obj['nom']?.trim()
-        const courseId = obj['id']?.trim() || (courseNom ? sanitizeId(courseNom) : null)
+        const rawId = obj['id']?.trim()
+        const courseId = (rawId && rawId.length > 0) ? rawId : (courseNom ? sanitizeId(courseNom) : null)
         
         return {
           id: courseId,
