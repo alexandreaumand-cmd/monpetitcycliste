@@ -135,12 +135,11 @@ export default function Startlist() {
     }
 
     try {
-      const formData = new FormData();
-      formData.append('race_id', selectedRaceId);
-      formData.append('text_content', textContent);
-
       const { data, error } = await supabase.functions.invoke('startlist-upload-and-parse', {
-        body: Object.fromEntries(formData)
+        body: { 
+          race_id: selectedRaceId, 
+          text_content: textContent 
+        }
       });
 
       if (error) throw error;

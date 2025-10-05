@@ -73,9 +73,7 @@ serve(async (req) => {
       );
     }
 
-    const formData = await req.formData();
-    const raceId = formData.get('race_id') as string;
-    const textContent = formData.get('text_content') as string;
+    const { race_id: raceId, text_content: textContent } = await req.json();
 
     if (!raceId || !textContent) {
       return new Response(
@@ -107,7 +105,7 @@ serve(async (req) => {
       .single();
 
     // Parse lines from text
-    const lines = textContent.split('\n').filter(line => line.trim());
+    const lines = textContent.split('\n').filter((line: string) => line.trim());
     const parsedEntries: any[] = [];
     
     // Regex patterns for parsing
