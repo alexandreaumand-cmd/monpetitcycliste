@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, AlertCircle, Calculator, Loader2, RotateCw, Undo2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Calculator, Loader2, RotateCw, Undo2, Info } from "lucide-react";
 import { toast } from "sonner";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
 
@@ -46,7 +46,7 @@ export function StagesRaceManager() {
   const [etapeNumero, setEtapeNumero] = useState<number>(1);
   const queryClient = useQueryClient();
 
-  // Fetch courses with stages
+  // Fetch courses of type 'stage' (includes "Stage race" and variations)
   const { data: courses } = useQuery({
     queryKey: ["courses-with-stages"],
     queryFn: async () => {
@@ -65,20 +65,35 @@ export function StagesRaceManager() {
   const { data: nbEtapesData } = useQuery({
     queryKey: ["course-nb-etapes", selectedCourse],
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!selectedCourse) return 0;
+
+      // Try to get from race_results first
+      const { data: resultData, error: resultError } = await supabase
         .from("race_results")
         .select("etape_numero")
         .eq("course_id", selectedCourse)
         .eq("type_classement", "Etape")
         .not("etape_numero", "is", null);
 
-      if (error) throw error;
+      if (!resultError && resultData && resultData.length > 0) {
+        return Math.max(...resultData.map(s => s.etape_numero));
+      }
+
+      // Fallback: estimate from course dates (date_fin - date_debut + 1)
+      const { data: courseData, error: courseError } = await supabase
+        .from("courses")
+        .select("date_debut, date_fin")
+        .eq("id", selectedCourse)
+        .single();
+
+      if (courseError || !courseData) return 0;
+
+      const debut = new Date(courseData.date_debut);
+      const fin = new Date(courseData.date_fin);
+      const diffTime = Math.abs(fin.getTime() - debut.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
       
-      const nb_etapes = data && data.length > 0 
-        ? Math.max(...data.map(s => s.etape_numero))
-        : 0;
-      
-      return nb_etapes;
+      return diffDays;
     },
     enabled: !!selectedCourse,
   });
@@ -163,21 +178,30 @@ export function StagesRaceManager() {
               </Select>
             </div>
 
-            {context === 'Etape' && selectedCourse && nbEtapesData && nbEtapesData > 0 && (
+            {context === 'Etape' && selectedCourse && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">N° Étape</label>
-                <Select value={String(etapeNumero)} onValueChange={(val) => setEtapeNumero(Number(val))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: nbEtapesData }, (_, i) => i + 1).map((n) => (
-                      <SelectItem key={n} value={String(n)}>
-                        Étape {n}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {nbEtapesData && nbEtapesData > 0 ? (
+                  <Select value={String(etapeNumero)} onValueChange={(val) => setEtapeNumero(Number(val))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: nbEtapesData }, (_, i) => i + 1).map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          Étape {n}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Alert variant="default">
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      Nombre d'étapes estimé depuis les dates de course. Ajustez manuellement si nécessaire.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             )}
           </div>

@@ -193,66 +193,98 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   }, [isDirty]);
 
   const handlePrepareGrid = async () => {
-    if (!scoringRules || scoringRules.length === 0) {
-      toast({
-        title: "Barème introuvable",
-        description: `Aucun barème défini pour ${course.categorie} / ${classementType}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const maxPlace = Math.max(...scoringRules.map((r) => r.place));
     const newRequestId = ++requestIdRef.current;
     setCurrentRequestId(newRequestId);
 
     let rows: ResultRow[] = [];
 
-    if (mode === 'edit') {
-      // Mode Corriger: Load existing results
-      try {
-        const { data: existingResults, error } = await supabase.rpc('results_course_rows', {
-          p_course_id: course.course_id,
-          p_type_classement: classementType,
-          p_etape_numero: activeTab === 'stages' ? currentStage : null
-        });
+    // ALWAYS try to load existing results first (both for 'edit' and 'create' modes)
+    try {
+      const { data: existingData, error: loadError } = await supabase.functions.invoke('results-course-rows', {
+        body: {
+          course_id: course.course_id,
+          type_classement: classementType,
+          etape_numero: activeTab === 'stages' ? currentStage : null
+        }
+      });
 
-        if (error) throw error;
+      if (loadError) throw loadError;
 
-        // Use existing results, fill points from scoring rules
-        rows = (existingResults || []).map((r: any) => ({
+      const existingResults = existingData?.rows || [];
+
+      if (existingResults.length > 0) {
+        // Pre-existing results found - display them
+        rows = existingResults.map((r: any) => ({
           position: r.row_position,
           coureur_id: r.coureur_id,
           coureur_nom: r.coureur_nom,
           manager_nom: r.manager_nom,
           statut: r.statut,
-          points: scoringRules.find(sr => sr.place === r.row_position)?.points || 0,
+          points: scoringRules?.find(sr => sr.place === r.row_position)?.points || 0,
           grid_version: sel_key,
         }));
-      } catch (err: any) {
-        console.error('Error loading existing results:', err);
+
+        // If scoring rules are missing, show warning but still display rows
+        if (!scoringRules || scoringRules.length === 0) {
+          toast({
+            title: "Barème introuvable",
+            description: `Résultats chargés mais aucun barème trouvé pour ${course.categorie} / ${classementType}. Points affichés = 0.`,
+            variant: "default",
+          });
+        }
+      } else {
+        // No existing results - create empty grid from scoring rules
+        if (!scoringRules || scoringRules.length === 0) {
+          toast({
+            title: "Barème introuvable",
+            description: `Aucun barème défini pour ${course.categorie} / ${classementType}`,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const maxPlace = Math.max(...scoringRules.map((r) => r.place));
+        rows = Array.from({ length: maxPlace }, (_, i) => {
+          const position = i + 1;
+          const rule = scoringRules.find((r) => r.place === position);
+          return {
+            position,
+            coureur_id: null,
+            coureur_nom: null,
+            manager_nom: null,
+            statut: "finished" as ResultStatut,
+            points: rule?.points || 0,
+            grid_version: sel_key,
+          };
+        });
+      }
+    } catch (err: any) {
+      console.error('Error loading results:', err);
+      
+      // Fallback: try to create empty grid from scoring rules
+      if (scoringRules && scoringRules.length > 0) {
+        const maxPlace = Math.max(...scoringRules.map((r) => r.place));
+        rows = Array.from({ length: maxPlace }, (_, i) => {
+          const position = i + 1;
+          const rule = scoringRules.find((r) => r.place === position);
+          return {
+            position,
+            coureur_id: null,
+            coureur_nom: null,
+            manager_nom: null,
+            statut: "finished" as ResultStatut,
+            points: rule?.points || 0,
+            grid_version: sel_key,
+          };
+        });
+      } else {
         toast({
           title: "Erreur",
-          description: err.message || "Impossible de charger les résultats existants",
+          description: err.message || "Impossible de charger les résultats",
           variant: "destructive",
         });
         return;
       }
-    } else {
-      // Mode Saisir: Empty grid based on scoring rules
-      rows = Array.from({ length: maxPlace }, (_, i) => {
-        const position = i + 1;
-        const rule = scoringRules.find((r) => r.place === position);
-        return {
-          position,
-          coureur_id: null,
-          coureur_nom: null,
-          manager_nom: null,
-          statut: "finished" as ResultStatut,
-          points: rule?.points || 0,
-          grid_version: sel_key,
-        };
-      });
     }
 
     if (newRequestId === currentRequestId || newRequestId > currentRequestId) {
