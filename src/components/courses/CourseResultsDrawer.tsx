@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Search, Calculator } from "lucide-react";
+import { Calendar, Search } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -47,12 +47,9 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [results, setResults] = useState<ResultRow[]>([]);
   const [selectedType, setSelectedType] = useState<string>("");
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
-  const [topN, setTopN] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [computing, setComputing] = useState(false);
   const { toast } = useToast();
-  const { isAdmin } = useUserRole();
 
   useEffect(() => {
     if (open && courseId) {
@@ -130,35 +127,6 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     }
   };
 
-  const handleComputePoints = async () => {
-    if (!courseId) return;
-
-    setComputing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('compute-points', {
-        body: { course_id: courseId }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "✅ Calcul terminé",
-        description: `${data.rows_upserted} points calculés`
-      });
-
-      // Reload results to show updated points
-      loadResults();
-    } catch (error: any) {
-      console.error('Error computing points:', error);
-      toast({
-        title: "Erreur",
-        description: error.message || "Impossible de calculer les points",
-        variant: "destructive"
-      });
-    } finally {
-      setComputing(false);
-    }
-  };
 
   // Client-side filtering
   const filteredResults = results.filter(r => {
@@ -168,10 +136,13 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
            r.equipe?.toLowerCase().includes(search);
   });
 
-  // Split finished and non-finished
+  // Split finished (with points) and non-finished
   const finishedResults = filteredResults
-    .filter(r => r.statut === 'finished' && r.row_position !== null)
-    .slice(0, topN);
+    .filter(r => {
+      if (r.statut !== 'finished' || r.row_position === null) return false;
+      const points = r.points_officiels !== null ? r.points_officiels : r.points_theoriques;
+      return points > 0;
+    });
   
   const nonFinishedResults = filteredResults
     .filter(r => r.statut !== 'finished' || r.row_position === null);
@@ -207,17 +178,6 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                     )}
                   </div>
                 </div>
-                {isAdmin && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleComputePoints}
-                    disabled={computing}
-                  >
-                    <Calculator className="h-4 w-4 mr-2" />
-                    {computing ? "Calcul..." : "Recalculer"}
-                  </Button>
-                )}
               </>
             ) : (
               <Skeleton className="h-6 w-64" />
@@ -258,21 +218,6 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
               </SelectContent>
             </Select>
           )}
-
-          {/* Top N selector */}
-          <div className="flex gap-2 items-center flex-wrap">
-            <span className="text-sm text-muted-foreground">Top:</span>
-            {[10, 15, 25, 50].map((n) => (
-              <Button
-                key={n}
-                variant={topN === n ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTopN(n)}
-              >
-                {n}
-              </Button>
-            ))}
-          </div>
 
           {/* Search box */}
           <div className="relative">
