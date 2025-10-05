@@ -83,33 +83,39 @@ Deno.serve(async (req) => {
     if (table === 'rosters') {
       console.log('🔧 Processing rosters...');
       
-      // Fetch all coureurs, managers, and phases
-      const [coureursRes, managersRes, phasesRes] = await Promise.all([
-        supabaseClient.from('coureurs').select('id, nom'),
-        supabaseClient.from('managers').select('id, nom'),
-        supabaseClient.from('phases').select('id, index_dans_saison'),
+      // Fetch ALL data with pagination
+      const [allCoureurs, allManagers, allPhases] = await Promise.all([
+        fetchAllRows(supabaseClient, 'coureurs', 'id, nom'),
+        fetchAllRows(supabaseClient, 'managers', 'id, nom'),
+        fetchAllRows(supabaseClient, 'phases', 'id, index_dans_saison')
       ]);
 
-      if (coureursRes.error || managersRes.error || phasesRes.error) {
-        throw new Error('Failed to fetch reference data');
+      if (!allCoureurs || allCoureurs.length === 0) {
+        throw new Error('Failed to load coureurs or no coureurs found');
+      }
+      if (!allManagers || allManagers.length === 0) {
+        throw new Error('Failed to load managers or no managers found');
+      }
+      if (!allPhases || allPhases.length === 0) {
+        throw new Error('Failed to load phases or no phases found');
       }
 
-      // Build lookup maps
+      // Build lookup maps from complete datasets
       const coureursByName = new Map(
-        coureursRes.data.map(c => [normalizeName(c.nom), c.id])
+        allCoureurs.map(c => [normalizeName(c.nom), c.id])
       );
       const managersByName = new Map(
-        managersRes.data.map(m => [normalizeName(m.nom), m.id])
+        allManagers.map(m => [normalizeName(m.nom), m.id])
       );
       const phasesByIndex = new Map(
-        phasesRes.data.map(p => [p.index_dans_saison, p.id])
+        allPhases.map(p => [p.index_dans_saison, p.id])
       );
 
       // 📊 Logs de diagnostic - Stats de référence
       console.log('📊 Stats de référence:');
-      console.log(`- Coureurs chargés: ${coureursByName.size}`);
-      console.log(`- Managers chargés: ${managersByName.size}`);
-      console.log(`- Phases chargées: ${phasesByIndex.size}`);
+      console.log(`- Coureurs chargés: ${allCoureurs.length}`);
+      console.log(`- Managers chargés: ${allManagers.length}`);
+      console.log(`- Phases chargées: ${allPhases.length}`);
       console.log('- Premiers 5 coureurs:', Array.from(coureursByName.entries()).slice(0, 5));
 
       const rostersToInsert: any[] = [];
@@ -564,6 +570,43 @@ Deno.serve(async (req) => {
     )
   }
 })
+
+/**
+ * Fetch all rows from a table with pagination to bypass the 1000 row limit
+ */
+async function fetchAllRows(
+  client: any,
+  table: string,
+  columns: string,
+  pageSize: number = 1000
+): Promise<any[]> {
+  const allRows: any[] = [];
+  let from = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await client
+      .from(table)
+      .select(columns)
+      .range(from, from + pageSize - 1);
+
+    if (error) {
+      console.error(`Error fetching ${table} (range ${from}-${from + pageSize - 1}):`, error);
+      throw error;
+    }
+
+    if (data && data.length > 0) {
+      allRows.push(...data);
+      console.log(`  📦 Fetched ${data.length} rows from ${table} (total: ${allRows.length})`);
+    }
+
+    // If we got fewer rows than pageSize, we've reached the end
+    hasMore = data && data.length === pageSize;
+    from += pageSize;
+  }
+
+  return allRows;
+}
 
 function unwrapGlobalQuotes(line: string): string {
   // Remove leading/trailing whitespace
