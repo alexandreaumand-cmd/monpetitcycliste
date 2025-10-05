@@ -61,6 +61,28 @@ export function StagesRaceManager() {
     },
   });
 
+  // Fetch number of stages for selected course
+  const { data: nbEtapesData } = useQuery({
+    queryKey: ["course-nb-etapes", selectedCourse],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("race_results")
+        .select("etape_numero")
+        .eq("course_id", selectedCourse)
+        .eq("type_classement", "Etape")
+        .not("etape_numero", "is", null);
+
+      if (error) throw error;
+      
+      const nb_etapes = data && data.length > 0 
+        ? Math.max(...data.map(s => s.etape_numero))
+        : 0;
+      
+      return nb_etapes;
+    },
+    enabled: !!selectedCourse,
+  });
+
   // Load results data
   const { data: resultsData, isLoading: resultsLoading, refetch: refetchResults } = useQuery({
     queryKey: ["admin-results-load", selectedCourse, context, etapeNumero],
@@ -141,7 +163,7 @@ export function StagesRaceManager() {
               </Select>
             </div>
 
-            {context === 'Etape' && resultsData?.course.nb_etapes && (
+            {context === 'Etape' && selectedCourse && nbEtapesData && nbEtapesData > 0 && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">N° Étape</label>
                 <Select value={String(etapeNumero)} onValueChange={(val) => setEtapeNumero(Number(val))}>
@@ -149,7 +171,7 @@ export function StagesRaceManager() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: resultsData.course.nb_etapes }, (_, i) => i + 1).map((n) => (
+                    {Array.from({ length: nbEtapesData }, (_, i) => i + 1).map((n) => (
                       <SelectItem key={n} value={String(n)}>
                         Étape {n}
                       </SelectItem>
