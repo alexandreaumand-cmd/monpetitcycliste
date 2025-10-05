@@ -37,6 +37,26 @@ export const CoureursCombobox = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
+  // Fetch selected coureur by ID
+  const { data: selectedCoureurData } = useQuery({
+    queryKey: ['coureur-by-id', phaseId, value],
+    queryFn: async () => {
+      if (!value) return null;
+      
+      const { data, error } = await supabase
+        .from('coureurs_disponibilite')
+        .select('*')
+        .eq('phase_id', phaseId)
+        .eq('coureur_id', value)
+        .single();
+      
+      if (error) return null;
+      return data;
+    },
+    enabled: !!value,
+  });
+
+  // Fetch coureurs by search term
   const { data: coureurs = [], isLoading } = useQuery({
     queryKey: ['coureurs-search', phaseId, debouncedSearchTerm],
     queryFn: async () => {
@@ -58,7 +78,7 @@ export const CoureursCombobox = ({
     enabled: debouncedSearchTerm.length >= 2,
   });
 
-  const selectedCoureur = coureurs.find((c) => c.coureur_id === value);
+  const selectedCoureur = selectedCoureurData || coureurs.find((c) => c.coureur_id === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
