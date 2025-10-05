@@ -602,6 +602,132 @@ export type Database = {
         }
         Relationships: []
       }
+      name_aliases: {
+        Row: {
+          alias_text: string
+          coureur_id: string
+          created_at: string | null
+          created_by_manager_id: string | null
+          id: string
+          source_team: string | null
+        }
+        Insert: {
+          alias_text: string
+          coureur_id: string
+          created_at?: string | null
+          created_by_manager_id?: string | null
+          id?: string
+          source_team?: string | null
+        }
+        Update: {
+          alias_text?: string
+          coureur_id?: string
+          created_at?: string | null
+          created_by_manager_id?: string | null
+          id?: string
+          source_team?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "name_aliases_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "name_aliases_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "name_aliases_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "name_aliases_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "name_aliases_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "name_aliases_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_by_phase"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "name_aliases_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_global"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "name_aliases_created_by_manager_id_fkey"
+            columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "name_aliases_created_by_manager_id_fkey"
+            columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "name_aliases_created_by_manager_id_fkey"
+            columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "name_aliases_created_by_manager_id_fkey"
+            columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "name_aliases_created_by_manager_id_fkey"
+            columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "name_aliases_created_by_manager_id_fkey"
+            columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "name_aliases_created_by_manager_id_fkey"
+            columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
+        ]
+      }
       phases: {
         Row: {
           budget: number | null
@@ -1564,6 +1690,224 @@ export type Database = {
           type_classement?: Database["public"]["Enums"]["type_classement"]
         }
         Relationships: []
+      }
+      startlist_entries: {
+        Row: {
+          bib_no: string | null
+          confidence: number | null
+          coureur_id: string | null
+          created_at: string | null
+          id: string
+          line_no: number
+          source_name: string
+          source_team: string | null
+          startlist_id: string
+          status: Database["public"]["Enums"]["startlist_entry_status"] | null
+        }
+        Insert: {
+          bib_no?: string | null
+          confidence?: number | null
+          coureur_id?: string | null
+          created_at?: string | null
+          id?: string
+          line_no: number
+          source_name: string
+          source_team?: string | null
+          startlist_id: string
+          status?: Database["public"]["Enums"]["startlist_entry_status"] | null
+        }
+        Update: {
+          bib_no?: string | null
+          confidence?: number | null
+          coureur_id?: string | null
+          created_at?: string | null
+          id?: string
+          line_no?: number
+          source_name?: string
+          source_team?: string | null
+          startlist_id?: string
+          status?: Database["public"]["Enums"]["startlist_entry_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "startlist_entries_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startlist_entries_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "startlist_entries_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "startlist_entries_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "startlist_entries_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "startlist_entries_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_by_phase"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "startlist_entries_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_global"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "startlist_entries_startlist_id_fkey"
+            columns: ["startlist_id"]
+            isOneToOne: false
+            referencedRelation: "startlist_imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      startlist_imports: {
+        Row: {
+          created_at: string | null
+          created_by_manager_id: string | null
+          file_url: string | null
+          id: string
+          parsed_at: string | null
+          race_id: string
+          raw_text: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by_manager_id?: string | null
+          file_url?: string | null
+          id?: string
+          parsed_at?: string | null
+          race_id: string
+          raw_text?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by_manager_id?: string | null
+          file_url?: string | null
+          id?: string
+          parsed_at?: string | null
+          race_id?: string
+          raw_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "startlist_imports_created_by_manager_id_fkey"
+            columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_created_by_manager_id_fkey"
+            columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_created_by_manager_id_fkey"
+            columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_created_by_manager_id_fkey"
+            columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_created_by_manager_id_fkey"
+            columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_created_by_manager_id_fkey"
+            columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_created_by_manager_id_fkey"
+            columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_race_id_fkey"
+            columns: ["race_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_race_id_fkey"
+            columns: ["race_id"]
+            isOneToOne: false
+            referencedRelation: "courses_for_points_norm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_race_id_fkey"
+            columns: ["race_id"]
+            isOneToOne: false
+            referencedRelation: "v_bareme_missing_all"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_race_id_fkey"
+            columns: ["race_id"]
+            isOneToOne: false
+            referencedRelation: "v_course_points_theoriques"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_race_id_fkey"
+            columns: ["race_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_recent_results"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_race_id_fkey"
+            columns: ["race_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["course_id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -2852,6 +3196,7 @@ export type Database = {
         | "completed"
       race_statut: "scheduled" | "completed"
       result_statut: "finished" | "dnf" | "dns" | "dsq"
+      startlist_entry_status: "parsed" | "unmatched" | "confirmed"
       type_classement: "Etape" | "General" | "Points" | "Montagne" | "Jeune"
       wt_tier_type:
         | "GT"
@@ -3009,6 +3354,7 @@ export const Constants = {
       ],
       race_statut: ["scheduled", "completed"],
       result_statut: ["finished", "dnf", "dns", "dsq"],
+      startlist_entry_status: ["parsed", "unmatched", "confirmed"],
       type_classement: ["Etape", "General", "Points", "Montagne", "Jeune"],
       wt_tier_type: [
         "GT",
