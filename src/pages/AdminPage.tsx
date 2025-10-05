@@ -10,6 +10,7 @@ import { RecentResults } from "@/components/admin/RecentResults";
 import { SeasonManager } from "@/components/admin/SeasonManager";
 import { MaintenancePanel } from "@/components/admin/MaintenancePanel";
 import { PointsComputeManager } from "@/components/admin/PointsComputeManager";
+import { StagesRaceManager } from "@/components/admin/StagesRaceManager";
 import { cn } from "@/lib/utils";
 
 const adminTabs = [
@@ -18,6 +19,7 @@ const adminTabs = [
   { label: 'Rounds', path: 'rounds' },
   { label: 'Annonces', path: 'annonces' },
   { label: 'Résultats', path: 'results' },
+  { label: 'Stages Race', path: 'stages' },
   { label: 'Saisons', path: 'seasons' },
   { label: 'Utilisateurs', path: 'users' },
   { label: 'Maintenance', path: 'maintenance' },
@@ -75,9 +77,10 @@ export const AdminPage = () => {
         
         <Route path="rounds" element={<RoundManager />} />
         <Route path="annonces" element={<AnnouncementManager />} />
-        <Route path="results" element={<RecentResults />} />
-        <Route path="seasons" element={<SeasonManager />} />
-        <Route path="maintenance" element={<MaintenancePanel />} />
+          <Route path="results" element={<RecentResults />} />
+          <Route path="stages" element={<StagesRaceManager />} />
+          <Route path="seasons" element={<SeasonManager />} />
+          <Route path="maintenance" element={<MaintenancePanel />} />
         
         <Route path="users" element={
           <Card>
