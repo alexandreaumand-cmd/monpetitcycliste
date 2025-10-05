@@ -341,18 +341,8 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         statut: row.statut,
       }));
 
-      // Check if results already exist to decide between create or update
-      const { data: existingCheck } = await supabase.rpc("admin_result_check_unique", {
-        p_course_id: course.course_id,
-        p_type_classement: classementType,
-        p_etape_numero: etapeNumeroValue,
-      });
-
-      const resultsExist = (existingCheck as any)?.exists || false;
-
-      // Call appropriate DB function
-      const fnName = resultsExist ? "admin_result_update_lot" : "admin_result_create_lot";
-      const { data: saveResult, error: saveError } = await supabase.rpc(fnName, {
+      // Call unified UPSERT function (handles both create and update)
+      const { data: saveResult, error: saveError } = await supabase.rpc("admin_result_save_lot", {
         p_course_id: course.course_id,
         p_type_classement: classementType,
         p_etape_numero: etapeNumeroValue,
@@ -388,12 +378,12 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       queryClient.invalidateQueries({ queryKey: ["rankings-kpis"] });
 
       const label = activeTab === "stages" ? `ÉTAPE ${currentStage}` : classementType.toUpperCase();
-      const inserted = (data.saveResult as any)?.inserted_count || 0;
+      const rowsAffected = (data.saveResult as any)?.rows_affected || 0;
       const pointsRows = (data.pointsResult as any)?.rows_upserted || 0;
       
       toast({
         title: "✅ Résultats enregistrés",
-        description: `${label} — ${inserted} résultats · ${pointsRows} points attribués`,
+        description: `${label} — ${rowsAffected} résultats · ${pointsRows} points attribués`,
       });
       setIsDirty(false);
     },

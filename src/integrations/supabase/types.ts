@@ -2590,15 +2590,7 @@ export type Database = {
         Args: { p_phase_id: string }
         Returns: Json
       }
-      admin_result_check_unique: {
-        Args: {
-          p_course_id: string
-          p_etape_numero?: number
-          p_type_classement: Database["public"]["Enums"]["type_classement"]
-        }
-        Returns: Json
-      }
-      admin_result_create_lot: {
+      admin_result_save_lot: {
         Args: {
           p_course_id: string
           p_etape_numero: number
@@ -2609,15 +2601,6 @@ export type Database = {
       }
       admin_result_status: {
         Args: { p_course_id: string }
-        Returns: Json
-      }
-      admin_result_update_lot: {
-        Args: {
-          p_course_id: string
-          p_etape_numero: number
-          p_rows: Json
-          p_type_classement: Database["public"]["Enums"]["type_classement"]
-        }
         Returns: Json
       }
       admin_results_reset_all: {
