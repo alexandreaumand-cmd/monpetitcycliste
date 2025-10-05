@@ -34,21 +34,43 @@ type ResultsStatus = {
 export const RecentResults = () => {
   const [dayRange, setDayRange] = useState(7);
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [phaseFilter, setPhaseFilter] = useState<string>("all");
   const [searchFilter, setSearchFilter] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [studioMode, setStudioMode] = useState<'create' | 'edit'>('create');
   const [studioOpen, setStudioOpen] = useState(false);
 
-  // Fetch recent courses
-  const { data: recentCourses, isLoading } = useQuery({
-    queryKey: ['recent-courses', dayRange],
+  // Fetch phases
+  const { data: phases } = useQuery({
+    queryKey: ['phases'],
     queryFn: async () => {
       const { data, error } = await supabase
+        .from('phases')
+        .select('id, index_dans_saison, date_debut, date_fin, statut')
+        .order('index_dans_saison', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch recent courses
+  const { data: recentCourses, isLoading } = useQuery({
+    queryKey: ['recent-courses', dayRange, phaseFilter],
+    queryFn: async () => {
+      let query = supabase
         .from('courses')
         .select('*')
         .gte('date_fin', new Date(Date.now() - dayRange * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
         .lte('date_debut', new Date().toISOString().split('T')[0])
         .order('date_debut', { ascending: false });
+      
+      // Ajouter le filtre de phase si sélectionné
+      if (phaseFilter !== "all") {
+        query = query.eq('phase_id', phaseFilter);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       
@@ -187,6 +209,20 @@ export const RecentResults = () => {
             <SelectItem value="all">Tous les types</SelectItem>
             <SelectItem value="One day">Course d'un jour</SelectItem>
             <SelectItem value="Stage race">Course à étapes</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={phaseFilter} onValueChange={setPhaseFilter}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Phase" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toutes les phases</SelectItem>
+            {phases?.map((phase) => (
+              <SelectItem key={phase.id} value={phase.id}>
+                Phase {phase.index_dans_saison}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
