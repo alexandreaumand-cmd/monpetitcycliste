@@ -17,7 +17,7 @@ const navLinks = [
   { label: 'Courses', href: '/dashboard/courses', icon: Calendar },
   { label: 'Résultats', href: '/dashboard/resultats', icon: BarChart3 },
   { label: 'Classement', href: '/dashboard/classement', icon: BarChart3 },
-  { label: 'Startlist', href: '/startlist', icon: ListChecks },
+  { label: 'Startlist', href: '/dashboard/startlist', icon: ListChecks },
 ];
 
 export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {

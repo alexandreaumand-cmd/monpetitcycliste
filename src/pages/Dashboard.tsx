@@ -9,6 +9,7 @@ import { UpcomingCourses } from "@/components/courses/UpcomingCourses";
 import { ResultsPage } from "./ResultsPage";
 import Rankings from "./Rankings";
 import { AdminPage } from "./AdminPage";
+import Startlist from "./Startlist";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -71,6 +72,7 @@ const Dashboard = () => {
           <Route path="courses" element={<UpcomingCourses />} />
           <Route path="resultats" element={<ResultsPage />} />
           <Route path="classement" element={<Rankings />} />
+          <Route path="startlist" element={<Startlist />} />
           {isAdmin && <Route path="admin/*" element={<AdminPage />} />}
         </Routes>
       </main>
