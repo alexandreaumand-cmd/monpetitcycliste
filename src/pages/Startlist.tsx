@@ -1,16 +1,22 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Users, AlertCircle, Download, FileText } from "lucide-react";
+import { Loader2, Users, AlertCircle, Download, FileText, Calendar, Trophy, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useQuery } from "@tanstack/react-query";
+import { differenceInDays, format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Startlist = () => {
+  const [viewMode, setViewMode] = useState<'list' | 'parse'>('list');
+  const [selectedRaceForParsing, setSelectedRaceForParsing] = useState<any>(null);
   const [selectedRaceId, setSelectedRaceId] = useState<string>("");
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>("");
   const [textContent, setTextContent] = useState<string>("");
@@ -115,12 +121,199 @@ const Startlist = () => {
     a.click();
   };
 
+  // Fetch upcoming courses
+  const { data: upcomingCourses, isLoading: isLoadingCourses } = useQuery({
+    queryKey: ['upcoming-courses-startlist'],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from('courses')
+        .select(`
+          id,
+          nom,
+          date_debut,
+          date_fin,
+          categorie,
+          type_course,
+          phase_id,
+          phases (
+            index_dans_saison,
+            saisons (annee)
+          )
+        `)
+        .gte('date_debut', today)
+        .lte('date_debut', in30Days)
+        .order('date_debut', { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Check if startlist exists for a race
+  const { data: existingStartlists } = useQuery({
+    queryKey: ['startlist-imports'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('startlist_imports')
+        .select('race_id');
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const hasStartlist = (raceId: string) => {
+    return existingStartlists?.some(s => s.race_id === raceId) || false;
+  };
+
+  const handleSelectRace = (race: any) => {
+    setSelectedRaceForParsing(race);
+    setSelectedRaceId(race.id);
+    setSelectedPhaseId(race.phase_id);
+    setViewMode('parse');
+  };
+
+  const handleBackToList = () => {
+    setViewMode('list');
+    setSelectedRaceForParsing(null);
+    setTextContent('');
+    setParseResult(null);
+  };
+
   const selectedRace = races.find(r => r.id === selectedRaceId);
 
+  if (viewMode === 'list') {
+    return (
+      <div className="container mx-auto py-8 space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Prochaines courses</h1>
+            <p className="text-muted-foreground mt-1">Cliquez sur une course pour ajouter sa startlist</p>
+          </div>
+        </div>
+
+        {isLoadingCourses ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-1/2 mt-2" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-20 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : upcomingCourses && upcomingCourses.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {upcomingCourses.map((course: any) => {
+              const dateDebut = new Date(course.date_debut);
+              const dateFin = new Date(course.date_fin);
+              const daysUntil = differenceInDays(dateDebut, new Date());
+              const duration = differenceInDays(dateFin, dateDebut) + 1;
+              const estimatedStages = course.type_course === 'etape' ? duration : 1;
+              const phaseData = course.phases as any;
+
+              return (
+                <Card 
+                  key={course.id} 
+                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => handleSelectRace(course)}
+                >
+                  <CardHeader>
+                    <div className="flex justify-between items-start gap-2 mb-2">
+                      <CardTitle className="text-lg line-clamp-2">{course.nom}</CardTitle>
+                      {hasStartlist(course.id) && (
+                        <Badge variant="outline" className="bg-green-500/10 shrink-0">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Startlist
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {phaseData && (
+                        <Badge variant="secondary">
+                          Phase {phaseData.index_dans_saison}
+                        </Badge>
+                      )}
+                      {course.categorie && (
+                        <Badge variant="outline">{course.categorie}</Badge>
+                      )}
+                      {course.type_course && (
+                        <Badge variant="outline" className="capitalize">
+                          {course.type_course}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span>
+                        {format(dateDebut, 'dd MMM', { locale: fr })}
+                        {duration > 1 && ` - ${format(dateFin, 'dd MMM', { locale: fr })}`}
+                      </span>
+                    </div>
+                    
+                    {daysUntil >= 0 ? (
+                      <Badge variant="outline" className="bg-primary/10">
+                        J-{daysUntil}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-muted">
+                        En cours
+                      </Badge>
+                    )}
+                    
+                    {estimatedStages > 1 && (
+                      <div className="text-sm text-muted-foreground">
+                        ~{estimatedStages} étapes estimées
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Aucune course prévue dans les 30 prochains jours</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  // Parse view
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Startlist</h1>
+        <div className="space-y-1">
+          <Button 
+            variant="ghost" 
+            onClick={handleBackToList}
+            className="mb-2"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour aux courses
+          </Button>
+          <h1 className="text-3xl font-bold">
+            {selectedRaceForParsing?.nom || 'Startlist'}
+          </h1>
+          {selectedRaceForParsing && (
+            <p className="text-muted-foreground">
+              {format(new Date(selectedRaceForParsing.date_debut), 'dd MMMM yyyy', { locale: fr })}
+            </p>
+          )}
+        </div>
         {parseResult && (
           <Button onClick={handleExportCSV} variant="outline">
             <Download className="h-4 w-4 mr-2" />
