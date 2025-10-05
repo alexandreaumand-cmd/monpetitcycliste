@@ -186,24 +186,48 @@ const Startlist = () => {
     }
   });
 
+  const normalizeId = (v?: string | null) => (v ?? '').trim().toLowerCase();
+
   const hasStartlist = (raceId: string) => {
-    return existingStartlists?.some(s => s.race_id === raceId) || false;
+    const rid = normalizeId(raceId);
+    return existingStartlists?.some(s => normalizeId(s.race_id) === rid) || false;
   };
 
   const getStartlistId = (raceId: string) => {
-    return existingStartlists?.find(sl => sl.race_id === raceId)?.id;
+    const rid = normalizeId(raceId);
+    return existingStartlists?.find(sl => normalizeId(sl.race_id) === rid)?.id;
   };
 
-  const handleSelectRace = (race: any) => {
-    const startlistId = getStartlistId(race.id);
-    
+  const handleSelectRace = async (race: any) => {
+    console.log('[Startlist] handleSelectRace click', { raceId: race.id, existingCount: existingStartlists?.length });
+    let startlistId = getStartlistId(race.id);
+
+    if (!startlistId) {
+      try {
+        const { data: latest, error } = await supabase
+          .from('startlist_imports')
+          .select('id')
+          .eq('race_id', race.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) console.warn('[Startlist] fallback query error', error);
+        if (latest?.id) {
+          startlistId = latest.id as string;
+        }
+      } catch (e) {
+        console.warn('[Startlist] fallback query exception', e);
+      }
+    }
+
     if (startlistId) {
-      // Startlist exists, go to view mode
+      console.log('[Startlist] startlist found, opening view', { startlistId });
       setSelectedStartlistId(startlistId);
       setSelectedRaceForViewing(race);
       setViewMode('view');
     } else {
-      // No startlist, go to parse mode
+      console.log('[Startlist] no startlist found, opening parse');
       setSelectedRaceForParsing(race);
       setSelectedRaceId(race.id);
       setSelectedPhaseId(race.phase_id);
@@ -336,7 +360,7 @@ const Startlist = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">Prochaines courses</h1>
-            <p className="text-muted-foreground mt-1">Cliquez sur une course pour ajouter sa startlist</p>
+            <p className="text-muted-foreground mt-1">Cliquez sur une course pour consulter ou ajouter sa startlist</p>
           </div>
         </div>
 
