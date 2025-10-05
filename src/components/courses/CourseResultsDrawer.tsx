@@ -6,12 +6,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Search } from "lucide-react";
+import { Calendar, Search, ChevronDown, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useQuery } from "@tanstack/react-query";
 
 interface CourseMeta {
   course_nom: string;
@@ -49,7 +51,31 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("results");
+  const [expandedManagers, setExpandedManagers] = useState<Set<string>>(new Set());
   const { toast } = useToast();
+
+  // Fetch leaderboard for the course
+  const { data: leaderboard, isLoading: leaderboardLoading } = useQuery({
+    queryKey: ["course-leaderboard-drawer", courseId, selectedType, selectedEtape],
+    queryFn: async () => {
+      if (!courseId) return null;
+      const { data, error } = await supabase.functions.invoke("course-leaderboard", {
+        body: {
+          course_id: courseId,
+          type_classement: selectedType || null,
+          etape_numero: selectedType === 'Etape' && selectedEtape ? selectedEtape : null
+        }
+      });
+      if (error) throw error;
+      return data as {
+        course: { id: string; nom: string; date_debut: string; category: string };
+        leaderboard: Array<{ rank: number; manager_id: string; manager_nom: string; points: number }>;
+        contributors: Array<{ manager_id: string; rider_id: string; rider_nom: string; rider_equipe: string | null; points: number }>;
+      };
+    },
+    enabled: open && !!courseId && activeTab === "leaderboard",
+  });
 
   useEffect(() => {
     if (open && courseId) {
@@ -158,6 +184,23 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     return variants[statut.toLowerCase()] || null;
   };
 
+  const toggleManager = (managerId: string) => {
+    const newExpanded = new Set(expandedManagers);
+    if (newExpanded.has(managerId)) {
+      newExpanded.delete(managerId);
+    } else {
+      newExpanded.add(managerId);
+    }
+    setExpandedManagers(newExpanded);
+  };
+
+  const getContributorsForManager = (managerId: string) => {
+    if (!leaderboard) return [];
+    return leaderboard.contributors
+      .filter(c => c.manager_id === managerId)
+      .sort((a, b) => b.points - a.points);
+  };
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[90vh]">
@@ -186,153 +229,263 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
         </DrawerHeader>
 
         <div className="px-4 pb-4 space-y-4 overflow-y-auto">
-          {/* Type selector pills */}
-          <div className="flex gap-2 flex-wrap">
-            {meta?.types_disponibles?.map((type) => (
-              <Button
-                key={type}
-                variant={selectedType === type ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleTypeChange(type)}
-              >
-                {type}
-              </Button>
-            ))}
-          </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="results">Résultats</TabsTrigger>
+              <TabsTrigger value="leaderboard">Classement Managers</TabsTrigger>
+            </TabsList>
 
-          {/* Etape selector if applicable */}
-          {selectedType === 'Etape' && meta?.etapes_disponibles && (
-            <Select
-              value={selectedEtape?.toString() || ""}
-              onValueChange={(value) => setSelectedEtape(parseInt(value))}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Sélectionner étape" />
-              </SelectTrigger>
-              <SelectContent>
-                {meta.etapes_disponibles.map((etape) => (
-                  <SelectItem key={etape} value={etape.toString()}>
-                    Étape {etape}
-                  </SelectItem>
+            <TabsContent value="results" className="space-y-4 mt-4">
+              {/* Type selector pills */}
+              <div className="flex gap-2 flex-wrap">
+                {meta?.types_disponibles?.map((type) => (
+                  <Button
+                    key={type}
+                    variant={selectedType === type ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleTypeChange(type)}
+                  >
+                    {type}
+                  </Button>
                 ))}
-              </SelectContent>
-            </Select>
-          )}
+              </div>
 
-          {/* Search box */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher coureur ou équipe..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+              {/* Etape selector if applicable */}
+              {selectedType === 'Etape' && meta?.etapes_disponibles && (
+                <Select
+                  value={selectedEtape?.toString() || ""}
+                  onValueChange={(value) => setSelectedEtape(parseInt(value))}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Sélectionner étape" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {meta.etapes_disponibles.map((etape) => (
+                      <SelectItem key={etape} value={etape.toString()}>
+                        Étape {etape}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
-          {/* Results count */}
-          {!loading && displayedResults.length > 0 && (
-            <div className="text-sm text-muted-foreground">
-              Affichage de {displayedResults.length} résultat{displayedResults.length > 1 ? 's' : ''}
-              {searchQuery && ` sur ${results.length} total`}
-            </div>
-          )}
+              {/* Search box */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher coureur ou équipe..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
 
-          {/* Results table */}
-          {loading ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : displayedResults.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {results.length === 0 
-                ? "Aucun résultat pour ce classement" 
-                : "Aucun résultat ne correspond à votre recherche"}
-            </div>
-          ) : (
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-24">Pos./Statut</TableHead>
-                    <TableHead>Coureur</TableHead>
-                    <TableHead className="hidden md:table-cell">Équipe</TableHead>
-                    <TableHead className="text-right">Points</TableHead>
-                    <TableHead className="hidden sm:table-cell">Manager</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {displayedResults.map((row) => {
-                    const isFinished = row.statut === 'finished' && row.row_position !== null;
-                    const statutBadge = getStatutBadge(row.statut);
-                    const hasOfficialPoints = row.points_officiels !== null;
-                    const points = hasOfficialPoints ? row.points_officiels : row.points_theoriques;
-                    
-                    return (
-                      <TableRow
-                        key={row.race_result_id}
-                        className={row.is_my_rider ? "bg-primary/5 border-l-2 border-l-primary" : ""}
-                      >
-                        <TableCell className="font-medium">
-                          {isFinished ? (
-                            <div className="flex items-center gap-2">
-                              {row.row_position && row.row_position <= 3 && (
-                                <span className={`text-lg ${
-                                  row.row_position === 1 ? "text-yellow-500" :
-                                  row.row_position === 2 ? "text-gray-400" :
-                                  "text-amber-600"
-                                }`}>
-                                  {row.row_position === 1 ? "🥇" : 
-                                   row.row_position === 2 ? "🥈" : "🥉"}
-                                </span>
-                              )}
-                              <span>{row.row_position}</span>
-                            </div>
-                          ) : statutBadge ? (
-                            <Badge variant={statutBadge.variant}>
-                              {statutBadge.label}
-                            </Badge>
-                          ) : (
-                            "—"
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold">{row.coureur_nom}</span>
-                              {row.is_my_rider && (
-                                <Badge variant="default" className="text-xs">Mon équipe</Badge>
-                              )}
-                            </div>
-                            <span className="text-xs text-muted-foreground md:hidden">{row.equipe}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {row.equipe && (
-                            <Badge variant="outline" className="text-xs">
-                              {row.equipe}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {isFinished ? (
-                            <span className="font-semibold text-lg">{points}</span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
-                          {row.manager_nom || "—"}
-                        </TableCell>
+              {/* Results count */}
+              {!loading && displayedResults.length > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  Affichage de {displayedResults.length} résultat{displayedResults.length > 1 ? 's' : ''}
+                  {searchQuery && ` sur ${results.length} total`}
+                </div>
+              )}
+
+              {/* Results table */}
+              {loading ? (
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : displayedResults.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {results.length === 0 
+                    ? "Aucun résultat pour ce classement" 
+                    : "Aucun résultat ne correspond à votre recherche"}
+                </div>
+              ) : (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-24">Pos./Statut</TableHead>
+                        <TableHead>Coureur</TableHead>
+                        <TableHead className="hidden md:table-cell">Équipe</TableHead>
+                        <TableHead className="text-right">Points</TableHead>
+                        <TableHead className="hidden sm:table-cell">Manager</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                    </TableHeader>
+                    <TableBody>
+                      {displayedResults.map((row) => {
+                        const isFinished = row.statut === 'finished' && row.row_position !== null;
+                        const statutBadge = getStatutBadge(row.statut);
+                        const hasOfficialPoints = row.points_officiels !== null;
+                        const points = hasOfficialPoints ? row.points_officiels : row.points_theoriques;
+                        
+                        return (
+                          <TableRow
+                            key={row.race_result_id}
+                            className={row.is_my_rider ? "bg-primary/5 border-l-2 border-l-primary" : ""}
+                          >
+                            <TableCell className="font-medium">
+                              {isFinished ? (
+                                <div className="flex items-center gap-2">
+                                  {row.row_position && row.row_position <= 3 && (
+                                    <span className={`text-lg ${
+                                      row.row_position === 1 ? "text-yellow-500" :
+                                      row.row_position === 2 ? "text-gray-400" :
+                                      "text-amber-600"
+                                    }`}>
+                                      {row.row_position === 1 ? "🥇" : 
+                                       row.row_position === 2 ? "🥈" : "🥉"}
+                                    </span>
+                                  )}
+                                  <span>{row.row_position}</span>
+                                </div>
+                              ) : statutBadge ? (
+                                <Badge variant={statutBadge.variant}>
+                                  {statutBadge.label}
+                                </Badge>
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold">{row.coureur_nom}</span>
+                                  {row.is_my_rider && (
+                                    <Badge variant="default" className="text-xs">Mon équipe</Badge>
+                                  )}
+                                </div>
+                                <span className="text-xs text-muted-foreground md:hidden">{row.equipe}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {row.equipe && (
+                                <Badge variant="outline" className="text-xs">
+                                  {row.equipe}
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {isFinished ? (
+                                <span className="font-semibold text-lg">{points}</span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
+                              {row.manager_nom || "—"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="leaderboard" className="space-y-4 mt-4">
+              {leaderboardLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : !leaderboard?.leaderboard?.length ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Aucun point pour ce classement
+                </div>
+              ) : (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12"></TableHead>
+                        <TableHead className="w-16">Rang</TableHead>
+                        <TableHead>Manager</TableHead>
+                        <TableHead className="text-right">Points</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {leaderboard.leaderboard.map((entry) => {
+                        const contributors = getContributorsForManager(entry.manager_id);
+                        const isExpanded = expandedManagers.has(entry.manager_id);
+                        
+                        return (
+                          <Collapsible key={entry.manager_id} asChild open={isExpanded}>
+                            <>
+                              <TableRow className="cursor-pointer hover:bg-muted/50">
+                                <TableCell>
+                                  <CollapsibleTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => toggleManager(entry.manager_id)}
+                                    >
+                                      {isExpanded ? (
+                                        <ChevronDown className="h-4 w-4" />
+                                      ) : (
+                                        <ChevronRight className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </CollapsibleTrigger>
+                                </TableCell>
+                                <TableCell className="font-bold">
+                                  {entry.rank <= 3 && (
+                                    <span className={`text-lg mr-1 ${
+                                      entry.rank === 1 ? "text-yellow-500" :
+                                      entry.rank === 2 ? "text-gray-400" :
+                                      "text-amber-600"
+                                    }`}>
+                                      {entry.rank === 1 ? "🥇" : 
+                                       entry.rank === 2 ? "🥈" : "🥉"}
+                                    </span>
+                                  )}
+                                  #{entry.rank}
+                                </TableCell>
+                                <TableCell className="font-medium">{entry.manager_nom}</TableCell>
+                                <TableCell className="text-right font-bold text-lg">{entry.points}</TableCell>
+                              </TableRow>
+                              <CollapsibleContent asChild>
+                                <TableRow>
+                                  <TableCell colSpan={4} className="bg-muted/30 p-4">
+                                    <div className="space-y-2">
+                                      <div className="text-sm font-medium text-muted-foreground mb-2">
+                                        Coureurs contributeurs
+                                      </div>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        {contributors.map((contributor) => (
+                                          <div
+                                            key={contributor.rider_id}
+                                            className="flex items-center justify-between p-2 rounded border bg-background"
+                                          >
+                                            <div>
+                                              <div className="font-medium">{contributor.rider_nom}</div>
+                                              {contributor.rider_equipe && (
+                                                <Badge variant="outline" className="mt-1 text-xs">
+                                                  {contributor.rider_equipe}
+                                                </Badge>
+                                              )}
+                                            </div>
+                                            <div className="font-bold">{contributor.points} pts</div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              </CollapsibleContent>
+                            </>
+                          </Collapsible>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </DrawerContent>
     </Drawer>
