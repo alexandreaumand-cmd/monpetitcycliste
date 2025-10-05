@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
-import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save } from "lucide-react";
+import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
@@ -657,13 +657,27 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
           {/* Title & Date */}
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold">
-              {isOneDay
-                ? "Résultat final (One-day)"
-                : activeTab === "stages"
-                ? `Étape ${currentStage}`
-                : currentFinalClassement}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">
+                {isOneDay
+                  ? "Résultat final (One-day)"
+                  : activeTab === "stages"
+                  ? `Étape ${currentStage}`
+                  : currentFinalClassement}
+              </h3>
+              {(() => {
+                const filledCount = resultRows.filter(r => r.coureur_id !== null).length;
+                const totalCount = resultRows.length;
+                const isPartial = filledCount > 0 && filledCount < totalCount;
+                
+                return isPartial ? (
+                  <Badge variant="secondary" className="gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Résultats partiels ({filledCount}/{totalCount})
+                  </Badge>
+                ) : null;
+              })()}
+            </div>
             <div className="flex items-center gap-2">
               <label className="text-sm text-muted-foreground">Date:</label>
               <Input

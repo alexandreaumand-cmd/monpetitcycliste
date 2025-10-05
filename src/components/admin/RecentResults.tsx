@@ -71,18 +71,23 @@ export const RecentResults = () => {
     },
   });
 
-  // Fetch results status for each course
+  // Fetch results status for each course with expected counts
   const { data: resultsStatusMap } = useQuery({
     queryKey: ['results-status', recentCourses?.map(c => c.course_id)],
     queryFn: async () => {
       if (!recentCourses?.length) return {};
       
-      const statusMap: Record<string, ResultsStatus> = {};
+      const statusMap: Record<string, ResultsStatus & {
+        expected_gc?: number;
+        expected_points?: number;
+        expected_montagne?: number;
+        expected_jeune?: number;
+      }> = {};
       
       for (const course of recentCourses) {
         const { data, error } = await supabase
           .from('race_results')
-          .select('type_classement')
+          .select('type_classement, coureur_id')
           .eq('course_id', course.course_id);
         
         if (error) {
@@ -90,12 +95,28 @@ export const RecentResults = () => {
           continue;
         }
         
+        // Get expected positions from scoring rules
+        const { data: scoringData } = await supabase
+          .from('scoring_rules_norm')
+          .select('type_canon, place')
+          .eq('cat_canon', course.categorie.toLowerCase())
+          .order('place', { ascending: false });
+        
+        const getMaxPlace = (type: string) => {
+          const filtered = scoringData?.filter(s => s.type_canon === type);
+          return filtered?.[0]?.place || 0;
+        };
+        
         statusMap[course.course_id] = {
           nb_lignes_etapes: data?.filter(r => r.type_classement === 'Etape').length || 0,
-          nb_lignes_gc: data?.filter(r => r.type_classement === 'General').length || 0,
-          nb_lignes_points: data?.filter(r => r.type_classement === 'Points').length || 0,
-          nb_lignes_montagne: data?.filter(r => r.type_classement === 'Montagne').length || 0,
-          nb_lignes_jeune: data?.filter(r => r.type_classement === 'Jeune').length || 0,
+          nb_lignes_gc: data?.filter(r => r.type_classement === 'General' && r.coureur_id).length || 0,
+          nb_lignes_points: data?.filter(r => r.type_classement === 'Points' && r.coureur_id).length || 0,
+          nb_lignes_montagne: data?.filter(r => r.type_classement === 'Montagne' && r.coureur_id).length || 0,
+          nb_lignes_jeune: data?.filter(r => r.type_classement === 'Jeune' && r.coureur_id).length || 0,
+          expected_gc: getMaxPlace('general'),
+          expected_points: getMaxPlace('points'),
+          expected_montagne: getMaxPlace('montagne'),
+          expected_jeune: getMaxPlace('jeune'),
         };
       }
       
@@ -243,22 +264,69 @@ export const RecentResults = () => {
                         </div>
                         
                         <div className="flex gap-2 flex-wrap">
-                          <Badge variant={status?.nb_lignes_gc ? "default" : "secondary"} className="flex items-center gap-1">
-                            {status?.nb_lignes_gc ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-                            GC
-                          </Badge>
-                          <Badge variant={status?.nb_lignes_points ? "default" : "secondary"} className="flex items-center gap-1">
-                            {status?.nb_lignes_points ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-                            Points
-                          </Badge>
-                          <Badge variant={status?.nb_lignes_montagne ? "default" : "secondary"} className="flex items-center gap-1">
-                            {status?.nb_lignes_montagne ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-                            Montagne
-                          </Badge>
-                          <Badge variant={status?.nb_lignes_jeune ? "default" : "secondary"} className="flex items-center gap-1">
-                            {status?.nb_lignes_jeune ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-                            Jeune
-                          </Badge>
+                          {/* GC Badge */}
+                          {(() => {
+                            const filled = status?.nb_lignes_gc || 0;
+                            const expected = status?.expected_gc || 0;
+                            const isPartial = filled > 0 && filled < expected;
+                            const isComplete = filled > 0 && filled >= expected;
+                            
+                            return (
+                              <Badge variant={isComplete ? "default" : "secondary"} className="flex items-center gap-1">
+                                {isComplete ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                                GC {expected > 0 && `(${filled}/${expected})`}
+                                {isPartial && " ⚠️"}
+                              </Badge>
+                            );
+                          })()}
+                          
+                          {/* Points Badge */}
+                          {(() => {
+                            const filled = status?.nb_lignes_points || 0;
+                            const expected = status?.expected_points || 0;
+                            const isPartial = filled > 0 && filled < expected;
+                            const isComplete = filled > 0 && filled >= expected;
+                            
+                            return (
+                              <Badge variant={isComplete ? "default" : "secondary"} className="flex items-center gap-1">
+                                {isComplete ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                                Points {expected > 0 && `(${filled}/${expected})`}
+                                {isPartial && " ⚠️"}
+                              </Badge>
+                            );
+                          })()}
+                          
+                          {/* Montagne Badge */}
+                          {(() => {
+                            const filled = status?.nb_lignes_montagne || 0;
+                            const expected = status?.expected_montagne || 0;
+                            const isPartial = filled > 0 && filled < expected;
+                            const isComplete = filled > 0 && filled >= expected;
+                            
+                            return (
+                              <Badge variant={isComplete ? "default" : "secondary"} className="flex items-center gap-1">
+                                {isComplete ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                                Montagne {expected > 0 && `(${filled}/${expected})`}
+                                {isPartial && " ⚠️"}
+                              </Badge>
+                            );
+                          })()}
+                          
+                          {/* Jeune Badge */}
+                          {(() => {
+                            const filled = status?.nb_lignes_jeune || 0;
+                            const expected = status?.expected_jeune || 0;
+                            const isPartial = filled > 0 && filled < expected;
+                            const isComplete = filled > 0 && filled >= expected;
+                            
+                            return (
+                              <Badge variant={isComplete ? "default" : "secondary"} className="flex items-center gap-1">
+                                {isComplete ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                                Jeune {expected > 0 && `(${filled}/${expected})`}
+                                {isPartial && " ⚠️"}
+                              </Badge>
+                            );
+                          })()}
                         </div>
                       </>
                     ) : (
