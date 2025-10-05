@@ -723,13 +723,44 @@ function normalizeTypeClassement(type: string): string | null {
 function normalizeName(name: string): string {
   if (!name) return '';
   
-  // Remove accents
-  const withoutAccents = name
+  // Manual accent removal map (plus robuste que NFD)
+  const accentMap: Record<string, string> = {
+    'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a', 'å': 'a',
+    'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
+    'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
+    'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
+    'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u',
+    'ý': 'y', 'ÿ': 'y',
+    'ñ': 'n', 'ç': 'c',
+    'À': 'A', 'Á': 'A', 'Â': 'A', 'Ã': 'A', 'Ä': 'A', 'Å': 'A',
+    'È': 'E', 'É': 'E', 'Ê': 'E', 'Ë': 'E',
+    'Ì': 'I', 'Í': 'I', 'Î': 'I', 'Ï': 'I',
+    'Ò': 'O', 'Ó': 'O', 'Ô': 'O', 'Õ': 'O', 'Ö': 'O',
+    'Ù': 'U', 'Ú': 'U', 'Û': 'U', 'Ü': 'U',
+    'Ý': 'Y', 'Ÿ': 'Y',
+    'Ñ': 'N', 'Ç': 'C'
+  };
+  
+  // Replace all accented characters
+  let result = name;
+  for (const [accented, plain] of Object.entries(accentMap)) {
+    result = result.replaceAll(accented, plain);
+  }
+  
+  // Also try NFD normalization as fallback
+  result = result
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
   
+  // Replace all types of spaces with single space
+  result = result
+    .replace(/[\s\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]/g, ' ');
+  
+  // Remove control characters
+  result = result.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+  
   // Convert to lowercase, trim, and collapse multiple spaces
-  return withoutAccents
+  return result
     .toLowerCase()
     .trim()
     .replace(/\s+/g, ' ');
