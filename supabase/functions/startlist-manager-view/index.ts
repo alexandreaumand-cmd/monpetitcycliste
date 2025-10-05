@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     const race = Array.isArray(startlist.courses) ? startlist.courses[0] : startlist.courses;
     const phaseId = race.phase_id;
 
-    // Get confirmed entries with coureur details
+    // Get all matched entries (any status as long as coureur_id is set)
     const { data: entries, error: entriesError } = await supabase
       .from('startlist_entries')
       .select(`
@@ -55,7 +55,6 @@ Deno.serve(async (req) => {
         )
       `)
       .eq('startlist_id', startlist_id)
-      .eq('status', 'confirmed')
       .not('coureur_id', 'is', null);
 
     if (entriesError) throw entriesError;

@@ -165,7 +165,8 @@ const Startlist = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('startlist_imports')
-        .select('id, race_id');
+        .select('id, race_id, created_at')
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data || [];
@@ -195,7 +196,11 @@ const Startlist = () => {
 
   const getStartlistId = (raceId: string) => {
     const rid = normalizeId(raceId);
-    return existingStartlists?.find(sl => normalizeId(sl.race_id) === rid)?.id;
+    // Find all startlists for this race and return the most recent one
+    const matchingStartlists = existingStartlists?.filter(sl => normalizeId(sl.race_id) === rid);
+    if (!matchingStartlists || matchingStartlists.length === 0) return undefined;
+    // They're already sorted by created_at desc, so take the first one
+    return matchingStartlists[0].id;
   };
 
   const handleSelectRace = async (race: any) => {
@@ -325,29 +330,37 @@ const Startlist = () => {
 
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Coureurs par manager</h3>
-            {startlistViewData.managers.map((manager: any) => (
-              <Card key={manager.manager_id} className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold">{manager.manager_nom}</h4>
-                  <Badge variant="secondary">{manager.starters_count} partant{manager.starters_count > 1 ? 's' : ''}</Badge>
-                </div>
-                <div className="grid gap-2">
-                  {manager.starters.map((starter: any) => (
-                    <div key={starter.coureur_id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                      <div>
-                        <span className="font-medium">{starter.nom}</span>
-                        {starter.equipe && (
-                          <span className="text-sm text-muted-foreground ml-2">({starter.equipe})</span>
+            {startlistViewData.managers.length === 0 ? (
+              <Card className="p-6">
+                <p className="text-muted-foreground text-center">
+                  Aucun coureur associé à un manager pour cette startlist
+                </p>
+              </Card>
+            ) : (
+              startlistViewData.managers.map((manager: any) => (
+                <Card key={manager.manager_id} className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold">{manager.manager_nom}</h4>
+                    <Badge variant="secondary">{manager.starters_count} partant{manager.starters_count > 1 ? 's' : ''}</Badge>
+                  </div>
+                  <div className="grid gap-2">
+                    {manager.starters.map((starter: any) => (
+                      <div key={starter.coureur_id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                        <div>
+                          <span className="font-medium">{starter.nom}</span>
+                          {starter.equipe && (
+                            <span className="text-sm text-muted-foreground ml-2">({starter.equipe})</span>
+                          )}
+                        </div>
+                        {starter.bib_no && (
+                          <Badge variant="outline">#{starter.bib_no}</Badge>
                         )}
                       </div>
-                      {starter.bib_no && (
-                        <Badge variant="outline">#{starter.bib_no}</Badge>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            ))}
+                    ))}
+                  </div>
+                </Card>
+              ))
+            )}
           </div>
         </Card>
       </div>
