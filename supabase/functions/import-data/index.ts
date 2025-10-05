@@ -105,6 +105,13 @@ Deno.serve(async (req) => {
         phasesRes.data.map(p => [p.index_dans_saison, p.id])
       );
 
+      // 📊 Logs de diagnostic - Stats de référence
+      console.log('📊 Stats de référence:');
+      console.log(`- Coureurs chargés: ${coureursByName.size}`);
+      console.log(`- Managers chargés: ${managersByName.size}`);
+      console.log(`- Phases chargées: ${phasesByIndex.size}`);
+      console.log('- Premiers 5 coureurs:', Array.from(coureursByName.entries()).slice(0, 5));
+
       const rostersToInsert: any[] = [];
       const errorDetails: string[] = [];
 
@@ -121,6 +128,22 @@ Deno.serve(async (req) => {
         const phaseStr = obj['phase'];
         const prixStr = obj['prix'];
 
+        // 📝 Logs détaillés pour les 15 premières lignes (incluant Jan HIRT)
+        if (i <= 15) {
+          console.log(`\n📝 Row ${i}:`);
+          console.log(`  Raw coureur: "${coureurName}" (length: ${coureurName?.length})`);
+          console.log(`  Normalized: "${normalizeName(coureurName)}"`);
+          console.log(`  Found in map: ${coureursByName.has(normalizeName(coureurName))}`);
+          
+          // Afficher les codes ASCII des caractères pour détecter les invisibles
+          if (coureurName) {
+            const chars = coureurName.split('').map((c: string, idx: number) => 
+              `${idx}:'${c}'(${c.charCodeAt(0)})`
+            ).join(' ');
+            console.log(`  Chars: ${chars}`);
+          }
+        }
+
         if (!coureurName || !proprietaire || !phaseStr || !prixStr) {
           errorDetails.push(`Row ${i}: Missing data`);
           errors++;
@@ -130,7 +153,15 @@ Deno.serve(async (req) => {
         // Match coureur
         const coureurId = coureursByName.get(normalizeName(coureurName));
         if (!coureurId) {
-          errorDetails.push(`Row ${i}: Coureur not found: ${coureurName}`);
+          // Logs détaillés pour les erreurs de matching
+          const normalized = normalizeName(coureurName);
+          const similar = Array.from(coureursByName.keys())
+            .filter(k => k.includes(normalized.split(' ')[0]) || normalized.includes(k.split(' ')[0]))
+            .slice(0, 3);
+          
+          errorDetails.push(
+            `Row ${i}: Coureur not found: "${coureurName}" (normalized: "${normalized}") - Similar: ${similar.join(', ')}`
+          );
           errors++;
           continue;
         }
