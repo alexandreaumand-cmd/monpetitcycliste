@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Loader2 } from "lucide-react";
+import { Upload, Loader2, Download } from "lucide-react";
 
 type TableType = 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates' | 'rosters';
 
@@ -12,6 +12,7 @@ export const DataImport = () => {
   const [selectedTable, setSelectedTable] = useState<TableType>('coureurs');
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,6 +98,59 @@ export const DataImport = () => {
     }
   };
 
+  const handleExportCoureurs = async () => {
+    setExporting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Erreur",
+          description: "Vous devez être connecté pour exporter",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-coureurs-csv`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de l\'export');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'coureurs_export.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Export réussi",
+        description: "Le fichier coureurs_export.csv a été téléchargé",
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Erreur d'export",
+        description: error.message || "Une erreur est survenue lors de l'export",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -173,6 +227,30 @@ export const DataImport = () => {
             <Upload className="mr-2 h-4 w-4" />
             Assigner phases par dates
           </Button>
+        )}
+
+        {selectedTable === 'coureurs' && (
+          <div className="pt-4 border-t">
+            <p className="text-sm font-medium mb-2">Export de la table Coureurs</p>
+            <Button
+              onClick={handleExportCoureurs}
+              disabled={exporting}
+              variant="outline"
+              className="w-full"
+            >
+              {exporting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Export en cours...
+                </>
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  Exporter tous les coureurs (CSV)
+                </>
+              )}
+            </Button>
+          </div>
         )}
 
         <div className="text-sm text-muted-foreground space-y-1">
