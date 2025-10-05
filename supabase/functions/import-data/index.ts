@@ -116,10 +116,10 @@ Deno.serve(async (req) => {
           obj[headers[j].trim()] = values[j]?.trim() || null;
         }
 
-        const coureurName = obj['Coureur'];
-        const proprietaire = obj['Propriétaire'];
-        const phaseStr = obj['Phase'];
-        const prixStr = obj['Prix'];
+        const coureurName = obj['coureur'];
+        const proprietaire = obj['propriétaire'];
+        const phaseStr = obj['phase'];
+        const prixStr = obj['prix'];
 
         if (!coureurName || !proprietaire || !phaseStr || !prixStr) {
           errorDetails.push(`Row ${i}: Missing data`);
