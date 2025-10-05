@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { course_id, general_top, jersey_winners } = await req.json();
+    const { course_id, general_top, jersey_winners, change_reason } = await req.json();
 
     if (!course_id || !Array.isArray(general_top) || !jersey_winners) {
       return new Response(JSON.stringify({ error: 'Invalid request parameters' }), {

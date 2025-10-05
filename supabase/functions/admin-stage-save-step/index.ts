@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { course_id, etape_numero, top10, leaders } = await req.json();
+    const { course_id, etape_numero, top10, leaders, change_reason } = await req.json();
 
     // Validations
     if (!course_id || !etape_numero) {
