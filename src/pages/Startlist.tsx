@@ -187,6 +187,22 @@ const Startlist = () => {
     }
   });
 
+  // Fetch all startlist entries (matched and unmatched)
+  const { data: startlistEntriesData, isLoading: isLoadingEntries } = useQuery({
+    queryKey: ['startlist-entries', selectedStartlistId],
+    queryFn: async () => {
+      if (!selectedStartlistId) return null;
+      
+      const { data, error } = await supabase.functions.invoke('startlist-entries-list', {
+        body: { startlist_id: selectedStartlistId }
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedStartlistId && viewMode === 'view'
+  });
+
   const normalizeId = (v?: string | null) => (v ?? '').trim().toLowerCase();
 
   const hasStartlist = (raceId: string) => {
@@ -316,28 +332,26 @@ const Startlist = () => {
           </div>
 
           <div className="mb-4 p-4 bg-muted rounded-lg">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
-                <span className="font-medium">Total partants:</span>{' '}
-                <span className="text-muted-foreground">{startlistViewData.totals.starters_all}</span>
+                <span className="font-medium">Total entrées:</span>{' '}
+                <span className="text-muted-foreground">{startlistEntriesData?.stats?.total || 0}</span>
               </div>
               <div>
-                <span className="font-medium">Managers concernés:</span>{' '}
-                <span className="text-muted-foreground">{startlistViewData.totals.managers}</span>
+                <span className="font-medium">Matchés:</span>{' '}
+                <span className="text-muted-foreground">{startlistEntriesData?.stats?.matched || 0}</span>
+              </div>
+              <div>
+                <span className="font-medium">Non matchés:</span>{' '}
+                <span className="text-muted-foreground">{startlistEntriesData?.stats?.unmatched || 0}</span>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Coureurs par manager</h3>
-            {startlistViewData.managers.length === 0 ? (
-              <Card className="p-6">
-                <p className="text-muted-foreground text-center">
-                  Aucun coureur associé à un manager pour cette startlist
-                </p>
-              </Card>
-            ) : (
-              startlistViewData.managers.map((manager: any) => (
+          {startlistViewData.managers.length > 0 && (
+            <div className="space-y-4 mb-6">
+              <h3 className="text-lg font-semibold">Coureurs par manager</h3>
+              {startlistViewData.managers.map((manager: any) => (
                 <Card key={manager.manager_id} className="p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="font-semibold">{manager.manager_nom}</h4>
@@ -359,7 +373,68 @@ const Startlist = () => {
                     ))}
                   </div>
                 </Card>
-              ))
+              ))}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Startlist brute</h3>
+            {isLoadingEntries ? (
+              <Card className="p-6">
+                <Skeleton className="h-40 w-full" />
+              </Card>
+            ) : startlistEntriesData?.entries && startlistEntriesData.entries.length > 0 ? (
+              <Card className="p-4">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2 font-semibold">Ligne</th>
+                        <th className="text-left p-2 font-semibold">Dossard</th>
+                        <th className="text-left p-2 font-semibold">Nom source</th>
+                        <th className="text-left p-2 font-semibold">Équipe source</th>
+                        <th className="text-left p-2 font-semibold">Coureur associé</th>
+                        <th className="text-left p-2 font-semibold">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {startlistEntriesData.entries.map((entry: any) => (
+                        <tr key={entry.id} className="border-b hover:bg-muted/50">
+                          <td className="p-2 text-sm">{entry.line_no}</td>
+                          <td className="p-2 text-sm">{entry.bib_no || '-'}</td>
+                          <td className="p-2 text-sm font-medium">{entry.source_name}</td>
+                          <td className="p-2 text-sm text-muted-foreground">{entry.source_team || '-'}</td>
+                          <td className="p-2 text-sm">
+                            {entry.coureur_id && entry.coureurs ? (
+                              <div>
+                                <div className="font-medium">{Array.isArray(entry.coureurs) ? entry.coureurs[0]?.nom : entry.coureurs.nom}</div>
+                                {(Array.isArray(entry.coureurs) ? entry.coureurs[0]?.equipe : entry.coureurs.equipe) && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {Array.isArray(entry.coureurs) ? entry.coureurs[0]?.equipe : entry.coureurs.equipe}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </td>
+                          <td className="p-2">
+                            <Badge variant={entry.coureur_id ? 'default' : 'secondary'} className="text-xs">
+                              {entry.status}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            ) : (
+              <Card className="p-6">
+                <p className="text-muted-foreground text-center">
+                  Aucune entrée trouvée pour cette startlist
+                </p>
+              </Card>
             )}
           </div>
         </Card>
