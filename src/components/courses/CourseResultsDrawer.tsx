@@ -373,15 +373,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                         </TableCell>
                         <TableCell className="text-right">
                           {isFinished ? (
-                            <div className="flex items-center justify-end gap-2">
-                              <span className="font-semibold text-lg">{points}</span>
-                              <Badge 
-                                variant={hasOfficialPoints ? "default" : "secondary"}
-                                className="text-xs"
-                              >
-                                {hasOfficialPoints ? "Officiel" : "Barème"}
-                              </Badge>
-                            </div>
+                            <span className="font-semibold text-lg">{points}</span>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
