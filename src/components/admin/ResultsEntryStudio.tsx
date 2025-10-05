@@ -213,23 +213,41 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       const existingResults = existingData?.rows || [];
 
       if (existingResults.length > 0) {
-        // Pre-existing results found - display them
-        rows = existingResults.map((r: any) => ({
-          position: r.row_position,
-          coureur_id: r.coureur_id,
-          coureur_nom: r.coureur_nom,
-          manager_nom: r.manager_nom,
-          statut: r.statut,
-          points: scoringRules?.find(sr => sr.place === r.row_position)?.points || 0,
-          grid_version: sel_key,
-        }));
-
-        // If scoring rules are missing, show warning but still display rows
+        // Pre-existing results found - merge with full grid from scoring rules
         if (!scoringRules || scoringRules.length === 0) {
           toast({
             title: "Barème introuvable",
             description: `Résultats chargés mais aucun barème trouvé pour ${course.categorie} / ${classementType}. Points affichés = 0.`,
             variant: "default",
+          });
+          // Still display existing results even without scoring rules
+          rows = existingResults.map((r: any) => ({
+            position: r.row_position,
+            coureur_id: r.coureur_id,
+            coureur_nom: r.coureur_nom,
+            manager_nom: r.manager_nom,
+            statut: r.statut,
+            points: 0,
+            grid_version: sel_key,
+          }));
+        } else {
+          // Create full grid based on scoring rules
+          const maxPlace = Math.max(...scoringRules.map((r) => r.place));
+          rows = Array.from({ length: maxPlace }, (_, i) => {
+            const position = i + 1;
+            const rule = scoringRules.find((r) => r.place === position);
+            // Check if we have existing data for this position
+            const existing = existingResults.find((r: any) => r.row_position === position);
+            
+            return {
+              position,
+              coureur_id: existing?.coureur_id || null,
+              coureur_nom: existing?.coureur_nom || null,
+              manager_nom: existing?.manager_nom || null,
+              statut: existing?.statut || ("finished" as ResultStatut),
+              points: rule?.points || 0,
+              grid_version: sel_key,
+            };
           });
         }
       } else {
