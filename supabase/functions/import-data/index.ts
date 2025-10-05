@@ -10,6 +10,291 @@ interface ImportRequest {
   data: string // CSV content
 }
 
+/**
+ * Fetch all rows from a table with pagination to bypass the 1000 row limit
+ */
+async function fetchAllRows(
+  client: any,
+  table: string,
+  columns: string,
+  pageSize: number = 1000
+): Promise<any[]> {
+  const allRows: any[] = [];
+  let from = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await client
+      .from(table)
+      .select(columns)
+      .range(from, from + pageSize - 1);
+
+    if (error) {
+      console.error(`Error fetching ${table} (range ${from}-${from + pageSize - 1}):`, error);
+      throw error;
+    }
+
+    if (data && data.length > 0) {
+      allRows.push(...data);
+      console.log(`  📦 Fetched ${data.length} rows from ${table} (total: ${allRows.length})`);
+    }
+
+    // If we got fewer rows than pageSize, we've reached the end
+    hasMore = data && data.length === pageSize;
+    from += pageSize;
+  }
+
+  return allRows;
+}
+
+function unwrapGlobalQuotes(line: string): string {
+  // Remove leading/trailing whitespace
+  const trimmed = line.trim()
+  
+  // Check if the entire line is wrapped in quotes and contains separators inside
+  if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length > 2) {
+    const inner = trimmed.slice(1, -1)
+    // Only unwrap if the inner content has comma or semicolon (looks like CSV data)
+    if (inner.includes(',') || inner.includes(';')) {
+      return inner
+    }
+  }
+  
+  return trimmed
+}
+
+function parseCSVLine(line: string, separator: string = ','): string[] {
+  const result = []
+  let current = ''
+  let inQuotes = false
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+    
+    if (char === '"') {
+      inQuotes = !inQuotes
+    } else if (char === separator && !inQuotes) {
+      result.push(current.trim())
+      current = ''
+    } else {
+      current += char
+    }
+  }
+  
+  result.push(current.trim())
+  return result
+}
+
+function mapToTableFormat(
+  table: string,
+  headers: string[],
+  values: string[]
+): any {
+  const obj: any = {}
+  
+  for (let i = 0; i < headers.length; i++) {
+    obj[headers[i].trim()] = values[i]?.trim() || null
+  }
+
+  switch (table) {
+    case 'coureurs':
+      return {
+        id: sanitizeId(obj['Coureur']),
+        nom: obj['Coureur'],
+        equipe: obj['Equipe'],
+        prix_initial: parseFloat(obj['Prix initial']) || 10,
+        uci_id: obj['id'] || null
+      }
+    
+    case 'scoring_rules':
+      const typeClassement = normalizeTypeClassement(obj['Type classement']);
+      if (!typeClassement) return null; // Skip invalid rows
+      
+      return {
+        id: obj['id'] || `${obj['Catégorie']}_${typeClassement}_${obj['Place']}`.toLowerCase().replace(/\s+/g, '_'),
+        categorie: obj['Catégorie'],
+        type_classement: typeClassement,
+        place: parseInt(obj['Place']) || 0,
+        points: Math.floor(parseFloat(obj['Points']) || 0),
+        type: obj['Type'] || null
+      }
+    
+    case 'courses':
+      // Support both old format (Course, Race Type, Race Category) and new format (all fields)
+      const hasNewFormat = headers.includes('nom') || headers.includes('date_debut')
+      
+      if (hasNewFormat) {
+        // New format: supports pays column and phase name mapping
+        // Generate ID from nom if id is empty or null
+        const courseNom = obj['nom']?.trim()
+        const rawId = obj['id']?.trim()
+        const courseId = (rawId && rawId.length > 0) ? rawId : (courseNom ? sanitizeId(courseNom) : null)
+        
+        return {
+          id: courseId,
+          nom: courseNom,
+          categorie: obj['categorie']?.trim() || null,
+          type_course: obj['type_course']?.trim() || null,
+          date_debut: obj['date_debut']?.trim() || null,
+          date_fin: obj['date_fin']?.trim() || null,
+          phase_id: obj['phase_id']?.trim() || null, // Will be mapped later
+          statut: obj['statut']?.trim() || 'scheduled',
+          uci_code: obj['uci_code']?.trim() || null,
+          wt_tier: obj['wt_tier']?.trim() || null,
+          pays: obj['pays']?.trim() || null
+        }
+      } else {
+        // Old format: id, Course, Race Type, Race Category
+        return {
+          id: obj['id'],
+          nom: obj['Course']?.trim(),
+          type_course: obj['Race Type'],
+          categorie: obj['Race Category'],
+          statut: 'scheduled',
+          date_debut: null,
+          date_fin: null,
+          phase_id: null,
+          uci_code: null,
+          wt_tier: null,
+          pays: null
+        }
+      }
+    
+    case 'managers':
+      return {
+        nom: obj['Nom manager'],
+        sponsor: obj['Sponsor'],
+        email: null,
+        user_id: null
+      }
+    
+    default:
+      return null
+  }
+}
+
+function sanitizeId(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[àáâãäå]/g, 'a')
+    .replace(/[èéêë]/g, 'e')
+    .replace(/[ìíîï]/g, 'i')
+    .replace(/[òóôõö]/g, 'o')
+    .replace(/[ùúûü]/g, 'u')
+    .replace(/[ñ]/g, 'n')
+    .replace(/[ç]/g, 'c')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
+function normalizeTypeClassement(type: string): string | null {
+  if (!type) return null; // Handle undefined/null values
+  const lowerType = type.toLowerCase();
+  
+  // Map to allowed enum values: General, Etape, Points, Montagne, Jeune
+  if (lowerType.includes('général') || lowerType.includes('general')) return 'General';
+  if (lowerType.includes('étape') || lowerType.includes('etape') || lowerType.includes('stage')) return 'Etape';
+  if (lowerType.includes('vert') || lowerType.includes('points')) return 'Points';
+  if (lowerType.includes('montagne') || lowerType.includes('kom')) return 'Montagne';
+  if (lowerType.includes('jeune') || lowerType.includes('youth')) return 'Jeune';
+  if (lowerType.includes('combatif') || lowerType.includes('combativity')) return null; // Ignore combativity
+  
+  return null; // Unknown type, skip
+}
+
+function normalizeName(name: string): string {
+  if (!name) return '';
+  
+  // Manual accent removal map (plus robuste que NFD)
+  const accentMap: Record<string, string> = {
+    'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a', 'å': 'a',
+    'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
+    'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
+    'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
+    'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u',
+    'ý': 'y', 'ÿ': 'y',
+    'ñ': 'n', 'ç': 'c',
+    'À': 'A', 'Á': 'A', 'Â': 'A', 'Ã': 'A', 'Ä': 'A', 'Å': 'A',
+    'È': 'E', 'É': 'E', 'Ê': 'E', 'Ë': 'E',
+    'Ì': 'I', 'Í': 'I', 'Î': 'I', 'Ï': 'I',
+    'Ò': 'O', 'Ó': 'O', 'Ô': 'O', 'Õ': 'O', 'Ö': 'O',
+    'Ù': 'U', 'Ú': 'U', 'Û': 'U', 'Ü': 'U',
+    'Ý': 'Y', 'Ÿ': 'Y',
+    'Ñ': 'N', 'Ç': 'C'
+  };
+  
+  // Replace all accented characters
+  let result = name;
+  for (const [accented, plain] of Object.entries(accentMap)) {
+    result = result.replaceAll(accented, plain);
+  }
+  
+  // Also try NFD normalization as fallback
+  result = result
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  
+  // Replace all types of spaces with single space
+  result = result
+    .replace(/[\s\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]/g, ' ');
+  
+  // Remove control characters
+  result = result.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+  
+  // Convert to lowercase, trim, and collapse multiple spaces
+  return result
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function parseFlexibleDate(dateStr: string | null): string | null {
+  if (!dateStr || dateStr.trim().length === 0) return null
+  
+  const cleaned = dateStr.trim()
+  
+  // Already in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
+    return cleaned
+  }
+  
+  // Try DD/MM/YYYY
+  const ddmmyyyyMatch = cleaned.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/)
+  if (ddmmyyyyMatch) {
+    const day = ddmmyyyyMatch[1].padStart(2, '0')
+    const month = ddmmyyyyMatch[2].padStart(2, '0')
+    const year = ddmmyyyyMatch[3]
+    // Assume DD/MM/YYYY (European format)
+    return `${year}-${month}-${day}`
+  }
+  
+  // Try MM/DD/YYYY (American format) - less common in cycling
+  const mmddyyyyMatch = cleaned.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/)
+  if (mmddyyyyMatch) {
+    const first = mmddyyyyMatch[1].padStart(2, '0')
+    const second = mmddyyyyMatch[2].padStart(2, '0')
+    const year = mmddyyyyMatch[3]
+    // If first number > 12, must be DD/MM
+    if (parseInt(first) > 12) {
+      return `${year}-${second}-${first}`
+    }
+    // Otherwise assume MM/DD
+    return `${year}-${first}-${second}`
+  }
+  
+  // Try YYYY/MM/DD
+  const yyyymmddMatch = cleaned.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/)
+  if (yyyymmddMatch) {
+    const year = yyyymmddMatch[1]
+    const month = yyyymmddMatch[2].padStart(2, '0')
+    const day = yyyymmddMatch[3].padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  
+  console.warn(`Unable to parse date: ${dateStr}`)
+  return null
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -81,7 +366,7 @@ Deno.serve(async (req) => {
 
     // Special handling for rosters
     if (table === 'rosters') {
-      console.log('🔧 Processing rosters...');
+      console.log('🔧 Processing rosters with PAGINATION (version 2025-01-05)...');
       
       // Fetch ALL data with pagination
       const [allCoureurs, allManagers, allPhases] = await Promise.all([
@@ -570,288 +855,3 @@ Deno.serve(async (req) => {
     )
   }
 })
-
-/**
- * Fetch all rows from a table with pagination to bypass the 1000 row limit
- */
-async function fetchAllRows(
-  client: any,
-  table: string,
-  columns: string,
-  pageSize: number = 1000
-): Promise<any[]> {
-  const allRows: any[] = [];
-  let from = 0;
-  let hasMore = true;
-
-  while (hasMore) {
-    const { data, error } = await client
-      .from(table)
-      .select(columns)
-      .range(from, from + pageSize - 1);
-
-    if (error) {
-      console.error(`Error fetching ${table} (range ${from}-${from + pageSize - 1}):`, error);
-      throw error;
-    }
-
-    if (data && data.length > 0) {
-      allRows.push(...data);
-      console.log(`  📦 Fetched ${data.length} rows from ${table} (total: ${allRows.length})`);
-    }
-
-    // If we got fewer rows than pageSize, we've reached the end
-    hasMore = data && data.length === pageSize;
-    from += pageSize;
-  }
-
-  return allRows;
-}
-
-function unwrapGlobalQuotes(line: string): string {
-  // Remove leading/trailing whitespace
-  const trimmed = line.trim()
-  
-  // Check if the entire line is wrapped in quotes and contains separators inside
-  if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length > 2) {
-    const inner = trimmed.slice(1, -1)
-    // Only unwrap if the inner content has comma or semicolon (looks like CSV data)
-    if (inner.includes(',') || inner.includes(';')) {
-      return inner
-    }
-  }
-  
-  return trimmed
-}
-
-function parseCSVLine(line: string, separator: string = ','): string[] {
-  const result = []
-  let current = ''
-  let inQuotes = false
-  
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i]
-    
-    if (char === '"') {
-      inQuotes = !inQuotes
-    } else if (char === separator && !inQuotes) {
-      result.push(current.trim())
-      current = ''
-    } else {
-      current += char
-    }
-  }
-  
-  result.push(current.trim())
-  return result
-}
-
-function mapToTableFormat(
-  table: string,
-  headers: string[],
-  values: string[]
-): any {
-  const obj: any = {}
-  
-  for (let i = 0; i < headers.length; i++) {
-    obj[headers[i].trim()] = values[i]?.trim() || null
-  }
-
-  switch (table) {
-    case 'coureurs':
-      return {
-        id: sanitizeId(obj['Coureur']),
-        nom: obj['Coureur'],
-        equipe: obj['Equipe'],
-        prix_initial: parseFloat(obj['Prix initial']) || 10,
-        uci_id: obj['id'] || null
-      }
-    
-    case 'scoring_rules':
-      const typeClassement = normalizeTypeClassement(obj['Type classement']);
-      if (!typeClassement) return null; // Skip invalid rows
-      
-      return {
-        id: obj['id'] || `${obj['Catégorie']}_${typeClassement}_${obj['Place']}`.toLowerCase().replace(/\s+/g, '_'),
-        categorie: obj['Catégorie'],
-        type_classement: typeClassement,
-        place: parseInt(obj['Place']) || 0,
-        points: Math.floor(parseFloat(obj['Points']) || 0),
-        type: obj['Type'] || null
-      }
-    
-    case 'courses':
-      // Support both old format (Course, Race Type, Race Category) and new format (all fields)
-      const hasNewFormat = headers.includes('nom') || headers.includes('date_debut')
-      
-      if (hasNewFormat) {
-        // New format: supports pays column and phase name mapping
-        // Generate ID from nom if id is empty or null
-        const courseNom = obj['nom']?.trim()
-        const rawId = obj['id']?.trim()
-        const courseId = (rawId && rawId.length > 0) ? rawId : (courseNom ? sanitizeId(courseNom) : null)
-        
-        return {
-          id: courseId,
-          nom: courseNom,
-          categorie: obj['categorie']?.trim() || null,
-          type_course: obj['type_course']?.trim() || null,
-          date_debut: obj['date_debut']?.trim() || null,
-          date_fin: obj['date_fin']?.trim() || null,
-          phase_id: obj['phase_id']?.trim() || null, // Will be mapped later
-          statut: obj['statut']?.trim() || 'scheduled',
-          uci_code: obj['uci_code']?.trim() || null,
-          wt_tier: obj['wt_tier']?.trim() || null,
-          pays: obj['pays']?.trim() || null
-        }
-      } else {
-        // Old format: id, Course, Race Type, Race Category
-        return {
-          id: obj['id'],
-          nom: obj['Course']?.trim(),
-          type_course: obj['Race Type'],
-          categorie: obj['Race Category'],
-          statut: 'scheduled',
-          date_debut: null,
-          date_fin: null,
-          phase_id: null,
-          uci_code: null,
-          wt_tier: null,
-          pays: null
-        }
-      }
-    
-    case 'managers':
-      return {
-        nom: obj['Nom manager'],
-        sponsor: obj['Sponsor'],
-        email: null,
-        user_id: null
-      }
-    
-    default:
-      return null
-  }
-}
-
-function sanitizeId(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[àáâãäå]/g, 'a')
-    .replace(/[èéêë]/g, 'e')
-    .replace(/[ìíîï]/g, 'i')
-    .replace(/[òóôõö]/g, 'o')
-    .replace(/[ùúûü]/g, 'u')
-    .replace(/[ñ]/g, 'n')
-    .replace(/[ç]/g, 'c')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-}
-
-function normalizeTypeClassement(type: string): string | null {
-  if (!type) return null; // Handle undefined/null values
-  const lowerType = type.toLowerCase();
-  
-  // Map to allowed enum values: General, Etape, Points, Montagne, Jeune
-  if (lowerType.includes('général') || lowerType.includes('general')) return 'General';
-  if (lowerType.includes('étape') || lowerType.includes('etape') || lowerType.includes('stage')) return 'Etape';
-  if (lowerType.includes('vert') || lowerType.includes('points')) return 'Points';
-  if (lowerType.includes('montagne') || lowerType.includes('kom')) return 'Montagne';
-  if (lowerType.includes('jeune') || lowerType.includes('youth')) return 'Jeune';
-  if (lowerType.includes('combatif') || lowerType.includes('combativity')) return null; // Ignore combativity
-  
-  return null; // Unknown type, skip
-}
-
-function normalizeName(name: string): string {
-  if (!name) return '';
-  
-  // Manual accent removal map (plus robuste que NFD)
-  const accentMap: Record<string, string> = {
-    'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a', 'å': 'a',
-    'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
-    'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
-    'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
-    'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u',
-    'ý': 'y', 'ÿ': 'y',
-    'ñ': 'n', 'ç': 'c',
-    'À': 'A', 'Á': 'A', 'Â': 'A', 'Ã': 'A', 'Ä': 'A', 'Å': 'A',
-    'È': 'E', 'É': 'E', 'Ê': 'E', 'Ë': 'E',
-    'Ì': 'I', 'Í': 'I', 'Î': 'I', 'Ï': 'I',
-    'Ò': 'O', 'Ó': 'O', 'Ô': 'O', 'Õ': 'O', 'Ö': 'O',
-    'Ù': 'U', 'Ú': 'U', 'Û': 'U', 'Ü': 'U',
-    'Ý': 'Y', 'Ÿ': 'Y',
-    'Ñ': 'N', 'Ç': 'C'
-  };
-  
-  // Replace all accented characters
-  let result = name;
-  for (const [accented, plain] of Object.entries(accentMap)) {
-    result = result.replaceAll(accented, plain);
-  }
-  
-  // Also try NFD normalization as fallback
-  result = result
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-  
-  // Replace all types of spaces with single space
-  result = result
-    .replace(/[\s\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]/g, ' ');
-  
-  // Remove control characters
-  result = result.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
-  
-  // Convert to lowercase, trim, and collapse multiple spaces
-  return result
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, ' ');
-}
-
-function parseFlexibleDate(dateStr: string | null): string | null {
-  if (!dateStr || dateStr.trim().length === 0) return null
-  
-  const cleaned = dateStr.trim()
-  
-  // Already in YYYY-MM-DD format
-  if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
-    return cleaned
-  }
-  
-  // Try DD/MM/YYYY
-  const ddmmyyyyMatch = cleaned.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/)
-  if (ddmmyyyyMatch) {
-    const day = ddmmyyyyMatch[1].padStart(2, '0')
-    const month = ddmmyyyyMatch[2].padStart(2, '0')
-    const year = ddmmyyyyMatch[3]
-    // Assume DD/MM/YYYY (European format)
-    return `${year}-${month}-${day}`
-  }
-  
-  // Try MM/DD/YYYY (American format) - less common in cycling
-  const mmddyyyyMatch = cleaned.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/)
-  if (mmddyyyyMatch) {
-    const first = mmddyyyyMatch[1].padStart(2, '0')
-    const second = mmddyyyyMatch[2].padStart(2, '0')
-    const year = mmddyyyyMatch[3]
-    // If first number > 12, must be DD/MM
-    if (parseInt(first) > 12) {
-      return `${year}-${second}-${first}`
-    }
-    // Otherwise assume MM/DD
-    return `${year}-${first}-${second}`
-  }
-  
-  // Try YYYY/MM/DD
-  const yyyymmddMatch = cleaned.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/)
-  if (yyyymmddMatch) {
-    const year = yyyymmddMatch[1]
-    const month = yyyymmddMatch[2].padStart(2, '0')
-    const day = yyyymmddMatch[3].padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-  
-  console.warn(`Unable to parse date: ${dateStr}`)
-  return null
-}
