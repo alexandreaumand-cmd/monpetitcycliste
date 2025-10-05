@@ -26,14 +26,40 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch all coureurs (jusqu'à 10000)
-    const { data: coureurs, error } = await supabase
-      .from('coureurs')
-      .select('id, nom, equipe, prix_initial')
-      .order('nom', { ascending: true })
-      .range(0, 9999);
+    // Fetch all coureurs with pagination (Supabase limit is 1000 per query)
+    const pageSize = 1000;
+    let from = 0;
+    let allCoureurs: any[] = [];
+    let hasMore = true;
 
-    if (error) throw error;
+    console.log('Starting pagination to fetch all riders...');
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('coureurs')
+        .select('id, nom, equipe, prix_initial')
+        .order('nom', { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        allCoureurs = allCoureurs.concat(data);
+        console.log(`Fetched page: ${Math.floor(from / pageSize) + 1}, rows: ${data.length}, total so far: ${allCoureurs.length}`);
+        
+        // If we got fewer rows than pageSize, we've reached the end
+        if (data.length < pageSize) {
+          hasMore = false;
+        } else {
+          from += pageSize;
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+
+    console.log(`Total riders fetched: ${allCoureurs.length}`);
+    const coureurs = allCoureurs;
 
     // Generate CSV
     const headers = ['id', 'nom', 'equipe', 'prix_initial'];
