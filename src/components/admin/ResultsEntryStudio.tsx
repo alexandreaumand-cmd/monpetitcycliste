@@ -331,141 +331,42 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         throw new Error("Doublons détectés dans la saisie");
       }
 
-      let resultRowsCount = 0;
-      let resultRowsPositive = 0;
-      let managerRowsCount = 0;
-
-      // Server-side recalculation of points
-      const { data: courseData } = await supabase
-        .from("courses")
-        .select("categorie")
-        .eq("id", course.course_id)
-        .single();
-
-      if (!courseData) throw new Error("Course introuvable");
-
-      const typeClassementMap: Record<ClassementType, string> = {
-        Etape: "Etape",
-        General: "General",
-        Points: "Points",
-        Montagne: "Montagne",
-        Jeune: "Jeune",
-      };
-
-      const mappedType = typeClassementMap[classementType] as "Etape" | "General" | "Jeune" | "Montagne" | "Points";
-      
-      const { data: serverScoringRules } = await supabase
-        .from("scoring_rules")
-        .select("place, points")
-        .eq("categorie", courseData.categorie)
-        .eq("type_classement", mappedType)
-        .order("place");
-
-      const scoringMap = new Map(
-        (serverScoringRules || []).map((r) => [r.place, r.points])
-      );
-
       // Properly cast etape_numero: number for Etape, null otherwise
       const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
 
-      // Fetch manager_id for each rider first
-      const riderManagerMap = new Map<string, string | null>();
-      for (const row of validRows) {
-        const { data: roster } = await supabase
-          .from("rosters")
-          .select("manager_id")
-          .eq("phase_id", course.phase_id)
-          .eq("coureur_id", row.coureur_id!)
-          .maybeSingle();
-        
-        riderManagerMap.set(row.coureur_id!, roster?.manager_id || null);
-      }
+      // Prepare rows for DB function
+      const rowsForDb = validRows.map((row) => ({
+        coureur_id: row.coureur_id!,
+        position: Number(row.position),
+        statut: row.statut,
+      }));
 
-      // Upsert race_results with manager_id and points
-      const mappedTypeForUpsert = typeClassementMap[classementType] as "Etape" | "General" | "Jeune" | "Montagne" | "Points";
-      const raceResultsToUpsert = validRows.map((row) => {
-        const isFinished = row.statut === "finished";
-        const positionValue = isFinished ? Number(row.position) : null;
-        const points = isFinished ? scoringMap.get(row.position) || 0 : 0;
-        
-        return {
-          course_id: course.course_id,
-          type_classement: mappedTypeForUpsert,
-          etape_numero: etapeNumeroValue,
-          coureur_id: row.coureur_id!,
-          position: positionValue,
-          statut: row.statut,
-          date_classement: dateClassement,
-          manager_id: riderManagerMap.get(row.coureur_id!),
-          points,
-        };
+      // Check if results already exist to decide between create or update
+      const { data: existingCheck } = await supabase.rpc("admin_result_check_unique", {
+        p_course_id: course.course_id,
+        p_type_classement: classementType,
+        p_etape_numero: etapeNumeroValue,
       });
 
-      const { error: upsertError } = await supabase
-        .from("race_results")
-        .upsert(raceResultsToUpsert, {
-          onConflict: "course_id,type_classement,etape_numero,coureur_id",
-        });
+      const resultsExist = (existingCheck as any)?.exists || false;
 
-      if (upsertError) throw upsertError;
+      // Call appropriate DB function
+      const fnName = resultsExist ? "admin_result_update_lot" : "admin_result_create_lot";
+      const { data: saveResult, error: saveError } = await supabase.rpc(fnName, {
+        p_course_id: course.course_id,
+        p_type_classement: classementType,
+        p_etape_numero: etapeNumeroValue,
+        p_rows: rowsForDb,
+      });
 
-      // Delete old points_ledger entries with proper null handling
-      let deleteQuery = supabase
-        .from("points_ledger")
-        .delete()
-        .eq("course_id", course.course_id)
-        .eq("type_classement", mappedTypeForUpsert);
+      if (saveError) throw saveError;
 
-      if (etapeNumeroValue !== null) {
-        deleteQuery = deleteQuery.eq("etape_numero", etapeNumeroValue);
-      } else {
-        deleteQuery = deleteQuery.is("etape_numero", null);
-      }
+      // Compute points for this course
+      const { data: pointsResult, error: pointsError } = await supabase.rpc("admin_compute_points_for_course", {
+        p_course_id: course.course_id,
+      });
 
-      const { error: deleteError } = await deleteQuery;
-      if (deleteError) throw deleteError;
-
-      // Insert new points_ledger entries
-      const pointsLedger = [];
-      for (const row of validRows) {
-        const isFinished = row.statut === "finished";
-        const points = isFinished ? scoringMap.get(row.position) || 0 : 0;
-
-        // Only create ledger entries for riders with points
-        if (points > 0) {
-          // Find manager_id via rosters
-          const { data: roster } = await supabase
-            .from("rosters")
-            .select("manager_id")
-            .eq("phase_id", course.phase_id)
-            .eq("coureur_id", row.coureur_id!)
-            .maybeSingle();
-
-          if (roster) {
-            pointsLedger.push({
-              course_id: course.course_id,
-              type_classement: typeClassementMap[classementType],
-              etape_numero: etapeNumeroValue,
-              coureur_id: row.coureur_id!,
-              phase_id: course.phase_id,
-              manager_id: roster.manager_id,
-              points,
-            });
-          }
-        }
-      }
-
-      if (pointsLedger.length > 0) {
-        const { error: insertError } = await supabase
-          .from("points_ledger")
-          .insert(pointsLedger);
-
-        if (insertError) throw insertError;
-        managerRowsCount = pointsLedger.length;
-      }
-
-      resultRowsCount = validRows.length;
-      resultRowsPositive = validRows.filter(r => r.statut === "finished" && scoringMap.get(r.position)).length;
+      if (pointsError) throw pointsError;
 
       // Verification check
       const { data: verifyData } = await supabase.rpc("verify_course_save", {
@@ -473,12 +374,9 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       });
 
       return { 
-        inserted: validRows.length, 
-        ledger: pointsLedger.length,
-        result_rows: resultRowsCount,
-        result_rows_positive: resultRowsPositive,
-        manager_rows: managerRowsCount,
-        verify: verifyData?.[0] || null,
+        saveResult,
+        pointsResult,
+        verifyData,
       };
     },
     onSuccess: (data) => {
@@ -490,9 +388,12 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       queryClient.invalidateQueries({ queryKey: ["rankings-kpis"] });
 
       const label = activeTab === "stages" ? `ÉTAPE ${currentStage}` : classementType.toUpperCase();
+      const inserted = (data.saveResult as any)?.inserted_count || 0;
+      const pointsRows = (data.pointsResult as any)?.rows_upserted || 0;
+      
       toast({
         title: "✅ Résultats enregistrés",
-        description: `${label} — ${data.manager_rows} attributions créées · ${data.result_rows_positive} lignes scorées / ${data.result_rows} résultats`,
+        description: `${label} — ${inserted} résultats · ${pointsRows} points attribués`,
       });
       setIsDirty(false);
     },
