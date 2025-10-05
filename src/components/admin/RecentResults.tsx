@@ -87,7 +87,7 @@ export const RecentResults = () => {
       for (const course of recentCourses) {
         const { data, error } = await supabase
           .from('race_results')
-          .select('type_classement, coureur_id')
+          .select('type_classement, coureur_id, etape_numero')
           .eq('course_id', course.course_id);
         
         if (error) {
@@ -108,7 +108,7 @@ export const RecentResults = () => {
         };
         
         statusMap[course.course_id] = {
-          nb_lignes_etapes: data?.filter(r => r.type_classement === 'Etape').length || 0,
+          nb_lignes_etapes: new Set(data?.filter(r => r.type_classement === 'Etape').map(r => r.etape_numero)).size || 0,
           nb_lignes_gc: data?.filter(r => r.type_classement === 'General' && r.coureur_id).length || 0,
           nb_lignes_points: data?.filter(r => r.type_classement === 'Points' && r.coureur_id).length || 0,
           nb_lignes_montagne: data?.filter(r => r.type_classement === 'Montagne' && r.coureur_id).length || 0,
