@@ -26,11 +26,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch all coureurs
+    // Fetch all coureurs (jusqu'à 10000)
     const { data: coureurs, error } = await supabase
       .from('coureurs')
       .select('id, nom, equipe, prix_initial')
-      .order('nom', { ascending: true });
+      .order('nom', { ascending: true })
+      .range(0, 9999);
 
     if (error) throw error;
 
