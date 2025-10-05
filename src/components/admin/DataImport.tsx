@@ -45,10 +45,34 @@ export const DataImport = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Importation réussie",
-        description: data.message,
-      });
+      // Afficher les erreurs détaillées s'il y en a
+      if (data.errorDetails && data.errorDetails.length > 0) {
+        toast({
+          title: "Importation partielle",
+          description: (
+            <div className="space-y-2">
+              <p>{data.message}</p>
+              <div className="mt-2 max-h-40 overflow-y-auto text-xs">
+                <p className="font-semibold">Erreurs détaillées:</p>
+                <ul className="list-disc list-inside">
+                  {data.errorDetails.slice(0, 20).map((err: string, i: number) => (
+                    <li key={i}>{err}</li>
+                  ))}
+                  {data.errorDetails.length > 20 && (
+                    <li>... et {data.errorDetails.length - 20} autres erreurs</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          ),
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Importation réussie",
+          description: data.message,
+        });
+      }
 
       setFile(null);
       // Reset file input
