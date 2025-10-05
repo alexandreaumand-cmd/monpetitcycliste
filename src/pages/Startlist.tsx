@@ -15,8 +15,10 @@ import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const Startlist = () => {
-  const [viewMode, setViewMode] = useState<'list' | 'parse'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'parse' | 'view'>('list');
   const [selectedRaceForParsing, setSelectedRaceForParsing] = useState<any>(null);
+  const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
+  const [selectedRaceForViewing, setSelectedRaceForViewing] = useState<any>(null);
   const [selectedRaceId, setSelectedRaceId] = useState<string>("");
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>("");
   const [textContent, setTextContent] = useState<string>("");
@@ -101,24 +103,29 @@ const Startlist = () => {
     }
   };
 
-  const handleExportCSV = () => {
-    if (!parseResult) return;
+  const handleExportCSV = async (startlistId?: string) => {
+    const idToExport = startlistId || parseResult?.startlist_id;
+    if (!idToExport) return;
 
-    const rows = [['Manager', 'Coureur', 'Équipe', 'Code Équipe']];
-    
-    parseResult.managers.forEach((m: any) => {
-      m.starters.forEach((s: any) => {
-        rows.push([m.manager_nom, s.nom, s.equipe || '', s.team_code || '']);
+    try {
+      const { data, error } = await supabase.functions.invoke('startlist-export-csv', {
+        body: { startlist_id: idToExport }
       });
-    });
 
-    const csv = rows.map(r => r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'startlist.csv';
-    a.click();
+      if (error) throw error;
+
+      const blob = new Blob([data], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `startlist_${idToExport}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('CSV exporté avec succès');
+    } catch (error: any) {
+      console.error('Export error:', error);
+      toast.error('Erreur lors de l\'export: ' + error.message);
+    }
   };
 
   // Fetch upcoming courses
@@ -158,10 +165,24 @@ const Startlist = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('startlist_imports')
-        .select('race_id');
+        .select('id, race_id');
       
       if (error) throw error;
       return data || [];
+    }
+  });
+
+  // Fetch startlist view data when in view mode
+  const { data: startlistViewData, isLoading: isLoadingStartlistView } = useQuery({
+    queryKey: ['startlist-view', selectedStartlistId],
+    enabled: !!selectedStartlistId && viewMode === 'view',
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('startlist-manager-view', {
+        body: { startlist_id: selectedStartlistId }
+      });
+      
+      if (error) throw error;
+      return data;
     }
   });
 
@@ -169,21 +190,145 @@ const Startlist = () => {
     return existingStartlists?.some(s => s.race_id === raceId) || false;
   };
 
+  const getStartlistId = (raceId: string) => {
+    return existingStartlists?.find(sl => sl.race_id === raceId)?.id;
+  };
+
   const handleSelectRace = (race: any) => {
-    setSelectedRaceForParsing(race);
-    setSelectedRaceId(race.id);
-    setSelectedPhaseId(race.phase_id);
-    setViewMode('parse');
+    const startlistId = getStartlistId(race.id);
+    
+    if (startlistId) {
+      // Startlist exists, go to view mode
+      setSelectedStartlistId(startlistId);
+      setSelectedRaceForViewing(race);
+      setViewMode('view');
+    } else {
+      // No startlist, go to parse mode
+      setSelectedRaceForParsing(race);
+      setSelectedRaceId(race.id);
+      setSelectedPhaseId(race.phase_id);
+      setViewMode('parse');
+    }
   };
 
   const handleBackToList = () => {
     setViewMode('list');
     setSelectedRaceForParsing(null);
+    setSelectedStartlistId(null);
+    setSelectedRaceForViewing(null);
     setTextContent('');
     setParseResult(null);
   };
 
+  const handleModifyStartlist = () => {
+    setSelectedRaceForParsing(selectedRaceForViewing);
+    setSelectedRaceId(selectedRaceForViewing?.id);
+    setSelectedPhaseId(selectedRaceForViewing?.phase_id);
+    setViewMode('parse');
+  };
+
   const selectedRace = races.find(r => r.id === selectedRaceId);
+  const isAdmin = currentUser; // Simplified - adjust based on your role logic
+
+  // View mode - show existing startlist
+  if (viewMode === 'view') {
+    if (isLoadingStartlistView) {
+      return (
+        <div className="container mx-auto p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-8 w-64" />
+          </div>
+          <Skeleton className="h-40 w-full" />
+        </div>
+      );
+    }
+
+    if (!startlistViewData) {
+      return (
+        <div className="container mx-auto p-6">
+          <Button variant="ghost" onClick={handleBackToList} className="mb-6">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour aux courses
+          </Button>
+          <Card className="p-6">
+            <p className="text-muted-foreground">Impossible de charger la startlist.</p>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <div className="container mx-auto p-6 space-y-6">
+        <Button variant="ghost" onClick={handleBackToList} className="mb-6">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Retour aux courses
+        </Button>
+
+        <Card className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">{startlistViewData.race.nom}</h2>
+              <p className="text-muted-foreground">
+                {format(new Date(startlistViewData.race.date_debut), 'dd MMMM yyyy', { locale: fr })}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => handleExportCSV(selectedStartlistId!)} variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Exporter CSV
+              </Button>
+              {isAdmin && (
+                <Button onClick={handleModifyStartlist} variant="outline">
+                  Modifier / Réimporter
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="mb-4 p-4 bg-muted rounded-lg">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-medium">Total partants:</span>{' '}
+                <span className="text-muted-foreground">{startlistViewData.totals.starters_all}</span>
+              </div>
+              <div>
+                <span className="font-medium">Managers concernés:</span>{' '}
+                <span className="text-muted-foreground">{startlistViewData.totals.managers}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Coureurs par manager</h3>
+            {startlistViewData.managers.map((manager: any) => (
+              <Card key={manager.manager_id} className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold">{manager.manager_nom}</h4>
+                  <Badge variant="secondary">{manager.starters_count} partant{manager.starters_count > 1 ? 's' : ''}</Badge>
+                </div>
+                <div className="grid gap-2">
+                  {manager.starters.map((starter: any) => (
+                    <div key={starter.coureur_id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                      <div>
+                        <span className="font-medium">{starter.nom}</span>
+                        {starter.equipe && (
+                          <span className="text-sm text-muted-foreground ml-2">({starter.equipe})</span>
+                        )}
+                      </div>
+                      {starter.bib_no && (
+                        <Badge variant="outline">#{starter.bib_no}</Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ))}
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   if (viewMode === 'list') {
     return (
@@ -315,7 +460,7 @@ const Startlist = () => {
           )}
         </div>
         {parseResult && (
-          <Button onClick={handleExportCSV} variant="outline">
+          <Button onClick={() => handleExportCSV()} variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Exporter CSV
           </Button>
