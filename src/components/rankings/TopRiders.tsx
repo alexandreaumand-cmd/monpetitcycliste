@@ -278,7 +278,6 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
                         <SortIcon column="ratio_points_par_prix" />
                       </div>
                     </TableHead>
-                    <TableHead className="text-right">Courses</TableHead>
                     <TableHead>Managers</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -312,21 +311,18 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
                           ? rider.ratio_points_par_prix.toFixed(2)
                           : '—'}
                       </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {rider.courses_count}
-                      </TableCell>
                       <TableCell>
                         {phaseId ? (
                           rider.owners && rider.owners.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
-                              {rider.owners.slice(0, 2).map((owner) => (
+                              {rider.owners.slice(0, 4).map((owner) => (
                                 <Badge key={owner.manager_id} variant="outline" className="text-xs">
                                   {owner.manager_nom}
                                 </Badge>
                               ))}
-                              {rider.owners.length > 2 && (
+                              {rider.owners.length > 4 && (
                                 <Badge variant="outline" className="text-xs">
-                                  +{rider.owners.length - 2}
+                                  +{rider.owners.length - 4}
                                 </Badge>
                               )}
                             </div>
@@ -336,19 +332,19 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
                         ) : (
                           rider.owners_all && rider.owners_all.length > 0 ? (
                             <div className="flex flex-wrap gap-1 items-center">
-                              {rider.owners_all.slice(0, 1).map((owner) => (
+                              {rider.owners_all.slice(0, 3).map((owner) => (
                                 <Badge key={owner.manager_id} variant="outline" className="text-xs">
                                   {owner.manager_nom}
                                 </Badge>
                               ))}
-                              {rider.owners_all.length > 1 && (
+                              {rider.owners_all.length > 3 && (
                                 <Popover>
                                   <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
                                     <Badge 
                                       variant="secondary" 
                                       className="text-xs cursor-pointer hover:bg-secondary/80"
                                     >
-                                      +{rider.owners_all.length - 1}
+                                      +{rider.owners_all.length - 3}
                                       <Info className="h-3 w-3 ml-1" />
                                     </Badge>
                                   </PopoverTrigger>
