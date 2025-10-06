@@ -374,35 +374,41 @@ const Startlist = () => {
             </div>
           </div>
 
-          {/* Image de parcours */}
-          {startlistViewData.route_image_url && (
-            <div className="mb-3 overflow-hidden rounded-lg border">
-              <img 
-                src={startlistViewData.route_image_url} 
-                alt="Parcours" 
-                className="w-full h-auto max-h-[400px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => window.open(startlistViewData.route_image_url, '_blank')}
-              />
-            </div>
-          )}
-
-          {/* Barème de points compact */}
-          {startlistViewData.scoring && startlistViewData.scoring.rules && startlistViewData.scoring.rules.length > 0 && (
-            <Card className="bg-muted/50 p-3 mb-3">
-              <h4 className="font-semibold text-xs mb-2">Barème ({startlistViewData.scoring.categorie})</h4>
-              <div className="grid grid-cols-5 gap-x-4 gap-y-1 text-xs">
-                {startlistViewData.scoring.rules
-                  .filter((r: any) => r.type_classement === 'General')
-                  .slice(0, 10)
-                  .map((rule: any) => (
-                    <div key={rule.place} className="flex gap-1">
-                      <span className="font-medium">{rule.place}e:</span>
-                      <span className="text-muted-foreground">{rule.points}pts</span>
-                    </div>
-                  ))}
-              </div>
-            </Card>
-          )}
+          {/* Section image + barème côte à côte */}
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            {/* Image de parcours */}
+            {startlistViewData.route_image_url && (
+              <Card className="bg-muted/50 p-3 overflow-hidden">
+                <h4 className="font-semibold text-xs mb-2">Parcours</h4>
+                <div className="overflow-hidden rounded border">
+                  <img 
+                    src={startlistViewData.route_image_url} 
+                    alt="Parcours" 
+                    className="w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => window.open(startlistViewData.route_image_url, '_blank')}
+                  />
+                </div>
+              </Card>
+            )}
+            
+            {/* Barème de points */}
+            {startlistViewData.scoring && startlistViewData.scoring.rules && startlistViewData.scoring.rules.length > 0 && (
+              <Card className="bg-muted/50 p-3">
+                <h4 className="font-semibold text-xs mb-2">Barème ({startlistViewData.scoring.categorie})</h4>
+                <div className="grid grid-cols-5 gap-x-4 gap-y-1 text-xs">
+                  {startlistViewData.scoring.rules
+                    .filter((r: any) => r.type_classement === 'General')
+                    .slice(0, 10)
+                    .map((rule: any) => (
+                      <div key={rule.place} className="flex gap-1">
+                        <span className="font-medium">{rule.place}e:</span>
+                        <span className="text-muted-foreground">{rule.points}pts</span>
+                      </div>
+                    ))}
+                </div>
+              </Card>
+            )}
+          </div>
 
           {/* Stats */}
           <div className="flex gap-4 text-xs">
