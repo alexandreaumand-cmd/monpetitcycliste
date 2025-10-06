@@ -345,18 +345,6 @@ const Startlist = () => {
           Retour
         </Button>
 
-        {/* Image de parcours */}
-        {startlistViewData.route_image_url && (
-          <Card className="overflow-hidden">
-            <img 
-              src={startlistViewData.route_image_url} 
-              alt="Parcours" 
-              className="w-full h-auto max-h-[400px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => window.open(startlistViewData.route_image_url, '_blank')}
-            />
-          </Card>
-        )}
-
         {/* Header compact avec barème */}
         <Card className="p-4">
           <div className="flex items-start justify-between mb-3">
@@ -409,6 +397,18 @@ const Startlist = () => {
             <div><span className="font-medium">Managers:</span> {startlistViewData.totals.managers}</div>
             <div><span className="font-medium">Partants:</span> {startlistViewData.totals.starters_all}</div>
           </div>
+
+          {/* Image de parcours */}
+          {startlistViewData.route_image_url && (
+            <div className="mt-4 overflow-hidden rounded-lg border">
+              <img 
+                src={startlistViewData.route_image_url} 
+                alt="Parcours" 
+                className="w-full h-auto max-h-[400px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => window.open(startlistViewData.route_image_url, '_blank')}
+              />
+            </div>
+          )}
         </Card>
 
         {/* Section Managers */}
