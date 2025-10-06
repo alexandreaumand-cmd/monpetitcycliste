@@ -46,6 +46,8 @@ interface TeamKPIs {
   scorers_count: number;
   total_points: number;
   wins_count: number;
+  my_rank: number | null;
+  managers_count: number;
 }
 
 interface Phase {
@@ -66,7 +68,9 @@ export const MyTeam = () => {
   const [kpis, setKpis] = useState<TeamKPIs>({
     scorers_count: 0,
     total_points: 0,
-    wins_count: 0
+    wins_count: 0,
+    my_rank: null,
+    managers_count: 0
   });
   
   // Phase state
@@ -157,7 +161,7 @@ export const MyTeam = () => {
 
       if (error) throw error;
       setCoureurs(data.coureurs || []);
-      setKpis(data.kpis || { scorers_count: 0, total_points: 0, wins_count: 0 });
+      setKpis(data.kpis || { scorers_count: 0, total_points: 0, wins_count: 0, my_rank: null, managers_count: 0 });
     } catch (error) {
       console.error('Error loading team:', error);
       toast({
@@ -391,7 +395,7 @@ export const MyTeam = () => {
 
       {/* Bannière KPI */}
       {coureurs.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex flex-col items-center">
@@ -428,6 +432,27 @@ export const MyTeam = () => {
                 <div className="text-3xl font-bold">{kpis.wins_count}</div>
                 <div className="text-sm text-muted-foreground text-center">
                   Course{kpis.wins_count > 1 ? 's' : ''} gagnée{kpis.wins_count > 1 ? 's' : ''}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center">
+                <Trophy className="h-8 w-8 text-blue-600 mb-2" />
+                <div className="text-3xl font-bold">
+                  {kpis.my_rank ? (
+                    <>
+                      {kpis.my_rank}
+                      <sup className="text-sm ml-0.5">
+                        {kpis.my_rank === 1 ? 'er' : 'e'}
+                      </sup>
+                    </>
+                  ) : '—'}
+                </div>
+                <div className="text-sm text-muted-foreground text-center">
+                  {kpis.managers_count > 0 ? `sur ${kpis.managers_count} managers` : 'Classement'}
                 </div>
               </div>
             </CardContent>

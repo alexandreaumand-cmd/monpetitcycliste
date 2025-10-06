@@ -90,12 +90,46 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Calculer le classement du manager sur la phase
+    let myRank = null;
+    let managersCount = 0;
+    if (phaseId && manager?.id) {
+      const { data: standings } = await supabase
+        .from('points_ledger')
+        .select('manager_id, points')
+        .eq('phase_id', phaseId);
+
+      if (standings && standings.length > 0) {
+        // Agréger les points par manager
+        const managerPoints = new Map<string, number>();
+        standings.forEach((row: any) => {
+          const current = managerPoints.get(row.manager_id) || 0;
+          managerPoints.set(row.manager_id, current + row.points);
+        });
+
+        // Créer un leaderboard trié
+        const leaderboard = Array.from(managerPoints.entries())
+          .map(([managerId, points]) => ({ managerId, points }))
+          .sort((a, b) => b.points - a.points);
+
+        managersCount = leaderboard.length;
+        
+        // Trouver la position du manager actuel
+        const position = leaderboard.findIndex(m => m.managerId === manager.id);
+        if (position !== -1) {
+          myRank = position + 1;
+        }
+      }
+    }
+
     return new Response(JSON.stringify({ 
       coureurs: coureurs || [],
       kpis: {
         scorers_count: scorersCount,
         total_points: totalPoints,
-        wins_count: winsCount
+        wins_count: winsCount,
+        my_rank: myRank,
+        managers_count: managersCount
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
