@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
           .select('*', { count: 'exact', head: true })
           .in('coureur_id', coureurIds)
           .eq('position', 1)
-          .in('type_classement', ['CG', 'Etape'])
+          .in('type_classement', ['General', 'Etape'])
           .in('course_id', courseIds);
         
         winsCount = count || 0;
