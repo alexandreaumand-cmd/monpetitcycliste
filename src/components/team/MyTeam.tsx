@@ -22,6 +22,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MyTeamMobile } from "./MyTeam.mobile";
 
 interface Coureur {
   coureur_id: string;
@@ -61,6 +63,7 @@ interface Phase {
 type SortBy = 'points' | 'ratio' | 'prix' | 'cote';
 
 export const MyTeam = () => {
+  const isMobile = useIsMobile();
   const { toast } = useToast();
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,6 +85,13 @@ export const MyTeam = () => {
   const [selectedCoureur, setSelectedCoureur] = useState<Coureur | null>(null);
   const [pointsDetail, setPointsDetail] = useState<PointDetail[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
+
+  // Mobile version
+  if (isMobile) {
+    return <MyTeamMobile />;
+  }
+
+  // Desktop version below
 
   useEffect(() => {
     loadPhases();
