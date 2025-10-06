@@ -1,14 +1,24 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Star } from "lucide-react";
+import { Star, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Badge } from "@/components/ui/badge";
+
+interface Starter {
+  coureur_id: string;
+  nom: string;
+  equipe?: string;
+}
 
 interface Manager {
   manager_id: string;
   manager_nom: string;
   avg_stars: number | null;
+  starters: Starter[];
+  starters_count: number;
 }
 
 interface ManagerRatingModalProps {
@@ -101,16 +111,38 @@ export function ManagerRatingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Noter les managers</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="space-y-2 py-4">
           {managers.map(manager => (
-            <div key={manager.manager_id} className="flex items-center justify-between py-3 border-b last:border-0">
-              <span className="font-medium">{manager.manager_nom}</span>
-              {renderStars(manager.manager_id)}
-            </div>
+            <Collapsible key={manager.manager_id} className="border rounded-lg">
+              <div className="p-4">
+                <CollapsibleTrigger className="w-full">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="h-4 w-4 transition-transform ui-expanded:rotate-180" />
+                      <span className="font-medium">{manager.manager_nom}</span>
+                      <Badge variant="secondary">{manager.starters_count} coureur{manager.starters_count > 1 ? 's' : ''}</Badge>
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      {renderStars(manager.manager_id)}
+                    </div>
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="ml-6 mt-3 space-y-1 border-t pt-3">
+                    {manager.starters.map(starter => (
+                      <div key={starter.coureur_id} className="text-sm flex justify-between py-1">
+                        <span>{starter.nom}</span>
+                        <span className="text-muted-foreground">{starter.equipe}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </div>
+            </Collapsible>
           ))}
         </div>
         <DialogFooter>
