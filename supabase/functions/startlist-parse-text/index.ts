@@ -23,11 +23,6 @@ function tokenSig(s: string): string {
   return normalize(s).split(' ').sort().join(' ');
 }
 
-// Team code bonus (very light)
-function teamBonus(dbTeam: string, code: string): number {
-  const m = normalize(dbTeam);
-  return m.includes(code) ? 0.03 : 0;
-}
 
 // Simple Levenshtein distance
 function levenshtein(a: string, b: string): number {
@@ -226,9 +221,7 @@ serve(async (req) => {
       // 3) Fuzzy match (manual only, no RPC)
       if (!bestMatch) {
         for (const r of riders) {
-          const score = similarity(entry.normalized, normalize(r.nom));
-          const bonus = teamBonus(r.equipe || '', entry.team_code || '');
-          const finalScore = score + bonus;
+          const finalScore = similarity(entry.normalized, normalize(r.nom));
           
           if (finalScore >= 0.84 && finalScore > matchScore) {
             matchScore = finalScore;
@@ -269,7 +262,7 @@ serve(async (req) => {
         // Get suggestions with on_roster badge
         const suggestions = riders
           .map(r => {
-            const score = similarity(entry.normalized, normalize(r.nom)) + teamBonus(r.equipe || '', entry.team_code || '');
+            const score = similarity(entry.normalized, normalize(r.nom));
             const onRoster = rosters?.some(ro => ro.coureur_id === r.id) || false;
             return {
               coureur_id: r.id,
