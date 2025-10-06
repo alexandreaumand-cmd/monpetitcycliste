@@ -29,15 +29,6 @@ serve(async (req) => {
       }
     });
 
-    // User client for admin check with proper auth context
-    const supabaseUser = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false
-      }
-    });
-
     // Validate the token
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(
       authHeader.replace('Bearer ', '')
@@ -50,14 +41,19 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is admin using user-scoped client
-    const { data: isAdmin, error: adminError } = await supabaseUser.rpc('is_admin');
+    // Check if user is admin by querying user_roles directly with admin client
+    const { data: userRole, error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .single();
 
-    if (adminError) {
-      console.error('is_admin error:', adminError);
+    if (roleError) {
+      console.error('Error checking admin role:', roleError);
     }
 
-    if (!isAdmin) {
+    if (!userRole) {
       return new Response(
         JSON.stringify({ error: 'Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
