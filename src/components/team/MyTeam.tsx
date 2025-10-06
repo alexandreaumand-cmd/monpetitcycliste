@@ -41,7 +41,7 @@ interface TeamKPIs {
   wins_count: number;
 }
 
-type SortBy = 'points' | 'ratio' | 'prix';
+type SortBy = 'points' | 'ratio' | 'prix' | 'cote';
 
 export const MyTeam = () => {
   const { toast } = useToast();
@@ -156,6 +156,8 @@ export const MyTeam = () => {
         return b.ratio_points_par_prix - a.ratio_points_par_prix;
       case 'prix':
         return b.prix_achat - a.prix_achat;
+      case 'cote':
+        return b.cote_initiale - a.cote_initiale;
       default:
         return 0;
     }
@@ -223,6 +225,13 @@ export const MyTeam = () => {
           >
             Prix
           </Button>
+          <Button
+            variant={sortBy === 'cote' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSortBy('cote')}
+          >
+            Cote initiale
+          </Button>
         </div>
       </div>
 
@@ -256,9 +265,7 @@ export const MyTeam = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex flex-col items-center">
-                <Badge className="h-8 w-8 rounded-full flex items-center justify-center text-lg mb-2 bg-yellow-500">
-                  1
-                </Badge>
+                <Trophy className="h-8 w-8 text-yellow-500 mb-2" />
                 <div className="text-3xl font-bold">{kpis.wins_count}</div>
                 <div className="text-sm text-muted-foreground text-center">
                   Course{kpis.wins_count > 1 ? 's' : ''} gagnée{kpis.wins_count > 1 ? 's' : ''}
@@ -300,8 +307,8 @@ export const MyTeam = () => {
                     onClick={() => openCoureurDetail(coureur)}
                   >
                     <TableCell className="font-medium">{coureur.nom}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{coureur.equipe}</Badge>
+                    <TableCell className="text-muted-foreground">
+                      {coureur.equipe}
                     </TableCell>
                     <TableCell className="text-right font-semibold">
                       {coureur.prix_achat.toFixed(0)}
@@ -342,7 +349,7 @@ export const MyTeam = () => {
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <div className="font-medium text-base">{coureur.nom}</div>
-                    <Badge variant="secondary" className="mt-1">{coureur.equipe}</Badge>
+                    <div className="text-sm text-muted-foreground mt-1">{coureur.equipe}</div>
                   </div>
                   <div className="text-right">
                     <div className="flex items-center gap-1 justify-end mb-1">
@@ -380,7 +387,7 @@ export const MyTeam = () => {
                 <DrawerDescription>
                   {selectedCoureur && (
                     <div className="flex items-center gap-3 mt-2">
-                      <Badge variant="secondary">{selectedCoureur.equipe}</Badge>
+                      <span className="text-sm text-muted-foreground">{selectedCoureur.equipe}</span>
                       <span className="text-sm">Prix: {selectedCoureur.prix_achat.toFixed(0)}</span>
                       <span className="text-sm">Cote: {selectedCoureur.cote_initiale.toFixed(0)}</span>
                     </div>

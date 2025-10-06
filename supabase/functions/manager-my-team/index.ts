@@ -39,8 +39,8 @@ Deno.serve(async (req) => {
     if (error) throw error;
 
     // Calculer les KPIs
-    const totalPoints = coureurs?.reduce((sum, c) => sum + Number(c.points_total || 0), 0) || 0;
-    const scorersCount = coureurs?.filter(c => Number(c.points_total || 0) > 0).length || 0;
+    const totalPoints = coureurs?.reduce((sum: number, c: any) => sum + Number(c.points_total || 0), 0) || 0;
+    const scorersCount = coureurs?.filter((c: any) => Number(c.points_total || 0) > 0).length || 0;
 
     // Obtenir l'ID du manager
     const { data: manager } = await supabase
@@ -64,7 +64,11 @@ Deno.serve(async (req) => {
 
     // Compter les courses gagnées (1ère position CG ou Etape)
     let winsCount = 0;
-    if (manager?.id && phaseId) {
+    if (coureurs && coureurs.length > 0 && phaseId) {
+      // Extraire les IDs des coureurs du manager
+      const coureurIds = coureurs.map((c: any) => c.coureur_id);
+      
+      // Récupérer les IDs des courses de la phase
       const { data: courses } = await supabase
         .from('courses')
         .select('id')
@@ -72,13 +76,16 @@ Deno.serve(async (req) => {
 
       if (courses && courses.length > 0) {
         const courseIds = courses.map(c => c.id);
+        
+        // Compter les victoires (position 1) des coureurs du manager
         const { count } = await supabase
           .from('race_results')
           .select('*', { count: 'exact', head: true })
-          .eq('manager_id', manager.id)
+          .in('coureur_id', coureurIds)
           .eq('position', 1)
           .in('type_classement', ['CG', 'Etape'])
           .in('course_id', courseIds);
+        
         winsCount = count || 0;
       }
     }
