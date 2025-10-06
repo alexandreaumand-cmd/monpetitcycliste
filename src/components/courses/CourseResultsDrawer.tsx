@@ -15,6 +15,70 @@ import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 
+// Jersey holders compact bar component
+const JerseyHoldersBar = ({ courseId, etapeNumero }: { courseId: string | null; etapeNumero: number | null }) => {
+  const { data: holders, isLoading } = useQuery({
+    queryKey: ["jersey-holders", courseId, etapeNumero],
+    queryFn: async () => {
+      if (!courseId || !etapeNumero) return null;
+      
+      const jerseyTypes = [
+        { type: 'Porteur Général', icon: '🟡', label: 'Jaune' },
+        { type: 'Porteur Vert', icon: '🟢', label: 'Vert' },
+        { type: 'Porteur Montagne', icon: '🔴', label: 'Pois' },
+        { type: 'Porteur Jeune', icon: '⚪', label: 'Blanc' },
+        { type: 'Porteur Combattif', icon: '🔵', label: 'Combattif' }
+      ];
+      
+      const results = await Promise.all(
+        jerseyTypes.map(async (jersey) => {
+          const { data } = await supabase.functions.invoke('results-course-table', {
+            body: {
+              course_id: courseId,
+              type_classement: jersey.type,
+              etape_numero: etapeNumero
+            }
+          });
+          
+          const holder = data?.rows?.[0];
+          return holder ? {
+            ...jersey,
+            coureur_nom: holder.coureur_nom,
+            equipe: holder.equipe
+          } : null;
+        })
+      );
+      
+      return results.filter(Boolean);
+    },
+    enabled: !!courseId && !!etapeNumero,
+  });
+
+  if (isLoading) {
+    return <Skeleton className="h-12 w-full rounded-lg" />;
+  }
+
+  if (!holders || holders.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="bg-muted/30 rounded-lg p-3 border">
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <span className="font-semibold text-muted-foreground">Maillots :</span>
+        {holders.map((holder: any, idx: number) => (
+          <div key={idx} className="flex items-center gap-1.5">
+            <span className="text-base">{holder.icon}</span>
+            <span className="font-medium">{holder.coureur_nom}</span>
+            <span className="text-muted-foreground text-xs">({holder.equipe})</span>
+            {idx < holders.length - 1 && <span className="text-muted-foreground mx-1">|</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 interface CourseMeta {
   course_nom: string;
   categorie: string;
@@ -279,6 +343,14 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                   className="pl-9"
                 />
               </div>
+
+              {/* Jersey holders for Etape type */}
+              {selectedType === 'Etape' && !loading && (
+                <JerseyHoldersBar 
+                  courseId={courseId} 
+                  etapeNumero={selectedEtape} 
+                />
+              )}
 
               {/* Results count */}
               {!loading && displayedResults.length > 0 && (

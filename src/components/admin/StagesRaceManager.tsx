@@ -494,54 +494,69 @@ function StageEditor({
 
         <div>
           <h3 className="text-sm font-semibold mb-3">Porteurs de maillots (optionnel)</h3>
-          <div className="space-y-3">
-            <div className={`space-y-2 p-2 rounded ${generalHolderEdit !== (jerseyHoldersBase.general_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20' : ''}`}>
-              <label className="text-sm font-medium">Porteur Maillot Leader</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className={`space-y-2 p-3 rounded border ${generalHolderEdit !== (jerseyHoldersBase.general_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-400' : 'border-border'}`}>
+              <label className="text-sm font-medium flex items-center gap-2">
+                <span className="text-lg">🟡</span>
+                Maillot Jaune
+              </label>
               <CoureursCombobox
                 phaseId={phaseId}
                 value={generalHolderEdit || null}
                 onSelect={(coureur) => setGeneralHolderEdit(coureur?.coureur_id || "")}
-                placeholder="Sélectionner le porteur"
+                placeholder="Leader général"
                 showTakenRiders={true}
               />
             </div>
-            <div className={`space-y-2 p-2 rounded ${vertHolderEdit !== (jerseyHoldersBase.vert_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20' : ''}`}>
-              <label className="text-sm font-medium">Porteur Maillot Vert (Points)</label>
+            <div className={`space-y-2 p-3 rounded border ${vertHolderEdit !== (jerseyHoldersBase.vert_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-400' : 'border-border'}`}>
+              <label className="text-sm font-medium flex items-center gap-2">
+                <span className="text-lg">🟢</span>
+                Maillot Vert
+              </label>
               <CoureursCombobox
                 phaseId={phaseId}
                 value={vertHolderEdit || null}
                 onSelect={(coureur) => setVertHolderEdit(coureur?.coureur_id || "")}
-                placeholder="Sélectionner le porteur"
+                placeholder="Classement points"
                 showTakenRiders={true}
               />
             </div>
-            <div className={`space-y-2 p-2 rounded ${montagneHolderEdit !== (jerseyHoldersBase.montagne_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20' : ''}`}>
-              <label className="text-sm font-medium">Porteur Maillot Montagne</label>
+            <div className={`space-y-2 p-3 rounded border ${montagneHolderEdit !== (jerseyHoldersBase.montagne_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-400' : 'border-border'}`}>
+              <label className="text-sm font-medium flex items-center gap-2">
+                <span className="text-lg">🔴</span>
+                Maillot à Pois
+              </label>
               <CoureursCombobox
                 phaseId={phaseId}
                 value={montagneHolderEdit || null}
                 onSelect={(coureur) => setMontagneHolderEdit(coureur?.coureur_id || "")}
-                placeholder="Sélectionner le porteur"
+                placeholder="Classement montagne"
                 showTakenRiders={true}
               />
             </div>
-            <div className={`space-y-2 p-2 rounded ${jeuneHolderEdit !== (jerseyHoldersBase.jeune_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20' : ''}`}>
-              <label className="text-sm font-medium">Porteur Maillot Jeune (Blanc)</label>
+            <div className={`space-y-2 p-3 rounded border ${jeuneHolderEdit !== (jerseyHoldersBase.jeune_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-400' : 'border-border'}`}>
+              <label className="text-sm font-medium flex items-center gap-2">
+                <span className="text-lg">⚪</span>
+                Maillot Blanc
+              </label>
               <CoureursCombobox
                 phaseId={phaseId}
                 value={jeuneHolderEdit || null}
                 onSelect={(coureur) => setJeuneHolderEdit(coureur?.coureur_id || "")}
-                placeholder="Sélectionner le porteur"
+                placeholder="Meilleur jeune"
                 showTakenRiders={true}
               />
             </div>
-            <div className={`space-y-2 p-2 rounded ${combattifHolderEdit !== (jerseyHoldersBase.combattif_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20' : ''}`}>
-              <label className="text-sm font-medium">Porteur Maillot Combattif</label>
+            <div className={`space-y-2 p-3 rounded border ${combattifHolderEdit !== (jerseyHoldersBase.combattif_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-400' : 'border-border'}`}>
+              <label className="text-sm font-medium flex items-center gap-2">
+                <span className="text-lg">🔵</span>
+                Maillot Combattif
+              </label>
               <CoureursCombobox
                 phaseId={phaseId}
                 value={combattifHolderEdit || null}
                 onSelect={(coureur) => setCombattifHolderEdit(coureur?.coureur_id || "")}
-                placeholder="Sélectionner le porteur"
+                placeholder="Plus combattif"
                 showTakenRiders={true}
               />
             </div>
