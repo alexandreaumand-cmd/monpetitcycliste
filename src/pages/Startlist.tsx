@@ -389,7 +389,7 @@ const Startlist = () => {
         </Card>
 
         {/* Grille compacte des managers */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-5 gap-3">
           {startlistViewData.managers.map((manager: any) => (
             <Card key={manager.manager_id} className="p-3">
               {/* En-tête manager */}
