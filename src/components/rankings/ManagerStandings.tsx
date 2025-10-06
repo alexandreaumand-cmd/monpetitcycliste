@@ -82,7 +82,66 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
     enabled: !!phaseId,
   });
 
+  // Fetch previous global standings for evolution calculation (global view only)
+  const { data: previousGlobalStandings } = useQuery({
+    queryKey: ["previous-global-standings"],
+    queryFn: async () => {
+      if (phaseId) return null; // Only for global standings
+      
+      // 1. Find the active phase
+      const { data: activePhase } = await supabase
+        .from("phases")
+        .select("id, index_dans_saison, saison_id")
+        .eq("statut", "active")
+        .order("index_dans_saison", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (!activePhase || activePhase.index_dans_saison === 1) return null;
+      
+      // 2. Find all completed phases before the active phase
+      const { data: completedPhases } = await supabase
+        .from("phases")
+        .select("id")
+        .eq("saison_id", activePhase.saison_id)
+        .eq("statut", "completed")
+        .lt("index_dans_saison", activePhase.index_dans_saison);
+      
+      if (!completedPhases || completedPhases.length === 0) return null;
+      
+      const phaseIds = completedPhases.map(p => p.id);
+      
+      // 3. Calculate global standings up to the end of the previous phase
+      const { data: pointsData } = await supabase
+        .from("points_ledger")
+        .select("manager_id, points")
+        .in("phase_id", phaseIds);
+      
+      if (!pointsData) return null;
+      
+      // 4. Aggregate by manager
+      const managerPoints = new Map<string, number>();
+      pointsData.forEach(row => {
+        const current = managerPoints.get(row.manager_id) || 0;
+        managerPoints.set(row.manager_id, current + (row.points || 0));
+      });
+      
+      // 5. Sort and create a rank map
+      const sorted = Array.from(managerPoints.entries())
+        .sort((a, b) => b[1] - a[1]);
+      
+      const rankMap = new Map<string, number>();
+      sorted.forEach(([managerId], idx) => {
+        rankMap.set(managerId, idx + 1);
+      });
+      
+      return rankMap;
+    },
+    enabled: !phaseId, // Only if global standings
+  });
+
   const maxPoints = standings?.[0]?.total_points || 1;
+  const totalPoints = standings?.reduce((sum, s) => sum + s.total_points, 0) || 1;
 
   const getRankIcon = (rank: number, isBottomThree: boolean) => {
     if (rank === 1) return <Trophy className="h-6 w-6 text-yellow-500" />;
@@ -129,7 +188,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               <TableHead>Manager</TableHead>
               <TableHead className="text-right">Points</TableHead>
               <TableHead className="text-right">Écart</TableHead>
-              {phaseId && <TableHead className="w-24 text-center">Évolution</TableHead>}
+              {(phaseId || previousGlobalStandings) && <TableHead className="w-24 text-center">Évolution</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -137,12 +196,25 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               const rank = idx + 1;
               const isBottomThree = standings && idx >= standings.length - 3;
               const gapToPrevious = idx > 0 ? standings[idx - 1].total_points - standing.total_points : 0;
+              const percentage = ((standing.total_points / totalPoints) * 100).toFixed(1);
               
               // Calculate evolution
               let evolution: number | null = null;
               let isNew = false;
+              
+              // For phase-specific view
               if (phaseId && previousStandings) {
                 const previousRank = previousStandings.get(standing.manager_id);
+                if (previousRank) {
+                  evolution = previousRank - rank; // Positive = gained places
+                } else {
+                  isNew = true;
+                }
+              }
+              
+              // For global view
+              if (!phaseId && previousGlobalStandings) {
+                const previousRank = previousGlobalStandings.get(standing.manager_id);
                 if (previousRank) {
                   evolution = previousRank - rank; // Positive = gained places
                 } else {
@@ -171,17 +243,22 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                     {standing.manager_nom}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-baseline justify-end gap-1">
-                      <span className={cn(
-                        "font-mono",
-                        rank === 1 && "text-xl font-bold text-yellow-600",
-                        rank === 2 && "text-lg font-bold text-gray-500",
-                        rank === 3 && "text-lg font-bold text-amber-600",
-                        rank > 3 && "text-base font-semibold text-foreground"
-                      )}>
-                        {standing.total_points}
-                      </span>
-                      <span className="text-xs text-muted-foreground">pts</span>
+                    <div className="space-y-1">
+                      <div className="flex items-baseline justify-end gap-1">
+                        <span className={cn(
+                          "font-mono",
+                          rank === 1 && "text-xl font-bold text-yellow-600",
+                          rank === 2 && "text-lg font-bold text-gray-500",
+                          rank === 3 && "text-lg font-bold text-amber-600",
+                          rank > 3 && "text-base font-semibold text-foreground"
+                        )}>
+                          {standing.total_points}
+                        </span>
+                        <span className="text-xs text-muted-foreground">pts</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {percentage}%
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
@@ -193,7 +270,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                       </span>
                     )}
                   </TableCell>
-                  {phaseId && (
+                  {(phaseId || previousGlobalStandings) && (
                     <TableCell className="text-center">
                       {isNew ? (
                         <Badge variant="outline" className="text-xs">NEW</Badge>
