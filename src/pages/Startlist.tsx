@@ -412,10 +412,63 @@ const Startlist = () => {
 
     return (
       <div className="max-w-7xl mx-auto p-4 space-y-4 overflow-hidden">
-        <Button variant="ghost" onClick={handleBackToList} className="mb-4">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Retour
-        </Button>
+        <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
+          <Button variant="ghost" onClick={handleBackToList}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+          
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={handleExportImage} variant="outline" size="sm">
+              <Camera className="h-3 w-3 mr-1" />
+              Exporter la SL
+            </Button>
+            {isAdmin && (
+              <RouteImageUploader 
+                startlistId={selectedStartlistId!}
+                currentImageUrl={startlistViewData.route_image_url}
+                onUploadComplete={() => queryClient.invalidateQueries({ queryKey: ['startlist-view', selectedStartlistId] })}
+              />
+            )}
+            {canModify && (
+              <Button onClick={handleModifyStartlist} variant="outline" size="sm">
+                Modifier la SL
+              </Button>
+            )}
+            {isAdmin && !startlistViewData?.pcs_validated && (
+              <Button 
+                onClick={handlePcsValidation} 
+                variant="default" 
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1" />
+                Valider PCS
+              </Button>
+            )}
+            {isAdmin && startlistViewData?.pcs_validated && (
+              <Button 
+                onClick={handlePcsValidation} 
+                variant="outline"
+                size="sm"
+                className="bg-green-600 text-white hover:bg-green-700 border-green-600"
+              >
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                PCS OK (retirer)
+              </Button>
+            )}
+            {isAdmin && startlistViewData.managers.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowRatingModal(true)}
+              >
+                <Star className="h-4 w-4 mr-2" />
+                Noter les managers
+              </Button>
+            )}
+          </div>
+        </div>
 
         {/* ZONE DE CAPTURE */}
         <div ref={exportRef} className="relative space-y-4">
@@ -564,63 +617,6 @@ const Startlist = () => {
           </DialogContent>
         </Dialog>
 
-        {/* BOUTONS D'ACTION - HORS ZONE DE CAPTURE */}
-        <Card className="p-4">
-          <div className="flex gap-2 flex-wrap">
-            <Button onClick={handleExportImage} variant="outline" size="sm">
-              <Camera className="h-3 w-3 mr-1" />
-              Exporter en image
-            </Button>
-            <Button onClick={() => handleExportCSV(selectedStartlistId!)} variant="outline" size="sm">
-              <Download className="h-3 w-3 mr-1" />
-              Exporter CSV
-            </Button>
-            {isAdmin && (
-              <RouteImageUploader 
-                startlistId={selectedStartlistId!}
-                currentImageUrl={startlistViewData.route_image_url}
-                onUploadComplete={() => queryClient.invalidateQueries({ queryKey: ['startlist-view', selectedStartlistId] })}
-              />
-            )}
-            {canModify && (
-              <Button onClick={handleModifyStartlist} variant="outline" size="sm">
-                Modifier
-              </Button>
-            )}
-            {isAdmin && !startlistViewData?.pcs_validated && (
-              <Button 
-                onClick={handlePcsValidation} 
-                variant="default" 
-                size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <CheckCircle2 className="h-4 w-4 mr-1" />
-                Valider PCS
-              </Button>
-            )}
-            {isAdmin && startlistViewData?.pcs_validated && (
-              <Button 
-                onClick={handlePcsValidation} 
-                variant="outline"
-                size="sm"
-                className="bg-green-600 text-white hover:bg-green-700 border-green-600"
-              >
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                PCS OK (retirer)
-              </Button>
-            )}
-            {isAdmin && startlistViewData.managers.length > 0 && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setShowRatingModal(true)}
-              >
-                <Star className="h-4 w-4 mr-2" />
-                Noter les managers
-              </Button>
-            )}
-          </div>
-        </Card>
 
         {/* Modal de notation */}
         <ManagerRatingModal 

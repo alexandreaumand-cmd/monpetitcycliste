@@ -100,7 +100,7 @@ export function RouteImageUploader({ startlistId, currentImageUrl, onUploadCompl
         disabled={isUploading}
       >
         <Upload className="h-4 w-4 mr-2" />
-        {isUploading ? 'Téléchargement...' : currentImageUrl ? 'Modifier l\'image' : 'Ajouter une image'}
+        {isUploading ? 'Téléchargement...' : currentImageUrl ? 'Modifier le parcours' : 'Ajouter le parcours'}
       </Button>
     </div>
   );
