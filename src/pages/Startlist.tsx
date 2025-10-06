@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Users, AlertCircle, Download, FileText, Calendar, Trophy, ArrowLeft, CheckCircle2, Star } from "lucide-react";
+import { Loader2, Users, AlertCircle, Download, FileText, Calendar, Trophy, ArrowLeft, CheckCircle2, Star, Camera } from "lucide-react";
+import { toPng } from "html-to-image";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -39,6 +40,7 @@ const Startlist = () => {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadData();
@@ -356,6 +358,30 @@ const Startlist = () => {
   // Check if user can modify: admin OR creator of the startlist
   const canModify = isAdmin || (currentUser?.id && startlistMeta?.created_by_manager_id && currentUser.id === startlistMeta.created_by_manager_id);
 
+  const handleExportImage = async () => {
+    if (!exportRef.current) return;
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const dataUrl = await toPng(exportRef.current, {
+        quality: 1,
+        pixelRatio: 2,
+        cacheBust: true
+      });
+      
+      const link = document.createElement('a');
+      link.download = `startlist-${startlistViewData?.race.nom}-${format(new Date(), 'yyyy-MM-dd')}.png`;
+      link.href = dataUrl;
+      link.click();
+      
+      toast.success("Image exportée avec succès !");
+    } catch (error) {
+      toast.error("Erreur lors de l'export");
+      console.error(error);
+    }
+  };
+
   // View mode - show existing startlist
   if (viewMode === 'view') {
     if (isLoadingStartlistView) {
@@ -391,56 +417,24 @@ const Startlist = () => {
           Retour
         </Button>
 
-        {/* Header compact avec barème */}
-        <Card className="p-4">
-          <div className="flex items-start justify-between mb-3">
-            <div>
+        {/* ZONE DE CAPTURE */}
+        <div ref={exportRef} className="relative space-y-4">
+          {/* Badge PCS OK - visible uniquement si validé */}
+          {startlistViewData.pcs_validated && (
+            <div className="absolute top-2 right-2 z-10 bg-green-600 text-white px-3 py-1 rounded-full flex items-center gap-1 text-sm font-semibold shadow-lg">
+              <CheckCircle2 className="h-4 w-4" />
+              PCS OK
+            </div>
+          )}
+
+          {/* Header compact avec barème */}
+          <Card className="p-4">
+            <div className="mb-3">
               <h2 className="text-xl font-bold">{startlistViewData.race.nom}</h2>
               <p className="text-sm text-muted-foreground">
                 {format(new Date(startlistViewData.race.date_debut), 'dd MMMM yyyy', { locale: fr })} • {startlistViewData.race.categorie}
               </p>
             </div>
-            <div className="flex gap-2">
-              {isAdmin && (
-                <RouteImageUploader 
-                  startlistId={selectedStartlistId!}
-                  currentImageUrl={startlistViewData.route_image_url}
-                  onUploadComplete={() => queryClient.invalidateQueries({ queryKey: ['startlist-view', selectedStartlistId] })}
-                />
-              )}
-              <Button onClick={() => handleExportCSV(selectedStartlistId!)} variant="outline" size="sm">
-                <Download className="h-3 w-3 mr-1" />
-                CSV
-              </Button>
-              {canModify && (
-                <Button onClick={handleModifyStartlist} variant="outline" size="sm">
-                  Modifier
-                </Button>
-              )}
-              {isAdmin && !startlistViewData?.pcs_validated && (
-                <Button 
-                  onClick={handlePcsValidation} 
-                  variant="default" 
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-1" />
-                  Valider PCS
-                </Button>
-              )}
-              {isAdmin && startlistViewData?.pcs_validated && (
-                <Button 
-                  onClick={handlePcsValidation} 
-                  variant="outline"
-                  size="sm"
-                  className="bg-green-600 text-white hover:bg-green-700 border-green-600"
-                >
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  PCS OK (retirer)
-                </Button>
-              )}
-            </div>
-          </div>
 
           {/* Section barème + image côte à côte */}
           <div className="grid grid-cols-4 gap-3 mb-3">
@@ -478,12 +472,12 @@ const Startlist = () => {
             )}
           </div>
 
-          {/* Stats */}
-          <div className="flex gap-4 text-xs">
-            <div><span className="font-medium">Managers:</span> {startlistViewData.totals.managers}</div>
-            <div><span className="font-medium">Partants:</span> {startlistViewData.totals.starters_all}</div>
-          </div>
-        </Card>
+            {/* Stats */}
+            <div className="flex gap-4 text-xs">
+              <div><span className="font-medium">Managers:</span> {startlistViewData.totals.managers}</div>
+              <div><span className="font-medium">Partants:</span> {startlistViewData.totals.starters_all}</div>
+            </div>
+          </Card>
 
         {/* Modal pour afficher l'image en grand */}
         <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
@@ -499,10 +493,122 @@ const Startlist = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Section Managers */}
+          {/* Section Managers */}
+          <Card className="p-4">
+            <h3 className="text-lg font-semibold mb-4">Managers au départ</h3>
+
+            {/* Grille compacte des managers */}
+            <div className="grid grid-cols-5 gap-3">
+              {startlistViewData.managers.map((manager: any) => (
+                <Card key={manager.manager_id} className="p-3">
+                  {/* En-tête manager */}
+                  <div className="mb-2 pb-2 border-b">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-sm truncate mb-1">{manager.manager_nom}</h4>
+                        <ManagerStars avgStars={manager.avg_stars} votes={manager.votes} showVotes={manager.votes > 1} />
+                        {manager.sponsor && (
+                          <p className="text-xs text-muted-foreground truncate mt-1">{manager.sponsor}</p>
+                        )}
+                      </div>
+                    </div>
+                  
+                    {/* Classements */}
+                    <div className="grid grid-cols-2 gap-2 text-xs mb-1">
+                      <div>
+                        <span className="font-medium">Phase:</span> #{manager.rank_phase || '-'}
+                        {manager.points_phase > 0 && (
+                          <span className="text-muted-foreground ml-1">({manager.points_phase}pts)</span>
+                        )}
+                      </div>
+                      <div>
+                        <span className="font-medium">CG:</span> #{manager.rank_total || '-'}
+                        {manager.points_total > 0 && (
+                          <span className="text-muted-foreground ml-1">({manager.points_total}pts)</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Liste coureurs */}
+                  <div className="space-y-0.5">
+                    {manager.starters.map((starter: any) => (
+                      <div key={starter.coureur_id} className="text-xs flex justify-between items-center gap-2">
+                        <span className="font-medium truncate flex-1 min-w-0">{starter.nom}</span>
+                        {starter.equipe && (
+                          <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                            {starter.equipe.substring(0, 15)}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </Card>
+        </div>
+        {/* FIN ZONE DE CAPTURE */}
+
+        {/* Modal pour afficher l'image en grand */}
+        <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
+          <DialogContent className="max-w-7xl w-[95vw] max-h-[95vh] p-0">
+            <DialogTitle className="sr-only">Image du parcours</DialogTitle>
+            <div className="relative w-full h-full flex items-center justify-center p-4">
+              <img 
+                src={startlistViewData.route_image_url} 
+                alt="Parcours en grand format" 
+                className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* BOUTONS D'ACTION - HORS ZONE DE CAPTURE */}
         <Card className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Managers au départ</h3>
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={handleExportImage} variant="outline" size="sm">
+              <Camera className="h-3 w-3 mr-1" />
+              Exporter en image
+            </Button>
+            <Button onClick={() => handleExportCSV(selectedStartlistId!)} variant="outline" size="sm">
+              <Download className="h-3 w-3 mr-1" />
+              Exporter CSV
+            </Button>
+            {isAdmin && (
+              <RouteImageUploader 
+                startlistId={selectedStartlistId!}
+                currentImageUrl={startlistViewData.route_image_url}
+                onUploadComplete={() => queryClient.invalidateQueries({ queryKey: ['startlist-view', selectedStartlistId] })}
+              />
+            )}
+            {canModify && (
+              <Button onClick={handleModifyStartlist} variant="outline" size="sm">
+                Modifier
+              </Button>
+            )}
+            {isAdmin && !startlistViewData?.pcs_validated && (
+              <Button 
+                onClick={handlePcsValidation} 
+                variant="default" 
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1" />
+                Valider PCS
+              </Button>
+            )}
+            {isAdmin && startlistViewData?.pcs_validated && (
+              <Button 
+                onClick={handlePcsValidation} 
+                variant="outline"
+                size="sm"
+                className="bg-green-600 text-white hover:bg-green-700 border-green-600"
+              >
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                PCS OK (retirer)
+              </Button>
+            )}
             {isAdmin && startlistViewData.managers.length > 0 && (
               <Button 
                 variant="outline" 
@@ -513,56 +619,6 @@ const Startlist = () => {
                 Noter les managers
               </Button>
             )}
-          </div>
-
-          {/* Grille compacte des managers */}
-          <div className="grid grid-cols-5 gap-3">
-            {startlistViewData.managers.map((manager: any) => (
-              <Card key={manager.manager_id} className="p-3">
-                {/* En-tête manager */}
-                <div className="mb-2 pb-2 border-b">
-                  <div className="flex items-center justify-between mb-1">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-sm truncate mb-1">{manager.manager_nom}</h4>
-                    <ManagerStars avgStars={manager.avg_stars} votes={manager.votes} showVotes={manager.votes > 1} />
-                      {manager.sponsor && (
-                        <p className="text-xs text-muted-foreground truncate mt-1">{manager.sponsor}</p>
-                      )}
-                    </div>
-                  </div>
-                
-                {/* Classements */}
-                <div className="grid grid-cols-2 gap-2 text-xs mb-1">
-                  <div>
-                    <span className="font-medium">Phase:</span> #{manager.rank_phase || '-'}
-                    {manager.points_phase > 0 && (
-                      <span className="text-muted-foreground ml-1">({manager.points_phase}pts)</span>
-                    )}
-                  </div>
-                  <div>
-                    <span className="font-medium">CG:</span> #{manager.rank_total || '-'}
-                    {manager.points_total > 0 && (
-                      <span className="text-muted-foreground ml-1">({manager.points_total}pts)</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Liste coureurs */}
-              <div className="space-y-0.5">
-                {manager.starters.map((starter: any) => (
-                  <div key={starter.coureur_id} className="text-xs flex justify-between items-center gap-2">
-                    <span className="font-medium truncate flex-1 min-w-0">{starter.nom}</span>
-                    {starter.equipe && (
-                      <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                        {starter.equipe.substring(0, 15)}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </Card>
-          ))}
           </div>
         </Card>
 
