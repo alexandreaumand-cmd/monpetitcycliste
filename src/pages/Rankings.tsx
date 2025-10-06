@@ -18,13 +18,6 @@ import { RankingsMobile } from "./Rankings.mobile";
 
 export default function Rankings() {
   const isMobile = useIsMobile();
-
-  // Render mobile version if on mobile
-  if (isMobile) {
-    return <RankingsMobile />;
-  }
-
-  // Desktop version below (unchanged)
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -46,6 +39,13 @@ export default function Rankings() {
     setSelectedManager(managerId);
     setDetailsOpen(true);
   };
+
+  // ✅ Render mobile version AFTER all hooks
+  if (isMobile) {
+    return <RankingsMobile />;
+  }
+
+  // Desktop version
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-6">
