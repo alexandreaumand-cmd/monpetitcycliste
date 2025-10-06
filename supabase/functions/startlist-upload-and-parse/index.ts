@@ -203,11 +203,14 @@ function similarity(a: string, b: string): number {
 }
 
 serve(async (req) => {
+  console.log('[DEPLOY] startlist-upload-and-parse v2025-10-06-01 STARTING');
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('[DEPLOY] Handler reached, creating Supabase client');
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -357,6 +360,7 @@ serve(async (req) => {
       .from('name_aliases')
       .select('alias_text, coureur_id, source_team');
 
+    console.log('[DEPLOY] Aliases loaded:', (aliases || []).length, 'entries');
     console.log('[DEBUG] Loaded', (aliases || []).length, 'name aliases');
 
     const aliasMap = new Map<string, { coureur_id: string; source_team: string | null }[]>();
