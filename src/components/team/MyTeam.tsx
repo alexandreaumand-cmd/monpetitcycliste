@@ -35,6 +35,12 @@ interface PointDetail {
   total_points: number;
 }
 
+interface TeamKPIs {
+  scorers_count: number;
+  total_points: number;
+  wins_count: number;
+}
+
 type SortBy = 'points' | 'ratio' | 'prix';
 
 export const MyTeam = () => {
@@ -42,6 +48,11 @@ export const MyTeam = () => {
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>('points');
+  const [kpis, setKpis] = useState<TeamKPIs>({
+    scorers_count: 0,
+    total_points: 0,
+    wins_count: 0
+  });
   
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -81,6 +92,7 @@ export const MyTeam = () => {
 
       if (error) throw error;
       setCoureurs(data.coureurs || []);
+      setKpis(data.kpis || { scorers_count: 0, total_points: 0, wins_count: 0 });
     } catch (error) {
       console.error('Error loading team:', error);
       toast({
@@ -150,14 +162,20 @@ export const MyTeam = () => {
   });
 
   const getRatioColor = (ratio: number) => {
-    if (ratio > 1) return "text-green-600 dark:text-green-400";
-    if (ratio < 1) return "text-red-600 dark:text-red-400";
+    if (ratio > 10) return "text-green-800 dark:text-green-300";
+    if (ratio >= 4 && ratio <= 10) return "text-green-600 dark:text-green-400";
+    if (ratio >= 2 && ratio < 4) return "text-yellow-600 dark:text-yellow-400";
+    if (ratio > 0 && ratio < 2) return "text-orange-600 dark:text-orange-400";
+    if (ratio === 0) return "text-red-600 dark:text-red-400";
     return "text-muted-foreground";
   };
 
   const getRatioBgColor = (ratio: number) => {
-    if (ratio > 1) return "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900";
-    if (ratio < 1) return "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900";
+    if (ratio > 10) return "bg-green-100 dark:bg-green-950/30 border-green-300 dark:border-green-800";
+    if (ratio >= 4 && ratio <= 10) return "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900";
+    if (ratio >= 2 && ratio < 4) return "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900";
+    if (ratio > 0 && ratio < 2) return "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900";
+    if (ratio === 0) return "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900";
     return "";
   };
 
@@ -208,6 +226,49 @@ export const MyTeam = () => {
         </div>
       </div>
 
+      {/* Bannière KPI */}
+      {coureurs.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center">
+                <Trophy className="h-8 w-8 text-primary mb-2" />
+                <div className="text-3xl font-bold">{kpis.scorers_count}</div>
+                <div className="text-sm text-muted-foreground text-center">
+                  Scoreur{kpis.scorers_count > 1 ? 's' : ''} sur la phase
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center">
+                <TrendingUp className="h-8 w-8 text-green-600 mb-2" />
+                <div className="text-3xl font-bold">{kpis.total_points}</div>
+                <div className="text-sm text-muted-foreground text-center">
+                  Points marqués
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center">
+                <Badge className="h-8 w-8 rounded-full flex items-center justify-center text-lg mb-2 bg-yellow-500">
+                  1
+                </Badge>
+                <div className="text-3xl font-bold">{kpis.wins_count}</div>
+                <div className="text-sm text-muted-foreground text-center">
+                  Course{kpis.wins_count > 1 ? 's' : ''} gagnée{kpis.wins_count > 1 ? 's' : ''}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {coureurs.length === 0 ? (
         <Card className="p-12 text-center">
           <Trophy className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
@@ -228,7 +289,7 @@ export const MyTeam = () => {
                   <TableHead className="text-right">Prix d'achat</TableHead>
                   <TableHead className="text-right">Cote initiale</TableHead>
                   <TableHead className="text-right">Points totaux</TableHead>
-                  <TableHead className="text-right">Ratio pts/€</TableHead>
+                  <TableHead className="text-right">Ratio</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -243,10 +304,10 @@ export const MyTeam = () => {
                       <Badge variant="secondary">{coureur.equipe}</Badge>
                     </TableCell>
                     <TableCell className="text-right font-semibold">
-                      {coureur.prix_achat.toFixed(0)}€
+                      {coureur.prix_achat.toFixed(0)}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                      {coureur.cote_initiale.toFixed(0)}€
+                      {coureur.cote_initiale.toFixed(0)}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -261,7 +322,7 @@ export const MyTeam = () => {
                         ) : coureur.ratio_points_par_prix < 1 ? (
                           <TrendingDown className="h-4 w-4" />
                         ) : null}
-                        <span>{coureur.ratio_points_par_prix.toFixed(2)} pts/€</span>
+                        <span>{coureur.ratio_points_par_prix.toFixed(2)}</span>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -270,43 +331,40 @@ export const MyTeam = () => {
             </Table>
           </Card>
 
-          {/* Mobile cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
+          {/* Mobile list - sans vignettes */}
+          <div className="space-y-0 md:hidden divide-y">
             {sortedCoureurs.map((coureur) => (
-              <Card 
+              <div 
                 key={coureur.coureur_id}
-                className={`cursor-pointer hover:shadow-lg transition-shadow ${getRatioBgColor(coureur.ratio_points_par_prix)}`}
+                className={`cursor-pointer hover:bg-muted/50 p-4 transition-colors ${getRatioBgColor(coureur.ratio_points_par_prix)}`}
                 onClick={() => openCoureurDetail(coureur)}
               >
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">{coureur.nom}</CardTitle>
-                  <Badge variant="secondary" className="w-fit">{coureur.equipe}</Badge>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Prix d'achat:</span>
-                    <span className="font-semibold">{coureur.prix_achat.toFixed(0)}€</span>
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <div className="font-medium text-base">{coureur.nom}</div>
+                    <Badge variant="secondary" className="mt-1">{coureur.equipe}</Badge>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Cote:</span>
-                    <span>{coureur.cote_initiale.toFixed(0)}€</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t">
-                    <div className="flex items-center gap-1">
+                  <div className="text-right">
+                    <div className="flex items-center gap-1 justify-end mb-1">
                       <Trophy className="h-4 w-4 text-primary" />
                       <span className="font-bold text-lg">{coureur.points_total}</span>
                     </div>
-                    <div className={`flex items-center gap-1 font-semibold text-sm ${getRatioColor(coureur.ratio_points_par_prix)}`}>
+                    <div className={`flex items-center gap-1 justify-end font-semibold text-sm ${getRatioColor(coureur.ratio_points_par_prix)}`}>
                       {coureur.ratio_points_par_prix > 1 ? (
                         <TrendingUp className="h-3 w-3" />
                       ) : coureur.ratio_points_par_prix < 1 ? (
                         <TrendingDown className="h-3 w-3" />
                       ) : null}
-                      <span>{coureur.ratio_points_par_prix.toFixed(2)} pts/€</span>
+                      <span>{coureur.ratio_points_par_prix.toFixed(2)}</span>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                
+                <div className="flex gap-4 text-sm text-muted-foreground">
+                  <span>Prix: <span className="font-semibold text-foreground">{coureur.prix_achat.toFixed(0)}</span></span>
+                  <span>Cote: <span className="font-semibold text-foreground">{coureur.cote_initiale.toFixed(0)}</span></span>
+                </div>
+              </div>
             ))}
           </div>
         </>
@@ -323,8 +381,8 @@ export const MyTeam = () => {
                   {selectedCoureur && (
                     <div className="flex items-center gap-3 mt-2">
                       <Badge variant="secondary">{selectedCoureur.equipe}</Badge>
-                      <span className="text-sm">Prix: {selectedCoureur.prix_achat.toFixed(0)}€</span>
-                      <span className="text-sm">Cote: {selectedCoureur.cote_initiale.toFixed(0)}€</span>
+                      <span className="text-sm">Prix: {selectedCoureur.prix_achat.toFixed(0)}</span>
+                      <span className="text-sm">Cote: {selectedCoureur.cote_initiale.toFixed(0)}</span>
                     </div>
                   )}
                 </DrawerDescription>
@@ -353,7 +411,7 @@ export const MyTeam = () => {
                   ) : null}
                   <div>
                     <div className="text-2xl font-bold">{selectedCoureur.ratio_points_par_prix.toFixed(2)}</div>
-                    <div className="text-xs text-muted-foreground">pts/€</div>
+                    <div className="text-xs text-muted-foreground">Ratio</div>
                   </div>
                 </div>
               </div>

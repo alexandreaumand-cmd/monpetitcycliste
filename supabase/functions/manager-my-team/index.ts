@@ -38,7 +38,59 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
-    return new Response(JSON.stringify({ coureurs: coureurs || [] }), {
+    // Calculer les KPIs
+    const totalPoints = coureurs?.reduce((sum, c) => sum + Number(c.points_total || 0), 0) || 0;
+    const scorersCount = coureurs?.filter(c => Number(c.points_total || 0) > 0).length || 0;
+
+    // Obtenir l'ID du manager
+    const { data: manager } = await supabase
+      .from('managers')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+
+    // Obtenir la phase active ou celle fournie
+    let phaseId = phase_id;
+    if (!phaseId) {
+      const { data: activePhase } = await supabase
+        .from('phases')
+        .select('id')
+        .eq('statut', 'active')
+        .order('date_debut', { ascending: false })
+        .limit(1)
+        .single();
+      phaseId = activePhase?.id;
+    }
+
+    // Compter les courses gagnées (1ère position CG ou Etape)
+    let winsCount = 0;
+    if (manager?.id && phaseId) {
+      const { data: courses } = await supabase
+        .from('courses')
+        .select('id')
+        .eq('phase_id', phaseId);
+
+      if (courses && courses.length > 0) {
+        const courseIds = courses.map(c => c.id);
+        const { count } = await supabase
+          .from('race_results')
+          .select('*', { count: 'exact', head: true })
+          .eq('manager_id', manager.id)
+          .eq('position', 1)
+          .in('type_classement', ['CG', 'Etape'])
+          .in('course_id', courseIds);
+        winsCount = count || 0;
+      }
+    }
+
+    return new Response(JSON.stringify({ 
+      coureurs: coureurs || [],
+      kpis: {
+        scorers_count: scorersCount,
+        total_points: totalPoints,
+        wins_count: winsCount
+      }
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
