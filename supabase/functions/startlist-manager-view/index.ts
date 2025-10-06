@@ -77,6 +77,32 @@ Deno.serve(async (req) => {
 
     if (rostersError) throw rostersError;
 
+    // Get last 5 results for each coureur in the startlist
+    const coureurIds = entries.map(e => e.coureur_id).filter(Boolean);
+    
+    const { data: recentResults } = await supabase
+      .from('race_results')
+      .select('coureur_id, position, type_classement, date_classement')
+      .in('coureur_id', coureurIds)
+      .in('type_classement', ['General', 'Etape'])
+      .not('position', 'is', null)
+      .eq('statut', 'finished')
+      .order('date_classement', { ascending: false });
+
+    // Build results map (max 5 results per coureur)
+    const resultsMap = new Map();
+    if (recentResults) {
+      for (const result of recentResults) {
+        if (!resultsMap.has(result.coureur_id)) {
+          resultsMap.set(result.coureur_id, []);
+        }
+        const coureurResults = resultsMap.get(result.coureur_id);
+        if (coureurResults.length < 5) {
+          coureurResults.push(result.position);
+        }
+      }
+    }
+
     // Get phase standings
     const { data: phaseStandings } = await supabase
       .from('v_manager_standings_by_phase')
@@ -173,12 +199,13 @@ Deno.serve(async (req) => {
       const roster = rosters.find(r => r.coureur_id === entry.coureur_id);
       if (roster) {
         const manager = managerMap.get(roster.manager_id);
-        manager.starters.push({
-          coureur_id: entry.coureur_id,
-          nom: coureurData.nom,
-          equipe: coureurData.equipe,
-          bib_no: entry.bib_no
-        });
+      manager.starters.push({
+        coureur_id: entry.coureur_id,
+        nom: coureurData.nom,
+        equipe: coureurData.equipe,
+        bib_no: entry.bib_no,
+        recent_results: resultsMap.get(entry.coureur_id) || []
+      });
         manager.starters_count++;
       }
     }
