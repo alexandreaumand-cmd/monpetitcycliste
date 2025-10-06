@@ -9,6 +9,7 @@ import { Loader2, Users, AlertCircle, Download, FileText, Calendar, Trophy, Arro
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { differenceInDays, format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -37,6 +38,7 @@ const Startlist = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -403,7 +405,7 @@ const Startlist = () => {
                     src={startlistViewData.route_image_url} 
                     alt="Parcours" 
                     className="w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => window.open(startlistViewData.route_image_url, '_blank')}
+                    onClick={() => setIsImageModalOpen(true)}
                   />
                 </div>
               </Card>
@@ -416,6 +418,20 @@ const Startlist = () => {
             <div><span className="font-medium">Partants:</span> {startlistViewData.totals.starters_all}</div>
           </div>
         </Card>
+
+        {/* Modal pour afficher l'image en grand */}
+        <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
+          <DialogContent className="max-w-7xl w-[95vw] max-h-[95vh] p-0">
+            <DialogTitle className="sr-only">Image du parcours</DialogTitle>
+            <div className="relative w-full h-full flex items-center justify-center p-4">
+              <img 
+                src={startlistViewData.route_image_url} 
+                alt="Parcours en grand format" 
+                className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Section Managers */}
         <Card className="p-4">
