@@ -40,36 +40,34 @@ export default function Rankings() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Phase Filter */}
-        <div className="flex items-center justify-end gap-3">
-          <span className="text-sm text-muted-foreground">Filtrer par phase :</span>
-          <Select 
-            value={selectedPhase || "all"} 
-            onValueChange={(v) => setSelectedPhase(v === "all" ? null : v)}
-          >
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Toutes phases" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes phases</SelectItem>
-              {phases?.map((phase) => (
-                <SelectItem key={phase.id} value={phase.id}>
-                  Phase {phase.index_dans_saison}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Main Content */}
         <Tabs defaultValue="standings" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 max-w-3xl">
-            <TabsTrigger value="standings">Classement</TabsTrigger>
-            <TabsTrigger value="riders">Top Coureurs</TabsTrigger>
-            <TabsTrigger value="timeline">Chronologie</TabsTrigger>
-            <TabsTrigger value="team">Détail par équipe</TabsTrigger>
-            <TabsTrigger value="course">Par course</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between gap-4">
+            <TabsList className="grid w-full grid-cols-5 max-w-3xl">
+              <TabsTrigger value="standings">Classement</TabsTrigger>
+              <TabsTrigger value="riders">Top Coureurs</TabsTrigger>
+              <TabsTrigger value="timeline">Chronologie</TabsTrigger>
+              <TabsTrigger value="team">Détail par équipe</TabsTrigger>
+              <TabsTrigger value="course">Par course</TabsTrigger>
+            </TabsList>
+            
+            <Select 
+              value={selectedPhase || "all"} 
+              onValueChange={(v) => setSelectedPhase(v === "all" ? null : v)}
+            >
+              <SelectTrigger className="w-48 shrink-0">
+                <SelectValue placeholder="Toutes phases" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes phases</SelectItem>
+                {phases?.map((phase) => (
+                  <SelectItem key={phase.id} value={phase.id}>
+                    Phase {phase.index_dans_saison}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <TabsContent value="standings" className="space-y-4">
             <ManagerStandings 

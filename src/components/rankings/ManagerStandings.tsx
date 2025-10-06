@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, TrendingUp, Medal } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 type StandingsProps = {
   phaseId?: string | null;
@@ -39,10 +39,11 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
 
   const maxPoints = standings?.[0]?.total_points || 1;
 
-  const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Trophy className="h-5 w-5 text-yellow-500" />;
-    if (rank === 2) return <Medal className="h-5 w-5 text-gray-400" />;
-    if (rank === 3) return <Medal className="h-5 w-5 text-amber-700" />;
+  const getRankIcon = (rank: number, isBottomThree: boolean) => {
+    if (rank === 1) return <Trophy className="h-6 w-6 text-yellow-500" />;
+    if (rank === 2) return <Medal className="h-6 w-6 text-gray-400" />;
+    if (rank === 3) return <Medal className="h-6 w-6 text-amber-600" />;
+    if (isBottomThree) return <span className="text-red-500 font-bold">#{rank}</span>;
     return <span className="text-muted-foreground">#{rank}</span>;
   };
 
@@ -82,24 +83,31 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               <TableHead className="w-16">Rang</TableHead>
               <TableHead>Manager</TableHead>
               <TableHead className="text-right">Points</TableHead>
-              <TableHead className="text-right">Courses</TableHead>
-              <TableHead className="w-48">Progression</TableHead>
+              <TableHead className="text-right">Écart au leader</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {standings?.map((standing, idx) => {
               const rank = idx + 1;
-              const delta = idx > 0 ? standing.total_points - standings[idx - 1].total_points : 0;
-              const progressPercent = (standing.total_points / maxPoints) * 100;
+              const isBottomThree = standings && idx >= standings.length - 3;
+              const gapToLeader = maxPoints - standing.total_points;
 
               return (
                 <TableRow 
                   key={standing.manager_id}
-                  className={onManagerClick ? "cursor-pointer hover:bg-muted/50" : ""}
+                  className={cn(
+                    "cursor-pointer transition-all",
+                    rank === 1 && "bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-950/30 border-l-4 border-yellow-500 font-bold",
+                    rank === 2 && "bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-900/30 border-l-4 border-gray-400 font-semibold",
+                    rank === 3 && "bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-950/30 border-l-4 border-amber-600 font-semibold",
+                    rank <= 3 && "shadow-sm",
+                    isBottomThree && rank > 3 && "bg-gradient-to-r from-red-50/30 to-transparent dark:from-red-950/20 border-l-4 border-red-500/50",
+                    onManagerClick && "hover:bg-muted/50"
+                  )}
                   onClick={() => onManagerClick?.(standing.manager_id)}
                 >
                   <TableCell className="font-medium">
-                    {getRankIcon(rank)}
+                    {getRankIcon(rank, isBottomThree)}
                   </TableCell>
                   <TableCell className="font-semibold">
                     {standing.manager_nom}
@@ -109,18 +117,14 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                       {standing.total_points} pts
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {standing.courses_count}
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <Progress value={progressPercent} className="h-2" />
-                      {delta !== 0 && idx > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          {delta} pts d'écart
-                        </p>
-                      )}
-                    </div>
+                  <TableCell className="text-right">
+                    {rank === 1 ? (
+                      <span className="text-sm text-muted-foreground font-medium">Leader</span>
+                    ) : (
+                      <span className="text-sm text-destructive font-mono">
+                        −{gapToLeader} pts
+                      </span>
+                    )}
                   </TableCell>
                 </TableRow>
               );
