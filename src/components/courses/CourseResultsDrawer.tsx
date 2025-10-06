@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
+import { StageJerseyBonuses } from "./StageJerseyBonuses";
 
 // Jersey holders compact bar component
 const JerseyHoldersBar = ({ courseId, etapeNumero }: { courseId: string | null; etapeNumero: number | null }) => {
@@ -167,8 +168,11 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
       if (data?.meta) {
         setMeta(data.meta);
         
+        // Filter out "Porteur *" types
+        const types = (data.meta.types_disponibles || [])
+          .filter((type: string) => !type.startsWith('Porteur'));
+        
         // Set default type (prefer General, otherwise first available)
-        const types = data.meta.types_disponibles || [];
         const defaultType = types.includes('General') ? 'General' : types[0];
         setSelectedType(defaultType);
 
@@ -302,16 +306,18 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
             <TabsContent value="results" className="space-y-4 mt-4">
               {/* Type selector pills */}
               <div className="flex gap-2 flex-wrap">
-                {meta?.types_disponibles?.map((type) => (
-                  <Button
-                    key={type}
-                    variant={selectedType === type ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleTypeChange(type)}
-                  >
-                    {type}
-                  </Button>
-                ))}
+                {meta?.types_disponibles
+                  ?.filter(type => !type.startsWith('Porteur'))
+                  .map((type) => (
+                    <Button
+                      key={type}
+                      variant={selectedType === type ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleTypeChange(type)}
+                    >
+                      {type}
+                    </Button>
+                  ))}
               </div>
 
               {/* Etape selector if applicable */}
@@ -454,6 +460,14 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                     </TableBody>
                   </Table>
                 </div>
+              )}
+
+              {/* Jersey bonuses section for Etape type */}
+              {selectedType === 'Etape' && selectedEtape && !loading && (
+                <StageJerseyBonuses 
+                  courseId={courseId!} 
+                  etapeNumero={selectedEtape}
+                />
               )}
             </TabsContent>
 
