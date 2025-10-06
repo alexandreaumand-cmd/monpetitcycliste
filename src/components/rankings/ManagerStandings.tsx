@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, TrendingUp, TrendingDown, Medal } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -144,9 +144,9 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
   const totalPoints = standings?.reduce((sum, s) => sum + s.total_points, 0) || 1;
 
   const getRankIcon = (rank: number, isBottomThree: boolean) => {
-    if (rank === 1) return <Trophy className="h-5 w-5 text-yellow-500" />;
-    if (rank === 2) return <Medal className="h-5 w-5 text-gray-400" />;
-    if (rank === 3) return <Medal className="h-5 w-5 text-amber-600" />;
+    if (rank === 1) return <span className="text-xl">🥇</span>;
+    if (rank === 2) return <span className="text-xl">🥈</span>;
+    if (rank === 3) return <span className="text-xl">🥉</span>;
     if (isBottomThree) return <span className="text-red-500 font-bold text-sm">#{rank}</span>;
     return <span className="text-muted-foreground text-sm">#{rank}</span>;
   };
