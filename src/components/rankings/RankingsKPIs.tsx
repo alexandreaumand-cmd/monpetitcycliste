@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Laugh, Frown, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
 
@@ -167,34 +168,46 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                   <h3 className="font-semibold">{kpi.label}</h3>
                 </div>
                 
-                <p className="text-2xl font-bold">
-                  {award?.managerName || (
-                    <span className="text-muted-foreground text-lg">Non attribué</span>
-                  )}
-                </p>
-                
-                {isAdmin && (
-                  <Select
-                    value={award?.managerId || "none"}
-                    onValueChange={(value) => {
-                      updateAward.mutate({
-                        awardType: kpi.type,
-                        managerId: value === "none" ? null : value,
-                      });
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choisir un manager" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Aucun</SelectItem>
-                      {managers?.map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.nom}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {isAdmin ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <p className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors">
+                        {award?.managerName || (
+                          <span className="text-muted-foreground text-lg">Non attribué</span>
+                        )}
+                      </p>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm mb-2">Choisir un manager</h4>
+                        <div className="space-y-1 max-h-64 overflow-y-auto">
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start"
+                            onClick={() => updateAward.mutate({ awardType: kpi.type, managerId: null })}
+                          >
+                            Aucun
+                          </Button>
+                          {managers?.map((m) => (
+                            <Button
+                              key={m.id}
+                              variant="ghost"
+                              className="w-full justify-start"
+                              onClick={() => updateAward.mutate({ awardType: kpi.type, managerId: m.id })}
+                            >
+                              {m.nom}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <p className="text-2xl font-bold">
+                    {award?.managerName || (
+                      <span className="text-muted-foreground text-lg">Non attribué</span>
+                    )}
+                  </p>
                 )}
               </div>
             </CardContent>
