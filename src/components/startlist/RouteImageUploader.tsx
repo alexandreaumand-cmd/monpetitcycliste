@@ -41,14 +41,33 @@ export function RouteImageUploader({ startlistId, currentImageUrl, onUploadCompl
       formData.append('startlist_id', startlistId);
       formData.append('file', file);
 
-      const { data, error } = await supabase.functions.invoke('startlist-upload-route-image', {
-        body: formData
-      });
+      // Get session for auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Vous devez être connecté");
+        return;
+      }
 
-      if (error) throw error;
+      // Use direct fetch with proper multipart/form-data handling
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/startlist-upload-route-image`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: formData,
+        }
+      );
 
-      if (data?.route_image_url) {
-        onUploadComplete(data.route_image_url);
+      const json = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(json?.error || 'Upload failed');
+      }
+
+      if (json?.route_image_url) {
+        onUploadComplete(json.route_image_url);
         toast.success("Image téléchargée", {
           description: "L'image du parcours a été mise à jour"
         });

@@ -374,6 +374,18 @@ const Startlist = () => {
             </div>
           </div>
 
+          {/* Image de parcours */}
+          {startlistViewData.route_image_url && (
+            <div className="mb-3 overflow-hidden rounded-lg border">
+              <img 
+                src={startlistViewData.route_image_url} 
+                alt="Parcours" 
+                className="w-full h-auto max-h-[400px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => window.open(startlistViewData.route_image_url, '_blank')}
+              />
+            </div>
+          )}
+
           {/* Barème de points compact */}
           {startlistViewData.scoring && startlistViewData.scoring.rules && startlistViewData.scoring.rules.length > 0 && (
             <Card className="bg-muted/50 p-3 mb-3">
@@ -397,18 +409,6 @@ const Startlist = () => {
             <div><span className="font-medium">Managers:</span> {startlistViewData.totals.managers}</div>
             <div><span className="font-medium">Partants:</span> {startlistViewData.totals.starters_all}</div>
           </div>
-
-          {/* Image de parcours */}
-          {startlistViewData.route_image_url && (
-            <div className="mt-4 overflow-hidden rounded-lg border">
-              <img 
-                src={startlistViewData.route_image_url} 
-                alt="Parcours" 
-                className="w-full h-auto max-h-[400px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => window.open(startlistViewData.route_image_url, '_blank')}
-              />
-            </div>
-          )}
         </Card>
 
         {/* Section Managers */}
