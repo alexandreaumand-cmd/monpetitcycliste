@@ -22,8 +22,11 @@ import { RouteImageUploader } from "@/components/startlist/RouteImageUploader";
 import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
 import { FormIndicator } from "@/components/startlist/FormIndicator";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { StartlistMobile } from "./Startlist.mobile";
 
 const Startlist = () => {
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'list' | 'parse' | 'view'>('list');
   const [selectedRaceForParsing, setSelectedRaceForParsing] = useState<any>(null);
@@ -42,6 +45,13 @@ const Startlist = () => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+
+  // Mobile version
+  if (isMobile) {
+    return <StartlistMobile />;
+  }
+
+  // Desktop version below
 
   useEffect(() => {
     loadData();

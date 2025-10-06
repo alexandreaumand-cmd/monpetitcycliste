@@ -1,0 +1,475 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import {
+  ChipGroup,
+  MobileCard,
+  MobileBottomSheet,
+  KPIRow,
+  MobileEmptyState,
+  MobileStickyBottom,
+} from "@/components/mobile";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Trophy,
+  FileText,
+  Loader2,
+  Users,
+  Calendar,
+  Star,
+  CheckCircle2,
+  AlertCircle,
+  ArrowLeft,
+  Image as ImageIcon,
+} from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { ManagerStars } from "@/components/startlist/ManagerStars";
+import { FormIndicator } from "@/components/startlist/FormIndicator";
+
+export const StartlistMobile = () => {
+  const queryClient = useQueryClient();
+  const { isAdmin } = useUserRole();
+  const [viewMode, setViewMode] = useState<"list" | "parse" | "view">("list");
+  const [selectedRaceId, setSelectedRaceId] = useState("");
+  const [selectedPhaseId, setSelectedPhaseId] = useState("");
+  const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
+  const [textContent, setTextContent] = useState("");
+  const [parseResult, setParseResult] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showUnmatched, setShowUnmatched] = useState(false);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+
+  // Fetch races
+  const { data: races } = useQuery({
+    queryKey: ["startlist-races"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("courses")
+        .select("id, nom, date_debut, phase_id")
+        .order("date_debut", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch phases
+  const { data: phases } = useQuery({
+    queryKey: ["startlist-phases"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("phases")
+        .select("id, index_dans_saison, saisons(annee)")
+        .order("index_dans_saison", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch startlist view data
+  const { data: startlistViewData, isLoading: viewLoading } = useQuery({
+    queryKey: ["startlist-view-mobile", selectedStartlistId],
+    queryFn: async () => {
+      if (!selectedStartlistId) return null;
+      
+      const { data, error } = await supabase.functions.invoke("startlist-manager-view", {
+        body: { startlist_id: selectedStartlistId },
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedStartlistId && viewMode === "view",
+  });
+
+  const handleParse = async () => {
+    if (!textContent.trim()) {
+      toast.error("Veuillez coller le texte de la startlist");
+      return;
+    }
+
+    if (!selectedPhaseId) {
+      toast.error("Veuillez sélectionner une phase");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("startlist-parse-text", {
+        body: {
+          race_id: selectedRaceId || null,
+          phase_id: selectedPhaseId,
+          text: textContent,
+        },
+      });
+
+      if (error) throw error;
+      setParseResult(data);
+      toast.success("Parsing terminé !");
+    } catch (error: any) {
+      toast.error("Erreur : " + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectRace = (raceId: string, startlistId: string) => {
+    setSelectedStartlistId(startlistId);
+    setViewMode("view");
+  };
+
+  // LIST MODE
+  if (viewMode === "list") {
+    return (
+      <div className="p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold">Startlists</h2>
+          <Button size="sm" onClick={() => setViewMode("parse")}>
+            <FileText className="h-4 w-4 mr-2" />
+            Parser
+          </Button>
+        </div>
+
+        {!races || races.length === 0 ? (
+          <MobileEmptyState
+            icon={<Trophy className="h-12 w-12" />}
+            title="Aucune course"
+            description="Les courses apparaîtront ici"
+          />
+        ) : (
+          <div className="space-y-3">
+            {races.map((race) => (
+              <MobileCard
+                key={race.id}
+                title={race.nom}
+                subtitle={format(new Date(race.date_debut), "dd MMMM yyyy", { locale: fr })}
+                avatar={
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Calendar className="h-5 w-5 text-primary" />
+                  </div>
+                }
+                onClick={() => {
+                  // Check if startlist exists for this race
+                  supabase
+                    .from("startlist_imports")
+                    .select("id")
+                    .eq("race_id", race.id)
+                    .order("created_at", { ascending: false })
+                    .limit(1)
+                    .single()
+                    .then(({ data }) => {
+                      if (data) {
+                        handleSelectRace(race.id, data.id);
+                      } else {
+                        toast.info("Aucune startlist pour cette course");
+                      }
+                    });
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // PARSE MODE
+  if (viewMode === "parse") {
+    return (
+      <div className="p-4 space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Button variant="ghost" size="sm" onClick={() => setViewMode("list")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+          <h2 className="text-lg font-bold flex-1">Parser une startlist</h2>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Course (optionnel)</label>
+            <Select value={selectedRaceId} onValueChange={setSelectedRaceId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir une course..." />
+              </SelectTrigger>
+              <SelectContent>
+                {races?.map((race) => (
+                  <SelectItem key={race.id} value={race.id}>
+                    {race.nom}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">Phase *</label>
+            <Select value={selectedPhaseId} onValueChange={setSelectedPhaseId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner une phase..." />
+              </SelectTrigger>
+              <SelectContent>
+                {phases?.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    Phase {p.index_dans_saison} - {(p.saisons as any)?.annee}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              Coller le texte de la startlist
+            </label>
+            <Textarea
+              value={textContent}
+              onChange={(e) => setTextContent(e.target.value)}
+              placeholder="0. MBH NESPOLI Lorenzo 0:00"
+              className="min-h-[200px] font-mono text-sm"
+            />
+          </div>
+
+          <Button onClick={handleParse} disabled={isLoading} className="w-full touch-target">
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Identification...
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4 mr-2" />
+                Identifier les coureurs
+              </>
+            )}
+          </Button>
+
+          {parseResult && (
+            <div className="space-y-4">
+              <KPIRow
+                items={[
+                  { label: "Lignes", value: parseResult.counts.parsed },
+                  { label: "Match DB", value: parseResult.counts.matched_db, trend: "up" },
+                  { label: "Dans roster", value: parseResult.counts.on_roster, trend: "up" },
+                ]}
+              />
+              
+              {parseResult.counts.unmatched > 0 && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowUnmatched(true)}
+                >
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  Voir les {parseResult.counts.unmatched} non trouvés
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // VIEW MODE
+  if (viewMode === "view") {
+    if (viewLoading) {
+      return (
+        <div className="p-4 space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+          ))}
+        </div>
+      );
+    }
+
+    if (!startlistViewData) {
+      return (
+        <div className="p-4">
+          <Button variant="ghost" onClick={() => setViewMode("list")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+          <MobileEmptyState
+            icon={<AlertCircle className="h-12 w-12" />}
+            title="Erreur"
+            description="Impossible de charger la startlist"
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="pb-20">
+        <div className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" size="sm" onClick={() => setViewMode("list")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour
+            </Button>
+            {startlistViewData.pcs_validated && (
+              <Badge className="bg-green-600 text-white">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                PCS OK
+              </Badge>
+            )}
+          </div>
+
+          {/* Race info */}
+          <div>
+            <h2 className="text-xl font-bold">{startlistViewData.race.nom}</h2>
+            <p className="text-sm text-muted-foreground">
+              {format(new Date(startlistViewData.race.date_debut), "dd MMMM yyyy", { locale: fr })} •{" "}
+              {startlistViewData.race.categorie}
+            </p>
+          </div>
+
+          {/* Route image */}
+          {startlistViewData.route_image_url && (
+            <div
+              className="rounded-xl overflow-hidden border cursor-pointer"
+              onClick={() => setImageModalOpen(true)}
+            >
+              <img
+                src={startlistViewData.route_image_url}
+                alt="Parcours"
+                className="w-full h-auto object-cover"
+              />
+            </div>
+          )}
+
+          {/* KPIs */}
+          <KPIRow
+            items={[
+              { label: "Managers", value: startlistViewData.totals.managers, icon: <Users className="h-4 w-4" /> },
+              { label: "Partants", value: startlistViewData.totals.starters_all, icon: <Trophy className="h-4 w-4" /> },
+            ]}
+          />
+
+          {/* Managers */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Managers au départ</h3>
+            <div className="space-y-3">
+              {startlistViewData.managers.map((manager: any) => (
+                <MobileCard
+                  key={manager.manager_id}
+                  title={manager.manager_nom}
+                  subtitle={
+                    <div className="space-y-1">
+                      <ManagerStars avgStars={manager.avg_stars} votes={manager.votes} showVotes={manager.votes > 1} />
+                      <div className="flex gap-3 text-xs text-muted-foreground">
+                        <span>Phase: #{manager.rank_phase || "-"}</span>
+                        <span>CG: #{manager.rank_total || "-"}</span>
+                      </div>
+                    </div>
+                  }
+                  avatar={
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-primary/10">
+                        {manager.manager_nom
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")
+                          .slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                  }
+                  badge={
+                    <Badge variant="outline" className="text-xs">
+                      {manager.starters_count} coureurs
+                    </Badge>
+                  }
+                >
+                  <div className="mt-2 space-y-1">
+                    {manager.starters.slice(0, 3).map((starter: any) => (
+                      <div key={starter.coureur_id} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="font-medium truncate flex-1">{starter.nom}</span>
+                        <FormIndicator results={starter.recent_results || []} />
+                      </div>
+                    ))}
+                    {manager.starters.length > 3 && (
+                      <p className="text-xs text-muted-foreground">
+                        +{manager.starters.length - 3} autres
+                      </p>
+                    )}
+                  </div>
+                </MobileCard>
+              ))}
+            </div>
+          </div>
+
+          {/* Sans propriétaire */}
+          {startlistViewData.without_owner && startlistViewData.without_owner.length > 0 && (
+            <div className="rounded-xl bg-muted/50 p-4">
+              <h4 className="font-semibold text-sm mb-2">
+                Sans propriétaire ({startlistViewData.without_owner.length})
+              </h4>
+              <div className="flex flex-wrap gap-1.5">
+                {startlistViewData.without_owner.map((coureur: any) => (
+                  <Badge key={coureur.coureur_id} variant="outline" className="text-xs">
+                    {coureur.nom}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sticky button Noter */}
+        {isAdmin && startlistViewData.managers.length > 0 && (
+          <MobileStickyBottom>
+            <Button className="w-full touch-target" onClick={() => setShowRatingModal(true)}>
+              <Star className="h-4 w-4 mr-2" />
+              Noter les managers
+            </Button>
+          </MobileStickyBottom>
+        )}
+
+        {/* Image modal */}
+        <MobileBottomSheet
+          open={imageModalOpen}
+          onOpenChange={setImageModalOpen}
+          title="Parcours"
+        >
+          {startlistViewData.route_image_url && (
+            <img
+              src={startlistViewData.route_image_url}
+              alt="Parcours en grand"
+              className="w-full h-auto rounded-lg"
+            />
+          )}
+        </MobileBottomSheet>
+
+        {/* Unmatched sheet */}
+        <MobileBottomSheet
+          open={showUnmatched}
+          onOpenChange={setShowUnmatched}
+          title="Coureurs non trouvés"
+          description="Ces coureurs n'ont pas été identifiés dans la base"
+        >
+          <div className="space-y-2">
+            {parseResult?.entries
+              ?.filter((e: any) => !e.coureur_id)
+              .map((entry: any, idx: number) => (
+                <div key={idx} className="p-3 rounded-lg bg-muted/50 text-sm">
+                  {entry.source_name}
+                </div>
+              ))}
+          </div>
+        </MobileBottomSheet>
+      </div>
+    );
+  }
+
+  return null;
+};

@@ -5,7 +5,7 @@ import { ChevronRight } from "lucide-react";
 
 interface MobileCardProps {
   title: string;
-  subtitle?: string;
+  subtitle?: string | React.ReactNode;
   meta?: string;
   avatar?: React.ReactNode;
   badge?: React.ReactNode;
@@ -37,9 +37,9 @@ export const MobileCard = ({
         </div>
         
         {subtitle && (
-          <p className="text-xs text-muted-foreground line-clamp-2">
+          <div className="text-xs text-muted-foreground line-clamp-2">
             {subtitle}
-          </p>
+          </div>
         )}
         
         {meta && (
