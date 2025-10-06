@@ -14,6 +14,8 @@ import { differenceInDays, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUserRole } from "@/hooks/useUserRole";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const Startlist = () => {
   const [viewMode, setViewMode] = useState<'list' | 'parse' | 'view'>('list');
@@ -29,6 +31,7 @@ const Startlist = () => {
   const [phases, setPhases] = useState<any[]>([]);
   const [showUnmatched, setShowUnmatched] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -85,7 +88,7 @@ const Startlist = () => {
           race_id: selectedRaceId || null,
           phase_id: selectedPhaseId,
           text: textContent,
-          with_diagnostics: false
+          with_diagnostics: showDiagnostics
         }
       });
 
@@ -654,6 +657,17 @@ const Startlist = () => {
             />
           </div>
 
+          {isAdmin && (
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="diagnostics"
+                checked={showDiagnostics}
+                onCheckedChange={setShowDiagnostics}
+              />
+              <Label htmlFor="diagnostics">Activer les diagnostics (admin)</Label>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <Button 
               onClick={handleParse} 
@@ -853,38 +867,112 @@ const Startlist = () => {
           <div className="mt-6 space-y-4">
             {parseResult?.unmatched.map((entry: any, i: number) => (
               <Card key={i}>
-                <CardContent className="pt-4 space-y-2">
-                  <div className="font-medium">{entry.source_name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    Code: {entry.team_code} | Ligne {entry.line_no}
-                  </div>
-                  <div className="text-sm text-muted-foreground italic">
-                    Suggestion: {entry.canonical_guess}
+                <CardContent className="pt-4 space-y-3">
+                  <div>
+                    <div className="font-medium text-lg">{entry.source_name}</div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Code équipe: {entry.team_code} • Ligne {entry.line_no}
+                    </div>
+                    <div className="text-sm text-muted-foreground italic mt-1">
+                      Canon: {entry.canonical_guess}
+                    </div>
                   </div>
                   
                   <Separator />
                   
-                  <div className="text-sm font-medium">Suggestions:</div>
-                  {entry.suggestions.length > 0 ? (
-                    <div className="space-y-1">
-                      {entry.suggestions.map((sug: any, j: number) => (
-                        <div key={j} className="text-sm flex justify-between">
-                          <span>{sug.nom} ({sug.equipe})</span>
-                          <span className="text-muted-foreground">
-                            {(sug.score * 100).toFixed(0)}%
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">Aucune suggestion</div>
-                  )}
+                  <div>
+                    <div className="text-sm font-medium mb-2">Suggestions de la base de données:</div>
+                    {entry.suggestions && entry.suggestions.length > 0 ? (
+                      <div className="space-y-2">
+                        {entry.suggestions.map((sug: any, j: number) => (
+                          <div 
+                            key={j} 
+                            className="p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{sug.nom}</div>
+                                <div className="text-xs text-muted-foreground">{sug.equipe || 'Sans équipe'}</div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {sug.on_roster ? (
+                                  <Badge variant="default" className="bg-green-600 text-xs">
+                                    Dans roster
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs">
+                                    Sans propriétaire
+                                  </Badge>
+                                )}
+                                <Badge variant="secondary" className="text-xs">
+                                  {(sug.score * 100).toFixed(0)}%
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground p-4 text-center bg-muted/30 rounded-md">
+                        Aucune suggestion trouvée
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Diagnostics panel */}
+      {parseResult?.diagnostics && parseResult.diagnostics.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-lg">Diagnostics (admin) — 20 premières lignes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Ligne</th>
+                    <th className="text-left p-2">Source</th>
+                    <th className="text-left p-2">Canon</th>
+                    <th className="text-left p-2">Type</th>
+                    <th className="text-left p-2">Score</th>
+                    <th className="text-left p-2">DB Match</th>
+                    <th className="text-left p-2">Roster</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {parseResult.diagnostics.slice(0, 20).map((diag: any, i: number) => (
+                    <tr key={i} className="border-b hover:bg-muted/50">
+                      <td className="p-2">{diag.line_no}</td>
+                      <td className="p-2 font-mono text-xs">{diag.name_raw}</td>
+                      <td className="p-2 font-mono text-xs text-muted-foreground">{diag.canonical_guess}</td>
+                      <td className="p-2">
+                        <Badge variant={diag.match_type === 'none' ? 'destructive' : 'default'} className="text-xs">
+                          {diag.match_type}
+                        </Badge>
+                      </td>
+                      <td className="p-2">{diag.score ? (diag.score * 100).toFixed(0) + '%' : '-'}</td>
+                      <td className="p-2 text-xs">{diag.db_nom || '-'}</td>
+                      <td className="p-2">
+                        {diag.on_roster !== undefined && (
+                          <Badge variant={diag.on_roster ? 'default' : 'outline'} className="text-xs">
+                            {diag.on_roster ? '✓' : '✗'}
+                          </Badge>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

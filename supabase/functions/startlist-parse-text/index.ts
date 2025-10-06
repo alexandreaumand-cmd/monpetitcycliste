@@ -11,7 +11,7 @@ function normalize(s: string): string {
   return (s || '')
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')   // Remove accents
-    .replace(/[''`´]/g, "'")           // Unify apostrophes
+    .replace(/[''`´'']/g, "'")         // Unify all apostrophe variants
     .replace(/[.\-]/g, ' ')            // . and - to space
     .replace(/\s+/g, ' ')              // Multiple spaces to one
     .trim()
@@ -26,7 +26,7 @@ function tokenSig(s: string): string {
 // Team code bonus (very light)
 function teamBonus(dbTeam: string, code: string): number {
   const m = normalize(dbTeam);
-  return m.includes(code) ? 0.05 : 0;
+  return m.includes(code) ? 0.03 : 0;
 }
 
 // Simple Levenshtein distance
@@ -66,7 +66,7 @@ function canonizeName(nameRaw: string): string {
   const toks = (nameRaw || '').trim().split(/\s+/);
   let i = 0;
   // Cluster of ALLCAPS tokens at start (surname: DE, VAN, TRENTIN, etc.)
-  while (i < toks.length && /^[A-Z''\-]+$/.test(toks[i])) i++;
+  while (i < toks.length && /^[A-Z''''\-]+$/.test(toks[i])) i++;
   const surname = toks.slice(0, i).join(' ').toUpperCase();
   const given = toks.slice(i).map(t => t.charAt(0) + t.slice(1).toLowerCase()).join(' ');
   return (given && surname) ? `${given} ${surname}` : nameRaw;
@@ -159,6 +159,19 @@ serve(async (req) => {
       throw new Error('Impossible de charger les coureurs');
     }
 
+    // Load name aliases for pre-matching
+    const { data: aliases } = await supabase
+      .from('name_aliases')
+      .select('alias_text, coureur_id, source_team');
+
+    const aliasMap = new Map<string, string>();
+    if (aliases) {
+      for (const a of aliases) {
+        const key = normalize(a.alias_text);
+        aliasMap.set(key, a.coureur_id);
+      }
+    }
+
     // Build maps for fast lookup
     const riderByNorm = new Map<string, any>();
     const riderBySig = new Map<string, any>();
@@ -174,13 +187,30 @@ serve(async (req) => {
     const matched: any[] = [];
     const unmatched: any[] = [];
 
+    // Load rosters for on_roster check
+    const { data: rosters } = await supabase
+      .from('rosters')
+      .select('coureur_id, manager_id, managers(id, nom)')
+      .eq('phase_id', phaseId);
+
     for (const entry of parsedEntries) {
       let bestMatch = null;
       let matchType = 'none';
       let matchScore = 0;
 
+      // 0) Alias match (highest priority)
+      const aliasKey = normalize(entry.source_name);
+      if (aliasMap.has(aliasKey)) {
+        const coureurId = aliasMap.get(aliasKey);
+        bestMatch = riders.find(r => r.id === coureurId);
+        if (bestMatch) {
+          matchType = 'alias';
+          matchScore = 1.0;
+        }
+      }
+
       // 1) Exact match
-      if (riderByNorm.has(entry.normalized)) {
+      if (!bestMatch && riderByNorm.has(entry.normalized)) {
         bestMatch = riderByNorm.get(entry.normalized);
         matchType = 'exact';
         matchScore = 1.0;
@@ -193,45 +223,24 @@ serve(async (req) => {
         matchScore = 0.95;
       }
 
-      // 3) Fuzzy match (if pg_trgm enabled)
+      // 3) Fuzzy match (manual only, no RPC)
       if (!bestMatch) {
-        // Try similarity search (requires pg_trgm)
-        const { data: fuzzyMatches } = await supabase
-          .rpc('similarity', { 
-            target: entry.normalized,
-            threshold: 0.75 
-          } as any)
-          .limit(5);
-
-        if (fuzzyMatches && fuzzyMatches.length > 0) {
-          const best = fuzzyMatches[0];
-          const bonus = teamBonus(best.equipe || '', entry.team_code || '');
-          const finalScore = best.score + bonus;
+        for (const r of riders) {
+          const score = similarity(entry.normalized, normalize(r.nom));
+          const bonus = teamBonus(r.equipe || '', entry.team_code || '');
+          const finalScore = score + bonus;
           
-          if (finalScore >= 0.86) {
-            bestMatch = best;
-            matchType = 'fuzzy';
+          if (finalScore >= 0.84 && finalScore > matchScore) {
             matchScore = finalScore;
-          }
-        }
-        
-        // Fallback: manual fuzzy
-        if (!bestMatch) {
-          for (const r of riders) {
-            const score = similarity(entry.normalized, normalize(r.nom));
-            const bonus = teamBonus(r.equipe || '', entry.team_code || '');
-            const finalScore = score + bonus;
-            
-            if (finalScore >= 0.86 && finalScore > matchScore) {
-              matchScore = finalScore;
-              bestMatch = r;
-              matchType = 'fuzzy';
-            }
+            bestMatch = r;
+            matchType = 'fuzzy';
           }
         }
       }
 
       if (bestMatch) {
+        const onRoster = rosters?.some(r => r.coureur_id === bestMatch.id) || false;
+        
         matched.push({
           ...entry,
           coureur_id: bestMatch.id,
@@ -239,6 +248,7 @@ serve(async (req) => {
           equipe: bestMatch.equipe,
           confidence: matchScore,
           match_type: matchType,
+          on_roster: onRoster,
         });
 
         if (with_diagnostics) {
@@ -252,17 +262,24 @@ serve(async (req) => {
             score: matchScore,
             db_nom: bestMatch.nom,
             db_equipe: bestMatch.equipe,
+            on_roster: onRoster,
           });
         }
       } else {
-        // Get suggestions
+        // Get suggestions with on_roster badge
         const suggestions = riders
-          .map(r => ({
-            coureur_id: r.id,
-            nom: r.nom,
-            score: similarity(entry.normalized, normalize(r.nom)) + teamBonus(r.equipe || '', entry.team_code || '')
-          }))
-          .filter(s => s.score >= 0.70)
+          .map(r => {
+            const score = similarity(entry.normalized, normalize(r.nom)) + teamBonus(r.equipe || '', entry.team_code || '');
+            const onRoster = rosters?.some(ro => ro.coureur_id === r.id) || false;
+            return {
+              coureur_id: r.id,
+              nom: r.nom,
+              equipe: r.equipe,
+              score,
+              on_roster: onRoster,
+            };
+          })
+          .filter(s => s.score >= 0.65)
           .sort((a, b) => b.score - a.score)
           .slice(0, 5);
 
@@ -284,13 +301,7 @@ serve(async (req) => {
       }
     }
 
-    // Load rosters for this phase
-    const { data: rosters } = await supabase
-      .from('rosters')
-      .select('coureur_id, manager_id, managers(id, nom)')
-      .eq('phase_id', phaseId);
-
-    // Build manager map
+    // Build manager map (rosters already loaded above)
     const managerMap = new Map();
     const noOwner: any[] = [];
 
