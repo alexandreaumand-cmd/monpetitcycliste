@@ -207,6 +207,21 @@ const Startlist = () => {
     enabled: !!selectedStartlistId && viewMode === 'view'
   });
 
+  // Fetch startlist metadata (for permission checks)
+  const { data: startlistMeta } = useQuery({
+    queryKey: ['startlist-meta', selectedStartlistId],
+    enabled: !!selectedStartlistId && viewMode === 'view',
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('startlist_imports')
+        .select('id, race_id, created_by_manager_id')
+        .eq('id', selectedStartlistId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const normalizeId = (v?: string | null) => (v ?? '').trim().toLowerCase();
 
   const hasStartlist = (raceId: string) => {
@@ -278,6 +293,9 @@ const Startlist = () => {
 
   const selectedRace = races.find(r => r.id === selectedRaceId);
   const { isAdmin, loading: isLoadingRole } = useUserRole();
+  
+  // Check if user can modify: admin OR creator of the startlist
+  const canModify = isAdmin || (currentUser?.id && startlistMeta?.created_by_manager_id && currentUser.id === startlistMeta.created_by_manager_id);
 
   // View mode - show existing startlist
   if (viewMode === 'view') {
@@ -327,7 +345,7 @@ const Startlist = () => {
                 <Download className="h-4 w-4 mr-2" />
                 Exporter CSV
               </Button>
-              {isAdmin && (
+              {canModify && (
                 <Button onClick={handleModifyStartlist} variant="outline">
                   Modifier / Réimporter
                 </Button>

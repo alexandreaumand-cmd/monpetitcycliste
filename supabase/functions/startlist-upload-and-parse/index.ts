@@ -218,21 +218,48 @@ serve(async (req) => {
       }
     );
 
-    // Check admin access
-    const { data: isAdminData, error: adminError } = await supabase.rpc('is_admin');
-    if (adminError || !isAdminData) {
-      return new Response(
-        JSON.stringify({ error: 'Accès refusé: réservé aux administrateurs' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const { race_id: raceId, text_content: textContent } = await req.json();
 
     if (!raceId || !textContent) {
       return new Response(
         JSON.stringify({ error: 'race_id et text_content sont requis' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Permission check: admin OR creator of latest import for this race
+    const { data: isAdminData } = await supabase.rpc('is_admin');
+    
+    // Get current manager
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: manager } = await supabase
+      .from('managers')
+      .select('id')
+      .eq('user_id', user?.id)
+      .maybeSingle();
+
+    let allowed = !!isAdminData;
+
+    // If not admin, check if user is the creator of the latest import for this race
+    if (!allowed && manager) {
+      const { data: latestImport } = await supabase
+        .from('startlist_imports')
+        .select('id, created_by_manager_id')
+        .eq('race_id', raceId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestImport && latestImport.created_by_manager_id === manager.id) {
+        allowed = true;
+      }
+    }
+
+    if (!allowed) {
+      console.error('[startlist-upload-and-parse] Access denied for user:', user?.id);
+      return new Response(
+        JSON.stringify({ error: 'Accès refusé: réservé à l\'admin ou au créateur de la startlist' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -249,14 +276,6 @@ serve(async (req) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Get manager ID
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: manager } = await supabase
-      .from('managers')
-      .select('id')
-      .eq('user_id', user?.id)
-      .single();
 
     // Parse lines from text
     const lines = textContent.split('\n').filter((line: string) => line.trim());
