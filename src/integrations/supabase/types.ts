@@ -575,6 +575,163 @@ export type Database = {
           },
         ]
       }
+      manager_fun_awards: {
+        Row: {
+          assigned_by: string | null
+          award_type: Database["public"]["Enums"]["fun_award_type"]
+          created_at: string | null
+          id: string
+          manager_id: string
+          phase_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_by?: string | null
+          award_type: Database["public"]["Enums"]["fun_award_type"]
+          created_at?: string | null
+          id?: string
+          manager_id: string
+          phase_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_by?: string | null
+          award_type?: Database["public"]["Enums"]["fun_award_type"]
+          created_at?: string | null
+          id?: string
+          manager_id?: string
+          phase_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_fun_awards_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       managers: {
         Row: {
           created_at: string | null
@@ -3346,6 +3503,7 @@ export type Database = {
         | "invalid"
         | "carried_over"
         | "draft"
+      fun_award_type: "funniest" | "grumpiest" | "luckiest"
       phase_statut:
         | "draft"
         | "auction_open"
@@ -3513,6 +3671,7 @@ export const Constants = {
         "carried_over",
         "draft",
       ],
+      fun_award_type: ["funniest", "grumpiest", "luckiest"],
       phase_statut: [
         "draft",
         "auction_open",
