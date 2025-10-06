@@ -322,32 +322,29 @@ const Startlist = () => {
   };
 
   const handlePcsValidation = async () => {
-    if (!selectedStartlistId) return;
+    if (!selectedStartlistId || !currentUser) return;
     
-    const { data: managerData } = await supabase
-      .from('managers')
-      .select('id')
-      .eq('user_id', currentUser?.id)
-      .single();
-
+    const currentStatus = startlistViewData?.pcs_validated || false;
+    const newStatus = !currentStatus;
+    
     setIsLoading(true);
     try {
       const { error } = await supabase
         .from('startlist_imports')
         .update({ 
-          pcs_validated: true,
-          pcs_validated_at: new Date().toISOString(),
-          pcs_validated_by_manager_id: managerData?.id
+          pcs_validated: newStatus,
+          pcs_validated_at: newStatus ? new Date().toISOString() : null,
+          pcs_validated_by_manager_id: newStatus ? currentUser.id : null
         })
         .eq('id', selectedStartlistId);
 
       if (error) throw error;
 
-      toast.success("Startlist validée PCS ✓");
+      toast.success(newStatus ? "Startlist validée PCS ✓" : "Validation PCS retirée");
       queryClient.invalidateQueries({ queryKey: ['startlist-view'] });
       queryClient.invalidateQueries({ queryKey: ['startlist-imports'] });
     } catch (error: any) {
-      toast.error("Erreur lors de la validation : " + error.message);
+      toast.error("Erreur : " + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -431,11 +428,16 @@ const Startlist = () => {
                   Valider PCS
                 </Button>
               )}
-              {startlistViewData?.pcs_validated && (
-                <Badge className="bg-green-600 text-white">
+              {isAdmin && startlistViewData?.pcs_validated && (
+                <Button 
+                  onClick={handlePcsValidation} 
+                  variant="outline"
+                  size="sm"
+                  className="bg-green-600 text-white hover:bg-green-700 border-green-600"
+                >
                   <CheckCircle2 className="h-3 w-3 mr-1" />
-                  PCS OK
-                </Badge>
+                  PCS OK (retirer)
+                </Button>
               )}
             </div>
           </div>
