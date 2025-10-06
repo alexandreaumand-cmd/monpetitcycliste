@@ -462,11 +462,23 @@ serve(async (req) => {
       const sourceTokens = extractTokens(normalized);
       const sourceTokenSetKey = sourceTokens.join('|');
       
-      // Extract potential last names from both variants
-      const sourceLastNames = Array.from(new Set([
-        extractLastName(normalized),
-        extractLastName(normalizedInverted)
-      ].filter(n => n.length > 0)));
+      // Extract potential last names from both variants and first token
+      const sourceLastNamesSet = new Set<string>();
+      const tokensNormalized = normalized.split(/\s+/).filter(t => t.length > 0);
+      
+      // Add first token (covers "LASTNAME Firstname" format)
+      if (tokensNormalized.length > 0 && tokensNormalized[0].length > 0) {
+        sourceLastNamesSet.add(tokensNormalized[0]);
+      }
+      
+      // Add last token from both variants
+      const lastNorm = extractLastName(normalized);
+      if (lastNorm.length > 0) sourceLastNamesSet.add(lastNorm);
+      
+      const lastInv = extractLastName(normalizedInverted);
+      if (lastInv.length > 0) sourceLastNamesSet.add(lastInv);
+      
+      const sourceLastNames = Array.from(sourceLastNamesSet);
       
       // Extract potential first initials from both variants
       const sourceFirstInitials = new Set<string>();
