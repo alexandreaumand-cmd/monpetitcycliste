@@ -1,0 +1,28 @@
+-- Partie 2: Insérer les barèmes pour les porteurs de maillots
+INSERT INTO scoring_rules (id, categorie, type_classement, place, points, type) VALUES
+('345', 'WT GT', 'Porteur Général', 1, 20, 'stage races'),
+('346', 'WT GT', 'Porteur Vert', 1, 12, 'stage races'),
+('347', 'WT GT', 'Porteur Montagne', 1, 12, 'stage races'),
+('348', 'WT GT', 'Porteur Jeune', 1, 6, 'stage races'),
+('349', 'WT GT', 'Porteur Combattif', 1, 12, 'stage races'),
+('350', 'Tours WT Cat 1', 'Porteur Général', 1, 12, 'stage races'),
+('351', 'Tours WT Cat 1', 'Porteur Vert', 1, 8, 'stage races'),
+('352', 'Tours WT Cat 1', 'Porteur Montagne', 1, 8, 'stage races'),
+('353', 'Tours WT Cat 1', 'Porteur Jeune', 1, 5, 'stage races'),
+('354', 'Tours WT Cat 2', 'Porteur Général', 1, 10, 'stage races'),
+('355', 'Tours WT Cat 2', 'Porteur Vert', 1, 7, 'stage races'),
+('356', 'Tours WT Cat 2', 'Porteur Montagne', 1, 7, 'stage races'),
+('357', 'Tours WT Cat 2', 'Porteur Jeune', 1, 4, 'stage races'),
+('358', 'Tours WT Cat 3', 'Porteur Général', 1, 8, 'stage races'),
+('359', 'Tours WT Cat 3', 'Porteur Vert', 1, 6, 'stage races'),
+('360', 'Tours WT Cat 3', 'Porteur Montagne', 1, 6, 'stage races'),
+('361', 'Tours WT Cat 3', 'Porteur Jeune', 1, 3, 'stage races'),
+('362', '2.pro', 'Porteur Général', 1, 6, 'stage races'),
+('363', '2.pro', 'Porteur Vert', 1, 4, 'stage races'),
+('364', '2.pro', 'Porteur Montagne', 1, 4, 'stage races'),
+('365', '2.pro', 'Porteur Jeune', 1, 2, 'stage races'),
+('366', '2.1', 'Porteur Général', 1, 5, 'stage races'),
+('367', '2.1', 'Porteur Vert', 1, 3, 'stage races'),
+('368', '2.1', 'Porteur Montagne', 1, 3, 'stage races'),
+('369', '2.1', 'Porteur Jeune', 1, 0, 'stage races')
+ON CONFLICT (id) DO NOTHING;

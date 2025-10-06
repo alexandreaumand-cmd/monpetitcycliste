@@ -28,6 +28,13 @@ interface ResultsData {
     points_leader_id: string | null;
     montagne_leader_id: string | null;
   };
+  jersey_holders_base?: {
+    general_holder_id: string | null;
+    vert_holder_id: string | null;
+    montagne_holder_id: string | null;
+    jeune_holder_id: string | null;
+    combattif_holder_id: string | null;
+  };
   is_stage_complete?: boolean;
   general_top_base?: Array<{ position: number; coureur_id: string | null }>;
   jersey_winners_base?: {
@@ -277,12 +284,25 @@ function StageEditor({
     points_leader_id: null,
     montagne_leader_id: null
   };
+  const jerseyHoldersBase = resultsData.jersey_holders_base || {
+    general_holder_id: null,
+    vert_holder_id: null,
+    montagne_holder_id: null,
+    jeune_holder_id: null,
+    combattif_holder_id: null
+  };
 
   // Editable values
   const [top10Edit, setTop10Edit] = useState<Array<{ position: number; coureur_id: string | null }>>(top10Base);
   const [generalLeaderEdit, setGeneralLeaderEdit] = useState(leadersBase.general_leader_id || "");
   const [pointsLeaderEdit, setPointsLeaderEdit] = useState(leadersBase.points_leader_id || "");
   const [montagneLeaderEdit, setMontagneLeaderEdit] = useState(leadersBase.montagne_leader_id || "");
+  
+  const [generalHolderEdit, setGeneralHolderEdit] = useState(jerseyHoldersBase.general_holder_id || "");
+  const [vertHolderEdit, setVertHolderEdit] = useState(jerseyHoldersBase.vert_holder_id || "");
+  const [montagneHolderEdit, setMontagneHolderEdit] = useState(jerseyHoldersBase.montagne_holder_id || "");
+  const [jeuneHolderEdit, setJeuneHolderEdit] = useState(jerseyHoldersBase.jeune_holder_id || "");
+  const [combattifHolderEdit, setCombattifHolderEdit] = useState(jerseyHoldersBase.combattif_holder_id || "");
 
   // Update edit states when base data changes
   useEffect(() => {
@@ -290,6 +310,11 @@ function StageEditor({
     setGeneralLeaderEdit(leadersBase.general_leader_id || "");
     setPointsLeaderEdit(leadersBase.points_leader_id || "");
     setMontagneLeaderEdit(leadersBase.montagne_leader_id || "");
+    setGeneralHolderEdit(jerseyHoldersBase.general_holder_id || "");
+    setVertHolderEdit(jerseyHoldersBase.vert_holder_id || "");
+    setMontagneHolderEdit(jerseyHoldersBase.montagne_holder_id || "");
+    setJeuneHolderEdit(jerseyHoldersBase.jeune_holder_id || "");
+    setCombattifHolderEdit(jerseyHoldersBase.combattif_holder_id || "");
   }, [resultsData]);
 
   // Count changes
@@ -297,7 +322,12 @@ function StageEditor({
     top10Edit.filter((t, i) => t.coureur_id !== top10Base[i]?.coureur_id).length +
     (generalLeaderEdit !== (leadersBase.general_leader_id || "") ? 1 : 0) +
     (pointsLeaderEdit !== (leadersBase.points_leader_id || "") ? 1 : 0) +
-    (montagneLeaderEdit !== (leadersBase.montagne_leader_id || "") ? 1 : 0);
+    (montagneLeaderEdit !== (leadersBase.montagne_leader_id || "") ? 1 : 0) +
+    (generalHolderEdit !== (jerseyHoldersBase.general_holder_id || "") ? 1 : 0) +
+    (vertHolderEdit !== (jerseyHoldersBase.vert_holder_id || "") ? 1 : 0) +
+    (montagneHolderEdit !== (jerseyHoldersBase.montagne_holder_id || "") ? 1 : 0) +
+    (jeuneHolderEdit !== (jerseyHoldersBase.jeune_holder_id || "") ? 1 : 0) +
+    (combattifHolderEdit !== (jerseyHoldersBase.combattif_holder_id || "") ? 1 : 0);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -319,8 +349,15 @@ function StageEditor({
       }
 
       if (!generalLeaderEdit || !pointsLeaderEdit || !montagneLeaderEdit) {
-        throw new Error("Les trois porteurs de maillots sont requis");
+        throw new Error("Les trois porteurs de maillots après étape sont requis");
       }
+
+      const jerseyHolders: any = {};
+      if (generalHolderEdit) jerseyHolders.general_holder_id = generalHolderEdit;
+      if (vertHolderEdit) jerseyHolders.vert_holder_id = vertHolderEdit;
+      if (montagneHolderEdit) jerseyHolders.montagne_holder_id = montagneHolderEdit;
+      if (jeuneHolderEdit) jerseyHolders.jeune_holder_id = jeuneHolderEdit;
+      if (combattifHolderEdit) jerseyHolders.combattif_holder_id = combattifHolderEdit;
 
       const { data, error } = await supabase.functions.invoke("admin-stage-save-step", {
         body: {
@@ -332,6 +369,7 @@ function StageEditor({
             points_leader_id: pointsLeaderEdit,
             montagne_leader_id: montagneLeaderEdit,
           },
+          jersey_holders: jerseyHolders,
         },
       });
 
@@ -355,6 +393,11 @@ function StageEditor({
     setGeneralLeaderEdit(leadersBase.general_leader_id || "");
     setPointsLeaderEdit(leadersBase.points_leader_id || "");
     setMontagneLeaderEdit(leadersBase.montagne_leader_id || "");
+    setGeneralHolderEdit(jerseyHoldersBase.general_holder_id || "");
+    setVertHolderEdit(jerseyHoldersBase.vert_holder_id || "");
+    setMontagneHolderEdit(jerseyHoldersBase.montagne_holder_id || "");
+    setJeuneHolderEdit(jerseyHoldersBase.jeune_holder_id || "");
+    setCombattifHolderEdit(jerseyHoldersBase.combattif_holder_id || "");
   };
 
   return (
@@ -412,35 +455,93 @@ function StageEditor({
         <Separator />
 
         <div>
-          <h3 className="text-sm font-semibold mb-3">Porteurs après l'étape</h3>
+          <h3 className="text-sm font-semibold mb-3">Leaders provisoires après l'étape</h3>
           <div className="space-y-3">
             <div className={`space-y-2 p-2 rounded ${generalLeaderEdit !== (leadersBase.general_leader_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20' : ''}`}>
-              <label className="text-sm font-medium">Maillot Leader (Général provisoire)</label>
+              <label className="text-sm font-medium">Leader Général (provisoire)</label>
               <CoureursCombobox
                 phaseId={phaseId}
                 value={generalLeaderEdit || null}
                 onSelect={(coureur) => setGeneralLeaderEdit(coureur?.coureur_id || "")}
-                placeholder="Sélectionner le porteur du maillot leader"
+                placeholder="Sélectionner le leader général"
                 showTakenRiders={true}
               />
             </div>
             <div className={`space-y-2 p-2 rounded ${pointsLeaderEdit !== (leadersBase.points_leader_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20' : ''}`}>
-              <label className="text-sm font-medium">Maillot Points</label>
+              <label className="text-sm font-medium">Leader Points (provisoire)</label>
               <CoureursCombobox
                 phaseId={phaseId}
                 value={pointsLeaderEdit || null}
                 onSelect={(coureur) => setPointsLeaderEdit(coureur?.coureur_id || "")}
-                placeholder="Sélectionner le porteur du maillot points"
+                placeholder="Sélectionner le leader points"
                 showTakenRiders={true}
               />
             </div>
             <div className={`space-y-2 p-2 rounded ${montagneLeaderEdit !== (leadersBase.montagne_leader_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20' : ''}`}>
-              <label className="text-sm font-medium">Maillot Montagne</label>
+              <label className="text-sm font-medium">Leader Montagne (provisoire)</label>
               <CoureursCombobox
                 phaseId={phaseId}
                 value={montagneLeaderEdit || null}
                 onSelect={(coureur) => setMontagneLeaderEdit(coureur?.coureur_id || "")}
-                placeholder="Sélectionner le porteur du maillot montagne"
+                placeholder="Sélectionner le leader montagne"
+                showTakenRiders={true}
+              />
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div>
+          <h3 className="text-sm font-semibold mb-3">Porteurs de maillots (optionnel)</h3>
+          <div className="space-y-3">
+            <div className={`space-y-2 p-2 rounded ${generalHolderEdit !== (jerseyHoldersBase.general_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20' : ''}`}>
+              <label className="text-sm font-medium">Porteur Maillot Leader</label>
+              <CoureursCombobox
+                phaseId={phaseId}
+                value={generalHolderEdit || null}
+                onSelect={(coureur) => setGeneralHolderEdit(coureur?.coureur_id || "")}
+                placeholder="Sélectionner le porteur"
+                showTakenRiders={true}
+              />
+            </div>
+            <div className={`space-y-2 p-2 rounded ${vertHolderEdit !== (jerseyHoldersBase.vert_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20' : ''}`}>
+              <label className="text-sm font-medium">Porteur Maillot Vert (Points)</label>
+              <CoureursCombobox
+                phaseId={phaseId}
+                value={vertHolderEdit || null}
+                onSelect={(coureur) => setVertHolderEdit(coureur?.coureur_id || "")}
+                placeholder="Sélectionner le porteur"
+                showTakenRiders={true}
+              />
+            </div>
+            <div className={`space-y-2 p-2 rounded ${montagneHolderEdit !== (jerseyHoldersBase.montagne_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20' : ''}`}>
+              <label className="text-sm font-medium">Porteur Maillot Montagne</label>
+              <CoureursCombobox
+                phaseId={phaseId}
+                value={montagneHolderEdit || null}
+                onSelect={(coureur) => setMontagneHolderEdit(coureur?.coureur_id || "")}
+                placeholder="Sélectionner le porteur"
+                showTakenRiders={true}
+              />
+            </div>
+            <div className={`space-y-2 p-2 rounded ${jeuneHolderEdit !== (jerseyHoldersBase.jeune_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20' : ''}`}>
+              <label className="text-sm font-medium">Porteur Maillot Jeune (Blanc)</label>
+              <CoureursCombobox
+                phaseId={phaseId}
+                value={jeuneHolderEdit || null}
+                onSelect={(coureur) => setJeuneHolderEdit(coureur?.coureur_id || "")}
+                placeholder="Sélectionner le porteur"
+                showTakenRiders={true}
+              />
+            </div>
+            <div className={`space-y-2 p-2 rounded ${combattifHolderEdit !== (jerseyHoldersBase.combattif_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20' : ''}`}>
+              <label className="text-sm font-medium">Porteur Maillot Combattif</label>
+              <CoureursCombobox
+                phaseId={phaseId}
+                value={combattifHolderEdit || null}
+                onSelect={(coureur) => setCombattifHolderEdit(coureur?.coureur_id || "")}
+                placeholder="Sélectionner le porteur"
                 showTakenRiders={true}
               />
             </div>

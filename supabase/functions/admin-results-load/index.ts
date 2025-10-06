@@ -121,6 +121,25 @@ Deno.serve(async (req) => {
 
       result.leaders_base = leaders_base;
 
+      // Load jersey holders for the stage
+      const { data: jerseyHoldersData } = await supabase
+        .from('race_results')
+        .select('type_classement, coureur_id')
+        .eq('course_id', course_id)
+        .eq('etape_numero', etape_numero)
+        .eq('position', 1)
+        .in('type_classement', ['Porteur Général', 'Porteur Vert', 'Porteur Montagne', 'Porteur Jeune', 'Porteur Combattif']);
+
+      const jersey_holders_base = {
+        general_holder_id: jerseyHoldersData?.find(j => j.type_classement === 'Porteur Général')?.coureur_id || null,
+        vert_holder_id: jerseyHoldersData?.find(j => j.type_classement === 'Porteur Vert')?.coureur_id || null,
+        montagne_holder_id: jerseyHoldersData?.find(j => j.type_classement === 'Porteur Montagne')?.coureur_id || null,
+        jeune_holder_id: jerseyHoldersData?.find(j => j.type_classement === 'Porteur Jeune')?.coureur_id || null,
+        combattif_holder_id: jerseyHoldersData?.find(j => j.type_classement === 'Porteur Combattif')?.coureur_id || null
+      };
+
+      result.jersey_holders_base = jersey_holders_base;
+
       const hasTop10 = top10_base.every(t => t.coureur_id !== null);
       const hasLeaders = leaders_base.general_leader_id && leaders_base.points_leader_id && leaders_base.montagne_leader_id;
       result.is_stage_complete = hasTop10 && hasLeaders;

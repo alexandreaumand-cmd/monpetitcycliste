@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { course_id, etape_numero, top10, leaders, change_reason } = await req.json();
+    const { course_id, etape_numero, top10, leaders, jersey_holders, change_reason } = await req.json();
 
     // Validations
     if (!course_id || !etape_numero) {
@@ -157,6 +157,92 @@ Deno.serve(async (req) => {
       .insert(leadersInserts);
 
     if (leadersError) throw leadersError;
+
+    // Insert jersey holders if provided
+    if (jersey_holders) {
+      const jerseyInserts = [];
+      
+      if (jersey_holders.general_holder_id) {
+        jerseyInserts.push({
+          course_id,
+          type_classement: 'Porteur Général',
+          etape_numero,
+          coureur_id: jersey_holders.general_holder_id,
+          position: 1,
+          statut: 'finished',
+          date_classement,
+          updated_by_manager_id: manager_id
+        });
+      }
+      
+      if (jersey_holders.vert_holder_id) {
+        jerseyInserts.push({
+          course_id,
+          type_classement: 'Porteur Vert',
+          etape_numero,
+          coureur_id: jersey_holders.vert_holder_id,
+          position: 1,
+          statut: 'finished',
+          date_classement,
+          updated_by_manager_id: manager_id
+        });
+      }
+      
+      if (jersey_holders.montagne_holder_id) {
+        jerseyInserts.push({
+          course_id,
+          type_classement: 'Porteur Montagne',
+          etape_numero,
+          coureur_id: jersey_holders.montagne_holder_id,
+          position: 1,
+          statut: 'finished',
+          date_classement,
+          updated_by_manager_id: manager_id
+        });
+      }
+      
+      if (jersey_holders.jeune_holder_id) {
+        jerseyInserts.push({
+          course_id,
+          type_classement: 'Porteur Jeune',
+          etape_numero,
+          coureur_id: jersey_holders.jeune_holder_id,
+          position: 1,
+          statut: 'finished',
+          date_classement,
+          updated_by_manager_id: manager_id
+        });
+      }
+      
+      if (jersey_holders.combattif_holder_id) {
+        jerseyInserts.push({
+          course_id,
+          type_classement: 'Porteur Combattif',
+          etape_numero,
+          coureur_id: jersey_holders.combattif_holder_id,
+          position: 1,
+          statut: 'finished',
+          date_classement,
+          updated_by_manager_id: manager_id
+        });
+      }
+
+      if (jerseyInserts.length > 0) {
+        // Delete existing jersey holders first
+        await supabase
+          .from('race_results')
+          .delete()
+          .eq('course_id', course_id)
+          .eq('etape_numero', etape_numero)
+          .in('type_classement', ['Porteur Général', 'Porteur Vert', 'Porteur Montagne', 'Porteur Jeune', 'Porteur Combattif']);
+
+        const { error: jerseyError } = await supabase
+          .from('race_results')
+          .insert(jerseyInserts);
+
+        if (jerseyError) throw jerseyError;
+      }
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 
