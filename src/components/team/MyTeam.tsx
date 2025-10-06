@@ -8,6 +8,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Drawer,
   DrawerClose,
   DrawerContent,
@@ -41,6 +48,14 @@ interface TeamKPIs {
   wins_count: number;
 }
 
+interface Phase {
+  id: string;
+  index_dans_saison: number;
+  date_debut: string;
+  date_fin: string;
+  statut: 'draft' | 'active' | 'completed' | 'auction_open' | 'auction_closed';
+}
+
 type SortBy = 'points' | 'ratio' | 'prix' | 'cote';
 
 export const MyTeam = () => {
@@ -54,6 +69,10 @@ export const MyTeam = () => {
     wins_count: 0
   });
   
+  // Phase state
+  const [phases, setPhases] = useState<Phase[]>([]);
+  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
+  
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedCoureur, setSelectedCoureur] = useState<Coureur | null>(null);
@@ -61,8 +80,54 @@ export const MyTeam = () => {
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   useEffect(() => {
-    loadTeam();
+    loadPhases();
   }, []);
+
+  useEffect(() => {
+    if (selectedPhaseId) {
+      loadTeam();
+    }
+  }, [selectedPhaseId]);
+
+  const loadPhases = async () => {
+    try {
+      // Récupérer la saison 2025
+      const { data: saisonData } = await supabase
+        .from('saisons')
+        .select('id')
+        .eq('annee', 2025)
+        .single();
+
+      if (!saisonData) {
+        console.error('No season 2025 found');
+        return;
+      }
+
+      // Récupérer les phases de la saison 2025
+      const { data: phasesData } = await supabase
+        .from('phases')
+        .select('id, index_dans_saison, date_debut, date_fin, statut')
+        .eq('saison_id', saisonData.id)
+        .order('index_dans_saison', { ascending: true });
+
+      setPhases(phasesData || []);
+
+      // Sélectionner la phase active par défaut
+      const activePhase = phasesData?.find(p => p.statut === 'active');
+      if (activePhase) {
+        setSelectedPhaseId(activePhase.id);
+      } else if (phasesData && phasesData.length > 0) {
+        setSelectedPhaseId(phasesData[0].id);
+      }
+    } catch (error) {
+      console.error('Error loading phases:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les phases",
+        variant: "destructive"
+      });
+    }
+  };
 
   const loadTeam = async () => {
     setLoading(true);
@@ -84,7 +149,7 @@ export const MyTeam = () => {
 
       // Appeler la fonction avec le token d'authentification
       const { data, error } = await supabase.functions.invoke('manager-my-team', {
-        body: { phase_id: null },
+        body: { phase_id: selectedPhaseId },
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -128,7 +193,7 @@ export const MyTeam = () => {
 
       // Appeler la fonction avec le token d'authentification
       const { data, error } = await supabase.functions.invoke('manager-coureur-points-detail', {
-        body: { coureur_id: coureur.coureur_id, phase_id: null },
+        body: { coureur_id: coureur.coureur_id, phase_id: selectedPhaseId },
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -181,6 +246,12 @@ export const MyTeam = () => {
     return "";
   };
 
+  const getPhaseLabel = (phase: Phase) => {
+    const debut = new Date(phase.date_debut).toLocaleDateString('fr-FR', { month: 'short' });
+    const fin = new Date(phase.date_fin).toLocaleDateString('fr-FR', { month: 'short' });
+    return `Phase ${phase.index_dans_saison} (${debut} - ${fin})${phase.statut === 'active' ? ' ✓' : ''}`;
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -192,7 +263,8 @@ export const MyTeam = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Mobile layout */}
+      <div className="flex flex-col gap-4 md:hidden">
         <div>
           <h1 className="text-3xl font-bold">Mon équipe</h1>
           <p className="text-muted-foreground">
@@ -200,8 +272,24 @@ export const MyTeam = () => {
           </p>
         </div>
         
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Trier par:</span>
+        {/* Phase selector - mobile */}
+        {phases.length > 0 && (
+          <Select value={selectedPhaseId || ''} onValueChange={setSelectedPhaseId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Sélectionner une phase" />
+            </SelectTrigger>
+            <SelectContent>
+              {phases.map((phase) => (
+                <SelectItem key={phase.id} value={phase.id}>
+                  {getPhaseLabel(phase)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        
+        {/* Sort buttons - mobile */}
+        <div className="flex gap-2 overflow-x-auto">
           <Button
             variant={sortBy === 'points' ? 'default' : 'outline'}
             size="sm"
@@ -230,8 +318,74 @@ export const MyTeam = () => {
             size="sm"
             onClick={() => setSortBy('cote')}
           >
-            Cote initiale
+            Cote
           </Button>
+        </div>
+      </div>
+
+      {/* Desktop layout */}
+      <div className="hidden md:flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Mon équipe</h1>
+          <p className="text-muted-foreground">
+            {coureurs.length} coureur{coureurs.length > 1 ? 's' : ''}
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {/* Phase selector - desktop */}
+          {phases.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Phase:</span>
+              <Select value={selectedPhaseId || ''} onValueChange={setSelectedPhaseId}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="Sélectionner une phase" />
+                </SelectTrigger>
+                <SelectContent>
+                  {phases.map((phase) => (
+                    <SelectItem key={phase.id} value={phase.id}>
+                      {getPhaseLabel(phase)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          {/* Sort buttons - desktop */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Trier par:</span>
+            <Button
+              variant={sortBy === 'points' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSortBy('points')}
+            >
+              <Trophy className="h-4 w-4 mr-2" />
+              Points
+            </Button>
+            <Button
+              variant={sortBy === 'ratio' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSortBy('ratio')}
+            >
+              <ArrowUpDown className="h-4 w-4 mr-2" />
+              Ratio
+            </Button>
+            <Button
+              variant={sortBy === 'prix' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSortBy('prix')}
+            >
+              Prix
+            </Button>
+            <Button
+              variant={sortBy === 'cote' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSortBy('cote')}
+            >
+              Cote initiale
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -244,7 +398,12 @@ export const MyTeam = () => {
                 <Trophy className="h-8 w-8 text-primary mb-2" />
                 <div className="text-3xl font-bold">{kpis.scorers_count}</div>
                 <div className="text-sm text-muted-foreground text-center">
-                  Scoreur{kpis.scorers_count > 1 ? 's' : ''} sur la phase
+                  Scoreur{kpis.scorers_count > 1 ? 's' : ''} 
+                  {phases.find(p => p.id === selectedPhaseId)?.statut !== 'active' && (
+                    <span className="ml-1">
+                      (Phase {phases.find(p => p.id === selectedPhaseId)?.index_dans_saison})
+                    </span>
+                  )}
                 </div>
               </div>
             </CardContent>
