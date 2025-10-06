@@ -3236,7 +3236,14 @@ export type Database = {
         }[]
       }
       results_courses_with_entries: {
-        Args: { p_limit?: number; p_offset?: number; p_search?: string }
+        Args:
+          | {
+              p_limit?: number
+              p_offset?: number
+              p_phase_id?: string
+              p_search?: string
+            }
+          | { p_limit?: number; p_offset?: number; p_search?: string }
         Returns: {
           categorie: string
           course_id: string

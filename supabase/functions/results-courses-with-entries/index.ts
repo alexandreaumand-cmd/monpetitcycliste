@@ -26,12 +26,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { search = null, limit = 24, offset = 0 } = await req.json();
+    const { search = null, limit = 24, offset = 0, phase_id = null } = await req.json();
 
     const { data: races, error } = await supabase.rpc('results_courses_with_entries', {
       p_search: search,
       p_limit: limit,
-      p_offset: offset
+      p_offset: offset,
+      p_phase_id: phase_id
     });
 
     if (error) throw error;

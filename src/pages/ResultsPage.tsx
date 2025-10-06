@@ -8,6 +8,7 @@ import { Loader2, Trophy, Calendar, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebounce } from "use-debounce";
 import { CourseResultsDrawer } from "@/components/courses/CourseResultsDrawer";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Race {
   course_id: string;
@@ -19,6 +20,14 @@ interface Race {
   types: string[];
 }
 
+interface Phase {
+  id: string;
+  index_dans_saison: number;
+  date_debut: string;
+  date_fin: string;
+  statut: 'draft' | 'active' | 'completed' | 'auction_open' | 'auction_closed';
+}
+
 export const ResultsPage = () => {
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,14 +36,54 @@ export const ResultsPage = () => {
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [phases, setPhases] = useState<Phase[]>([]);
+  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadRaces(true);
-  }, [debouncedSearch]);
+    loadPhases();
+  }, []);
+
+  useEffect(() => {
+    if (selectedPhaseId) {
+      loadRaces(true);
+    }
+  }, [selectedPhaseId, debouncedSearch]);
+
+  const loadPhases = async () => {
+    const { data: saisonData } = await supabase
+      .from('saisons')
+      .select('id')
+      .eq('annee', 2025)
+      .single();
+
+    if (!saisonData) return;
+
+    const { data: phasesData } = await supabase
+      .from('phases')
+      .select('id, index_dans_saison, date_debut, date_fin, statut')
+      .eq('saison_id', saisonData.id)
+      .order('index_dans_saison', { ascending: true });
+
+    setPhases(phasesData || []);
+
+    // Sélectionner la phase actuelle basée sur la date
+    const today = new Date();
+    const currentPhase = phasesData?.find(p => {
+      const debut = new Date(p.date_debut);
+      const fin = new Date(p.date_fin);
+      return today >= debut && today <= fin;
+    });
+
+    if (currentPhase) {
+      setSelectedPhaseId(currentPhase.id);
+    } else if (phasesData && phasesData.length > 0) {
+      setSelectedPhaseId(phasesData[phasesData.length - 1].id);
+    }
+  };
 
   const loadRaces = async (reset = false) => {
     if (reset) {
@@ -50,7 +99,8 @@ export const ResultsPage = () => {
         body: { 
           search: debouncedSearch || null,
           limit: 24,
-          offset: reset ? 0 : offset
+          offset: reset ? 0 : offset,
+          phase_id: selectedPhaseId
         }
       });
 
@@ -79,26 +129,53 @@ export const ResultsPage = () => {
     setDrawerOpen(true);
   };
 
+  const getPhaseLabel = (phase: Phase) => {
+    const debut = new Date(phase.date_debut).toLocaleDateString('fr-FR', { month: 'short' });
+    const fin = new Date(phase.date_fin).toLocaleDateString('fr-FR', { month: 'short' });
+    
+    const today = new Date();
+    const isActive = today >= new Date(phase.date_debut) && today <= new Date(phase.date_fin);
+    
+    return `Phase ${phase.index_dans_saison} (${debut} - ${fin})${isActive ? ' ✓' : ''}`;
+  };
+
   return (
     <div className="space-y-6">
       {/* Header with search */}
       <div className="sticky top-0 z-10 bg-background pb-4 border-b">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
           <div>
             <h1 className="text-3xl font-bold">Résultats</h1>
             <p className="text-muted-foreground">
               {races.length} course{races.length > 1 ? 's' : ''} avec résultats
             </p>
           </div>
-          {searchQuery && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSearchQuery("")}
-            >
-              Réinitialiser
-            </Button>
-          )}
+          
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground hidden md:inline">Phase:</span>
+            <Select value={selectedPhaseId || ''} onValueChange={setSelectedPhaseId}>
+              <SelectTrigger className="w-full md:w-[200px]">
+                <SelectValue placeholder="Toutes les phases" />
+              </SelectTrigger>
+              <SelectContent>
+                {phases.map((phase) => (
+                  <SelectItem key={phase.id} value={phase.id}>
+                    {getPhaseLabel(phase)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {searchQuery && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSearchQuery("")}
+              >
+                Réinitialiser
+              </Button>
+            )}
+          </div>
         </div>
         
         <div className="relative">
