@@ -43,15 +43,20 @@ export const MobileDrawer = ({
       items: [
         { label: "Classement", path: "/dashboard/classement", icon: BarChart3 },
         { label: "Mon Équipe", path: "/dashboard/mon-equipe", icon: Users },
-        { label: "Enchères", path: "/dashboard/encheres", icon: Trophy },
+        { label: "Startlist", path: "/dashboard/startlist", icon: ListChecks },
+      ],
+    },
+    {
+      title: "Courses",
+      items: [
+        { label: "Courses", path: "/dashboard/courses", icon: Calendar },
+        { label: "Résultats", path: "/dashboard/resultats", icon: BarChart3 },
       ],
     },
     {
       title: "Gestion",
       items: [
-        { label: "Startlist", path: "/dashboard/startlist", icon: ListChecks },
-        { label: "Courses", path: "/dashboard/courses", icon: Calendar },
-        { label: "Résultats", path: "/dashboard/resultats", icon: BarChart3 },
+        { label: "Enchères", path: "/dashboard/encheres", icon: Trophy },
       ],
     },
   ];

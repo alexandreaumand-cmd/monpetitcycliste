@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Trophy, Users, BarChart3, ListChecks, Shield } from "lucide-react";
+import { Users, BarChart3, ListChecks, Medal, Calendar } from "lucide-react";
 
 interface MobileBottomBarProps {
   isAdmin: boolean;
@@ -13,18 +13,10 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
   const mainRoutes = [
     { label: "Classement", path: "/dashboard/classement", icon: BarChart3 },
     { label: "Mon Équipe", path: "/dashboard/mon-equipe", icon: Users },
-    { label: "Enchères", path: "/dashboard/encheres", icon: Trophy },
     { label: "Startlist", path: "/dashboard/startlist", icon: ListChecks },
+    { label: "Résultats", path: "/dashboard/resultats", icon: Medal },
+    { label: "Courses", path: "/dashboard/courses", icon: Calendar },
   ];
-
-  // Add admin route if user is admin
-  if (isAdmin) {
-    mainRoutes.push({
-      label: "Admin",
-      path: "/dashboard/admin",
-      icon: Shield,
-    });
-  }
 
   const isActive = (path: string) => {
     return location.pathname.startsWith(path);
