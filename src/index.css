@@ -160,7 +160,7 @@ All colors MUST be HSL.
 
   /* Scrollable chips */
   .chips-scroll {
-    @apply flex gap-2 overflow-x-auto whitespace-nowrap pb-2 -mx-4 px-4;
+    @apply flex gap-1.5 overflow-x-auto whitespace-nowrap pb-2 -mx-4 px-4;
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
