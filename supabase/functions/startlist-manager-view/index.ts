@@ -53,7 +53,8 @@ Deno.serve(async (req) => {
         coureurs!inner(
           id,
           nom,
-          equipe
+          equipe,
+          prix_initial
         )
       `)
       .eq('startlist_id', startlist_id)
@@ -203,6 +204,7 @@ Deno.serve(async (req) => {
         coureur_id: entry.coureur_id,
         nom: coureurData.nom,
         equipe: coureurData.equipe,
+        cote: coureurData.prix_initial,
         bib_no: entry.bib_no,
         recent_results: resultsMap.get(entry.coureur_id) || []
       });
@@ -210,9 +212,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Sort starters by name within each manager
+    // Sort starters by cote (descending) within each manager
     for (const manager of managerMap.values()) {
-      manager.starters.sort((a: any, b: any) => a.nom.localeCompare(b.nom));
+      manager.starters.sort((a: any, b: any) => (b.cote || 0) - (a.cote || 0));
     }
 
     const managers = Array.from(managerMap.values())
