@@ -40,41 +40,29 @@ export default function Rankings() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <Card className="border-none shadow-card">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-3xl flex items-center gap-3">
-                  <BarChart3 className="h-8 w-8 text-primary" />
-                  Classements
-                </CardTitle>
-                <CardDescription className="text-base mt-2">
-                  Suivez les performances des managers et coureurs
-                </CardDescription>
-              </div>
-              <Select 
-                value={selectedPhase || "all"} 
-                onValueChange={(v) => setSelectedPhase(v === "all" ? null : v)}
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Toutes phases" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes phases</SelectItem>
-                  {phases?.map((phase) => (
-                    <SelectItem key={phase.id} value={phase.id}>
-                      Phase {phase.index_dans_saison}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardHeader>
-      </Card>
+        {/* Phase Filter */}
+        <div className="flex items-center justify-end gap-3">
+          <span className="text-sm text-muted-foreground">Filtrer par phase :</span>
+          <Select 
+            value={selectedPhase || "all"} 
+            onValueChange={(v) => setSelectedPhase(v === "all" ? null : v)}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Toutes phases" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes phases</SelectItem>
+              {phases?.map((phase) => (
+                <SelectItem key={phase.id} value={phase.id}>
+                  Phase {phase.index_dans_saison}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      {/* Main Content */}
-      <Tabs defaultValue="standings" className="space-y-6">
+        {/* Main Content */}
+        <Tabs defaultValue="standings" className="space-y-6">
           <TabsList className="grid w-full grid-cols-5 max-w-3xl">
             <TabsTrigger value="standings">Classement</TabsTrigger>
             <TabsTrigger value="riders">Top Coureurs</TabsTrigger>
