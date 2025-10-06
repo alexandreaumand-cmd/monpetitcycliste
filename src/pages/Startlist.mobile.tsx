@@ -52,9 +52,11 @@ export const StartlistMobile = () => {
   const { data: races } = useQuery({
     queryKey: ["startlist-races"],
     queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from("courses")
         .select("id, nom, date_debut, phase_id, categorie")
+        .gte("date_debut", today)
         .order("date_debut", { ascending: true })
         .limit(50);
       if (error) throw error;
