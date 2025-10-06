@@ -81,32 +81,44 @@ Deno.serve(async (req) => {
     // Get points from last 5 weeks for each coureur in the startlist
     const coureurIds = entries.map(e => e.coureur_id).filter(Boolean);
     
-    const fiveWeeksAgo = new Date();
-    fiveWeeksAgo.setDate(fiveWeeksAgo.getDate() - 35); // 5 weeks = 35 days
-
-    const { data: recentPoints } = await supabase
+    // Get all points for coureurs in startlist with course info
+    const { data: allPoints } = await supabase
       .from('points_ledger')
-      .select(`
-        coureur_id,
-        points,
-        courses!inner(date_fin)
-      `)
-      .in('coureur_id', coureurIds)
-      .gte('courses.date_fin', fiveWeeksAgo.toISOString().split('T')[0])
-      .order('courses.date_fin', { ascending: false });
+      .select('coureur_id, points, course_id')
+      .in('coureur_id', coureurIds);
 
-    // Build weekly points map (5 weeks)
+    // Get course dates
+    const courseIds = [...new Set(allPoints?.map(p => p.course_id) || [])];
+    const { data: courseDates } = await supabase
+      .from('courses')
+      .select('id, date_fin')
+      .in('id', courseIds);
+
+    // Build course date map
+    const courseDateMap = new Map();
+    courseDates?.forEach(c => {
+      courseDateMap.set(c.id, c.date_fin);
+    });
+
+    // Filter to last 5 weeks and build weekly points map
     const resultsMap = new Map();
-    if (recentPoints) {
-      const now = new Date();
-      for (const point of recentPoints) {
+    const now = new Date();
+    const fiveWeeksAgo = new Date();
+    fiveWeeksAgo.setDate(fiveWeeksAgo.getDate() - 35);
+
+    if (allPoints) {
+      for (const point of allPoints) {
+        const courseDateFin = courseDateMap.get(point.course_id);
+        if (!courseDateFin) continue;
+        
+        const courseDate = new Date(courseDateFin);
+        if (courseDate < fiveWeeksAgo) continue; // Skip courses older than 5 weeks
+        
         if (!resultsMap.has(point.coureur_id)) {
           resultsMap.set(point.coureur_id, [0, 0, 0, 0, 0]); // 5 weeks
         }
         
-        const courseData = Array.isArray(point.courses) ? point.courses[0] : point.courses;
-        const courseDateFin = new Date(courseData.date_fin);
-        const daysDiff = Math.floor((now.getTime() - courseDateFin.getTime()) / (1000 * 60 * 60 * 24));
+        const daysDiff = Math.floor((now.getTime() - courseDate.getTime()) / (1000 * 60 * 60 * 24));
         const weekIndex = Math.min(Math.floor(daysDiff / 7), 4); // Max 4 (5th week)
         
         resultsMap.get(point.coureur_id)[weekIndex] += point.points;
