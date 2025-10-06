@@ -116,10 +116,10 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                     <div className="flex items-baseline justify-end gap-1">
                       <span className={cn(
                         "font-mono",
-                        rank === 1 && "text-2xl font-bold text-yellow-600",
-                        rank === 2 && "text-xl font-bold text-gray-500",
-                        rank === 3 && "text-xl font-bold text-amber-600",
-                        rank > 3 && "text-lg font-semibold text-foreground"
+                        rank === 1 && "text-xl font-bold text-yellow-600",
+                        rank === 2 && "text-lg font-bold text-gray-500",
+                        rank === 3 && "text-lg font-bold text-amber-600",
+                        rank > 3 && "text-base font-semibold text-foreground"
                       )}>
                         {standing.total_points}
                       </span>
