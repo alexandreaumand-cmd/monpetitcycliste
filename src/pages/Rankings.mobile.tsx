@@ -95,11 +95,11 @@ export const RankingsMobile = () => {
   ];
 
   const tabChips = [
-    { label: "Classement", value: "standings" as TabView },
-    { label: "Top Coureurs", value: "riders" as TabView },
-    { label: "Chronologie", value: "timeline" as TabView },
-    { label: "Par Équipe", value: "teams" as TabView },
-    { label: "Par Course", value: "courses" as TabView },
+    { label: "🏆 Général", value: "standings" as TabView },
+    { label: "🚴 Top 20", value: "riders" as TabView },
+    { label: "📈 Chrono", value: "timeline" as TabView },
+    { label: "👥 Équipes", value: "teams" as TabView },
+    { label: "🏁 Courses", value: "courses" as TabView },
   ];
 
   const getRankBadge = (rank: number) => {
@@ -140,13 +140,24 @@ export const RankingsMobile = () => {
         </div>
       </div>
 
-      {/* Sticky Tabs */}
-      <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-sm border-b py-2 px-4 -mx-4">
-        <ChipGroup
-          items={tabChips}
-          selected={activeTab}
-          onSelect={(value) => setActiveTab(value as TabView)}
-        />
+      {/* Sticky Tabs with Scroll Indicator */}
+      <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-sm border-b">
+        <div className="relative">
+          {/* Gradient fade-out gauche */}
+          <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background/95 to-transparent z-10 pointer-events-none" />
+          
+          {/* Tabs scrollables */}
+          <div className="py-2 px-4">
+            <ChipGroup
+              items={tabChips}
+              selected={activeTab}
+              onSelect={(value) => setActiveTab(value as TabView)}
+            />
+          </div>
+          
+          {/* Gradient fade-out droite */}
+          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background/95 to-transparent z-10 pointer-events-none" />
+        </div>
       </div>
 
       {/* Content */}
