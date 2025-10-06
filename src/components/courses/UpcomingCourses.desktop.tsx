@@ -37,20 +37,15 @@ interface CourseData {
 export const UpcomingCourses = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [phaseFilter, setPhaseFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("proximity");
   const [selectedCourse, setSelectedCourse] = useState<CourseData | null>(null);
 
   const { data: courses, isLoading } = useQuery({
-    queryKey: ['upcoming-courses'],
+    queryKey: ['all-courses'],
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('v_course_points_theoriques')
         .select('*')
-        .gte('date_debut', today)
-        .order('date_debut', { ascending: true });
+        .order('date_debut', { ascending: false });
       
       if (error) throw error;
       return data as CourseData[];
@@ -69,34 +64,12 @@ export const UpcomingCourses = () => {
     }
   });
 
-  const filteredAndSortedCourses = courses?.filter(course => {
+  const filteredCourses = courses?.filter(course => {
     const matchesSearch = course.nom.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPhase = phaseFilter === "all" || course.phase_index?.toString() === phaseFilter;
-    const matchesCategory = categoryFilter === "all" || course.categorie === categoryFilter;
     
-    const normalized = normalizeCourseType(course.type_course);
-    const matchesType = typeFilter === "all" || normalized.display === typeFilter;
-    
-    return matchesSearch && matchesPhase && matchesCategory && matchesType;
-  })?.sort((a, b) => {
-    const today = new Date();
-    switch (sortBy) {
-      case "proximity":
-        const daysA = differenceInDays(new Date(a.date_debut), today);
-        const daysB = differenceInDays(new Date(b.date_debut), today);
-        return daysA - daysB;
-      case "points":
-        return (b.points_total || 0) - (a.points_total || 0);
-      case "date":
-        return new Date(a.date_debut).getTime() - new Date(b.date_debut).getTime();
-      case "category":
-        return a.categorie.localeCompare(b.categorie);
-      default:
-        return 0;
-    }
+    return matchesSearch && matchesPhase;
   });
-
-  const categories = [...new Set(courses?.map(c => c.categorie) || [])];
 
   if (isLoading) {
     return (
@@ -125,11 +98,11 @@ export const UpcomingCourses = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Courses à venir
+            Toutes les courses de la saison
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               placeholder="Rechercher une course..."
               value={searchTerm}
@@ -141,7 +114,7 @@ export const UpcomingCourses = () => {
                 <SelectValue placeholder="Toutes les phases" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes les phases</SelectItem>
+                <SelectItem value="all">Toutes</SelectItem>
                 {phases?.map(p => (
                   <SelectItem key={p.index_dans_saison} value={p.index_dans_saison.toString()}>
                     Phase {p.index_dans_saison}
@@ -149,58 +122,23 @@ export const UpcomingCourses = () => {
                 ))}
               </SelectContent>
             </Select>
-
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Toutes catégories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toutes catégories</SelectItem>
-                {categories.map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Tous types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous types</SelectItem>
-                <SelectItem value="One day">Course d'un jour</SelectItem>
-                <SelectItem value="Stage race">Course par étapes</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger>
-                <SelectValue placeholder="Trier par..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="proximity">Proximité</SelectItem>
-                <SelectItem value="points">Points max</SelectItem>
-                <SelectItem value="date">Date</SelectItem>
-                <SelectItem value="category">Catégorie</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </CardContent>
       </Card>
 
       {/* Courses List */}
-      {!filteredAndSortedCourses || filteredAndSortedCourses.length === 0 ? (
+      {!filteredCourses || filteredCourses.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">
-              Aucune course à venir dans la période sélectionnée.
+              Aucune course trouvée avec les filtres sélectionnés.
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredAndSortedCourses.map(course => {
+          {filteredCourses.map(course => {
             const daysUntil = differenceInDays(new Date(course.date_debut), new Date());
             const daysLabel = daysUntil === 0 ? "Aujourd'hui" : `J-${daysUntil}`;
             const normalized = normalizeCourseType(course.type_course);

@@ -35,19 +35,15 @@ interface CourseData {
 export const UpcomingCoursesMobile = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [phaseFilter, setPhaseFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<CourseData | null>(null);
 
   const { data: courses, isLoading } = useQuery({
-    queryKey: ['upcoming-courses'],
+    queryKey: ['all-courses'],
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('v_course_points_theoriques')
         .select('*')
-        .gte('date_debut', today)
-        .order('date_debut', { ascending: true });
+        .order('date_debut', { ascending: false });
       
       if (error) throw error;
       return data as CourseData[];
@@ -69,27 +65,13 @@ export const UpcomingCoursesMobile = () => {
   const filteredCourses = courses?.filter(course => {
     const matchesSearch = course.nom.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPhase = phaseFilter === "all" || course.phase_index?.toString() === phaseFilter;
-    const matchesCategory = categoryFilter === "all" || course.categorie === categoryFilter;
     
-    const normalized = normalizeCourseType(course.type_course);
-    const matchesType = typeFilter === "all" || normalized.display === typeFilter;
-    
-    return matchesSearch && matchesPhase && matchesCategory && matchesType;
+    return matchesSearch && matchesPhase;
   });
 
-  const categories = [...new Set(courses?.map(c => c.categorie) || [])];
   const phaseItems = [
     { value: "all", label: "Toutes" },
     ...(phases?.map(p => ({ value: p.index_dans_saison.toString(), label: `Phase ${p.index_dans_saison}` })) || [])
-  ];
-  const categoryItems = [
-    { value: "all", label: "Toutes" },
-    ...categories.map(cat => ({ value: cat, label: cat }))
-  ];
-  const typeItems = [
-    { value: "all", label: "Tous" },
-    { value: "One day", label: "Un jour" },
-    { value: "Stage race", label: "Étapes" }
   ];
 
   return (
@@ -98,7 +80,7 @@ export const UpcomingCoursesMobile = () => {
       <div className="sticky top-14 z-10 bg-background border-b safe-top">
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold">Courses à venir</h1>
+            <h1 className="text-xl font-bold">Toutes les courses</h1>
             {filteredCourses && (
               <span className="text-xs text-muted-foreground">{filteredCourses.length} courses</span>
             )}
@@ -114,23 +96,11 @@ export const UpcomingCoursesMobile = () => {
             />
           </div>
 
-          <div className="space-y-2">
-            <ChipGroup
-              items={phaseItems}
-              selected={phaseFilter}
-              onSelect={setPhaseFilter}
-            />
-            <ChipGroup
-              items={categoryItems}
-              selected={categoryFilter}
-              onSelect={setCategoryFilter}
-            />
-            <ChipGroup
-              items={typeItems}
-              selected={typeFilter}
-              onSelect={setTypeFilter}
-            />
-          </div>
+          <ChipGroup
+            items={phaseItems}
+            selected={phaseFilter}
+            onSelect={setPhaseFilter}
+          />
         </div>
       </div>
 
