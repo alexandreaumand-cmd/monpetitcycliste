@@ -82,7 +82,7 @@ const Startlist = () => {
       const { data, error } = await supabase.functions.invoke('startlist-upload-and-parse', {
         body: { 
           race_id: selectedRaceId,
-          textContent: textContent 
+          text_content: textContent 
         }
       });
 
@@ -90,9 +90,9 @@ const Startlist = () => {
 
       // The improved function returns startlist_id and detailed stats
       const startlistId = data.startlist_id;
-      const stats = data.stats;
+      const counts = data.counts;
       
-      toast.success(`${stats.matched} coureurs matchés sur ${stats.total_entries} entrées (${stats.auto_confirmed} auto-confirmés)`);
+      toast.success(`${counts.matched} coureurs matchés sur ${counts.parsed} entrées`);
       
       // Switch to view mode with the new startlist
       setSelectedStartlistId(startlistId);
