@@ -42,14 +42,14 @@ export default function Rankings() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <Card className="border-none shadow-card">
-          <CardHeader className="pb-4 pt-6">
+          <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-2xl flex items-center gap-2">
-                  <BarChart3 className="h-6 w-6 text-primary" />
+                <CardTitle className="text-3xl flex items-center gap-3">
+                  <BarChart3 className="h-8 w-8 text-primary" />
                   Classements
                 </CardTitle>
-                <CardDescription className="text-base">
+                <CardDescription className="text-base mt-2">
                   Suivez les performances des managers et coureurs
                 </CardDescription>
               </div>
@@ -72,12 +72,6 @@ export default function Rankings() {
             </div>
           </CardHeader>
       </Card>
-
-      {/* KPIs Section */}
-      <section aria-labelledby="kpi-section-title">
-        <h2 id="kpi-section-title" className="sr-only">Aperçu des points</h2>
-        <RankingsKPIs phaseId={selectedPhase} />
-      </section>
 
       {/* Main Content */}
       <Tabs defaultValue="standings" className="space-y-6">
@@ -113,6 +107,11 @@ export default function Rankings() {
           </TabsContent>
         </Tabs>
 
+        {/* KPIs Section */}
+        <section aria-labelledby="kpi-section-title" className="mt-8">
+          <h2 id="kpi-section-title" className="sr-only">Aperçu des points</h2>
+          <RankingsKPIs phaseId={selectedPhase} />
+        </section>
 
         {/* Manager Details Drawer */}
         <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>

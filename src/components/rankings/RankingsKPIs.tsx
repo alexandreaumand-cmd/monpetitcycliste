@@ -33,9 +33,13 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
 
   if (isLoading) {
     return (
-      <div className="flex gap-3 justify-center items-center flex-wrap">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-20 w-48" />
+          <Card key={i}>
+            <CardContent className="p-6">
+              <Skeleton className="h-16 w-full" />
+            </CardContent>
+          </Card>
         ))}
       </div>
     );
@@ -63,18 +67,19 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
   ];
 
   return (
-    <div className="flex gap-3 justify-center items-center flex-wrap">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {kpis.map((kpi) => (
-        <div 
-          key={kpi.label} 
-          className="flex items-center gap-3 px-5 py-3 rounded-lg bg-card border shadow-sm hover:shadow-md transition-shadow"
-        >
-          <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
-          <div>
-            <p className="text-xs text-muted-foreground">{kpi.label}</p>
-            <p className="text-xl font-bold">{kpi.value}</p>
-          </div>
-        </div>
+        <Card key={kpi.label}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">{kpi.label}</p>
+                <p className="text-3xl font-bold">{kpi.value}</p>
+              </div>
+              <kpi.icon className={`h-10 w-10 ${kpi.color}`} />
+            </div>
+          </CardContent>
+        </Card>
       ))}
     </div>
   );

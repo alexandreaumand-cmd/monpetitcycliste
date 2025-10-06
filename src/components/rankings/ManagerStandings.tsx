@@ -66,9 +66,9 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
 
   return (
     <Card>
-      <CardHeader className="pb-3 pt-5">
-        <CardTitle className="text-xl flex items-center gap-2">
-          <TrendingUp className="h-4 w-4" />
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5" />
           Classement des Managers
         </CardTitle>
         <CardDescription>
@@ -83,50 +83,44 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               <TableHead>Manager</TableHead>
               <TableHead className="text-right">Points</TableHead>
               <TableHead className="text-right">Courses</TableHead>
-              <TableHead className="text-right">Écart</TableHead>
+              <TableHead className="w-48">Progression</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {standings?.map((standing, idx) => {
               const rank = idx + 1;
-              const gapToLeader = standing.total_points - (standings[0]?.total_points || 0);
-              const isPodium = rank <= 3;
+              const delta = idx > 0 ? standing.total_points - standings[idx - 1].total_points : 0;
+              const progressPercent = (standing.total_points / maxPoints) * 100;
 
               return (
                 <TableRow 
                   key={standing.manager_id}
-                  className={`cursor-pointer hover:bg-muted/50 transition-all ${
-                    rank === 1 ? "bg-gradient-to-r from-yellow-50/50 to-transparent dark:from-yellow-950/20 border-l-4 border-yellow-500" :
-                    rank === 2 ? "bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-950/20 border-l-4 border-gray-400" :
-                    rank === 3 ? "bg-gradient-to-r from-amber-50/50 to-transparent dark:from-amber-950/20 border-l-4 border-amber-600" :
-                    ""
-                  }`}
+                  className={onManagerClick ? "cursor-pointer hover:bg-muted/50" : ""}
                   onClick={() => onManagerClick?.(standing.manager_id)}
                 >
                   <TableCell className="font-medium">
-                    <div className={isPodium ? "h-6 w-6" : "h-5 w-5"}>
-                      {getRankIcon(rank)}
-                    </div>
+                    {getRankIcon(rank)}
                   </TableCell>
-                  <TableCell className={isPodium ? "font-bold text-base" : "font-semibold"}>
+                  <TableCell className="font-semibold">
                     {standing.manager_nom}
                   </TableCell>
                   <TableCell className="text-right">
-                    {isPodium ? (
-                      <span className="text-lg font-bold font-mono">
-                        {standing.total_points}
-                      </span>
-                    ) : (
-                      <span className="font-mono text-muted-foreground">
-                        {standing.total_points}
-                      </span>
-                    )}
+                    <Badge variant={rank <= 3 ? "default" : "secondary"}>
+                      {standing.total_points} pts
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
                     {standing.courses_count}
                   </TableCell>
-                  <TableCell className="text-right text-muted-foreground text-sm">
-                    {rank === 1 ? "—" : `${gapToLeader} pts`}
+                  <TableCell>
+                    <div className="space-y-1">
+                      <Progress value={progressPercent} className="h-2" />
+                      {delta !== 0 && idx > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {delta} pts d'écart
+                        </p>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );
