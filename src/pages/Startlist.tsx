@@ -73,31 +73,29 @@ const Startlist = () => {
       return;
     }
 
-    if (!selectedRaceId) {
-      toast.error("Veuillez sélectionner une course");
+    if (!selectedPhaseId) {
+      toast.error("Veuillez sélectionner une phase");
       return;
     }
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('startlist-upload-and-parse', {
+      const { data, error } = await supabase.functions.invoke('startlist-parse-text', {
         body: { 
-          race_id: selectedRaceId,
-          text_content: textContent 
+          race_id: selectedRaceId || null,
+          phase_id: selectedPhaseId,
+          text: textContent,
+          with_diagnostics: false
         }
       });
 
       if (error) throw error;
 
-      // The improved function returns startlist_id and detailed stats
-      const startlistId = data.startlist_id;
-      const counts = data.counts;
+      setParseResult(data);
       
-      toast.success(`${counts.matched} coureurs matchés sur ${counts.parsed} entrées`);
-      
-      // Switch to view mode with the new startlist
-      setSelectedStartlistId(startlistId);
-      setViewMode('view');
+      toast.success(
+        `${data.counts.matched_db} trouvés en BDD (${data.counts.on_roster} dans vos rosters) sur ${data.counts.parsed} entrées`
+      );
       
     } catch (error: any) {
       console.error('Parse error:', error);
@@ -690,26 +688,74 @@ const Startlist = () => {
           </div>
 
           {parseResult && (
-            <div className="flex gap-2 flex-wrap">
-              {selectedRace && (
-                <Badge variant="secondary">{selectedRace.nom}</Badge>
-              )}
-              <Badge variant="outline">
-                {parseResult.counts.lines} lignes
-              </Badge>
-              <Badge variant="outline" className="bg-green-500/10">
-                {parseResult.counts.matched} matchés
-              </Badge>
-              {parseResult.counts.unmatched > 0 && (
-                <Badge 
-                  variant="outline" 
-                  className="bg-orange-500/10 cursor-pointer"
-                  onClick={() => setShowUnmatched(true)}
-                >
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  {parseResult.counts.unmatched} à corriger
-                </Badge>
-              )}
+            <div className="space-y-2">
+              <div className="flex gap-2 flex-wrap">
+                {selectedRace && (
+                  <Badge variant="secondary">{selectedRace.nom}</Badge>
+                )}
+                {selectedPhaseId && (
+                  <Badge variant="secondary">Phase {phases.find(p => p.id === selectedPhaseId)?.index_dans_saison}</Badge>
+                )}
+              </div>
+              
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <div className="font-medium">Lignes parsées</div>
+                    <div className="text-2xl font-bold">{parseResult.counts.parsed}</div>
+                  </div>
+                  <div>
+                    <div className="font-medium">Trouvés en BDD</div>
+                    <div className="text-2xl font-bold text-green-600">{parseResult.counts.matched_db}</div>
+                  </div>
+                  <div>
+                    <div className="font-medium">Dans vos rosters</div>
+                    <div className="text-2xl font-bold text-blue-600">{parseResult.counts.on_roster}</div>
+                  </div>
+                  <div>
+                    <div className="font-medium">Non trouvés</div>
+                    <div className="text-2xl font-bold text-orange-600">
+                      {parseResult.counts.unmatched}
+                      {parseResult.counts.unmatched > 0 && (
+                        <Button 
+                          variant="link" 
+                          size="sm" 
+                          className="ml-2"
+                          onClick={() => setShowUnmatched(true)}
+                        >
+                          Voir
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button onClick={async () => {
+                  try {
+                    const { data, error } = await supabase.functions.invoke('startlist-export-csv-from-text', {
+                      body: { result: parseResult }
+                    });
+
+                    if (error) throw error;
+
+                    const blob = new Blob([data], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `startlist_export.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success('CSV exporté');
+                  } catch (error: any) {
+                    toast.error('Erreur export: ' + error.message);
+                  }
+                }} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exporter CSV
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

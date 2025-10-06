@@ -6,15 +6,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Normalize text for matching
-function normalizeText(text: string): string {
-  return text
+// Normalize text for matching (unaccent + clean)
+function normalize(s: string): string {
+  return (s || '')
     .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/[^\w\s]/g, ' ') // Replace punctuation with space
-    .replace(/\s+/g, ' ') // Compress multiple spaces
+    .replace(/[\u0300-\u036f]/g, '')   // Remove accents
+    .replace(/[''`´]/g, "'")           // Unify apostrophes
+    .replace(/[.\-]/g, ' ')            // . and - to space
+    .replace(/\s+/g, ' ')              // Multiple spaces to one
     .trim()
     .toUpperCase();
+}
+
+// Token signature: sorted unique tokens
+function tokenSig(s: string): string {
+  return normalize(s).split(' ').sort().join(' ');
+}
+
+// Team code bonus (very light)
+function teamBonus(dbTeam: string, code: string): number {
+  const m = normalize(dbTeam);
+  return m.includes(code) ? 0.05 : 0;
 }
 
 // Simple Levenshtein distance
@@ -49,28 +61,15 @@ function similarity(a: string, b: string): number {
   return maxLen === 0 ? 1 : 1 - distance / maxLen;
 }
 
-// Parse name: "NESPOLI Lorenzo" -> "Lorenzo NESPOLI"
+// Canonicalize: "TRENTIN Matteo" -> "Matteo TRENTIN"
 function canonizeName(nameRaw: string): string {
-  const tokens = nameRaw.trim().split(/\s+/);
-  
-  // Find where ALLCAPS tokens end
+  const toks = (nameRaw || '').trim().split(/\s+/);
   let i = 0;
-  while (i < tokens.length && /^[A-ZÀ-Ÿ''\-]+$/.test(tokens[i])) {
-    i++;
-  }
-  
-  const surnameTokens = tokens.slice(0, i);
-  const givenTokens = tokens.slice(i);
-  
-  const surname = surnameTokens.join(' ').toUpperCase();
-  const given = givenTokens.map(t => 
-    t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()
-  ).join(' ');
-  
-  if (given && surname) {
-    return `${given} ${surname}`;
-  }
-  return nameRaw;
+  // Cluster of ALLCAPS tokens at start (surname: DE, VAN, TRENTIN, etc.)
+  while (i < toks.length && /^[A-Z''\-]+$/.test(toks[i])) i++;
+  const surname = toks.slice(0, i).join(' ').toUpperCase();
+  const given = toks.slice(i).map(t => t.charAt(0) + t.slice(1).toLowerCase()).join(' ');
+  return (given && surname) ? `${given} ${surname}` : nameRaw;
 }
 
 serve(async (req) => {
@@ -89,7 +88,7 @@ serve(async (req) => {
       }
     );
 
-    const { race_id, phase_id, text } = await req.json();
+    const { race_id, phase_id, text, with_diagnostics } = await req.json();
 
     if (!text) {
       return new Response(
@@ -124,8 +123,8 @@ serve(async (req) => {
     // Parse lines
     const lines = text.split('\n').filter((l: string) => l.trim());
     const parsedEntries: any[] = [];
+    const diagnostics: any[] = [];
     
-    // Regex: 0. MBH NESPOLI Lorenzo 0:00
     const reFull = /^\s*\d+\.\s+([A-Z]{2,4})\s+(.+?)\s+([+\-−]?\d+:\d+|\d+:\d+)\s*$/i;
     const reLoose = /^\s*\d+\.\s+([A-Z]{2,4})\s+(.+?)\s*$/i;
     
@@ -138,88 +137,150 @@ serve(async (req) => {
         const teamCode = match[1].toUpperCase();
         const nameRaw = match[2].trim();
         const canonicalGuess = canonizeName(nameRaw);
+        const normalized = normalize(canonicalGuess);
         
         parsedEntries.push({
           line_no: i + 1,
           team_code: teamCode,
           source_name: nameRaw,
           canonical_guess: canonicalGuess,
+          normalized,
+          key_sig: tokenSig(canonicalGuess),
         });
       }
     }
 
-    // Load riders
+    // Load all riders
     const { data: riders } = await supabase
       .from('coureurs')
       .select('id, nom, equipe');
+
+    if (!riders) {
+      throw new Error('Impossible de charger les coureurs');
+    }
+
+    // Build maps for fast lookup
+    const riderByNorm = new Map<string, any>();
+    const riderBySig = new Map<string, any>();
+    
+    for (const r of riders) {
+      const norm = normalize(r.nom);
+      const sig = tokenSig(r.nom);
+      if (!riderByNorm.has(norm)) riderByNorm.set(norm, r);
+      if (!riderBySig.has(sig)) riderBySig.set(sig, r);
+    }
 
     // Match each entry
     const matched: any[] = [];
     const unmatched: any[] = [];
 
     for (const entry of parsedEntries) {
-      const normalized = normalizeText(entry.canonical_guess);
       let bestMatch = null;
-      let bestScore = 0;
+      let matchType = 'none';
+      let matchScore = 0;
 
-      if (riders) {
-        for (const rider of riders) {
-          const riderNorm = normalizeText(rider.nom);
+      // 1) Exact match
+      if (riderByNorm.has(entry.normalized)) {
+        bestMatch = riderByNorm.get(entry.normalized);
+        matchType = 'exact';
+        matchScore = 1.0;
+      }
+      
+      // 2) Token signature match
+      if (!bestMatch && riderBySig.has(entry.key_sig)) {
+        bestMatch = riderBySig.get(entry.key_sig);
+        matchType = 'tokens';
+        matchScore = 0.95;
+      }
+
+      // 3) Fuzzy match (if pg_trgm enabled)
+      if (!bestMatch) {
+        // Try similarity search (requires pg_trgm)
+        const { data: fuzzyMatches } = await supabase
+          .rpc('similarity', { 
+            target: entry.normalized,
+            threshold: 0.75 
+          } as any)
+          .limit(5);
+
+        if (fuzzyMatches && fuzzyMatches.length > 0) {
+          const best = fuzzyMatches[0];
+          const bonus = teamBonus(best.equipe || '', entry.team_code || '');
+          const finalScore = best.score + bonus;
           
-          // Exact match
-          if (riderNorm === normalized) {
-            bestMatch = rider;
-            bestScore = 1.0;
-            break;
+          if (finalScore >= 0.86) {
+            bestMatch = best;
+            matchType = 'fuzzy';
+            matchScore = finalScore;
           }
-
-          // Swapped name
-          const parts = normalized.split(' ');
-          if (parts.length >= 2) {
-            const last = parts[parts.length - 1];
-            const first = parts.slice(0, -1).join(' ');
-            const swapped = `${last} ${first}`;
-            if (riderNorm === swapped) {
-              bestMatch = rider;
-              bestScore = 0.98;
-              break;
+        }
+        
+        // Fallback: manual fuzzy
+        if (!bestMatch) {
+          for (const r of riders) {
+            const score = similarity(entry.normalized, normalize(r.nom));
+            const bonus = teamBonus(r.equipe || '', entry.team_code || '');
+            const finalScore = score + bonus;
+            
+            if (finalScore >= 0.86 && finalScore > matchScore) {
+              matchScore = finalScore;
+              bestMatch = r;
+              matchType = 'fuzzy';
             }
-          }
-
-          // Fuzzy match
-          const score = similarity(normalized, riderNorm);
-          if (score >= 0.90 && score > bestScore) {
-            bestScore = score;
-            bestMatch = rider;
           }
         }
       }
 
-      if (bestMatch && bestScore >= 0.90) {
+      if (bestMatch) {
         matched.push({
           ...entry,
           coureur_id: bestMatch.id,
           nom: bestMatch.nom,
           equipe: bestMatch.equipe,
-          confidence: bestScore,
+          confidence: matchScore,
+          match_type: matchType,
         });
+
+        if (with_diagnostics) {
+          diagnostics.push({
+            line_no: entry.line_no,
+            team_code: entry.team_code,
+            name_raw: entry.source_name,
+            canonical_guess: entry.canonical_guess,
+            normalized: entry.normalized,
+            match_type: matchType,
+            score: matchScore,
+            db_nom: bestMatch.nom,
+            db_equipe: bestMatch.equipe,
+          });
+        }
       } else {
         // Get suggestions
         const suggestions = riders
-          ?.map(r => ({
+          .map(r => ({
             coureur_id: r.id,
             nom: r.nom,
-            equipe: r.equipe,
-            score: similarity(normalized, normalizeText(r.nom))
+            score: similarity(entry.normalized, normalize(r.nom)) + teamBonus(r.equipe || '', entry.team_code || '')
           }))
           .filter(s => s.score >= 0.70)
           .sort((a, b) => b.score - a.score)
-          .slice(0, 5) || [];
+          .slice(0, 5);
 
         unmatched.push({
           ...entry,
           suggestions,
         });
+
+        if (with_diagnostics) {
+          diagnostics.push({
+            line_no: entry.line_no,
+            team_code: entry.team_code,
+            name_raw: entry.source_name,
+            canonical_guess: entry.canonical_guess,
+            normalized: entry.normalized,
+            match_type: 'none',
+          });
+        }
       }
     }
 
@@ -270,18 +331,25 @@ serve(async (req) => {
       starters: m.starters.sort((a: any, b: any) => a.nom.localeCompare(b.nom)),
     })).sort((a, b) => b.starters_count - a.starters_count);
 
+    // Count matched on_roster
+    const onRoster = matched.filter(m => {
+      return rosters?.some(r => r.coureur_id === m.coureur_id);
+    }).length;
+
     return new Response(
       JSON.stringify({
         phase_id: phaseId,
         race_id: raceId,
         counts: {
-          lines: parsedEntries.length,
-          matched: matched.length,
+          parsed: parsedEntries.length,
+          matched_db: matched.length,
+          on_roster: onRoster,
           unmatched: unmatched.length,
         },
         managers,
         no_owner: noOwner.sort((a, b) => a.nom.localeCompare(b.nom)),
         unmatched: unmatched.sort((a, b) => a.line_no - b.line_no),
+        diagnostics: with_diagnostics ? diagnostics : undefined,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
