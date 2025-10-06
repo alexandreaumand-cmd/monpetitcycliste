@@ -59,6 +59,92 @@ export const RankingsMobile = () => {
     },
   });
 
+  // Fetch previous standings for evolution
+  const { data: previousStandings } = useQuery({
+    queryKey: ["previous-manager-standings-mobile", selectedPhase],
+    queryFn: async () => {
+      if (!selectedPhase) {
+        // For global view, get previous global standings
+        const { data: activePhase } = await supabase
+          .from("phases")
+          .select("id, index_dans_saison, saison_id")
+          .eq("statut", "active")
+          .order("index_dans_saison", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (!activePhase || activePhase.index_dans_saison === 1) return null;
+        
+        const { data: completedPhases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", activePhase.saison_id)
+          .eq("statut", "completed")
+          .lt("index_dans_saison", activePhase.index_dans_saison);
+        
+        if (!completedPhases || completedPhases.length === 0) return null;
+        
+        const phaseIds = completedPhases.map(p => p.id);
+        
+        const { data: pointsData } = await supabase
+          .from("points_ledger")
+          .select("manager_id, points")
+          .in("phase_id", phaseIds);
+        
+        if (!pointsData) return null;
+        
+        const managerPoints = new Map<string, number>();
+        pointsData.forEach(row => {
+          const current = managerPoints.get(row.manager_id) || 0;
+          managerPoints.set(row.manager_id, current + (row.points || 0));
+        });
+        
+        const sorted = Array.from(managerPoints.entries())
+          .sort((a, b) => b[1] - a[1]);
+        
+        const rankMap = new Map<string, number>();
+        sorted.forEach(([managerId], idx) => {
+          rankMap.set(managerId, idx + 1);
+        });
+        
+        return rankMap;
+      } else {
+        // For phase view, get previous phase standings
+        const { data: currentPhase } = await supabase
+          .from("phases")
+          .select("index_dans_saison, saison_id")
+          .eq("id", selectedPhase)
+          .single();
+
+        if (!currentPhase || currentPhase.index_dans_saison <= 1) return null;
+
+        const { data: prevPhase } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", currentPhase.saison_id)
+          .eq("index_dans_saison", currentPhase.index_dans_saison - 1)
+          .single();
+
+        if (!prevPhase) return null;
+
+        const { data, error } = await supabase
+          .from("v_manager_standings_by_phase")
+          .select("*")
+          .eq("phase_id", prevPhase.id)
+          .order("total_points", { ascending: false });
+
+        if (error) return null;
+
+        const rankMap = new Map();
+        data?.forEach((standing, idx) => {
+          rankMap.set(standing.manager_id, idx + 1);
+        });
+
+        return rankMap;
+      }
+    },
+  });
+
   // Fetch top riders
   const { data: topRiders, isLoading: ridersLoading } = useQuery({
     queryKey: ["top-riders-mobile", selectedPhase],
@@ -171,25 +257,52 @@ export const RankingsMobile = () => {
             ) : standings && standings.length > 0 ? (
               standings.map((standing, idx) => {
                 const rank = idx + 1;
-                const gapToPrevious = idx > 0 ? standings[idx - 1].total_points - standing.total_points : 0;
+                const totalPoints = standings.reduce((sum, s) => sum + s.total_points, 0) || 1;
+                const percentage = ((standing.total_points / totalPoints) * 100).toFixed(1);
+                
+                // Calculate evolution
+                let evolution: number | null = null;
+                let isNew = false;
+                
+                if (previousStandings) {
+                  const previousRank = previousStandings.get(standing.manager_id);
+                  if (previousRank) {
+                    evolution = previousRank - rank; // Positive = gained places
+                  } else {
+                    isNew = true;
+                  }
+                }
 
                 return (
                   <MobileCard
                     key={standing.manager_id}
                     title={standing.manager_nom}
-                    subtitle={`${standing.total_points} points`}
-                    meta={rank === 1 ? undefined : `Écart: -${gapToPrevious} pts`}
+                    subtitle={`${standing.total_points} pts • ${percentage}%`}
+                    meta={
+                      isNew ? (
+                        <Badge variant="outline" className="text-xs">NEW</Badge>
+                      ) : evolution !== null && evolution !== 0 ? (
+                        <div className={`flex items-center gap-1 text-xs font-semibold ${
+                          evolution > 0 ? "text-green-600" : "text-red-600"
+                        }`}>
+                          {evolution > 0 ? (
+                            <>
+                              <TrendingUp className="h-3.5 w-3.5" />
+                              <span>+{evolution}</span>
+                            </>
+                          ) : (
+                            <>
+                              <TrendingUp className="h-3.5 w-3.5 rotate-180" />
+                              <span>{Math.abs(evolution)}</span>
+                            </>
+                          )}
+                        </div>
+                      ) : undefined
+                    }
                     avatar={
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-lg">
                         {getRankBadge(rank)}
                       </div>
-                    }
-                    badge={
-                      standing.courses_count && (
-                        <Badge variant="outline" className="text-xs">
-                          {standing.courses_count} courses
-                        </Badge>
-                      )
                     }
                     onClick={() => handleManagerClick(standing.manager_id)}
                   />

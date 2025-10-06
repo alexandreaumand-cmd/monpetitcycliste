@@ -6,7 +6,7 @@ import { ChevronRight } from "lucide-react";
 interface MobileCardProps {
   title: string;
   subtitle?: string | React.ReactNode;
-  meta?: string;
+  meta?: string | React.ReactNode;
   avatar?: React.ReactNode;
   badge?: React.ReactNode;
   onClick?: () => void;
