@@ -83,14 +83,14 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               <TableHead className="w-16">Rang</TableHead>
               <TableHead>Manager</TableHead>
               <TableHead className="text-right">Points</TableHead>
-              <TableHead className="text-right">Écart au leader</TableHead>
+              <TableHead className="text-right">Écart</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {standings?.map((standing, idx) => {
               const rank = idx + 1;
               const isBottomThree = standings && idx >= standings.length - 3;
-              const gapToLeader = maxPoints - standing.total_points;
+              const gapToPrevious = idx > 0 ? standings[idx - 1].total_points - standing.total_points : 0;
 
               return (
                 <TableRow 
@@ -113,16 +113,25 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                     {standing.manager_nom}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Badge variant={rank <= 3 ? "default" : "secondary"}>
-                      {standing.total_points} pts
-                    </Badge>
+                    <div className="flex items-baseline justify-end gap-1">
+                      <span className={cn(
+                        "font-mono",
+                        rank === 1 && "text-2xl font-bold text-yellow-600",
+                        rank === 2 && "text-xl font-bold text-gray-500",
+                        rank === 3 && "text-xl font-bold text-amber-600",
+                        rank > 3 && "text-lg font-semibold text-foreground"
+                      )}>
+                        {standing.total_points}
+                      </span>
+                      <span className="text-xs text-muted-foreground">pts</span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     {rank === 1 ? (
-                      <span className="text-sm text-muted-foreground font-medium">Leader</span>
+                      <span className="text-xs text-muted-foreground">—</span>
                     ) : (
-                      <span className="text-sm text-destructive font-mono">
-                        −{gapToLeader} pts
+                      <span className="text-xs text-muted-foreground font-mono">
+                        -{gapToPrevious}
                       </span>
                     )}
                   </TableCell>
