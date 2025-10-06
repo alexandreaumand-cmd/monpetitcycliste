@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { differenceInDays, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const Startlist = () => {
   const [viewMode, setViewMode] = useState<'list' | 'parse' | 'view'>('list');
@@ -276,7 +277,7 @@ const Startlist = () => {
   };
 
   const selectedRace = races.find(r => r.id === selectedRaceId);
-  const isAdmin = currentUser; // Simplified - adjust based on your role logic
+  const { isAdmin, loading: isLoadingRole } = useUserRole();
 
   // View mode - show existing startlist
   if (viewMode === 'view') {
