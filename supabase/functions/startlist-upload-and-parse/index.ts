@@ -574,10 +574,10 @@ serve(async (req) => {
         }
       }
 
-      // === PASS 2: Exact map lookups ===
+      // === PASS 2: Exact map lookups (with name inversion support) ===
       if (!matched) {
-        const lastFirstMatch = mapLastFirst.get(normalized);
-        const firstLastMatch = mapFirstLast.get(normalized);
+        const lastFirstMatch = mapLastFirst.get(normalized) || mapLastFirst.get(normalizedInverted);
+        const firstLastMatch = mapFirstLast.get(normalized) || mapFirstLast.get(normalizedInverted);
         const tokenSetMatch = mapTokenSet.get(sourceTokenSetKey);
         
         if (isDebugName) {
