@@ -110,9 +110,42 @@ serve(async (req) => {
     
     // Regex patterns for parsing
     const patterns = [
-      /^(\d+)\s+([A-Z\s\-\.\']+)\s+([A-Z\s\-\.]+)$/i, // BIB NAME TEAM
-      /^([A-Z\s\-\.\']+)\s+([A-Z\s\-\.]+)$/i, // NAME TEAM
-      /^(\d+)\s+([A-Z\s\-\.\']+)$/i, // BIB NAME
+      // NEW: BIB. TEAM_CODE LASTNAME Firstname TIME (e.g., "0. MBH NESPOLI Lorenzo 0:00")
+      {
+        regex: /^(\d+)\.\s+([A-Z]{3})\s+([A-Z\s\-\.\']+)\s+\d+:\d+/i,
+        extract: (match: RegExpMatchArray) => ({
+          bib_no: match[1],
+          source_team: match[2],
+          source_name: match[3].trim(), // Keep LASTNAME Firstname as-is for now
+        })
+      },
+      // BIB NAME TEAM
+      {
+        regex: /^(\d+)\s+([A-Z\s\-\.\']+)\s+([A-Z\s\-\.]+)$/i,
+        extract: (match: RegExpMatchArray) => ({
+          bib_no: match[1],
+          source_name: match[2].trim(),
+          source_team: match[3].trim(),
+        })
+      },
+      // NAME TEAM
+      {
+        regex: /^([A-Z\s\-\.\']+)\s+([A-Z\s\-\.]+)$/i,
+        extract: (match: RegExpMatchArray) => ({
+          bib_no: null,
+          source_name: match[1].trim(),
+          source_team: match[2].trim(),
+        })
+      },
+      // BIB NAME
+      {
+        regex: /^(\d+)\s+([A-Z\s\-\.\']+)$/i,
+        extract: (match: RegExpMatchArray) => ({
+          bib_no: match[1],
+          source_name: match[2].trim(),
+          source_team: null,
+        })
+      },
     ];
 
     for (let i = 0; i < lines.length; i++) {
@@ -121,15 +154,14 @@ serve(async (req) => {
 
       let parsed = false;
       for (const pattern of patterns) {
-        const match = line.match(pattern);
+        const match = line.match(pattern.regex);
         if (match) {
-          const hasBib = match.length === 4;
+          const entry = pattern.extract(match);
           parsedEntries.push({
             line_no: i + 1,
-            bib_no: hasBib ? match[1] : null,
-            source_name: hasBib ? match[2].trim() : (match.length === 3 ? match[1].trim() : match[2].trim()),
-            source_team: hasBib ? match[3].trim() : (match.length === 3 ? match[2].trim() : null),
+            ...entry,
           });
+          console.log(`Parsed entry #${i+1}: bib=${entry.bib_no}, team=${entry.source_team}, name=${entry.source_name}`);
           parsed = true;
           break;
         }
@@ -143,6 +175,7 @@ serve(async (req) => {
           source_name: line.trim(),
           source_team: null,
         });
+        console.log(`Fallback parse #${i+1}: name=${line.trim()}`);
       }
     }
 
@@ -215,56 +248,89 @@ serve(async (req) => {
 
           // Swapped name (LAST FIRST <-> FIRST LAST)
           const parts = normalized.split(' ');
-          if (parts.length === 2) {
-            const swapped = `${parts[1]} ${parts[0]}`;
+          if (parts.length >= 2) {
+            // Try multiple swap combinations for multi-part names
+            const swapped = `${parts[parts.length - 1]} ${parts.slice(0, parts.length - 1).join(' ')}`;
             if (riderNorm === swapped) {
               coureurId = rider.id;
               confidence = 0.95;
               matched = true;
               break;
             }
+            
+            // Also try first-last swap for 2-part names
+            if (parts.length === 2) {
+              const simpleSwap = `${parts[1]} ${parts[0]}`;
+              if (riderNorm === simpleSwap) {
+                coureurId = rider.id;
+                confidence = 0.95;
+                matched = true;
+                break;
+              }
+            }
           }
         }
       }
 
-      // 3. Fuzzy match
+      // 3. Fuzzy match (test both name orders)
       if (!matched && riders) {
         let bestMatch = null;
         let bestScore = 0;
 
-        for (const rider of riders) {
-          const riderNorm = normalizeText(rider.nom);
-          const score = similarity(normalized, riderNorm);
-          
-          // Bonus if team matches
-          let finalScore = score;
-          if (entry.source_team && rider.equipe) {
-            const teamSimilarity = similarity(
-              normalizeText(entry.source_team),
-              normalizeText(rider.equipe)
-            );
-            if (teamSimilarity > 0.7) {
-              finalScore += 0.1;
+        const parts = normalized.split(' ');
+        const namesToTest = [normalized];
+        
+        // Add swapped version for fuzzy matching
+        if (parts.length >= 2) {
+          const swapped = `${parts[parts.length - 1]} ${parts.slice(0, parts.length - 1).join(' ')}`;
+          namesToTest.push(swapped);
+          if (parts.length === 2) {
+            const simpleSwap = `${parts[1]} ${parts[0]}`;
+            if (simpleSwap !== swapped) {
+              namesToTest.push(simpleSwap);
             }
-          }
-
-          if (finalScore > bestScore && finalScore >= 0.86) {
-            bestScore = finalScore;
-            bestMatch = rider.id;
           }
         }
 
-        if (bestMatch && bestScore >= 0.86) {
+        for (const rider of riders) {
+          const riderNorm = normalizeText(rider.nom);
+          
+          // Test all name variations
+          for (const testName of namesToTest) {
+            let score = similarity(testName, riderNorm);
+            
+            // Bonus if team matches
+            if (entry.source_team && rider.equipe) {
+              const teamSimilarity = similarity(
+                normalizeText(entry.source_team),
+                normalizeText(rider.equipe)
+              );
+              if (teamSimilarity > 0.7) {
+                score += 0.1;
+              }
+            }
+
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatch = rider.id;
+            }
+          }
+        }
+
+        // Lower threshold to 0.80 for auto-confirmation
+        if (bestMatch && bestScore >= 0.80) {
           coureurId = bestMatch;
-          confidence = bestScore;
+          confidence = Math.min(bestScore, 0.99); // Cap at 0.99
           matched = true;
         }
       }
 
       if (matched) {
         matchedCount++;
+        console.log(`✓ Matched #${entry.line_no}: ${entry.source_name} → ${coureurId} (confidence: ${confidence.toFixed(2)})`);
       } else {
         unmatchedCount++;
+        console.log(`✗ Unmatched #${entry.line_no}: ${entry.source_name}`);
       }
 
       matchedEntries.push({
@@ -317,6 +383,13 @@ serve(async (req) => {
       );
     }
 
+    console.log(`\n=== STARTLIST PARSING COMPLETE ===`);
+    console.log(`Total lines: ${lines.length}`);
+    console.log(`Parsed: ${parsedEntries.length}`);
+    console.log(`Matched: ${matchedCount} (${(matchedCount/parsedEntries.length*100).toFixed(1)}%)`);
+    console.log(`Unmatched: ${unmatchedCount} (${(unmatchedCount/parsedEntries.length*100).toFixed(1)}%)`);
+    console.log(`Auto-confirmed: ${matchedEntries.filter(e => e.status === 'confirmed').length}`);
+    
     return new Response(
       JSON.stringify({
         startlist_id: importRecord.id,
