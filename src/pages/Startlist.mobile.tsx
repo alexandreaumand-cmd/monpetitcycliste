@@ -54,8 +54,8 @@ export const StartlistMobile = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("courses")
-        .select("id, nom, date_debut, phase_id")
-        .order("date_debut", { ascending: false })
+        .select("id, nom, date_debut, phase_id, categorie")
+        .order("date_debut", { ascending: true })
         .limit(50);
       if (error) throw error;
       return data;
@@ -128,6 +128,23 @@ export const StartlistMobile = () => {
     setViewMode("view");
   };
 
+  // Helper function to check if startlist exists and get its ID
+  const getStartlistInfo = (raceId: string) => {
+    return useQuery({
+      queryKey: ["startlist-check", raceId],
+      queryFn: async () => {
+        const { data } = await supabase
+          .from("startlist_imports")
+          .select("id, pcs_validated")
+          .eq("race_id", raceId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        return data;
+      },
+    });
+  };
+
   // LIST MODE
   if (viewMode === "list") {
     return (
@@ -148,35 +165,59 @@ export const StartlistMobile = () => {
           />
         ) : (
           <div className="space-y-3">
-            {races.map((race) => (
-              <MobileCard
-                key={race.id}
-                title={race.nom}
-                subtitle={format(new Date(race.date_debut), "dd MMMM yyyy", { locale: fr })}
-                avatar={
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Calendar className="h-5 w-5 text-primary" />
-                  </div>
-                }
-                onClick={() => {
-                  // Check if startlist exists for this race
-                  supabase
+            {races.map((race) => {
+              const startlistQuery = useQuery({
+                queryKey: ["startlist-check", race.id],
+                queryFn: async () => {
+                  const { data } = await supabase
                     .from("startlist_imports")
-                    .select("id")
+                    .select("id, pcs_validated")
                     .eq("race_id", race.id)
                     .order("created_at", { ascending: false })
                     .limit(1)
-                    .single()
-                    .then(({ data }) => {
-                      if (data) {
-                        handleSelectRace(race.id, data.id);
-                      } else {
-                        toast.info("Aucune startlist pour cette course");
-                      }
-                    });
-                }}
-              />
-            ))}
+                    .maybeSingle();
+                  return data;
+                },
+              });
+
+              const hasStartlist = !!startlistQuery.data;
+              const isPcsValidated = startlistQuery.data?.pcs_validated || false;
+
+              return (
+                <MobileCard
+                  key={race.id}
+                  title={race.nom}
+                  subtitle={format(new Date(race.date_debut), "dd MMMM yyyy", { locale: fr })}
+                  avatar={
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Calendar className="h-5 w-5 text-primary" />
+                    </div>
+                  }
+                  badge={
+                    <div className="flex gap-1">
+                      {race.categorie && (
+                        <Badge variant="outline" className="text-xs">
+                          {race.categorie}
+                        </Badge>
+                      )}
+                      {isPcsValidated && (
+                        <Badge className="bg-green-600 text-white text-xs">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          PCS OK
+                        </Badge>
+                      )}
+                    </div>
+                  }
+                  onClick={() => {
+                    if (hasStartlist && startlistQuery.data?.id) {
+                      handleSelectRace(race.id, startlistQuery.data.id);
+                    } else {
+                      toast.info("Aucune startlist pour cette course");
+                    }
+                  }}
+                />
+              );
+            })}
           </div>
         )}
       </div>
