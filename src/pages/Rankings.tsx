@@ -13,8 +13,18 @@ import { RankingsKPIs } from "@/components/rankings/RankingsKPIs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { TeamScoring } from "@/components/rankings/TeamScoring";
 import { CourseLeaderboard } from "@/components/rankings/CourseLeaderboard";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { RankingsMobile } from "./Rankings.mobile";
 
 export default function Rankings() {
+  const isMobile = useIsMobile();
+
+  // Render mobile version if on mobile
+  if (isMobile) {
+    return <RankingsMobile />;
+  }
+
+  // Desktop version below (unchanged)
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);

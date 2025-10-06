@@ -1,0 +1,73 @@
+import { Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { useNavigate, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
+
+interface NavItem {
+  label: string;
+  path: string;
+  icon?: React.ReactNode;
+}
+
+interface MobileHeaderProps {
+  title: string;
+  navItems: NavItem[];
+}
+
+export const MobileHeader = ({ title, navItems }: MobileHeaderProps) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  return (
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 safe-top">
+      <div className="flex h-14 items-center justify-between px-4">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="touch-target">
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Ouvrir le menu</span>
+            </Button>
+          </SheetTrigger>
+          
+          <SheetContent side="left" className="w-[280px] safe-bottom">
+            <nav className="flex flex-col gap-2 mt-8">
+              {navItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                
+                return (
+                  <Button
+                    key={item.path}
+                    variant={isActive ? "default" : "ghost"}
+                    className={cn(
+                      "w-full justify-start touch-target",
+                      isActive && "shadow-sm"
+                    )}
+                    onClick={() => {
+                      navigate(item.path);
+                    }}
+                  >
+                    {item.icon && (
+                      <span className="mr-2">{item.icon}</span>
+                    )}
+                    {item.label}
+                  </Button>
+                );
+              })}
+            </nav>
+          </SheetContent>
+        </Sheet>
+
+        <h1 className="text-lg font-bold truncate flex-1 text-center">
+          {title}
+        </h1>
+
+        <div className="w-10" /> {/* Spacer for centering */}
+      </div>
+    </header>
+  );
+};
