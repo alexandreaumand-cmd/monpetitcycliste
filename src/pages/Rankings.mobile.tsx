@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { MobileHeader } from "@/components/mobile/MobileHeader";
 import { ChipGroup } from "@/components/mobile/ChipGroup";
 import { MobileCard } from "@/components/mobile/MobileCard";
 import { MobileBottomSheet } from "@/components/mobile/MobileBottomSheet";
-import { KPIRow } from "@/components/mobile/KPIRow";
 import { MobileEmptyState } from "@/components/mobile/MobileEmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, User, TrendingUp, TrendingDown } from "lucide-react";
+import { Trophy, User, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -115,16 +113,7 @@ export const RankingsMobile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-safe">
-      <MobileHeader
-        title="Classements"
-        navItems={[
-          { label: "Classements", path: "/dashboard/classement" },
-          { label: "Startlist", path: "/dashboard/startlist" },
-          { label: "Admin", path: "/dashboard/admin" },
-        ]}
-      />
-
+    <div className="min-h-screen bg-background">
       <div className="p-4 space-y-4">
         {/* Phase Filter */}
         <ChipGroup
