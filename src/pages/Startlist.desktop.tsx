@@ -21,7 +21,6 @@ import { Label } from "@/components/ui/label";
 import { RouteImageUploader } from "@/components/startlist/RouteImageUploader";
 import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
-import { FormIndicator } from "@/components/startlist/FormIndicator";
 
 const StartlistDesktop = () => {
   
@@ -591,9 +590,8 @@ const StartlistDesktop = () => {
                     {[...manager.starters]
                       .sort((a: any, b: any) => (b.cote || 0) - (a.cote || 0))
                       .map((starter: any) => (
-                        <div key={starter.coureur_id} className="text-xs flex justify-between items-center gap-2">
+                      <div key={starter.coureur_id} className="text-xs flex justify-between items-center gap-2">
                           <span className="font-medium truncate flex-1 min-w-0">{starter.nom}</span>
-                          <FormIndicator results={starter.recent_results || []} />
                         </div>
                       ))}
                   </div>

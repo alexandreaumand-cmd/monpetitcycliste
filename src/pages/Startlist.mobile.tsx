@@ -32,7 +32,6 @@ import {
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
-import { FormIndicator } from "@/components/startlist/FormIndicator";
 
 export const StartlistMobile = () => {
   const queryClient = useQueryClient();
@@ -436,7 +435,6 @@ export const StartlistMobile = () => {
                       {displayedStarters.map((starter: any) => (
                         <div key={starter.coureur_id} className="flex items-center justify-between gap-2 text-xs">
                           <span className="font-medium truncate flex-1">{starter.nom}</span>
-                          <FormIndicator results={starter.recent_results || []} />
                         </div>
                       ))}
                       {hasMore && (
