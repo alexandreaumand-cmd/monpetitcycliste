@@ -120,16 +120,16 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [expandedManagers, setExpandedManagers] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
-  // Fetch leaderboard for the course
+  // Fetch leaderboard for the course - always consolidated (all stages, all classifications)
   const { data: leaderboard, isLoading: leaderboardLoading } = useQuery({
-    queryKey: ["course-leaderboard-drawer", courseId, selectedType, selectedEtape],
+    queryKey: ["course-leaderboard-drawer", courseId],
     queryFn: async () => {
       if (!courseId) return null;
       const { data, error } = await supabase.functions.invoke("course-leaderboard", {
         body: {
           course_id: courseId,
-          type_classement: selectedType || null,
-          etape_numero: selectedType === 'Etape' && selectedEtape ? selectedEtape : null
+          type_classement: null,  // Always aggregate all classification types
+          etape_numero: null      // Always aggregate all stages
         }
       });
       if (error) throw error;
