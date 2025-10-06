@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// UCI team code to full name mapping
+// UCI team code to full name mapping (2024-2025 WT + ProTeams)
 const UCI_TEAM_MAP: Record<string, string> = {
   'UAD': 'UAE TEAM EMIRATES',
   'IGD': 'INEOS GRENADIERS',
@@ -18,8 +18,10 @@ const UCI_TEAM_MAP: Record<string, string> = {
   'TBV': 'BAHRAIN VICTORIOUS',
   'JAY': 'TEAM JAYCO ALULA',
   'XAT': 'TUDOR PRO CYCLING TEAM',
+  'TUD': 'TUDOR PRO CYCLING TEAM',
   'IPT': 'ISRAEL PREMIER TECH',
   'BOH': 'BORA HANSGROHE',
+  'RBH': 'RED BULL BORA HANSGROHE',
   'COF': 'COFIDIS',
   'GFC': 'GROUPAMA FDJ',
   'EFE': 'EF EDUCATION EASYPOST',
@@ -27,22 +29,123 @@ const UCI_TEAM_MAP: Record<string, string> = {
   'AST': 'ASTANA QAZAQSTAN TEAM',
   'LTD': 'LIDL TREK',
   'DSM': 'TEAM DSM FIRMENICH POSTNL',
+  'DFP': 'TEAM DSM FIRMENICH POSTNL',
   'ARK': 'ARKEA B&B HOTELS',
   'UXT': 'UNO X MOBILITY',
   'MBH': 'MOVISTAR TEAM',
   'TNN': 'TEAM NOVO NORDISK',
   'BWB': 'BINGOAL WB',
   'IWG': 'INTERMARCHE WANTY',
+  'ADC': 'ALPECIN DECEUNINCK',
+  'LTS': 'LOTTO DSTNY',
+  'TEN': 'TEAM CORRATEC VINI FANTINI',
+  'QST': 'SOUDAL QUICK STEP',
 };
 
-// Normalize text for matching
+// Common name particles for smart lastName extraction
+const PARTICLES = ['VAN', 'DER', 'DE', 'DI', 'DA', 'DEL', 'DELLA', 'DELLE', 'VON', 'ZU', 'ZUM', 'ZUR', 'LA', 'LE', 'LES', 'DU', 'DES', 'AL', 'EL', 'MC', 'MAC', 'O', 'D'];
+
+// Character transliteration map for European special characters
+const CHAR_MAP: Record<string, string> = {
+  'Á': 'A', 'À': 'A', 'Â': 'A', 'Ä': 'A', 'Ã': 'A', 'Å': 'A', 'Ā': 'A',
+  'á': 'a', 'à': 'a', 'â': 'a', 'ä': 'a', 'ã': 'a', 'å': 'a', 'ā': 'a',
+  'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E', 'Ē': 'E', 'Ė': 'E', 'Ę': 'E',
+  'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e', 'ē': 'e', 'ė': 'e', 'ę': 'e',
+  'Í': 'I', 'Ì': 'I', 'Î': 'I', 'Ï': 'I', 'Ī': 'I', 'Į': 'I',
+  'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i', 'ī': 'i', 'į': 'i',
+  'Ó': 'O', 'Ò': 'O', 'Ô': 'O', 'Ö': 'O', 'Õ': 'O', 'Ø': 'O', 'Ō': 'O',
+  'ó': 'o', 'ò': 'o', 'ô': 'o', 'ö': 'o', 'õ': 'o', 'ø': 'o', 'ō': 'o',
+  'Ú': 'U', 'Ù': 'U', 'Û': 'U', 'Ü': 'U', 'Ū': 'U', 'Ų': 'U',
+  'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u', 'ū': 'u', 'ų': 'u',
+  'Ñ': 'N', 'Ń': 'N', 'Ň': 'N',
+  'ñ': 'n', 'ń': 'n', 'ň': 'n',
+  'Ç': 'C', 'Ć': 'C', 'Č': 'C',
+  'ç': 'c', 'ć': 'c', 'č': 'c',
+  'Ś': 'S', 'Š': 'S', 'Ş': 'S',
+  'ś': 's', 'š': 's', 'ş': 's',
+  'Ł': 'L', 'Ľ': 'L',
+  'ł': 'l', 'ľ': 'l',
+  'Ž': 'Z', 'Ź': 'Z', 'Ż': 'Z',
+  'ž': 'z', 'ź': 'z', 'ż': 'z',
+  'Đ': 'D', 'Ď': 'D',
+  'đ': 'd', 'ď': 'd',
+  'Ř': 'R', 'ř': 'r',
+  'Ý': 'Y', 'Ÿ': 'Y',
+  'ý': 'y', 'ÿ': 'y',
+  'Æ': 'AE', 'æ': 'ae',
+  'Œ': 'OE', 'œ': 'oe',
+  'ß': 'SS',
+};
+
+// Advanced normalization with comprehensive special character handling
+function normalizeTextAdvanced(text: string): string {
+  if (!text) return '';
+  
+  let result = text;
+  
+  // 1. Explicit transliteration of European special characters
+  for (const [char, replacement] of Object.entries(CHAR_MAP)) {
+    result = result.replaceAll(char, replacement);
+  }
+  
+  // 2. Remove all apostrophes and quotes (straight and typographic)
+  result = result.replace(/['''`"""]/g, '');
+  
+  // 3. Remove parentheses and their content (e.g., "(ITA)")
+  result = result.replace(/\([^)]*\)/g, '');
+  
+  // 4. Replace separators with space
+  result = result.replace(/[-_/\.]/g, ' ');
+  
+  // 5. Normalize multi-spaces to single space
+  result = result.replace(/\s+/g, ' ');
+  
+  // 6. Trim and uppercase
+  return result.trim().toUpperCase();
+}
+
+// Legacy normalization (kept for compatibility)
 function normalizeText(text: string): string {
-  return text
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/[-\.]/g, ' ') // Replace - and . with space
-    .trim()
-    .toUpperCase();
+  return normalizeTextAdvanced(text);
+}
+
+// Extract tokens from normalized text (sorted for token-set comparison)
+function extractTokens(normalized: string): string[] {
+  return normalized.split(/\s+/).filter(t => t.length > 0).sort();
+}
+
+// Extract last name from normalized text
+function extractLastName(normalized: string, includeParticles: boolean = false): string {
+  const tokens = normalized.split(/\s+/).filter(t => t.length > 0);
+  if (tokens.length === 0) return '';
+  
+  const lastName = tokens[tokens.length - 1];
+  
+  if (includeParticles && tokens.length > 1) {
+    // Check if previous token(s) are particles
+    let particleCount = 0;
+    for (let i = tokens.length - 2; i >= 0; i--) {
+      if (PARTICLES.includes(tokens[i])) {
+        particleCount++;
+      } else {
+        break;
+      }
+    }
+    
+    if (particleCount > 0) {
+      // Join particles with last name (e.g., "VAN DER POEL" -> "VANDERPOEL")
+      return tokens.slice(tokens.length - 1 - particleCount).join('');
+    }
+  }
+  
+  return lastName;
+}
+
+// Generate team acronym from full name
+function generateTeamAcronym(teamName: string): string {
+  if (!teamName) return '';
+  const words = teamName.split(/\s+/).filter(w => w.length > 0);
+  return words.map(w => w[0]).join('');
 }
 
 // Invert name from "LAST First" to "First LAST"
@@ -246,36 +349,95 @@ serve(async (req) => {
       .from('coureurs')
       .select('id, nom, equipe');
 
-    // Build in-memory dictionaries for O(1) lookups
+    // Build in-memory dictionaries with advanced pre-calculations
     const mapFirstLast = new Map<string, string>(); // "Firstname LASTNAME" → coureur_id
     const mapLastFirst = new Map<string, string>(); // "LASTNAME Firstname" → coureur_id
+    const mapTokenSet = new Map<string, string>(); // "tokenSetKey" → coureur_id (if unique)
+    
+    interface RiderData {
+      id: string;
+      nom: string;
+      equipe: string | null;
+      nomNorm: string;
+      nomSwap: string;
+      tokens: string[];
+      tokenSetKey: string;
+      lastName: string;
+      lastNameAlt: string; // without particles
+      teamNorm: string;
+      teamAcronym: string;
+    }
+    
+    const riderDataMap = new Map<string, RiderData>();
+    const tokenSetCount = new Map<string, number>(); // Track duplicates
     
     riders?.forEach(rider => {
-      const normalized = normalizeText(rider.nom);
-      mapFirstLast.set(normalized, rider.id);
+      const nomNorm = normalizeText(rider.nom);
+      const nomSwap = normalizeText(invertName(rider.nom));
+      const tokens = extractTokens(nomNorm);
+      const tokenSetKey = tokens.join('|');
+      const lastName = extractLastName(nomNorm);
+      const lastNameAlt = extractLastName(nomNorm, true); // with particles joined
+      const teamNorm = normalizeText(rider.equipe || '');
+      const teamAcronym = generateTeamAcronym(teamNorm);
       
-      // Generate inverted version
-      const inverted = normalizeText(invertName(rider.nom));
-      mapLastFirst.set(inverted, rider.id);
+      riderDataMap.set(rider.id, {
+        id: rider.id,
+        nom: rider.nom,
+        equipe: rider.equipe,
+        nomNorm,
+        nomSwap,
+        tokens,
+        tokenSetKey,
+        lastName,
+        lastNameAlt,
+        teamNorm,
+        teamAcronym,
+      });
+      
+      mapFirstLast.set(nomNorm, rider.id);
+      mapLastFirst.set(nomSwap, rider.id);
+      
+      // Count token set occurrences
+      tokenSetCount.set(tokenSetKey, (tokenSetCount.get(tokenSetKey) || 0) + 1);
+    });
+    
+    // Only add unique token sets to map
+    riderDataMap.forEach((data, riderId) => {
+      if (tokenSetCount.get(data.tokenSetKey) === 1) {
+        mapTokenSet.set(data.tokenSetKey, riderId);
+      }
     });
 
-    console.log(`Built dictionaries: ${mapFirstLast.size} FirstLast entries, ${mapLastFirst.size} LastFirst entries`);
+    console.log(`Built dictionaries: ${mapFirstLast.size} FirstLast, ${mapLastFirst.size} LastFirst, ${mapTokenSet.size} unique TokenSets`);
 
-    // Match each entry
+    // Match each entry - Enhanced multi-pass cascade
     const matchedEntries: any[] = [];
     let matchedCount = 0;
     let unmatchedCount = 0;
+    const nearMisses: any[] = [];
 
     for (const entry of parsedEntries) {
       const normalized = normalizeText(entry.source_name);
+      const sourceTokens = extractTokens(normalized);
+      const sourceTokenSetKey = sourceTokens.join('|');
+      const sourceLastName = extractLastName(normalized);
+      const sourceFirstInitial = sourceTokens[0]?.charAt(0) || '';
+      
       let matched = false;
       let coureurId = null;
       let confidence = 0;
+      let matchMethod = '';
 
-      // 1. Check aliases first
+      // Map UCI team code to full name for better team matching
+      const sourceTeamNorm = entry.source_team 
+        ? normalizeText(UCI_TEAM_MAP[entry.source_team] || entry.source_team)
+        : '';
+      const sourceTeamAcronym = generateTeamAcronym(sourceTeamNorm);
+
+      // === PASS 1: Alias exact match (priority) ===
       const aliasMatches = aliasMap.get(normalized);
       if (aliasMatches && aliasMatches.length > 0) {
-        // If source_team matches, prefer that alias
         if (entry.source_team) {
           const teamMatch = aliasMatches.find(a => 
             a.source_team && normalizeText(a.source_team) === normalizeText(entry.source_team)
@@ -284,99 +446,251 @@ serve(async (req) => {
             coureurId = teamMatch.coureur_id;
             confidence = 1.0;
             matched = true;
+            matchMethod = 'alias-team';
           }
         }
         if (!matched && aliasMatches.length === 1) {
           coureurId = aliasMatches[0].coureur_id;
           confidence = 0.95;
           matched = true;
+          matchMethod = 'alias-unique';
         }
       }
 
-      // 2. Exact map lookup (O(1))
+      // === PASS 2: Exact map lookups ===
       if (!matched) {
-        // Try LastFirst lookup first (common in startlists)
         coureurId = mapLastFirst.get(normalized) || null;
         if (coureurId) {
           confidence = 0.98;
           matched = true;
-          console.log(`  → Exact LastFirst match: ${normalized}`);
+          matchMethod = 'exact-lastfirst';
         } else {
-          // Try FirstLast lookup
           coureurId = mapFirstLast.get(normalized) || null;
           if (coureurId) {
             confidence = 0.98;
             matched = true;
-            console.log(`  → Exact FirstLast match: ${normalized}`);
+            matchMethod = 'exact-firstlast';
+          } else {
+            coureurId = mapTokenSet.get(sourceTokenSetKey) || null;
+            if (coureurId) {
+              confidence = 0.96;
+              matched = true;
+              matchMethod = 'exact-tokenset';
+            }
           }
         }
       }
 
-      // 3. Fuzzy match (test both name orders)
-      if (!matched && riders) {
+      // === PASS 3: Last name + Initial match ===
+      if (!matched && sourceLastName && sourceFirstInitial) {
+        for (const [riderId, riderData] of riderDataMap) {
+          if (riderData.lastName === sourceLastName || riderData.lastNameAlt === sourceLastName) {
+            const riderFirstInitial = riderData.tokens[0]?.charAt(0) || '';
+            
+            if (sourceFirstInitial === riderFirstInitial) {
+              // Calculate team similarity
+              const teamSim = sourceTeamNorm ? similarity(sourceTeamNorm, riderData.teamNorm) : 0;
+              const acronymMatch = sourceTeamAcronym && riderData.teamAcronym && 
+                                  similarity(sourceTeamAcronym, riderData.teamAcronym) > 0.75;
+              
+              if (teamSim > 0.75 || acronymMatch) {
+                coureurId = riderId;
+                confidence = 0.96;
+                matched = true;
+                matchMethod = 'lastname-initial-team';
+                break;
+              } else if (teamSim > 0.5 || !sourceTeamNorm) {
+                // Still good match even without perfect team
+                coureurId = riderId;
+                confidence = 0.90;
+                matched = true;
+                matchMethod = 'lastname-initial';
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      // === PASS 4: Token-set weighted matching ===
+      if (!matched) {
+        let bestMatch = null;
+        let bestScore = 0;
+        let bestRiderName = '';
+        let bestDetails = { method: '', teamBonus: 0, lastNameBoost: 0 };
+        
+        const sourceTokensSet = new Set(sourceTokens);
+        
+        for (const [riderId, riderData] of riderDataMap) {
+          const riderTokensSet = new Set(riderData.tokens);
+          const intersection = [...sourceTokensSet].filter(t => riderTokensSet.has(t));
+          
+          // Token overlap score
+          const scoreTokens = intersection.length / Math.max(sourceTokensSet.size, riderTokensSet.size);
+          
+          // Full similarity score
+          const scoreFull = similarity(normalized, riderData.nomNorm);
+          
+          // Combined score (weighted)
+          let score = 0.6 * scoreTokens + 0.4 * scoreFull;
+          
+          let teamBonus = 0;
+          let lastNameBoost = 0;
+          
+          // Team bonus
+          if (sourceTeamNorm) {
+            const teamSim = similarity(sourceTeamNorm, riderData.teamNorm);
+            const acronymSim = sourceTeamAcronym && riderData.teamAcronym 
+              ? similarity(sourceTeamAcronym, riderData.teamAcronym)
+              : 0;
+            
+            if (teamSim > 0.75) {
+              teamBonus = 0.15;
+              score += teamBonus;
+            } else if (teamSim > 0.60) {
+              teamBonus = 0.08;
+              score += teamBonus;
+            } else if (acronymSim > 0.75) {
+              teamBonus = 0.05;
+              score += teamBonus;
+            }
+          }
+          
+          // Last name boost
+          if (riderData.lastName === sourceLastName || riderData.lastNameAlt === sourceLastName) {
+            lastNameBoost = 0.10;
+            score += lastNameBoost;
+          }
+          
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = riderId;
+            bestRiderName = riderData.nom;
+            bestDetails = { method: 'token-set', teamBonus, lastNameBoost };
+          }
+        }
+        
+        // Dynamic threshold based on context
+        let threshold = 0.82;
+        if (bestDetails.lastNameBoost > 0 && bestDetails.teamBonus >= 0.08) {
+          threshold = 0.65; // Strong case
+        } else if (bestDetails.teamBonus >= 0.05 || entry.source_team) {
+          threshold = 0.75; // Medium case
+        }
+        
+        if (bestMatch && bestScore >= threshold) {
+          coureurId = bestMatch;
+          confidence = Math.min(bestScore, 0.99);
+          matched = true;
+          matchMethod = bestDetails.method;
+        } else if (bestMatch && bestScore >= 0.70) {
+          // Track as near-miss
+          nearMisses.push({
+            entry: entry.source_name,
+            candidate: bestRiderName,
+            score: bestScore,
+            threshold,
+            teamBonus: bestDetails.teamBonus,
+            lastNameBoost: bestDetails.lastNameBoost,
+          });
+        }
+      }
+
+      // === PASS 5: Enhanced fuzzy matching ===
+      if (!matched) {
         let bestMatch = null;
         let bestScore = 0;
         let bestRiderName = '';
         let bestTeamBonus = 0;
+        let bestLastNameBoost = 0;
+        let secondBestScore = 0;
 
-        const namesToTest = [normalized];
-        
-        // Add inverted version for fuzzy matching
-        const inverted = normalizeText(invertName(entry.source_name));
-        if (inverted !== normalized) {
-          namesToTest.push(inverted);
-        }
+        const namesToTest = [
+          normalized,
+          normalizeText(invertName(entry.source_name)),
+          sourceTokenSetKey.split('|').join(' '), // TokenSort version
+        ];
 
-        // Map UCI team code to full name for better team matching
-        const sourceTeamNorm = entry.source_team 
-          ? normalizeText(UCI_TEAM_MAP[entry.source_team] || entry.source_team)
-          : null;
-
-        for (const rider of riders) {
-          const riderNorm = normalizeText(rider.nom);
-          
-          // Test all name variations
+        for (const [riderId, riderData] of riderDataMap) {
           for (const testName of namesToTest) {
-            let score = similarity(testName, riderNorm);
+            let score = similarity(testName, riderData.nomNorm);
             let teamBonus = 0;
+            let lastNameBoost = 0;
             
-            // Enhanced team bonus with UCI mapping
-            if (sourceTeamNorm && rider.equipe) {
-              const riderTeamNorm = normalizeText(rider.equipe);
-              const teamSimilarity = similarity(sourceTeamNorm, riderTeamNorm);
+            // Team bonus
+            if (sourceTeamNorm) {
+              const teamSim = similarity(sourceTeamNorm, riderData.teamNorm);
+              const acronymSim = sourceTeamAcronym && riderData.teamAcronym
+                ? similarity(sourceTeamAcronym, riderData.teamAcronym)
+                : 0;
               
-              if (teamSimilarity > 0.7) {
-                teamBonus = 0.15; // Stronger bonus for good team match
+              if (teamSim > 0.75) {
+                teamBonus = 0.15;
+                score += teamBonus;
+              } else if (teamSim > 0.60) {
+                teamBonus = 0.08;
+                score += teamBonus;
+              } else if (acronymSim > 0.75) {
+                teamBonus = 0.05;
                 score += teamBonus;
               }
             }
+            
+            // Last name boost
+            if (riderData.lastName === sourceLastName || riderData.lastNameAlt === sourceLastName) {
+              lastNameBoost = 0.10;
+              score += lastNameBoost;
+            }
 
             if (score > bestScore) {
+              secondBestScore = bestScore;
               bestScore = score;
-              bestMatch = rider.id;
-              bestRiderName = rider.nom;
+              bestMatch = riderId;
+              bestRiderName = riderData.nom;
               bestTeamBonus = teamBonus;
+              bestLastNameBoost = lastNameBoost;
+            } else if (score > secondBestScore) {
+              secondBestScore = score;
             }
           }
         }
 
-        // Dynamic threshold: 0.75 if team code present and mapped, 0.80 otherwise
-        const threshold = (entry.source_team && UCI_TEAM_MAP[entry.source_team]) ? 0.75 : 0.80;
+        // Dynamic threshold
+        let threshold = 0.82;
+        if (bestLastNameBoost > 0 && bestTeamBonus >= 0.08) {
+          threshold = 0.65;
+        } else if (bestTeamBonus >= 0.05 || entry.source_team) {
+          threshold = 0.75;
+        }
         
-        if (bestMatch && bestScore >= threshold) {
+        // Anti-ambiguity protection
+        const scoreDiff = bestScore - secondBestScore;
+        const tooClose = scoreDiff < 0.03 && secondBestScore > 0.70;
+        
+        if (bestMatch && bestScore >= threshold && !tooClose) {
           coureurId = bestMatch;
-          confidence = Math.min(bestScore, 0.99); // Cap at 0.99
+          confidence = Math.min(bestScore, 0.99);
           matched = true;
-          console.log(`  → Fuzzy match: ${entry.source_name} → ${bestRiderName} (score: ${bestScore.toFixed(2)}, team bonus: ${bestTeamBonus.toFixed(2)})`);
-        } else if (bestMatch) {
-          // Log near-misses for debugging
-          console.log(`  ✗ Near-miss: ${entry.source_name} → ${bestRiderName} (score: ${bestScore.toFixed(2)}, threshold: ${threshold}, team bonus: ${bestTeamBonus.toFixed(2)})`);
+          matchMethod = 'fuzzy-enhanced';
+          console.log(`  → ${matchMethod}: ${entry.source_name} → ${bestRiderName} (score: ${bestScore.toFixed(3)}, team: ${bestTeamBonus.toFixed(2)}, lastName: ${bestLastNameBoost.toFixed(2)})`);
+        } else if (bestMatch && bestScore >= 0.70) {
+          // Near-miss
+          nearMisses.push({
+            entry: entry.source_name,
+            candidate: bestRiderName,
+            score: bestScore,
+            threshold,
+            teamBonus: bestTeamBonus,
+            lastNameBoost: bestLastNameBoost,
+            ambiguous: tooClose,
+          });
+          console.log(`  ✗ ${tooClose ? 'AMBIGUOUS' : 'NEAR-MISS'}: ${entry.source_name} → ${bestRiderName} (score: ${bestScore.toFixed(3)}, diff: ${scoreDiff.toFixed(3)}, threshold: ${threshold})`);
         }
       }
 
       if (matched) {
         matchedCount++;
-        console.log(`✓ Matched #${entry.line_no}: ${entry.source_name} → ${coureurId} (confidence: ${confidence.toFixed(2)})`);
+        console.log(`✓ Matched #${entry.line_no}: ${entry.source_name} → ${coureurId} (${matchMethod}, conf: ${confidence.toFixed(2)})`);
       } else {
         unmatchedCount++;
         console.log(`✗ Unmatched #${entry.line_no}: ${entry.source_name}`);
@@ -387,6 +701,14 @@ serve(async (req) => {
         coureur_id: coureurId,
         confidence: confidence,
         status: matched ? 'confirmed' : 'unmatched'
+      });
+    }
+
+    // Log near-misses summary
+    if (nearMisses.length > 0) {
+      console.log(`\n=== NEAR-MISSES (${nearMisses.length}) ===`);
+      nearMisses.slice(0, 10).forEach(nm => {
+        console.log(`  "${nm.entry}" → "${nm.candidate}" (score: ${nm.score.toFixed(3)}, threshold: ${nm.threshold}, team: ${nm.teamBonus.toFixed(2)}, lastName: ${nm.lastNameBoost.toFixed(2)}${nm.ambiguous ? ' [AMBIGUOUS]' : ''})`);
       });
     }
 
