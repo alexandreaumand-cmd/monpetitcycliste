@@ -3355,7 +3355,17 @@ export type Database = {
       race_statut: "scheduled" | "completed"
       result_statut: "finished" | "dnf" | "dns" | "dsq"
       startlist_entry_status: "parsed" | "unmatched" | "confirmed"
-      type_classement: "Etape" | "General" | "Points" | "Montagne" | "Jeune"
+      type_classement:
+        | "Etape"
+        | "General"
+        | "Points"
+        | "Montagne"
+        | "Jeune"
+        | "Porteur Général"
+        | "Porteur Vert"
+        | "Porteur Montagne"
+        | "Porteur Jeune"
+        | "Porteur Combattif"
       wt_tier_type:
         | "GT"
         | "Monument"
@@ -3513,7 +3523,18 @@ export const Constants = {
       race_statut: ["scheduled", "completed"],
       result_statut: ["finished", "dnf", "dns", "dsq"],
       startlist_entry_status: ["parsed", "unmatched", "confirmed"],
-      type_classement: ["Etape", "General", "Points", "Montagne", "Jeune"],
+      type_classement: [
+        "Etape",
+        "General",
+        "Points",
+        "Montagne",
+        "Jeune",
+        "Porteur Général",
+        "Porteur Vert",
+        "Porteur Montagne",
+        "Porteur Jeune",
+        "Porteur Combattif",
+      ],
       wt_tier_type: [
         "GT",
         "Monument",
