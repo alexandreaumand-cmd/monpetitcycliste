@@ -8,16 +8,9 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false
-        }
-      }
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
     // Get the authenticated user
     const authHeader = req.headers.get('Authorization');
@@ -28,7 +21,25 @@ serve(async (req) => {
       );
     }
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser(
+    // Admin client for privileged operations
+    const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      }
+    });
+
+    // User client for admin check with proper auth context
+    const supabaseUser = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      }
+    });
+
+    // Validate the token
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
 
@@ -39,10 +50,14 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is admin using RPC function
-    const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin');
+    // Check if user is admin using user-scoped client
+    const { data: isAdmin, error: adminError } = await supabaseUser.rpc('is_admin');
 
-    if (adminError || !isAdmin) {
+    if (adminError) {
+      console.error('is_admin error:', adminError);
+    }
+
+    if (!isAdmin) {
       return new Response(
         JSON.stringify({ error: 'Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -76,8 +91,8 @@ serve(async (req) => {
     const filename = `${startlistId}_${timestamp}.${ext}`;
     const path = `${startlistId}/${filename}`;
 
-    // Upload to storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    // Upload to storage using admin client
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('startlist-route-images')
       .upload(path, file, {
         contentType: file.type,
@@ -93,12 +108,12 @@ serve(async (req) => {
     }
 
     // Get public URL
-    const { data: { publicUrl } } = supabase.storage
+    const { data: { publicUrl } } = supabaseAdmin.storage
       .from('startlist-route-images')
       .getPublicUrl(path);
 
-    // Update startlist_imports with the new URL
-    const { error: updateError } = await supabase
+    // Update startlist_imports with the new URL using admin client
+    const { error: updateError } = await supabaseAdmin
       .from('startlist_imports')
       .update({ route_image_url: publicUrl })
       .eq('id', startlistId);
