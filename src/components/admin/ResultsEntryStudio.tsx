@@ -12,6 +12,7 @@ import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, 
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
+import { JerseyHoldersInput } from "@/components/admin/JerseyHoldersInput";
 
 type CourseData = {
   course_id: string;
@@ -24,8 +25,17 @@ type CourseData = {
   phase_id: string;
 };
 
-type ClassementType = "Etape" | "General" | "Points" | "Montagne" | "Jeune";
+type ClassementType = "Etape" | "General" | "Points" | "Montagne" | "Jeune" | "Porteur Général" | "Porteur Vert" | "Porteur Montagne" | "Porteur Jeune" | "Porteur Combattif";
 type ResultStatut = "finished" | "dnf" | "dns" | "dsq";
+type JerseyType = 'general' | 'vert' | 'montagne' | 'jeune' | 'combattif';
+
+type JerseyHolders = {
+  general: string | null;
+  vert: string | null;
+  montagne: string | null;
+  jeune: string | null;
+  combattif: string | null;
+};
 
 type ResultRow = {
   position: number;
@@ -54,6 +64,13 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const [isDirty, setIsDirty] = useState(false);
   const requestIdRef = useRef(0);
   const [currentRequestId, setCurrentRequestId] = useState(0);
+  const [jerseyHolders, setJerseyHolders] = useState<JerseyHolders>({
+    general: null,
+    vert: null,
+    montagne: null,
+    jeune: null,
+    combattif: null,
+  });
 
   const isOneDay = course.type_course === "One day";
   const classementType: ClassementType = isOneDay
@@ -92,15 +109,15 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const { data: scoringRules } = useQuery({
     queryKey: ["scoring-rules-studio", course.course_id, classementType],
     queryFn: async () => {
-      // Map classement type to canonical form
-      const typeMap: Record<ClassementType, string> = {
+      // Map classement type to canonical form (only for scoring rules)
+      const typeMap: Record<string, string> = {
         Etape: "Etape",
         General: "General",
         Points: "Points",
         Montagne: "Montagne",
         Jeune: "Jeune",
       };
-      const typeCanon = typeMap[classementType];
+      const typeCanon = typeMap[classementType] || classementType;
 
       // First, get the normalized category for this course
       const { data: courseNorm, error: courseError } = await supabase
@@ -138,6 +155,13 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     setResultRows([]);
     setGridPrepared(false);
     setIsDirty(false);
+    setJerseyHolders({
+      general: null,
+      vert: null,
+      montagne: null,
+      jeune: null,
+      combattif: null,
+    });
 
     // Auto-set date
     if (activeTab === "stages" && etapeNumero) {
@@ -211,6 +235,42 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       if (loadError) throw loadError;
 
       const existingResults = existingData?.rows || [];
+
+      // Load jersey holders if on stage race + stages tab
+      if (!isOneDay && activeTab === "stages" && etapeNumero) {
+        const jerseyTypes: Array<{ type: ClassementType; key: JerseyType }> = [
+          { type: 'Porteur Général', key: 'general' },
+          { type: 'Porteur Vert', key: 'vert' },
+          { type: 'Porteur Montagne', key: 'montagne' },
+          { type: 'Porteur Jeune', key: 'jeune' },
+          { type: 'Porteur Combattif', key: 'combattif' },
+        ];
+
+        const newJerseyHolders: JerseyHolders = {
+          general: null,
+          vert: null,
+          montagne: null,
+          jeune: null,
+          combattif: null,
+        };
+
+        for (const { type, key } of jerseyTypes) {
+          const { data: jerseyData } = await supabase.functions.invoke('results-course-rows', {
+            body: {
+              course_id: course.course_id,
+              type_classement: type,
+              etape_numero: currentStage
+            }
+          });
+
+          const jerseyRows = jerseyData?.rows || [];
+          if (jerseyRows.length > 0 && jerseyRows[0].coureur_id) {
+            newJerseyHolders[key] = jerseyRows[0].coureur_id;
+          }
+        }
+
+        setJerseyHolders(newJerseyHolders);
+      }
 
       if (existingResults.length > 0) {
         // Pre-existing results found - merge with full grid from scoring rules
@@ -350,6 +410,30 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       });
 
       if (saveError) throw saveError;
+
+      // Save jersey holders if on stage race + stages tab
+      if (!isOneDay && activeTab === "stages" && etapeNumero) {
+        const jerseyMappings: Array<{ type: ClassementType; key: JerseyType }> = [
+          { type: 'Porteur Général', key: 'general' },
+          { type: 'Porteur Vert', key: 'vert' },
+          { type: 'Porteur Montagne', key: 'montagne' },
+          { type: 'Porteur Jeune', key: 'jeune' },
+          { type: 'Porteur Combattif', key: 'combattif' },
+        ];
+
+        for (const { type, key } of jerseyMappings) {
+          const coureurId = jerseyHolders[key];
+          if (coureurId) {
+            const { error: jerseyError } = await supabase.rpc("admin_result_save_lot", {
+              p_course_id: course.course_id,
+              p_type_classement: type,
+              p_etape_numero: Number(etapeNumero),
+              p_rows: [{ coureur_id: coureurId, position: 1, statut: 'finished' as ResultStatut }],
+            });
+            if (jerseyError) console.error(`Error saving ${type}:`, jerseyError);
+          }
+        }
+      }
 
       // Compute points for this course
       const { data: pointsResult, error: pointsError } = await supabase.rpc("admin_compute_points_for_course", {
@@ -635,6 +719,20 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {/* Jersey Holders Section - Only for Stage Races on Stages Tab */}
+          {!isOneDay && activeTab === "stages" && gridPrepared && (
+            <div className="mt-6">
+              <JerseyHoldersInput
+                phaseId={course.phase_id}
+                jerseyHolders={jerseyHolders}
+                onChange={(type, coureurId) => {
+                  setJerseyHolders(prev => ({ ...prev, [type]: coureurId }));
+                  setIsDirty(true);
+                }}
+              />
             </div>
           )}
         </div>
