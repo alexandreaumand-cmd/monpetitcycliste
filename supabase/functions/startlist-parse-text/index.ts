@@ -342,8 +342,84 @@ serve(async (req) => {
       starters: m.starters.sort((a: any, b: any) => a.nom.localeCompare(b.nom)),
     })).sort((a, b) => b.starters_count - a.starters_count);
 
+    // ===== SAVE TO DATABASE =====
+    // Get current manager ID
+    const { data: userData } = await supabase.auth.getUser();
+    const { data: managerData } = await supabase
+      .from('managers')
+      .select('id')
+      .eq('user_id', userData?.user?.id)
+      .single();
+
+    if (!managerData) {
+      console.error('Manager not found for user');
+      return new Response(
+        JSON.stringify({ error: 'Manager introuvable' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create startlist_imports record
+    const { data: importRecord, error: importError } = await supabase
+      .from('startlist_imports')
+      .insert({
+        race_id: raceId,
+        created_by_manager_id: managerData.id,
+        raw_text: text,
+      })
+      .select()
+      .single();
+
+    if (importError || !importRecord) {
+      console.error('Error creating startlist_import:', importError);
+      return new Response(
+        JSON.stringify({ error: 'Erreur lors de la création de l\'import' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Prepare entries to insert (matched + unmatched)
+    const entriesToInsert = [
+      ...matched.map((m: any) => ({
+        startlist_id: importRecord.id,
+        line_no: m.line_no,
+        bib_no: null,
+        source_name: m.source_name,
+        source_team: m.team_code || null,
+        coureur_id: m.coureur_id,
+        confidence: m.confidence || 1.0,
+        status: 'confirmed' as const,
+      })),
+      ...unmatched.map((u: any) => ({
+        startlist_id: importRecord.id,
+        line_no: u.line_no,
+        bib_no: null,
+        source_name: u.source_name,
+        source_team: u.team_code || null,
+        coureur_id: null,
+        confidence: 0,
+        status: 'unmatched' as const,
+      }))
+    ];
+
+    // Insert entries into startlist_entries
+    const { error: entriesError } = await supabase
+      .from('startlist_entries')
+      .insert(entriesToInsert);
+
+    if (entriesError) {
+      console.error('Error inserting entries:', entriesError);
+      return new Response(
+        JSON.stringify({ error: 'Erreur lors de l\'insertion des entrées' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`✅ Saved ${entriesToInsert.length} entries to database (startlist_id: ${importRecord.id})`);
+
     return new Response(
       JSON.stringify({
+        startlist_id: importRecord.id,
         phase_id: phaseId,
         race_id: raceId,
         counts: {
