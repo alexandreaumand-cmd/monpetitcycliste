@@ -29,7 +29,8 @@ Deno.serve(async (req) => {
           id,
           nom,
           date_debut,
-          phase_id
+          phase_id,
+          categorie
         )
       `)
       .eq('id', startlist_id)
@@ -67,22 +68,74 @@ Deno.serve(async (req) => {
         coureur_id,
         managers!inner(
           id,
-          nom
+          nom,
+          sponsor
         )
       `)
       .eq('phase_id', phaseId);
 
     if (rostersError) throw rostersError;
 
-    // Build manager map
+    // Get phase standings
+    const { data: phaseStandings } = await supabase
+      .from('v_manager_standings_by_phase')
+      .select('*')
+      .eq('phase_id', phaseId)
+      .order('total_points', { ascending: false });
+
+    // Get total standings
+    const { data: totalStandings } = await supabase
+      .from('v_manager_standings_total')
+      .select('*')
+      .order('total_points', { ascending: false });
+
+    // Get scoring rules for this race category
+    const { data: scoringRules } = await supabase
+      .from('scoring_rules')
+      .select('type_classement, place, points')
+      .eq('categorie', race.categorie)
+      .order('type_classement')
+      .order('place');
+
+    // Build manager map with standings
     const managerMap = new Map();
     
     for (const roster of rosters) {
       const managerData = Array.isArray(roster.managers) ? roster.managers[0] : roster.managers;
       if (!managerMap.has(roster.manager_id)) {
+        // Find standings for this manager
+        const phaseStanding = phaseStandings?.find(s => s.manager_id === roster.manager_id);
+        const totalStanding = totalStandings?.find(s => s.manager_id === roster.manager_id);
+        
+        // Calculate phase rank
+        const phaseRank = phaseStandings ? phaseStandings.findIndex(s => s.manager_id === roster.manager_id) + 1 || null : null;
+        const totalRank = totalStandings ? totalStandings.findIndex(s => s.manager_id === roster.manager_id) + 1 || null : null;
+        
+        // Calculate gaps with adjacent managers in phase standings
+        let gap_prev_phase = null;
+        let gap_next_phase = null;
+        if (phaseRank && phaseStandings) {
+          const prevManager = phaseStandings[phaseRank - 2]; // -2 because array is 0-indexed
+          const nextManager = phaseStandings[phaseRank]; // Next is at current rank index
+          
+          if (prevManager) {
+            gap_prev_phase = (phaseStanding?.total_points || 0) - (prevManager.total_points || 0);
+          }
+          if (nextManager) {
+            gap_next_phase = (phaseStanding?.total_points || 0) - (nextManager.total_points || 0);
+          }
+        }
+        
         managerMap.set(roster.manager_id, {
           manager_id: roster.manager_id,
           manager_nom: managerData.nom,
+          sponsor: managerData.sponsor,
+          rank_phase: phaseRank,
+          rank_total: totalRank,
+          points_phase: phaseStanding?.total_points || 0,
+          points_total: totalStanding?.total_points || 0,
+          gap_prev_phase,
+          gap_next_phase,
           starters: [],
           starters_count: 0
         });
@@ -119,9 +172,14 @@ Deno.serve(async (req) => {
         id: race.id,
         nom: race.nom,
         date_debut: race.date_debut,
-        phase_id: phaseId
+        phase_id: phaseId,
+        categorie: race.categorie
       },
       managers,
+      scoring: {
+        categorie: race.categorie,
+        rules: scoringRules || []
+      },
       totals: {
         managers: managers.length,
         starters_all: entries.length

@@ -327,140 +327,122 @@ const Startlist = () => {
     }
 
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <Button variant="ghost" onClick={handleBackToList} className="mb-6">
+      <div className="max-w-7xl mx-auto p-4 space-y-4 overflow-hidden">
+        <Button variant="ghost" onClick={handleBackToList} className="mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Retour aux courses
+          Retour
         </Button>
 
-        <Card className="p-6">
-          <div className="flex items-start justify-between mb-4">
+        {/* Header compact avec barème */}
+        <Card className="p-4">
+          <div className="flex items-start justify-between mb-3">
             <div>
-              <h2 className="text-2xl font-bold mb-2">{startlistViewData.race.nom}</h2>
-              <p className="text-muted-foreground">
-                {format(new Date(startlistViewData.race.date_debut), 'dd MMMM yyyy', { locale: fr })}
+              <h2 className="text-xl font-bold">{startlistViewData.race.nom}</h2>
+              <p className="text-sm text-muted-foreground">
+                {format(new Date(startlistViewData.race.date_debut), 'dd MMMM yyyy', { locale: fr })} • {startlistViewData.race.categorie}
               </p>
             </div>
             <div className="flex gap-2">
-              <Button onClick={() => handleExportCSV(selectedStartlistId!)} variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Exporter CSV
+              <Button onClick={() => handleExportCSV(selectedStartlistId!)} variant="outline" size="sm">
+                <Download className="h-3 w-3 mr-1" />
+                CSV
               </Button>
               {canModify && (
-                <Button onClick={handleModifyStartlist} variant="outline">
-                  Modifier / Réimporter
+                <Button onClick={handleModifyStartlist} variant="outline" size="sm">
+                  Modifier
                 </Button>
               )}
             </div>
           </div>
 
-          <div className="mb-4 p-4 bg-muted rounded-lg">
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <span className="font-medium">Total entrées:</span>{' '}
-                <span className="text-muted-foreground">{startlistEntriesData?.stats?.total || 0}</span>
+          {/* Barème de points compact */}
+          {startlistViewData.scoring && startlistViewData.scoring.rules && startlistViewData.scoring.rules.length > 0 && (
+            <Card className="bg-muted/50 p-3 mb-3">
+              <h4 className="font-semibold text-xs mb-2">Barème ({startlistViewData.scoring.categorie})</h4>
+              <div className="grid grid-cols-5 gap-x-4 gap-y-1 text-xs">
+                {startlistViewData.scoring.rules
+                  .filter((r: any) => r.type_classement === 'General')
+                  .slice(0, 10)
+                  .map((rule: any) => (
+                    <div key={rule.place} className="flex gap-1">
+                      <span className="font-medium">{rule.place}e:</span>
+                      <span className="text-muted-foreground">{rule.points}pts</span>
+                    </div>
+                  ))}
               </div>
-              <div>
-                <span className="font-medium">Matchés:</span>{' '}
-                <span className="text-muted-foreground">{startlistEntriesData?.stats?.matched || 0}</span>
-              </div>
-              <div>
-                <span className="font-medium">Non matchés:</span>{' '}
-                <span className="text-muted-foreground">{startlistEntriesData?.stats?.unmatched || 0}</span>
-              </div>
-            </div>
-          </div>
-
-          {startlistViewData.managers.length > 0 && (
-            <div className="space-y-4 mb-6">
-              <h3 className="text-lg font-semibold">Coureurs par manager</h3>
-              {startlistViewData.managers.map((manager: any) => (
-                <Card key={manager.manager_id} className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold">{manager.manager_nom}</h4>
-                    <Badge variant="secondary">{manager.starters_count} partant{manager.starters_count > 1 ? 's' : ''}</Badge>
-                  </div>
-                  <div className="grid gap-2">
-                    {manager.starters.map((starter: any) => (
-                      <div key={starter.coureur_id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                        <div>
-                          <span className="font-medium">{starter.nom}</span>
-                          {starter.equipe && (
-                            <span className="text-sm text-muted-foreground ml-2">({starter.equipe})</span>
-                          )}
-                        </div>
-                        {starter.bib_no && (
-                          <Badge variant="outline">#{starter.bib_no}</Badge>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              ))}
-            </div>
+            </Card>
           )}
 
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Startlist brute</h3>
-            {isLoadingEntries ? (
-              <Card className="p-6">
-                <Skeleton className="h-40 w-full" />
-              </Card>
-            ) : startlistEntriesData?.entries && startlistEntriesData.entries.length > 0 ? (
-              <Card className="p-4">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2 font-semibold">Ligne</th>
-                        <th className="text-left p-2 font-semibold">Dossard</th>
-                        <th className="text-left p-2 font-semibold">Nom source</th>
-                        <th className="text-left p-2 font-semibold">Équipe source</th>
-                        <th className="text-left p-2 font-semibold">Coureur associé</th>
-                        <th className="text-left p-2 font-semibold">Statut</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {startlistEntriesData.entries.map((entry: any) => (
-                        <tr key={entry.id} className="border-b hover:bg-muted/50">
-                          <td className="p-2 text-sm">{entry.line_no}</td>
-                          <td className="p-2 text-sm">{entry.bib_no || '-'}</td>
-                          <td className="p-2 text-sm font-medium">{entry.source_name}</td>
-                          <td className="p-2 text-sm text-muted-foreground">{entry.source_team || '-'}</td>
-                          <td className="p-2 text-sm">
-                            {entry.coureur_id && entry.coureurs ? (
-                              <div>
-                                <div className="font-medium">{Array.isArray(entry.coureurs) ? entry.coureurs[0]?.nom : entry.coureurs.nom}</div>
-                                {(Array.isArray(entry.coureurs) ? entry.coureurs[0]?.equipe : entry.coureurs.equipe) && (
-                                  <div className="text-xs text-muted-foreground">
-                                    {Array.isArray(entry.coureurs) ? entry.coureurs[0]?.equipe : entry.coureurs.equipe}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </td>
-                          <td className="p-2">
-                            <Badge variant={entry.coureur_id ? 'default' : 'secondary'} className="text-xs">
-                              {entry.status}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            ) : (
-              <Card className="p-6">
-                <p className="text-muted-foreground text-center">
-                  Aucune entrée trouvée pour cette startlist
-                </p>
-              </Card>
-            )}
+          {/* Stats */}
+          <div className="flex gap-4 text-xs">
+            <div><span className="font-medium">Managers:</span> {startlistViewData.totals.managers}</div>
+            <div><span className="font-medium">Partants:</span> {startlistViewData.totals.starters_all}</div>
           </div>
         </Card>
+
+        {/* Grille compacte des managers */}
+        <div className="grid grid-cols-2 gap-3">
+          {startlistViewData.managers.map((manager: any) => (
+            <Card key={manager.manager_id} className="p-3">
+              {/* En-tête manager */}
+              <div className="mb-2 pb-2 border-b">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-sm truncate">{manager.manager_nom}</h4>
+                    {manager.sponsor && (
+                      <p className="text-xs text-muted-foreground truncate">{manager.sponsor}</p>
+                    )}
+                  </div>
+                  <Badge variant="secondary" className="text-xs ml-2 flex-shrink-0">
+                    {manager.starters_count}
+                  </Badge>
+                </div>
+                
+                {/* Classements */}
+                <div className="grid grid-cols-2 gap-2 text-xs mb-1">
+                  <div>
+                    <span className="font-medium">Phase:</span> #{manager.rank_phase || '-'}
+                    {manager.points_phase > 0 && (
+                      <span className="text-muted-foreground ml-1">({manager.points_phase}pts)</span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-medium">CG:</span> #{manager.rank_total || '-'}
+                    {manager.points_total > 0 && (
+                      <span className="text-muted-foreground ml-1">({manager.points_total}pts)</span>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Écarts */}
+                {(manager.gap_prev_phase || manager.gap_next_phase) && (
+                  <div className="flex gap-3 text-xs text-muted-foreground">
+                    {manager.gap_prev_phase && (
+                      <span className="text-destructive">{manager.gap_prev_phase}pts</span>
+                    )}
+                    {manager.gap_next_phase && (
+                      <span className="text-green-600">+{Math.abs(manager.gap_next_phase)}pts</span>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Liste coureurs */}
+              <div className="space-y-0.5">
+                {manager.starters.map((starter: any) => (
+                  <div key={starter.coureur_id} className="text-xs flex justify-between items-center gap-2">
+                    <span className="font-medium truncate flex-1 min-w-0">{starter.nom}</span>
+                    {starter.equipe && (
+                      <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                        {starter.equipe.substring(0, 15)}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
