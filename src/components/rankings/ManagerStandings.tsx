@@ -144,11 +144,11 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
   const totalPoints = standings?.reduce((sum, s) => sum + s.total_points, 0) || 1;
 
   const getRankIcon = (rank: number, isBottomThree: boolean) => {
-    if (rank === 1) return <Trophy className="h-6 w-6 text-yellow-500" />;
-    if (rank === 2) return <Medal className="h-6 w-6 text-gray-400" />;
-    if (rank === 3) return <Medal className="h-6 w-6 text-amber-600" />;
-    if (isBottomThree) return <span className="text-red-500 font-bold">#{rank}</span>;
-    return <span className="text-muted-foreground">#{rank}</span>;
+    if (rank === 1) return <Trophy className="h-5 w-5 text-yellow-500" />;
+    if (rank === 2) return <Medal className="h-5 w-5 text-gray-400" />;
+    if (rank === 3) return <Medal className="h-5 w-5 text-amber-600" />;
+    if (isBottomThree) return <span className="text-red-500 font-bold text-sm">#{rank}</span>;
+    return <span className="text-muted-foreground text-sm">#{rank}</span>;
   };
 
   if (isLoading) {
@@ -226,7 +226,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                 <TableRow 
                   key={standing.manager_id}
                   className={cn(
-                    "cursor-pointer transition-all",
+                    "cursor-pointer transition-all h-12",
                     rank === 1 && "bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-950/30 border-l-4 border-yellow-500 font-bold",
                     rank === 2 && "bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-900/30 border-l-4 border-gray-400 font-semibold",
                     rank === 3 && "bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-950/30 border-l-4 border-amber-600 font-semibold",
@@ -236,21 +236,21 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                   )}
                   onClick={() => onManagerClick?.(standing.manager_id)}
                 >
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium py-2">
                     {getRankIcon(rank, isBottomThree)}
                   </TableCell>
-                  <TableCell className="font-semibold">
+                  <TableCell className="font-semibold py-2">
                     {standing.manager_nom}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="space-y-1">
+                  <TableCell className="text-right py-2">
+                    <div className="space-y-0.5">
                       <div className="flex items-baseline justify-end gap-1">
                         <span className={cn(
                           "font-mono",
-                          rank === 1 && "text-xl font-bold text-yellow-600",
-                          rank === 2 && "text-lg font-bold text-gray-500",
-                          rank === 3 && "text-lg font-bold text-amber-600",
-                          rank > 3 && "text-base font-semibold text-foreground"
+                          rank === 1 && "text-lg font-bold text-yellow-600",
+                          rank === 2 && "text-base font-bold text-gray-500",
+                          rank === 3 && "text-base font-bold text-amber-600",
+                          rank > 3 && "text-sm font-semibold text-foreground"
                         )}>
                           {standing.total_points}
                         </span>
@@ -261,7 +261,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right py-2">
                     {rank === 1 ? (
                       <span className="text-xs text-muted-foreground">—</span>
                     ) : (
@@ -271,22 +271,22 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                     )}
                   </TableCell>
                   {(phaseId || previousGlobalStandings) && (
-                    <TableCell className="text-center">
+                    <TableCell className="text-center py-2">
                       {isNew ? (
                         <Badge variant="outline" className="text-xs">NEW</Badge>
                       ) : evolution !== null && evolution !== 0 ? (
                         <div className={cn(
-                          "flex items-center justify-center gap-1 text-sm font-semibold",
+                          "flex items-center justify-center gap-1 text-xs font-semibold",
                           evolution > 0 ? "text-green-600" : "text-red-600"
                         )}>
                           {evolution > 0 ? (
                             <>
-                              <TrendingUp className="h-4 w-4" />
+                              <TrendingUp className="h-3.5 w-3.5" />
                               <span>+{evolution}</span>
                             </>
                           ) : (
                             <>
-                              <TrendingDown className="h-4 w-4" />
+                              <TrendingDown className="h-3.5 w-3.5" />
                               <span>{evolution}</span>
                             </>
                           )}
