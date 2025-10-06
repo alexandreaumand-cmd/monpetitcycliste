@@ -374,26 +374,11 @@ const Startlist = () => {
             </div>
           </div>
 
-          {/* Section image + barème côte à côte */}
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            {/* Image de parcours */}
-            {startlistViewData.route_image_url && (
-              <Card className="bg-muted/50 p-3 overflow-hidden">
-                <h4 className="font-semibold text-xs mb-2">Parcours</h4>
-                <div className="overflow-hidden rounded border">
-                  <img 
-                    src={startlistViewData.route_image_url} 
-                    alt="Parcours" 
-                    className="w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => window.open(startlistViewData.route_image_url, '_blank')}
-                  />
-                </div>
-              </Card>
-            )}
-            
-            {/* Barème de points */}
+          {/* Section barème + image côte à côte */}
+          <div className="grid grid-cols-4 gap-3 mb-3">
+            {/* Barème de points - 3/4 de la largeur */}
             {startlistViewData.scoring && startlistViewData.scoring.rules && startlistViewData.scoring.rules.length > 0 && (
-              <Card className="bg-muted/50 p-3">
+              <Card className="bg-muted/50 p-3 col-span-3">
                 <h4 className="font-semibold text-xs mb-2">Barème ({startlistViewData.scoring.categorie})</h4>
                 <div className="grid grid-cols-5 gap-x-4 gap-y-1 text-xs">
                   {startlistViewData.scoring.rules
@@ -405,6 +390,21 @@ const Startlist = () => {
                         <span className="text-muted-foreground">{rule.points}pts</span>
                       </div>
                     ))}
+                </div>
+              </Card>
+            )}
+            
+            {/* Image de parcours - 1/4 de la largeur */}
+            {startlistViewData.route_image_url && (
+              <Card className="bg-muted/50 p-3 overflow-hidden col-span-1">
+                <h4 className="font-semibold text-xs mb-2">Parcours</h4>
+                <div className="overflow-hidden rounded border">
+                  <img 
+                    src={startlistViewData.route_image_url} 
+                    alt="Parcours" 
+                    className="w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => window.open(startlistViewData.route_image_url, '_blank')}
+                  />
                 </div>
               </Card>
             )}
