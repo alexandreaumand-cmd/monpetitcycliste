@@ -31,8 +31,10 @@ type TopRider = {
   rider_id: string;
   rider_nom: string;
   rider_equipe: string;
+  prix_initial?: number;
   total_points: number;
   courses_count: number;
+  ratio_points_par_prix?: number;
   owners?: RiderOwner[];
   owners_all?: RiderOwner[];
   owners_by_phase?: RiderOwnerByPhase[];
@@ -56,12 +58,16 @@ type RiderPointsTableData = {
   total: number;
 };
 
+type TopRidersSortColumn = "total_points" | "prix_initial" | "ratio_points_par_prix";
+
 export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
   const [selectedRider, setSelectedRider] = useState<TopRider | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortColumn, setSortColumn] = useState<keyof RiderPointRow>("points");
+  const [sortColumn, setSortColumn] = useState<TopRidersSortColumn>("total_points");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [detailsSortColumn, setDetailsSortColumn] = useState<keyof RiderPointRow>("points");
+  const [detailsSortDirection, setDetailsSortDirection] = useState<"asc" | "desc">("desc");
 
   const { data: riders, isLoading } = useQuery({
     queryKey: ["top-riders", phaseId, limit],
@@ -96,7 +102,23 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
     enabled: !!selectedRider,
   });
 
-  // Filter and sort rows
+  // Sort riders list
+  const sortedRiders = useMemo(() => {
+    if (!riders) return [];
+    
+    return [...riders].sort((a, b) => {
+      const aVal = a[sortColumn] ?? 0;
+      const bVal = b[sortColumn] ?? 0;
+      
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      
+      return 0;
+    });
+  }, [riders, sortColumn, sortDirection]);
+
+  // Filter and sort detail rows
   const filteredAndSortedRows = useMemo(() => {
     if (!riderPointsData?.rows) return [];
 
@@ -111,22 +133,22 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
 
     // Sort
     const sorted = [...filtered].sort((a, b) => {
-      const aVal = a[sortColumn];
-      const bVal = b[sortColumn];
+      const aVal = a[detailsSortColumn];
+      const bVal = b[detailsSortColumn];
 
       // Handle nulls for place
-      if (sortColumn === "place") {
+      if (detailsSortColumn === "place") {
         if (aVal === null && bVal === null) return 0;
-        if (aVal === null) return sortDirection === "asc" ? 1 : -1;
-        if (bVal === null) return sortDirection === "asc" ? -1 : 1;
+        if (aVal === null) return detailsSortDirection === "asc" ? 1 : -1;
+        if (bVal === null) return detailsSortDirection === "asc" ? -1 : 1;
       }
 
       if (typeof aVal === "number" && typeof bVal === "number") {
-        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+        return detailsSortDirection === "asc" ? aVal - bVal : bVal - aVal;
       }
 
       if (typeof aVal === "string" && typeof bVal === "string") {
-        return sortDirection === "asc" 
+        return detailsSortDirection === "asc" 
           ? aVal.localeCompare(bVal)
           : bVal.localeCompare(aVal);
       }
@@ -135,14 +157,23 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
     });
 
     return sorted;
-  }, [riderPointsData, searchTerm, sortColumn, sortDirection]);
+  }, [riderPointsData, searchTerm, detailsSortColumn, detailsSortDirection]);
 
-  const handleSort = (column: keyof RiderPointRow) => {
+  const handleSort = (column: TopRidersSortColumn) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortColumn(column);
-      setSortDirection(column === "points" ? "desc" : "asc");
+      setSortDirection("desc");
+    }
+  };
+
+  const handleDetailsSort = (column: keyof RiderPointRow) => {
+    if (detailsSortColumn === column) {
+      setDetailsSortDirection(detailsSortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setDetailsSortColumn(column);
+      setDetailsSortDirection(column === "points" ? "desc" : "asc");
     }
   };
 
@@ -172,11 +203,9 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
     setSelectedRider(rider);
     setDetailsOpen(true);
     setSearchTerm("");
-    setSortColumn("points");
-    setSortDirection("desc");
+    setDetailsSortColumn("points");
+    setDetailsSortDirection("desc");
   };
-
-  const maxPoints = riders?.[0]?.total_points || 1;
 
   if (isLoading) {
     return (
@@ -186,17 +215,16 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
           <Skeleton className="h-4 w-64" />
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <Skeleton key={i} className="h-32" />
-            ))}
-          </div>
+          <Skeleton className="h-96 w-full" />
         </CardContent>
       </Card>
     );
   }
 
-  
+  const SortIcon = ({ column }: { column: TopRidersSortColumn }) => {
+    if (sortColumn !== column) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    return <ArrowUpDown className="h-4 w-4 ml-1" />;
+  };
 
   return (
     <>
@@ -211,135 +239,154 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {riders?.map((rider, idx) => {
-              const progressPercent = (rider.total_points / maxPoints) * 100;
-              
-              return (
-                <Card 
-                  key={rider.rider_id} 
-                  className="overflow-hidden cursor-pointer hover:border-primary transition-colors"
-                  onClick={() => handleRiderClick(rider)}
-                >
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold truncate">{rider.rider_nom}</p>
-                        {rider.rider_equipe && (
-                          <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {rider.rider_equipe}
-                          </p>
-                        )}
-                      </div>
-                      <Badge 
-                        variant={idx < 3 ? "default" : "secondary"}
-                        className="ml-2 shrink-0"
-                      >
-                        #{idx + 1}
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Points</span>
-                        <span className="font-bold">{rider.total_points}</span>
-                      </div>
-                      <Progress value={progressPercent} className="h-2" />
-                      <p className="text-xs text-muted-foreground text-right">
-                        {rider.courses_count} {rider.courses_count > 1 ? 'courses' : 'course'}
-                      </p>
-                    </div>
-
-                    {/* Managers section */}
-                    {phaseId ? (
-                      // Case A: Specific phase selected
-                      rider.owners && rider.owners.length > 0 ? (
-                        <div className="pt-2 border-t">
-                          <p className="text-xs text-muted-foreground mb-1">Managers</p>
-                          <div className="flex flex-wrap gap-1">
-                            {rider.owners.slice(0, 2).map((owner) => (
-                              <Badge key={owner.manager_id} variant="outline" className="text-xs">
-                                {owner.manager_nom}
-                              </Badge>
-                            ))}
-                            {rider.owners.length > 2 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{rider.owners.length - 2}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="pt-2 border-t">
-                          <p className="text-xs text-muted-foreground">Managers : —</p>
-                        </div>
-                      )
-                    ) : (
-                      // Case B: All phases (phase_id = null)
-                      rider.owners_all && rider.owners_all.length > 0 ? (
-                        <div className="pt-2 border-t">
-                          <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                            Managers (toutes phases)
-                          </p>
-                          <div className="flex flex-wrap gap-1 items-center">
-                            {rider.owners_all.slice(0, 2).map((owner) => (
-                              <Badge key={owner.manager_id} variant="outline" className="text-xs">
-                                {owner.manager_nom}
-                              </Badge>
-                            ))}
-                            {rider.owners_all.length > 2 && (
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Badge 
-                                    variant="secondary" 
-                                    className="text-xs cursor-pointer hover:bg-secondary/80"
-                                  >
-                                    +{rider.owners_all.length - 2}
-                                    <Info className="h-3 w-3 ml-1" />
-                                  </Badge>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-80">
-                                  <div className="space-y-2">
-                                    <h4 className="font-semibold text-sm">Propriétaires par phase</h4>
-                                    <div className="max-h-48 overflow-y-auto">
-                                      <Table>
-                                        <TableHeader>
-                                          <TableRow>
-                                            <TableHead className="text-xs">Manager</TableHead>
-                                            <TableHead className="text-xs">Phase</TableHead>
-                                          </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                          {rider.owners_by_phase?.map((owner, idx) => (
-                                            <TableRow key={idx}>
-                                              <TableCell className="text-xs">{owner.manager_nom}</TableCell>
-                                              <TableCell className="text-xs">P{owner.phase_index}</TableCell>
-                                            </TableRow>
-                                          ))}
-                                        </TableBody>
-                                      </Table>
-                                    </div>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="pt-2 border-t">
-                          <p className="text-xs text-muted-foreground">Aucun manager</p>
-                        </div>
-                      )
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-          {!riders || riders.length === 0 && (
+          {!riders || riders.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               Aucun point pour la période sélectionnée
+            </div>
+          ) : (
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-16">#</TableHead>
+                    <TableHead>Coureur</TableHead>
+                    <TableHead>Équipe</TableHead>
+                    <TableHead 
+                      className="text-right cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort("total_points")}
+                    >
+                      <div className="flex items-center justify-end">
+                        Points
+                        <SortIcon column="total_points" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-right cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort("prix_initial")}
+                    >
+                      <div className="flex items-center justify-end">
+                        Prix
+                        <SortIcon column="prix_initial" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-right cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSort("ratio_points_par_prix")}
+                    >
+                      <div className="flex items-center justify-end">
+                        Ratio
+                        <SortIcon column="ratio_points_par_prix" />
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-right">Courses</TableHead>
+                    <TableHead>Managers</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedRiders.map((rider, idx) => (
+                    <TableRow 
+                      key={rider.rider_id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleRiderClick(rider)}
+                    >
+                      <TableCell>
+                        <Badge 
+                          variant={idx < 3 ? "default" : "secondary"}
+                          className="w-10 justify-center"
+                        >
+                          {idx + 1}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-semibold">{rider.rider_nom}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {rider.rider_equipe || '—'}
+                      </TableCell>
+                      <TableCell className="text-right font-bold">
+                        {rider.total_points}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {rider.prix_initial ? `${rider.prix_initial} €` : '—'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {rider.ratio_points_par_prix !== undefined 
+                          ? rider.ratio_points_par_prix.toFixed(2)
+                          : '—'}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {rider.courses_count}
+                      </TableCell>
+                      <TableCell>
+                        {phaseId ? (
+                          rider.owners && rider.owners.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {rider.owners.slice(0, 2).map((owner) => (
+                                <Badge key={owner.manager_id} variant="outline" className="text-xs">
+                                  {owner.manager_nom}
+                                </Badge>
+                              ))}
+                              {rider.owners.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{rider.owners.length - 2}
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )
+                        ) : (
+                          rider.owners_all && rider.owners_all.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 items-center">
+                              {rider.owners_all.slice(0, 1).map((owner) => (
+                                <Badge key={owner.manager_id} variant="outline" className="text-xs">
+                                  {owner.manager_nom}
+                                </Badge>
+                              ))}
+                              {rider.owners_all.length > 1 && (
+                                <Popover>
+                                  <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                    <Badge 
+                                      variant="secondary" 
+                                      className="text-xs cursor-pointer hover:bg-secondary/80"
+                                    >
+                                      +{rider.owners_all.length - 1}
+                                      <Info className="h-3 w-3 ml-1" />
+                                    </Badge>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-80" onClick={(e) => e.stopPropagation()}>
+                                    <div className="space-y-2">
+                                      <h4 className="font-semibold text-sm">Propriétaires par phase</h4>
+                                      <div className="max-h-48 overflow-y-auto">
+                                        <Table>
+                                          <TableHeader>
+                                            <TableRow>
+                                              <TableHead className="text-xs">Manager</TableHead>
+                                              <TableHead className="text-xs">Phase</TableHead>
+                                            </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                            {rider.owners_by_phase?.map((owner, ownerIdx) => (
+                                              <TableRow key={ownerIdx}>
+                                                <TableCell className="text-xs">{owner.manager_nom}</TableCell>
+                                                <TableCell className="text-xs">P{owner.phase_index}</TableCell>
+                                              </TableRow>
+                                            ))}
+                                          </TableBody>
+                                        </Table>
+                                      </div>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>
@@ -449,39 +496,47 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
                       <TableHeader className="sticky top-0 bg-background z-10">
                         <TableRow>
                           <TableHead 
-                            className="cursor-pointer select-none"
-                            onClick={() => handleSort("phase_label")}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => handleDetailsSort("phase_label")}
                           >
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center">
                               Phase
-                              <ArrowUpDown className="h-3 w-3" />
+                              {detailsSortColumn === "phase_label" && (
+                                <ArrowUpDown className="h-4 w-4 ml-1" />
+                              )}
                             </div>
                           </TableHead>
-                          <TableHead 
+                          <TableHead
                             className="cursor-pointer select-none"
-                            onClick={() => handleSort("course_nom")}
+                            onClick={() => handleDetailsSort("course_nom")}
                           >
                             <div className="flex items-center gap-1">
                               Course
-                              <ArrowUpDown className="h-3 w-3" />
+                              {detailsSortColumn === "course_nom" && (
+                                <ArrowUpDown className="h-4 w-4 ml-1" />
+                              )}
                             </div>
                           </TableHead>
                           <TableHead 
                             className="cursor-pointer select-none"
-                            onClick={() => handleSort("place")}
+                            onClick={() => handleDetailsSort("place")}
                           >
                             <div className="flex items-center gap-1">
                               Place
-                              <ArrowUpDown className="h-3 w-3" />
+                              {detailsSortColumn === "place" && (
+                                <ArrowUpDown className="h-4 w-4 ml-1" />
+                              )}
                             </div>
                           </TableHead>
                           <TableHead 
                             className="text-right cursor-pointer select-none"
-                            onClick={() => handleSort("points")}
+                            onClick={() => handleDetailsSort("points")}
                           >
                             <div className="flex items-center justify-end gap-1">
                               Points
-                              <ArrowUpDown className="h-3 w-3" />
+                              {detailsSortColumn === "points" && (
+                                <ArrowUpDown className="h-4 w-4 ml-1" />
+                              )}
                             </div>
                           </TableHead>
                         </TableRow>

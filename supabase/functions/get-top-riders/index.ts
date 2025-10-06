@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
         phase_id,
         coureurs:coureur_id (
           nom,
-          equipe
+          equipe,
+          prix_initial
         )
       `);
 
@@ -79,6 +80,7 @@ Deno.serve(async (req) => {
           rider_id: coureurId,
           rider_nom: entry.coureurs?.nom || 'Inconnu',
           rider_equipe: entry.coureurs?.equipe || '',
+          prix_initial: entry.coureurs?.prix_initial || 0,
           total_points: 0,
           courses_count: new Set(),
         });
@@ -94,8 +96,12 @@ Deno.serve(async (req) => {
       rider_id: rider.rider_id,
       rider_nom: rider.rider_nom,
       rider_equipe: rider.rider_equipe,
+      prix_initial: rider.prix_initial,
       total_points: rider.total_points,
       courses_count: rider.courses_count.size,
+      ratio_points_par_prix: rider.prix_initial > 0 
+        ? Math.round((rider.total_points / rider.prix_initial) * 100) / 100
+        : 0,
     }));
 
     // Sort by points descending
