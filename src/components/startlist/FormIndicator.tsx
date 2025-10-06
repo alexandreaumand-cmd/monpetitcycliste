@@ -3,31 +3,31 @@ interface FormIndicatorProps {
 }
 
 export const FormIndicator = ({ results }: FormIndicatorProps) => {
-  const getColorForPosition = (position: number | null) => {
-    if (!position) return "bg-gray-300";
-    if (position === 1) return "bg-green-800";
-    if (position <= 3) return "bg-green-600";
-    if (position <= 5) return "bg-green-400";
-    if (position <= 10) return "bg-yellow-300";
-    if (position <= 15) return "bg-orange-300";
-    return "bg-red-500";
+  const getColorForPoints = (points: number | null) => {
+    if (!points || points === 0) return "bg-gray-400";
+    if (points > 0 && points <= 200) return "bg-orange-300";
+    if (points > 200 && points <= 400) return "bg-yellow-300";
+    if (points > 400 && points <= 600) return "bg-green-400";
+    return "bg-green-800"; // > 600
   };
 
   const paddedResults = [...results];
   while (paddedResults.length < 5) {
-    paddedResults.push(null as any);
+    paddedResults.push(0);
   }
   const displayResults = paddedResults.slice(0, 5);
 
   return (
     <div 
       className="flex gap-0.5 items-center" 
-      title={results.length > 0 ? `Derniers résultats: ${results.join(', ')}` : 'Aucun résultat récent'}
+      title={results.some(r => r > 0) 
+        ? `Points des 5 dernières semaines: ${displayResults.map(p => p || 0).join(', ')}` 
+        : 'Aucun point récent'}
     >
-      {displayResults.map((position, idx) => (
+      {displayResults.map((points, idx) => (
         <div
           key={idx}
-          className={`w-2 h-2 rounded-full ${getColorForPosition(position)}`}
+          className={`w-2 h-2 rounded-full ${getColorForPoints(points)}`}
         />
       ))}
     </div>

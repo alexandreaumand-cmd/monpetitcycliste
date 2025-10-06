@@ -78,29 +78,38 @@ Deno.serve(async (req) => {
 
     if (rostersError) throw rostersError;
 
-    // Get last 5 results for each coureur in the startlist
+    // Get points from last 5 weeks for each coureur in the startlist
     const coureurIds = entries.map(e => e.coureur_id).filter(Boolean);
     
-    const { data: recentResults } = await supabase
-      .from('race_results')
-      .select('coureur_id, position, type_classement, date_classement')
-      .in('coureur_id', coureurIds)
-      .in('type_classement', ['General', 'Etape'])
-      .not('position', 'is', null)
-      .eq('statut', 'finished')
-      .order('date_classement', { ascending: false });
+    const fiveWeeksAgo = new Date();
+    fiveWeeksAgo.setDate(fiveWeeksAgo.getDate() - 35); // 5 weeks = 35 days
 
-    // Build results map (max 5 results per coureur)
+    const { data: recentPoints } = await supabase
+      .from('points_ledger')
+      .select(`
+        coureur_id,
+        points,
+        courses!inner(date_fin)
+      `)
+      .in('coureur_id', coureurIds)
+      .gte('courses.date_fin', fiveWeeksAgo.toISOString().split('T')[0])
+      .order('courses.date_fin', { ascending: false });
+
+    // Build weekly points map (5 weeks)
     const resultsMap = new Map();
-    if (recentResults) {
-      for (const result of recentResults) {
-        if (!resultsMap.has(result.coureur_id)) {
-          resultsMap.set(result.coureur_id, []);
+    if (recentPoints) {
+      const now = new Date();
+      for (const point of recentPoints) {
+        if (!resultsMap.has(point.coureur_id)) {
+          resultsMap.set(point.coureur_id, [0, 0, 0, 0, 0]); // 5 weeks
         }
-        const coureurResults = resultsMap.get(result.coureur_id);
-        if (coureurResults.length < 5) {
-          coureurResults.push(result.position);
-        }
+        
+        const courseData = Array.isArray(point.courses) ? point.courses[0] : point.courses;
+        const courseDateFin = new Date(courseData.date_fin);
+        const daysDiff = Math.floor((now.getTime() - courseDateFin.getTime()) / (1000 * 60 * 60 * 24));
+        const weekIndex = Math.min(Math.floor(daysDiff / 7), 4); // Max 4 (5th week)
+        
+        resultsMap.get(point.coureur_id)[weekIndex] += point.points;
       }
     }
 
