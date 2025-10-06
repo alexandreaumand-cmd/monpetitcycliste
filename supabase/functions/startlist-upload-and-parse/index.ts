@@ -164,8 +164,10 @@ function invertName(name: string): string {
   return `${restOfName} ${lastName}`;
 }
 
-// Simple Levenshtein distance
-function levenshtein(a: string, b: string): number {
+// Optimized Levenshtein distance with early exit
+function levenshtein(a: string, b: string, maxDistance: number = Infinity): number {
+  if (Math.abs(a.length - b.length) > maxDistance) return maxDistance + 1;
+  
   const matrix: number[][] = [];
   for (let i = 0; i <= b.length; i++) {
     matrix[i] = [i];
@@ -174,6 +176,7 @@ function levenshtein(a: string, b: string): number {
     matrix[0][j] = j;
   }
   for (let i = 1; i <= b.length; i++) {
+    let minInRow = Infinity;
     for (let j = 1; j <= a.length; j++) {
       if (b.charAt(i - 1) === a.charAt(j - 1)) {
         matrix[i][j] = matrix[i - 1][j - 1];
@@ -184,7 +187,10 @@ function levenshtein(a: string, b: string): number {
           matrix[i - 1][j] + 1
         );
       }
+      minInRow = Math.min(minInRow, matrix[i][j]);
     }
+    // Early exit if all values in row exceed maxDistance
+    if (minInRow > maxDistance) return maxDistance + 1;
   }
   return matrix[b.length][a.length];
 }
@@ -409,7 +415,37 @@ serve(async (req) => {
       }
     });
 
+    // Build search indexes for optimized matching
+    const lastNameIndex = new Map<string, Set<string>>(); // lastName -> Set<riderId>
+    const lastNameJoinedIndex = new Map<string, Set<string>>(); // lastNameAlt -> Set<riderId>
+    const tokenIndex = new Map<string, Set<string>>(); // token -> Set<riderId>
+    
+    riderDataMap.forEach((data, riderId) => {
+      // Index by last name
+      if (!lastNameIndex.has(data.lastName)) {
+        lastNameIndex.set(data.lastName, new Set());
+      }
+      lastNameIndex.get(data.lastName)!.add(riderId);
+      
+      // Index by joined last name (with particles)
+      if (data.lastNameAlt && data.lastNameAlt !== data.lastName) {
+        if (!lastNameJoinedIndex.has(data.lastNameAlt)) {
+          lastNameJoinedIndex.set(data.lastNameAlt, new Set());
+        }
+        lastNameJoinedIndex.get(data.lastNameAlt)!.add(riderId);
+      }
+      
+      // Index by tokens
+      data.tokens.forEach(token => {
+        if (!tokenIndex.has(token)) {
+          tokenIndex.set(token, new Set());
+        }
+        tokenIndex.get(token)!.add(riderId);
+      });
+    });
+
     console.log(`Built dictionaries: ${mapFirstLast.size} FirstLast, ${mapLastFirst.size} LastFirst, ${mapTokenSet.size} unique TokenSets`);
+    console.log(`Built indexes: ${lastNameIndex.size} lastNames, ${lastNameJoinedIndex.size} joinedNames, ${tokenIndex.size} tokens`);
 
     // Match each entry - Enhanced multi-pass cascade
     const matchedEntries: any[] = [];
@@ -481,65 +517,94 @@ serve(async (req) => {
         }
       }
 
-      // === PASS 3: Last name + Initial match ===
+      // === PASS 3: Last name + Initial match (optimized with index) ===
       if (!matched && sourceLastName && sourceFirstInitial) {
-        for (const [riderId, riderData] of riderDataMap) {
-          if (riderData.lastName === sourceLastName || riderData.lastNameAlt === sourceLastName) {
-            const riderFirstInitial = riderData.tokens[0]?.charAt(0) || '';
+        // Get candidates from indexes (much smaller search space)
+        const candidates = new Set<string>();
+        const byLastName = lastNameIndex.get(sourceLastName);
+        const byJoinedName = lastNameJoinedIndex.get(sourceLastName);
+        
+        if (byLastName) byLastName.forEach(id => candidates.add(id));
+        if (byJoinedName) byJoinedName.forEach(id => candidates.add(id));
+        
+        // Only search through candidates (typically 1-5 riders instead of 2000+)
+        for (const riderId of candidates) {
+          const riderData = riderDataMap.get(riderId)!;
+          const riderFirstInitial = riderData.tokens[0]?.charAt(0) || '';
+          
+          if (sourceFirstInitial === riderFirstInitial) {
+            // Calculate team similarity only if we have a team
+            const teamSim = sourceTeamNorm ? similarity(sourceTeamNorm, riderData.teamNorm) : 0;
+            const acronymMatch = sourceTeamAcronym && riderData.teamAcronym && 
+                                similarity(sourceTeamAcronym, riderData.teamAcronym) > 0.75;
             
-            if (sourceFirstInitial === riderFirstInitial) {
-              // Calculate team similarity
-              const teamSim = sourceTeamNorm ? similarity(sourceTeamNorm, riderData.teamNorm) : 0;
-              const acronymMatch = sourceTeamAcronym && riderData.teamAcronym && 
-                                  similarity(sourceTeamAcronym, riderData.teamAcronym) > 0.75;
-              
-              if (teamSim > 0.75 || acronymMatch) {
-                coureurId = riderId;
-                confidence = 0.96;
-                matched = true;
-                matchMethod = 'lastname-initial-team';
-                break;
-              } else if (teamSim > 0.5 || !sourceTeamNorm) {
-                // Still good match even without perfect team
-                coureurId = riderId;
-                confidence = 0.90;
-                matched = true;
-                matchMethod = 'lastname-initial';
-                break;
-              }
+            if (teamSim > 0.75 || acronymMatch) {
+              coureurId = riderId;
+              confidence = 0.96;
+              matched = true;
+              matchMethod = 'lastname-initial-team';
+              break; // High confidence match, exit immediately
+            } else if (teamSim > 0.5 || !sourceTeamNorm) {
+              coureurId = riderId;
+              confidence = 0.90;
+              matched = true;
+              matchMethod = 'lastname-initial';
+              break; // Good enough match, exit
             }
           }
         }
       }
 
-      // === PASS 4: Token-set weighted matching ===
+      // === PASS 4: Token-set weighted matching (optimized with pre-filtering) ===
       if (!matched) {
+        // Build candidate set from token index (much smaller search space)
+        const candidates = new Set<string>();
+        sourceTokens.forEach(token => {
+          const byToken = tokenIndex.get(token);
+          if (byToken) byToken.forEach(id => candidates.add(id));
+        });
+        
+        // Limit to top 150 candidates if list is large
+        let candidateList = Array.from(candidates);
+        if (candidateList.length > 150) {
+          // Pre-score by token count and keep top 150
+          const tokenCounts = new Map<string, number>();
+          candidateList.forEach(riderId => {
+            const riderData = riderDataMap.get(riderId)!;
+            const commonTokens = sourceTokens.filter(t => riderData.tokens.includes(t)).length;
+            tokenCounts.set(riderId, commonTokens);
+          });
+          candidateList = candidateList
+            .sort((a, b) => (tokenCounts.get(b) || 0) - (tokenCounts.get(a) || 0))
+            .slice(0, 150);
+        }
+        
         let bestMatch = null;
         let bestScore = 0;
         let bestRiderName = '';
         let bestDetails = { method: '', teamBonus: 0, lastNameBoost: 0 };
+        const teamSimCache = new Map<string, number>(); // Cache team similarity
         
         const sourceTokensSet = new Set(sourceTokens);
         
-        for (const [riderId, riderData] of riderDataMap) {
+        for (const riderId of candidateList) {
+          const riderData = riderDataMap.get(riderId)!;
           const riderTokensSet = new Set(riderData.tokens);
           const intersection = [...sourceTokensSet].filter(t => riderTokensSet.has(t));
           
-          // Token overlap score
           const scoreTokens = intersection.length / Math.max(sourceTokensSet.size, riderTokensSet.size);
-          
-          // Full similarity score
           const scoreFull = similarity(normalized, riderData.nomNorm);
-          
-          // Combined score (weighted)
           let score = 0.6 * scoreTokens + 0.4 * scoreFull;
           
           let teamBonus = 0;
           let lastNameBoost = 0;
           
-          // Team bonus
           if (sourceTeamNorm) {
-            const teamSim = similarity(sourceTeamNorm, riderData.teamNorm);
+            // Use cached team similarity
+            if (!teamSimCache.has(riderId)) {
+              teamSimCache.set(riderId, similarity(sourceTeamNorm, riderData.teamNorm));
+            }
+            const teamSim = teamSimCache.get(riderId)!;
             const acronymSim = sourceTeamAcronym && riderData.teamAcronym 
               ? similarity(sourceTeamAcronym, riderData.teamAcronym)
               : 0;
@@ -556,7 +621,6 @@ serve(async (req) => {
             }
           }
           
-          // Last name boost
           if (riderData.lastName === sourceLastName || riderData.lastNameAlt === sourceLastName) {
             lastNameBoost = 0.10;
             score += lastNameBoost;
@@ -570,12 +634,11 @@ serve(async (req) => {
           }
         }
         
-        // Dynamic threshold based on context
         let threshold = 0.82;
         if (bestDetails.lastNameBoost > 0 && bestDetails.teamBonus >= 0.08) {
-          threshold = 0.65; // Strong case
+          threshold = 0.65;
         } else if (bestDetails.teamBonus >= 0.05 || entry.source_team) {
-          threshold = 0.75; // Medium case
+          threshold = 0.75;
         }
         
         if (bestMatch && bestScore >= threshold) {
@@ -584,7 +647,6 @@ serve(async (req) => {
           matched = true;
           matchMethod = bestDetails.method;
         } else if (bestMatch && bestScore >= 0.70) {
-          // Track as near-miss
           nearMisses.push({
             entry: entry.source_name,
             candidate: bestRiderName,
@@ -596,30 +658,63 @@ serve(async (req) => {
         }
       }
 
-      // === PASS 5: Enhanced fuzzy matching ===
+      // === PASS 5: Enhanced fuzzy matching (optimized with smart candidate selection) ===
       if (!matched) {
+        // Build smart candidate set (union of multiple sources, limited to 150)
+        const candidates = new Set<string>();
+        
+        // Add from Pass 4 token candidates if available
+        sourceTokens.forEach(token => {
+          const byToken = tokenIndex.get(token);
+          if (byToken) byToken.forEach(id => candidates.add(id));
+        });
+        
+        // Add from lastName indexes
+        const byLastName = lastNameIndex.get(sourceLastName);
+        const byJoinedName = lastNameJoinedIndex.get(sourceLastName);
+        if (byLastName) byLastName.forEach(id => candidates.add(id));
+        if (byJoinedName) byJoinedName.forEach(id => candidates.add(id));
+        
+        // Add riders with matching first letter of last name (broader net)
+        if (sourceLastName) {
+          const firstLetter = sourceLastName.charAt(0);
+          riderDataMap.forEach((data, riderId) => {
+            if (data.lastName.charAt(0) === firstLetter && candidates.size < 200) {
+              candidates.add(riderId);
+            }
+          });
+        }
+        
+        // Limit to 150 candidates
+        const candidateList = Array.from(candidates).slice(0, 150);
+        
         let bestMatch = null;
         let bestScore = 0;
         let bestRiderName = '';
         let bestTeamBonus = 0;
         let bestLastNameBoost = 0;
         let secondBestScore = 0;
+        const teamSimCache = new Map<string, number>();
 
+        // Only test 2 name variants (normalized + inverted) for efficiency
         const namesToTest = [
           normalized,
           normalizeText(invertName(entry.source_name)),
-          sourceTokenSetKey.split('|').join(' '), // TokenSort version
         ];
 
-        for (const [riderId, riderData] of riderDataMap) {
+        for (const riderId of candidateList) {
+          const riderData = riderDataMap.get(riderId)!;
+          
           for (const testName of namesToTest) {
             let score = similarity(testName, riderData.nomNorm);
             let teamBonus = 0;
             let lastNameBoost = 0;
             
-            // Team bonus
             if (sourceTeamNorm) {
-              const teamSim = similarity(sourceTeamNorm, riderData.teamNorm);
+              if (!teamSimCache.has(riderId)) {
+                teamSimCache.set(riderId, similarity(sourceTeamNorm, riderData.teamNorm));
+              }
+              const teamSim = teamSimCache.get(riderId)!;
               const acronymSim = sourceTeamAcronym && riderData.teamAcronym
                 ? similarity(sourceTeamAcronym, riderData.teamAcronym)
                 : 0;
@@ -636,7 +731,6 @@ serve(async (req) => {
               }
             }
             
-            // Last name boost
             if (riderData.lastName === sourceLastName || riderData.lastNameAlt === sourceLastName) {
               lastNameBoost = 0.10;
               score += lastNameBoost;
@@ -655,7 +749,6 @@ serve(async (req) => {
           }
         }
 
-        // Dynamic threshold
         let threshold = 0.82;
         if (bestLastNameBoost > 0 && bestTeamBonus >= 0.08) {
           threshold = 0.65;
@@ -663,7 +756,6 @@ serve(async (req) => {
           threshold = 0.75;
         }
         
-        // Anti-ambiguity protection
         const scoreDiff = bestScore - secondBestScore;
         const tooClose = scoreDiff < 0.03 && secondBestScore > 0.70;
         
@@ -672,9 +764,7 @@ serve(async (req) => {
           confidence = Math.min(bestScore, 0.99);
           matched = true;
           matchMethod = 'fuzzy-enhanced';
-          console.log(`  → ${matchMethod}: ${entry.source_name} → ${bestRiderName} (score: ${bestScore.toFixed(3)}, team: ${bestTeamBonus.toFixed(2)}, lastName: ${bestLastNameBoost.toFixed(2)})`);
         } else if (bestMatch && bestScore >= 0.70) {
-          // Near-miss
           nearMisses.push({
             entry: entry.source_name,
             candidate: bestRiderName,
@@ -684,16 +774,13 @@ serve(async (req) => {
             lastNameBoost: bestLastNameBoost,
             ambiguous: tooClose,
           });
-          console.log(`  ✗ ${tooClose ? 'AMBIGUOUS' : 'NEAR-MISS'}: ${entry.source_name} → ${bestRiderName} (score: ${bestScore.toFixed(3)}, diff: ${scoreDiff.toFixed(3)}, threshold: ${threshold})`);
         }
       }
 
       if (matched) {
         matchedCount++;
-        console.log(`✓ Matched #${entry.line_no}: ${entry.source_name} → ${coureurId} (${matchMethod}, conf: ${confidence.toFixed(2)})`);
       } else {
         unmatchedCount++;
-        console.log(`✗ Unmatched #${entry.line_no}: ${entry.source_name}`);
       }
 
       matchedEntries.push({
