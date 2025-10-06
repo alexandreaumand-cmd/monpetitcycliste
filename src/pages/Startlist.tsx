@@ -72,29 +72,32 @@ const Startlist = () => {
       return;
     }
 
-    if (!selectedPhaseId && !selectedRaceId) {
-      toast.error("Veuillez sélectionner une course ou une phase");
+    if (!selectedRaceId) {
+      toast.error("Veuillez sélectionner une course");
       return;
     }
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('startlist-parse-text', {
+      const { data, error } = await supabase.functions.invoke('startlist-upload-and-parse', {
         body: { 
-          race_id: selectedRaceId || null,
-          phase_id: selectedPhaseId || null,
-          text: textContent 
+          race_id: selectedRaceId,
+          textContent: textContent 
         }
       });
 
       if (error) throw error;
 
-      setParseResult(data);
-      toast.success(`${data.counts.matched} coureurs identifiés sur ${data.counts.lines} lignes`);
+      // The improved function returns startlist_id and detailed stats
+      const startlistId = data.startlist_id;
+      const stats = data.stats;
       
-      if (data.counts.unmatched > 0) {
-        setShowUnmatched(true);
-      }
+      toast.success(`${stats.matched} coureurs matchés sur ${stats.total_entries} entrées (${stats.auto_confirmed} auto-confirmés)`);
+      
+      // Switch to view mode with the new startlist
+      setSelectedStartlistId(startlistId);
+      setViewMode('view');
+      
     } catch (error: any) {
       console.error('Parse error:', error);
       toast.error("Erreur lors du parsing: " + error.message);
