@@ -9,6 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, User, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 type TabView = "standings" | "riders" | "timeline" | "teams" | "courses";
 
@@ -114,24 +116,43 @@ export const RankingsMobile = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="p-4 space-y-4">
-        {/* Phase Filter */}
-        <ChipGroup
-          items={phaseChips}
-          selected={selectedPhase || "null"}
-          onSelect={(value) => setSelectedPhase(value === "null" ? null : value)}
-        />
+      <div className="p-4 pb-0">
+        {/* Phase Filter - Select */}
+        <div className="mb-4">
+          <Label htmlFor="phase-select" className="text-xs text-muted-foreground mb-2 block">
+            Période
+          </Label>
+          <Select 
+            value={selectedPhase || "null"} 
+            onValueChange={(value) => setSelectedPhase(value === "null" ? null : value)}
+          >
+            <SelectTrigger id="phase-select" className="w-full">
+              <SelectValue placeholder="Sélectionner une période" />
+            </SelectTrigger>
+            <SelectContent>
+              {phaseChips.map((chip) => (
+                <SelectItem key={chip.value} value={chip.value}>
+                  {chip.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-        {/* Tabs */}
+      {/* Sticky Tabs */}
+      <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-sm border-b py-2 px-4 -mx-4">
         <ChipGroup
           items={tabChips}
           selected={activeTab}
           onSelect={(value) => setActiveTab(value as TabView)}
         />
+      </div>
 
-        {/* Content */}
+      {/* Content */}
+      <div className="p-4 pt-4">
         {activeTab === "standings" && (
-          <div className="space-y-3">
+          <div className="space-y-3 pb-4">
             {standingsLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-20 w-full rounded-2xl" />
@@ -174,7 +195,7 @@ export const RankingsMobile = () => {
         )}
 
         {activeTab === "riders" && (
-          <div className="space-y-3">
+          <div className="space-y-3 pb-4">
             {ridersLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-20 w-full rounded-2xl" />
