@@ -357,6 +357,8 @@ serve(async (req) => {
       .from('name_aliases')
       .select('alias_text, coureur_id, source_team');
 
+    console.log('[DEBUG] Loaded', (aliases || []).length, 'name aliases');
+
     const aliasMap = new Map<string, { coureur_id: string; source_team: string | null }[]>();
     aliases?.forEach(alias => {
       const key = normalizeText(alias.alias_text);
@@ -374,6 +376,8 @@ serve(async (req) => {
       .from('coureurs')
       .select('id, nom, equipe');
 
+    console.log('[DEBUG] Building rider maps from', riders?.length || 0, 'coureurs');
+    
     // Build in-memory dictionaries with advanced pre-calculations
     const mapFirstLast = new Map<string, string>(); // "Firstname LASTNAME" → coureur_id
     const mapLastFirst = new Map<string, string>(); // "LASTNAME Firstname" → coureur_id
@@ -422,6 +426,17 @@ serve(async (req) => {
       
       mapFirstLast.set(nomNorm, rider.id);
       mapLastFirst.set(nomSwap, rider.id);
+      
+      // DEBUG: Log for specific riders
+      if (rider.id === 'matteo_trentin' || rider.id === 'joel_suter' || rider.id === 'fabian_weiss') {
+        console.log(`[DEBUG] Mapping rider ${rider.id}:`, {
+          original: rider.nom,
+          nomNorm,
+          nomSwap,
+          mapFirstLastKey: nomNorm,
+          mapLastFirstKey: nomSwap
+        });
+      }
       
       // Count token set occurrences
       tokenSetCount.set(tokenSetKey, (tokenSetCount.get(tokenSetKey) || 0) + 1);
@@ -480,6 +495,18 @@ serve(async (req) => {
       const normalizedInverted = normalizeText(invertName(entry.source_name));
       const sourceTokens = extractTokens(normalized);
       const sourceTokenSetKey = sourceTokens.join('|');
+      
+      // DEBUG: Log for specific names
+      const isDebugName = entry.source_name.includes('TRENTIN') || entry.source_name.includes('SUTER') || entry.source_name.includes('WEISS');
+      if (isDebugName) {
+        console.log(`\n[DEBUG] Processing entry #${entry.line_no}:`, {
+          source_name: entry.source_name,
+          normalized,
+          normalizedInverted,
+          sourceTokens,
+          sourceTokenSetKey
+        });
+      }
       
       // Extract potential last names from both variants and first token
       const sourceLastNamesSet = new Set<string>();
@@ -545,28 +572,65 @@ serve(async (req) => {
 
       // === PASS 2: Exact map lookups ===
       if (!matched) {
-        coureurId = mapLastFirst.get(normalized) || null;
+        const lastFirstMatch = mapLastFirst.get(normalized);
+        const firstLastMatch = mapFirstLast.get(normalized);
+        const tokenSetMatch = mapTokenSet.get(sourceTokenSetKey);
+        
+        if (isDebugName) {
+          console.log(`[DEBUG] Pass2 checks for ${entry.source_name}:`, {
+            normalized,
+            lastFirstMatch,
+            firstLastMatch,
+            tokenSetMatch,
+            'mapLastFirst.has(normalized)': mapLastFirst.has(normalized),
+            'mapFirstLast.has(normalized)': mapFirstLast.has(normalized),
+            'mapTokenSet.has(sourceTokenSetKey)': mapTokenSet.has(sourceTokenSetKey)
+          });
+          
+          // Show sample of similar keys in mapLastFirst
+          const lastName = entry.source_name.split(' ')[0];
+          const relevantKeys = Array.from(mapLastFirst.keys()).filter(k => k.includes(lastName.toUpperCase())).slice(0, 3);
+          console.log(`[DEBUG] Sample mapLastFirst keys containing "${lastName}":`, relevantKeys);
+        }
+        
+        coureurId = lastFirstMatch || null;
         if (coureurId) {
           confidence = 0.98;
           matched = true;
           matchMethod = 'exact-lastfirst';
           passExact++;
+          
+          if (isDebugName) {
+            console.log(`[DEBUG] ✅ Pass2 MATCHED via lastfirst: ${entry.source_name} -> ${coureurId}`);
+          }
         } else {
-          coureurId = mapFirstLast.get(normalized) || null;
+          coureurId = firstLastMatch || null;
           if (coureurId) {
             confidence = 0.98;
             matched = true;
             matchMethod = 'exact-firstlast';
             passExact++;
+            
+            if (isDebugName) {
+              console.log(`[DEBUG] ✅ Pass2 MATCHED via firstlast: ${entry.source_name} -> ${coureurId}`);
+            }
           } else {
-            coureurId = mapTokenSet.get(sourceTokenSetKey) || null;
+            coureurId = tokenSetMatch || null;
             if (coureurId) {
               confidence = 0.96;
               matched = true;
               matchMethod = 'exact-tokenset';
               passExact++;
+              
+              if (isDebugName) {
+                console.log(`[DEBUG] ✅ Pass2 MATCHED via tokenset: ${entry.source_name} -> ${coureurId}`);
+              }
             }
           }
+        }
+        
+        if (!matched && isDebugName) {
+          console.log(`[DEBUG] ❌ Pass2 NO MATCH for ${entry.source_name}`);
         }
       }
 
