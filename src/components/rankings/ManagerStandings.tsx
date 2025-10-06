@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, TrendingUp, Medal } from "lucide-react";
+import { Trophy, TrendingUp, TrendingDown, Medal } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +35,51 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
         return data;
       }
     },
+  });
+
+  // Fetch previous phase standings for evolution calculation
+  const { data: previousStandings } = useQuery({
+    queryKey: ["previous-manager-standings", phaseId],
+    queryFn: async () => {
+      if (!phaseId) return null;
+
+      // Get current phase info
+      const { data: currentPhase } = await supabase
+        .from("phases")
+        .select("index_dans_saison, saison_id")
+        .eq("id", phaseId)
+        .single();
+
+      if (!currentPhase || currentPhase.index_dans_saison <= 1) return null;
+
+      // Get previous phase
+      const { data: prevPhase } = await supabase
+        .from("phases")
+        .select("id")
+        .eq("saison_id", currentPhase.saison_id)
+        .eq("index_dans_saison", currentPhase.index_dans_saison - 1)
+        .single();
+
+      if (!prevPhase) return null;
+
+      // Get previous phase standings
+      const { data, error } = await supabase
+        .from("v_manager_standings_by_phase")
+        .select("*")
+        .eq("phase_id", prevPhase.id)
+        .order("total_points", { ascending: false });
+
+      if (error) return null;
+
+      // Create a map of manager_id -> rank
+      const rankMap = new Map();
+      data?.forEach((standing, idx) => {
+        rankMap.set(standing.manager_id, idx + 1);
+      });
+
+      return rankMap;
+    },
+    enabled: !!phaseId,
   });
 
   const maxPoints = standings?.[0]?.total_points || 1;
@@ -84,6 +129,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               <TableHead>Manager</TableHead>
               <TableHead className="text-right">Points</TableHead>
               <TableHead className="text-right">Écart</TableHead>
+              {phaseId && <TableHead className="w-24 text-center">Évolution</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -91,6 +137,18 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               const rank = idx + 1;
               const isBottomThree = standings && idx >= standings.length - 3;
               const gapToPrevious = idx > 0 ? standings[idx - 1].total_points - standing.total_points : 0;
+              
+              // Calculate evolution
+              let evolution: number | null = null;
+              let isNew = false;
+              if (phaseId && previousStandings) {
+                const previousRank = previousStandings.get(standing.manager_id);
+                if (previousRank) {
+                  evolution = previousRank - rank; // Positive = gained places
+                } else {
+                  isNew = true;
+                }
+              }
 
               return (
                 <TableRow 
@@ -135,6 +193,32 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                       </span>
                     )}
                   </TableCell>
+                  {phaseId && (
+                    <TableCell className="text-center">
+                      {isNew ? (
+                        <Badge variant="outline" className="text-xs">NEW</Badge>
+                      ) : evolution !== null && evolution !== 0 ? (
+                        <div className={cn(
+                          "flex items-center justify-center gap-1 text-sm font-semibold",
+                          evolution > 0 ? "text-green-600" : "text-red-600"
+                        )}>
+                          {evolution > 0 ? (
+                            <>
+                              <TrendingUp className="h-4 w-4" />
+                              <span>+{evolution}</span>
+                            </>
+                          ) : (
+                            <>
+                              <TrendingDown className="h-4 w-4" />
+                              <span>{evolution}</span>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}
