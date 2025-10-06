@@ -47,6 +47,7 @@ export const StartlistMobile = () => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showUnmatched, setShowUnmatched] = useState(false);
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [expandedManagers, setExpandedManagers] = useState<Set<string>>(new Set());
 
   // Fetch races
   const { data: races } = useQuery({
@@ -148,6 +149,7 @@ export const StartlistMobile = () => {
 
   const handleSelectRace = (raceId: string, startlistId: string) => {
     setSelectedStartlistId(startlistId);
+    setExpandedManagers(new Set()); // Reset expanded managers
     setViewMode("view");
   };
 
@@ -394,51 +396,72 @@ export const StartlistMobile = () => {
           <div>
             <h3 className="text-lg font-semibold mb-3">Managers au départ</h3>
             <div className="space-y-3">
-              {startlistViewData.managers.map((manager: any) => (
-                <MobileCard
-                  key={manager.manager_id}
-                  title={manager.manager_nom}
-                  subtitle={
-                    <div className="space-y-1">
-                      <ManagerStars avgStars={manager.avg_stars} votes={manager.votes} showVotes={manager.votes > 1} />
-                      <div className="flex gap-3 text-xs text-muted-foreground">
-                        <span>Phase: #{manager.rank_phase || "-"}</span>
-                        <span>CG: #{manager.rank_total || "-"}</span>
+              {startlistViewData.managers.map((manager: any) => {
+                const isExpanded = expandedManagers.has(manager.manager_id);
+                const sortedStarters = [...manager.starters].sort((a: any, b: any) => (b.cote || 0) - (a.cote || 0));
+                const displayedStarters = isExpanded ? sortedStarters : sortedStarters.slice(0, 3);
+                const hasMore = manager.starters.length > 3;
+
+                return (
+                  <MobileCard
+                    key={manager.manager_id}
+                    title={manager.manager_nom}
+                    subtitle={
+                      <div className="space-y-1">
+                        <ManagerStars avgStars={manager.avg_stars} votes={manager.votes} showVotes={manager.votes > 1} />
+                        <div className="flex gap-3 text-xs text-muted-foreground">
+                          <span>Phase: #{manager.rank_phase || "-"}</span>
+                          <span>CG: #{manager.rank_total || "-"}</span>
+                        </div>
                       </div>
+                    }
+                    avatar={
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-primary/10">
+                          {manager.manager_nom
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")
+                            .slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                    }
+                    badge={
+                      <Badge variant="outline" className="text-xs">
+                        {manager.starters_count} coureurs
+                      </Badge>
+                    }
+                  >
+                    <div className="mt-2 space-y-1">
+                      {displayedStarters.map((starter: any) => (
+                        <div key={starter.coureur_id} className="flex items-center justify-between gap-2 text-xs">
+                          <span className="font-medium truncate flex-1">{starter.nom}</span>
+                          <FormIndicator results={starter.recent_results || []} />
+                        </div>
+                      ))}
+                      {hasMore && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newExpanded = new Set(expandedManagers);
+                            if (isExpanded) {
+                              newExpanded.delete(manager.manager_id);
+                            } else {
+                              newExpanded.add(manager.manager_id);
+                            }
+                            setExpandedManagers(newExpanded);
+                          }}
+                          className="text-xs text-primary font-medium hover:underline w-full text-left"
+                        >
+                          {isExpanded 
+                            ? "Réduire" 
+                            : `+${manager.starters.length - 3} autres`}
+                        </button>
+                      )}
                     </div>
-                  }
-                  avatar={
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-primary/10">
-                        {manager.manager_nom
-                          .split(" ")
-                          .map((n: string) => n[0])
-                          .join("")
-                          .slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                  }
-                  badge={
-                    <Badge variant="outline" className="text-xs">
-                      {manager.starters_count} coureurs
-                    </Badge>
-                  }
-                >
-                  <div className="mt-2 space-y-1">
-                    {manager.starters.slice(0, 3).map((starter: any) => (
-                      <div key={starter.coureur_id} className="flex items-center justify-between gap-2 text-xs">
-                        <span className="font-medium truncate flex-1">{starter.nom}</span>
-                        <FormIndicator results={starter.recent_results || []} />
-                      </div>
-                    ))}
-                    {manager.starters.length > 3 && (
-                      <p className="text-xs text-muted-foreground">
-                        +{manager.starters.length - 3} autres
-                      </p>
-                    )}
-                  </div>
-                </MobileCard>
-              ))}
+                  </MobileCard>
+                );
+              })}
             </div>
           </div>
 

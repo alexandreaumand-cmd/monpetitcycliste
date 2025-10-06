@@ -586,14 +586,16 @@ const StartlistDesktop = () => {
                     </div>
                   </div>
                   
-                  {/* Liste coureurs */}
+                  {/* Liste coureurs triés par cote décroissante */}
                   <div className="space-y-0.5">
-                    {manager.starters.map((starter: any) => (
-                      <div key={starter.coureur_id} className="text-xs flex justify-between items-center gap-2">
-                        <span className="font-medium truncate flex-1 min-w-0">{starter.nom}</span>
-                        <FormIndicator results={starter.recent_results || []} />
-                      </div>
-                    ))}
+                    {[...manager.starters]
+                      .sort((a: any, b: any) => (b.cote || 0) - (a.cote || 0))
+                      .map((starter: any) => (
+                        <div key={starter.coureur_id} className="text-xs flex justify-between items-center gap-2">
+                          <span className="font-medium truncate flex-1 min-w-0">{starter.nom}</span>
+                          <FormIndicator results={starter.recent_results || []} />
+                        </div>
+                      ))}
                   </div>
                 </Card>
               ))}
