@@ -522,14 +522,9 @@ const Startlist = () => {
                 {/* En-tête manager */}
                 <div className="mb-2 pb-2 border-b">
                   <div className="flex items-center justify-between mb-1">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-bold text-sm truncate">{manager.manager_nom}</h4>
-                        <Badge variant="secondary" className="text-xs flex-shrink-0">
-                          {manager.starters_count}
-                        </Badge>
-                      </div>
-                      <ManagerStars avgStars={manager.avg_stars} votes={manager.votes} showVotes={manager.votes > 1} />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-sm truncate mb-1">{manager.manager_nom}</h4>
+                    <ManagerStars avgStars={manager.avg_stars} votes={manager.votes} showVotes={manager.votes > 1} />
                       {manager.sponsor && (
                         <p className="text-xs text-muted-foreground truncate mt-1">{manager.sponsor}</p>
                       )}
@@ -551,18 +546,6 @@ const Startlist = () => {
                     )}
                   </div>
                 </div>
-                
-                {/* Écarts */}
-                {(manager.gap_prev_phase || manager.gap_next_phase) && (
-                  <div className="flex gap-3 text-xs text-muted-foreground">
-                    {manager.gap_prev_phase && (
-                      <span className="text-destructive">{manager.gap_prev_phase}pts</span>
-                    )}
-                    {manager.gap_next_phase && (
-                      <span className="text-green-600">+{Math.abs(manager.gap_next_phase)}pts</span>
-                    )}
-                  </div>
-                )}
               </div>
               
               {/* Liste coureurs */}

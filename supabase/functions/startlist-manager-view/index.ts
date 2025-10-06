@@ -189,7 +189,6 @@ Deno.serve(async (req) => {
     }
 
     const managers = Array.from(managerMap.values())
-      .filter(m => m.starters_count > 0)
       .sort((a, b) => {
         // Sort by avg_stars DESC (nulls last), then by starters_count DESC, then by name ASC
         if (a.avg_stars !== null && b.avg_stars !== null) {
