@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     });
 
     // Convert to array format and sort
-    const result: Record<string, Array<{ manager_nom: string; points: number; rank: number }>> = {};
+    const podiumResult: Record<string, Array<{ manager_nom: string; points: number; rank: number }>> = {};
 
     Object.keys(aggregated).forEach(courseId => {
       const managers = Object.values(aggregated[courseId])
@@ -91,10 +91,42 @@ Deno.serve(async (req) => {
           points: m.points,
           rank: idx + 1
         }));
-      result[courseId] = managers;
+      podiumResult[courseId] = managers;
     });
 
-    return new Response(JSON.stringify(result), {
+    // Get winners (top rider in General or Etape classification)
+    const { data: winnersData, error: winnersError } = await supabase
+      .from('race_results')
+      .select(`
+        course_id,
+        type_classement,
+        position,
+        coureur_id,
+        coureurs!inner(nom)
+      `)
+      .in('course_id', course_ids)
+      .eq('position', 1)
+      .in('type_classement', ['General', 'Etape']);
+
+    if (winnersError) throw winnersError;
+
+    // Process winners: prefer General, fallback to Etape
+    const winnersResult: Record<string, { coureur_nom: string }> = {};
+    
+    winnersData?.forEach((row: any) => {
+      const courseId = row.course_id;
+      const classType = row.type_classement;
+      const coureurNom = row.coureurs?.nom;
+
+      if (!coureurNom) return;
+
+      // If no winner yet, or if this is General classification, use it
+      if (!winnersResult[courseId] || classType === 'General') {
+        winnersResult[courseId] = { coureur_nom: coureurNom };
+      }
+    });
+
+    return new Response(JSON.stringify({ podiums: podiumResult, winners: winnersResult }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
