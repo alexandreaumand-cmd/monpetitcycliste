@@ -62,6 +62,27 @@ export const StartlistMobile = () => {
     },
   });
 
+  // Fetch all startlist info in one query
+  const { data: startlistsInfo } = useQuery({
+    queryKey: ["startlists-info"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("startlist_imports")
+        .select("id, race_id, pcs_validated")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      
+      // Group by race_id, keeping only the most recent
+      const byRace = new Map();
+      data?.forEach(sl => {
+        if (!byRace.has(sl.race_id)) {
+          byRace.set(sl.race_id, sl);
+        }
+      });
+      return byRace;
+    },
+  });
+
   // Fetch phases
   const { data: phases } = useQuery({
     queryKey: ["startlist-phases"],
@@ -128,23 +149,6 @@ export const StartlistMobile = () => {
     setViewMode("view");
   };
 
-  // Helper function to check if startlist exists and get its ID
-  const getStartlistInfo = (raceId: string) => {
-    return useQuery({
-      queryKey: ["startlist-check", raceId],
-      queryFn: async () => {
-        const { data } = await supabase
-          .from("startlist_imports")
-          .select("id, pcs_validated")
-          .eq("race_id", raceId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        return data;
-      },
-    });
-  };
-
   // LIST MODE
   if (viewMode === "list") {
     return (
@@ -166,22 +170,9 @@ export const StartlistMobile = () => {
         ) : (
           <div className="space-y-3">
             {races.map((race) => {
-              const startlistQuery = useQuery({
-                queryKey: ["startlist-check", race.id],
-                queryFn: async () => {
-                  const { data } = await supabase
-                    .from("startlist_imports")
-                    .select("id, pcs_validated")
-                    .eq("race_id", race.id)
-                    .order("created_at", { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-                  return data;
-                },
-              });
-
-              const hasStartlist = !!startlistQuery.data;
-              const isPcsValidated = startlistQuery.data?.pcs_validated || false;
+              const startlistInfo = startlistsInfo?.get(race.id);
+              const hasStartlist = !!startlistInfo;
+              const isPcsValidated = startlistInfo?.pcs_validated || false;
 
               return (
                 <MobileCard
@@ -209,8 +200,8 @@ export const StartlistMobile = () => {
                     </div>
                   }
                   onClick={() => {
-                    if (hasStartlist && startlistQuery.data?.id) {
-                      handleSelectRace(race.id, startlistQuery.data.id);
+                    if (hasStartlist && startlistInfo?.id) {
+                      handleSelectRace(race.id, startlistInfo.id);
                     } else {
                       toast.info("Aucune startlist pour cette course");
                     }
