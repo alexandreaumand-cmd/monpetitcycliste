@@ -25,6 +25,7 @@ Deno.serve(async (req) => {
       .select(`
         id,
         race_id,
+        route_image_url,
         courses!inner(
           id,
           nom,
@@ -97,6 +98,27 @@ Deno.serve(async (req) => {
       .order('type_classement')
       .order('place');
 
+    // Get ratings for managers
+    const { data: ratings } = await supabase
+      .from('startlist_manager_ratings')
+      .select('manager_id, stars')
+      .eq('startlist_id', startlist_id);
+
+    // Calculate average ratings per manager
+    const ratingsMap = new Map();
+    if (ratings && ratings.length > 0) {
+      const grouped = ratings.reduce((acc: any, r: any) => {
+        if (!acc[r.manager_id]) acc[r.manager_id] = [];
+        acc[r.manager_id].push(r.stars);
+        return acc;
+      }, {});
+
+      Object.entries(grouped).forEach(([managerId, stars]: [string, any]) => {
+        const avg = stars.reduce((sum: number, s: number) => sum + s, 0) / stars.length;
+        ratingsMap.set(managerId, { avg_stars: avg, votes: stars.length });
+      });
+    }
+
     // Build manager map with standings
     const managerMap = new Map();
     
@@ -126,6 +148,7 @@ Deno.serve(async (req) => {
           }
         }
         
+        const rating = ratingsMap.get(roster.manager_id);
         managerMap.set(roster.manager_id, {
           manager_id: roster.manager_id,
           manager_nom: managerData.nom,
@@ -136,6 +159,8 @@ Deno.serve(async (req) => {
           points_total: totalStanding?.total_points || 0,
           gap_prev_phase,
           gap_next_phase,
+          avg_stars: rating?.avg_stars || null,
+          votes: rating?.votes || 0,
           starters: [],
           starters_count: 0
         });
@@ -165,7 +190,20 @@ Deno.serve(async (req) => {
 
     const managers = Array.from(managerMap.values())
       .filter(m => m.starters_count > 0)
-      .sort((a, b) => b.starters_count - a.starters_count);
+      .sort((a, b) => {
+        // Sort by avg_stars DESC (nulls last), then by starters_count DESC, then by name ASC
+        if (a.avg_stars !== null && b.avg_stars !== null) {
+          if (a.avg_stars !== b.avg_stars) return b.avg_stars - a.avg_stars;
+        } else if (a.avg_stars !== null) {
+          return -1; // a has rating, b doesn't, a comes first
+        } else if (b.avg_stars !== null) {
+          return 1; // b has rating, a doesn't, b comes first
+        }
+        // If same rating or both null, sort by starters_count
+        if (a.starters_count !== b.starters_count) return b.starters_count - a.starters_count;
+        // If same starters_count, sort by name
+        return a.manager_nom.localeCompare(b.manager_nom);
+      });
 
     const result = {
       race: {
@@ -175,6 +213,7 @@ Deno.serve(async (req) => {
         phase_id: phaseId,
         categorie: race.categorie
       },
+      route_image_url: startlist.route_image_url || null,
       managers,
       scoring: {
         categorie: race.categorie,

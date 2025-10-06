@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Users, AlertCircle, Download, FileText, Calendar, Trophy, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Loader2, Users, AlertCircle, Download, FileText, Calendar, Trophy, ArrowLeft, CheckCircle2, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -16,6 +16,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { RouteImageUploader } from "@/components/startlist/RouteImageUploader";
+import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
+import { ManagerStars } from "@/components/startlist/ManagerStars";
 
 const Startlist = () => {
   const queryClient = useQueryClient();
@@ -33,6 +36,7 @@ const Startlist = () => {
   const [showUnmatched, setShowUnmatched] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -341,6 +345,18 @@ const Startlist = () => {
           Retour
         </Button>
 
+        {/* Image de parcours */}
+        {startlistViewData.route_image_url && (
+          <Card className="overflow-hidden">
+            <img 
+              src={startlistViewData.route_image_url} 
+              alt="Parcours" 
+              className="w-full h-auto max-h-[400px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => window.open(startlistViewData.route_image_url, '_blank')}
+            />
+          </Card>
+        )}
+
         {/* Header compact avec barème */}
         <Card className="p-4">
           <div className="flex items-start justify-between mb-3">
@@ -351,6 +367,13 @@ const Startlist = () => {
               </p>
             </div>
             <div className="flex gap-2">
+              {isAdmin && (
+                <RouteImageUploader 
+                  startlistId={selectedStartlistId!}
+                  currentImageUrl={startlistViewData.route_image_url}
+                  onUploadComplete={() => queryClient.invalidateQueries({ queryKey: ['startlist-view', selectedStartlistId] })}
+                />
+              )}
               <Button onClick={() => handleExportCSV(selectedStartlistId!)} variant="outline" size="sm">
                 <Download className="h-3 w-3 mr-1" />
                 CSV
@@ -388,23 +411,42 @@ const Startlist = () => {
           </div>
         </Card>
 
-        {/* Grille compacte des managers */}
-        <div className="grid grid-cols-5 gap-3">
-          {startlistViewData.managers.map((manager: any) => (
-            <Card key={manager.manager_id} className="p-3">
-              {/* En-tête manager */}
-              <div className="mb-2 pb-2 border-b">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-sm truncate">{manager.manager_nom}</h4>
-                    {manager.sponsor && (
-                      <p className="text-xs text-muted-foreground truncate">{manager.sponsor}</p>
-                    )}
+        {/* Section Managers */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Managers au départ</h3>
+            {isAdmin && startlistViewData.managers.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowRatingModal(true)}
+              >
+                <Star className="h-4 w-4 mr-2" />
+                Noter les managers
+              </Button>
+            )}
+          </div>
+
+          {/* Grille compacte des managers */}
+          <div className="grid grid-cols-5 gap-3">
+            {startlistViewData.managers.map((manager: any) => (
+              <Card key={manager.manager_id} className="p-3">
+                {/* En-tête manager */}
+                <div className="mb-2 pb-2 border-b">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-bold text-sm truncate">{manager.manager_nom}</h4>
+                        <Badge variant="secondary" className="text-xs flex-shrink-0">
+                          {manager.starters_count}
+                        </Badge>
+                      </div>
+                      <ManagerStars avgStars={manager.avg_stars} votes={manager.votes} showVotes={manager.votes > 1} />
+                      {manager.sponsor && (
+                        <p className="text-xs text-muted-foreground truncate mt-1">{manager.sponsor}</p>
+                      )}
+                    </div>
                   </div>
-                  <Badge variant="secondary" className="text-xs ml-2 flex-shrink-0">
-                    {manager.starters_count}
-                  </Badge>
-                </div>
                 
                 {/* Classements */}
                 <div className="grid grid-cols-2 gap-2 text-xs mb-1">
@@ -450,7 +492,17 @@ const Startlist = () => {
               </div>
             </Card>
           ))}
-        </div>
+          </div>
+        </Card>
+
+        {/* Modal de notation */}
+        <ManagerRatingModal 
+          open={showRatingModal}
+          onOpenChange={setShowRatingModal}
+          startlistId={selectedStartlistId!}
+          managers={startlistViewData.managers}
+          onRatingsUpdated={() => queryClient.invalidateQueries({ queryKey: ['startlist-view', selectedStartlistId] })}
+        />
       </div>
     );
   }

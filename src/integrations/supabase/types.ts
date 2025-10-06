@@ -1796,6 +1796,7 @@ export type Database = {
           parsed_at: string | null
           race_id: string
           raw_text: string | null
+          route_image_url: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1805,6 +1806,7 @@ export type Database = {
           parsed_at?: string | null
           race_id: string
           raw_text?: string | null
+          route_image_url?: string | null
         }
         Update: {
           created_at?: string | null
@@ -1814,6 +1816,7 @@ export type Database = {
           parsed_at?: string | null
           race_id?: string
           raw_text?: string | null
+          route_image_url?: string | null
         }
         Relationships: [
           {
@@ -1906,6 +1909,96 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_manager_breakdown"
             referencedColumns: ["course_id"]
+          },
+        ]
+      }
+      startlist_manager_ratings: {
+        Row: {
+          created_at: string
+          id: string
+          manager_id: string
+          note: string | null
+          rated_by: string
+          stars: number
+          startlist_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          manager_id: string
+          note?: string | null
+          rated_by: string
+          stars: number
+          startlist_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          manager_id?: string
+          note?: string | null
+          rated_by?: string
+          stars?: number
+          startlist_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "startlist_manager_ratings_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_manager_ratings_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_manager_ratings_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startlist_manager_ratings_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_manager_ratings_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_manager_ratings_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_manager_ratings_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_manager_ratings_startlist_id_fkey"
+            columns: ["startlist_id"]
+            isOneToOne: false
+            referencedRelation: "startlist_imports"
+            referencedColumns: ["id"]
           },
         ]
       }
