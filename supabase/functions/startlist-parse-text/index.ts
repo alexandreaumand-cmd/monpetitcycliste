@@ -120,8 +120,8 @@ serve(async (req) => {
     const parsedEntries: any[] = [];
     const diagnostics: any[] = [];
     
-    const reFull = /^\s*\d+\.\s+([A-Z]{2,4})\s+(.+?)\s+([+\-−]?\d+:\d+|\d+:\d+)\s*$/i;
-    const reLoose = /^\s*\d+\.\s+([A-Z]{2,4})\s+(.+?)\s*$/i;
+    const reFull = /^\s*\d+\.\s+([A-Z0-9]{2,4})\s+(.+?)\s+([+\-−]?\d+:\d+|\d+:\d+)\s*$/i;
+    const reLoose = /^\s*\d+\.\s+([A-Z0-9]{2,4})\s+(.+?)\s*$/i;
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();

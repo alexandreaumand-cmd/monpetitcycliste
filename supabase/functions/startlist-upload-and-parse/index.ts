@@ -288,7 +288,7 @@ serve(async (req) => {
     const patterns = [
       // NEW: BIB. TEAM_CODE LASTNAME Firstname TIME (e.g., "0. MBH NESPOLI Lorenzo 0:00")
       {
-        regex: /^(\d+)\.\s+([A-Z]{3})\s+([A-Z\s\-\.\']+)\s+\d+:\d+/i,
+        regex: /^(\d+)\.\s+([A-Z0-9]{2,4})\s+([A-Z\s\-\.\']+)\s+\d+:\d+/i,
         extract: (match: RegExpMatchArray) => ({
           bib_no: match[1],
           source_team: match[2],
