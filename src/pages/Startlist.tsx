@@ -184,7 +184,7 @@ const Startlist = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('startlist_imports')
-        .select('id, race_id, created_at')
+        .select('id, race_id, created_at, pcs_validated')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -202,7 +202,15 @@ const Startlist = () => {
       });
       
       if (error) throw error;
-      return data;
+      
+      // Get PCS validation info
+      const { data: startlistData } = await supabase
+        .from('startlist_imports')
+        .select('pcs_validated, pcs_validated_at, pcs_validated_by_manager_id')
+        .eq('id', selectedStartlistId)
+        .single();
+      
+      return { ...data, ...startlistData };
     }
   });
 
@@ -242,6 +250,13 @@ const Startlist = () => {
   const hasStartlist = (raceId: string) => {
     const rid = normalizeId(raceId);
     return existingStartlists?.some(s => normalizeId(s.race_id) === rid) || false;
+  };
+
+  const isPcsValidated = (raceId: string) => {
+    const rid = normalizeId(raceId);
+    return existingStartlists?.some(
+      (s: any) => normalizeId(s.race_id) === rid && s.pcs_validated === true
+    ) || false;
   };
 
   const getStartlistId = (raceId: string) => {
@@ -304,6 +319,38 @@ const Startlist = () => {
     setSelectedRaceId(selectedRaceForViewing?.id);
     setSelectedPhaseId(selectedRaceForViewing?.phase_id);
     setViewMode('parse');
+  };
+
+  const handlePcsValidation = async () => {
+    if (!selectedStartlistId) return;
+    
+    const { data: managerData } = await supabase
+      .from('managers')
+      .select('id')
+      .eq('user_id', currentUser?.id)
+      .single();
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('startlist_imports')
+        .update({ 
+          pcs_validated: true,
+          pcs_validated_at: new Date().toISOString(),
+          pcs_validated_by_manager_id: managerData?.id
+        })
+        .eq('id', selectedStartlistId);
+
+      if (error) throw error;
+
+      toast.success("Startlist validée PCS ✓");
+      queryClient.invalidateQueries({ queryKey: ['startlist-view'] });
+      queryClient.invalidateQueries({ queryKey: ['startlist-imports'] });
+    } catch (error: any) {
+      toast.error("Erreur lors de la validation : " + error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const selectedRace = races.find(r => r.id === selectedRaceId);
@@ -372,6 +419,23 @@ const Startlist = () => {
                 <Button onClick={handleModifyStartlist} variant="outline" size="sm">
                   Modifier
                 </Button>
+              )}
+              {isAdmin && !startlistViewData?.pcs_validated && (
+                <Button 
+                  onClick={handlePcsValidation} 
+                  variant="default" 
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  Valider PCS
+                </Button>
+              )}
+              {startlistViewData?.pcs_validated && (
+                <Badge className="bg-green-600 text-white">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  PCS OK
+                </Badge>
               )}
             </div>
           </div>
@@ -572,12 +636,20 @@ const Startlist = () => {
                   <CardHeader>
                     <div className="flex justify-between items-start gap-2 mb-2">
                       <CardTitle className="text-lg line-clamp-2">{course.nom}</CardTitle>
-                      {hasStartlist(course.id) && (
-                        <Badge variant="outline" className="bg-green-500/10 shrink-0">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Startlist
-                        </Badge>
-                      )}
+                      <div className="flex gap-1.5 shrink-0">
+                        {hasStartlist(course.id) && (
+                          <Badge variant="outline" className="bg-green-500/10">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Startlist
+                          </Badge>
+                        )}
+                        {isPcsValidated(course.id) && (
+                          <Badge variant="outline" className="bg-green-600 text-white">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            PCS OK
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {phaseData && (

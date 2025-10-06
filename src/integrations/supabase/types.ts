@@ -1794,6 +1794,9 @@ export type Database = {
           file_url: string | null
           id: string
           parsed_at: string | null
+          pcs_validated: boolean | null
+          pcs_validated_at: string | null
+          pcs_validated_by_manager_id: string | null
           race_id: string
           raw_text: string | null
           route_image_url: string | null
@@ -1804,6 +1807,9 @@ export type Database = {
           file_url?: string | null
           id?: string
           parsed_at?: string | null
+          pcs_validated?: boolean | null
+          pcs_validated_at?: string | null
+          pcs_validated_by_manager_id?: string | null
           race_id: string
           raw_text?: string | null
           route_image_url?: string | null
@@ -1814,6 +1820,9 @@ export type Database = {
           file_url?: string | null
           id?: string
           parsed_at?: string | null
+          pcs_validated?: boolean | null
+          pcs_validated_at?: string | null
+          pcs_validated_by_manager_id?: string | null
           race_id?: string
           raw_text?: string | null
           route_image_url?: string | null
@@ -1864,6 +1873,55 @@ export type Database = {
           {
             foreignKeyName: "startlist_imports_created_by_manager_id_fkey"
             columns: ["created_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_pcs_validated_by_manager_id_fkey"
+            columns: ["pcs_validated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_pcs_validated_by_manager_id_fkey"
+            columns: ["pcs_validated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_pcs_validated_by_manager_id_fkey"
+            columns: ["pcs_validated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_pcs_validated_by_manager_id_fkey"
+            columns: ["pcs_validated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_pcs_validated_by_manager_id_fkey"
+            columns: ["pcs_validated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_pcs_validated_by_manager_id_fkey"
+            columns: ["pcs_validated_by_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_pcs_validated_by_manager_id_fkey"
+            columns: ["pcs_validated_by_manager_id"]
             isOneToOne: false
             referencedRelation: "v_recent_points"
             referencedColumns: ["manager_id"]
