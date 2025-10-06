@@ -447,18 +447,33 @@ serve(async (req) => {
     console.log(`Built dictionaries: ${mapFirstLast.size} FirstLast, ${mapLastFirst.size} LastFirst, ${mapTokenSet.size} unique TokenSets`);
     console.log(`Built indexes: ${lastNameIndex.size} lastNames, ${lastNameJoinedIndex.size} joinedNames, ${tokenIndex.size} tokens`);
 
-    // Match each entry - Enhanced multi-pass cascade
+    // Match each entry - Enhanced multi-pass cascade with dual-variant processing
     const matchedEntries: any[] = [];
     let matchedCount = 0;
     let unmatchedCount = 0;
     const nearMisses: any[] = [];
+    
+    // Pass-level counters for logging
+    let passAlias = 0, passExact = 0, passLastInit = 0, passTokenSet = 0, passFuzzy = 0;
 
     for (const entry of parsedEntries) {
       const normalized = normalizeText(entry.source_name);
+      const normalizedInverted = normalizeText(invertName(entry.source_name));
       const sourceTokens = extractTokens(normalized);
       const sourceTokenSetKey = sourceTokens.join('|');
-      const sourceLastName = extractLastName(normalized);
-      const sourceFirstInitial = sourceTokens[0]?.charAt(0) || '';
+      
+      // Extract potential last names from both variants
+      const sourceLastNames = Array.from(new Set([
+        extractLastName(normalized),
+        extractLastName(normalizedInverted)
+      ].filter(n => n.length > 0)));
+      
+      // Extract potential first initials from both variants
+      const sourceFirstInitials = new Set<string>();
+      const tokensNorm = normalized.split(/\s+/).filter(t => t.length > 0);
+      const tokensInv = normalizedInverted.split(/\s+/).filter(t => t.length > 0);
+      if (tokensNorm.length >= 2) sourceFirstInitials.add(tokensNorm[1].charAt(0));
+      if (tokensInv.length >= 1) sourceFirstInitials.add(tokensInv[0].charAt(0));
       
       let matched = false;
       let coureurId = null;
@@ -471,8 +486,10 @@ serve(async (req) => {
         : '';
       const sourceTeamAcronym = generateTeamAcronym(sourceTeamNorm);
 
-      // === PASS 1: Alias exact match (priority) ===
-      const aliasMatches = aliasMap.get(normalized);
+      // === PASS 1: Alias exact match (priority) - Test both variants ===
+      let aliasMatches = aliasMap.get(normalized);
+      if (!aliasMatches) aliasMatches = aliasMap.get(normalizedInverted);
+      
       if (aliasMatches && aliasMatches.length > 0) {
         if (entry.source_team) {
           const teamMatch = aliasMatches.find(a => 
@@ -483,6 +500,7 @@ serve(async (req) => {
             confidence = 1.0;
             matched = true;
             matchMethod = 'alias-team';
+            passAlias++;
           }
         }
         if (!matched && aliasMatches.length === 1) {
@@ -490,6 +508,7 @@ serve(async (req) => {
           confidence = 0.95;
           matched = true;
           matchMethod = 'alias-unique';
+          passAlias++;
         }
       }
 
@@ -500,39 +519,43 @@ serve(async (req) => {
           confidence = 0.98;
           matched = true;
           matchMethod = 'exact-lastfirst';
+          passExact++;
         } else {
           coureurId = mapFirstLast.get(normalized) || null;
           if (coureurId) {
             confidence = 0.98;
             matched = true;
             matchMethod = 'exact-firstlast';
+            passExact++;
           } else {
             coureurId = mapTokenSet.get(sourceTokenSetKey) || null;
             if (coureurId) {
               confidence = 0.96;
               matched = true;
               matchMethod = 'exact-tokenset';
+              passExact++;
             }
           }
         }
       }
 
       // === PASS 3: Last name + Initial match (optimized with index) ===
-      if (!matched && sourceLastName && sourceFirstInitial) {
-        // Get candidates from indexes (much smaller search space)
+      if (!matched && sourceLastNames.length > 0 && sourceFirstInitials.size > 0) {
+        // Get candidates from indexes for all potential last names
         const candidates = new Set<string>();
-        const byLastName = lastNameIndex.get(sourceLastName);
-        const byJoinedName = lastNameJoinedIndex.get(sourceLastName);
-        
-        if (byLastName) byLastName.forEach(id => candidates.add(id));
-        if (byJoinedName) byJoinedName.forEach(id => candidates.add(id));
+        for (const lastName of sourceLastNames) {
+          const byLastName = lastNameIndex.get(lastName);
+          const byJoinedName = lastNameJoinedIndex.get(lastName);
+          if (byLastName) byLastName.forEach(id => candidates.add(id));
+          if (byJoinedName) byJoinedName.forEach(id => candidates.add(id));
+        }
         
         // Only search through candidates (typically 1-5 riders instead of 2000+)
         for (const riderId of candidates) {
           const riderData = riderDataMap.get(riderId)!;
           const riderFirstInitial = riderData.tokens[0]?.charAt(0) || '';
           
-          if (sourceFirstInitial === riderFirstInitial) {
+          if (sourceFirstInitials.has(riderFirstInitial)) {
             // Calculate team similarity only if we have a team
             const teamSim = sourceTeamNorm ? similarity(sourceTeamNorm, riderData.teamNorm) : 0;
             const acronymMatch = sourceTeamAcronym && riderData.teamAcronym && 
@@ -543,12 +566,14 @@ serve(async (req) => {
               confidence = 0.96;
               matched = true;
               matchMethod = 'lastname-initial-team';
+              passLastInit++;
               break; // High confidence match, exit immediately
             } else if (teamSim > 0.5 || !sourceTeamNorm) {
               coureurId = riderId;
               confidence = 0.90;
               matched = true;
               matchMethod = 'lastname-initial';
+              passLastInit++;
               break; // Good enough match, exit
             }
           }
@@ -621,7 +646,11 @@ serve(async (req) => {
             }
           }
           
-          if (riderData.lastName === sourceLastName || riderData.lastNameAlt === sourceLastName) {
+          // Check if rider's last name matches any source last name
+          const hasLastNameMatch = sourceLastNames.some(ln => 
+            riderData.lastName === ln || riderData.lastNameAlt === ln
+          );
+          if (hasLastNameMatch) {
             lastNameBoost = 0.10;
             score += lastNameBoost;
           }
@@ -635,8 +664,13 @@ serve(async (req) => {
         }
         
         let threshold = 0.82;
+        const scoreTokens = bestScore - bestDetails.teamBonus - bestDetails.lastNameBoost;
+        
         if (bestDetails.lastNameBoost > 0 && bestDetails.teamBonus >= 0.08) {
           threshold = 0.65;
+        } else if (scoreTokens >= 0.95) {
+          // Perfect token match - lower threshold significantly
+          threshold = 0.70;
         } else if (bestDetails.teamBonus >= 0.05 || entry.source_team) {
           threshold = 0.75;
         }
@@ -646,6 +680,7 @@ serve(async (req) => {
           confidence = Math.min(bestScore, 0.99);
           matched = true;
           matchMethod = bestDetails.method;
+          passTokenSet++;
         } else if (bestMatch && bestScore >= 0.70) {
           nearMisses.push({
             entry: entry.source_name,
@@ -669,17 +704,19 @@ serve(async (req) => {
           if (byToken) byToken.forEach(id => candidates.add(id));
         });
         
-        // Add from lastName indexes
-        const byLastName = lastNameIndex.get(sourceLastName);
-        const byJoinedName = lastNameJoinedIndex.get(sourceLastName);
-        if (byLastName) byLastName.forEach(id => candidates.add(id));
-        if (byJoinedName) byJoinedName.forEach(id => candidates.add(id));
+        // Add from lastName indexes for all potential last names
+        for (const lastName of sourceLastNames) {
+          const byLastName = lastNameIndex.get(lastName);
+          const byJoinedName = lastNameJoinedIndex.get(lastName);
+          if (byLastName) byLastName.forEach(id => candidates.add(id));
+          if (byJoinedName) byJoinedName.forEach(id => candidates.add(id));
+        }
         
-        // Add riders with matching first letter of last name (broader net)
-        if (sourceLastName) {
-          const firstLetter = sourceLastName.charAt(0);
+        // Add riders with matching first letter of any source last name (broader net)
+        if (sourceLastNames.length > 0) {
+          const firstLetters = new Set(sourceLastNames.map(ln => ln.charAt(0)));
           riderDataMap.forEach((data, riderId) => {
-            if (data.lastName.charAt(0) === firstLetter && candidates.size < 200) {
+            if (firstLetters.has(data.lastName.charAt(0)) && candidates.size < 200) {
               candidates.add(riderId);
             }
           });
@@ -731,7 +768,11 @@ serve(async (req) => {
               }
             }
             
-            if (riderData.lastName === sourceLastName || riderData.lastNameAlt === sourceLastName) {
+            // Check if rider's last name matches any source last name
+            const hasLastNameMatch = sourceLastNames.some(ln => 
+              riderData.lastName === ln || riderData.lastNameAlt === ln
+            );
+            if (hasLastNameMatch) {
               lastNameBoost = 0.10;
               score += lastNameBoost;
             }
@@ -764,6 +805,7 @@ serve(async (req) => {
           confidence = Math.min(bestScore, 0.99);
           matched = true;
           matchMethod = 'fuzzy-enhanced';
+          passFuzzy++;
         } else if (bestMatch && bestScore >= 0.70) {
           nearMisses.push({
             entry: entry.source_name,
@@ -847,6 +889,12 @@ serve(async (req) => {
     console.log(`Matched: ${matchedCount} (${(matchedCount/parsedEntries.length*100).toFixed(1)}%)`);
     console.log(`Unmatched: ${unmatchedCount} (${(unmatchedCount/parsedEntries.length*100).toFixed(1)}%)`);
     console.log(`Auto-confirmed: ${matchedEntries.filter(e => e.status === 'confirmed').length}`);
+    console.log(`\n=== MATCH BREAKDOWN BY PASS ===`);
+    console.log(`  Pass 1 (Alias): ${passAlias}`);
+    console.log(`  Pass 2 (Exact): ${passExact}`);
+    console.log(`  Pass 3 (LastName+Init): ${passLastInit}`);
+    console.log(`  Pass 4 (Token-Set): ${passTokenSet}`);
+    console.log(`  Pass 5 (Fuzzy): ${passFuzzy}`);
     
     return new Response(
       JSON.stringify({
