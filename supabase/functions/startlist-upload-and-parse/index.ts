@@ -6,6 +6,35 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// UCI team code to full name mapping
+const UCI_TEAM_MAP: Record<string, string> = {
+  'UAD': 'UAE TEAM EMIRATES',
+  'IGD': 'INEOS GRENADIERS',
+  'SOQ': 'SOUDAL QUICK STEP',
+  'TVL': 'TEAM VISMA LEASE A BIKE',
+  'DAT': 'DECATHLON AG2R LA MONDIALE TEAM',
+  'BBH': 'BURGOS BH',
+  'MOV': 'MOVISTAR TEAM',
+  'TBV': 'BAHRAIN VICTORIOUS',
+  'JAY': 'TEAM JAYCO ALULA',
+  'XAT': 'TUDOR PRO CYCLING TEAM',
+  'IPT': 'ISRAEL PREMIER TECH',
+  'BOH': 'BORA HANSGROHE',
+  'COF': 'COFIDIS',
+  'GFC': 'GROUPAMA FDJ',
+  'EFE': 'EF EDUCATION EASYPOST',
+  'TFS': 'TREK SEGAFREDO',
+  'AST': 'ASTANA QAZAQSTAN TEAM',
+  'LTD': 'LIDL TREK',
+  'DSM': 'TEAM DSM FIRMENICH POSTNL',
+  'ARK': 'ARKEA B&B HOTELS',
+  'UXT': 'UNO X MOBILITY',
+  'MBH': 'MOVISTAR TEAM',
+  'TNN': 'TEAM NOVO NORDISK',
+  'BWB': 'BINGOAL WB',
+  'IWG': 'INTERMARCHE WANTY',
+};
+
 // Normalize text for matching
 function normalizeText(text: string): string {
   return text
@@ -14,6 +43,22 @@ function normalizeText(text: string): string {
     .replace(/[-\.]/g, ' ') // Replace - and . with space
     .trim()
     .toUpperCase();
+}
+
+// Invert name from "LAST First" to "First LAST"
+function invertName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  
+  // For 2 parts: "LAST First" → "First LAST"
+  if (parts.length === 2) {
+    return `${parts[1]} ${parts[0]}`;
+  }
+  
+  // For 3+ parts: "LAST First Middle" → "First Middle LAST"
+  const lastName = parts[0];
+  const restOfName = parts.slice(1).join(' ');
+  return `${restOfName} ${lastName}`;
 }
 
 // Simple Levenshtein distance
@@ -201,6 +246,21 @@ serve(async (req) => {
       .from('coureurs')
       .select('id, nom, equipe');
 
+    // Build in-memory dictionaries for O(1) lookups
+    const mapFirstLast = new Map<string, string>(); // "Firstname LASTNAME" → coureur_id
+    const mapLastFirst = new Map<string, string>(); // "LASTNAME Firstname" → coureur_id
+    
+    riders?.forEach(rider => {
+      const normalized = normalizeText(rider.nom);
+      mapFirstLast.set(normalized, rider.id);
+      
+      // Generate inverted version
+      const inverted = normalizeText(invertName(rider.nom));
+      mapLastFirst.set(inverted, rider.id);
+    });
+
+    console.log(`Built dictionaries: ${mapFirstLast.size} FirstLast entries, ${mapLastFirst.size} LastFirst entries`);
+
     // Match each entry
     const matchedEntries: any[] = [];
     let matchedCount = 0;
@@ -233,41 +293,21 @@ serve(async (req) => {
         }
       }
 
-      // 2. Direct match on riders
-      if (!matched && riders) {
-        for (const rider of riders) {
-          const riderNorm = normalizeText(rider.nom);
-          
-          // Exact match
-          if (riderNorm === normalized) {
-            coureurId = rider.id;
+      // 2. Exact map lookup (O(1))
+      if (!matched) {
+        // Try LastFirst lookup first (common in startlists)
+        coureurId = mapLastFirst.get(normalized) || null;
+        if (coureurId) {
+          confidence = 0.98;
+          matched = true;
+          console.log(`  → Exact LastFirst match: ${normalized}`);
+        } else {
+          // Try FirstLast lookup
+          coureurId = mapFirstLast.get(normalized) || null;
+          if (coureurId) {
             confidence = 0.98;
             matched = true;
-            break;
-          }
-
-          // Swapped name (LAST FIRST <-> FIRST LAST)
-          const parts = normalized.split(' ');
-          if (parts.length >= 2) {
-            // Try multiple swap combinations for multi-part names
-            const swapped = `${parts[parts.length - 1]} ${parts.slice(0, parts.length - 1).join(' ')}`;
-            if (riderNorm === swapped) {
-              coureurId = rider.id;
-              confidence = 0.95;
-              matched = true;
-              break;
-            }
-            
-            // Also try first-last swap for 2-part names
-            if (parts.length === 2) {
-              const simpleSwap = `${parts[1]} ${parts[0]}`;
-              if (riderNorm === simpleSwap) {
-                coureurId = rider.id;
-                confidence = 0.95;
-                matched = true;
-                break;
-              }
-            }
+            console.log(`  → Exact FirstLast match: ${normalized}`);
           }
         }
       }
@@ -276,21 +316,21 @@ serve(async (req) => {
       if (!matched && riders) {
         let bestMatch = null;
         let bestScore = 0;
+        let bestRiderName = '';
+        let bestTeamBonus = 0;
 
-        const parts = normalized.split(' ');
         const namesToTest = [normalized];
         
-        // Add swapped version for fuzzy matching
-        if (parts.length >= 2) {
-          const swapped = `${parts[parts.length - 1]} ${parts.slice(0, parts.length - 1).join(' ')}`;
-          namesToTest.push(swapped);
-          if (parts.length === 2) {
-            const simpleSwap = `${parts[1]} ${parts[0]}`;
-            if (simpleSwap !== swapped) {
-              namesToTest.push(simpleSwap);
-            }
-          }
+        // Add inverted version for fuzzy matching
+        const inverted = normalizeText(invertName(entry.source_name));
+        if (inverted !== normalized) {
+          namesToTest.push(inverted);
         }
+
+        // Map UCI team code to full name for better team matching
+        const sourceTeamNorm = entry.source_team 
+          ? normalizeText(UCI_TEAM_MAP[entry.source_team] || entry.source_team)
+          : null;
 
         for (const rider of riders) {
           const riderNorm = normalizeText(rider.nom);
@@ -298,30 +338,39 @@ serve(async (req) => {
           // Test all name variations
           for (const testName of namesToTest) {
             let score = similarity(testName, riderNorm);
+            let teamBonus = 0;
             
-            // Bonus if team matches
-            if (entry.source_team && rider.equipe) {
-              const teamSimilarity = similarity(
-                normalizeText(entry.source_team),
-                normalizeText(rider.equipe)
-              );
+            // Enhanced team bonus with UCI mapping
+            if (sourceTeamNorm && rider.equipe) {
+              const riderTeamNorm = normalizeText(rider.equipe);
+              const teamSimilarity = similarity(sourceTeamNorm, riderTeamNorm);
+              
               if (teamSimilarity > 0.7) {
-                score += 0.1;
+                teamBonus = 0.15; // Stronger bonus for good team match
+                score += teamBonus;
               }
             }
 
             if (score > bestScore) {
               bestScore = score;
               bestMatch = rider.id;
+              bestRiderName = rider.nom;
+              bestTeamBonus = teamBonus;
             }
           }
         }
 
-        // Lower threshold to 0.80 for auto-confirmation
-        if (bestMatch && bestScore >= 0.80) {
+        // Dynamic threshold: 0.75 if team code present and mapped, 0.80 otherwise
+        const threshold = (entry.source_team && UCI_TEAM_MAP[entry.source_team]) ? 0.75 : 0.80;
+        
+        if (bestMatch && bestScore >= threshold) {
           coureurId = bestMatch;
           confidence = Math.min(bestScore, 0.99); // Cap at 0.99
           matched = true;
+          console.log(`  → Fuzzy match: ${entry.source_name} → ${bestRiderName} (score: ${bestScore.toFixed(2)}, team bonus: ${bestTeamBonus.toFixed(2)})`);
+        } else if (bestMatch) {
+          // Log near-misses for debugging
+          console.log(`  ✗ Near-miss: ${entry.source_name} → ${bestRiderName} (score: ${bestScore.toFixed(2)}, threshold: ${threshold}, team bonus: ${bestTeamBonus.toFixed(2)})`);
         }
       }
 
