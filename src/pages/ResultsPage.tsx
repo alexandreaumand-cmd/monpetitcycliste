@@ -20,6 +20,12 @@ interface Race {
   types: string[];
 }
 
+interface ManagerPodium {
+  manager_nom: string;
+  points: number;
+  rank: number;
+}
+
 interface Phase {
   id: string;
   index_dans_saison: number;
@@ -38,6 +44,7 @@ export const ResultsPage = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [phases, setPhases] = useState<Phase[]>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
+  const [podiums, setPodiums] = useState<Record<string, ManagerPodium[]>>({});
   
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -106,15 +113,29 @@ export const ResultsPage = () => {
 
       if (error) throw error;
       
+      const loadedRaces = data.races || [];
+      
       if (reset) {
-        setRaces(data.races || []);
+        setRaces(loadedRaces);
       } else {
-        setRaces(prev => [...prev, ...(data.races || [])]);
+        setRaces(prev => [...prev, ...loadedRaces]);
       }
       
       setHasMore(data.has_more || false);
       if (!reset) {
         setOffset(prev => prev + 24);
+      }
+
+      // Load podiums for the courses
+      if (loadedRaces.length > 0) {
+        const courseIds = loadedRaces.map((r: Race) => r.course_id);
+        const { data: podiumsData } = await supabase.functions.invoke('results-courses-podiums', {
+          body: { course_ids: courseIds }
+        });
+        
+        if (podiumsData) {
+          setPodiums(prev => reset ? podiumsData : { ...prev, ...podiumsData });
+        }
       }
     } catch (error) {
       console.error('Error loading races:', error);
@@ -230,13 +251,26 @@ export const ResultsPage = () => {
                 <CardContent className="space-y-3">
                   <Badge variant="secondary">{race.categorie}</Badge>
                   
-                  <div className="flex flex-wrap gap-1">
-                    {race.types.map((type) => (
-                      <Badge key={type} variant="outline" className="text-xs">
-                        {type}
-                      </Badge>
-                    ))}
-                  </div>
+                  {podiums[race.course_id] && podiums[race.course_id].length > 0 && (
+                    <div className="space-y-1.5 pt-2 border-t">
+                      <div className="text-xs font-semibold text-muted-foreground mb-1">
+                        🏆 Podium managers
+                      </div>
+                      {podiums[race.course_id].slice(0, 3).map((manager, idx) => (
+                        <div key={manager.manager_nom} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-base">
+                              {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
+                            </span>
+                            <span className="font-medium truncate">{manager.manager_nom}</span>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            {manager.points} pts
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
