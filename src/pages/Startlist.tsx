@@ -9,7 +9,7 @@ import { Loader2, Users, AlertCircle, Download, FileText, Calendar, Trophy, Arro
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { differenceInDays, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 const Startlist = () => {
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'list' | 'parse' | 'view'>('list');
   const [selectedRaceForParsing, setSelectedRaceForParsing] = useState<any>(null);
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
@@ -94,10 +95,17 @@ const Startlist = () => {
 
       if (error) throw error;
 
-      setParseResult(data);
+      // Invalider le cache pour recharger les données
+      queryClient.invalidateQueries({ queryKey: ['startlist-imports'] });
+      
+      // Basculer automatiquement en mode 'view' avec le nouveau startlist
+      const newStartlistId = data.startlist_id;
+      setSelectedStartlistId(newStartlistId);
+      setSelectedRaceForViewing(selectedRaceForParsing);
+      setViewMode('view');
       
       toast.success(
-        `${data.counts.matched_db} trouvés en BDD (${data.counts.on_roster} dans vos rosters) sur ${data.counts.parsed} entrées`
+        `Startlist enregistrée : ${data.counts.matched_db} coureurs matchés sur ${data.counts.parsed}`
       );
       
     } catch (error: any) {
@@ -757,204 +765,6 @@ const Startlist = () => {
         </CardContent>
       </Card>
 
-      {parseResult && (
-        <>
-          <div>
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <Users className="h-6 w-6" />
-              Vue par manager
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Current user's team first */}
-              {parseResult.managers
-                .filter((m: any) => currentUser && m.manager_id === currentUser.id)
-                .map((manager: any) => (
-                  <Card key={manager.manager_id} className="border-2 border-primary">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg">{manager.manager_nom}</CardTitle>
-                        <Badge>Mon équipe</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {manager.starters_count} au départ
-                      </p>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-1 max-h-[300px] overflow-y-auto">
-                        {manager.starters.map((s: any, i: number) => (
-                          <div key={i} className="text-sm">
-                            {s.nom} <span className="text-muted-foreground">({s.equipe})</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-              ))}
-
-              {/* Other managers */}
-              {parseResult.managers
-                .filter((m: any) => !currentUser || m.manager_id !== currentUser.id)
-                .map((manager: any) => (
-                  <Card key={manager.manager_id}>
-                    <CardHeader>
-                      <CardTitle className="text-lg">{manager.manager_nom}</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {manager.starters_count} au départ
-                      </p>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-1 max-h-[300px] overflow-y-auto">
-                        {manager.starters.map((s: any, i: number) => (
-                          <div key={i} className="text-sm">
-                            {s.nom} <span className="text-muted-foreground">({s.equipe})</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-              ))}
-            </div>
-          </div>
-
-          {parseResult.no_owner && parseResult.no_owner.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5" />
-                  Sans propriétaire (dans cette phase)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {parseResult.no_owner.map((s: any, i: number) => (
-                    <div key={i} className="text-sm">
-                      {s.nom} <span className="text-muted-foreground">({s.equipe})</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </>
-      )}
-
-      {/* Unmatched panel */}
-      <Sheet open={showUnmatched} onOpenChange={setShowUnmatched}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>À corriger ({parseResult?.counts.unmatched || 0})</SheetTitle>
-          </SheetHeader>
-          
-          <div className="mt-6 space-y-4">
-            {parseResult?.unmatched.map((entry: any, i: number) => (
-              <Card key={i}>
-                <CardContent className="pt-4 space-y-3">
-                  <div>
-                    <div className="font-medium text-lg">{entry.source_name}</div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      Code équipe: {entry.team_code} • Ligne {entry.line_no}
-                    </div>
-                    <div className="text-sm text-muted-foreground italic mt-1">
-                      Canon: {entry.canonical_guess}
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div>
-                    <div className="text-sm font-medium mb-2">Suggestions de la base de données:</div>
-                    {entry.suggestions && entry.suggestions.length > 0 ? (
-                      <div className="space-y-2">
-                        {entry.suggestions.map((sug: any, j: number) => (
-                          <div 
-                            key={j} 
-                            className="p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors"
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1">
-                                <div className="font-medium text-sm">{sug.nom}</div>
-                                <div className="text-xs text-muted-foreground">{sug.equipe || 'Sans équipe'}</div>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                {sug.on_roster ? (
-                                  <Badge variant="default" className="bg-green-600 text-xs">
-                                    Dans roster
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-xs">
-                                    Sans propriétaire
-                                  </Badge>
-                                )}
-                                <Badge variant="secondary" className="text-xs">
-                                  {(sug.score * 100).toFixed(0)}%
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-muted-foreground p-4 text-center bg-muted/30 rounded-md">
-                        Aucune suggestion trouvée
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Diagnostics panel */}
-      {parseResult?.diagnostics && parseResult.diagnostics.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Diagnostics (admin) — 20 premières lignes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Ligne</th>
-                    <th className="text-left p-2">Source</th>
-                    <th className="text-left p-2">Canon</th>
-                    <th className="text-left p-2">Type</th>
-                    <th className="text-left p-2">Score</th>
-                    <th className="text-left p-2">DB Match</th>
-                    <th className="text-left p-2">Roster</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {parseResult.diagnostics.slice(0, 20).map((diag: any, i: number) => (
-                    <tr key={i} className="border-b hover:bg-muted/50">
-                      <td className="p-2">{diag.line_no}</td>
-                      <td className="p-2 font-mono text-xs">{diag.name_raw}</td>
-                      <td className="p-2 font-mono text-xs text-muted-foreground">{diag.canonical_guess}</td>
-                      <td className="p-2">
-                        <Badge variant={diag.match_type === 'none' ? 'destructive' : 'default'} className="text-xs">
-                          {diag.match_type}
-                        </Badge>
-                      </td>
-                      <td className="p-2">{diag.score ? (diag.score * 100).toFixed(0) + '%' : '-'}</td>
-                      <td className="p-2 text-xs">{diag.db_nom || '-'}</td>
-                      <td className="p-2">
-                        {diag.on_roster !== undefined && (
-                          <Badge variant={diag.on_roster ? 'default' : 'outline'} className="text-xs">
-                            {diag.on_roster ? '✓' : '✗'}
-                          </Badge>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
