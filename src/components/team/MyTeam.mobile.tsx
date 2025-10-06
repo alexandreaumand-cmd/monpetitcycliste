@@ -111,7 +111,7 @@ export const MyTeamMobile = () => {
       });
 
       if (error) throw error;
-      setCoureurs(data.team || []);
+      setCoureurs(data.coureurs || []);
     } catch (error: any) {
       toast.error("Erreur : " + error.message);
     } finally {
