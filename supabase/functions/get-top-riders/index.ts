@@ -96,12 +96,10 @@ Deno.serve(async (req) => {
       rider_id: rider.rider_id,
       rider_nom: rider.rider_nom,
       rider_equipe: rider.rider_equipe,
-      prix_initial: rider.prix_initial,
+      prix_achat: 0, // Will be filled later based on context
       total_points: rider.total_points,
       courses_count: rider.courses_count.size,
-      ratio_points_par_prix: rider.prix_initial > 0 
-        ? Math.round((rider.total_points / rider.prix_initial) * 100) / 100
-        : 0,
+      ratio_points_par_prix: 0, // Will be calculated later with actual prix_achat
     }));
 
     // Sort by points descending
@@ -119,6 +117,7 @@ Deno.serve(async (req) => {
         .from('rosters')
         .select(`
           coureur_id,
+          prix_signature,
           managers:manager_id (
             id,
             nom
@@ -131,6 +130,8 @@ Deno.serve(async (req) => {
         console.error('Error fetching rosters:', rostersError);
       } else {
         const ownersMap = new Map();
+        const prixMap = new Map();
+        
         rostersData?.forEach((roster: any) => {
           if (!ownersMap.has(roster.coureur_id)) {
             ownersMap.set(roster.coureur_id, []);
@@ -139,12 +140,22 @@ Deno.serve(async (req) => {
             manager_id: roster.managers?.id,
             manager_nom: roster.managers?.nom || 'Inconnu',
           });
+          
+          // Store prix_signature for this rider
+          prixMap.set(roster.coureur_id, roster.prix_signature || 0);
         });
 
-        items = items.map(rider => ({
-          ...rider,
-          owners: ownersMap.get(rider.rider_id) || [],
-        }));
+        items = items.map(rider => {
+          const prix_achat = prixMap.get(rider.rider_id) || 0;
+          return {
+            ...rider,
+            prix_achat,
+            ratio_points_par_prix: prix_achat > 0 
+              ? Math.round((rider.total_points / prix_achat) * 100) / 100
+              : 0,
+            owners: ownersMap.get(rider.rider_id) || [],
+          };
+        });
       }
     } else {
       // Case B: All phases - get deduplicated owners + owners by phase
@@ -156,6 +167,7 @@ Deno.serve(async (req) => {
         .select(`
           coureur_id,
           phase_id,
+          prix_signature,
           managers:manager_id (
             id,
             nom
@@ -186,9 +198,10 @@ Deno.serve(async (req) => {
       if (rostersError) {
         console.error('Error fetching rosters for all phases:', rostersError);
       } else {
-        // Build owners_all (deduplicated) and owners_by_phase
+        // Build owners_all (deduplicated), owners_by_phase, and sum of prix_signature
         const ownersAllMap = new Map();
         const ownersByPhaseMap = new Map();
+        const prixTotalMap = new Map();
 
         rostersData?.forEach((roster: any) => {
           const coureurId = roster.coureur_id;
@@ -196,6 +209,7 @@ Deno.serve(async (req) => {
           const managerNom = roster.managers?.nom || 'Inconnu';
           const phaseId = roster.phase_id;
           const phaseIndex = roster.phases?.index_dans_saison;
+          const prixSignature = roster.prix_signature || 0;
 
           // Initialize maps if not exists
           if (!ownersAllMap.has(coureurId)) {
@@ -203,6 +217,9 @@ Deno.serve(async (req) => {
           }
           if (!ownersByPhaseMap.has(coureurId)) {
             ownersByPhaseMap.set(coureurId, []);
+          }
+          if (!prixTotalMap.has(coureurId)) {
+            prixTotalMap.set(coureurId, 0);
           }
 
           // Add to owners_all (deduplicated by manager_id)
@@ -220,14 +237,22 @@ Deno.serve(async (req) => {
             phase_id: phaseId,
             phase_index: phaseIndex,
           });
+
+          // Sum prix_signature
+          prixTotalMap.set(coureurId, prixTotalMap.get(coureurId) + prixSignature);
         });
 
         items = items.map(rider => {
           const ownersAllSet = ownersAllMap.get(rider.rider_id);
           const ownersByPhase = ownersByPhaseMap.get(rider.rider_id) || [];
+          const prix_achat = prixTotalMap.get(rider.rider_id) || 0;
 
           return {
             ...rider,
+            prix_achat,
+            ratio_points_par_prix: prix_achat > 0 
+              ? Math.round((rider.total_points / prix_achat) * 100) / 100
+              : 0,
             owners_all: ownersAllSet ? Array.from(ownersAllSet.values()).sort((a: any, b: any) => 
               a.manager_nom.localeCompare(b.manager_nom)
             ) : [],

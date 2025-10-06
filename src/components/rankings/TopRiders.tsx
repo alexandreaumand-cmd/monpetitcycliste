@@ -31,7 +31,7 @@ type TopRider = {
   rider_id: string;
   rider_nom: string;
   rider_equipe: string;
-  prix_initial?: number;
+  prix_achat?: number;
   total_points: number;
   courses_count: number;
   ratio_points_par_prix?: number;
@@ -58,7 +58,7 @@ type RiderPointsTableData = {
   total: number;
 };
 
-type TopRidersSortColumn = "total_points" | "prix_initial" | "ratio_points_par_prix";
+type TopRidersSortColumn = "total_points" | "prix_achat" | "ratio_points_par_prix";
 
 export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
   const [selectedRider, setSelectedRider] = useState<TopRider | null>(null);
@@ -262,11 +262,11 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
                     </TableHead>
                     <TableHead 
                       className="text-right cursor-pointer hover:bg-muted/50 transition-colors"
-                      onClick={() => handleSort("prix_initial")}
+                      onClick={() => handleSort("prix_achat")}
                     >
                       <div className="flex items-center justify-end">
                         Prix
-                        <SortIcon column="prix_initial" />
+                        <SortIcon column="prix_achat" />
                       </div>
                     </TableHead>
                     <TableHead 
@@ -304,7 +304,7 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
                         {rider.total_points}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">
-                        {rider.prix_initial ? `${rider.prix_initial} €` : '—'}
+                        {rider.prix_achat ? `${rider.prix_achat} €` : '—'}
                       </TableCell>
                       <TableCell className="text-right">
                         {rider.ratio_points_par_prix !== undefined 
