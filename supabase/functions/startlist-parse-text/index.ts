@@ -145,13 +145,38 @@ serve(async (req) => {
       }
     }
 
-    // Load all riders
-    const { data: riders } = await supabase
-      .from('coureurs')
-      .select('id, nom, equipe');
+    // Load rosters + coureurs for the phase (matching only against roster)
+    const { data: rostersData } = await supabase
+      .from('rosters')
+      .select('coureur_id, manager_id, coureurs(id, nom, equipe), managers(id, nom)')
+      .eq('phase_id', phaseId);
 
-    if (!riders) {
-      throw new Error('Impossible de charger les coureurs');
+    if (!rostersData) {
+      throw new Error('Impossible de charger les rosters');
+    }
+
+    // Extract unique riders from rosters
+    const riders: any[] = [];
+    const rostersByRider = new Map<string, any[]>();
+    
+    for (const r of rostersData) {
+      if (r.coureurs) {
+        const coureur = r.coureurs as any;
+        // Add to riders if not already present
+        if (!riders.some((c: any) => c.id === coureur.id)) {
+          riders.push(coureur);
+        }
+        
+        // Track manager ownership
+        if (!rostersByRider.has(r.coureur_id)) {
+          rostersByRider.set(r.coureur_id, []);
+        }
+        const manager = r.managers as any;
+        rostersByRider.get(r.coureur_id)!.push({
+          manager_id: r.manager_id,
+          manager_nom: manager?.nom,
+        });
+      }
     }
 
     // Load name aliases for pre-matching
@@ -181,12 +206,6 @@ serve(async (req) => {
     // Match each entry
     const matched: any[] = [];
     const unmatched: any[] = [];
-
-    // Load rosters for on_roster check
-    const { data: rosters } = await supabase
-      .from('rosters')
-      .select('coureur_id, manager_id, managers(id, nom)')
-      .eq('phase_id', phaseId);
 
     for (const entry of parsedEntries) {
       let bestMatch = null;
@@ -232,8 +251,7 @@ serve(async (req) => {
       }
 
       if (bestMatch) {
-        const onRoster = rosters?.some(r => r.coureur_id === bestMatch.id) || false;
-        
+        // All matched riders are on_roster (we only match against rosters)
         matched.push({
           ...entry,
           coureur_id: bestMatch.id,
@@ -241,7 +259,7 @@ serve(async (req) => {
           equipe: bestMatch.equipe,
           confidence: matchScore,
           match_type: matchType,
-          on_roster: onRoster,
+          on_roster: true,
         });
 
         if (with_diagnostics) {
@@ -255,21 +273,20 @@ serve(async (req) => {
             score: matchScore,
             db_nom: bestMatch.nom,
             db_equipe: bestMatch.equipe,
-            on_roster: onRoster,
+            on_roster: true,
           });
         }
       } else {
-        // Get suggestions with on_roster badge
+        // Get suggestions (all suggestions are from roster)
         const suggestions = riders
           .map(r => {
             const score = similarity(entry.normalized, normalize(r.nom));
-            const onRoster = rosters?.some(ro => ro.coureur_id === r.id) || false;
             return {
               coureur_id: r.id,
               nom: r.nom,
               equipe: r.equipe,
               score,
-              on_roster: onRoster,
+              on_roster: true,
             };
           })
           .filter(s => s.score >= 0.65)
@@ -294,33 +311,23 @@ serve(async (req) => {
       }
     }
 
-    // Build manager map (rosters already loaded above)
+    // Build manager map using rostersByRider
     const managerMap = new Map();
-    const noOwner: any[] = [];
 
     for (const m of matched) {
-      const roster = rosters?.find(r => r.coureur_id === m.coureur_id);
+      const owners = rostersByRider.get(m.coureur_id) || [];
       
-      if (roster && roster.managers) {
-        const managerId = (roster.managers as any).id;
-        const managerNom = (roster.managers as any).nom;
-        
-        if (!managerMap.has(managerId)) {
-          managerMap.set(managerId, {
-            manager_id: managerId,
-            manager_nom: managerNom,
+      for (const owner of owners) {
+        if (!managerMap.has(owner.manager_id)) {
+          managerMap.set(owner.manager_id, {
+            manager_id: owner.manager_id,
+            manager_nom: owner.manager_nom,
             starters: [],
           });
         }
         
-        managerMap.get(managerId).starters.push({
+        managerMap.get(owner.manager_id).starters.push({
           coureur_id: m.coureur_id,
-          nom: m.nom,
-          equipe: m.equipe,
-          team_code: m.team_code,
-        });
-      } else {
-        noOwner.push({
           nom: m.nom,
           equipe: m.equipe,
           team_code: m.team_code,
@@ -335,11 +342,6 @@ serve(async (req) => {
       starters: m.starters.sort((a: any, b: any) => a.nom.localeCompare(b.nom)),
     })).sort((a, b) => b.starters_count - a.starters_count);
 
-    // Count matched on_roster
-    const onRoster = matched.filter(m => {
-      return rosters?.some(r => r.coureur_id === m.coureur_id);
-    }).length;
-
     return new Response(
       JSON.stringify({
         phase_id: phaseId,
@@ -347,11 +349,10 @@ serve(async (req) => {
         counts: {
           parsed: parsedEntries.length,
           matched_db: matched.length,
-          on_roster: onRoster,
+          on_roster: matched.length, // All matched are on roster
           unmatched: unmatched.length,
         },
         managers,
-        no_owner: noOwner.sort((a, b) => a.nom.localeCompare(b.nom)),
         unmatched: unmatched.sort((a, b) => a.line_no - b.line_no),
         diagnostics: with_diagnostics ? diagnostics : undefined,
       }),
