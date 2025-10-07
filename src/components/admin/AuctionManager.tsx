@@ -62,6 +62,24 @@ export const AuctionManager = () => {
     }
   });
 
+  const { data: closedAuctions } = useQuery({
+    queryKey: ['closed-auctions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('auctions')
+        .select(`
+          *,
+          phases(index_dans_saison, saisons(annee))
+        `)
+        .eq('statut', 'closed')
+        .order('closed_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Get the active phase and next round number
   const activePhase = phases?.[0];
   const nextRoundNumber = (activeAuctions?.filter(a => a.phase_id === activePhase?.id).length || 0) + 1;
@@ -159,7 +177,8 @@ export const AuctionManager = () => {
 
   const closeAuction = useMutation({
     mutationFn: async (auctionId: string) => {
-      const { error } = await supabase
+      // First, update the auction status
+      const { error: updateError } = await supabase
         .from('auctions')
         .update({ 
           statut: 'closed',
@@ -167,18 +186,52 @@ export const AuctionManager = () => {
         })
         .eq('id', auctionId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Then, invoke the clore-round function to process bids
+      const { data, error: functionError } = await supabase.functions.invoke('clore-round', {
+        body: { auction_id: auctionId }
+      });
+
+      if (functionError) throw functionError;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['active-auctions'] });
+      queryClient.invalidateQueries({ queryKey: ['closed-auctions'] });
       toast({
-        title: "Enchère clôturée",
-        description: "L'enchère a été clôturée avec succès"
+        title: "Enchère clôturée ✅",
+        description: `${data?.annonces_count || 0} annonces créées`
       });
     },
     onError: (error) => {
       toast({
-        title: "Erreur",
+        title: "Erreur lors de la clôture",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const reprocessRound = useMutation({
+    mutationFn: async (auctionId: string) => {
+      const { data, error } = await supabase.functions.invoke('clore-round', {
+        body: { auction_id: auctionId }
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['closed-auctions'] });
+      toast({
+        title: "Round retraité ✅",
+        description: `${data?.annonces_count || 0} annonces créées`
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur lors du retraitement",
         description: error.message,
         variant: "destructive"
       });
@@ -280,6 +333,7 @@ export const AuctionManager = () => {
                     onClick={() => closeAuction.mutate(auction.id)}
                     disabled={closeAuction.isPending}
                   >
+                    {closeAuction.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Clôturer
                   </Button>
                 </div>
@@ -288,6 +342,43 @@ export const AuctionManager = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Closed Auctions - Reprocess */}
+      {closedAuctions && closedAuctions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              Enchères fermées récentes
+            </CardTitle>
+            <CardDescription>
+              Retraiter un round si les annonces n'ont pas été créées correctement
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {closedAuctions.map((auction) => (
+                <div key={auction.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <p className="font-medium">Tour {auction.round_number}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Clôturé le: {auction.closed_at ? new Date(auction.closed_at).toLocaleString() : 'N/A'}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => reprocessRound.mutate(auction.id)}
+                    disabled={reprocessRound.isPending}
+                  >
+                    {reprocessRound.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Retraiter
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Manager Status for Active Phase */}
       {activePhase && managersStatus.length > 0 && (
