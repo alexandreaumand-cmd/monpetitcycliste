@@ -309,7 +309,7 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
                         {rider.total_points}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">
-                        {rider.prix_achat ? `${rider.prix_achat.toFixed(2)} €` : '—'}
+                        {rider.prix_achat ? rider.prix_achat.toFixed(2) : '—'}
                       </TableCell>
                       <TableCell className="text-right">
                         {rider.ratio_points_par_prix !== undefined 

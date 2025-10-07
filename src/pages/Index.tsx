@@ -158,7 +158,7 @@ const Index = () => {
               </Badge>
               <Badge variant="secondary" className="px-4 py-2 text-base">
                 <Trophy className="mr-2 h-4 w-4" />
-                Budget 2200€ / phase
+                Budget 2200 / phase
               </Badge>
               <Badge variant="secondary" className="px-4 py-2 text-base">
                 <Calendar className="mr-2 h-4 w-4" />
@@ -334,7 +334,7 @@ const Index = () => {
               {
                 icon: Trophy,
                 title: "Enchéris sur 30 coureurs",
-                description: "Participe aux enchères pour constituer ton équipe avec un budget de 2200€"
+                description: "Participe aux enchères pour constituer ton équipe avec un budget de 2200"
               },
               {
                 icon: Users,

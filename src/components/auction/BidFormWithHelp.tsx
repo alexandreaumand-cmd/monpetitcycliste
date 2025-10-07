@@ -61,7 +61,7 @@ export const BidFormWithHelp = ({ auction, managerId }: BidFormWithHelpProps) =>
                 <p className="font-medium">Règles de validation :</p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
                   <li>Offre ≥ prix initial du coureur</li>
-                  <li>Décimales autorisées (ex: 125.50 €)</li>
+                  <li>Décimales autorisées (ex: 125.50)</li>
                   <li>Somme totale = budget restant</li>
                   <li>Nombre d'enchères = slots restants</li>
                   <li>Pas de doublons</li>
