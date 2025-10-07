@@ -118,6 +118,9 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("results");
   const [expandedManagers, setExpandedManagers] = useState<Set<string>>(new Set());
+  const [expandedRiders, setExpandedRiders] = useState<Set<string>>(new Set());
+  const [totalRiders, setTotalRiders] = useState<any[]>([]);
+  const [totalBreakdown, setTotalBreakdown] = useState<any[]>([]);
   const { toast } = useToast();
 
   // Fetch leaderboard for the course - always consolidated (all stages, all classifications)
@@ -157,7 +160,11 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
 
   useEffect(() => {
     if (meta && selectedType) {
-      loadResults();
+      if (selectedType === 'Total') {
+        loadTotalResults();
+      } else {
+        loadResults();
+      }
     }
   }, [selectedType, selectedEtape, meta]);
 
@@ -219,6 +226,28 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     }
   };
 
+  const loadTotalResults = async () => {
+    if (!courseId) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('rider-course-total', {
+        body: { course_id: courseId }
+      });
+
+      if (error) throw error;
+
+      setTotalRiders(data?.riders || []);
+      setTotalBreakdown(data?.breakdown || []);
+    } catch (error) {
+      console.error('Error loading total results:', error);
+      setTotalRiders([]);
+      setTotalBreakdown([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleTypeChange = (type: string) => {
     setSelectedType(type);
     if (type === 'Etape' && meta?.etapes_disponibles?.length) {
@@ -269,10 +298,26 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     setExpandedManagers(newExpanded);
   };
 
+  const toggleRider = (riderId: string) => {
+    const newExpanded = new Set(expandedRiders);
+    if (newExpanded.has(riderId)) {
+      newExpanded.delete(riderId);
+    } else {
+      newExpanded.add(riderId);
+    }
+    setExpandedRiders(newExpanded);
+  };
+
   const getContributorsForManager = (managerId: string) => {
     if (!leaderboard) return [];
     return leaderboard.contributors
       .filter(c => c.manager_id === managerId)
+      .sort((a, b) => b.points - a.points);
+  };
+
+  const getRiderBreakdown = (riderId: string) => {
+    return totalBreakdown
+      .filter(b => b.coureur_id === riderId)
       .sort((a, b) => b.points - a.points);
   };
 
@@ -330,6 +375,14 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
             <TabsContent value="results" className="space-y-4 mt-4">
               {/* Type selector pills */}
               <div className="flex gap-2 flex-wrap">
+                {/* Add Total as first option */}
+                <Button
+                  variant={selectedType === 'Total' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleTypeChange('Total')}
+                >
+                  Total
+                </Button>
                 {meta?.types_disponibles
                   ?.filter(type => !type.startsWith('Porteur'))
                   .map((type) => (
@@ -383,27 +436,130 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
               )}
 
               {/* Results count */}
-              {!loading && displayedResults.length > 0 && (
+              {!loading && selectedType !== 'Total' && displayedResults.length > 0 && (
                 <div className="text-sm text-muted-foreground">
                   Affichage de {displayedResults.length} résultat{displayedResults.length > 1 ? 's' : ''}
                   {searchQuery && ` sur ${results.length} total`}
                 </div>
               )}
 
+              {/* Total riders table */}
+              {selectedType === 'Total' && !loading && totalRiders.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12"></TableHead>
+                        <TableHead className="w-16">Rang</TableHead>
+                        <TableHead>Coureur</TableHead>
+                        <TableHead className="hidden md:table-cell">Équipe</TableHead>
+                        <TableHead className="text-right">Points</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {totalRiders.map((rider) => {
+                        const breakdown = getRiderBreakdown(rider.coureur_id);
+                        const isExpanded = expandedRiders.has(rider.coureur_id);
+                        
+                        return (
+                          <Collapsible 
+                            key={rider.coureur_id} 
+                            asChild 
+                            open={isExpanded}
+                            onOpenChange={() => toggleRider(rider.coureur_id)}
+                          >
+                            <>
+                              <CollapsibleTrigger asChild>
+                                <TableRow className="cursor-pointer hover:bg-muted/50 touch-manipulation">
+                                  <TableCell>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="pointer-events-none"
+                                    >
+                                      {isExpanded ? (
+                                        <ChevronDown className="h-4 w-4" />
+                                      ) : (
+                                        <ChevronRight className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </TableCell>
+                                  <TableCell className="font-bold">
+                                    {rider.rank <= 3 && (
+                                      <span className={`text-lg mr-1 ${
+                                        rider.rank === 1 ? "text-yellow-500" :
+                                        rider.rank === 2 ? "text-gray-400" :
+                                        "text-amber-600"
+                                      }`}>
+                                        {rider.rank === 1 ? "🥇" : 
+                                         rider.rank === 2 ? "🥈" : "🥉"}
+                                      </span>
+                                    )}
+                                    #{rider.rank}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex flex-col">
+                                      <span className="font-semibold">{rider.coureur_nom}</span>
+                                      <span className="text-xs text-muted-foreground md:hidden">{rider.equipe}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="hidden md:table-cell">
+                                    {rider.equipe && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {rider.equipe}
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right font-bold text-lg">{rider.total_points}</TableCell>
+                                </TableRow>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent asChild>
+                                <TableRow>
+                                  <TableCell colSpan={5} className="bg-muted/30 p-4">
+                                    <div className="space-y-2">
+                                      <div className="text-sm font-medium text-muted-foreground mb-2">
+                                        Points marqués
+                                      </div>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        {breakdown.map((entry, idx) => (
+                                          <div
+                                            key={`${entry.type_classement}-${entry.etape_numero}-${idx}`}
+                                            className="flex items-center justify-between p-2 rounded border bg-background"
+                                          >
+                                            <Badge variant="outline" className="text-xs">
+                                              {formatClassementLabel(entry.type_classement, entry.etape_numero)}
+                                            </Badge>
+                                            <div className="font-bold">{entry.points} pts</div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              </CollapsibleContent>
+                            </>
+                          </Collapsible>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
               {/* Results table */}
-              {loading ? (
+              {selectedType !== 'Total' && loading ? (
                 <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (
                     <Skeleton key={i} className="h-12 w-full" />
                   ))}
                 </div>
-              ) : displayedResults.length === 0 ? (
+              ) : selectedType !== 'Total' && displayedResults.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   {results.length === 0 
                     ? "Aucun résultat pour ce classement" 
                     : "Aucun résultat ne correspond à votre recherche"}
                 </div>
-              ) : (
+              ) : selectedType !== 'Total' && (
                 <div className="border rounded-lg overflow-hidden">
                   <Table>
                     <TableHeader>
