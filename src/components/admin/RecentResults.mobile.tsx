@@ -86,7 +86,9 @@ export const RecentResultsMobile = () => {
           date_debut: c.date_debut || '',
           date_fin: c.date_fin || '',
           nb_etapes: normalized.isStage
-            ? Math.max(1, Math.ceil((new Date(c.date_fin || c.date_debut).getTime() - new Date(c.date_debut).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+            ? (c.categorie === 'WT GT'
+                ? 21
+                : Math.max(1, Math.ceil((new Date(c.date_fin || c.date_debut).getTime() - new Date(c.date_debut).getTime()) / (1000 * 60 * 60 * 24)) + 1))
             : 1,
           phase_id: c.phase_id || '',
           phase_nom: ''
