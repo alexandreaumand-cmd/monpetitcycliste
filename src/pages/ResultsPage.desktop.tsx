@@ -43,7 +43,6 @@ export const ResultsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch] = useDebounce(searchQuery, 300);
-  const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [phases, setPhases] = useState<Phase[]>([]);
@@ -100,18 +99,19 @@ export const ResultsPage = () => {
   const loadRaces = async (reset = false) => {
     if (reset) {
       setLoading(true);
-      setOffset(0);
       setRaces([]);
     } else {
       setLoadingMore(true);
     }
 
     try {
+      const currentOffset = reset ? 0 : races.length;
+      
       const { data, error } = await supabase.functions.invoke('results-courses-with-entries', {
         body: { 
           search: debouncedSearch || null,
           limit: 24,
-          offset: reset ? 0 : offset,
+          offset: currentOffset,
           phase_id: selectedPhaseId
         }
       });
@@ -127,9 +127,6 @@ export const ResultsPage = () => {
       }
       
       setHasMore(data.has_more || false);
-      if (!reset) {
-        setOffset(prev => prev + 24);
-      }
 
       // Load podiums and winners for the courses
       if (loadedRaces.length > 0) {
