@@ -293,17 +293,18 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
   return (
     <div className="min-h-screen">
       {/* Compact Header */}
-      <AuctionHeader
-        starting_budget={context.starting_budget}
-        draft_sum={context.totals.draft_sum}
-        remaining_budget={context.totals.remaining_budget}
-        budget_spent={context.totals.budget_spent}
-        currency={context.currency}
-        validation_status={context.validation_status}
-        draft_count={context.totals.draft_count}
-        roster_count={context.totals.roster_count}
-        max_slots={context.rules.max_bids}
-      />
+        <AuctionHeader
+          starting_budget={context.starting_budget}
+          draft_sum={context.totals.draft_sum}
+          remaining_budget={context.totals.remaining_budget}
+          budget_spent={context.totals.budget_spent}
+          currency={context.currency}
+          validation_status={context.validation_status}
+          draft_count={context.totals.draft_count}
+          roster_count={context.totals.roster_count}
+          max_slots={context.rules.max_bids}
+          deadline_at={context.auction?.deadline_at}
+        />
 
       {/* Filters - Right below header */}
       <div className="border-b bg-muted/30">

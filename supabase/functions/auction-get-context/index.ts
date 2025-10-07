@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     // Get active auction for this phase
     const { data: auction } = await supabase
       .from('auctions')
-      .select('id, round_number, statut')
+      .select('id, round_number, statut, deadline_at')
       .eq('phase_id', phase_id)
       .eq('statut', 'open')
       .order('round_number', { ascending: false })
@@ -213,6 +213,12 @@ Deno.serve(async (req) => {
         phase_id,
         manager_id,
         auction_id: auction.id,
+        auction: {
+          id: auction.id,
+          round_number: auction.round_number,
+          statut: auction.statut,
+          deadline_at: auction.deadline_at
+        },
         starting_budget: phase.budget,
         currency: '€',
         rules: { min_bid: 1, step: 1, max_bids: phase.max_coureurs },
