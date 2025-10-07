@@ -239,14 +239,26 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="my-bids" className="flex-1 mt-0 pt-2">
-          <MyBidsList
-            bids={context.my_bids}
-            onUpdateAmount={handleUpdateAmount}
-            onRemove={handleRemoveBid}
+        <TabsContent value="my-bids" className="flex-1 mt-0 pt-2 flex flex-col">
+          <div className="flex-1 overflow-y-auto">
+            <MyBidsList
+              bids={context.my_bids}
+              onUpdateAmount={handleUpdateAmount}
+              onRemove={handleRemoveBid}
+              currency={context.currency}
+              step={context.rules.step}
+              isUpdating={upsertBidMutation.isPending || removeBidMutation.isPending}
+            />
+          </div>
+          
+          {/* Submit Button - Only in My Bids tab */}
+          <AuctionSubmitButton
+            canSubmit={context.validation_status.can_submit}
+            onSubmit={handleSubmitAll}
+            isSubmitting={submitAllMutation.isPending}
+            draft_count={context.totals.draft_count}
+            draft_sum={context.totals.draft_sum}
             currency={context.currency}
-            step={context.rules.step}
-            isUpdating={upsertBidMutation.isPending || removeBidMutation.isPending}
           />
         </TabsContent>
 
@@ -293,16 +305,6 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
         remainingBudget={context.totals.remaining_budget}
         currency={context.currency}
         step={context.rules.step}
-      />
-
-      {/* Submit Button - Sticky */}
-      <AuctionSubmitButton
-        canSubmit={context.validation_status.can_submit}
-        onSubmit={handleSubmitAll}
-        isSubmitting={submitAllMutation.isPending}
-        draft_count={context.totals.draft_count}
-        draft_sum={context.totals.draft_sum}
-        currency={context.currency}
       />
     </div>
   );
