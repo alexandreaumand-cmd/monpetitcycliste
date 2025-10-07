@@ -135,7 +135,6 @@ export function RiderResultsList({ riders, onAddRider, isLoading, renderActionBu
                     onClick={() => onAddRider(rider)}
                   >
                     <Plus className="h-4 w-4" />
-                    {!isMobile && <span className="ml-1">Ajouter</span>}
                   </Button>
                 )}
               </TableCell>

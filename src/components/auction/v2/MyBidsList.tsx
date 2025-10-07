@@ -67,7 +67,7 @@ export function MyBidsList({
   }
 
   return (
-    <div className="space-y-1 p-4">
+    <div className="space-y-0.5 p-4">
       <h3 className="text-xs font-medium text-muted-foreground mb-2">
         Mes enchères ({bids.length})
       </h3>
@@ -75,7 +75,7 @@ export function MyBidsList({
       {sortedBids.map((bid) => (
         <div
           key={bid.bid_id}
-          className="flex items-center justify-between py-1 px-2 hover:bg-muted/50 rounded-md transition-colors"
+          className="flex items-center justify-between py-0.5 px-2 hover:bg-muted/50 rounded-md transition-colors"
         >
           {/* Rider name */}
           <span className="font-medium text-xs flex-1 truncate pr-2">{bid.rider_nom}</span>
