@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AuctionHeader } from "./AuctionHeader";
@@ -29,6 +29,27 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
 
   const [debouncedSearch] = useDebounce(searchQuery, 250);
+
+  // Validate coteRange on mount to fix invalid legacy values
+  useEffect(() => {
+    const validRanges = [
+      [0, 500],
+      [0, 50],
+      [50, 100],
+      [100, 150],
+      [150, 200],
+      [200, 500],
+    ];
+    
+    const isValid = validRanges.some(
+      ([min, max]) => coteRange[0] === min && coteRange[1] === max
+    );
+    
+    if (!isValid) {
+      console.log('🔄 Réinitialisation du filtre côte invalide:', coteRange);
+      setCoteRange([0, 500]);
+    }
+  }, []);
 
   // Get auction context
   const { data: context, isLoading: contextLoading } = useQuery({
@@ -66,8 +87,8 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
           phase_id: phaseId,
           q: debouncedSearch || null,
           teams: selectedTeams.length > 0 ? selectedTeams : null,
-          cote_min: coteRange[0] > 0 ? coteRange[0] : null,
-          cote_max: coteRange[1] < 500 ? coteRange[1] : null,
+          cote_min: coteRange[0] !== 0 ? coteRange[0] : null,
+          cote_max: coteRange[1] !== 500 ? coteRange[1] : null,
           exclude_rider_ids: context?.my_bids?.map((b: any) => b.coureur_id) || [],
           limit: 50,
         },
