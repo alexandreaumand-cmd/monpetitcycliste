@@ -170,7 +170,11 @@ export const ResultsEntryStudioMobile = ({
   const handleRiderChange = (index: number, coureur: any) => {
     setResultRows(prev => prev.map((row, i) => 
       i === index 
-        ? { ...row, coureur_id: coureur?.coureur_id || null, coureur_nom: coureur?.coureur_nom || null }
+        ? { 
+            ...row, 
+            coureur_id: coureur?.coureur_id || null, 
+            coureur_nom: coureur?.coureur_nom || null 
+          }
         : row
     ));
   };
