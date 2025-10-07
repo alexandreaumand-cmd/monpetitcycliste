@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AuctionHeaderMobile } from "./AuctionHeaderMobile";
@@ -29,7 +29,6 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
   const [selectedRider, setSelectedRider] = useState<any>(null);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);
-
   const [debouncedSearch] = useDebounce(searchQuery, 250);
 
   // Get auction context
@@ -45,6 +44,13 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
     refetchInterval: 10000, // Refresh every 10s (optimized)
     refetchOnWindowFocus: false,
   });
+
+  // Auto-show validation screen if manager has already validated and auction is still open
+  useEffect(() => {
+    if (context?.validation_status?.has_validated && context?.auction_id) {
+      setShowValidationScreen(true);
+    }
+  }, [context?.validation_status?.has_validated, context?.auction_id]);
 
   // Fetch available teams from database
   const { data: teamsData } = useQuery({

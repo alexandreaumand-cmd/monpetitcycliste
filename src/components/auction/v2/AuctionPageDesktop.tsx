@@ -38,7 +38,6 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);
-
   const [debouncedSearch] = useDebounce(searchQuery, 250);
 
   // Get auction context
@@ -53,6 +52,13 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
     },
     refetchInterval: 5000,
   });
+
+  // Auto-show validation screen if manager has already validated and auction is still open
+  useEffect(() => {
+    if (context?.validation_status?.has_validated && context?.auction_id) {
+      setShowValidationScreen(true);
+    }
+  }, [context?.validation_status?.has_validated, context?.auction_id]);
 
   // Get available teams
   const { data: availableTeams = [] } = useQuery({

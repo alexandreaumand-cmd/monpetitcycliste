@@ -111,6 +111,8 @@ Deno.serve(async (req) => {
       .filter(b => b.statut === 'pending')
       .map(b => ({ bid_id: b.id, coureur_id: b.coureur_id, amount: b.montant }));
 
+    const has_validated = submitted_bids.length > 0;
+
     // Get coureur details for bids
     const coureur_ids = [...my_bids, ...submitted_bids].map(b => b.coureur_id);
     const { data: coureurs } = await supabase
@@ -184,6 +186,7 @@ Deno.serve(async (req) => {
           no_duplicates,
           no_taken_riders,
           can_submit,
+          has_validated,
         },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
