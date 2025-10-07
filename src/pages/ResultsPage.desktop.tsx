@@ -9,34 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDebounce } from "use-debounce";
 import { CourseResultsDrawer } from "@/components/courses/CourseResultsDrawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface Race {
-  course_id: string;
-  nom: string;
-  categorie: string;
-  date_debut: string;
-  date_fin: string;
-  last_result_at: string;
-  types: string[];
-}
-
-interface ManagerPodium {
-  manager_nom: string;
-  points: number;
-  rank: number;
-}
-
-interface RaceWinner {
-  coureur_nom: string;
-}
-
-interface Phase {
-  id: string;
-  index_dans_saison: number;
-  date_debut: string;
-  date_fin: string;
-  statut: 'draft' | 'active' | 'completed' | 'auction_open' | 'auction_closed';
-}
+import { AdminMaintenance } from "@/components/admin/AdminMaintenance";
 
 export const ResultsPage = () => {
   const [races, setRaces] = useState<Race[]>([]);
@@ -165,6 +138,9 @@ export const ResultsPage = () => {
 
   return (
     <div className="space-y-6">
+      {/* Admin Maintenance Component */}
+      <AdminMaintenance />
+      
       {/* Header with search */}
       <div className="sticky top-0 z-10 bg-background pb-4 border-b">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">

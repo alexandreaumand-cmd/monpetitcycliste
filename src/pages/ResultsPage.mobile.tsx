@@ -161,6 +161,11 @@ export const ResultsPageMobile = () => {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Admin Maintenance Component */}
+      <div className="p-4">
+        <AdminMaintenance />
+      </div>
+      
       {/* Header */}
       <div className="sticky top-14 z-10 bg-background border-b safe-top">
         <div className="p-4 space-y-3">

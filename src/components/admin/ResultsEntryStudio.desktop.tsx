@@ -463,6 +463,15 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
       if (saveError) throw saveError;
 
+      // Immediately recompute points for this course to reflect Porteur points
+      const { error: computeError } = await supabase.functions.invoke('compute-points', {
+        body: { course_id: course.course_id }
+      });
+      
+      if (computeError) {
+        console.error('Error recomputing points after save:', computeError);
+      }
+
       // Save jersey holders if on stage race + stages tab
       if (!isOneDay && activeTab === "stages" && etapeNumero) {
         const jerseyMappings: Array<{ type: ClassementType; key: JerseyType }> = [
