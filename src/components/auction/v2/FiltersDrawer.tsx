@@ -122,7 +122,7 @@ export function FiltersDrawer({
                   </Button>
                 </div>
               </div>
-              <div className="border rounded-md p-2 space-y-1 max-h-[200px] overflow-y-auto">
+              <div className="border rounded-md p-2 space-y-1">
                 {availableTeams.map((team) => (
                   <div
                     key={team}
