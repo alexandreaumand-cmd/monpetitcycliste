@@ -3,12 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { AuctionPage } from "./AuctionPage";
+import { AuctionPageV2 } from "./v2/AuctionPageV2";
 
 interface AuctionsListProps {
   managerId: string;
 }
 
 export const AuctionsList = ({ managerId }: AuctionsListProps) => {
+  // Feature flag: use v2 by default, can be toggled in localStorage
+  const useV2 = localStorage.getItem("USE_AUCTION_V2") !== "false";
+
   const { data: activePhases, isLoading } = useQuery({
     queryKey: ['my-active-phases'],
     queryFn: async () => {
@@ -47,6 +51,10 @@ export const AuctionsList = ({ managerId }: AuctionsListProps) => {
     );
   }
 
-  // Show auction page for the active phase
-  return <AuctionPage phaseId={activePhases[0].id} managerId={managerId} />;
+  // Show v2 or v1 based on feature flag
+  return useV2 ? (
+    <AuctionPageV2 phaseId={activePhases[0].id} managerId={managerId} />
+  ) : (
+    <AuctionPage phaseId={activePhases[0].id} managerId={managerId} />
+  );
 };

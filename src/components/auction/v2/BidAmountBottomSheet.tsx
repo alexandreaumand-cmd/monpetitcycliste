@@ -6,7 +6,7 @@ import { MobileBottomSheet } from "@/components/mobile";
 import { Plus, Minus } from "lucide-react";
 
 interface BidAmountBottomSheetProps {
-  isOpen: boolean;
+  open: boolean;
   onClose: () => void;
   rider: {
     rider_id: string;
@@ -22,7 +22,7 @@ interface BidAmountBottomSheetProps {
 }
 
 export function BidAmountBottomSheet({
-  isOpen,
+  open,
   onClose,
   rider,
   onSubmit,
@@ -81,7 +81,7 @@ export function BidAmountBottomSheet({
 
   return (
     <MobileBottomSheet 
-      open={isOpen} 
+      open={open} 
       onOpenChange={onClose}
       title={rider.rider_nom}
       description={`${rider.rider_team}${rider.cote ? ` • Côte: ${rider.cote}${currency}` : ''}`}
