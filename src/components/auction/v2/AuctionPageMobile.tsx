@@ -262,9 +262,9 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
           />
         </TabsContent>
 
-        <TabsContent value="search" className="flex-1 mt-0">
-          {/* Search bar directly in tab */}
-          <div className="px-3 py-2 border-b bg-muted/30">
+        <TabsContent value="search" className="flex-1 mt-0 flex flex-col">
+          {/* Search bar - Sticky at top */}
+          <div className="px-3 py-2 border-b bg-background sticky top-0 z-10">
             <div className="relative">
               <input
                 type="text"
@@ -277,11 +277,14 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
             </div>
           </div>
           
-          <RiderResultsList
-            riders={ridersData?.items || []}
-            onAddRider={handleAddRider}
-            isLoading={ridersLoading}
-          />
+          {/* Scrollable results list */}
+          <div className="flex-1 overflow-y-auto">
+            <RiderResultsList
+              riders={ridersData?.items || []}
+              onAddRider={handleAddRider}
+              isLoading={ridersLoading}
+            />
+          </div>
         </TabsContent>
       </Tabs>
 
