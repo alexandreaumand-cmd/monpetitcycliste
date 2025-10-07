@@ -325,29 +325,10 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
         handleSubmitBid={handleSubmitBid}
         handleUpdateAmount={handleUpdateAmount}
         handleRemoveBid={handleRemoveBid}
+        handleSubmitAll={handleSubmitAll}
         isUpdating={upsertBidMutation.isPending || removeBidMutation.isPending}
+        isSubmitting={submitAllMutation.isPending}
       />
-
-      {/* Submit Button - Fixed at bottom */}
-      <div className="fixed bottom-0 right-0 left-0 border-t bg-background p-4">
-        <div className="container mx-auto max-w-7xl">
-          <Button
-            onClick={handleSubmitAll}
-            disabled={!context.validation_status.can_submit || submitAllMutation.isPending}
-            size="lg"
-            className="w-full"
-          >
-            {submitAllMutation.isPending ? (
-              "Validation en cours..."
-            ) : (
-              <>
-                <CheckCircle2 className="h-5 w-5 mr-2" />
-                Valider mes enchères
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
 
       {/* Submit confirmation dialog */}
       <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>

@@ -6,7 +6,7 @@ import { AuctionTeamsGrid } from "../AuctionTeamsGrid";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BidAmountPopover } from "./BidAmountPopover";
-import { Plus } from "lucide-react";
+import { Plus, CheckCircle2 } from "lucide-react";
 
 interface AuctionTabsProps {
   phaseId: string;
@@ -28,7 +28,9 @@ interface AuctionTabsProps {
   handleSubmitBid: (amount: number, riderId: string) => void;
   handleUpdateAmount: (bidId: string, coureurId: string, amount: number) => void;
   handleRemoveBid: (bidId: string) => void;
+  handleSubmitAll: () => void;
   isUpdating: boolean;
+  isSubmitting: boolean;
 }
 
 export const AuctionTabs = ({
@@ -48,7 +50,9 @@ export const AuctionTabs = ({
   handleSubmitBid,
   handleUpdateAmount,
   handleRemoveBid,
+  handleSubmitAll,
   isUpdating,
+  isSubmitting,
 }: AuctionTabsProps) => {
   return (
     <Tabs defaultValue="bid" className="w-full">
@@ -116,10 +120,10 @@ export const AuctionTabs = ({
                 </Card>
               </div>
 
-              {/* Right column: My Bids */}
-              <div>
-                <Card className="h-[calc(100vh-340px)]">
-                  <CardContent className="p-0 h-full overflow-y-auto">
+              {/* Right column: My Bids + Submit button */}
+              <div className="flex flex-col gap-4">
+                <Card className="flex-1">
+                  <CardContent className="p-0 h-[calc(100vh-280px)] overflow-y-auto">
                     <MyBidsList
                       bids={myBids}
                       onUpdateAmount={handleUpdateAmount}
@@ -130,6 +134,23 @@ export const AuctionTabs = ({
                     />
                   </CardContent>
                 </Card>
+
+                {/* Submit button */}
+                <Button
+                  onClick={handleSubmitAll}
+                  disabled={!context?.validation_status?.can_submit || isSubmitting}
+                  size="lg"
+                  className="w-full"
+                >
+                  {isSubmitting ? (
+                    "Validation en cours..."
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-5 w-5 mr-2" />
+                      Valider mes enchères
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </div>
