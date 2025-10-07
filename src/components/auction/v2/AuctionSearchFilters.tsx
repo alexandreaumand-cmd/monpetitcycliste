@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Search, X } from "lucide-react";
 
 interface AuctionSearchFiltersProps {
@@ -8,9 +9,9 @@ interface AuctionSearchFiltersProps {
   onSearchChange: (query: string) => void;
   selectedTeams: string[];
   onTeamsChange: (teams: string[]) => void;
-  coteRange: [number, number];
-  onCoteRangeChange: (range: [number, number]) => void;
-  availableTeams: string[];
+  selectedCotes: number[];
+  onCotesChange: (cotes: number[]) => void;
+  availableTeams: { short: string; full: string }[];
 }
 
 export function AuctionSearchFilters({
@@ -18,8 +19,8 @@ export function AuctionSearchFilters({
   onSearchChange,
   selectedTeams,
   onTeamsChange,
-  coteRange,
-  onCoteRangeChange,
+  selectedCotes,
+  onCotesChange,
   availableTeams,
 }: AuctionSearchFiltersProps) {
   const handleTeamChange = (value: string) => {
@@ -30,38 +31,19 @@ export function AuctionSearchFilters({
     }
   };
 
-  const handleCoteChange = (value: string) => {
-    switch (value) {
-      case "all":
-        onCoteRangeChange([0, 500]);
-        break;
-      case "0-50":
-        onCoteRangeChange([0, 50]);
-        break;
-      case "50-100":
-        onCoteRangeChange([50, 100]);
-        break;
-      case "100-150":
-        onCoteRangeChange([100, 150]);
-        break;
-      case "150-200":
-        onCoteRangeChange([150, 200]);
-        break;
-      case "200+":
-        onCoteRangeChange([200, 500]);
-        break;
+  const coteOptions = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 101]; // 101 represents 100+
+  
+  const toggleCote = (cote: number) => {
+    if (selectedCotes.includes(cote)) {
+      onCotesChange(selectedCotes.filter(c => c !== cote));
+    } else {
+      onCotesChange([...selectedCotes, cote]);
     }
   };
 
-  const getCoteValue = () => {
-    const [min, max] = coteRange;
-    if (min === 0 && max === 500) return "all";
-    if (min === 0 && max === 50) return "0-50";
-    if (min === 50 && max === 100) return "50-100";
-    if (min === 100 && max === 150) return "100-150";
-    if (min === 150 && max === 200) return "150-200";
-    if (min === 200 && max === 500) return "200+";
-    return "all";
+  const getCoteLabel = (cote: number) => {
+    if (cote === 101) return "100+";
+    return `${cote}€`;
   };
 
   return (
@@ -87,38 +69,41 @@ export function AuctionSearchFilters({
         )}
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2">
+      {/* Team Filter */}
+      <div>
         <Select
           value={selectedTeams.length === 0 ? "all" : selectedTeams[0]}
           onValueChange={handleTeamChange}
         >
-          <SelectTrigger className="flex-1">
+          <SelectTrigger>
             <SelectValue placeholder="Toutes les équipes" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Toutes les équipes</SelectItem>
             {availableTeams.map((team) => (
-              <SelectItem key={team} value={team}>
-                {team}
+              <SelectItem key={team.short} value={team.short}>
+                {team.full}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+      </div>
 
-        <Select value={getCoteValue()} onValueChange={handleCoteChange}>
-          <SelectTrigger className="flex-1">
-            <SelectValue placeholder="Toutes les côtes" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toutes les côtes</SelectItem>
-            <SelectItem value="0-50">0 - 50€</SelectItem>
-            <SelectItem value="50-100">50 - 100€</SelectItem>
-            <SelectItem value="100-150">100 - 150€</SelectItem>
-            <SelectItem value="150-200">150 - 200€</SelectItem>
-            <SelectItem value="200+">200€+</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Price Filter */}
+      <div className="space-y-2">
+        <div className="text-xs font-medium text-muted-foreground">Filtrer par côte</div>
+        <div className="flex flex-wrap gap-1.5">
+          {coteOptions.map((cote) => (
+            <Badge
+              key={cote}
+              variant={selectedCotes.includes(cote) ? "default" : "outline"}
+              className="cursor-pointer hover:bg-primary/10 transition-colors"
+              onClick={() => toggleCote(cote)}
+            >
+              {getCoteLabel(cote)}
+            </Badge>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, Clock, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface AuctionHeaderProps {
   starting_budget: number;
@@ -17,6 +18,9 @@ interface AuctionHeaderProps {
   };
   draft_count: number;
   max_slots: number;
+  deadline_at?: string;
+  validated_count?: number;
+  total_managers?: number;
 }
 
 export function AuctionHeader({
@@ -27,13 +31,73 @@ export function AuctionHeader({
   validation_status,
   draft_count,
   max_slots,
+  deadline_at,
+  validated_count = 0,
+  total_managers = 0,
 }: AuctionHeaderProps) {
   const progressPercentage = (draft_sum / starting_budget) * 100;
   const allValid = validation_status.can_submit;
+  
+  const [timeRemaining, setTimeRemaining] = useState<string>("");
+
+  useEffect(() => {
+    if (!deadline_at) return;
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const deadline = new Date(deadline_at).getTime();
+      const diff = deadline - now;
+
+      if (diff <= 0) {
+        setTimeRemaining("Terminé");
+        return;
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      if (hours > 0) {
+        setTimeRemaining(`${hours}h ${minutes}m`);
+      } else if (minutes > 0) {
+        setTimeRemaining(`${minutes}m ${seconds}s`);
+      } else {
+        setTimeRemaining(`${seconds}s`);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [deadline_at]);
 
   return (
     <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-      <div className="container mx-auto p-4 max-w-7xl">
+      <div className="container mx-auto p-4 max-w-7xl space-y-3">
+        {/* Top Row - Time & Stats */}
+        <div className="flex items-center justify-between text-sm">
+          {deadline_at && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span className="font-medium">Temps restant:</span>
+              <Badge variant="outline" className="font-mono">
+                {timeRemaining}
+              </Badge>
+            </div>
+          )}
+          {total_managers > 0 && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Users className="h-4 w-4" />
+              <span className="font-medium">Validés:</span>
+              <Badge variant="outline">
+                {validated_count}/{total_managers}
+              </Badge>
+            </div>
+          )}
+        </div>
+
+        {/* Main Row - Budget & Validation */}
         <div className="flex gap-4">
           {/* Budget Section - 60% */}
           <div className="flex-[3] space-y-2">

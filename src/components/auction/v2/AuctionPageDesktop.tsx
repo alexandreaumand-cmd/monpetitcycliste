@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
+import { getTeamOptions } from "@/lib/teamNames";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,31 +35,10 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
   // State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
-  const [coteRange, setCoteRange] = useState<[number, number]>([0, 500]);
+  const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
 
   const [debouncedSearch] = useDebounce(searchQuery, 250);
-
-  // Validate coteRange on mount to fix invalid legacy values
-  useEffect(() => {
-    const validRanges = [
-      [0, 500],
-      [0, 50],
-      [50, 100],
-      [100, 150],
-      [150, 200],
-      [200, 500],
-    ];
-    
-    const isValid = validRanges.some(
-      ([min, max]) => coteRange[0] === min && coteRange[1] === max
-    );
-    
-    if (!isValid) {
-      console.log('🔄 Réinitialisation du filtre côte invalide:', coteRange);
-      setCoteRange([0, 500]);
-    }
-  }, []);
 
   // Get auction context
   const { data: context, isLoading: contextLoading } = useQuery({
@@ -74,7 +54,8 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
   });
 
   const availableTeams = useMemo(() => {
-    return ["UAD", "TVL", "ISN", "QST", "GCW", "DSM", "SOU", "EFE", "IGD", "COF", "LTD", "BAH"];
+    const teams = ["UAD", "TVL", "ISN", "QST", "GCW", "DSM", "SOU", "EFE", "IGD", "COF", "LTD", "BAH"];
+    return getTeamOptions(teams);
   }, []);
 
   // Search riders
@@ -84,17 +65,33 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
       phaseId,
       debouncedSearch,
       selectedTeams,
-      coteRange,
+      selectedCotes,
       context?.my_bids?.map((b: any) => b.coureur_id) || [],
     ],
     queryFn: async () => {
+      // Convert selectedCotes to min/max ranges
+      let cote_min: number | null = null;
+      let cote_max: number | null = null;
+      
+      if (selectedCotes.length > 0) {
+        const sortedCotes = [...selectedCotes].sort((a, b) => a - b);
+        cote_min = sortedCotes[0];
+        
+        // If 101 (100+) is selected, set max to null (no limit)
+        if (sortedCotes.includes(101)) {
+          cote_max = null;
+        } else {
+          cote_max = sortedCotes[sortedCotes.length - 1];
+        }
+      }
+      
       const { data, error } = await supabase.functions.invoke("auction-search-riders", {
         body: {
           phase_id: phaseId,
           q: debouncedSearch || null,
           teams: selectedTeams.length > 0 ? selectedTeams : null,
-          cote_min: coteRange[0] !== 0 ? coteRange[0] : null,
-          cote_max: coteRange[1] !== 500 ? coteRange[1] : null,
+          cote_min,
+          cote_max,
           exclude_rider_ids: context?.my_bids?.map((b: any) => b.coureur_id) || [],
           limit: 50,
         },
@@ -238,8 +235,8 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
                   onSearchChange={setSearchQuery}
                   selectedTeams={selectedTeams}
                   onTeamsChange={setSelectedTeams}
-                  coteRange={coteRange}
-                  onCoteRangeChange={setCoteRange}
+                  selectedCotes={selectedCotes}
+                  onCotesChange={setSelectedCotes}
                   availableTeams={availableTeams}
                 />
               </CardContent>

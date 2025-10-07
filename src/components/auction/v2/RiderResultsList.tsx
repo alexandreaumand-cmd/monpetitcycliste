@@ -55,8 +55,7 @@ export function RiderResultsList({ riders, onAddRider, isLoading, renderActionBu
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Nom</TableHead>
-            <TableHead className="text-center">Équipe</TableHead>
+            <TableHead>Coureur</TableHead>
             <TableHead className="text-right">Côte</TableHead>
             <TableHead className="text-center w-[100px]">Action</TableHead>
           </TableRow>
@@ -64,14 +63,20 @@ export function RiderResultsList({ riders, onAddRider, isLoading, renderActionBu
         <TableBody>
           {riders.map((rider) => (
             <TableRow key={rider.rider_id} className="hover:bg-muted/50">
-              <TableCell className="font-medium">{rider.rider_nom}</TableCell>
-              <TableCell className="text-center font-mono text-xs">
-                {rider.rider_team || "N/A"}
+              <TableCell className="font-medium py-2">
+                <div className="flex items-center gap-2">
+                  <span>{rider.rider_nom}</span>
+                  {rider.rider_team && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-normal">
+                      {rider.rider_team}
+                    </span>
+                  )}
+                </div>
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right py-2">
                 {rider.cote !== null ? `${rider.cote}€` : "-"}
               </TableCell>
-              <TableCell className="text-center">
+              <TableCell className="text-center py-2">
                 {renderActionButton ? (
                   renderActionButton(rider)
                 ) : (
