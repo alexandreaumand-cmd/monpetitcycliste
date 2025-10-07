@@ -11,6 +11,34 @@ import { CourseResultsDrawer } from "@/components/courses/CourseResultsDrawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AdminMaintenance } from "@/components/admin/AdminMaintenance";
 
+interface Race {
+  course_id: string;
+  nom: string;
+  categorie: string;
+  date_debut: string;
+  date_fin: string;
+  last_result_at: string;
+  types: string[];
+}
+
+interface ManagerPodium {
+  manager_nom: string;
+  points: number;
+  rank: number;
+}
+
+interface RaceWinner {
+  coureur_nom: string;
+}
+
+interface Phase {
+  id: string;
+  index_dans_saison: number;
+  date_debut: string;
+  date_fin: string;
+  statut: 'draft' | 'active' | 'completed' | 'auction_open' | 'auction_closed';
+}
+
 export const ResultsPage = () => {
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState(true);
