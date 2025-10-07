@@ -24,6 +24,7 @@ type CoureursComboboxProps = {
   onSelect: (coureur: Coureur | null) => void;
   placeholder?: string;
   showTakenRiders?: boolean;
+  disabled?: boolean;
 };
 
 export const CoureursCombobox = ({
@@ -32,6 +33,7 @@ export const CoureursCombobox = ({
   onSelect,
   placeholder = "Sélectionner un coureur...",
   showTakenRiders = true,
+  disabled = false,
 }: CoureursComboboxProps) => {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -88,6 +90,7 @@ export const CoureursCombobox = ({
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
+          disabled={disabled}
         >
           {selectedCoureur ? (
             <span className="truncate">{selectedCoureur.coureur_nom}</span>

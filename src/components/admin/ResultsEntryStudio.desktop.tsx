@@ -7,12 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
 import { JerseyHoldersInput } from "@/components/admin/JerseyHoldersInput";
+import { cn } from "@/lib/utils";
 
 type CourseData = {
   course_id: string;
@@ -71,6 +73,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     jeune: null,
     combattif: null,
   });
+  const [isCancelled, setIsCancelled] = useState(false);
 
   const isOneDay = course.type_course === "One day";
   const classementType: ClassementType = isOneDay
@@ -155,6 +158,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     setResultRows([]);
     setGridPrepared(false);
     setIsDirty(false);
+    setIsCancelled(false);
     setJerseyHolders({
       general: null,
       vert: null,
@@ -235,6 +239,18 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       if (loadError) throw loadError;
 
       const existingResults = existingData?.rows || [];
+
+      // Load cancellation status from race_result_sets
+      const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
+      const { data: resultSetData } = await supabase
+        .from('race_result_sets')
+        .select('is_cancelled')
+        .eq('course_id', course.course_id)
+        .eq('type_classement', classementType)
+        .eq('etape_numero', etapeNumeroValue)
+        .maybeSingle();
+
+      setIsCancelled(resultSetData?.is_cancelled || false);
 
       // Load jersey holders if on stage race + stages tab
       if (!isOneDay && activeTab === "stages" && etapeNumero) {
@@ -375,6 +391,29 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
+
+      // Update cancellation status in race_result_sets
+      await supabase
+        .from('race_result_sets')
+        .update({ is_cancelled: isCancelled })
+        .eq('course_id', course.course_id)
+        .eq('type_classement', classementType)
+        .eq('etape_numero', etapeNumeroValue);
+
+      // If cancelled, delete all results and return
+      if (isCancelled) {
+        await supabase
+          .from('race_results')
+          .delete()
+          .eq('course_id', course.course_id)
+          .eq('type_classement', classementType)
+          .eq('etape_numero', etapeNumeroValue);
+        
+        return { success: true, message: 'Annulation enregistrée' };
+      }
+
+      // Otherwise, save results normally
       const validRows = resultRows.filter((r) => r.coureur_id);
       if (validRows.length === 0) {
         throw new Error("Aucune ligne à enregistrer");
@@ -391,9 +430,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       if (duplicates.length > 0) {
         throw new Error("Doublons détectés dans la saisie");
       }
-
-      // Properly cast etape_numero: number for Etape, null otherwise
-      const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
 
       // Prepare rows for DB function
       const rowsForDb = validRows.map((row) => ({
@@ -454,7 +490,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         verifyData,
       };
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["stage-completion"] });
       queryClient.invalidateQueries({ queryKey: ["results-status"] });
       queryClient.invalidateQueries({ queryKey: ["manager-standings"] });
@@ -462,14 +498,21 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       queryClient.invalidateQueries({ queryKey: ["recent-points"] });
       queryClient.invalidateQueries({ queryKey: ["rankings-kpis"] });
 
-      const label = activeTab === "stages" ? `ÉTAPE ${currentStage}` : classementType.toUpperCase();
-      const rowsAffected = (data.saveResult as any)?.rows_affected || 0;
-      const pointsRows = (data.pointsResult as any)?.rows_upserted || 0;
-      
-      toast({
-        title: "✅ Résultats enregistrés",
-        description: `${label} — ${rowsAffected} résultats · ${pointsRows} points attribués`,
-      });
+      if (data.message === 'Annulation enregistrée') {
+        toast({
+          title: "✅ Annulation enregistrée",
+          description: "Les résultats ont été supprimés",
+        });
+      } else {
+        const label = activeTab === "stages" ? `ÉTAPE ${currentStage}` : classementType.toUpperCase();
+        const rowsAffected = (data.saveResult as any)?.rows_affected || 0;
+        const pointsRows = (data.pointsResult as any)?.rows_upserted || 0;
+        
+        toast({
+          title: "✅ Résultats enregistrés",
+          description: `${label} — ${rowsAffected} résultats · ${pointsRows} points attribués`,
+        });
+      }
       setIsDirty(false);
     },
     onError: (error: Error) => {
@@ -654,16 +697,49 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                 ) : null;
               })()}
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-muted-foreground">Date:</label>
-              <Input
-                type="date"
-                value={dateClassement}
-                onChange={(e) => setDateClassement(e.target.value)}
-                className="w-40"
-              />
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="cancelled-checkbox"
+                  checked={isCancelled}
+                  onCheckedChange={(checked) => {
+                    setIsCancelled(checked === true);
+                    if (checked) {
+                      setResultRows(prev => prev.map(row => ({
+                        ...row,
+                        coureur_id: null,
+                        coureur_nom: null,
+                        manager_nom: null,
+                      })));
+                      setIsDirty(true);
+                    }
+                  }}
+                />
+                <label htmlFor="cancelled-checkbox" className="text-sm font-medium cursor-pointer">
+                  {activeTab === "stages" && !isOneDay ? "Étape annulée" : "Course annulée"}
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-muted-foreground">Date:</label>
+                <Input
+                  type="date"
+                  value={dateClassement}
+                  onChange={(e) => setDateClassement(e.target.value)}
+                  className="w-40"
+                />
+              </div>
             </div>
           </div>
+
+          {/* Info message for cancelled stages */}
+          {!isOneDay && activeTab === "stages" && isCancelled && (
+            <Alert className="mb-4">
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Cette étape annulée ne bloque pas la saisie des classements finaux (CG, Points, etc.)
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Scoring Info */}
           {scoringRules && scoringRules.length === 0 && (
@@ -689,7 +765,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                   </thead>
                   <tbody className="divide-y">
                     {resultRows.map((row, index) => (
-                      <tr key={index} className="hover:bg-muted/50">
+                      <tr key={index} className={cn("hover:bg-muted/50", isCancelled && "opacity-50 pointer-events-none")}>
                         <td className="px-4 py-2 text-sm font-medium">{row.position}</td>
                         <td className="px-4 py-2">
                           <CoureursCombobox
@@ -703,6 +779,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                               }
                             }}
                             showTakenRiders={true}
+                            disabled={isCancelled}
                           />
                         </td>
                         <td className="px-4 py-2">

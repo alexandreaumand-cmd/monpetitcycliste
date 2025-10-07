@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
-import { X, ChevronLeft, ChevronRight, Save, Check } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Save, Check, Info } from "lucide-react";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +17,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { JerseyHoldersInput } from "./JerseyHoldersInput";
+import { cn } from "@/lib/utils";
 
 type Course = {
   course_id: string;
@@ -58,6 +61,7 @@ export const ResultsEntryStudioMobile = ({
     courseIsStageRace ? "Etape" : "General"
   );
   const [resultRows, setResultRows] = useState<ResultRow[]>([]);
+  const [isCancelled, setIsCancelled] = useState(false);
   const [jerseyHolders, setJerseyHolders] = useState<{
     general: string | null;
     vert: string | null;
@@ -123,6 +127,7 @@ export const ResultsEntryStudioMobile = ({
 
   // Load existing results when scoring rules are available
   useEffect(() => {
+    setIsCancelled(false); // Reset on classement/stage change
     if (scoringRules && scoringRules.length > 0) {
       loadResults();
     }
@@ -139,6 +144,19 @@ export const ResultsEntryStudioMobile = ({
     if (!scoringRules || scoringRules.length === 0) {
       return;
     }
+
+    // Load cancellation status
+    const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
+    const { data: resultSetData } = await supabase
+      .from('race_result_sets')
+      .select('is_cancelled')
+      .eq('course_id', course.course_id)
+      .eq('type_classement', currentClassement)
+      .eq('etape_numero', etapeNumeroValue)
+      .maybeSingle();
+
+    setIsCancelled(resultSetData?.is_cancelled || false);
+
     let query = supabase
       .from('race_results')
       .select('*, coureurs(nom)')
@@ -246,6 +264,29 @@ export const ResultsEntryStudioMobile = ({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
+
+      // Update cancellation status
+      await supabase
+        .from('race_result_sets')
+        .update({ is_cancelled: isCancelled })
+        .eq('course_id', course.course_id)
+        .eq('type_classement', currentClassement)
+        .eq('etape_numero', etapeNumeroValue);
+
+      // If cancelled, delete all results and return
+      if (isCancelled) {
+        await supabase
+          .from('race_results')
+          .delete()
+          .eq('course_id', course.course_id)
+          .eq('type_classement', currentClassement)
+          .eq('etape_numero', etapeNumeroValue);
+        
+        return { success: true, message: 'Annulation enregistrée' };
+      }
+
+      // Otherwise, save results normally
       const validRows = resultRows.filter(r => r.coureur_id);
       
       if (validRows.length === 0) {
@@ -380,8 +421,12 @@ export const ResultsEntryStudioMobile = ({
         await supabase.from('points_ledger').insert(pointsToInsert);
       }
     },
-    onSuccess: () => {
-      toast.success("Résultats enregistrés");
+    onSuccess: (data: any) => {
+      if (data.message === 'Annulation enregistrée') {
+        toast.success("Annulation enregistrée");
+      } else {
+        toast.success("Résultats enregistrés");
+      }
       queryClient.invalidateQueries({ queryKey: ['results-status'] });
       loadResults();
     },
@@ -463,6 +508,39 @@ export const ResultsEntryStudioMobile = ({
             </Button>
           </div>
         )}
+
+        {/* Cancelled checkbox */}
+        <div className="flex items-center gap-2 px-4 pb-3">
+          <Checkbox
+            id="cancelled-checkbox-mobile"
+            checked={isCancelled}
+            onCheckedChange={(checked) => {
+              setIsCancelled(checked === true);
+              if (checked) {
+                setResultRows(prev => prev.map(row => ({
+                  ...row,
+                  coureur_id: null,
+                  coureur_nom: null,
+                })));
+              }
+            }}
+          />
+          <label htmlFor="cancelled-checkbox-mobile" className="text-sm font-medium cursor-pointer">
+            {courseIsStageRace && currentClassement === "Etape" ? "Étape annulée" : "Course annulée"}
+          </label>
+        </div>
+
+        {/* Info message for cancelled stages */}
+        {courseIsStageRace && currentClassement === "Etape" && isCancelled && (
+          <div className="px-4 pb-3">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Cette étape annulée ne bloque pas la saisie des classements finaux
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -484,13 +562,14 @@ export const ResultsEntryStudioMobile = ({
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-3 space-y-2">
                 {currentClassement === "Etape" && resultRows.filter(r => r.position > 0).map((row, index) => (
-                  <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <div key={index} className={cn("flex items-center gap-2 p-3 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
                     <span className="font-bold text-sm w-6">{row.position}</span>
                     <div className="flex-1">
                       <CoureursCombobox
                         value={row.coureur_id}
                         onSelect={(coureur) => handleRiderChange(index, coureur)}
                         phaseId={course.phase_id}
+                        disabled={isCancelled}
                       />
                     </div>
                     <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>
@@ -527,13 +606,14 @@ export const ResultsEntryStudioMobile = ({
             </CollapsibleTrigger>
               <CollapsibleContent className="mt-3 space-y-2">
                 {currentClassement === "General" && resultRows.filter(r => r.position > 0).map((row, index) => (
-                  <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <div key={index} className={cn("flex items-center gap-2 p-3 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
                     <span className="font-bold text-sm w-6">{row.position}</span>
                     <div className="flex-1">
                       <CoureursCombobox
                         value={row.coureur_id}
                         onSelect={(coureur) => handleRiderChange(index, coureur)}
                         phaseId={course.phase_id}
+                        disabled={isCancelled}
                       />
                     </div>
                     <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>
@@ -558,13 +638,14 @@ export const ResultsEntryStudioMobile = ({
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-3 space-y-2">
                 {currentClassement === "Points" && resultRows.filter(r => r.position > 0).map((row, index) => (
-                  <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <div key={index} className={cn("flex items-center gap-2 p-3 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
                     <span className="font-bold text-sm w-6">{row.position}</span>
                     <div className="flex-1">
                       <CoureursCombobox
                         value={row.coureur_id}
                         onSelect={(coureur) => handleRiderChange(index, coureur)}
                         phaseId={course.phase_id}
+                        disabled={isCancelled}
                       />
                     </div>
                     <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>
@@ -590,13 +671,14 @@ export const ResultsEntryStudioMobile = ({
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-3 space-y-2">
                 {currentClassement === "Montagne" && resultRows.filter(r => r.position > 0).map((row, index) => (
-                  <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <div key={index} className={cn("flex items-center gap-2 p-3 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
                     <span className="font-bold text-sm w-6">{row.position}</span>
                     <div className="flex-1">
                       <CoureursCombobox
                         value={row.coureur_id}
                         onSelect={(coureur) => handleRiderChange(index, coureur)}
                         phaseId={course.phase_id}
+                        disabled={isCancelled}
                       />
                     </div>
                     <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>
@@ -622,13 +704,14 @@ export const ResultsEntryStudioMobile = ({
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-3 space-y-2">
                 {currentClassement === "Jeune" && resultRows.filter(r => r.position > 0).map((row, index) => (
-                  <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                  <div key={index} className={cn("flex items-center gap-2 p-3 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
                     <span className="font-bold text-sm w-6">{row.position}</span>
                     <div className="flex-1">
                       <CoureursCombobox
                         value={row.coureur_id}
                         onSelect={(coureur) => handleRiderChange(index, coureur)}
                         phaseId={course.phase_id}
+                        disabled={isCancelled}
                       />
                     </div>
                     <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>

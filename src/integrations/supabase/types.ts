@@ -1138,6 +1138,7 @@ export type Database = {
           created_by: string
           etape_numero: number | null
           id: string
+          is_cancelled: boolean
           type_classement: Database["public"]["Enums"]["type_classement"]
         }
         Insert: {
@@ -1146,6 +1147,7 @@ export type Database = {
           created_by: string
           etape_numero?: number | null
           id?: string
+          is_cancelled?: boolean
           type_classement: Database["public"]["Enums"]["type_classement"]
         }
         Update: {
@@ -1154,6 +1156,7 @@ export type Database = {
           created_by?: string
           etape_numero?: number | null
           id?: string
+          is_cancelled?: boolean
           type_classement?: Database["public"]["Enums"]["type_classement"]
         }
         Relationships: [
