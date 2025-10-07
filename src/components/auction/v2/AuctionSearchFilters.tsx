@@ -1,7 +1,9 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Search, X, ChevronDown } from "lucide-react";
 
 interface AuctionSearchFiltersProps {
   searchQuery: string;
@@ -28,6 +30,20 @@ export function AuctionSearchFilters({
     } else {
       onTeamsChange([...selectedTeams, team]);
     }
+  };
+
+  const selectAllTeams = () => {
+    onTeamsChange(availableTeams.map(t => t.short));
+  };
+
+  const clearAllTeams = () => {
+    onTeamsChange([]);
+  };
+
+  const getTeamDisplayText = () => {
+    if (selectedTeams.length === 0) return "Toutes les équipes";
+    if (selectedTeams.length <= 3) return selectedTeams.join(", ");
+    return `${selectedTeams.length} équipes sélectionnées`;
   };
 
   const coteOptions = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 101]; // 101 represents 100+
@@ -71,18 +87,59 @@ export function AuctionSearchFilters({
       {/* Team Filter */}
       <div className="space-y-2">
         <div className="text-xs font-medium text-muted-foreground">Filtrer par équipe</div>
-        <div className="flex flex-wrap gap-1.5">
-          {availableTeams.map((team) => (
-            <Badge
-              key={team.short}
-              variant={selectedTeams.includes(team.short) ? "default" : "outline"}
-              className="cursor-pointer hover:bg-primary/10 transition-colors text-xs"
-              onClick={() => toggleTeam(team.short)}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              className="w-full justify-between h-10 font-normal"
             >
-              {team.short}
-            </Badge>
-          ))}
-        </div>
+              <span className="truncate">{getTeamDisplayText()}</span>
+              <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-0" align="start">
+            <div className="max-h-[300px] overflow-y-auto">
+              {/* Select All / Clear All */}
+              <div className="flex items-center justify-between px-3 py-2 border-b">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={selectAllTeams}
+                  className="h-7 text-xs"
+                >
+                  Tout sélectionner
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllTeams}
+                  className="h-7 text-xs"
+                >
+                  Tout effacer
+                </Button>
+              </div>
+              {/* Team List */}
+              <div className="p-1">
+                {availableTeams.map((team) => (
+                  <div
+                    key={team.short}
+                    className="flex items-center space-x-2 px-2 py-2 hover:bg-accent rounded-sm cursor-pointer"
+                    onClick={() => toggleTeam(team.short)}
+                  >
+                    <Checkbox
+                      checked={selectedTeams.includes(team.short)}
+                      onCheckedChange={() => toggleTeam(team.short)}
+                    />
+                    <label className="flex-1 text-sm cursor-pointer">
+                      {team.short} - {team.full}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Price Filter */}
