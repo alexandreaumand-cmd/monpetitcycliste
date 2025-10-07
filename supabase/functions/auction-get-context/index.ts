@@ -80,7 +80,9 @@ Deno.serve(async (req) => {
           draft_sum: 0, 
           draft_count: 0, 
           remaining_budget: phase.budget, 
-          remaining_slots: phase.max_coureurs 
+          remaining_slots: phase.max_coureurs,
+          roster_count: 0,
+          budget_spent: 0
         },
         validation_status: {
           has_exact_slots: false,
@@ -113,6 +115,16 @@ Deno.serve(async (req) => {
 
     const has_validated = submitted_bids.length > 0;
 
+    // Get existing roster for this manager and phase
+    const { data: existingRoster } = await supabase
+      .from('rosters')
+      .select('coureur_id, prix_signature')
+      .eq('manager_id', manager_id)
+      .eq('phase_id', phase_id);
+
+    const roster_count = existingRoster?.length || 0;
+    const budget_spent = existingRoster?.reduce((sum, r) => sum + Number(r.prix_signature), 0) || 0;
+
     // Get coureur details for bids
     const coureur_ids = [...my_bids, ...submitted_bids].map(b => b.coureur_id);
     const { data: coureurs } = await supabase
@@ -137,11 +149,11 @@ Deno.serve(async (req) => {
       cote: coureursMap.get(b.coureur_id)?.prix_initial || null,
     }));
 
-    // Calculate totals
+    // Calculate totals (including existing roster)
     const draft_sum = my_bids.reduce((sum, b) => sum + b.amount, 0);
     const draft_count = my_bids.length;
-    const remaining_budget = phase.budget - draft_sum;
-    const remaining_slots = phase.max_coureurs - draft_count;
+    const remaining_budget = phase.budget - budget_spent - draft_sum;
+    const remaining_slots = phase.max_coureurs - roster_count - draft_count;
 
     // Check if coureurs are already taken (in rosters)
     const { data: takenRiders } = await supabase
@@ -164,7 +176,7 @@ Deno.serve(async (req) => {
     });
 
     // Validation status
-    const has_exact_slots = draft_count === phase.max_coureurs;
+    const has_exact_slots = (roster_count + draft_count) === phase.max_coureurs;
     const budget_fully_used = Math.abs(remaining_budget) < 1;
     const can_submit = has_exact_slots && budget_fully_used && all_above_min && no_duplicates && no_taken_riders;
 
@@ -178,7 +190,7 @@ Deno.serve(async (req) => {
         rules: { min_bid: 1, step: 1, max_bids: phase.max_coureurs },
         my_bids: enriched_my_bids,
         submitted_bids: enriched_submitted_bids,
-        totals: { draft_sum, draft_count, remaining_budget, remaining_slots },
+        totals: { draft_sum, draft_count, remaining_budget, remaining_slots, roster_count, budget_spent },
         validation_status: {
           has_exact_slots,
           budget_fully_used,
