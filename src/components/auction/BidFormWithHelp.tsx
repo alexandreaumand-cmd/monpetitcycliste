@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lightbulb, AlertTriangle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { formatAmount } from "@/lib/utils";
 
 interface BidFormWithHelpProps {
   auction: {
@@ -80,9 +81,9 @@ export const BidFormWithHelp = ({ auction, managerId }: BidFormWithHelpProps) =>
                       <p className="font-medium">{bid.coureur_nom}</p>
                       <p className="text-muted-foreground">
                         {bid.outcome === 'lost' ? (
-                          <>Perdu contre {bid.winning_manager} à {parseFloat(bid.winning_amount.toString()).toFixed(0)} €</>
+                          <>Perdu contre {bid.winning_manager} à {formatAmount(bid.winning_amount)}</>
                         ) : (
-                          <>Ex æquo à {parseFloat(bid.my_bid.toString()).toFixed(0)} €</>
+                          <>Ex æquo à {formatAmount(bid.my_bid)}</>
                         )}
                       </p>
                     </div>

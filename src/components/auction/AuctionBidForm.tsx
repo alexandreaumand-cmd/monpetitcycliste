@@ -14,6 +14,7 @@ import { useDebounce } from "use-debounce";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatAmount } from "@/lib/utils";
 
 interface AuctionBidFormProps {
   auction: {
@@ -280,13 +281,13 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
       
       // Allow small rounding errors (< 1 euro)
       if (Math.abs(draftSum - budgetRestant) >= 1) {
-        throw new Error(`La somme de tes offres (${draftSum.toFixed(0)} €) doit être égale à ton budget restant (${budgetRestant.toFixed(0)} €).`);
+        throw new Error(`La somme de tes offres (${formatAmount(draftSum)}) doit être égale à ton budget restant (${formatAmount(budgetRestant)}).`);
       }
 
       // Vérifier que chaque montant >= prix_initial
       for (const bid of draftBids) {
         if (parseFloat(bid.montant.toString()) < parseFloat(bid.coureurs.prix_initial.toString())) {
-          throw new Error(`Le montant pour ${bid.coureurs.nom} doit être au moins ${bid.coureurs.prix_initial} €`);
+          throw new Error(`Le montant pour ${bid.coureurs.nom} doit être au moins ${formatAmount(bid.coureurs.prix_initial)}`);
         }
       }
 
@@ -386,7 +387,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                     <p className="text-sm text-muted-foreground">{bid.coureurs.equipe}</p>
                   </div>
                   <Badge variant="outline" className="text-lg">
-                    {parseFloat(bid.montant.toString()).toFixed(0)} €
+                    {formatAmount(bid.montant)}
                   </Badge>
                 </div>
               ))}
@@ -407,7 +408,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                     Slots: {phaseStatus.slots_restants}
                   </Badge>
                   <Badge variant={parseFloat(phaseStatus.budget_restant.toString()) < 0 ? "destructive" : "secondary"} className="text-sm">
-                    Budget: {parseFloat(phaseStatus.budget_restant.toString()).toFixed(0)} €
+                    Budget: {formatAmount(phaseStatus.budget_restant)}
                   </Badge>
                 </>
               ) : null}
@@ -431,14 +432,14 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
               <AlertDescription>
                 <div className="flex flex-col gap-1">
                   <div>Slots à saisir ce round : <strong>{phaseStatus.slots_restants}</strong></div>
-                  <div>Budget restant : <strong>{parseFloat(phaseStatus.budget_restant.toString()).toFixed(0)} €</strong></div>
+                  <div>Budget restant : <strong>{formatAmount(phaseStatus.budget_restant)}</strong></div>
                   {roundDrafts && (
                     <div className="mt-2 text-sm">
                       <div className={roundDrafts.draft_count !== phaseStatus.slots_restants ? "text-orange-600" : "text-green-600"}>
                         Lignes : {roundDrafts.draft_count} / {phaseStatus.slots_restants}
                       </div>
                       <div className={Math.abs(parseFloat(phaseStatus.budget_restant.toString()) - roundDrafts.draft_sum) >= 1 ? "text-orange-600" : "text-green-600"}>
-                        Somme : {roundDrafts.draft_sum.toFixed(0)} / {parseFloat(phaseStatus.budget_restant.toString()).toFixed(0)} €
+                        Somme : {formatAmount(roundDrafts.draft_sum)} / {formatAmount(phaseStatus.budget_restant)}
                       </div>
                     </div>
                   )}
@@ -466,14 +467,14 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Confirmer la validation</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Vous êtes sur le point de soumettre {draftBids.length} enchère(s) pour un montant total de {draftBids.reduce((sum: number, b: any) => sum + parseFloat(b.montant.toString()), 0).toFixed(0)} €.
-                            <br /><br />
-                            Budget restant après validation: {phaseStatus ? parseFloat(phaseStatus.budget_restant.toString()).toFixed(0) : '0'} €
-                            <br /><br />
-                            Une fois validées, vous ne pourrez plus les modifier.
-                          </AlertDialogDescription>
+                        <AlertDialogTitle>Confirmer la validation</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Vous êtes sur le point de soumettre {draftBids.length} enchère(s) pour un montant total de {formatAmount(draftBids.reduce((sum: number, b: any) => sum + parseFloat(b.montant.toString()), 0))}.
+                          <br /><br />
+                          Budget restant après validation: {phaseStatus ? formatAmount(phaseStatus.budget_restant) : '0'}
+                          <br /><br />
+                          Une fois validées, vous ne pourrez plus les modifier.
+                        </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Annuler</AlertDialogCancel>
@@ -492,7 +493,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                         )}
                         {!budgetFullyUsed && roundDrafts && (
                           <div className="text-orange-600">
-                            ⚠️ La somme doit être égale au budget restant ({parseFloat(phaseStatus.budget_restant.toString()).toFixed(0)} €, actuellement: {roundDrafts.draft_sum.toFixed(0)} €)
+                            ⚠️ La somme doit être égale au budget restant ({formatAmount(phaseStatus.budget_restant)}, actuellement: {formatAmount(roundDrafts.draft_sum)})
                           </div>
                         )}
                       </div>
@@ -509,7 +510,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary">
-                        {parseFloat(bid.montant.toString()).toFixed(0)} €
+                        {formatAmount(bid.montant)}
                       </Badge>
                       <Button
                         size="sm"
@@ -601,7 +602,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                                 </div>
                                 {!coureur.is_taken && (
                                   <Badge variant="secondary">
-                                    Min: {parseFloat(coureur.prix_initial.toString()).toFixed(0)} €
+                                    Min: {formatAmount(coureur.prix_initial)}
                                   </Badge>
                                 )}
                               </div>
@@ -625,13 +626,13 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                       <span className="text-muted-foreground">Cote minimum:</span>
                       <span className="font-medium flex items-center gap-1">
                         <TrendingUp className="h-3 w-3" />
-                        {parseFloat(selectedCoureur.prix_initial.toString()).toFixed(0)} €
+                        {formatAmount(selectedCoureur.prix_initial)}
                       </span>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Montant de l'enchère (€)</Label>
+                    <Label>Montant de l'enchère</Label>
                     <Input
                       type="number"
                       min={selectedCoureur.prix_initial}
@@ -644,7 +645,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
 
                   {phaseStatus && bidAmount && parseFloat(bidAmount) > parseFloat(phaseStatus.budget_restant.toString()) && (
                     <p className="text-sm text-destructive">
-                      ⚠️ Budget insuffisant (reste: {parseFloat(phaseStatus.budget_restant.toString()).toFixed(0)} €)
+                      ⚠️ Budget insuffisant (reste: {formatAmount(phaseStatus.budget_restant)})
                     </p>
                   )}
 

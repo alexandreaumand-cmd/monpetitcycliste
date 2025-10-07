@@ -9,6 +9,7 @@ import { fr } from "date-fns/locale";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { formatAmount } from "@/lib/utils";
 
 interface LastRoundResultsProps {
   phaseId: string;
@@ -123,7 +124,7 @@ export const LastRoundResults = ({ phaseId, managerId }: LastRoundResultsProps) 
                           <div className="flex items-center justify-between">
                             <span className="font-medium">{bid.coureur_nom}</span>
                             <span className="text-green-700 dark:text-green-400">
-                              {parseFloat(bid.my_bid.toString()).toFixed(0)} €
+                              {formatAmount(bid.my_bid)}
                             </span>
                           </div>
                           {bid.coureur_equipe && (
@@ -147,11 +148,11 @@ export const LastRoundResults = ({ phaseId, managerId }: LastRoundResultsProps) 
                           <div className="flex items-center justify-between">
                             <span className="font-medium">{bid.coureur_nom}</span>
                             <span className="text-red-700 dark:text-red-400">
-                              {parseFloat(bid.my_bid.toString()).toFixed(0)} €
+                              {formatAmount(bid.my_bid)}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Perdu contre {bid.winning_manager} à {parseFloat(bid.winning_amount?.toString() || '0').toFixed(0)} €
+                            Perdu contre {bid.winning_manager} à {formatAmount(bid.winning_amount || '0')}
                           </p>
                         </div>
                       ))}
@@ -171,7 +172,7 @@ export const LastRoundResults = ({ phaseId, managerId }: LastRoundResultsProps) 
                           <div className="flex items-center justify-between">
                             <span className="font-medium">{bid.coureur_nom}</span>
                             <span className="text-orange-700 dark:text-orange-400">
-                              {parseFloat(bid.my_bid.toString()).toFixed(0)} €
+                              {formatAmount(bid.my_bid)}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground">
@@ -204,7 +205,7 @@ export const LastRoundResults = ({ phaseId, managerId }: LastRoundResultsProps) 
                       <div className="text-right">
                         <p className="font-medium">{winner.manager_gagnant}</p>
                         <p className="text-xs text-muted-foreground">
-                          {parseFloat(winner.montant_gagnant.toString()).toFixed(0)} €
+                          {formatAmount(winner.montant_gagnant)}
                         </p>
                       </div>
                     </div>

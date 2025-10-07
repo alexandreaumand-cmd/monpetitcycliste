@@ -7,6 +7,7 @@ import { Loader2, Search } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { formatAmount } from "@/lib/utils";
 
 interface AuctionTeamsGridProps {
   phaseId: string;
@@ -110,9 +111,9 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Dépensé:</span>
                   <span className="font-medium">
-                    {data.rosters.reduce((sum: number, r: any) => 
+                    {formatAmount(data.rosters.reduce((sum: number, r: any) => 
                       sum + parseFloat(r.prix_signature.toString()), 0
-                    ).toFixed(0)} €
+                    ))}
                   </span>
                 </div>
 
@@ -136,7 +137,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
                               <p className="text-sm text-muted-foreground">{roster.coureurs.equipe}</p>
                             </div>
                             <Badge variant="outline">
-                              {parseFloat(roster.prix_signature.toString()).toFixed(0)} €
+                              {formatAmount(roster.prix_signature)}
                             </Badge>
                           </div>
                         ))}

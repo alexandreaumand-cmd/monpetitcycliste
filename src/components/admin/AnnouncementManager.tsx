@@ -8,6 +8,7 @@ import { Loader2, Megaphone, Copy, CheckCircle2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatAmount } from "@/lib/utils";
 
 export const AnnouncementManager = () => {
   const queryClient = useQueryClient();
@@ -208,7 +209,7 @@ export const AnnouncementManager = () => {
                         <p className="font-medium">{annonce.coureurs?.nom}</p>
                         {annonce.type === 'gain' && annonce.managers && (
                           <p className="text-sm text-muted-foreground">
-                            {annonce.managers.nom} - {annonce.winning_amount?.toFixed(1)} €
+                            {annonce.managers.nom} - {formatAmount(annonce.winning_amount || 0)}
                           </p>
                         )}
                         {annonce.type === 'egalite' && (

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Trophy, XCircle, Clock } from "lucide-react";
 import { useState } from "react";
+import { formatAmount } from "@/lib/utils";
 
 interface BidHistoryProps {
   managerId: string;
@@ -145,7 +146,7 @@ export const BidHistory = ({ managerId, phaseId }: BidHistoryProps) => {
                         <p className="text-sm text-muted-foreground">{bid.coureur_equipe}</p>
                       </div>
                       <Badge variant="outline" className="text-green-700 dark:text-green-400">
-                        {parseFloat(bid.my_bid.toString()).toFixed(0)} €
+                        {formatAmount(bid.my_bid)}
                       </Badge>
                     </div>
                   ))
@@ -161,14 +162,14 @@ export const BidHistory = ({ managerId, phaseId }: BidHistoryProps) => {
                       <div className="flex items-center justify-between mb-1">
                         <p className="font-medium">{bid.coureur_nom}</p>
                         <Badge variant="outline" className="text-red-700 dark:text-red-400">
-                          {parseFloat(bid.my_bid.toString()).toFixed(0)} €
+                          {formatAmount(bid.my_bid)}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {bid.coureur_equipe}
                       </p>
                       <p className="text-sm text-red-700 dark:text-red-400 mt-1">
-                        Perdu contre <strong>{bid.winning_manager}</strong> à {parseFloat(bid.winning_amount.toString()).toFixed(0)} €
+                        Perdu contre <strong>{bid.winning_manager}</strong> à {formatAmount(bid.winning_amount)}
                       </p>
                     </div>
                   ))
@@ -189,7 +190,7 @@ export const BidHistory = ({ managerId, phaseId }: BidHistoryProps) => {
                         </p>
                       </div>
                       <Badge variant="outline" className="text-yellow-700 dark:text-yellow-400">
-                        {parseFloat(bid.my_bid.toString()).toFixed(0)} €
+                        {formatAmount(bid.my_bid)}
                       </Badge>
                     </div>
                   ))

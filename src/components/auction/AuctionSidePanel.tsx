@@ -6,6 +6,7 @@ import { Eye, Trophy, XCircle, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
+import { formatAmount } from "@/lib/utils";
 
 interface AuctionSidePanelProps {
   phaseId: string;
@@ -91,7 +92,7 @@ export const AuctionSidePanel = ({ phaseId, managerId, open, onOpenChange }: Auc
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      Budget: {parseFloat(manager.budget_restant.toString()).toFixed(0)} €
+                      Budget: {formatAmount(manager.budget_restant)}
                     </div>
                     {manager.slots_restants === 0 && (
                       <Badge variant="secondary" className="text-xs">Roster complet</Badge>
@@ -123,7 +124,7 @@ export const AuctionSidePanel = ({ phaseId, managerId, open, onOpenChange }: Auc
                       <p className="text-muted-foreground">Round {bid.round_number}</p>
                     </div>
                     <Badge variant="outline" className="text-xs">
-                      {parseFloat(bid.my_bid.toString()).toFixed(0)} €
+                      {formatAmount(bid.my_bid)}
                     </Badge>
                   </div>
                 ))}

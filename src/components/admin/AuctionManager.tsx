@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Zap, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatAmount } from "@/lib/utils";
 
 export const AuctionManager = () => {
   const { toast } = useToast();
@@ -233,7 +234,7 @@ export const AuctionManager = () => {
                   <p className="font-medium">Prochain tour: {nextRoundNumber}</p>
                   <p className="text-sm text-muted-foreground">Deadline: 24h automatique</p>
                 </div>
-                <Badge variant="outline">{activePhase.budget} € de budget</Badge>
+                <Badge variant="outline">{formatAmount(activePhase.budget)} de budget</Badge>
               </div>
               <Button
                 onClick={() => quickLaunchAuction.mutate()}
@@ -355,7 +356,7 @@ export const AuctionManager = () => {
                         </TableCell>
                         <TableCell className="text-center">
                           <span className={Math.abs(parseFloat(manager.budget_restant.toString()) - parseFloat(manager.pending_sum.toString())) >= 1 ? "text-orange-600" : "text-green-600"}>
-                            {parseFloat(manager.pending_sum.toString()).toFixed(0)} / {parseFloat(manager.budget_restant.toString()).toFixed(0)} €
+                            {formatAmount(manager.pending_sum)} / {formatAmount(manager.budget_restant)}
                           </span>
                         </TableCell>
                         <TableCell className="text-center">

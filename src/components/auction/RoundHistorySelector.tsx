@@ -8,6 +8,7 @@ import { CheckCircle2, XCircle, AlertCircle, Trophy } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useState } from "react";
+import { formatAmount } from "@/lib/utils";
 
 interface RoundHistorySelectorProps {
   phaseId: string;
@@ -146,7 +147,7 @@ export const RoundHistorySelector = ({ phaseId, managerId }: RoundHistorySelecto
                         <div className="flex items-center justify-between">
                           <span className="font-medium">{bid.coureur_nom}</span>
                           <span className="text-green-700 dark:text-green-400">
-                            {parseFloat(bid.my_bid?.toString() || '0').toFixed(0)} €
+                            {formatAmount(bid.my_bid || '0')}
                           </span>
                         </div>
                         {bid.coureur_equipe && (
@@ -170,11 +171,11 @@ export const RoundHistorySelector = ({ phaseId, managerId }: RoundHistorySelecto
                         <div className="flex items-center justify-between">
                           <span className="font-medium">{bid.coureur_nom}</span>
                           <span className="text-red-700 dark:text-red-400">
-                            {parseFloat(bid.my_bid?.toString() || '0').toFixed(0)} €
+                            {formatAmount(bid.my_bid || '0')}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Perdu contre {bid.winning_manager} à {parseFloat(bid.winning_amount?.toString() || '0').toFixed(0)} €
+                          Perdu contre {bid.winning_manager} à {formatAmount(bid.winning_amount || '0')}
                         </p>
                       </div>
                     ))}
@@ -194,7 +195,7 @@ export const RoundHistorySelector = ({ phaseId, managerId }: RoundHistorySelecto
                         <div className="flex items-center justify-between">
                           <span className="font-medium">{bid.coureur_nom}</span>
                           <span className="text-orange-700 dark:text-orange-400">
-                            {parseFloat(bid.my_bid?.toString() || '0').toFixed(0)} €
+                            {formatAmount(bid.my_bid || '0')}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">
@@ -224,12 +225,12 @@ export const RoundHistorySelector = ({ phaseId, managerId }: RoundHistorySelecto
                         <p className="text-xs text-muted-foreground">{winner.coureur_equipe}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium">{winner.manager_gagnant}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {parseFloat(winner.montant_gagnant.toString()).toFixed(0)} €
-                      </p>
-                    </div>
+                      <div className="text-right">
+                        <p className="font-medium">{winner.manager_gagnant}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatAmount(winner.montant_gagnant)}
+                        </p>
+                      </div>
                   </div>
                 ))}
                 {winners.length === 0 && (

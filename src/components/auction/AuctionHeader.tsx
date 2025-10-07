@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { RefreshCw, HelpCircle, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
+import { formatAmount } from "@/lib/utils";
 
 interface AuctionHeaderProps {
   auction: {
@@ -64,7 +65,7 @@ export const AuctionHeader = ({ auction, phaseStatus, onRefresh }: AuctionHeader
                 variant={parseFloat(phaseStatus.budget_restant.toString()) < 0 ? "destructive" : "default"} 
                 className="text-sm"
               >
-                Budget: {parseFloat(phaseStatus.budget_restant.toString()).toFixed(0)} €
+                Budget: {formatAmount(phaseStatus.budget_restant)}
               </Badge>
             </>
           )}

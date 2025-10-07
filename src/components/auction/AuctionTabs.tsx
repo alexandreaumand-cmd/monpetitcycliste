@@ -12,6 +12,7 @@ import { LastRoundResults } from "./LastRoundResults";
 import { useState } from "react";
 import { CheckCircle2, Users } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatAmount } from "@/lib/utils";
 
 interface AuctionTabsProps {
   auction: {
@@ -150,7 +151,7 @@ export const AuctionTabs = ({ auction, managerId }: AuctionTabsProps) => {
               Préparer
               {phaseStatus && roundDrafts && (
                 <Badge variant="secondary" className="ml-1">
-                  {roundDrafts.draft_count}/{phaseStatus.slots_restants} • {roundDrafts.draft_sum.toFixed(0)}€
+                  {roundDrafts.draft_count}/{phaseStatus.slots_restants} • {formatAmount(roundDrafts.draft_sum)}
                 </Badge>
               )}
             </TabsTrigger>

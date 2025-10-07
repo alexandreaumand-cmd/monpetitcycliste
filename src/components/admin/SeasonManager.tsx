@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { formatAmount } from "@/lib/utils";
 
 export const SeasonManager = () => {
   const { toast } = useToast();
@@ -206,7 +207,7 @@ export const SeasonManager = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Budget (€)</Label>
+                    <Label>Budget</Label>
                     <Input
                       type="number"
                       value={budget}
@@ -250,7 +251,7 @@ export const SeasonManager = () => {
                           </div>
                           <p className="text-sm text-muted-foreground">
                             {new Date(phase.date_debut).toLocaleDateString()} - {new Date(phase.date_fin).toLocaleDateString()}
-                            {" • "}{phase.budget} € de budget
+                            {" • "}{formatAmount(phase.budget)} de budget
                           </p>
                         </div>
                         <Button
