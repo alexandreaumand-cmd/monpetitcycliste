@@ -136,7 +136,14 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
       return data as {
         course: { id: string; nom: string; date_debut: string; category: string };
         leaderboard: Array<{ rank: number; manager_id: string; manager_nom: string; points: number }>;
-        contributors: Array<{ manager_id: string; rider_id: string; rider_nom: string; rider_equipe: string | null; points: number }>;
+        contributors: Array<{ 
+          manager_id: string; 
+          rider_id: string; 
+          rider_nom: string; 
+          type_classement: string; 
+          etape_numero: number | null; 
+          points: number 
+        }>;
       };
     },
     enabled: open && !!courseId && activeTab === "leaderboard",
@@ -267,6 +274,23 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     return leaderboard.contributors
       .filter(c => c.manager_id === managerId)
       .sort((a, b) => b.points - a.points);
+  };
+
+  const formatClassementLabel = (typeClassement: string, etapeNumero: number | null) => {
+    switch (typeClassement) {
+      case 'General':
+        return 'Classement Général';
+      case 'Etape':
+        return `Étape ${etapeNumero}`;
+      case 'Points':
+        return 'Maillot Vert';
+      case 'Montagne':
+        return 'Maillot à Pois';
+      case 'Jeune':
+        return 'Maillot Blanc';
+      default:
+        return typeClassement;
+    }
   };
 
   return (
@@ -550,18 +574,16 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                         Coureurs contributeurs
                                       </div>
                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                        {contributors.map((contributor) => (
+                                        {contributors.map((contributor, idx) => (
                                           <div
-                                            key={contributor.rider_id}
+                                            key={`${contributor.rider_id}-${contributor.type_classement}-${contributor.etape_numero}-${idx}`}
                                             className="flex items-center justify-between p-2 rounded border bg-background"
                                           >
-                                            <div>
+                                            <div className="flex-1">
                                               <div className="font-medium">{contributor.rider_nom}</div>
-                                              {contributor.rider_equipe && (
-                                                <Badge variant="outline" className="mt-1 text-xs">
-                                                  {contributor.rider_equipe}
-                                                </Badge>
-                                              )}
+                                              <Badge variant="outline" className="mt-1 text-xs">
+                                                {formatClassementLabel(contributor.type_classement, contributor.etape_numero)}
+                                              </Badge>
                                             </div>
                                             <div className="font-bold">{contributor.points} pts</div>
                                           </div>

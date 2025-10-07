@@ -63,24 +63,28 @@ Deno.serve(async (req) => {
 
     // Aggregate by manager
     const managerPoints = new Map<string, number>();
-    const contributorsByManager = new Map<string, Map<string, { rider_nom: string; points: number }>>();
+    const contributorsByManager = new Map<string, Array<{
+      coureur_id: string;
+      type_classement: string;
+      etape_numero: number | null;
+      points: number;
+    }>>();
 
     for (const point of pointsData || []) {
       // Manager totals
       const current = managerPoints.get(point.manager_id) || 0;
       managerPoints.set(point.manager_id, current + point.points);
 
-      // Contributors
+      // Contributors - keep detail for each classification
       if (!contributorsByManager.has(point.manager_id)) {
-        contributorsByManager.set(point.manager_id, new Map());
+        contributorsByManager.set(point.manager_id, []);
       }
-      const riders = contributorsByManager.get(point.manager_id)!;
-      const existingRider = riders.get(point.coureur_id);
-      if (existingRider) {
-        existingRider.points += point.points;
-      } else {
-        riders.set(point.coureur_id, { rider_nom: '', points: point.points });
-      }
+      contributorsByManager.get(point.manager_id)!.push({
+        coureur_id: point.coureur_id,
+        type_classement: point.type_classement,
+        etape_numero: point.etape_numero,
+        points: point.points
+      });
     }
 
     // Get manager names
@@ -122,15 +126,16 @@ Deno.serve(async (req) => {
 
     // Build contributors list
     const contributors = [];
-    for (const [manager_id, riders] of contributorsByManager.entries()) {
-      for (const [rider_id, data] of riders.entries()) {
-        const riderInfo = riderMap.get(rider_id);
+    for (const [manager_id, entries] of contributorsByManager.entries()) {
+      for (const entry of entries) {
+        const riderInfo = riderMap.get(entry.coureur_id);
         contributors.push({
           manager_id,
-          rider_id,
+          rider_id: entry.coureur_id,
           rider_nom: riderInfo?.nom || 'Unknown',
-          rider_equipe: riderInfo?.equipe || null,
-          points: data.points
+          type_classement: entry.type_classement,
+          etape_numero: entry.etape_numero,
+          points: entry.points
         });
       }
     }
