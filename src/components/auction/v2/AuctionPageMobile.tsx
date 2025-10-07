@@ -300,8 +300,6 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
 
       {/* Filters FAB */}
       <FiltersDrawer
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
         selectedTeams={selectedTeams}
         onTeamsChange={setSelectedTeams}
         selectedCotes={selectedCotes}

@@ -1,14 +1,11 @@
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Search, X, Filter } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+import { Filter } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface FiltersDrawerProps {
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   selectedTeams: string[];
   onTeamsChange: (teams: string[]) => void;
   selectedCotes: number[];
@@ -17,8 +14,6 @@ interface FiltersDrawerProps {
 }
 
 export function FiltersDrawer({
-  searchQuery,
-  onSearchChange,
   selectedTeams,
   onTeamsChange,
   selectedCotes,
@@ -57,13 +52,12 @@ export function FiltersDrawer({
   };
 
   const clearAllFilters = () => {
-    onSearchChange("");
     onTeamsChange([]);
     onCotesChange([]);
   };
 
-  const hasActiveFilters = searchQuery || selectedTeams.length > 0 || selectedCotes.length > 0;
-  const activeFiltersCount = (searchQuery ? 1 : 0) + (selectedTeams.length > 0 ? 1 : 0) + (selectedCotes.length > 0 ? 1 : 0);
+  const hasActiveFilters = selectedTeams.length > 0 || selectedCotes.length > 0;
+  const activeFiltersCount = (selectedTeams.length > 0 ? 1 : 0) + (selectedCotes.length > 0 ? 1 : 0);
 
   return (
     <Sheet>
@@ -102,31 +96,7 @@ export function FiltersDrawer({
         </SheetHeader>
 
         <ScrollArea className="h-full py-4">
-          <div className="space-y-4 px-1 pb-20">
-            {/* Search bar */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Recherche</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Nom du coureur…"
-                  value={searchQuery}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="pl-9 pr-10"
-                />
-                {searchQuery && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                    onClick={() => onSearchChange("")}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
-
+          <div className="space-y-4 px-1 pb-24">
             {/* Team Filter */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -191,6 +161,16 @@ export function FiltersDrawer({
             </div>
           </div>
         </ScrollArea>
+
+        {/* Filter Button */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t">
+          <SheetClose asChild>
+            <Button className="w-full" size="lg">
+              <Filter className="h-4 w-4 mr-2" />
+              Filtrer
+            </Button>
+          </SheetClose>
+        </div>
       </SheetContent>
     </Sheet>
   );
