@@ -243,7 +243,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
                   onTeamsChange={setSelectedTeams}
                   selectedCotes={selectedCotes}
                   onCotesChange={setSelectedCotes}
-                  availableTeams={availableTeams}
+                  availableTeams={Array.isArray(availableTeams) ? availableTeams : []}
                 />
               </CardContent>
             </Card>
