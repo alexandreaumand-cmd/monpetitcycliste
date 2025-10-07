@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { DataImport } from "@/components/admin/DataImport";
 import { CoursesImportManager } from "@/components/admin/CoursesImportManager";
 import { CoursesResetManager } from "@/components/admin/CoursesResetManager";
-import { RoundManager } from "@/components/admin/RoundManager";
+import { AuctionManager } from "@/components/admin/AuctionManager";
 import { AnnouncementManager } from "@/components/admin/AnnouncementManager";
 import { RecentResults } from "@/components/admin/RecentResults";
 import { SeasonManager } from "@/components/admin/SeasonManager";
@@ -69,7 +69,7 @@ export const AdminPage = () => {
         
         <Route path="encheres" element={
           <div className="space-y-6">
-            <RoundManager />
+            <AuctionManager />
             <AnnouncementManager />
           </div>
         } />
