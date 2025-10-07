@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Minus, X } from "lucide-react";
-import { useState } from "react";
+import { X } from "lucide-react";
+import { useState, useMemo } from "react";
 
 interface MyBid {
   bid_id: string;
@@ -50,13 +50,10 @@ export function MyBidsList({
     setEditValue("");
   };
 
-  const handleQuickAdjust = (bid: MyBid, delta: number) => {
-    const newAmount = bid.amount + delta;
-    const minAmount = bid.cote || 1;
-    if (newAmount >= minAmount) {
-      onUpdateAmount(bid.bid_id, bid.coureur_id, newAmount);
-    }
-  };
+  // Sort bids by amount descending
+  const sortedBids = useMemo(() => {
+    return [...bids].sort((a, b) => b.amount - a.amount);
+  }, [bids]);
 
   if (bids.length === 0) {
     return (
@@ -71,17 +68,17 @@ export function MyBidsList({
 
   return (
     <div className="space-y-1 p-4">
-      <h3 className="text-sm font-medium text-muted-foreground mb-3">
+      <h3 className="text-xs font-medium text-muted-foreground mb-2">
         Mes enchères ({bids.length})
       </h3>
 
-      {bids.map((bid) => (
+      {sortedBids.map((bid) => (
         <div
           key={bid.bid_id}
-          className="flex items-center justify-between py-1.5 px-3 hover:bg-muted/50 rounded-md transition-colors"
+          className="flex items-center justify-between py-1 px-2 hover:bg-muted/50 rounded-md transition-colors"
         >
           {/* Rider name */}
-          <span className="font-medium text-sm flex-1">{bid.rider_nom}</span>
+          <span className="font-medium text-xs flex-1 truncate pr-2">{bid.rider_nom}</span>
 
           {/* Amount controls */}
           <div className="flex items-center gap-1">
@@ -95,47 +92,25 @@ export function MyBidsList({
                     if (e.key === "Enter") handleSaveEdit(bid);
                     if (e.key === "Escape") handleCancelEdit();
                   }}
-                  className="w-20 h-8 text-center text-sm"
+                  className="w-16 h-7 text-center text-xs"
                   autoFocus
                 />
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => handleSaveEdit(bid)}
-                  className="h-8 w-8 p-0"
+                  className="h-7 w-7 p-0 text-xs"
                 >
                   ✓
                 </Button>
               </>
             ) : (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleQuickAdjust(bid, -step)}
-                  disabled={isUpdating || bid.amount <= (bid.cote || 1)}
-                  className="h-8 w-8 p-0"
-                >
-                  <Minus className="h-3 w-3" />
-                </Button>
-
-                <button
-                  onClick={() => handleStartEdit(bid)}
-                  className="min-w-16 h-8 px-2 text-sm font-medium hover:bg-muted rounded-md transition-colors"
-                >
-                  {bid.amount}
-                </button>
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleQuickAdjust(bid, step)}
-                  disabled={isUpdating}
-                  className="h-8 w-8 p-0"
-                >
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </>
+              <button
+                onClick={() => handleStartEdit(bid)}
+                className="min-w-12 h-7 px-2 text-xs font-medium hover:bg-muted rounded-md transition-colors"
+              >
+                {bid.amount}
+              </button>
             )}
 
             {/* Remove button */}
@@ -144,9 +119,9 @@ export function MyBidsList({
               variant="ghost"
               onClick={() => onRemove(bid.bid_id)}
               disabled={isUpdating}
-              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3 w-3" />
             </Button>
           </div>
         </div>
