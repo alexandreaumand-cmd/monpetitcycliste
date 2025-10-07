@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Search } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { formatAmount } from "@/lib/utils";
+import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
 
 interface AuctionTeamsGridProps {
   phaseId: string;
@@ -16,6 +16,12 @@ interface AuctionTeamsGridProps {
 
 export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRider, setSelectedRider] = useState<{
+    id: string;
+    nom: string;
+    equipe: string;
+    prix: number;
+  } | null>(null);
 
   // Get all managers rosters
   const { data: allManagersRosters = [], isLoading } = useQuery({
@@ -117,38 +123,45 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
                   </span>
                 </div>
 
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full">
-                      Voir détails
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-[500px] h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>{data.managerName}</DialogTitle>
-                    </DialogHeader>
-                    <div className="mt-4 space-y-2">
-                      {data.rosters
-                        .sort((a: any, b: any) => parseFloat(b.prix_signature.toString()) - parseFloat(a.prix_signature.toString()))
-                        .map((roster: any) => (
-                          <div key={roster.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                            <div>
-                              <p className="font-medium">{roster.coureurs.nom}</p>
-                              <p className="text-sm text-muted-foreground">{roster.coureurs.equipe}</p>
-                            </div>
-                            <Badge variant="outline">
-                              {formatAmount(roster.prix_signature)}
-                            </Badge>
-                          </div>
-                        ))}
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <div className="mt-4 space-y-2">
+                  {data.rosters
+                    .sort((a: any, b: any) => parseFloat(b.prix_signature.toString()) - parseFloat(a.prix_signature.toString()))
+                    .map((roster: any) => (
+                      <button
+                        key={roster.id}
+                        onClick={() => setSelectedRider({
+                          id: roster.coureur_id,
+                          nom: roster.coureurs.nom,
+                          equipe: roster.coureurs.equipe,
+                          prix: parseFloat(roster.prix_signature.toString())
+                        })}
+                        className="w-full flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors text-left"
+                      >
+                        <div>
+                          <p className="font-medium">{roster.coureurs.nom}</p>
+                          <p className="text-sm text-muted-foreground">{roster.coureurs.equipe}</p>
+                        </div>
+                        <Badge variant="outline">
+                          {formatAmount(roster.prix_signature)}
+                        </Badge>
+                      </button>
+                    ))}
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      <RiderPointsDetail
+        isOpen={!!selectedRider}
+        onClose={() => setSelectedRider(null)}
+        riderId={selectedRider?.id || ''}
+        riderName={selectedRider?.nom || ''}
+        riderTeam={selectedRider?.equipe || ''}
+        riderPrice={selectedRider?.prix || 0}
+        phaseId={phaseId}
+      />
     </div>
   );
 };
