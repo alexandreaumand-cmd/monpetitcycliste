@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
-import { getTeamOptions } from "@/lib/teamNames";
+import { getTeamOptions, TEAM_FULL_NAMES } from "@/lib/teamNames";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,7 +54,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
   });
 
   const availableTeams = useMemo(() => {
-    const teams = ["UAD", "TVL", "ISN", "QST", "GCW", "DSM", "SOU", "EFE", "IGD", "COF", "LTD", "BAH"];
+    const teams = Object.keys(TEAM_FULL_NAMES);
     return getTeamOptions(teams);
   }, []);
 

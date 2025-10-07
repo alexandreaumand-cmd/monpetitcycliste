@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -7,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus } from "lucide-react";
+import { Plus, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Rider {
@@ -26,6 +27,42 @@ interface RiderResultsListProps {
 
 export function RiderResultsList({ riders, onAddRider, isLoading, renderActionButton }: RiderResultsListProps) {
   const isMobile = useIsMobile();
+  const [sortColumn, setSortColumn] = useState<'nom' | 'cote' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (column: 'nom' | 'cote') => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (column: 'nom' | 'cote') => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 inline opacity-50" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="h-4 w-4 ml-1 inline" />
+      : <ArrowDown className="h-4 w-4 ml-1 inline" />;
+  };
+
+  const sortedRiders = useMemo(() => {
+    if (!sortColumn) return riders;
+    
+    return [...riders].sort((a, b) => {
+      if (sortColumn === 'nom') {
+        const comparison = a.rider_nom.localeCompare(b.rider_nom, 'fr');
+        return sortDirection === 'asc' ? comparison : -comparison;
+      } else if (sortColumn === 'cote') {
+        const coteA = a.cote ?? 999999;
+        const coteB = b.cote ?? 999999;
+        return sortDirection === 'asc' ? coteA - coteB : coteB - coteA;
+      }
+      return 0;
+    });
+  }, [riders, sortColumn, sortDirection]);
 
   if (isLoading) {
     return (
@@ -55,13 +92,25 @@ export function RiderResultsList({ riders, onAddRider, isLoading, renderActionBu
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Coureur</TableHead>
-            <TableHead className="text-right">Côte</TableHead>
+            <TableHead 
+              className="cursor-pointer hover:bg-muted/50 select-none"
+              onClick={() => handleSort('nom')}
+            >
+              Coureur
+              {getSortIcon('nom')}
+            </TableHead>
+            <TableHead 
+              className="text-right cursor-pointer hover:bg-muted/50 select-none"
+              onClick={() => handleSort('cote')}
+            >
+              Côte
+              {getSortIcon('cote')}
+            </TableHead>
             <TableHead className="text-center w-[100px]">Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {riders.map((rider) => (
+          {sortedRiders.map((rider) => (
             <TableRow key={rider.rider_id} className="hover:bg-muted/50">
               <TableCell className="font-medium py-2">
                 <div className="flex items-center gap-2">

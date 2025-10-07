@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
-import { getTeamOptions } from "@/lib/teamNames";
+import { getTeamOptions, TEAM_FULL_NAMES } from "@/lib/teamNames";
 
 interface AuctionPageMobileProps {
   phaseId: string;
@@ -46,7 +46,7 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
 
   // Get available teams for filter
   const availableTeams = useMemo(() => {
-    const teams = ["UAD", "TVL", "ISN", "QST", "GCW", "DSM", "SOU", "EFE", "IGD", "COF", "LTD", "BAH"];
+    const teams = Object.keys(TEAM_FULL_NAMES);
     return getTeamOptions(teams);
   }, []);
 
