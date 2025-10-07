@@ -15,13 +15,9 @@ import { cn } from "@/lib/utils";
 
 const adminTabs = [
   { label: 'Données', path: 'data' },
-  { label: 'Import Courses', path: 'courses-import' },
-  { label: 'Rounds', path: 'rounds' },
-  { label: 'Annonces', path: 'annonces' },
+  { label: 'Enchères', path: 'encheres' },
   { label: 'Résultats', path: 'results' },
-  { label: 'Stages Race', path: 'stages' },
   { label: 'Saisons', path: 'seasons' },
-  { label: 'Utilisateurs', path: 'users' },
   { label: 'Maintenance', path: 'maintenance' },
 ];
 
@@ -64,34 +60,22 @@ export const AdminPage = () => {
                 <DataImport />
               </CardContent>
             </Card>
+            <CoursesResetManager />
+            <CoursesImportManager />
             <PointsComputeManager />
           </div>
         } />
         
-        <Route path="courses-import" element={
+        <Route path="encheres" element={
           <div className="space-y-6">
-            <CoursesResetManager />
-            <CoursesImportManager />
+            <RoundManager />
+            <AnnouncementManager />
           </div>
         } />
         
-        <Route path="rounds" element={<RoundManager />} />
-        <Route path="annonces" element={<AnnouncementManager />} />
-          <Route path="results" element={<RecentResults />} />
-          <Route path="stages" element={<StagesRaceManager />} />
-          <Route path="seasons" element={<SeasonManager />} />
-          <Route path="maintenance" element={<MaintenancePanel />} />
-        
-        <Route path="users" element={
-          <Card>
-            <CardHeader>
-              <CardTitle>Gestion des managers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full">Gérer les managers</Button>
-            </CardContent>
-          </Card>
-        } />
+        <Route path="results" element={<RecentResults />} />
+        <Route path="seasons" element={<SeasonManager />} />
+        <Route path="maintenance" element={<MaintenancePanel />} />
       </Routes>
     </div>
   );
