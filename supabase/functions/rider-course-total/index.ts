@@ -82,6 +82,26 @@ Deno.serve(async (req) => {
 
     const riderMap = new Map(riders.map(r => [r.id, r]));
 
+    // Get manager ownership for riders in this phase
+    const managerMap = new Map<string, string>();
+    if (course.phase_id && riderIds.length > 0) {
+      const { data: rostersData, error: rostersError } = await supabaseClient
+        .from('rosters')
+        .select('coureur_id, manager_id, managers(nom)')
+        .eq('phase_id', course.phase_id)
+        .in('coureur_id', riderIds);
+
+      if (rostersError) throw rostersError;
+      
+      if (rostersData) {
+        for (const roster of rostersData) {
+          if (roster.managers && Array.isArray(roster.managers) && roster.managers[0]?.nom) {
+            managerMap.set(roster.coureur_id, roster.managers[0].nom);
+          }
+        }
+      }
+    }
+
     // Build ranked list
     const rankedRiders = Array.from(riderPointsMap.entries())
       .map(([coureur_id, total_points]) => {
@@ -90,6 +110,7 @@ Deno.serve(async (req) => {
           coureur_id,
           coureur_nom: rider?.nom || 'Unknown',
           equipe: rider?.equipe || '',
+          manager_nom: managerMap.get(coureur_id) || null,
           total_points,
         };
       })

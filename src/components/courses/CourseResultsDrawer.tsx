@@ -103,6 +103,15 @@ interface ResultRow {
   is_my_rider: boolean;
 }
 
+interface TotalRider {
+  coureur_id: string;
+  coureur_nom: string;
+  equipe: string;
+  manager_nom: string | null;
+  total_points: number;
+  rank: number;
+}
+
 interface CourseResultsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -450,9 +459,9 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-12"></TableHead>
-                        <TableHead className="w-16">Rang</TableHead>
                         <TableHead>Coureur</TableHead>
-                        <TableHead className="hidden md:table-cell">Équipe</TableHead>
+                        <TableHead className="hidden md:table-cell">Manager</TableHead>
+                        <TableHead className="hidden lg:table-cell">Équipe</TableHead>
                         <TableHead className="text-right">Points</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -472,50 +481,47 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                               <CollapsibleTrigger asChild>
                                 <TableRow className="cursor-pointer hover:bg-muted/50 touch-manipulation">
                                   <TableCell>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="pointer-events-none"
-                                    >
-                                      {isExpanded ? (
-                                        <ChevronDown className="h-4 w-4" />
-                                      ) : (
-                                        <ChevronRight className="h-4 w-4" />
-                                      )}
-                                    </Button>
-                                  </TableCell>
-                                  <TableCell className="font-bold">
-                                    {rider.rank <= 3 && (
-                                      <span className={`text-lg mr-1 ${
-                                        rider.rank === 1 ? "text-yellow-500" :
-                                        rider.rank === 2 ? "text-gray-400" :
-                                        "text-amber-600"
-                                      }`}>
-                                        {rider.rank === 1 ? "🥇" : 
-                                         rider.rank === 2 ? "🥈" : "🥉"}
-                                      </span>
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
                                     )}
-                                    #{rider.rank}
                                   </TableCell>
                                   <TableCell>
-                                    <div className="flex flex-col">
-                                      <span className="font-semibold">{rider.coureur_nom}</span>
-                                      <span className="text-xs text-muted-foreground md:hidden">{rider.equipe}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-lg">
+                                        {rider.rank === 1 && '🥇'}
+                                        {rider.rank === 2 && '🥈'}
+                                        {rider.rank === 3 && '🥉'}
+                                      </span>
+                                      <div className="flex flex-col">
+                                        <span className="font-semibold">{rider.coureur_nom}</span>
+                                        <span className="text-xs text-muted-foreground md:hidden">
+                                          {rider.manager_nom && `${rider.manager_nom} • `}{rider.equipe}
+                                        </span>
+                                      </div>
                                     </div>
                                   </TableCell>
                                   <TableCell className="hidden md:table-cell">
+                                    {rider.manager_nom && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {rider.manager_nom}
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="hidden lg:table-cell">
                                     {rider.equipe && (
                                       <Badge variant="outline" className="text-xs">
                                         {rider.equipe}
                                       </Badge>
                                     )}
                                   </TableCell>
-                                  <TableCell className="text-right font-bold text-lg">{rider.total_points}</TableCell>
+                                  <TableCell className="text-right font-bold">{rider.total_points}</TableCell>
                                 </TableRow>
                               </CollapsibleTrigger>
-                              <CollapsibleContent asChild>
-                                <TableRow>
-                                  <TableCell colSpan={5} className="bg-muted/30 p-4">
+                    <CollapsibleContent asChild>
+                      <TableRow>
+                        <TableCell colSpan={5} className="bg-muted/30 p-4">
                                     <div className="space-y-2">
                                       <div className="text-sm font-medium text-muted-foreground mb-2">
                                         Points marqués
