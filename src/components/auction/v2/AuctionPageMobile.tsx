@@ -8,6 +8,7 @@ import { BidAmountBottomSheet } from "./BidAmountBottomSheet";
 import { MyBidsList } from "./MyBidsList";
 import { AuctionSubmitButton } from "./AuctionSubmitButton";
 import { AuctionValidationConfirmation } from "./AuctionValidationConfirmation";
+import { AuctionLiveAnnouncements } from "./AuctionLiveAnnouncements";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -51,6 +52,9 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
       setShowValidationScreen(true);
     }
   }, [context?.validation_status?.has_validated, context?.auction_id]);
+
+  // Check if we should show live announcements screen
+  const shouldShowLiveScreen = context?.auction?.statut === 'closed' && context?.auction_id;
 
   // Fetch available teams from database
   const { data: teamsData } = useQuery({
@@ -224,6 +228,17 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
           </p>
         </div>
       </div>
+    );
+  }
+
+  // Show live announcements screen if round is closed
+  if (shouldShowLiveScreen) {
+    return (
+      <AuctionLiveAnnouncements
+        auctionId={context.auction_id}
+        managerId={managerId}
+        phaseId={phaseId}
+      />
     );
   }
 

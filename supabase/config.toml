@@ -32,3 +32,6 @@ verify_jwt = true
 
 [functions.admin-reset-phase]
 verify_jwt = true
+
+[functions.auction-get-live-status]
+verify_jwt = true

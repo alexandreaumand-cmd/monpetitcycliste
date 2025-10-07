@@ -7,6 +7,7 @@ import { RiderResultsList } from "./RiderResultsList";
 import { BidAmountPopover } from "./BidAmountPopover";
 import { MyBidsList } from "./MyBidsList";
 import { AuctionValidationConfirmation } from "./AuctionValidationConfirmation";
+import { AuctionLiveAnnouncements } from "./AuctionLiveAnnouncements";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2, Plus } from "lucide-react";
@@ -59,6 +60,9 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
       setShowValidationScreen(true);
     }
   }, [context?.validation_status?.has_validated, context?.auction_id]);
+
+  // Check if we should show live announcements screen
+  const shouldShowLiveScreen = context?.auction?.statut === 'closed' && context?.auction_id;
 
   // Get available teams
   const { data: availableTeams = [] } = useQuery({
@@ -218,6 +222,19 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
           </div>
         </CardContent>
       </Card>
+    );
+  }
+
+  // Show live announcements screen if round is closed
+  if (shouldShowLiveScreen) {
+    return (
+      <div className="container max-w-6xl mx-auto p-6">
+        <AuctionLiveAnnouncements
+          auctionId={context.auction_id}
+          managerId={managerId}
+          phaseId={phaseId}
+        />
+      </div>
     );
   }
 
