@@ -81,22 +81,13 @@ export function AuctionHeader({
       <div className="container mx-auto px-4 py-2 max-w-7xl">
         {/* Single compact line with all info */}
         <div className="flex items-center gap-6 text-sm">
-          {/* Time */}
+          {/* Time - Far Left */}
           {deadline_at && (
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Fin:</span>
               <Badge variant="outline" className="font-mono">
                 {timeRemaining}
-              </Badge>
-            </div>
-          )}
-
-          {/* Validated */}
-          {total_managers > 0 && (
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <Badge variant="outline">
-                {validated_count}/{total_managers}
               </Badge>
             </div>
           )}
@@ -111,6 +102,16 @@ export function AuctionHeader({
               {draft_sum}/{starting_budget}
             </span>
           </div>
+
+          {/* Validated */}
+          {total_managers > 0 && (
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <Badge variant="outline">
+                {validated_count}/{total_managers}
+              </Badge>
+            </div>
+          )}
 
           {/* Validation Status */}
           <div className={`flex items-center gap-3 px-3 py-1.5 rounded-md border ${

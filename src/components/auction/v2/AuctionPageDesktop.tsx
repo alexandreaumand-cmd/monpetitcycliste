@@ -326,7 +326,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
           {/* Left column: Results */}
           <div className="col-span-2">
             <Card>
-              <CardContent className="p-0 max-h-[600px] overflow-y-auto">
+              <CardContent className="p-0 max-h-[calc(100vh-200px)] overflow-y-auto">
                 <RiderResultsList
                   riders={ridersData?.items || []}
                   onAddRider={() => {}}
@@ -356,10 +356,10 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
             </Card>
           </div>
 
-          {/* Right column: My Bids */}
-          <div className="space-y-4">
-            <Card>
-              <CardContent className="p-0 max-h-[600px] overflow-y-auto">
+          {/* Right column: My Bids - Full height */}
+          <div className="flex flex-col gap-4">
+            <Card className="flex-1">
+              <CardContent className="p-0 h-[calc(100vh-200px)] overflow-y-auto">
                 <MyBidsList
                   bids={[...(context.roster || []), ...(context.my_bids || [])]}
                   onUpdateAmount={handleUpdateAmount}
