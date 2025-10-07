@@ -257,6 +257,104 @@ export const AuctionManager = () => {
 
   return (
     <div className="space-y-6">
+      {/* Active Auctions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Enchères en cours</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!activeAuctions || activeAuctions.length === 0 ? (
+            <p className="text-muted-foreground text-center py-4">Aucune enchère en cours</p>
+          ) : (
+            <div className="space-y-3">
+              {activeAuctions.map((auction) => (
+                <div key={auction.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <p className="font-medium">Tour {auction.round_number}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Deadline: {new Date(auction.deadline_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => closeAuction.mutate(auction.id)}
+                    disabled={closeAuction.isPending}
+                  >
+                    Clôturer
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Manager Status for Active Phase */}
+      {activePhase && managersStatus.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>État des managers - Round en cours</CardTitle>
+            <CardDescription>
+              Suivi de la soumission des enchères pour le round actif
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Manager</TableHead>
+                  <TableHead className="text-center">Slots restants</TableHead>
+                  <TableHead className="text-center">Enchères pending</TableHead>
+                  <TableHead className="text-center">Budget restant</TableHead>
+                  <TableHead className="text-center">Statut</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {managersStatus
+                  .sort((a, b) => {
+                    // Sort: "En attente" first, then by manager name
+                    const statusA = getManagerStatus(a);
+                    const statusB = getManagerStatus(b);
+                    if (statusA.label === "En attente" && statusB.label !== "En attente") return -1;
+                    if (statusA.label !== "En attente" && statusB.label === "En attente") return 1;
+                    return a.manager_nom.localeCompare(b.manager_nom);
+                  })
+                  .map((manager) => {
+                    const status = getManagerStatus(manager);
+                    return (
+                      <TableRow key={manager.manager_id}>
+                        <TableCell className="font-medium">{manager.manager_nom}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline">{manager.slots_restants}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className={manager.pending_count !== manager.slots_restants ? "text-orange-600" : "text-green-600"}>
+                            {manager.pending_count} / {manager.slots_restants}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className={Math.abs(parseFloat(manager.budget_restant.toString()) - parseFloat(manager.pending_sum.toString())) >= 1 ? "text-orange-600" : "text-green-600"}>
+                            {formatAmount(manager.pending_sum)} / {formatAmount(manager.budget_restant)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge 
+                            variant={status.variant}
+                            className="flex items-center gap-1 justify-center"
+                          >
+                            {status.icon}
+                            {status.label}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Quick Launch Section */}
       <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader>
@@ -298,6 +396,62 @@ export const AuctionManager = () => {
               <p className="text-muted-foreground mb-4">Aucune phase active. Veuillez d'abord activer une phase dans l'onglet Saisons.</p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Advanced Options */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Options avancées</CardTitle>
+          <CardDescription>Personnaliser les paramètres de l'enchère</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Phase</Label>
+            <Select value={selectedPhase} onValueChange={setSelectedPhase}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner une phase" />
+              </SelectTrigger>
+              <SelectContent>
+                {phases?.map((phase) => (
+                  <SelectItem key={phase.id} value={phase.id}>
+                    Phase {phase.index_dans_saison} ({new Date(phase.date_debut).toLocaleDateString()} - {new Date(phase.date_fin).toLocaleDateString()})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Numéro de tour</Label>
+              <Input
+                type="number"
+                min="1"
+                value={roundNumber}
+                onChange={(e) => setRoundNumber(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Deadline (heures)</Label>
+              <Input
+                type="number"
+                min="1"
+                value={deadlineHours}
+                onChange={(e) => setDeadlineHours(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <Button
+            onClick={() => createAuction.mutate()}
+            disabled={createAuction.isPending || !selectedPhase}
+            className="w-full"
+          >
+            {createAuction.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Lancer l'enchère
+          </Button>
         </CardContent>
       </Card>
 
@@ -383,159 +537,6 @@ export const AuctionManager = () => {
           </Card>
         );
       })()}
-
-      {/* Advanced Options */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Options avancées</CardTitle>
-          <CardDescription>Personnaliser les paramètres de l'enchère</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Phase</Label>
-            <Select value={selectedPhase} onValueChange={setSelectedPhase}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner une phase" />
-              </SelectTrigger>
-              <SelectContent>
-                {phases?.map((phase) => (
-                  <SelectItem key={phase.id} value={phase.id}>
-                    Phase {phase.index_dans_saison} ({new Date(phase.date_debut).toLocaleDateString()} - {new Date(phase.date_fin).toLocaleDateString()})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Numéro de tour</Label>
-              <Input
-                type="number"
-                min="1"
-                value={roundNumber}
-                onChange={(e) => setRoundNumber(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Deadline (heures)</Label>
-              <Input
-                type="number"
-                min="1"
-                value={deadlineHours}
-                onChange={(e) => setDeadlineHours(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <Button
-            onClick={() => createAuction.mutate()}
-            disabled={createAuction.isPending || !selectedPhase}
-            className="w-full"
-          >
-            {createAuction.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Lancer l'enchère
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Manager Status for Active Phase */}
-      {activePhase && managersStatus.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>État des managers - Round en cours</CardTitle>
-            <CardDescription>
-              Suivi de la soumission des enchères pour le round actif
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Manager</TableHead>
-                  <TableHead className="text-center">Slots restants</TableHead>
-                  <TableHead className="text-center">Enchères pending</TableHead>
-                  <TableHead className="text-center">Budget restant</TableHead>
-                  <TableHead className="text-center">Statut</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {managersStatus
-                  .sort((a, b) => {
-                    // Sort: "En attente" first, then by manager name
-                    const statusA = getManagerStatus(a);
-                    const statusB = getManagerStatus(b);
-                    if (statusA.label === "En attente" && statusB.label !== "En attente") return -1;
-                    if (statusA.label !== "En attente" && statusB.label === "En attente") return 1;
-                    return a.manager_nom.localeCompare(b.manager_nom);
-                  })
-                  .map((manager) => {
-                    const status = getManagerStatus(manager);
-                    return (
-                      <TableRow key={manager.manager_id}>
-                        <TableCell className="font-medium">{manager.manager_nom}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline">{manager.slots_restants}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className={manager.pending_count !== manager.slots_restants ? "text-orange-600" : "text-green-600"}>
-                            {manager.pending_count} / {manager.slots_restants}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className={Math.abs(parseFloat(manager.budget_restant.toString()) - parseFloat(manager.pending_sum.toString())) >= 1 ? "text-orange-600" : "text-green-600"}>
-                            {formatAmount(manager.pending_sum)} / {formatAmount(manager.budget_restant)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge 
-                            variant={status.variant}
-                            className="flex items-center gap-1 justify-center"
-                          >
-                            {status.icon}
-                            {status.label}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Enchères en cours</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!activeAuctions || activeAuctions.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">Aucune enchère en cours</p>
-          ) : (
-            <div className="space-y-3">
-              {activeAuctions.map((auction) => (
-                <div key={auction.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Tour {auction.round_number}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Deadline: {new Date(auction.deadline_at).toLocaleString()}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => closeAuction.mutate(auction.id)}
-                    disabled={closeAuction.isPending}
-                  >
-                    Clôturer
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 };
