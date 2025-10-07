@@ -14,9 +14,9 @@ import { StagesRaceManager } from "@/components/admin/StagesRaceManager";
 import { cn } from "@/lib/utils";
 
 const adminTabs = [
-  { label: 'Données', path: 'data' },
-  { label: 'Enchères', path: 'encheres' },
   { label: 'Résultats', path: 'results' },
+  { label: 'Enchères', path: 'encheres' },
+  { label: 'Données', path: 'data' },
   { label: 'Saisons', path: 'seasons' },
   { label: 'Maintenance', path: 'maintenance' },
 ];
