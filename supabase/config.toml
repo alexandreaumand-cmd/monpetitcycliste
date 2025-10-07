@@ -8,3 +8,18 @@ verify_jwt = true
 
 [functions.compute-points]
 verify_jwt = true
+
+[functions.auction-get-context]
+verify_jwt = true
+
+[functions.auction-search-riders]
+verify_jwt = true
+
+[functions.auction-upsert-bid]
+verify_jwt = true
+
+[functions.auction-remove-bid]
+verify_jwt = true
+
+[functions.auction-submit-all-bids]
+verify_jwt = true
