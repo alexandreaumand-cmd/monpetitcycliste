@@ -68,14 +68,15 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [detailsSortColumn, setDetailsSortColumn] = useState<keyof RiderPointRow>("points");
   const [detailsSortDirection, setDetailsSortDirection] = useState<"asc" | "desc">("desc");
+  const [displayLimit, setDisplayLimit] = useState(20);
 
-  const { data: riders, isLoading } = useQuery({
-    queryKey: ["top-riders", phaseId, limit],
+  const { data: allRiders, isLoading } = useQuery({
+    queryKey: ["top-riders", phaseId, 100],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-top-riders', {
         body: {
           phase_id: phaseId,
-          limit,
+          limit: 100,
         },
       });
 
@@ -83,6 +84,8 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
       return data?.items as TopRider[] || [];
     },
   });
+
+  const riders = allRiders?.slice(0, displayLimit);
 
   const { data: riderPointsData, isLoading: isLoadingDetails } = useQuery({
     queryKey: ["rider-points-table", selectedRider?.rider_id, phaseId],
@@ -117,6 +120,8 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
       return 0;
     });
   }, [riders, sortColumn, sortDirection]);
+
+  const hasMoreRiders = allRiders && allRiders.length > displayLimit;
 
   // Filter and sort detail rows
   const filteredAndSortedRows = useMemo(() => {
@@ -383,6 +388,24 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+          {hasMoreRiders && (
+            <div className="flex flex-col gap-2 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setDisplayLimit(prev => Math.min(prev + 20, allRiders!.length))}
+              >
+                Charger 20 de plus ({allRiders!.length - displayLimit} restants)
+              </Button>
+              {displayLimit >= 40 && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setDisplayLimit(allRiders!.length)}
+                >
+                  Voir tous ({allRiders!.length})
+                </Button>
+              )}
             </div>
           )}
         </CardContent>

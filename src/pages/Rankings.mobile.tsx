@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 type TabView = "standings" | "riders" | "timeline" | "teams" | "courses";
 
@@ -19,6 +20,7 @@ export const RankingsMobile = () => {
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [ridersDisplayLimit, setRidersDisplayLimit] = useState(20);
 
   // Fetch phases
   const { data: phases } = useQuery({
@@ -146,7 +148,7 @@ export const RankingsMobile = () => {
   });
 
   // Fetch top riders
-  const { data: topRiders, isLoading: ridersLoading } = useQuery({
+  const { data: allTopRiders, isLoading: ridersLoading } = useQuery({
     queryKey: ["top-riders-mobile", selectedPhase],
     queryFn: async () => {
       if (selectedPhase) {
@@ -155,7 +157,7 @@ export const RankingsMobile = () => {
           .select("*")
           .eq("phase_id", selectedPhase)
           .order("total_points", { ascending: false })
-          .limit(20);
+          .limit(100);
         
         if (error) throw error;
         return data;
@@ -164,13 +166,15 @@ export const RankingsMobile = () => {
           .from("v_top_riders_global")
           .select("*")
           .order("total_points", { ascending: false })
-          .limit(20);
+          .limit(100);
         
         if (error) throw error;
         return data;
       }
     },
   });
+
+  const topRiders = allTopRiders?.slice(0, ridersDisplayLimit);
 
   const phaseChips = [
     { label: "Global", value: "null" },
@@ -182,7 +186,7 @@ export const RankingsMobile = () => {
 
   const tabChips = [
     { label: "🏆 Général", value: "standings" as TabView },
-    { label: "🚴 Top 20", value: "riders" as TabView },
+    { label: "🚴 Top coureurs", value: "riders" as TabView },
     { label: "📈 Chrono", value: "timeline" as TabView },
     { label: "👥 Équipes", value: "teams" as TabView },
     { label: "🏁 Courses", value: "courses" as TabView },
@@ -325,29 +329,51 @@ export const RankingsMobile = () => {
                 <Skeleton key={i} className="h-20 w-full rounded-2xl" />
               ))
             ) : topRiders && topRiders.length > 0 ? (
-              topRiders.map((rider, idx) => (
-                <MobileCard
-                  key={rider.coureur_id}
-                  title={rider.coureur_nom}
-                  subtitle={rider.coureur_equipe || "Équipe inconnue"}
-                  meta={`${rider.courses_count || 0} courses`}
-                  avatar={
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-primary/10">
-                        {rider.coureur_nom.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                  }
-                  badge={
-                    <div className="flex items-center gap-1">
-                      <span className="text-2xl font-bold text-primary">
-                        {rider.total_points}
-                      </span>
-                      <span className="text-xs text-muted-foreground">pts</span>
-                    </div>
-                  }
-                />
-              ))
+              <>
+                {topRiders.map((rider, idx) => (
+                  <MobileCard
+                    key={rider.coureur_id}
+                    title={rider.coureur_nom}
+                    subtitle={rider.coureur_equipe || "Équipe inconnue"}
+                    meta={`${rider.courses_count || 0} courses`}
+                    avatar={
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-primary/10">
+                          {rider.coureur_nom.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                    }
+                    badge={
+                      <div className="flex items-center gap-1">
+                        <span className="text-2xl font-bold text-primary">
+                          {rider.total_points}
+                        </span>
+                        <span className="text-xs text-muted-foreground">pts</span>
+                      </div>
+                    }
+                  />
+                ))}
+                {allTopRiders && allTopRiders.length > ridersDisplayLimit && (
+                  <div className="flex flex-col gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setRidersDisplayLimit(prev => Math.min(prev + 20, allTopRiders.length))}
+                      className="w-full"
+                    >
+                      Charger 20 de plus ({allTopRiders.length - ridersDisplayLimit} restants)
+                    </Button>
+                    {ridersDisplayLimit >= 40 && (
+                      <Button
+                        variant="ghost"
+                        onClick={() => setRidersDisplayLimit(allTopRiders.length)}
+                        className="w-full"
+                      >
+                        Voir tous ({allTopRiders.length})
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </>
             ) : (
               <MobileEmptyState
                 icon={<User className="h-12 w-12" />}
