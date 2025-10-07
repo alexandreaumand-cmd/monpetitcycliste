@@ -6,12 +6,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Calculator, AlertCircle } from "lucide-react";
+import { Calculator, AlertCircle, Wrench } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 export const PointsComputeManager = () => {
   const [selectedPhase, setSelectedPhase] = useState<string>("");
   const [computing, setComputing] = useState(false);
+  const [fixing, setFixing] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [fixResult, setFixResult] = useState<any>(null);
   const { toast } = useToast();
 
   const { data: phases } = useQuery({
@@ -61,6 +64,32 @@ export const PointsComputeManager = () => {
       });
     } finally {
       setComputing(false);
+    }
+  };
+
+  const handleFixPorteurPoints = async () => {
+    setFixing(true);
+    setFixResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('auto-fix-missing-porteur-points');
+
+      if (error) throw error;
+
+      setFixResult(data);
+      toast({
+        title: "✅ Réparation terminée",
+        description: `${data.courses_processed} courses traitées, ${data.total_points_added} points ajoutés`
+      });
+    } catch (error: any) {
+      console.error('Error fixing porteur points:', error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de réparer les points porteurs",
+        variant: "destructive"
+      });
+    } finally {
+      setFixing(false);
     }
   };
 
@@ -120,6 +149,58 @@ export const PointsComputeManager = () => {
             </AlertDescription>
           </Alert>
         )}
+
+        <Separator className="my-6" />
+
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold mb-2">Réparation automatique</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Détecte et corrige automatiquement les points manquants pour les porteurs de maillots
+            </p>
+          </div>
+
+          <Button 
+            onClick={handleFixPorteurPoints}
+            disabled={fixing}
+            variant="outline"
+            className="w-full"
+          >
+            <Wrench className="h-4 w-4 mr-2" />
+            {fixing ? "Réparation en cours..." : "Réparer les points porteurs"}
+          </Button>
+
+          {fixResult && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Résultat de la réparation :</strong>
+                <br />
+                • {fixResult.courses_processed} courses traitées
+                <br />
+                • {fixResult.total_points_added} points ajoutés
+                <br />
+                • {fixResult.successful} succès / {fixResult.failed} échecs
+                {fixResult.results && fixResult.results.length > 0 && (
+                  <>
+                    <br />
+                    <br />
+                    <strong>Détails :</strong>
+                    <div className="mt-2 space-y-1 text-xs">
+                      {fixResult.results.map((r: any, i: number) => (
+                        <div key={i} className={r.success ? "text-green-600" : "text-destructive"}>
+                          {r.success ? "✓" : "✗"} {r.course_nom} ({r.course_id})
+                          {r.rows_upserted && ` - ${r.rows_upserted} points ajoutés`}
+                          {r.error && ` - Erreur: ${r.error}`}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
