@@ -89,18 +89,33 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const { data: stageCompletion } = useQuery({
     queryKey: ["stage-completion", course.course_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get stages with results
+      const { data: resultsData, error: resultsError } = await supabase
         .from("race_results")
-        .select("etape_numero", { count: "exact" })
+        .select("etape_numero")
         .eq("course_id", course.course_id)
         .eq("type_classement", "Etape");
 
-      if (error) throw error;
+      if (resultsError) throw resultsError;
 
-      const uniqueStages = new Set(data?.map((r) => r.etape_numero) || []);
+      // Get cancelled stages
+      const { data: cancelledData, error: cancelledError } = await supabase
+        .from("race_result_sets")
+        .select("etape_numero")
+        .eq("course_id", course.course_id)
+        .eq("type_classement", "Etape")
+        .eq("is_cancelled", true);
+
+      if (cancelledError) throw cancelledError;
+
+      // Combine both sets
+      const stagesWithResults = new Set(resultsData?.map(r => r.etape_numero) || []);
+      const cancelledStages = new Set(cancelledData?.map(r => r.etape_numero) || []);
+      const allCompletedStages = new Set([...stagesWithResults, ...cancelledStages]);
+
       return {
-        etapes_saisies: uniqueStages.size,
-        completed_stages: Array.from(uniqueStages),
+        etapes_saisies: allCompletedStages.size,
+        completed_stages: Array.from(allCompletedStages),
       };
     },
     enabled: !isOneDay,

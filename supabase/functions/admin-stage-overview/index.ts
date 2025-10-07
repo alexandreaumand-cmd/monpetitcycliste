@@ -100,6 +100,33 @@ Deno.serve(async (req) => {
     let all_stages_complete = true;
 
     for (let i = 1; i <= nb_etapes; i++) {
+      // Check if stage is cancelled
+      const { data: cancelledData } = await supabase
+        .from('race_result_sets')
+        .select('id')
+        .eq('course_id', course_id)
+        .eq('type_classement', 'Etape')
+        .eq('etape_numero', i)
+        .eq('is_cancelled', true)
+        .maybeSingle();
+
+      const is_cancelled = !!cancelledData;
+
+      if (is_cancelled) {
+        // Cancelled stage = considered complete
+        stages.push({
+          etape_numero: i,
+          is_cancelled: true,
+          is_top10_complete: true,
+          has_leader: true,
+          has_points_leader: true,
+          has_montagne_leader: true,
+          is_complete: true
+        });
+        continue;
+      }
+
+      // Normal logic for non-cancelled stages
       // Check top 10 for stage
       const { data: stageTop10 } = await supabase
         .from('race_results')

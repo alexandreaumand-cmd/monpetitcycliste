@@ -127,7 +127,6 @@ export const ResultsEntryStudioMobile = ({
 
   // Load existing results when scoring rules are available
   useEffect(() => {
-    setIsCancelled(false); // Reset on classement/stage change
     if (scoringRules && scoringRules.length > 0) {
       loadResults();
     }
