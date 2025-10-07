@@ -36,7 +36,7 @@ export const AuctionManager = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('phases')
-        .select('*')
+        .select('*, saisons(annee)')
         .eq('statut', 'active')
         .order('date_debut', { ascending: false });
       
@@ -302,71 +302,87 @@ export const AuctionManager = () => {
       </Card>
 
       {/* Reset Phase */}
-      {activePhase && (
-        <Card className="border-destructive/20 bg-destructive/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" />
-              Zone dangereuse
-            </CardTitle>
-            <CardDescription>
-              Remise à zéro complète de la phase en cours
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Réinitialiser la Phase 1 2026
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>⚠️ Confirmer la réinitialisation</AlertDialogTitle>
-                  <AlertDialogDescription className="space-y-3">
-                    <p>Cette action va <strong>supprimer définitivement</strong> :</p>
-                    <ul className="list-disc list-inside space-y-1 text-sm">
-                      <li>Tous les rosters des managers</li>
-                      <li>Toutes les enchères (gagnées et perdues)</li>
-                      <li>Toutes les annonces publiées</li>
-                      <li>Toutes les auctions créées</li>
-                    </ul>
-                    <p className="text-destructive font-semibold mt-4">
-                      Cette action est IRRÉVERSIBLE.
-                    </p>
-                    <div className="mt-4">
-                      <Label htmlFor="reset-phrase">
-                        Tapez <code className="bg-muted px-2 py-1 rounded">RESET PHASE 1 2026</code> pour confirmer :
-                      </Label>
-                      <Input
-                        id="reset-phrase"
-                        value={resetPhrase}
-                        onChange={(e) => setResetPhrase(e.target.value)}
-                        placeholder="RESET PHASE 1 2026"
-                        className="mt-2"
-                      />
-                    </div>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel onClick={() => setResetPhrase("")}>
-                    Annuler
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => resetPhase.mutate()}
-                    disabled={resetPhrase !== "RESET PHASE 1 2026" || resetPhase.isPending}
-                    className="bg-destructive hover:bg-destructive/90"
-                  >
-                    {resetPhase.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Confirmer la suppression
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardContent>
-        </Card>
-      )}
+      {activePhase && (() => {
+        const expectedPhrase = `RESET PHASE ${activePhase.index_dans_saison} ${activePhase.saisons?.annee || ''}`.trim();
+        
+        return (
+          <Card className="border-destructive/20 bg-destructive/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <Trash2 className="h-5 w-5" />
+                Zone dangereuse
+              </CardTitle>
+              <CardDescription>
+                Remise à zéro complète de la phase en cours
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="w-full">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Réinitialiser Phase {activePhase.index_dans_saison} {activePhase.saisons?.annee}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>⚠️ Confirmer la réinitialisation</AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-4">
+                      <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="destructive" className="text-xs">⚠️ PHASE ACTIVE</Badge>
+                        </div>
+                        <p className="font-semibold text-foreground">
+                          Phase {activePhase.index_dans_saison} {activePhase.saisons?.annee}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Du {new Date(activePhase.date_debut).toLocaleDateString()} au {new Date(activePhase.date_fin).toLocaleDateString()}
+                        </p>
+                      </div>
+                      
+                      <p className="text-foreground">Cette action va <strong>supprimer définitivement</strong> :</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        <li>Tous les rosters des managers</li>
+                        <li>Toutes les enchères (gagnées et perdues)</li>
+                        <li>Toutes les annonces publiées</li>
+                        <li>Toutes les auctions créées</li>
+                      </ul>
+                      <p className="text-destructive font-semibold">
+                        Cette action est IRRÉVERSIBLE.
+                      </p>
+                      <div className="mt-4">
+                        <Label htmlFor="reset-phrase">
+                          Tapez <code className="bg-muted px-2 py-1 rounded text-xs">{expectedPhrase}</code> pour confirmer :
+                        </Label>
+                        <Input
+                          id="reset-phrase"
+                          value={resetPhrase}
+                          onChange={(e) => setResetPhrase(e.target.value)}
+                          placeholder={expectedPhrase}
+                          className="mt-2"
+                        />
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setResetPhrase("")}>
+                      Annuler
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => resetPhase.mutate()}
+                      disabled={resetPhrase !== expectedPhrase || resetPhase.isPending}
+                      className="bg-destructive hover:bg-destructive/90"
+                    >
+                      {resetPhase.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Confirmer la suppression
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Advanced Options */}
       <Card>

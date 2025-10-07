@@ -38,9 +38,9 @@ serve(async (req) => {
 
     const { phase_id, confirmation_phrase } = await req.json()
 
-    // Vérifier la phrase de confirmation
-    if (confirmation_phrase !== 'RESET PHASE 1 2026') {
-      return new Response(JSON.stringify({ error: 'Phrase de confirmation incorrecte' }), {
+    // Vérifier que la phrase de confirmation commence par "RESET PHASE"
+    if (!confirmation_phrase || !confirmation_phrase.startsWith('RESET PHASE')) {
+      return new Response(JSON.stringify({ error: 'Phrase de confirmation incorrecte ou manquante' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
