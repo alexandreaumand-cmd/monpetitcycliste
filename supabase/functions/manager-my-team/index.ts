@@ -30,9 +30,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { phase_id = null } = await req.json();
+    const { phase_id = null, manager_id = null } = await req.json();
 
-    const { data: coureurs, error } = await supabase.rpc('manager_my_team', {
+    // Obtenir l'ID du manager (soit fourni, soit celui connecté)
+    let targetManagerId = manager_id;
+    if (!targetManagerId) {
+      const { data: manager } = await supabase
+        .from('managers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      targetManagerId = manager?.id;
+    }
+
+    // Utiliser la RPC qui accepte manager_id
+    const { data: coureurs, error } = await supabase.rpc('manager_team_by_id', {
+      p_manager_id: targetManagerId,
       p_phase_id: phase_id
     });
 
@@ -42,12 +55,7 @@ Deno.serve(async (req) => {
     const totalPoints = coureurs?.reduce((sum: number, c: any) => sum + Number(c.points_total || 0), 0) || 0;
     const scorersCount = coureurs?.filter((c: any) => Number(c.points_total || 0) > 0).length || 0;
 
-    // Obtenir l'ID du manager
-    const { data: manager } = await supabase
-      .from('managers')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
+    // Utiliser le targetManagerId pour les calculs
 
     // Obtenir la phase active ou celle fournie
     let phaseId = phase_id;
@@ -93,7 +101,7 @@ Deno.serve(async (req) => {
     // Calculer le classement du manager sur la phase
     let myRank = null;
     let managersCount = 0;
-    if (phaseId && manager?.id) {
+    if (phaseId && targetManagerId) {
       const { data: standings } = await supabase
         .from('points_ledger')
         .select('manager_id, points')
@@ -115,7 +123,7 @@ Deno.serve(async (req) => {
         managersCount = leaderboard.length;
         
         // Trouver la position du manager actuel
-        const position = leaderboard.findIndex(m => m.managerId === manager.id);
+        const position = leaderboard.findIndex(m => m.managerId === targetManagerId);
         if (position !== -1) {
           myRank = position + 1;
         }

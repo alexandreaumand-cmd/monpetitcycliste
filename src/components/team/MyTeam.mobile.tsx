@@ -48,12 +48,22 @@ interface Phase {
 
 type SortBy = "points" | "ratio" | "prix" | "cote";
 
+interface Manager {
+  id: string;
+  nom: string;
+}
+
 export const MyTeamMobile = () => {
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>("points");
   const [phases, setPhases] = useState<Phase[]>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
+  
+  // Manager selection state
+  const [managers, setManagers] = useState<Manager[]>([]);
+  const [selectedManagerId, setSelectedManagerId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   // Detail drawer
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -63,6 +73,8 @@ export const MyTeamMobile = () => {
 
   useEffect(() => {
     loadPhases();
+    loadManagers();
+    loadCurrentUser();
   }, []);
 
   useEffect(() => {
@@ -70,6 +82,38 @@ export const MyTeamMobile = () => {
       loadTeam();
     }
   }, [selectedPhaseId]);
+
+  const loadCurrentUser = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      const { data: manager } = await supabase
+        .from('managers')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .single();
+        
+      if (manager) {
+        setCurrentUserId(manager.id);
+      }
+    } catch (error) {
+      console.error('Error loading current user:', error);
+    }
+  };
+
+  const loadManagers = async () => {
+    try {
+      const { data: managersData } = await supabase
+        .from('managers')
+        .select('id, nom')
+        .order('nom', { ascending: true });
+      
+      setManagers(managersData || []);
+    } catch (error) {
+      console.error('Error loading managers:', error);
+    }
+  };
 
   const loadPhases = async () => {
     try {
@@ -104,7 +148,10 @@ export const MyTeamMobile = () => {
       if (!session) return;
 
       const { data, error } = await supabase.functions.invoke("manager-my-team", {
-        body: { phase_id: selectedPhaseId },
+        body: { 
+          phase_id: selectedPhaseId,
+          manager_id: selectedManagerId 
+        },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -208,6 +255,26 @@ export const MyTeamMobile = () => {
 
   return (
     <div className="p-4 space-y-4">
+      {/* Manager selector */}
+      {managers.length > 0 && (
+        <div>
+          <label className="text-sm font-medium mb-2 block">Manager</label>
+          <Select value={selectedManagerId || ""} onValueChange={setSelectedManagerId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Mon équipe" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Mon équipe</SelectItem>
+              {managers.map((manager) => (
+                <SelectItem key={manager.id} value={manager.id}>
+                  {manager.nom}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      
       {/* Phase selector */}
       {phases.length > 0 && (
         <div>

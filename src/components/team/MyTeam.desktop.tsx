@@ -60,6 +60,11 @@ interface Phase {
 
 type SortBy = 'points' | 'ratio' | 'prix' | 'cote';
 
+interface Manager {
+  id: string;
+  nom: string;
+}
+
 export const MyTeamDesktop = () => {
   
   const { toast } = useToast();
@@ -78,6 +83,11 @@ export const MyTeamDesktop = () => {
   const [phases, setPhases] = useState<Phase[]>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   
+  // Manager selection state
+  const [managers, setManagers] = useState<Manager[]>([]);
+  const [selectedManagerId, setSelectedManagerId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedCoureur, setSelectedCoureur] = useState<Coureur | null>(null);
@@ -88,6 +98,8 @@ export const MyTeamDesktop = () => {
 
   useEffect(() => {
     loadPhases();
+    loadManagers();
+    loadCurrentUser();
   }, []);
 
   useEffect(() => {
@@ -95,6 +107,38 @@ export const MyTeamDesktop = () => {
       loadTeam();
     }
   }, [selectedPhaseId]);
+
+  const loadCurrentUser = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      const { data: manager } = await supabase
+        .from('managers')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .single();
+        
+      if (manager) {
+        setCurrentUserId(manager.id);
+      }
+    } catch (error) {
+      console.error('Error loading current user:', error);
+    }
+  };
+
+  const loadManagers = async () => {
+    try {
+      const { data: managersData } = await supabase
+        .from('managers')
+        .select('id, nom')
+        .order('nom', { ascending: true });
+      
+      setManagers(managersData || []);
+    } catch (error) {
+      console.error('Error loading managers:', error);
+    }
+  };
 
   const loadPhases = async () => {
     try {
@@ -156,7 +200,10 @@ export const MyTeamDesktop = () => {
 
       // Appeler la fonction avec le token d'authentification
       const { data, error } = await supabase.functions.invoke('manager-my-team', {
-        body: { phase_id: selectedPhaseId },
+        body: { 
+          phase_id: selectedPhaseId,
+          manager_id: selectedManagerId 
+        },
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
@@ -273,11 +320,32 @@ export const MyTeamDesktop = () => {
       {/* Mobile layout */}
       <div className="flex flex-col gap-4 md:hidden">
         <div>
-          <h1 className="text-3xl font-bold">Mon équipe</h1>
+          <h1 className="text-3xl font-bold">
+            {selectedManagerId && selectedManagerId !== currentUserId
+              ? managers.find(m => m.id === selectedManagerId)?.nom
+              : 'Mon équipe'}
+          </h1>
           <p className="text-muted-foreground">
             {coureurs.length} coureur{coureurs.length > 1 ? 's' : ''}
           </p>
         </div>
+        
+        {/* Manager selector - mobile */}
+        {managers.length > 0 && (
+          <Select value={selectedManagerId || ''} onValueChange={setSelectedManagerId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Mon équipe" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Mon équipe</SelectItem>
+              {managers.map((manager) => (
+                <SelectItem key={manager.id} value={manager.id}>
+                  {manager.nom}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         
         {/* Phase selector - mobile */}
         {phases.length > 0 && (
@@ -333,13 +401,37 @@ export const MyTeamDesktop = () => {
       {/* Desktop layout */}
       <div className="hidden md:flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Mon équipe</h1>
+          <h1 className="text-3xl font-bold">
+            {selectedManagerId && selectedManagerId !== currentUserId
+              ? managers.find(m => m.id === selectedManagerId)?.nom
+              : 'Mon équipe'}
+          </h1>
           <p className="text-muted-foreground">
             {coureurs.length} coureur{coureurs.length > 1 ? 's' : ''}
           </p>
         </div>
         
         <div className="flex items-center gap-4">
+          {/* Manager selector - desktop */}
+          {managers.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Manager:</span>
+              <Select value={selectedManagerId || ''} onValueChange={setSelectedManagerId}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder="Mon équipe" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Mon équipe</SelectItem>
+                  {managers.map((manager) => (
+                    <SelectItem key={manager.id} value={manager.id}>
+                      {manager.nom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
           {/* Phase selector - desktop */}
           {phases.length > 0 && (
             <div className="flex items-center gap-2">
