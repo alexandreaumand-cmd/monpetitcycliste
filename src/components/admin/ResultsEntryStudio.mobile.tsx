@@ -58,7 +58,19 @@ export const ResultsEntryStudioMobile = ({
     courseIsStageRace ? "Etape" : "General"
   );
   const [resultRows, setResultRows] = useState<ResultRow[]>([]);
-  const [jerseyHolders, setJerseyHolders] = useState<Record<string, string>>({});
+  const [jerseyHolders, setJerseyHolders] = useState<{
+    general: string | null;
+    vert: string | null;
+    montagne: string | null;
+    jeune: string | null;
+    combattif: string | null;
+  }>({
+    general: null,
+    vert: null,
+    montagne: null,
+    jeune: null,
+    combattif: null,
+  });
   const [etapeOpen, setEtapeOpen] = useState(true);
   const [gcOpen, setGcOpen] = useState(!courseIsStageRace);
   const [pointsOpen, setPointsOpen] = useState(false);
@@ -116,6 +128,13 @@ export const ResultsEntryStudioMobile = ({
     }
   }, [currentClassement, currentStage, scoringRules]);
 
+  // Load jersey holders independently of scoring rules
+  useEffect(() => {
+    if (courseIsStageRace && currentClassement === 'Etape') {
+      loadJerseyHolders();
+    }
+  }, [course.course_id, currentStage, currentClassement]);
+
   const loadResults = async () => {
     if (!scoringRules || scoringRules.length === 0) {
       return;
@@ -166,35 +185,41 @@ export const ResultsEntryStudioMobile = ({
     });
 
     setResultRows(rows);
+  };
 
-    // Load jersey holders if stage race
-    if (courseIsStageRace && currentClassement === 'Etape') {
-      const jerseyMappings: Array<{ key: string; type: ClassementType }> = [
-        { key: "general", type: "General" },
-        { key: "vert", type: "Points" },
-        { key: "montagne", type: "Montagne" },
-        { key: "jeune", type: "Jeune" },
-      ];
+  const loadJerseyHolders = async () => {
+    const jerseyMappings: Array<{ key: 'general' | 'vert' | 'montagne' | 'jeune' | 'combattif'; type: string }> = [
+      { key: 'general', type: 'Porteur Général' },
+      { key: 'vert', type: 'Porteur Vert' },
+      { key: 'montagne', type: 'Porteur Montagne' },
+      { key: 'jeune', type: 'Porteur Jeune' },
+      { key: 'combattif', type: 'Porteur Combattif' },
+    ];
 
-      const newJerseyHolders: Record<string, string> = {};
+    const newJerseyHolders: typeof jerseyHolders = {
+      general: null,
+      vert: null,
+      montagne: null,
+      jeune: null,
+      combattif: null,
+    };
 
-      for (const { key, type } of jerseyMappings) {
-        const { data: jerseyData } = await supabase
-          .from('race_results')
-          .select('coureur_id')
-          .eq('course_id', course.course_id)
-          .eq('type_classement', type)
-          .eq('etape_numero', currentStage)
-          .eq('position', 1)
-          .maybeSingle();
+    for (const { key, type } of jerseyMappings) {
+      const { data: jerseyData } = await supabase
+        .from('race_results')
+        .select('coureur_id')
+        .eq('course_id', course.course_id)
+        .eq('type_classement', type as any)
+        .eq('etape_numero', currentStage)
+        .eq('position', 1)
+        .maybeSingle();
 
-        if (jerseyData?.coureur_id) {
-          newJerseyHolders[key] = jerseyData.coureur_id;
-        }
+      if (jerseyData?.coureur_id) {
+        newJerseyHolders[key] = jerseyData.coureur_id;
       }
-
-      setJerseyHolders(newJerseyHolders);
     }
+
+    setJerseyHolders(newJerseyHolders);
   };
 
   const handleRiderChange = (index: number, coureur: any) => {
@@ -287,11 +312,12 @@ export const ResultsEntryStudioMobile = ({
 
       // Save jersey holders
       if (courseIsStageRace && currentClassement === 'Etape') {
-        const jerseyMappings: Array<{ key: string; type: ClassementType }> = [
-          { key: "general", type: "General" },
-          { key: "vert", type: "Points" },
-          { key: "montagne", type: "Montagne" },
-          { key: "jeune", type: "Jeune" },
+        const jerseyMappings: Array<{ key: 'general' | 'vert' | 'montagne' | 'jeune' | 'combattif'; type: string }> = [
+          { key: 'general', type: 'Porteur Général' },
+          { key: 'vert', type: 'Porteur Vert' },
+          { key: 'montagne', type: 'Porteur Montagne' },
+          { key: 'jeune', type: 'Porteur Jeune' },
+          { key: 'combattif', type: 'Porteur Combattif' },
         ];
 
         for (const { key, type } of jerseyMappings) {
@@ -300,16 +326,15 @@ export const ResultsEntryStudioMobile = ({
 
           const managerId = riderManagerMap.get(coureurId);
           await supabase.from('race_results').upsert({
-            course_id: course.course_id,
             coureur_id: coureurId,
-            type_classement: type as ClassementType,
+            type_classement: type as any,
             etape_numero: currentStage,
             position: 1,
-            statut: 'finished',
+            statut: 'finished' as const,
             date_classement: dateClassement,
             manager_id: managerId,
             points: 0,
-          }, {
+          } as any, {
             onConflict: 'course_id,coureur_id,type_classement,etape_numero',
           });
         }
@@ -476,15 +501,9 @@ export const ResultsEntryStudioMobile = ({
                 <div className="mt-4 pt-4 border-t">
                   <h4 className="text-sm font-medium mb-2">Porteurs de maillot</h4>
                   <JerseyHoldersInput
-                    jerseyHolders={{
-                      general: jerseyHolders.general || null,
-                      vert: jerseyHolders.vert || null,
-                      montagne: jerseyHolders.montagne || null,
-                      jeune: jerseyHolders.jeune || null,
-                      combattif: null,
-                    }}
+                    jerseyHolders={jerseyHolders}
                     onChange={(type, coureurId) => {
-                      setJerseyHolders(prev => ({ ...prev, [type]: coureurId || '' }));
+                      setJerseyHolders(prev => ({ ...prev, [type]: coureurId }));
                     }}
                     phaseId={course.phase_id}
                   />
