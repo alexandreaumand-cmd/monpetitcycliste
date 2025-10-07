@@ -3300,6 +3300,14 @@ export type Database = {
         Args: { p_course_id: string; p_manager_id?: string }
         Returns: Json
       }
+      find_courses_missing_porteur_points: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          course_id: string
+          course_nom: string
+          missing_count: number
+        }[]
+      }
       get_my_roles: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"][]
