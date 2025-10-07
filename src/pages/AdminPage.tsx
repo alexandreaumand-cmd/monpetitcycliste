@@ -29,17 +29,18 @@ export const AdminPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+    <div className="space-y-4 sm:space-y-6 px-3 sm:px-0">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 px-2 sm:px-0 hide-scrollbar">
         {adminTabs.map((tab) => (
           <Link
             key={tab.path}
             to={`/dashboard/admin/${tab.path}`}
             className={cn(
-              "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
+              "flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all touch-target",
+              "active:scale-95",
               isActive(tab.path)
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                ? "bg-primary text-primary-foreground shadow-md"
+                : "bg-muted text-muted-foreground hover:bg-muted/80 active:bg-muted/70"
             )}
           >
             {tab.label}

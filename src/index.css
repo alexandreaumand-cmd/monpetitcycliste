@@ -158,6 +158,16 @@ All colors MUST be HSL.
     min-height: 44px;
   }
 
+  /* Hide scrollbar */
+  .hide-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+
   /* Scrollable chips */
   .chips-scroll {
     @apply flex gap-1.5 overflow-x-auto whitespace-nowrap pb-2 -mx-4 px-4;
