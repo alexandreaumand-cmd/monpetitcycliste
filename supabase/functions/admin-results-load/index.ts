@@ -62,9 +62,17 @@ Deno.serve(async (req) => {
       .eq('type_classement', 'Etape')
       .not('etape_numero', 'is', null);
 
-    const nb_etapes = stagesData && stagesData.length > 0 
-      ? Math.max(...stagesData.map(s => s.etape_numero))
-      : 0;
+    let nb_etapes: number;
+
+    // Special case: WT GT always has 21 stages
+    if (course.categorie === 'WT GT') {
+      nb_etapes = 21;
+    } else {
+      // Normal calculation: max of existing stages
+      nb_etapes = stagesData && stagesData.length > 0 
+        ? Math.max(...stagesData.map(s => s.etape_numero))
+        : 0;
+    }
 
     const result: any = {
       course: { ...course, nb_etapes },

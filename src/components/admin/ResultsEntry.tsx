@@ -60,11 +60,20 @@ export const ResultsEntry = () => {
       if (error) throw error;
 
       // Calculate nb_etapes
-      const dateDebut = data.date_debut ? new Date(data.date_debut) : null;
-      const dateFin = data.date_fin ? new Date(data.date_fin) : null;
-      const daysDiff = dateDebut && dateFin 
-        ? Math.ceil((dateFin.getTime() - dateDebut.getTime()) / (1000 * 60 * 60 * 24)) + 1
-        : 1;
+      let nb_etapes: number;
+
+      // Special case: WT GT always has 21 stages
+      if (data.categorie === 'WT GT') {
+        nb_etapes = 21;
+      } else {
+        // Normal calculation based on dates
+        const dateDebut = data.date_debut ? new Date(data.date_debut) : null;
+        const dateFin = data.date_fin ? new Date(data.date_fin) : null;
+        const daysDiff = dateDebut && dateFin 
+          ? Math.ceil((dateFin.getTime() - dateDebut.getTime()) / (1000 * 60 * 60 * 24)) + 1
+          : 1;
+        nb_etapes = Math.max(1, daysDiff);
+      }
 
       return {
         course_id: data.id,
@@ -73,7 +82,7 @@ export const ResultsEntry = () => {
         type_course: normalizeCourseType(data.type_course).display,
         date_debut: data.date_debut,
         date_fin: data.date_fin,
-        nb_etapes: Math.max(1, daysDiff),
+        nb_etapes,
         phase_id: data.phase_id,
       } as CourseData;
     },
