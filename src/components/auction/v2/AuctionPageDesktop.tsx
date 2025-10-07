@@ -11,7 +11,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
-import { getTeamOptions, TEAM_FULL_NAMES } from "@/lib/teamNames";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,10 +52,17 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
     refetchInterval: 5000,
   });
 
-  const availableTeams = useMemo(() => {
-    const teams = Object.keys(TEAM_FULL_NAMES);
-    return getTeamOptions(teams);
-  }, []);
+  // Get available teams
+  const { data: availableTeams = [] } = useQuery({
+    queryKey: ["auction-teams", phaseId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("auction-get-teams", {
+        body: { phase_id: phaseId },
+      });
+      if (error) throw error;
+      return data.teams || [];
+    },
+  });
 
   // Search riders
   const { data: ridersData, isLoading: ridersLoading } = useQuery({
