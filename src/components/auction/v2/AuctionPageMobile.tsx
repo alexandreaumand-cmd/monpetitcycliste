@@ -40,6 +40,7 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
         body: { phase_id: phaseId, manager_id: managerId },
       });
       if (error) throw error;
+      if (data?.error === "No active auction") return null;
       return data;
     },
     refetchInterval: 10000, // Refresh every 10s (optimized)
@@ -62,7 +63,7 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
       if (error) throw error;
       return data;
     },
-    enabled: !context, // Only fetch if no active auction
+    enabled: context === null, // Only fetch if no active auction
   });
 
   // Auto-show validation screen if manager has already validated and auction is still open

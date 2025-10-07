@@ -49,6 +49,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
         body: { phase_id: phaseId, manager_id: managerId },
       });
       if (error) throw error;
+      if (data?.error === "No active auction") return null;
       return data;
     },
     refetchInterval: 5000,
@@ -70,7 +71,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
       if (error) throw error;
       return data;
     },
-    enabled: !context, // Only fetch if no active auction
+    enabled: context === null, // Only fetch if no active auction
   });
 
   // Auto-show validation screen if manager has already validated and auction is still open
