@@ -2812,6 +2812,7 @@ export type Database = {
           nb_etapes_estimees: number | null
           nb_jours: number | null
           nom: string | null
+          phase_id: string | null
           phase_index: number | null
           points_etapes: number | null
           points_etapes_unitaire: number | null
@@ -2823,7 +2824,36 @@ export type Database = {
           type_course: string | null
           wt_tier: Database["public"]["Enums"]["wt_tier_type"] | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_home_recent_results: {
         Row: {
