@@ -52,9 +52,15 @@ export function MyBidsList({
     setEditValue("");
   };
 
-  // Sort bids by amount descending
+  // Sort bids: new bids first, then existing roster, then by amount descending
   const sortedBids = useMemo(() => {
-    return [...bids].sort((a, b) => b.amount - a.amount);
+    return [...bids].sort((a, b) => {
+      // New bids (is_existing = false) come first
+      if (!a.is_existing && b.is_existing) return -1;
+      if (a.is_existing && !b.is_existing) return 1;
+      // Within same type, sort by amount descending
+      return b.amount - a.amount;
+    });
   }, [bids]);
 
   if (bids.length === 0) {
@@ -70,7 +76,7 @@ export function MyBidsList({
 
   return (
     <div className="space-y-0.5 px-3">
-      <h3 className="text-xs font-medium text-muted-foreground mb-1.5">
+      <h3 className="text-sm font-semibold mb-2">
         Mes enchères ({bids.length})
       </h3>
 

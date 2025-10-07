@@ -297,6 +297,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
         starting_budget={context.starting_budget}
         draft_sum={context.totals.draft_sum}
         remaining_budget={context.totals.remaining_budget}
+        budget_spent={context.totals.budget_spent}
         currency={context.currency}
         validation_status={context.validation_status}
         draft_count={context.totals.draft_count}

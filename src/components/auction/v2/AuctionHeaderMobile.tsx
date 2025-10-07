@@ -9,6 +9,7 @@ interface AuctionHeaderMobileProps {
   starting_budget: number;
   draft_sum: number;
   remaining_budget: number;
+  budget_spent: number;
   currency: string;
   validation_status: {
     has_exact_slots: boolean;
@@ -30,6 +31,7 @@ export function AuctionHeaderMobile({
   starting_budget,
   draft_sum,
   remaining_budget,
+  budget_spent,
   currency,
   validation_status,
   draft_count,
@@ -40,7 +42,7 @@ export function AuctionHeaderMobile({
   total_managers = 0,
 }: AuctionHeaderMobileProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const progressPercentage = (draft_sum / starting_budget) * 100;
+  const progressPercentage = ((budget_spent + draft_sum) / starting_budget) * 100;
   const allValid = validation_status.can_submit;
   
   const [timeRemaining, setTimeRemaining] = useState<string>("");
