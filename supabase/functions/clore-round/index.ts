@@ -121,9 +121,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Insert all annonces
+    // Sort annonces by winning_amount (ascending) before inserting
     if (annonces.length > 0) {
-      await supabase.from('annonces').insert(annonces);
+      const sortedAnnonces = annonces.sort((a, b) => a.winning_amount - b.winning_amount);
+      await supabase.from('annonces').insert(sortedAnnonces);
     }
 
     console.log(`Round closed, ${annonces.length} annonces created`);

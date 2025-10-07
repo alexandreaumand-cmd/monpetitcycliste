@@ -35,13 +35,13 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else {
-      // Publish next annonce
+      // Publish next annonce (lowest price first)
       const { data: annonce, error } = await supabase
         .from('annonces')
         .select('*, coureurs(*), managers(*)')
         .eq('auction_id', auction_id)
         .eq('published', false)
-        .order('created_at', { ascending: true })
+        .order('winning_amount', { ascending: true })
         .limit(1)
         .single();
 
