@@ -95,24 +95,45 @@ Deno.serve(async (req) => {
       );
     }
 
-    // VALIDATION STRICTE (même logique que AuctionBidForm.tsx)
+    // Get existing roster count
+    const { count: rosterCount } = await supabase
+      .from('rosters')
+      .select('*', { count: 'exact', head: true })
+      .eq('phase_id', phase_id)
+      .eq('manager_id', manager_id);
+
+    const currentRosterCount = rosterCount || 0;
+    const totalSlots = currentRosterCount + draftBids.length;
+
+    // VALIDATION STRICTE
     
-    // 1. Check exact slot count
-    if (draftBids.length !== phase.max_coureurs) {
+    // 1. Check exact slot count (roster + new bids)
+    if (totalSlots !== phase.max_coureurs) {
       return new Response(
         JSON.stringify({ 
-          error: `Tu dois soumettre exactement ${phase.max_coureurs} enchères (actuellement: ${draftBids.length})` 
+          error: `Tu dois avoir exactement ${phase.max_coureurs} coureurs au total. Actuellement: ${currentRosterCount} en roster + ${draftBids.length} enchères = ${totalSlots} coureurs` 
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // 2. Check budget fully used (±1€)
-    const totalAmount = draftBids.reduce((sum, b) => sum + b.montant, 0);
-    if (Math.abs(totalAmount - phase.budget) >= 1) {
+    // 2. Check budget: draft_sum + roster_spent <= phase.budget
+    const draftSum = draftBids.reduce((sum, b) => sum + Number(b.montant), 0);
+    
+    // Get roster spent
+    const { data: rosterBids } = await supabase
+      .from('rosters')
+      .select('prix_signature')
+      .eq('phase_id', phase_id)
+      .eq('manager_id', manager_id);
+    
+    const rosterSpent = (rosterBids || []).reduce((sum, r) => sum + Number(r.prix_signature), 0);
+    const totalSpent = rosterSpent + draftSum;
+    
+    if (Math.abs(totalSpent - phase.budget) > 0) {
       return new Response(
         JSON.stringify({ 
-          error: `Tu dois utiliser exactement ton budget (${phase.budget}€). Actuellement: ${totalAmount}€` 
+          error: `Budget incorrect. Total dépensé: ${totalSpent}€ (roster: ${rosterSpent}€ + enchères: ${draftSum}€). Budget: ${phase.budget}€` 
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
