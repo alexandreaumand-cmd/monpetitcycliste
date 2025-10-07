@@ -70,7 +70,7 @@ export function FiltersDrawer({
       <SheetTrigger asChild>
         <Button
           size="icon"
-          className="fixed bottom-20 right-4 h-12 w-12 rounded-full shadow-lg z-20"
+          className="fixed bottom-32 right-4 h-12 w-12 rounded-full shadow-lg z-40"
         >
           <Filter className="h-5 w-5" />
           {hasActiveFilters && (

@@ -48,7 +48,7 @@ export function AuctionSubmitButton({
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t shadow-lg z-20">
+      <div className="fixed bottom-0 left-0 right-0 p-3 pb-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t shadow-lg z-50">
         <Button
           onClick={handleClick}
           disabled={!canSubmit || isSubmitting}

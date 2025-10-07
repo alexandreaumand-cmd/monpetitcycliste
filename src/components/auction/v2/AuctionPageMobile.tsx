@@ -213,7 +213,7 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background pb-16">
+    <div className="flex flex-col min-h-screen bg-background pb-32">
       {/* Compact Header */}
       <AuctionHeaderMobile
         starting_budget={context.starting_budget}
@@ -250,7 +250,21 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
           />
         </TabsContent>
 
-        <TabsContent value="search" className="flex-1 mt-0 pt-2">
+        <TabsContent value="search" className="flex-1 mt-0">
+          {/* Search bar directly in tab */}
+          <div className="px-3 py-2 border-b bg-muted/30">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Rechercher un coureur…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-9 pl-9 pr-10 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+            </div>
+          </div>
+          
           <RiderResultsList
             riders={ridersData?.items || []}
             onAddRider={handleAddRider}
