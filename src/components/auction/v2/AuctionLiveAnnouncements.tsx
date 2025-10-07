@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Trophy, Users, TrendingUp, PartyPopper } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Trophy, Users, TrendingUp, PartyPopper, ArrowLeft } from "lucide-react";
 
 interface AuctionLiveAnnouncementsProps {
   auctionId: string;
@@ -21,6 +22,7 @@ export function AuctionLiveAnnouncements({
   const [liveAnnonces, setLiveAnnonces] = useState<any[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
+  const queryClient = useQueryClient();
 
   // Fetch live status
   const { data: liveStatus, refetch } = useQuery({
@@ -230,13 +232,25 @@ export function AuctionLiveAnnouncements({
           {/* Completion message */}
           {isComplete && (
             <Card className="border-green-500/50 bg-green-500/5">
-              <CardContent className="pt-6 text-center">
-                <p className="text-lg font-semibold text-green-600 dark:text-green-400">
-                  ✅ Résultats complets !
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Tu peux maintenant consulter ton équipe complète
-                </p>
+              <CardContent className="pt-6 text-center space-y-4">
+                <div>
+                  <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                    ✅ Résultats complets !
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Tu peux maintenant consulter ton équipe complète
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    queryClient.invalidateQueries({ queryKey: ['auction-context'] });
+                    queryClient.invalidateQueries({ queryKey: ['my-active-phases'] });
+                  }}
+                  className="mx-auto"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Retour aux enchères
+                </Button>
               </CardContent>
             </Card>
           )}
