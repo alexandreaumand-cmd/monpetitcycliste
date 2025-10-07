@@ -78,91 +78,61 @@ export function AuctionHeader({
 
   return (
     <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-      <div className="container mx-auto p-4 max-w-7xl space-y-3">
-        {/* Top Row - Time & Stats */}
-        <div className="flex items-center justify-between text-sm">
+      <div className="container mx-auto px-4 py-2 max-w-7xl">
+        {/* Single compact line with all info */}
+        <div className="flex items-center gap-6 text-sm">
+          {/* Time */}
           {deadline_at && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span className="font-medium">Temps restant:</span>
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
               <Badge variant="outline" className="font-mono">
                 {timeRemaining}
               </Badge>
             </div>
           )}
+
+          {/* Validated */}
           {total_managers > 0 && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Users className="h-4 w-4" />
-              <span className="font-medium">Validés:</span>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
               <Badge variant="outline">
                 {validated_count}/{total_managers}
               </Badge>
             </div>
           )}
-        </div>
 
-        {/* Main Row - Budget & Validation */}
-        <div className="flex gap-4">
-          {/* Budget Section - 60% */}
-          <div className="flex-[3] space-y-2">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Budget restant</h2>
-              {validation_status.budget_fully_used ? (
-                <Badge variant="default" className="bg-green-500/10 text-green-500 border-green-500/20">
-                  Budget OK
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="text-base px-3 py-1">
-                  Reste: {remaining_budget}
-                </Badge>
-              )}
+          {/* Budget Progress */}
+          <div className="flex items-center gap-3 flex-1">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">Budget:</span>
+            <div className="flex-1 max-w-xs">
+              <Progress value={progressPercentage} className="h-2" />
             </div>
-            <Progress value={progressPercentage} className="h-2" />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{draft_sum}</span>
-              <span>{starting_budget}</span>
-            </div>
+            <span className="text-xs font-medium whitespace-nowrap">
+              {draft_sum}/{starting_budget}
+            </span>
           </div>
 
-          {/* Validation Section - 40% */}
-          <div className={`flex-[2] border rounded-lg p-3 ${
+          {/* Validation Status */}
+          <div className={`flex items-center gap-3 px-3 py-1.5 rounded-md border ${
             allValid ? 'border-green-500/50 bg-green-500/5' : 'border-orange-500/50 bg-orange-500/5'
           }`}>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-sm">Validation</h3>
-              {allValid ? (
-                <Badge variant="default" className="bg-green-500/10 text-green-500 border-green-500/20">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Prêt
-                </Badge>
-              ) : (
-                <Badge variant="secondary">
-                  {roster_count + draft_count}/{max_slots}
-                </Badge>
-              )}
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-xs">
               {validation_status.has_exact_slots ? (
                 <CheckCircle2 className="h-3 w-3 text-green-500" />
               ) : (
                 <AlertCircle className="h-3 w-3 text-orange-500" />
               )}
-              <span>Coureurs</span>
-              
-              {validation_status.budget_fully_used ? (
-                <CheckCircle2 className="h-3 w-3 text-green-500" />
-              ) : (
-                <AlertCircle className="h-3 w-3 text-orange-500" />
-              )}
-              <span>Budget</span>
-              
-              {validation_status.all_above_min && validation_status.no_duplicates ? (
-                <CheckCircle2 className="h-3 w-3 text-green-500" />
-              ) : (
-                <AlertCircle className="h-3 w-3 text-orange-500" />
-              )}
-              <span>Montants</span>
+              <span className="text-muted-foreground">
+                {roster_count + draft_count}/{max_slots}
+              </span>
             </div>
+            
+            {allValid && (
+              <Badge variant="default" className="bg-green-500/10 text-green-500 border-green-500/20">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                Prêt
+              </Badge>
+            )}
           </div>
         </div>
       </div>

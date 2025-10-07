@@ -292,7 +292,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
 
   return (
     <div className="min-h-screen">
-      {/* Budget + Validation Header */}
+      {/* Compact Header */}
       <AuctionHeader
         starting_budget={context.starting_budget}
         draft_sum={context.totals.draft_sum}
@@ -305,25 +305,26 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
         max_slots={context.rules.max_bids}
       />
 
+      {/* Filters - Right below header */}
+      <div className="border-b bg-muted/30">
+        <div className="container mx-auto max-w-7xl">
+          <AuctionSearchFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            selectedTeams={selectedTeams}
+            onTeamsChange={setSelectedTeams}
+            selectedCotes={selectedCotes}
+            onCotesChange={setSelectedCotes}
+            availableTeams={Array.isArray(availableTeams) ? availableTeams : []}
+          />
+        </div>
+      </div>
+
       {/* Two-column layout */}
       <div className="container mx-auto p-6 max-w-7xl">
         <div className="grid grid-cols-3 gap-6">
-          {/* Left column: Search & Results */}
-          <div className="col-span-2 space-y-4">
-            <Card>
-              <CardContent className="p-0">
-                <AuctionSearchFilters
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                  selectedTeams={selectedTeams}
-                  onTeamsChange={setSelectedTeams}
-                  selectedCotes={selectedCotes}
-                  onCotesChange={setSelectedCotes}
-                  availableTeams={Array.isArray(availableTeams) ? availableTeams : []}
-                />
-              </CardContent>
-            </Card>
-
+          {/* Left column: Results */}
+          <div className="col-span-2">
             <Card>
               <CardContent className="p-0 max-h-[600px] overflow-y-auto">
                 <RiderResultsList

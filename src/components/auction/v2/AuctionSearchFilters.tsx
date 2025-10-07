@@ -62,7 +62,7 @@ export function AuctionSearchFilters({
   };
 
   return (
-    <div className="space-y-3 p-4 border-b bg-muted/30">
+    <div className="space-y-3 p-3">
       {/* Search bar */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
