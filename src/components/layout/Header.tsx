@@ -11,7 +11,18 @@ interface HeaderProps {
   onSignOut: () => void;
 }
 
-const navLinks = [
+// Desktop navigation order
+const desktopNavLinks = [
+  { label: 'Classement', href: '/dashboard/classement', icon: BarChart3 },
+  { label: 'Équipes', href: '/dashboard/mon-equipe', icon: Users },
+  { label: 'Résultats', href: '/dashboard/resultats', icon: BarChart3 },
+  { label: 'Courses', href: '/dashboard/courses', icon: Calendar },
+  { label: 'Startlist', href: '/dashboard/startlist', icon: ListChecks },
+  { label: 'Enchères', href: '/dashboard/encheres', icon: Trophy },
+];
+
+// Mobile navigation order (unchanged)
+const mobileNavLinks = [
   { label: 'Enchères', href: '/dashboard/encheres', icon: Trophy },
   { label: 'Équipes', href: '/dashboard/mon-equipe', icon: Users },
   { label: 'Courses', href: '/dashboard/courses', icon: Calendar },
@@ -24,9 +35,13 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
-  const allLinks = isAdmin 
-    ? [...navLinks, { label: 'Admin', href: '/dashboard/admin', icon: Shield }]
-    : navLinks;
+  const allDesktopLinks = isAdmin 
+    ? [...desktopNavLinks, { label: 'Admin', href: '/dashboard/admin', icon: Shield }]
+    : desktopNavLinks;
+
+  const allMobileLinks = isAdmin 
+    ? [...mobileNavLinks, { label: 'Admin', href: '/dashboard/admin', icon: Shield }]
+    : mobileNavLinks;
 
   const isActive = (href: string) => {
     if (href === '/dashboard/encheres' && location.pathname === '/dashboard') return true;
@@ -52,7 +67,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
-            {allLinks.map((link) => {
+            {allDesktopLinks.map((link) => {
               const Icon = link.icon;
               const active = isActive(link.href);
               return (
@@ -105,7 +120,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
         {mobileMenuOpen && (
           <nav className="md:hidden py-4 border-t">
             <div className="flex flex-col gap-2">
-              {allLinks.map((link) => {
+              {allMobileLinks.map((link) => {
                 const Icon = link.icon;
                 const active = isActive(link.href);
                 return (
