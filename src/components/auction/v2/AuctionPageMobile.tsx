@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AuctionHeaderMobile } from "./AuctionHeaderMobile";
@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
-import { getTeamOptions, TEAM_FULL_NAMES } from "@/lib/teamNames";
 
 interface AuctionPageMobileProps {
   phaseId: string;
@@ -45,11 +44,22 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
     refetchOnWindowFocus: false,
   });
 
-  // Get available teams for filter
+  // Fetch available teams from database
+  const { data: teamsData } = useQuery({
+    queryKey: ["auction-teams", phaseId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("auction-get-teams", {
+        body: { phase_id: phaseId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!phaseId,
+  });
+
   const availableTeams = useMemo(() => {
-    const teams = Object.keys(TEAM_FULL_NAMES);
-    return getTeamOptions(teams);
-  }, []);
+    return teamsData?.teams || [];
+  }, [teamsData]);
 
   // Search riders
   const { data: ridersData, isLoading: ridersLoading } = useQuery({

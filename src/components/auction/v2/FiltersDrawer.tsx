@@ -13,7 +13,7 @@ interface FiltersDrawerProps {
   onTeamsChange: (teams: string[]) => void;
   selectedCotes: number[];
   onCotesChange: (cotes: number[]) => void;
-  availableTeams: { short: string; full: string }[];
+  availableTeams: string[];
 }
 
 export function FiltersDrawer({
@@ -34,7 +34,7 @@ export function FiltersDrawer({
   };
 
   const selectAllTeams = () => {
-    onTeamsChange(availableTeams.map(t => t.short));
+    onTeamsChange([...availableTeams]);
   };
 
   const clearAllTeams = () => {
@@ -155,16 +155,16 @@ export function FiltersDrawer({
               <div className="border rounded-md p-2 space-y-1 max-h-[200px] overflow-y-auto">
                 {availableTeams.map((team) => (
                   <div
-                    key={team.short}
+                    key={team}
                     className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
-                    onClick={() => toggleTeam(team.short)}
+                    onClick={() => toggleTeam(team)}
                   >
                     <Checkbox
-                      checked={selectedTeams.includes(team.short)}
-                      onCheckedChange={() => toggleTeam(team.short)}
+                      checked={selectedTeams.includes(team)}
+                      onCheckedChange={() => toggleTeam(team)}
                     />
                     <label className="flex-1 text-sm cursor-pointer">
-                      {team.short} - {team.full}
+                      {team}
                     </label>
                   </div>
                 ))}
