@@ -384,11 +384,11 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-24">Pos./Statut</TableHead>
+                        <TableHead className="w-20">Pos./Statut</TableHead>
                         <TableHead>Coureur</TableHead>
                         <TableHead className="hidden md:table-cell">Équipe</TableHead>
                         <TableHead className="text-right">Points</TableHead>
-                        <TableHead className="hidden sm:table-cell">Manager</TableHead>
+                        <TableHead>Manager</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -451,8 +451,12 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                 <span className="text-muted-foreground">—</span>
                               )}
                             </TableCell>
-                            <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
-                              {row.manager_nom || "—"}
+                            <TableCell className="text-muted-foreground text-sm">
+                              {row.manager_nom ? (
+                                <span className="text-xs truncate">{row.manager_nom}</span>
+                              ) : (
+                                "—"
+                              )}
                             </TableCell>
                           </TableRow>
                         );
