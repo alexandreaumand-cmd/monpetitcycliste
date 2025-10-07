@@ -717,7 +717,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                 <Checkbox
                   id="cancelled-checkbox"
                   checked={isCancelled}
-                  onCheckedChange={(checked) => {
+                  onCheckedChange={async (checked) => {
                     setIsCancelled(checked === true);
                     if (checked) {
                       setResultRows(prev => prev.map(row => ({
@@ -727,6 +727,43 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                         manager_nom: null,
                       })));
                       setIsDirty(true);
+                      
+                      // Create/update race_result_set immediately
+                      const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
+                      const { data: managerData } = await supabase
+                        .from('managers')
+                        .select('id')
+                        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+                        .single();
+
+                      if (managerData?.id) {
+                        await supabase
+                          .from('race_result_sets')
+                          .upsert({
+                            course_id: course.course_id,
+                            type_classement: classementType,
+                            etape_numero: etapeNumeroValue,
+                            is_cancelled: true,
+                            created_by: managerData.id
+                          }, {
+                            onConflict: 'course_id,type_classement,etape_numero',
+                            ignoreDuplicates: false
+                          });
+                        
+                        // Refresh stage completion
+                        queryClient.invalidateQueries({ queryKey: ["stage-completion", course.course_id] });
+                      }
+                    } else {
+                      // When unchecking, update is_cancelled to false
+                      const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
+                      await supabase
+                        .from('race_result_sets')
+                        .update({ is_cancelled: false })
+                        .eq('course_id', course.course_id)
+                        .eq('type_classement', classementType)
+                        .eq('etape_numero', etapeNumeroValue);
+                      
+                      queryClient.invalidateQueries({ queryKey: ["stage-completion", course.course_id] });
                     }
                   }}
                 />

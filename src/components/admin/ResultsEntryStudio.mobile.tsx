@@ -513,7 +513,7 @@ export const ResultsEntryStudioMobile = ({
           <Checkbox
             id="cancelled-checkbox-mobile"
             checked={isCancelled}
-            onCheckedChange={(checked) => {
+            onCheckedChange={async (checked) => {
               setIsCancelled(checked === true);
               if (checked) {
                 setResultRows(prev => prev.map(row => ({
@@ -521,6 +521,43 @@ export const ResultsEntryStudioMobile = ({
                   coureur_id: null,
                   coureur_nom: null,
                 })));
+                
+                // Create/update race_result_set immediately
+                const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
+                const { data: managerData } = await supabase
+                  .from('managers')
+                  .select('id')
+                  .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+                  .single();
+
+                if (managerData?.id) {
+                  await supabase
+                    .from('race_result_sets')
+                    .upsert({
+                      course_id: course.course_id,
+                      type_classement: currentClassement,
+                      etape_numero: etapeNumeroValue,
+                      is_cancelled: true,
+                      created_by: managerData.id
+                    }, {
+                      onConflict: 'course_id,type_classement,etape_numero',
+                      ignoreDuplicates: false
+                    });
+                  
+                  // Refresh results status query
+                  queryClient.invalidateQueries({ queryKey: ['results-status'] });
+                }
+              } else {
+                // When unchecking, update is_cancelled to false
+                const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
+                await supabase
+                  .from('race_result_sets')
+                  .update({ is_cancelled: false })
+                  .eq('course_id', course.course_id)
+                  .eq('type_classement', currentClassement)
+                  .eq('etape_numero', etapeNumeroValue);
+                
+                queryClient.invalidateQueries({ queryKey: ['results-status'] });
               }
             }}
           />
