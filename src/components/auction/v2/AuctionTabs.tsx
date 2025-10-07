@@ -56,13 +56,21 @@ export const AuctionTabs = ({
 }: AuctionTabsProps) => {
   return (
     <Tabs defaultValue="bid" className="w-full">
-      <div className="border-b bg-muted/30">
+      {/* Compact tabs bar */}
+      <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto max-w-7xl">
-          <TabsList className="w-full justify-start bg-transparent h-12">
-            <TabsTrigger value="bid" className="data-[state=active]:bg-background">
+          <TabsList className="w-full justify-start bg-transparent h-14 px-4">
+            <TabsTrigger 
+              value="bid" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg"
+            >
+              <Plus className="h-4 w-4 mr-2" />
               Enchérir
             </TabsTrigger>
-            <TabsTrigger value="teams" className="data-[state=active]:bg-background">
+            <TabsTrigger 
+              value="teams" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg"
+            >
               Équipes adverses
             </TabsTrigger>
           </TabsList>
@@ -70,9 +78,9 @@ export const AuctionTabs = ({
       </div>
 
       <TabsContent value="bid" className="mt-0">
-        <div className="container mx-auto max-w-7xl">
-          {/* Filters */}
-          <div className="border-b bg-muted/30">
+        <div className="container mx-auto max-w-7xl px-4">
+          {/* Compact inline filters */}
+          <div className="py-4 border-b">
             <AuctionSearchFilters
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
@@ -84,13 +92,19 @@ export const AuctionTabs = ({
             />
           </div>
 
-          {/* Two-column layout */}
-          <div className="p-6">
-            <div className="grid grid-cols-3 gap-6">
-              {/* Left column: Results */}
-              <div className="col-span-2">
-                <Card>
-                  <CardContent className="p-0 max-h-[calc(100vh-340px)] overflow-y-auto">
+          {/* Main content - Equal columns */}
+          <div className="grid grid-cols-2 gap-6 py-6">
+            {/* Left: Search Results */}
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Coureurs disponibles</h2>
+                <span className="text-sm text-muted-foreground">
+                  {riders.length} résultat{riders.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              <Card className="shadow-sm">
+                <CardContent className="p-0">
+                  <div className="max-h-[calc(100vh-340px)] overflow-y-auto">
                     <RiderResultsList
                       riders={riders}
                       onAddRider={() => {}}
@@ -98,9 +112,9 @@ export const AuctionTabs = ({
                       renderActionButton={(rider) => (
                         <BidAmountPopover
                           trigger={
-                            <Button size="default" variant="outline">
-                              <Plus className="h-4 w-4 mr-1" />
-                              Ajouter
+                            <Button size="sm" variant="default" className="gap-1">
+                              <Plus className="h-3 w-3" />
+                              Enchérir
                             </Button>
                           }
                           rider={{
@@ -116,14 +130,23 @@ export const AuctionTabs = ({
                         />
                       )}
                     />
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-              {/* Right column: My Bids + Submit button */}
-              <div className="flex flex-col gap-4">
-                <Card className="flex-1">
-                  <CardContent className="p-0 h-[calc(100vh-280px)] overflow-y-auto">
+            {/* Right: My Bids */}
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Mes enchères</h2>
+                <span className="text-sm text-muted-foreground">
+                  {myBids.length} coureur{myBids.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              
+              <Card className="shadow-sm border-2 border-primary/20">
+                <CardContent className="p-0">
+                  <div className="max-h-[calc(100vh-440px)] overflow-y-auto">
                     <MyBidsList
                       bids={myBids}
                       onUpdateAmount={handleUpdateAmount}
@@ -132,18 +155,23 @@ export const AuctionTabs = ({
                       step={context?.rules.step || 1}
                       isUpdating={isUpdating}
                     />
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* Submit button */}
+              {/* Submit button - Always visible */}
+              <div className="mt-4 space-y-2">
                 <Button
                   onClick={handleSubmitAll}
                   disabled={!context?.validation_status?.can_submit || isSubmitting}
                   size="lg"
-                  className="w-full"
+                  className="w-full shadow-lg hover:shadow-xl transition-all"
                 >
                   {isSubmitting ? (
-                    "Validation en cours..."
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Validation en cours...
+                    </>
                   ) : (
                     <>
                       <CheckCircle2 className="h-5 w-5 mr-2" />
@@ -151,6 +179,16 @@ export const AuctionTabs = ({
                     </>
                   )}
                 </Button>
+                
+                {!context?.validation_status?.can_submit && (
+                  <p className="text-xs text-center text-muted-foreground">
+                    {context?.validation_status?.missing_slots > 0 
+                      ? `Il manque ${context.validation_status.missing_slots} coureur${context.validation_status.missing_slots > 1 ? 's' : ''}`
+                      : context?.validation_status?.budget_overflow 
+                        ? "Budget dépassé" 
+                        : "Conditions non remplies"}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -158,7 +196,7 @@ export const AuctionTabs = ({
       </TabsContent>
 
       <TabsContent value="teams" className="mt-0">
-        <div className="container mx-auto px-4 py-4 max-w-7xl">
+        <div className="container mx-auto px-4 py-6 max-w-7xl">
           <AuctionTeamsGrid phaseId={phaseId} managerId={managerId} />
         </div>
       </TabsContent>

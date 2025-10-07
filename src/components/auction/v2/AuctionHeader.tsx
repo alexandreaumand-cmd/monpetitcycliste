@@ -1,6 +1,6 @@
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertCircle, Clock, Users } from "lucide-react";
+import { CheckCircle2, AlertCircle, Clock, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface AuctionHeaderProps {
@@ -39,9 +39,6 @@ export function AuctionHeader({
   validated_count = 0,
   total_managers = 0,
 }: AuctionHeaderProps) {
-  const progressPercentage = ((budget_spent + draft_sum) / starting_budget) * 100;
-  const allValid = validation_status.can_submit;
-  
   const [timeRemaining, setTimeRemaining] = useState<string>("");
 
   useEffect(() => {
@@ -72,68 +69,99 @@ export function AuctionHeader({
 
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
-
     return () => clearInterval(interval);
   }, [deadline_at]);
 
+  const budgetProgress = ((budget_spent + draft_sum) / starting_budget) * 100;
+  const slotsProgress = ((roster_count + draft_count) / max_slots) * 100;
+  const totalSlots = roster_count + draft_count;
+
+  const getBudgetColor = () => {
+    if (remaining_budget < 0) return "destructive";
+    if (remaining_budget < 50) return "default";
+    return "secondary";
+  };
+
+  const getSlotsColor = () => {
+    if (totalSlots === max_slots) return "default";
+    if (totalSlots > max_slots * 0.8) return "secondary";
+    return "outline";
+  };
+
   return (
-    <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-      <div className="container mx-auto px-4 py-2 max-w-7xl">
-        {/* Single compact line with all info */}
-        <div className="flex items-center gap-6 text-sm">
-          {/* Time - Far Left */}
+    <div className="sticky top-0 z-20 border-b bg-gradient-to-r from-background via-background/95 to-background backdrop-blur-sm shadow-sm">
+      <div className="container mx-auto max-w-7xl px-4 py-4">
+        <div className="grid grid-cols-4 gap-4">
+          {/* Timer */}
           {deadline_at && (
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Fin:</span>
-              <Badge variant="outline" className="font-mono">
-                {timeRemaining}
-              </Badge>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border hover:border-primary/50 transition-colors">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <Clock className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Temps restant</p>
+                <p className="text-lg font-bold tracking-tight">{timeRemaining}</p>
+              </div>
             </div>
           )}
 
-          {/* Budget Progress */}
-          <div className="flex items-center gap-3 flex-1">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">Budget:</span>
-            <div className="flex-1 max-w-xs">
-              <Progress value={progressPercentage} className="h-2" />
+          {/* Budget */}
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border hover:border-primary/50 transition-colors">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <TrendingUp className="h-5 w-5 text-primary" />
             </div>
-            <span className="text-xs font-medium whitespace-nowrap">
-              {draft_sum}/{starting_budget}
-            </span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-2 mb-1">
+                <p className="text-xs text-muted-foreground font-medium">Budget</p>
+                <Badge variant={getBudgetColor()} className="text-xs">
+                  {remaining_budget}{currency}
+                </Badge>
+              </div>
+              <Progress value={budgetProgress} className="h-1.5" />
+            </div>
           </div>
 
-          {/* Validated */}
-          {total_managers > 0 && (
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <Badge variant="outline">
-                {validated_count}/{total_managers}
-              </Badge>
+          {/* Slots */}
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border hover:border-primary/50 transition-colors">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <CheckCircle2 className="h-5 w-5 text-primary" />
             </div>
-          )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-2 mb-1">
+                <p className="text-xs text-muted-foreground font-medium">Coureurs</p>
+                <Badge variant={getSlotsColor()} className="text-xs">
+                  {totalSlots}/{max_slots}
+                </Badge>
+              </div>
+              <Progress value={slotsProgress} className="h-1.5" />
+            </div>
+          </div>
 
           {/* Validation Status */}
-          <div className={`flex items-center gap-3 px-3 py-1.5 rounded-md border ${
-            allValid ? 'border-green-500/50 bg-green-500/5' : 'border-orange-500/50 bg-orange-500/5'
+          <div className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+            validation_status.can_submit 
+              ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900/50' 
+              : 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/50'
           }`}>
-            <div className="flex items-center gap-1.5 text-xs">
-              {validation_status.has_exact_slots ? (
-                <CheckCircle2 className="h-3 w-3 text-green-500" />
+            <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+              validation_status.can_submit ? 'bg-green-100 dark:bg-green-900/30' : 'bg-amber-100 dark:bg-amber-900/30'
+            }`}>
+              {validation_status.can_submit ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
               ) : (
-                <AlertCircle className="h-3 w-3 text-orange-500" />
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               )}
-              <span className="text-muted-foreground">
-                {roster_count + draft_count}/{max_slots}
-              </span>
             </div>
-            
-            {allValid && (
-              <Badge variant="default" className="bg-green-500/10 text-green-500 border-green-500/20">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                Prêt
-              </Badge>
-            )}
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Statut</p>
+              <p className="text-sm font-semibold">
+                {validation_status.can_submit ? (
+                  <span className="text-green-600 dark:text-green-400">Prêt à valider</span>
+                ) : (
+                  <span className="text-amber-600 dark:text-amber-400">Incomplet</span>
+                )}
+              </p>
+            </div>
           </div>
         </div>
       </div>
