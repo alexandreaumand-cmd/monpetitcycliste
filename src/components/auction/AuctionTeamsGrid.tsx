@@ -42,18 +42,36 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
     }
   });
 
+  // Get managers status (budget, slots)
+  const { data: managersStatus = [] } = useQuery({
+    queryKey: ['managers-rosters-status', phaseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('managers_rosters_status')
+        .select('*')
+        .eq('phase_id', phaseId);
+
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
   // Group rosters by manager (exclude current user)
   const rostersByManager = allManagersRosters
     .filter((r: any) => r.manager_id !== managerId)
     .reduce((acc: any, roster: any) => {
-      const managerId = roster.manager_id;
-      if (!acc[managerId]) {
-        acc[managerId] = {
+      const mgrId = roster.manager_id;
+      if (!acc[mgrId]) {
+        const status = managersStatus.find((s: any) => s.manager_id === mgrId);
+        acc[mgrId] = {
           managerName: roster.managers?.nom || 'Inconnu',
-          rosters: []
+          rosters: [],
+          budgetRestant: status?.budget_restant || 0,
+          slotsRestants: status?.slots_restants || 0,
+          maxCoureurs: status?.max_coureurs || 0
         };
       }
-      acc[managerId].rosters.push(roster);
+      acc[mgrId].rosters.push(roster);
       return acc;
     }, {});
 
@@ -101,18 +119,28 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredManagers.map(([managerId, data]: [string, any]) => (
-            <Card key={managerId} className="hover:shadow-lg transition-shadow">
+          {filteredManagers.map(([mgrId, data]: [string, any]) => (
+            <Card key={mgrId} className="hover:shadow-lg transition-shadow">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center justify-between">
-                  <span>{data.managerName}</span>
-                  <Badge variant="secondary">{data.rosters.length}</Badge>
-                </CardTitle>
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base">{data.managerName}</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {data.rosters.length}/{data.maxCoureurs} coureurs
+                    </p>
+                  </div>
+                  <Badge 
+                    variant={data.budgetRestant < 100 ? "destructive" : "secondary"}
+                    className="ml-2"
+                  >
+                    {formatAmount(data.budgetRestant)} restant
+                  </Badge>
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Coureurs:</span>
-                  <Badge variant="outline">{data.rosters.length}</Badge>
+                  <span className="text-muted-foreground">Slots restants:</span>
+                  <Badge variant="outline">{data.slotsRestants}</Badge>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Dépensé:</span>

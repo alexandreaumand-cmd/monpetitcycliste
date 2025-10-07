@@ -8,9 +8,10 @@ import { BidAmountPopover } from "./BidAmountPopover";
 import { MyBidsList } from "./MyBidsList";
 import { AuctionValidationConfirmation } from "./AuctionValidationConfirmation";
 import { AuctionLiveAnnouncements } from "./AuctionLiveAnnouncements";
+import { AuctionTabs } from "./AuctionTabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, CheckCircle2, Plus } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
 import {
@@ -293,101 +294,58 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
   return (
     <div className="min-h-screen">
       {/* Compact Header */}
-        <AuctionHeader
-          starting_budget={context.starting_budget}
-          draft_sum={context.totals.draft_sum}
-          remaining_budget={context.totals.remaining_budget}
-          budget_spent={context.totals.budget_spent}
-          currency={context.currency}
-          validation_status={context.validation_status}
-          draft_count={context.totals.draft_count}
-          roster_count={context.totals.roster_count}
-          max_slots={context.rules.max_bids}
-          deadline_at={context.auction?.deadline_at}
-        />
+      <AuctionHeader
+        starting_budget={context.starting_budget}
+        draft_sum={context.totals.draft_sum}
+        remaining_budget={context.totals.remaining_budget}
+        budget_spent={context.totals.budget_spent}
+        currency={context.currency}
+        validation_status={context.validation_status}
+        draft_count={context.totals.draft_count}
+        roster_count={context.totals.roster_count}
+        max_slots={context.rules.max_bids}
+        deadline_at={context.auction?.deadline_at}
+      />
 
-      {/* Filters - Right below header */}
-      <div className="border-b bg-muted/30">
+      {/* Tabs */}
+      <AuctionTabs
+        phaseId={phaseId}
+        managerId={managerId}
+        context={context}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        selectedTeams={selectedTeams}
+        setSelectedTeams={setSelectedTeams}
+        selectedCotes={selectedCotes}
+        setSelectedCotes={setSelectedCotes}
+        availableTeams={Array.isArray(availableTeams) ? availableTeams : []}
+        riders={ridersData?.items || []}
+        isSearching={ridersLoading}
+        myBids={[...(context.roster || []), ...(context.my_bids || [])]}
+        handleSubmitBid={handleSubmitBid}
+        handleUpdateAmount={handleUpdateAmount}
+        handleRemoveBid={handleRemoveBid}
+        isUpdating={upsertBidMutation.isPending || removeBidMutation.isPending}
+      />
+
+      {/* Submit Button - Fixed at bottom */}
+      <div className="fixed bottom-0 right-0 left-0 border-t bg-background p-4">
         <div className="container mx-auto max-w-7xl">
-          <AuctionSearchFilters
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            selectedTeams={selectedTeams}
-            onTeamsChange={setSelectedTeams}
-            selectedCotes={selectedCotes}
-            onCotesChange={setSelectedCotes}
-            availableTeams={Array.isArray(availableTeams) ? availableTeams : []}
-          />
-        </div>
-      </div>
-
-      {/* Two-column layout */}
-      <div className="container mx-auto p-6 max-w-7xl">
-        <div className="grid grid-cols-3 gap-6">
-          {/* Left column: Results */}
-          <div className="col-span-2">
-            <Card>
-              <CardContent className="p-0 max-h-[calc(100vh-200px)] overflow-y-auto">
-                <RiderResultsList
-                  riders={ridersData?.items || []}
-                  onAddRider={() => {}}
-                  isLoading={ridersLoading}
-                  renderActionButton={(rider) => (
-                    <BidAmountPopover
-                      trigger={
-                        <Button size="default" variant="outline">
-                          <Plus className="h-4 w-4 mr-1" />
-                          Ajouter
-                        </Button>
-                      }
-                      rider={{
-                        rider_id: rider.rider_id,
-                        rider_nom: rider.rider_nom,
-                        rider_team: rider.rider_team,
-                        cote: rider.cote,
-                      }}
-                      onSubmit={(amount) => handleSubmitBid(amount, rider.rider_id)}
-                      remainingBudget={context?.totals.remaining_budget || 0}
-                      currency={context?.currency || "€"}
-                      step={context?.rules.step || 1}
-                    />
-                  )}
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right column: My Bids - Full height */}
-          <div className="flex flex-col gap-4">
-            <Card className="flex-1">
-              <CardContent className="p-0 h-[calc(100vh-200px)] overflow-y-auto">
-                <MyBidsList
-                  bids={[...(context.roster || []), ...(context.my_bids || [])]}
-                  onUpdateAmount={handleUpdateAmount}
-                  onRemove={handleRemoveBid}
-                  currency={context.currency}
-                  step={context.rules.step}
-                  isUpdating={upsertBidMutation.isPending || removeBidMutation.isPending}
-                />
-              </CardContent>
-            </Card>
-
-            <Button
-              onClick={handleSubmitAll}
-              disabled={!context.validation_status.can_submit || submitAllMutation.isPending}
-              size="lg"
-              className="w-full"
-            >
-              {submitAllMutation.isPending ? (
-                "Validation en cours..."
-              ) : (
-                <>
-                  <CheckCircle2 className="h-5 w-5 mr-2" />
-                  Valider mes enchères
-                </>
-              )}
-            </Button>
-          </div>
+          <Button
+            onClick={handleSubmitAll}
+            disabled={!context.validation_status.can_submit || submitAllMutation.isPending}
+            size="lg"
+            className="w-full"
+          >
+            {submitAllMutation.isPending ? (
+              "Validation en cours..."
+            ) : (
+              <>
+                <CheckCircle2 className="h-5 w-5 mr-2" />
+                Valider mes enchères
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
