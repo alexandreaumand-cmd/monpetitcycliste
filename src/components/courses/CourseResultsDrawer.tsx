@@ -499,15 +499,20 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                         const isExpanded = expandedManagers.has(entry.manager_id);
                         
                         return (
-                          <Collapsible key={entry.manager_id} asChild open={isExpanded}>
+                          <Collapsible 
+                            key={entry.manager_id} 
+                            asChild 
+                            open={isExpanded}
+                            onOpenChange={() => toggleManager(entry.manager_id)}
+                          >
                             <>
-                              <TableRow className="cursor-pointer hover:bg-muted/50">
-                                <TableCell>
-                                  <CollapsibleTrigger asChild>
+                              <CollapsibleTrigger asChild>
+                                <TableRow className="cursor-pointer hover:bg-muted/50 touch-manipulation">
+                                  <TableCell>
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => toggleManager(entry.manager_id)}
+                                      className="pointer-events-none"
                                     >
                                       {isExpanded ? (
                                         <ChevronDown className="h-4 w-4" />
@@ -515,24 +520,24 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                         <ChevronRight className="h-4 w-4" />
                                       )}
                                     </Button>
-                                  </CollapsibleTrigger>
-                                </TableCell>
-                                <TableCell className="font-bold">
-                                  {entry.rank <= 3 && (
-                                    <span className={`text-lg mr-1 ${
-                                      entry.rank === 1 ? "text-yellow-500" :
-                                      entry.rank === 2 ? "text-gray-400" :
-                                      "text-amber-600"
-                                    }`}>
-                                      {entry.rank === 1 ? "🥇" : 
-                                       entry.rank === 2 ? "🥈" : "🥉"}
-                                    </span>
-                                  )}
-                                  #{entry.rank}
-                                </TableCell>
-                                <TableCell className="font-medium">{entry.manager_nom}</TableCell>
-                                <TableCell className="text-right font-bold text-lg">{entry.points}</TableCell>
-                              </TableRow>
+                                  </TableCell>
+                                  <TableCell className="font-bold">
+                                    {entry.rank <= 3 && (
+                                      <span className={`text-lg mr-1 ${
+                                        entry.rank === 1 ? "text-yellow-500" :
+                                        entry.rank === 2 ? "text-gray-400" :
+                                        "text-amber-600"
+                                      }`}>
+                                        {entry.rank === 1 ? "🥇" : 
+                                         entry.rank === 2 ? "🥈" : "🥉"}
+                                      </span>
+                                    )}
+                                    #{entry.rank}
+                                  </TableCell>
+                                  <TableCell className="font-medium">{entry.manager_nom}</TableCell>
+                                  <TableCell className="text-right font-bold text-lg">{entry.points}</TableCell>
+                                </TableRow>
+                              </CollapsibleTrigger>
                               <CollapsibleContent asChild>
                                 <TableRow>
                                   <TableCell colSpan={4} className="bg-muted/30 p-4">
