@@ -4,12 +4,14 @@ import { X } from "lucide-react";
 import { useState, useMemo } from "react";
 
 interface MyBid {
-  bid_id: string;
+  bid_id?: string;
   coureur_id: string;
   rider_nom: string;
   rider_team: string;
   cote: number | null;
   amount: number;
+  is_existing?: boolean;
+  round_number?: number;
 }
 
 interface MyBidsListProps {
@@ -74,55 +76,74 @@ export function MyBidsList({
 
       {sortedBids.map((bid) => (
         <div
-          key={bid.bid_id}
-          className="flex items-center justify-between py-0.5 px-2 hover:bg-muted/50 rounded-md transition-colors"
+          key={bid.bid_id || bid.coureur_id}
+          className={`flex items-center justify-between py-0.5 px-2 rounded-md transition-colors ${
+            bid.is_existing ? 'opacity-60 bg-muted/30' : 'hover:bg-muted/50'
+          }`}
         >
           {/* Rider name */}
-          <span className="font-medium text-xs flex-1 truncate pr-2">{bid.rider_nom}</span>
+          <div className="flex flex-col flex-1 truncate pr-2">
+            <span className={`font-medium text-xs truncate ${bid.is_existing ? 'text-muted-foreground' : ''}`}>
+              {bid.rider_nom}
+            </span>
+            {bid.is_existing && bid.round_number && (
+              <span className="text-[10px] text-muted-foreground">Round {bid.round_number}</span>
+            )}
+          </div>
 
           {/* Amount controls */}
           <div className="flex items-center gap-1">
-            {editingId === bid.bid_id ? (
+            {bid.is_existing ? (
+              // Existing rider: just show amount
+              <span className="min-w-12 h-7 px-2 text-xs font-medium flex items-center justify-center text-muted-foreground">
+                {bid.amount}
+              </span>
+            ) : (
+              // New bid: editable
               <>
-                <Input
-                  type="number"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSaveEdit(bid);
-                    if (e.key === "Escape") handleCancelEdit();
-                  }}
-                  className="w-16 h-7 text-center text-xs"
-                  autoFocus
-                />
+                {editingId === bid.bid_id ? (
+                  <>
+                    <Input
+                      type="number"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSaveEdit(bid);
+                        if (e.key === "Escape") handleCancelEdit();
+                      }}
+                      className="w-16 h-7 text-center text-xs"
+                      autoFocus
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleSaveEdit(bid)}
+                      className="h-7 w-7 p-0 text-xs"
+                    >
+                      ✓
+                    </Button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => handleStartEdit(bid)}
+                    className="min-w-12 h-7 px-2 text-xs font-medium hover:bg-muted rounded-md transition-colors"
+                  >
+                    {bid.amount}
+                  </button>
+                )}
+
+                {/* Remove button - only for new bids */}
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => handleSaveEdit(bid)}
-                  className="h-7 w-7 p-0 text-xs"
+                  onClick={() => bid.bid_id && onRemove(bid.bid_id)}
+                  disabled={isUpdating}
+                  className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                 >
-                  ✓
+                  <X className="h-3 w-3" />
                 </Button>
               </>
-            ) : (
-              <button
-                onClick={() => handleStartEdit(bid)}
-                className="min-w-12 h-7 px-2 text-xs font-medium hover:bg-muted rounded-md transition-colors"
-              >
-                {bid.amount}
-              </button>
             )}
-
-            {/* Remove button */}
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => onRemove(bid.bid_id)}
-              disabled={isUpdating}
-              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-            >
-              <X className="h-3 w-3" />
-            </Button>
           </div>
         </div>
       ))}

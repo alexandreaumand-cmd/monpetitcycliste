@@ -115,15 +115,43 @@ Deno.serve(async (req) => {
 
     const has_validated = submitted_bids.length > 0;
 
-    // Get existing roster for this manager and phase
+    // Get existing roster with rider details
     const { data: existingRoster } = await supabase
       .from('rosters')
-      .select('coureur_id, prix_signature')
+      .select(`
+        coureur_id,
+        prix_signature,
+        coureurs!inner (
+          id,
+          nom,
+          equipe,
+          prix_initial
+        )
+      `)
       .eq('manager_id', manager_id)
       .eq('phase_id', phase_id);
 
     const roster_count = existingRoster?.length || 0;
     const budget_spent = existingRoster?.reduce((sum, r) => sum + Number(r.prix_signature), 0) || 0;
+
+    // Get round numbers from annonces
+    const { data: rosterAnnonces } = await supabase
+      .from('annonces')
+      .select('coureur_id, round_number, winning_amount')
+      .eq('winning_manager_id', manager_id)
+      .in('coureur_id', (existingRoster || []).map(r => r.coureur_id));
+
+    const roundMap = new Map((rosterAnnonces || []).map(a => [a.coureur_id, a.round_number]));
+
+    const enriched_roster = (existingRoster || []).map((r: any) => ({
+      coureur_id: r.coureur_id,
+      rider_nom: r.coureurs?.nom || '',
+      rider_team: r.coureurs?.equipe || '',
+      amount: Number(r.prix_signature),
+      round_number: roundMap.get(r.coureur_id) || null,
+      is_existing: true,
+      cote: r.coureurs?.prix_initial || null,
+    }));
 
     // Get coureur details for bids
     const coureur_ids = [...my_bids, ...submitted_bids].map(b => b.coureur_id);
@@ -188,6 +216,7 @@ Deno.serve(async (req) => {
         starting_budget: phase.budget,
         currency: '€',
         rules: { min_bid: 1, step: 1, max_bids: phase.max_coureurs },
+        roster: enriched_roster,
         my_bids: enriched_my_bids,
         submitted_bids: enriched_submitted_bids,
         totals: { draft_sum, draft_count, remaining_budget, remaining_slots, roster_count, budget_spent },

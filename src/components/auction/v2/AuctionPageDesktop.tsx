@@ -359,7 +359,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
             <Card>
               <CardContent className="p-0 max-h-[600px] overflow-y-auto">
                 <MyBidsList
-                  bids={context.my_bids}
+                  bids={[...(context.roster || []), ...(context.my_bids || [])]}
                   onUpdateAmount={handleUpdateAmount}
                   onRemove={handleRemoveBid}
                   currency={context.currency}
