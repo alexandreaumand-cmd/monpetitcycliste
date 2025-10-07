@@ -63,7 +63,7 @@ export function BidAmountPopover({
 
   const handleSubmit = () => {
     if (amount < minAmount) {
-      setError(`Le montant minimum est ${minAmount}${currency}`);
+      setError(`Le montant minimum est ${minAmount}`);
       return;
     }
 
@@ -86,7 +86,7 @@ export function BidAmountPopover({
             <h4 className="font-medium">{rider.rider_nom}</h4>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span className="font-mono">{rider.rider_team}</span>
-              {rider.cote && <span>• {rider.cote}{currency}</span>}
+              {rider.cote && <span>• {rider.cote}</span>}
             </div>
           </div>
 
@@ -114,9 +114,6 @@ export function BidAmountPopover({
                   min={minAmount}
                   step={step}
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  {currency}
-                </span>
               </div>
 
               <Button
@@ -132,7 +129,7 @@ export function BidAmountPopover({
 
             {rider.cote && (
               <p className="text-xs text-muted-foreground">
-                Min: {minAmount}{currency}
+                Min: {minAmount}
               </p>
             )}
           </div>
@@ -141,12 +138,12 @@ export function BidAmountPopover({
           <div className="text-sm space-y-1 bg-muted p-3 rounded-md">
             <div className="flex justify-between">
               <span>Budget restant</span>
-              <span>{remainingBudget}{currency}</span>
+              <span>{remainingBudget}</span>
             </div>
             <div className="flex justify-between font-medium">
               <span>Après enchère</span>
               <span className={simulatedRemaining < 0 ? 'text-destructive' : ''}>
-                {simulatedRemaining}{currency}
+                {simulatedRemaining}
               </span>
             </div>
           </div>

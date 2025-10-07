@@ -39,8 +39,8 @@ export function AuctionBudgetBanner({
                 </TooltipTrigger>
                 <TooltipContent>
                   <div className="text-sm space-y-1">
-                    <p>Budget initial: {starting_budget}{currency}</p>
-                    <p>Enchères engagées: {draft_sum}{currency}</p>
+                    <p>Budget initial: {starting_budget}</p>
+                    <p>Enchères engagées: {draft_sum}</p>
                   </div>
                 </TooltipContent>
               </Tooltip>
@@ -55,7 +55,7 @@ export function AuctionBudgetBanner({
             )}
             {!isBudgetValid && remaining_budget > 0 && (
               <Badge variant="secondary">
-                Reste: {remaining_budget}{currency}
+                Reste: {remaining_budget}
               </Badge>
             )}
           </div>
@@ -67,16 +67,16 @@ export function AuctionBudgetBanner({
             className={isAlmostFull ? "bg-primary/20" : "bg-muted"}
           />
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>{draft_sum}{currency} utilisés</span>
-            <span>{starting_budget}{currency} total</span>
+            <span>{draft_sum} utilisés</span>
+            <span>{starting_budget} total</span>
           </div>
         </div>
 
         {!isBudgetValid && remaining_budget !== 0 && (
           <p className="text-sm text-orange-500">
             {remaining_budget > 0 
-              ? `Tu dois encore dépenser ${remaining_budget}${currency}` 
-              : `Tu as dépassé de ${Math.abs(remaining_budget)}${currency}`}
+              ? `Tu dois encore dépenser ${remaining_budget}` 
+              : `Tu as dépassé de ${Math.abs(remaining_budget)}`}
           </p>
         )}
       </div>

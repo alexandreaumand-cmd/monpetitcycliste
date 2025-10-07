@@ -326,7 +326,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Montant total:</span>
                     <span className="font-medium">
-                      {context.totals.draft_sum}{context.currency}
+                      {context.totals.draft_sum}
                     </span>
                   </div>
                 </div>

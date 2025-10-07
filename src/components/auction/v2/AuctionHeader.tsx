@@ -108,15 +108,15 @@ export function AuctionHeader({
                   Budget OK
                 </Badge>
               ) : (
-                <Badge variant="secondary">
-                  Reste: {remaining_budget}{currency}
+                <Badge variant="secondary" className="text-base px-3 py-1">
+                  Reste: {remaining_budget}
                 </Badge>
               )}
             </div>
             <Progress value={progressPercentage} className="h-2" />
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{draft_sum}{currency}</span>
-              <span>{starting_budget}{currency}</span>
+              <span>{draft_sum}</span>
+              <span>{starting_budget}</span>
             </div>
           </div>
 

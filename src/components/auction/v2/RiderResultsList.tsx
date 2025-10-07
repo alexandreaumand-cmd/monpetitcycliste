@@ -112,7 +112,7 @@ export function RiderResultsList({ riders, onAddRider, isLoading, renderActionBu
         <TableBody>
           {sortedRiders.map((rider) => (
             <TableRow key={rider.rider_id} className="hover:bg-muted/50">
-              <TableCell className="font-medium py-2">
+              <TableCell className="font-medium py-1.5">
                 <div className="flex items-center gap-2">
                   <span>{rider.rider_nom}</span>
                   {rider.rider_team && (
@@ -122,10 +122,10 @@ export function RiderResultsList({ riders, onAddRider, isLoading, renderActionBu
                   )}
                 </div>
               </TableCell>
-              <TableCell className="text-right py-2">
-                {rider.cote !== null ? `${rider.cote}€` : "-"}
+              <TableCell className="text-right py-1.5">
+                {rider.cote !== null ? `${rider.cote}` : "-"}
               </TableCell>
-              <TableCell className="text-center py-2">
+              <TableCell className="text-center py-1.5">
                 {renderActionButton ? (
                   renderActionButton(rider)
                 ) : (

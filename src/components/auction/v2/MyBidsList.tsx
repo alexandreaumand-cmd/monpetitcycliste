@@ -78,7 +78,7 @@ export function MyBidsList({
       {bids.map((bid) => (
         <div
           key={bid.bid_id}
-          className="flex items-center justify-between py-2 px-3 hover:bg-muted/50 rounded-md transition-colors"
+          className="flex items-center justify-between py-1.5 px-3 hover:bg-muted/50 rounded-md transition-colors"
         >
           {/* Rider name */}
           <span className="font-medium text-sm flex-1">{bid.rider_nom}</span>
@@ -123,7 +123,7 @@ export function MyBidsList({
                   onClick={() => handleStartEdit(bid)}
                   className="min-w-16 h-8 px-2 text-sm font-medium hover:bg-muted rounded-md transition-colors"
                 >
-                  {bid.amount}{currency}
+                  {bid.amount}
                 </button>
 
                 <Button

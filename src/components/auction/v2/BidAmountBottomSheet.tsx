@@ -66,7 +66,7 @@ export function BidAmountBottomSheet({
   const handleSubmit = () => {
     // Validate
     if (amount < minAmount) {
-      setError(`Le montant minimum est ${minAmount}${currency}`);
+      setError(`Le montant minimum est ${minAmount}`);
       return;
     }
 
@@ -84,7 +84,7 @@ export function BidAmountBottomSheet({
       open={open} 
       onOpenChange={onClose}
       title={rider.rider_nom}
-      description={`${rider.rider_team}${rider.cote ? ` • Côte: ${rider.cote}${currency}` : ''}`}
+      description={`${rider.rider_team}${rider.cote ? ` • Côte: ${rider.cote}` : ''}`}
     >
       <div className="space-y-6">
 
@@ -114,9 +114,6 @@ export function BidAmountBottomSheet({
                 min={minAmount}
                 step={step}
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">
-                {currency}
-              </span>
             </div>
 
             <Button
@@ -132,7 +129,7 @@ export function BidAmountBottomSheet({
 
           {rider.cote && (
             <p className="text-sm text-muted-foreground">
-              Montant minimum: {minAmount}{currency}
+              Montant minimum: {minAmount}
             </p>
           )}
         </div>
@@ -141,12 +138,12 @@ export function BidAmountBottomSheet({
         <div className="rounded-lg bg-muted p-4 space-y-1">
           <div className="flex justify-between text-sm">
             <span>Budget restant actuel</span>
-            <span className="font-medium">{remainingBudget}{currency}</span>
+            <span className="font-medium">{remainingBudget}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span>Après cette enchère</span>
             <span className={`font-medium ${simulatedRemaining < 0 ? 'text-destructive' : 'text-foreground'}`}>
-              {simulatedRemaining}{currency}
+              {simulatedRemaining}
             </span>
           </div>
         </div>

@@ -36,7 +36,7 @@ export function ValidationSummaryCard({
       label: "Budget entièrement utilisé",
       status: validation_status.budget_fully_used,
       critical: true,
-      detail: remaining_budget !== 0 ? `Reste: ${remaining_budget}${currency}` : undefined,
+      detail: remaining_budget !== 0 ? `Reste: ${remaining_budget}` : undefined,
     },
     {
       label: "Tous les montants sont valides",

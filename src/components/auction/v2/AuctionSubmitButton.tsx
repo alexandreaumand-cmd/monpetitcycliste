@@ -91,7 +91,7 @@ export function AuctionSubmitButton({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Montant total:</span>
-                    <span className="font-medium">{draft_sum}{currency}</span>
+                    <span className="font-medium">{draft_sum}</span>
                   </div>
                 </div>
                 <p className="text-sm">

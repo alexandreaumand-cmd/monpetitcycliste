@@ -1,6 +1,5 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Search, X } from "lucide-react";
 
@@ -23,11 +22,11 @@ export function AuctionSearchFilters({
   onCotesChange,
   availableTeams,
 }: AuctionSearchFiltersProps) {
-  const handleTeamChange = (value: string) => {
-    if (value === "all") {
-      onTeamsChange([]);
+  const toggleTeam = (team: string) => {
+    if (selectedTeams.includes(team)) {
+      onTeamsChange(selectedTeams.filter(t => t !== team));
     } else {
-      onTeamsChange([value]);
+      onTeamsChange([...selectedTeams, team]);
     }
   };
 
@@ -43,7 +42,7 @@ export function AuctionSearchFilters({
 
   const getCoteLabel = (cote: number) => {
     if (cote === 101) return "100+";
-    return `${cote}€`;
+    return `${cote}`;
   };
 
   return (
@@ -70,23 +69,20 @@ export function AuctionSearchFilters({
       </div>
 
       {/* Team Filter */}
-      <div>
-        <Select
-          value={selectedTeams.length === 0 ? "all" : selectedTeams[0]}
-          onValueChange={handleTeamChange}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Toutes les équipes" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toutes les équipes</SelectItem>
-            {availableTeams.map((team) => (
-              <SelectItem key={team.short} value={team.short}>
-                {team.full}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="space-y-2">
+        <div className="text-xs font-medium text-muted-foreground">Filtrer par équipe</div>
+        <div className="flex flex-wrap gap-1.5">
+          {availableTeams.map((team) => (
+            <Badge
+              key={team.short}
+              variant={selectedTeams.includes(team.short) ? "default" : "outline"}
+              className="cursor-pointer hover:bg-primary/10 transition-colors text-xs"
+              onClick={() => toggleTeam(team.short)}
+            >
+              {team.short}
+            </Badge>
+          ))}
+        </div>
       </div>
 
       {/* Price Filter */}
