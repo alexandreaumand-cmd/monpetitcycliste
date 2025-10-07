@@ -1,12 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AuctionBudgetBanner } from "./AuctionBudgetBanner";
+import { AuctionHeader } from "./AuctionHeader";
 import { AuctionSearchFilters } from "./AuctionSearchFilters";
 import { RiderResultsList } from "./RiderResultsList";
 import { BidAmountBottomSheet } from "./BidAmountBottomSheet";
 import { MyBidsList } from "./MyBidsList";
-import { ValidationSummaryCard } from "./ValidationSummaryCard";
 import { AuctionSubmitButton } from "./AuctionSubmitButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
@@ -198,29 +197,20 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-20">
-      {/* Budget Banner - Sticky */}
-      <AuctionBudgetBanner
+      {/* Budget + Validation Header */}
+      <AuctionHeader
         starting_budget={context.starting_budget}
         draft_sum={context.totals.draft_sum}
         remaining_budget={context.totals.remaining_budget}
         currency={context.currency}
         validation_status={context.validation_status}
+        draft_count={context.totals.draft_count}
+        max_slots={context.rules.max_bids}
       />
-
-      {/* Validation Summary */}
-      <div className="p-4">
-        <ValidationSummaryCard
-          validation_status={context.validation_status}
-          draft_count={context.totals.draft_count}
-          max_slots={context.rules.max_bids}
-          remaining_budget={context.totals.remaining_budget}
-          currency={context.currency}
-        />
-      </div>
 
       {/* Tabs: Mes Enchères / Recherche */}
       <Tabs defaultValue="search" className="flex-1 flex flex-col">
-        <TabsList className="w-full grid grid-cols-2 mx-4" style={{ width: "calc(100% - 2rem)" }}>
+        <TabsList className="w-full grid grid-cols-2 mx-4 mt-4" style={{ width: "calc(100% - 2rem)" }}>
           <TabsTrigger value="my-bids">
             Mes Enchères ({context.totals.draft_count})
           </TabsTrigger>

@@ -1,10 +1,7 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Plus, Minus, X } from "lucide-react";
 import { useState } from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MyBid {
   bid_id: string;
@@ -32,7 +29,6 @@ export function MyBidsList({
   step = 1,
   isUpdating,
 }: MyBidsListProps) {
-  const isMobile = useIsMobile();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
@@ -74,97 +70,86 @@ export function MyBidsList({
   }
 
   return (
-    <div className={`space-y-2 ${isMobile ? 'p-3' : 'p-4'}`}>
+    <div className="space-y-1 p-4">
       <h3 className="text-sm font-medium text-muted-foreground mb-3">
         Mes enchères ({bids.length})
       </h3>
 
       {bids.map((bid) => (
-        <Card key={bid.bid_id} className="p-3">
-          <div className="flex items-center gap-2">
-            {/* Team badge */}
-            <Badge variant="outline" className="shrink-0 font-mono text-xs">
-              {bid.rider_team}
-            </Badge>
+        <div
+          key={bid.bid_id}
+          className="flex items-center justify-between py-2 px-3 hover:bg-muted/50 rounded-md transition-colors"
+        >
+          {/* Rider name */}
+          <span className="font-medium text-sm flex-1">{bid.rider_nom}</span>
 
-            {/* Rider info */}
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate text-sm">{bid.rider_nom}</p>
-              {bid.cote && (
-                <p className="text-xs text-muted-foreground">
-                  Min: {bid.cote}{currency}
-                </p>
-              )}
-            </div>
+          {/* Amount controls */}
+          <div className="flex items-center gap-1">
+            {editingId === bid.bid_id ? (
+              <>
+                <Input
+                  type="number"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveEdit(bid);
+                    if (e.key === "Escape") handleCancelEdit();
+                  }}
+                  className="w-20 h-8 text-center text-sm"
+                  autoFocus
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleSaveEdit(bid)}
+                  className="h-8 w-8 p-0"
+                >
+                  ✓
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleQuickAdjust(bid, -step)}
+                  disabled={isUpdating || bid.amount <= (bid.cote || 1)}
+                  className="h-8 w-8 p-0"
+                >
+                  <Minus className="h-3 w-3" />
+                </Button>
 
-            {/* Amount controls */}
-            <div className="flex items-center gap-1 shrink-0">
-              {editingId === bid.bid_id ? (
-                <>
-                  <Input
-                    type="number"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSaveEdit(bid);
-                      if (e.key === "Escape") handleCancelEdit();
-                    }}
-                    className="w-20 h-8 text-center text-sm"
-                    autoFocus
-                  />
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleSaveEdit(bid)}
-                    className="h-8 w-8 p-0"
-                  >
-                    ✓
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleQuickAdjust(bid, -step)}
-                    disabled={isUpdating || bid.amount <= (bid.cote || 1)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Minus className="h-3 w-3" />
-                  </Button>
+                <button
+                  onClick={() => handleStartEdit(bid)}
+                  className="min-w-16 h-8 px-2 text-sm font-medium hover:bg-muted rounded-md transition-colors"
+                >
+                  {bid.amount}{currency}
+                </button>
 
-                  <button
-                    onClick={() => handleStartEdit(bid)}
-                    className="min-w-16 h-8 px-2 text-sm font-medium hover:bg-muted rounded-md transition-colors"
-                  >
-                    {bid.amount}{currency}
-                  </button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleQuickAdjust(bid, step)}
+                  disabled={isUpdating}
+                  className="h-8 w-8 p-0"
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </>
+            )}
 
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleQuickAdjust(bid, step)}
-                    disabled={isUpdating}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </>
-              )}
-
-              {/* Remove button */}
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onRemove(bid.bid_id)}
-                disabled={isUpdating}
-                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            {/* Remove button */}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onRemove(bid.bid_id)}
+              disabled={isUpdating}
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-        </Card>
+        </div>
       ))}
     </div>
   );

@@ -1,14 +1,13 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AuctionBudgetBanner } from "./AuctionBudgetBanner";
+import { AuctionHeader } from "./AuctionHeader";
 import { AuctionSearchFilters } from "./AuctionSearchFilters";
 import { RiderResultsList } from "./RiderResultsList";
 import { BidAmountPopover } from "./BidAmountPopover";
 import { MyBidsList } from "./MyBidsList";
-import { ValidationSummaryCard } from "./ValidationSummaryCard";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
@@ -194,125 +193,81 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      {/* Budget Banner */}
-      <div className="mb-6">
-        <AuctionBudgetBanner
-          starting_budget={context.starting_budget}
-          draft_sum={context.totals.draft_sum}
-          remaining_budget={context.totals.remaining_budget}
-          currency={context.currency}
-          validation_status={context.validation_status}
-        />
-      </div>
+    <div className="min-h-screen">
+      {/* Budget + Validation Header */}
+      <AuctionHeader
+        starting_budget={context.starting_budget}
+        draft_sum={context.totals.draft_sum}
+        remaining_budget={context.totals.remaining_budget}
+        currency={context.currency}
+        validation_status={context.validation_status}
+        draft_count={context.totals.draft_count}
+        max_slots={context.rules.max_bids}
+      />
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-3 gap-6">
-        {/* Left column: Search & Results */}
-        <div className="col-span-2 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Rechercher des coureurs</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <AuctionSearchFilters
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                selectedTeams={selectedTeams}
-                onTeamsChange={setSelectedTeams}
-                coteRange={coteRange}
-                onCoteRangeChange={setCoteRange}
-                availableTeams={availableTeams}
-              />
-            </CardContent>
-          </Card>
+      <div className="container mx-auto p-6 max-w-7xl">
+        <div className="grid grid-cols-3 gap-6">
+          {/* Left column: Search & Results */}
+          <div className="col-span-2 space-y-4">
+            <Card>
+              <CardContent className="p-0">
+                <AuctionSearchFilters
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  selectedTeams={selectedTeams}
+                  onTeamsChange={setSelectedTeams}
+                  coteRange={coteRange}
+                  onCoteRangeChange={setCoteRange}
+                  availableTeams={availableTeams}
+                />
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Résultats</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 max-h-[600px] overflow-y-auto">
-              {ridersData?.items.map((rider: any) => (
-                <BidAmountPopover
-                  key={rider.rider_id}
-                  trigger={
-                    <div className="cursor-pointer">
-                      <div className="p-3 hover:bg-muted/50 transition-colors border-b last:border-b-0">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className="font-mono text-xs bg-muted px-2 py-1 rounded">
-                              {rider.rider_team}
-                            </span>
-                            <div>
-                              <p className="font-medium">{rider.rider_nom}</p>
-                              {rider.cote && (
-                                <p className="text-sm text-muted-foreground">
-                                  Côte: {rider.cote}{context.currency}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  }
-                  rider={rider}
-                  onSubmit={(amount) => handleSubmitBid(amount, rider.rider_id)}
-                  remainingBudget={context.totals.remaining_budget}
+            <Card>
+              <CardContent className="p-0 max-h-[600px] overflow-y-auto">
+                <RiderResultsList
+                  riders={ridersData?.items || []}
+                  onAddRider={(rider) => {
+                    // Open popover for this rider
+                  }}
+                  isLoading={ridersLoading}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right column: My Bids */}
+          <div className="space-y-4">
+            <Card>
+              <CardContent className="p-0 max-h-[600px] overflow-y-auto">
+                <MyBidsList
+                  bids={context.my_bids}
+                  onUpdateAmount={handleUpdateAmount}
+                  onRemove={handleRemoveBid}
                   currency={context.currency}
                   step={context.rules.step}
+                  isUpdating={upsertBidMutation.isPending || removeBidMutation.isPending}
                 />
-              ))}
-              {ridersLoading && (
-                <div className="p-8 text-center">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                </div>
+              </CardContent>
+            </Card>
+
+            <Button
+              onClick={handleSubmitAll}
+              disabled={!context.validation_status.can_submit || submitAllMutation.isPending}
+              size="lg"
+              className="w-full"
+            >
+              {submitAllMutation.isPending ? (
+                "Validation en cours..."
+              ) : (
+                <>
+                  <CheckCircle2 className="h-5 w-5 mr-2" />
+                  Valider mes enchères
+                </>
               )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right column: My Bids & Validation */}
-        <div className="space-y-4">
-          <ValidationSummaryCard
-            validation_status={context.validation_status}
-            draft_count={context.totals.draft_count}
-            max_slots={context.rules.max_bids}
-            remaining_budget={context.totals.remaining_budget}
-            currency={context.currency}
-          />
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Mes Enchères ({context.totals.draft_count})</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 max-h-[500px] overflow-y-auto">
-              <MyBidsList
-                bids={context.my_bids}
-                onUpdateAmount={handleUpdateAmount}
-                onRemove={handleRemoveBid}
-                currency={context.currency}
-                step={context.rules.step}
-                isUpdating={upsertBidMutation.isPending || removeBidMutation.isPending}
-              />
-            </CardContent>
-          </Card>
-
-          <Button
-            onClick={handleSubmitAll}
-            disabled={!context.validation_status.can_submit || submitAllMutation.isPending}
-            size="lg"
-            className="w-full"
-          >
-            {submitAllMutation.isPending ? (
-              "Validation en cours..."
-            ) : (
-              <>
-                <CheckCircle2 className="h-5 w-5 mr-2" />
-                Valider mes enchères
-              </>
-            )}
-          </Button>
+            </Button>
+          </div>
         </div>
       </div>
 

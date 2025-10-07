@@ -1,14 +1,7 @@
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { 
-  Collapsible, 
-  CollapsibleContent, 
-  CollapsibleTrigger 
-} from "@/components/ui/collapsible";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, X } from "lucide-react";
 
 interface AuctionSearchFiltersProps {
   searchQuery: string;
@@ -29,20 +22,46 @@ export function AuctionSearchFilters({
   onCoteRangeChange,
   availableTeams,
 }: AuctionSearchFiltersProps) {
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-
-  const toggleTeam = (team: string) => {
-    if (selectedTeams.includes(team)) {
-      onTeamsChange(selectedTeams.filter(t => t !== team));
+  const handleTeamChange = (value: string) => {
+    if (value === "all") {
+      onTeamsChange([]);
     } else {
-      onTeamsChange([...selectedTeams, team]);
+      onTeamsChange([value]);
     }
   };
 
-  const clearTeams = () => onTeamsChange([]);
+  const handleCoteChange = (value: string) => {
+    switch (value) {
+      case "all":
+        onCoteRangeChange([0, 500]);
+        break;
+      case "0-50":
+        onCoteRangeChange([0, 50]);
+        break;
+      case "50-100":
+        onCoteRangeChange([50, 100]);
+        break;
+      case "100-150":
+        onCoteRangeChange([100, 150]);
+        break;
+      case "150-200":
+        onCoteRangeChange([150, 200]);
+        break;
+      case "200+":
+        onCoteRangeChange([200, 500]);
+        break;
+    }
+  };
 
-  const setCotePreset = (min: number, max: number) => {
-    onCoteRangeChange([min, max]);
+  const getCoteValue = () => {
+    const [min, max] = coteRange;
+    if (min === 0 && max === 500) return "all";
+    if (min === 0 && max === 50) return "0-50";
+    if (min === 50 && max === 100) return "50-100";
+    if (min === 100 && max === 150) return "100-150";
+    if (min === 150 && max === 200) return "150-200";
+    if (min === 200 && max === 500) return "200+";
+    return "all";
   };
 
   return (
@@ -68,106 +87,39 @@ export function AuctionSearchFilters({
         )}
       </div>
 
-      {/* Filters toggle */}
-      <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-        <CollapsibleTrigger asChild>
-          <Button variant="outline" size="sm" className="w-full">
-            <SlidersHorizontal className="h-4 w-4 mr-2" />
-            Filtres avancés
-            {(selectedTeams.length > 0 || coteRange[0] > 0 || coteRange[1] < 500) && (
-              <Badge variant="secondary" className="ml-2">
-                {selectedTeams.length > 0 ? selectedTeams.length : ""}
-                {selectedTeams.length > 0 && (coteRange[0] > 0 || coteRange[1] < 500) ? " + " : ""}
-                {(coteRange[0] > 0 || coteRange[1] < 500) ? "côte" : ""}
-              </Badge>
-            )}
-          </Button>
-        </CollapsibleTrigger>
+      {/* Filters */}
+      <div className="flex gap-2">
+        <Select
+          value={selectedTeams.length === 0 ? "all" : selectedTeams[0]}
+          onValueChange={handleTeamChange}
+        >
+          <SelectTrigger className="flex-1">
+            <SelectValue placeholder="Toutes les équipes" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toutes les équipes</SelectItem>
+            {availableTeams.map((team) => (
+              <SelectItem key={team} value={team}>
+                {team}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        <CollapsibleContent className="space-y-4 pt-4">
-          {/* Team filter */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Équipes</label>
-              {selectedTeams.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearTeams}
-                  className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Effacer
-                </Button>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {availableTeams.slice(0, 12).map((team) => (
-                <Badge
-                  key={team}
-                  variant={selectedTeams.includes(team) ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() => toggleTeam(team)}
-                >
-                  {team}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          {/* Cote filter */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Côte (prix initial)</label>
-            
-            {/* Quick presets */}
-            <div className="flex gap-2 flex-wrap">
-              <Badge
-                variant="outline"
-                className="cursor-pointer"
-                onClick={() => setCotePreset(0, 50)}
-              >
-                ≤ 50€
-              </Badge>
-              <Badge
-                variant="outline"
-                className="cursor-pointer"
-                onClick={() => setCotePreset(50, 100)}
-              >
-                50-100€
-              </Badge>
-              <Badge
-                variant="outline"
-                className="cursor-pointer"
-                onClick={() => setCotePreset(100, 500)}
-              >
-                ≥ 100€
-              </Badge>
-              <Badge
-                variant="outline"
-                className="cursor-pointer"
-                onClick={() => setCotePreset(0, 500)}
-              >
-                Tous
-              </Badge>
-            </div>
-
-            {/* Range slider */}
-            <div className="space-y-2 px-2">
-              <Slider
-                value={coteRange}
-                onValueChange={(value) => onCoteRangeChange(value as [number, number])}
-                min={0}
-                max={500}
-                step={5}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{coteRange[0]}€</span>
-                <span>{coteRange[1]}€</span>
-              </div>
-            </div>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+        <Select value={getCoteValue()} onValueChange={handleCoteChange}>
+          <SelectTrigger className="flex-1">
+            <SelectValue placeholder="Toutes les côtes" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toutes les côtes</SelectItem>
+            <SelectItem value="0-50">0 - 50€</SelectItem>
+            <SelectItem value="50-100">50 - 100€</SelectItem>
+            <SelectItem value="100-150">100 - 150€</SelectItem>
+            <SelectItem value="150-200">150 - 200€</SelectItem>
+            <SelectItem value="200+">200€+</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 }
