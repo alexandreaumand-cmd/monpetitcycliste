@@ -332,12 +332,12 @@ export const MyTeamDesktop = () => {
         
         {/* Manager selector - mobile */}
         {managers.length > 0 && (
-          <Select value={selectedManagerId || ''} onValueChange={setSelectedManagerId}>
+          <Select value={selectedManagerId || '__MY_TEAM__'} onValueChange={(v) => setSelectedManagerId(v === '__MY_TEAM__' ? null : v)}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Mon équipe" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Mon équipe</SelectItem>
+              <SelectItem value="__MY_TEAM__">Mon équipe</SelectItem>
               {managers.map((manager) => (
                 <SelectItem key={manager.id} value={manager.id}>
                   {manager.nom}
@@ -416,12 +416,12 @@ export const MyTeamDesktop = () => {
           {managers.length > 0 && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Manager:</span>
-              <Select value={selectedManagerId || ''} onValueChange={setSelectedManagerId}>
+              <Select value={selectedManagerId || '__MY_TEAM__'} onValueChange={(v) => setSelectedManagerId(v === '__MY_TEAM__' ? null : v)}>
                 <SelectTrigger className="w-[220px]">
                   <SelectValue placeholder="Mon équipe" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Mon équipe</SelectItem>
+                  <SelectItem value="__MY_TEAM__">Mon équipe</SelectItem>
                   {managers.map((manager) => (
                     <SelectItem key={manager.id} value={manager.id}>
                       {manager.nom}

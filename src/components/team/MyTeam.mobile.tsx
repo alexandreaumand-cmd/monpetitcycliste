@@ -259,12 +259,12 @@ export const MyTeamMobile = () => {
       {managers.length > 0 && (
         <div>
           <label className="text-sm font-medium mb-2 block">Manager</label>
-          <Select value={selectedManagerId || ""} onValueChange={setSelectedManagerId}>
+          <Select value={selectedManagerId || '__MY_TEAM__'} onValueChange={(v) => setSelectedManagerId(v === '__MY_TEAM__' ? null : v)}>
             <SelectTrigger>
               <SelectValue placeholder="Mon équipe" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Mon équipe</SelectItem>
+              <SelectItem value="__MY_TEAM__">Mon équipe</SelectItem>
               {managers.map((manager) => (
                 <SelectItem key={manager.id} value={manager.id}>
                   {manager.nom}
