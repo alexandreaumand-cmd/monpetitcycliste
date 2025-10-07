@@ -48,28 +48,27 @@ export function AuctionSubmitButton({
 
   return (
     <>
-      <div className="sticky bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t shadow-lg z-20">
         <Button
           onClick={handleClick}
           disabled={!canSubmit || isSubmitting}
-          size="lg"
-          className="w-full"
+          className="w-full h-10"
         >
           {isSubmitting ? (
             "Validation en cours..."
           ) : canSubmit ? (
             <>
-              <CheckCircle2 className="h-5 w-5 mr-2" />
+              <CheckCircle2 className="h-4 w-4 mr-2" />
               Valider mes enchères
             </>
           ) : (
-            "Complète tes enchères pour valider"
+            "Complète tes enchères"
           )}
         </Button>
 
         {!canSubmit && draft_count > 0 && (
-          <p className="text-xs text-muted-foreground text-center mt-2">
-            Vérifie les critères de validation ci-dessus
+          <p className="text-[10px] text-muted-foreground text-center mt-1.5">
+            Vérifie les critères ci-dessus
           </p>
         )}
       </div>

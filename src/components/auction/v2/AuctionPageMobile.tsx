@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { AuctionHeader } from "./AuctionHeader";
-import { AuctionSearchFilters } from "./AuctionSearchFilters";
+import { AuctionHeaderMobile } from "./AuctionHeaderMobile";
+import { FiltersDrawer } from "./FiltersDrawer";
 import { RiderResultsList } from "./RiderResultsList";
 import { BidAmountBottomSheet } from "./BidAmountBottomSheet";
 import { MyBidsList } from "./MyBidsList";
@@ -41,7 +41,8 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
       if (error) throw error;
       return data;
     },
-    refetchInterval: 5000, // Refresh every 5s
+    refetchInterval: 10000, // Refresh every 10s (optimized)
+    refetchOnWindowFocus: false,
   });
 
   // Get available teams for filter
@@ -212,9 +213,9 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background pb-20">
-      {/* Budget + Validation Header */}
-      <AuctionHeader
+    <div className="flex flex-col min-h-screen bg-background pb-16">
+      {/* Compact Header */}
+      <AuctionHeaderMobile
         starting_budget={context.starting_budget}
         draft_sum={context.totals.draft_sum}
         remaining_budget={context.totals.remaining_budget}
@@ -222,18 +223,23 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
         validation_status={context.validation_status}
         draft_count={context.totals.draft_count}
         max_slots={context.rules.max_bids}
+        deadline_at={context.deadline_at}
+        validated_count={context.validated_count}
+        total_managers={context.total_managers}
       />
 
       {/* Tabs: Mes Enchères / Recherche */}
       <Tabs defaultValue="search" className="flex-1 flex flex-col">
-        <TabsList className="w-full grid grid-cols-2 mx-4 mt-4" style={{ width: "calc(100% - 2rem)" }}>
-          <TabsTrigger value="my-bids">
-            Mes Enchères ({context.totals.draft_count})
+        <TabsList className="mx-3 mt-2 grid grid-cols-2 h-9" style={{ width: "calc(100% - 1.5rem)" }}>
+          <TabsTrigger value="my-bids" className="text-xs">
+            📝 Enchères ({context.totals.draft_count})
           </TabsTrigger>
-          <TabsTrigger value="search">Rechercher</TabsTrigger>
+          <TabsTrigger value="search" className="text-xs">
+            🔎 Chercher
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="my-bids" className="flex-1 mt-0">
+        <TabsContent value="my-bids" className="flex-1 mt-0 pt-2">
           <MyBidsList
             bids={context.my_bids}
             onUpdateAmount={handleUpdateAmount}
@@ -244,17 +250,7 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
           />
         </TabsContent>
 
-        <TabsContent value="search" className="flex-1 mt-0">
-          <AuctionSearchFilters
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            selectedTeams={selectedTeams}
-            onTeamsChange={setSelectedTeams}
-            selectedCotes={selectedCotes}
-            onCotesChange={setSelectedCotes}
-            availableTeams={availableTeams}
-          />
-
+        <TabsContent value="search" className="flex-1 mt-0 pt-2">
           <RiderResultsList
             riders={ridersData?.items || []}
             onAddRider={handleAddRider}
@@ -262,6 +258,17 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
           />
         </TabsContent>
       </Tabs>
+
+      {/* Filters FAB */}
+      <FiltersDrawer
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedTeams={selectedTeams}
+        onTeamsChange={setSelectedTeams}
+        selectedCotes={selectedCotes}
+        onCotesChange={setSelectedCotes}
+        availableTeams={availableTeams}
+      />
 
       {/* Bottom Sheet */}
       <BidAmountBottomSheet

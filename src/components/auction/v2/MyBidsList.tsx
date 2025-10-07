@@ -67,8 +67,8 @@ export function MyBidsList({
   }
 
   return (
-    <div className="space-y-0.5 p-4">
-      <h3 className="text-xs font-medium text-muted-foreground mb-2">
+    <div className="space-y-0.5 px-3">
+      <h3 className="text-xs font-medium text-muted-foreground mb-1.5">
         Mes enchères ({bids.length})
       </h3>
 
