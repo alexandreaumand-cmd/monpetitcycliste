@@ -40,6 +40,18 @@ export const PointsComputeManager = () => {
       return;
     }
 
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      "⚠️ ATTENTION : Cette action va recalculer TOUS les points pour cette phase.\n\n" +
+      "Cela va :\n" +
+      "• Recalculer les points de toutes les courses de la phase\n" +
+      "• Mettre à jour tous les totaux managers\n" +
+      "• Peut prendre plusieurs secondes\n\n" +
+      "Êtes-vous sûr de vouloir continuer ?"
+    );
+
+    if (!confirmed) return;
+
     setComputing(true);
     setResult(null);
 
@@ -52,8 +64,8 @@ export const PointsComputeManager = () => {
 
       setResult(data);
       toast({
-        title: "✅ Calcul terminé",
-        description: `${data.courses_processed} courses traitées, ${data.total_rows} points calculés`
+        title: "✅ Calcul terminé avec succès",
+        description: `${data.courses_processed} courses traitées → ${data.total_rows} points calculés pour tous les managers`
       });
     } catch (error: any) {
       console.error('Error computing points:', error);
@@ -101,7 +113,7 @@ export const PointsComputeManager = () => {
           Recalcul des points
         </CardTitle>
         <CardDescription>
-          Recalculer tous les points pour une phase complète (toutes les courses)
+          ⚠️ Recalcule TOUS les points pour une phase complète (toutes les courses). Cette action reconstruit complètement le ledger de points.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
