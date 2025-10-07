@@ -30,6 +30,7 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
   const [selectedRider, setSelectedRider] = useState<any>(null);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);
+  const [hideLiveAnnouncements, setHideLiveAnnouncements] = useState(false);
   const [debouncedSearch] = useDebounce(searchQuery, 250);
 
   // Get auction context
@@ -73,8 +74,15 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
     }
   }, [context?.validation_status?.has_validated, context?.auction_id]);
 
+  // Reset hideLiveAnnouncements when a new open auction appears
+  useEffect(() => {
+    if (context?.auction?.statut === 'open') {
+      setHideLiveAnnouncements(false);
+    }
+  }, [context?.auction?.statut]);
+
   // Check if we should show live announcements screen
-  const shouldShowLiveScreen = context?.auction?.statut === 'closed' && context?.auction_id;
+  const shouldShowLiveScreen = context?.auction?.statut === 'closed' && context?.auction_id && !hideLiveAnnouncements;
 
   // Fetch available teams from database
   const { data: teamsData } = useQuery({
@@ -239,12 +247,13 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
   }
 
   // Show live announcements for last closed auction if no active auction
-  if (!context && lastClosedAuction) {
+  if (!context && lastClosedAuction && !hideLiveAnnouncements) {
     return (
       <AuctionLiveAnnouncements
         auctionId={lastClosedAuction.id}
         managerId={managerId}
         phaseId={phaseId}
+        onBack={() => setHideLiveAnnouncements(true)}
       />
     );
   }
@@ -269,6 +278,7 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
         auctionId={context.auction_id}
         managerId={managerId}
         phaseId={phaseId}
+        onBack={() => setHideLiveAnnouncements(true)}
       />
     );
   }

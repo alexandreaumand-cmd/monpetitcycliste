@@ -39,6 +39,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);
+  const [hideLiveAnnouncements, setHideLiveAnnouncements] = useState(false);
   const [debouncedSearch] = useDebounce(searchQuery, 250);
 
   // Get auction context
@@ -81,8 +82,15 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
     }
   }, [context?.validation_status?.has_validated, context?.auction_id]);
 
+  // Reset hideLiveAnnouncements when a new open auction appears
+  useEffect(() => {
+    if (context?.auction?.statut === 'open') {
+      setHideLiveAnnouncements(false);
+    }
+  }, [context?.auction?.statut]);
+
   // Check if we should show live announcements screen
-  const shouldShowLiveScreen = context?.auction?.statut === 'closed' && context?.auction_id;
+  const shouldShowLiveScreen = context?.auction?.statut === 'closed' && context?.auction_id && !hideLiveAnnouncements;
 
   // Get available teams
   const { data: availableTeams = [] } = useQuery({
@@ -231,13 +239,14 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
   }
 
   // Show live announcements for last closed auction if no active auction
-  if (!context && lastClosedAuction) {
+  if (!context && lastClosedAuction && !hideLiveAnnouncements) {
     return (
       <div className="container max-w-6xl mx-auto p-6">
         <AuctionLiveAnnouncements
           auctionId={lastClosedAuction.id}
           managerId={managerId}
           phaseId={phaseId}
+          onBack={() => setHideLiveAnnouncements(true)}
         />
       </div>
     );
@@ -266,6 +275,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
           auctionId={context.auction_id}
           managerId={managerId}
           phaseId={phaseId}
+          onBack={() => setHideLiveAnnouncements(true)}
         />
       </div>
     );

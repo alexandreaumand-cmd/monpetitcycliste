@@ -12,12 +12,14 @@ interface AuctionLiveAnnouncementsProps {
   auctionId: string;
   managerId: string;
   phaseId: string;
+  onBack?: () => void;
 }
 
 export function AuctionLiveAnnouncements({
   auctionId,
   managerId,
   phaseId,
+  onBack,
 }: AuctionLiveAnnouncementsProps) {
   const [liveAnnonces, setLiveAnnonces] = useState<any[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -245,6 +247,7 @@ export function AuctionLiveAnnouncements({
                   onClick={() => {
                     queryClient.invalidateQueries({ queryKey: ['auction-context'] });
                     queryClient.invalidateQueries({ queryKey: ['my-active-phases'] });
+                    onBack?.();
                   }}
                   className="mx-auto"
                 >
