@@ -12,7 +12,6 @@ import { ResultsPage } from "./ResultsPage";
 import Rankings from "./Rankings";
 import { AdminPage } from "./AdminPage";
 import Startlist from "./Startlist";
-import { Teams } from "./Teams";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -79,7 +78,6 @@ const Dashboard = () => {
           <Route path="courses" element={<UpcomingCourses />} />
           <Route path="resultats" element={<ResultsPage />} />
           <Route path="classement" element={<Rankings />} />
-          <Route path="equipes" element={<Teams />} />
           <Route path="startlist" element={<Startlist />} />
           {isAdmin && <Route path="admin/*" element={<AdminPage />} />}
         </Routes>
@@ -100,7 +98,6 @@ const Dashboard = () => {
           <Route path="courses" element={<UpcomingCourses />} />
           <Route path="resultats" element={<ResultsPage />} />
           <Route path="classement" element={<Rankings />} />
-          <Route path="equipes" element={<Teams />} />
           <Route path="startlist" element={<Startlist />} />
           {isAdmin && <Route path="admin/*" element={<AdminPage />} />}
         </Routes>
