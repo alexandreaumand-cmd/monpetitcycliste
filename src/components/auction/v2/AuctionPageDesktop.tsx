@@ -54,6 +54,25 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
     refetchInterval: 5000,
   });
 
+  // Get last closed auction if no active auction
+  const { data: lastClosedAuction } = useQuery({
+    queryKey: ["last-closed-auction", phaseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('auctions')
+        .select('id, closed_at, round_number')
+        .eq('phase_id', phaseId)
+        .eq('statut', 'closed')
+        .order('closed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !context, // Only fetch if no active auction
+  });
+
   // Auto-show validation screen if manager has already validated and auction is still open
   useEffect(() => {
     if (context?.validation_status?.has_validated && context?.auction_id) {
@@ -206,6 +225,19 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show live announcements for last closed auction if no active auction
+  if (!context && lastClosedAuction) {
+    return (
+      <div className="container max-w-6xl mx-auto p-6">
+        <AuctionLiveAnnouncements
+          auctionId={lastClosedAuction.id}
+          managerId={managerId}
+          phaseId={phaseId}
+        />
       </div>
     );
   }
