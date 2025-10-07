@@ -300,6 +300,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
         currency={context.currency}
         validation_status={context.validation_status}
         draft_count={context.totals.draft_count}
+        roster_count={context.totals.roster_count}
         max_slots={context.rules.max_bids}
       />
 

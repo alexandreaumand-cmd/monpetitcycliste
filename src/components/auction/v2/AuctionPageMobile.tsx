@@ -302,6 +302,7 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
         currency={context.currency}
         validation_status={context.validation_status}
         draft_count={context.totals.draft_count}
+        roster_count={context.totals.roster_count}
         max_slots={context.rules.max_bids}
         deadline_at={context.deadline_at}
         validated_count={context.validated_count}

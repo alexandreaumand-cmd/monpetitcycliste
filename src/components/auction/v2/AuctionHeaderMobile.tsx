@@ -19,6 +19,7 @@ interface AuctionHeaderMobileProps {
     can_submit: boolean;
   };
   draft_count: number;
+  roster_count: number;
   max_slots: number;
   deadline_at?: string;
   validated_count?: number;
@@ -32,6 +33,7 @@ export function AuctionHeaderMobile({
   currency,
   validation_status,
   draft_count,
+  roster_count,
   max_slots,
   deadline_at,
   validated_count = 0,
@@ -96,7 +98,7 @@ export function AuctionHeaderMobile({
             <div className="flex flex-col">
               <span className="text-[10px] text-muted-foreground leading-none">Coureurs</span>
               <span className="text-sm font-bold tabular-nums leading-tight">
-                {draft_count}/{max_slots}
+                {roster_count + draft_count}/{max_slots}
               </span>
             </div>
           </div>

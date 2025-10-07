@@ -17,6 +17,7 @@ interface AuctionHeaderProps {
     can_submit: boolean;
   };
   draft_count: number;
+  roster_count: number;
   max_slots: number;
   deadline_at?: string;
   validated_count?: number;
@@ -30,6 +31,7 @@ export function AuctionHeader({
   currency,
   validation_status,
   draft_count,
+  roster_count,
   max_slots,
   deadline_at,
   validated_count = 0,
@@ -133,7 +135,7 @@ export function AuctionHeader({
                 </Badge>
               ) : (
                 <Badge variant="secondary">
-                  {draft_count}/{max_slots}
+                  {roster_count + draft_count}/{max_slots}
                 </Badge>
               )}
             </div>
