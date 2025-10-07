@@ -100,16 +100,22 @@ Deno.serve(async (req) => {
     const riderIds = Array.from(
       new Set(
         Array.from(contributorsByManager.values())
-          .flatMap(riders => Array.from(riders.keys()))
+          .flatMap(entries => entries.map(entry => entry.coureur_id))
       )
     );
 
-    const { data: riders } = await supabaseClient
-      .from('coureurs')
-      .select('id, nom, equipe')
-      .in('id', riderIds);
+    console.log('riderIds count:', riderIds.length);
 
-    const riderMap = new Map(riders?.map(r => [r.id, { nom: r.nom, equipe: r.equipe }]) || []);
+    let riders: Array<{ id: string; nom: string; equipe: string | null }> = [];
+    if (riderIds.length > 0) {
+      const { data } = await supabaseClient
+        .from('coureurs')
+        .select('id, nom, equipe')
+        .in('id', riderIds);
+      riders = data || [];
+    }
+
+    const riderMap = new Map(riders.map(r => [r.id, { nom: r.nom, equipe: r.equipe }]) || []);
 
     // Build leaderboard
     const leaderboard = Array.from(managerPoints.entries())
