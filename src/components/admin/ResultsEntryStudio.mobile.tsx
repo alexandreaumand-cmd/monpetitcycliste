@@ -53,43 +53,73 @@ export const ResultsEntryStudioMobile = ({
   onClose: () => void;
 }) => {
   const [currentStage, setCurrentStage] = useState(1);
-  const [currentClassement, setCurrentClassement] = useState<ClassementType>("Etape");
+  const courseIsStageRace = isStageRace(course.type_course);
+  const [currentClassement, setCurrentClassement] = useState<ClassementType>(
+    courseIsStageRace ? "Etape" : "General"
+  );
   const [resultRows, setResultRows] = useState<ResultRow[]>([]);
   const [jerseyHolders, setJerseyHolders] = useState<Record<string, string>>({});
   const [etapeOpen, setEtapeOpen] = useState(true);
-  const [gcOpen, setGcOpen] = useState(false);
+  const [gcOpen, setGcOpen] = useState(!courseIsStageRace);
   const [pointsOpen, setPointsOpen] = useState(false);
   const [montagneOpen, setMontagneOpen] = useState(false);
   const [jeuneOpen, setJeuneOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  const courseIsStageRace = isStageRace(course.type_course);
-
-  // Fetch scoring rules
+  // Fetch scoring rules using normalized views (same as desktop)
   const { data: scoringRules } = useQuery({
-    queryKey: ['scoring-rules', course.course_id, currentClassement],
+    queryKey: ['scoring-rules-mobile', course.course_id, currentClassement],
     queryFn: async () => {
-      const normalized = normalizeCourseType(course.type_course);
-      
-      const { data, error } = await supabase
-        .from('scoring_rules')
-        .select('*')
-        .eq('categorie', course.categorie)
-        .eq('type_classement', currentClassement)
-        .eq('type', normalized.canonicalForRules)
+      // First, get the normalized category for this course
+      const { data: courseNorm, error: courseError } = await supabase
+        .from('courses_for_points_norm')
+        .select('cat_canon')
+        .eq('id', course.course_id)
+        .single();
+
+      if (courseError || !courseNorm) {
+        console.error('Error fetching course category:', courseError);
+        return [];
+      }
+
+      // Map classement type to canonical form
+      const typeMap: Record<string, string> = {
+        Etape: "Etape",
+        General: "General",
+        Points: "Points",
+        Montagne: "Montagne",
+        Jeune: "Jeune",
+      };
+      const typeCanon = typeMap[currentClassement] || currentClassement;
+
+      // Fetch scoring rules using normalized category
+      const { data: rulesData, error: rulesError } = await supabase
+        .from('scoring_rules_norm')
+        .select('place, points')
+        .eq('cat_canon', courseNorm.cat_canon)
+        .eq('type_canon', typeCanon)
         .order('place');
-      
-      if (error) throw error;
-      return (data || []) as ScoringRule[];
+
+      if (rulesError) {
+        console.error('Error fetching scoring rules:', rulesError);
+        return [];
+      }
+
+      return (rulesData || []) as ScoringRule[];
     },
   });
 
-  // Load existing results
+  // Load existing results when scoring rules are available
   useEffect(() => {
-    loadResults();
-  }, [currentClassement, currentStage]);
+    if (scoringRules && scoringRules.length > 0) {
+      loadResults();
+    }
+  }, [currentClassement, currentStage, scoringRules]);
 
   const loadResults = async () => {
+    if (!scoringRules || scoringRules.length === 0) {
+      return;
+    }
     let query = supabase
       .from('race_results')
       .select('*, coureurs(nom)')
@@ -104,38 +134,38 @@ export const ResultsEntryStudioMobile = ({
     
     const { data: existingData } = await query.order('position', { ascending: true, nullsFirst: false });
     
-    if (scoringRules && scoringRules.length > 0) {
-      const maxPlace = Math.max(...scoringRules.map(sr => sr.place));
-      const rows: ResultRow[] = [];
+    const maxPlace = Math.max(...scoringRules.map(sr => sr.place));
+    const rows: ResultRow[] = [];
 
-      const finishedResults = existingData?.filter(r => r.statut === 'finished' && r.position) || [];
+    const finishedResults = existingData?.filter(r => r.statut === 'finished' && r.position) || [];
+    
+    // Create rows based on scoring rules
+    for (let i = 1; i <= maxPlace; i++) {
+      const existing = finishedResults.find(r => r.position === i);
+      const points = scoringRules.find(sr => sr.place === i)?.points || 0;
       
-      for (let i = 1; i <= maxPlace; i++) {
-        const existing = finishedResults.find(r => r.position === i);
-        const points = scoringRules.find(sr => sr.place === i)?.points || 0;
-        
-        rows.push({
-          position: i,
-          coureur_id: existing?.coureur_id || null,
-          coureur_nom: existing ? (existing.coureurs as any)?.nom || null : null,
-          statut: 'finished' as StatutType,
-          points,
-        });
-      }
-
-      const nonFinishedResults = existingData?.filter(r => r.statut !== 'finished') || [];
-      nonFinishedResults.forEach(r => {
-        rows.push({
-          position: 0,
-          coureur_id: r.coureur_id,
-          coureur_nom: (r.coureurs as any)?.nom || null,
-          statut: r.statut as StatutType,
-          points: 0,
-        });
+      rows.push({
+        position: i,
+        coureur_id: existing?.coureur_id || null,
+        coureur_nom: existing ? (existing.coureurs as any)?.nom || null : null,
+        statut: 'finished' as StatutType,
+        points,
       });
-
-      setResultRows(rows);
     }
+
+    // Add non-finished results at the end
+    const nonFinishedResults = existingData?.filter(r => r.statut !== 'finished') || [];
+    nonFinishedResults.forEach(r => {
+      rows.push({
+        position: 0,
+        coureur_id: r.coureur_id,
+        coureur_nom: (r.coureurs as any)?.nom || null,
+        statut: r.statut as StatutType,
+        points: 0,
+      });
+    });
+
+    setResultRows(rows);
 
     // Load jersey holders if stage race
     if (courseIsStageRace && currentClassement === 'Etape') {
@@ -215,7 +245,7 @@ export const ResultsEntryStudioMobile = ({
 
       const dateClassement = currentClassement === 'Etape'
         ? new Date(new Date(course.date_debut).getTime() + (currentStage - 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        : course.date_fin;
+        : (course.date_fin || course.date_debut);
 
       const riderManagerMap = new Map<string, string | null>();
       for (const row of validRows) {
@@ -413,19 +443,22 @@ export const ResultsEntryStudioMobile = ({
       {/* Content */}
       <ScrollArea className="h-[calc(100vh-140px)]">
         <div className="p-4 space-y-3">
-          {/* Étape Section */}
+          {/* Étape Section (Stage race only) */}
           {courseIsStageRace && (
-            <Collapsible open={etapeOpen} onOpenChange={setEtapeOpen}>
+            <Collapsible open={etapeOpen} onOpenChange={(open) => {
+              setEtapeOpen(open);
+              if (open) setCurrentClassement("Etape");
+            }}>
               <CollapsibleTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
                   <span>Étape {currentStage}</span>
                   <Badge variant={etapeOpen ? "default" : "secondary"}>
-                    {resultRows.filter(r => r.coureur_id && r.statut === 'finished').length}
+                    {currentClassement === "Etape" ? resultRows.filter(r => r.coureur_id && r.statut === 'finished').length : 0}
                   </Badge>
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-3 space-y-2">
-                {resultRows.filter(r => r.position > 0).map((row, index) => (
+                {currentClassement === "Etape" && resultRows.filter(r => r.position > 0).map((row, index) => (
                   <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                     <span className="font-bold text-sm w-6">{row.position}</span>
                     <div className="flex-1">
@@ -460,22 +493,52 @@ export const ResultsEntryStudioMobile = ({
             </Collapsible>
           )}
 
-          {/* GC Section */}
+          {/* GC Section (for both One day and Stage race) */}
+          <Collapsible open={gcOpen} onOpenChange={(open) => {
+            setGcOpen(open);
+            if (open) setCurrentClassement("General");
+          }}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <span>{courseIsStageRace ? "Classement Général" : "Résultats"}</span>
+                <Badge variant={gcOpen ? "default" : "secondary"}>
+                  {currentClassement === "General" ? resultRows.filter(r => r.coureur_id).length : 0}
+                </Badge>
+              </Button>
+            </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 space-y-2">
+                {currentClassement === "General" && resultRows.filter(r => r.position > 0).map((row, index) => (
+                  <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                    <span className="font-bold text-sm w-6">{row.position}</span>
+                    <div className="flex-1">
+                      <CoureursCombobox
+                        value={row.coureur_id}
+                        onSelect={(coureur) => handleRiderChange(index, coureur)}
+                        phaseId={course.phase_id}
+                      />
+                    </div>
+                    <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>
+                  </div>
+                ))}
+              </CollapsibleContent>
+          </Collapsible>
+
+          {/* Points Section (Stage race only) */}
           {courseIsStageRace && (
-            <Collapsible open={gcOpen} onOpenChange={(open) => {
-              setGcOpen(open);
-              if (open) setCurrentClassement("General");
+            <Collapsible open={pointsOpen} onOpenChange={(open) => {
+              setPointsOpen(open);
+              if (open) setCurrentClassement("Points");
             }}>
               <CollapsibleTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
-                  <span>Classement Général</span>
-                  <Badge variant={gcOpen ? "default" : "secondary"}>
-                    {currentClassement === "General" ? resultRows.filter(r => r.coureur_id).length : 0}
+                  <span>Classement Points</span>
+                  <Badge variant={pointsOpen ? "default" : "secondary"}>
+                    {currentClassement === "Points" ? resultRows.filter(r => r.coureur_id).length : 0}
                   </Badge>
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-3 space-y-2">
-                {currentClassement === "General" && resultRows.filter(r => r.position > 0).map((row, index) => (
+                {currentClassement === "Points" && resultRows.filter(r => r.position > 0).map((row, index) => (
                   <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                     <span className="font-bold text-sm w-6">{row.position}</span>
                     <div className="flex-1">
@@ -492,20 +555,69 @@ export const ResultsEntryStudioMobile = ({
             </Collapsible>
           )}
 
-          {/* One day race - just General */}
-          {!courseIsStageRace && resultRows.filter(r => r.position > 0).map((row, index) => (
-            <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-              <span className="font-bold text-sm w-6">{row.position}</span>
-              <div className="flex-1">
-                <CoureursCombobox
-                  value={row.coureur_id}
-                  onSelect={(coureur) => handleRiderChange(index, coureur)}
-                  phaseId={course.phase_id}
-                />
-              </div>
-              <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>
-            </div>
-          ))}
+          {/* Montagne Section (Stage race only) */}
+          {courseIsStageRace && (
+            <Collapsible open={montagneOpen} onOpenChange={(open) => {
+              setMontagneOpen(open);
+              if (open) setCurrentClassement("Montagne");
+            }}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  <span>Classement Montagne</span>
+                  <Badge variant={montagneOpen ? "default" : "secondary"}>
+                    {currentClassement === "Montagne" ? resultRows.filter(r => r.coureur_id).length : 0}
+                  </Badge>
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 space-y-2">
+                {currentClassement === "Montagne" && resultRows.filter(r => r.position > 0).map((row, index) => (
+                  <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                    <span className="font-bold text-sm w-6">{row.position}</span>
+                    <div className="flex-1">
+                      <CoureursCombobox
+                        value={row.coureur_id}
+                        onSelect={(coureur) => handleRiderChange(index, coureur)}
+                        phaseId={course.phase_id}
+                      />
+                    </div>
+                    <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>
+                  </div>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {/* Jeune Section (Stage race only) */}
+          {courseIsStageRace && (
+            <Collapsible open={jeuneOpen} onOpenChange={(open) => {
+              setJeuneOpen(open);
+              if (open) setCurrentClassement("Jeune");
+            }}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  <span>Classement Jeune</span>
+                  <Badge variant={jeuneOpen ? "default" : "secondary"}>
+                    {currentClassement === "Jeune" ? resultRows.filter(r => r.coureur_id).length : 0}
+                  </Badge>
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 space-y-2">
+                {currentClassement === "Jeune" && resultRows.filter(r => r.position > 0).map((row, index) => (
+                  <div key={index} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                    <span className="font-bold text-sm w-6">{row.position}</span>
+                    <div className="flex-1">
+                      <CoureursCombobox
+                        value={row.coureur_id}
+                        onSelect={(coureur) => handleRiderChange(index, coureur)}
+                        phaseId={course.phase_id}
+                      />
+                    </div>
+                    <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>
+                  </div>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </div>
       </ScrollArea>
 
