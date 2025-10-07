@@ -99,7 +99,7 @@ export function AuctionSearchFilters({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-full p-0" align="start">
-            <div className="max-h-[300px] overflow-y-auto">
+            <div className="max-h-[500px] overflow-y-auto">
               {/* Select All / Clear All */}
               <div className="flex items-center justify-between px-3 py-2 border-b">
                 <Button
