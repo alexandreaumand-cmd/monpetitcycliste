@@ -8,7 +8,7 @@ import { BidAmountPopover } from "./BidAmountPopover";
 import { MyBidsList } from "./MyBidsList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
 import {
@@ -249,10 +249,28 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
               <CardContent className="p-0 max-h-[600px] overflow-y-auto">
                 <RiderResultsList
                   riders={ridersData?.items || []}
-                  onAddRider={(rider) => {
-                    // Open popover for this rider
-                  }}
+                  onAddRider={() => {}}
                   isLoading={ridersLoading}
+                  renderActionButton={(rider) => (
+                    <BidAmountPopover
+                      trigger={
+                        <Button size="default" variant="outline">
+                          <Plus className="h-4 w-4 mr-1" />
+                          Ajouter
+                        </Button>
+                      }
+                      rider={{
+                        rider_id: rider.rider_id,
+                        rider_nom: rider.rider_nom,
+                        rider_team: rider.rider_team,
+                        cote: rider.cote,
+                      }}
+                      onSubmit={(amount) => handleSubmitBid(amount, rider.rider_id)}
+                      remainingBudget={context?.totals.remaining_budget || 0}
+                      currency={context?.currency || "€"}
+                      step={context?.rules.step || 1}
+                    />
+                  )}
                 />
               </CardContent>
             </Card>

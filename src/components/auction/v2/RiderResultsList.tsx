@@ -21,9 +21,10 @@ interface RiderResultsListProps {
   riders: Rider[];
   onAddRider: (rider: Rider) => void;
   isLoading?: boolean;
+  renderActionButton?: (rider: Rider) => React.ReactNode;
 }
 
-export function RiderResultsList({ riders, onAddRider, isLoading }: RiderResultsListProps) {
+export function RiderResultsList({ riders, onAddRider, isLoading, renderActionButton }: RiderResultsListProps) {
   const isMobile = useIsMobile();
 
   if (isLoading) {
@@ -71,14 +72,18 @@ export function RiderResultsList({ riders, onAddRider, isLoading }: RiderResults
                 {rider.cote !== null ? `${rider.cote}€` : "-"}
               </TableCell>
               <TableCell className="text-center">
-                <Button
-                  size={isMobile ? "sm" : "default"}
-                  variant="outline"
-                  onClick={() => onAddRider(rider)}
-                >
-                  <Plus className="h-4 w-4" />
-                  {!isMobile && <span className="ml-1">Ajouter</span>}
-                </Button>
+                {renderActionButton ? (
+                  renderActionButton(rider)
+                ) : (
+                  <Button
+                    size={isMobile ? "sm" : "default"}
+                    variant="outline"
+                    onClick={() => onAddRider(rider)}
+                  >
+                    <Plus className="h-4 w-4" />
+                    {!isMobile && <span className="ml-1">Ajouter</span>}
+                  </Button>
+                )}
               </TableCell>
             </TableRow>
           ))}
