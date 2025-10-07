@@ -80,7 +80,7 @@ export const AuctionTabs = ({
       <TabsContent value="bid" className="mt-0">
         <div className="container mx-auto max-w-7xl px-4">
           {/* Compact inline filters */}
-          <div className="py-4 border-b">
+          <div className="py-3 border-b">
             <AuctionSearchFilters
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
@@ -93,18 +93,18 @@ export const AuctionTabs = ({
           </div>
 
           {/* Main content - Equal columns */}
-          <div className="grid grid-cols-2 gap-6 py-6">
+          <div className="grid grid-cols-2 gap-6 py-4">
             {/* Left: Search Results */}
             <div>
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Coureurs disponibles</h2>
-                <span className="text-sm text-muted-foreground">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="text-base font-semibold">Coureurs disponibles</h2>
+                <span className="text-xs text-muted-foreground">
                   {riders.length} résultat{riders.length > 1 ? 's' : ''}
                 </span>
               </div>
               <Card className="shadow-sm">
                 <CardContent className="p-0">
-                  <div className="max-h-[calc(100vh-340px)] overflow-y-auto">
+                  <div className="max-h-[calc(100vh-280px)] overflow-y-auto">
                     <RiderResultsList
                       riders={riders}
                       onAddRider={() => {}}
@@ -137,16 +137,16 @@ export const AuctionTabs = ({
 
             {/* Right: My Bids */}
             <div>
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Mes enchères</h2>
-                <span className="text-sm text-muted-foreground">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="text-base font-semibold">Mes enchères</h2>
+                <span className="text-xs text-muted-foreground">
                   {myBids.length} coureur{myBids.length > 1 ? 's' : ''}
                 </span>
               </div>
               
               <Card className="shadow-sm border-2 border-primary/20">
                 <CardContent className="p-0">
-                  <div className="max-h-[calc(100vh-440px)] overflow-y-auto">
+                  <div className="max-h-[calc(100vh-380px)] overflow-y-auto">
                     <MyBidsList
                       bids={myBids}
                       onUpdateAmount={handleUpdateAmount}
@@ -160,7 +160,7 @@ export const AuctionTabs = ({
               </Card>
 
               {/* Submit button - Always visible */}
-              <div className="mt-4 space-y-2">
+              <div className="mt-3 space-y-2">
                 <Button
                   onClick={handleSubmitAll}
                   disabled={!context?.validation_status?.can_submit || isSubmitting}
