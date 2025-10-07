@@ -13,15 +13,26 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const authHeader = req.headers.get('Authorization');
+
+    if (!authHeader) {
+      console.error('Missing Authorization header');
+      return new Response(JSON.stringify({ error: 'Unauthorized - Missing auth header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
-        headers: { Authorization: req.headers.get('Authorization') || '' },
+        headers: { Authorization: authHeader },
       },
     });
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      console.error('Auth error:', authError?.message || 'No user found');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -33,12 +44,20 @@ Deno.serve(async (req) => {
     // Obtenir l'ID du manager (soit fourni, soit celui connecté)
     let targetManagerId = manager_id;
     if (!targetManagerId) {
-      const { data: manager } = await supabase
+      const { data: manager, error: managerError } = await supabase
         .from('managers')
         .select('id')
         .eq('user_id', user.id)
         .single();
-      targetManagerId = manager?.id;
+      
+      if (managerError || !manager) {
+        console.error('Manager not found for user:', user.id, managerError?.message);
+        return new Response(JSON.stringify({ error: 'Manager profile not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      targetManagerId = manager.id;
     }
 
     // Utiliser la RPC qui accepte manager_id
