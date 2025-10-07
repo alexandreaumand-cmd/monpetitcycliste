@@ -17,6 +17,7 @@ const navLinks = [
   { label: 'Courses', href: '/dashboard/courses', icon: Calendar },
   { label: 'Résultats', href: '/dashboard/resultats', icon: BarChart3 },
   { label: 'Classement', href: '/dashboard/classement', icon: BarChart3 },
+  { label: 'Équipes', href: '/dashboard/equipes', icon: Users },
   { label: 'Startlist', href: '/dashboard/startlist', icon: ListChecks },
 ];
 
