@@ -7,7 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Zap, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { Loader2, Zap, CheckCircle2, Clock, AlertCircle, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatAmount } from "@/lib/utils";
@@ -18,6 +29,7 @@ export const AuctionManager = () => {
   const [selectedPhase, setSelectedPhase] = useState("");
   const [roundNumber, setRoundNumber] = useState("1");
   const [deadlineHours, setDeadlineHours] = useState("24");
+  const [resetPhrase, setResetPhrase] = useState("");
 
   const { data: phases, isLoading: loadingPhases } = useQuery({
     queryKey: ['phases'],
@@ -173,6 +185,40 @@ export const AuctionManager = () => {
     }
   });
 
+  const resetPhase = useMutation({
+    mutationFn: async () => {
+      if (!activePhase) {
+        throw new Error("Aucune phase active");
+      }
+
+      const { data, error } = await supabase.functions.invoke('admin-reset-phase', {
+        body: {
+          phase_id: activePhase.id,
+          confirmation_phrase: resetPhrase
+        }
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['active-auctions'] });
+      queryClient.invalidateQueries({ queryKey: ['managers-rosters-status'] });
+      toast({
+        title: "Phase réinitialisée ✅",
+        description: `Supprimés : ${data.deleted.rosters} rosters, ${data.deleted.bids} enchères, ${data.deleted.annonces} annonces, ${data.deleted.auctions} auctions`
+      });
+      setResetPhrase("");
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
   if (loadingPhases) {
     return (
       <div className="flex justify-center p-8">
@@ -254,6 +300,73 @@ export const AuctionManager = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Reset Phase */}
+      {activePhase && (
+        <Card className="border-destructive/20 bg-destructive/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Zone dangereuse
+            </CardTitle>
+            <CardDescription>
+              Remise à zéro complète de la phase en cours
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Réinitialiser la Phase 1 2026
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>⚠️ Confirmer la réinitialisation</AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3">
+                    <p>Cette action va <strong>supprimer définitivement</strong> :</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>Tous les rosters des managers</li>
+                      <li>Toutes les enchères (gagnées et perdues)</li>
+                      <li>Toutes les annonces publiées</li>
+                      <li>Toutes les auctions créées</li>
+                    </ul>
+                    <p className="text-destructive font-semibold mt-4">
+                      Cette action est IRRÉVERSIBLE.
+                    </p>
+                    <div className="mt-4">
+                      <Label htmlFor="reset-phrase">
+                        Tapez <code className="bg-muted px-2 py-1 rounded">RESET PHASE 1 2026</code> pour confirmer :
+                      </Label>
+                      <Input
+                        id="reset-phrase"
+                        value={resetPhrase}
+                        onChange={(e) => setResetPhrase(e.target.value)}
+                        placeholder="RESET PHASE 1 2026"
+                        className="mt-2"
+                      />
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setResetPhrase("")}>
+                    Annuler
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => resetPhase.mutate()}
+                    disabled={resetPhrase !== "RESET PHASE 1 2026" || resetPhase.isPending}
+                    className="bg-destructive hover:bg-destructive/90"
+                  >
+                    {resetPhase.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Confirmer la suppression
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Advanced Options */}
       <Card>
