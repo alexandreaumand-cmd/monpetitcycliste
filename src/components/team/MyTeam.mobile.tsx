@@ -81,7 +81,7 @@ export const MyTeamMobile = () => {
     if (selectedPhaseId) {
       loadTeam();
     }
-  }, [selectedPhaseId]);
+  }, [selectedPhaseId, selectedManagerId]);
 
   const loadCurrentUser = async () => {
     try {

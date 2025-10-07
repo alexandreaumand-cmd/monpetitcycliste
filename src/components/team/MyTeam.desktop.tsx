@@ -106,7 +106,7 @@ export const MyTeamDesktop = () => {
     if (selectedPhaseId) {
       loadTeam();
     }
-  }, [selectedPhaseId]);
+  }, [selectedPhaseId, selectedManagerId]);
 
   const loadCurrentUser = async () => {
     try {
