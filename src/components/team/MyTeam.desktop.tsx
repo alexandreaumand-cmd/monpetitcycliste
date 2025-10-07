@@ -14,14 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+import { RiderPointsDetail } from "./RiderPointsDetail";
 
 interface Coureur {
   coureur_id: string;
@@ -88,11 +81,8 @@ export const MyTeamDesktop = () => {
   const [selectedManagerId, setSelectedManagerId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
-  // Drawer state
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedCoureur, setSelectedCoureur] = useState<Coureur | null>(null);
-  const [pointsDetail, setPointsDetail] = useState<PointDetail[]>([]);
-  const [loadingDetail, setLoadingDetail] = useState(false);
+  // Rider detail state
+  const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string; equipe: string; prix: number } | null>(null);
 
   // Desktop version
 
@@ -225,46 +215,13 @@ export const MyTeamDesktop = () => {
     }
   };
 
-  const openCoureurDetail = async (coureur: Coureur) => {
-    setSelectedCoureur(coureur);
-    setDrawerOpen(true);
-    setLoadingDetail(true);
-
-    try {
-      // Récupérer la session pour obtenir le token
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        console.error('No session found');
-        toast({
-          title: "Erreur d'authentification",
-          description: "Impossible de charger les détails",
-          variant: "destructive"
-        });
-        setLoadingDetail(false);
-        return;
-      }
-
-      // Appeler la fonction avec le token d'authentification
-      const { data, error } = await supabase.functions.invoke('manager-coureur-points-detail', {
-        body: { coureur_id: coureur.coureur_id, phase_id: selectedPhaseId },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
-      });
-
-      if (error) throw error;
-      setPointsDetail(data.history || []);
-    } catch (error) {
-      console.error('Error loading coureur detail:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les détails du coureur",
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingDetail(false);
-    }
+  const openCoureurDetail = (coureur: Coureur) => {
+    setSelectedRider({
+      id: coureur.coureur_id,
+      nom: coureur.nom,
+      equipe: coureur.equipe,
+      prix: coureur.prix_achat
+    });
   };
 
   const sortedCoureurs = [...coureurs].sort((a, b) => {
@@ -656,106 +613,17 @@ export const MyTeamDesktop = () => {
         </>
       )}
 
-      {/* Drawer détail */}
-      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="border-b">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <DrawerTitle className="text-2xl">{selectedCoureur?.nom}</DrawerTitle>
-                <DrawerDescription>
-                  {selectedCoureur && (
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="text-sm text-muted-foreground">{selectedCoureur.equipe}</span>
-                      <span className="text-sm">Prix: {selectedCoureur.prix_achat.toFixed(0)}</span>
-                      <span className="text-sm">Cote: {selectedCoureur.cote_initiale.toFixed(0)}</span>
-                    </div>
-                  )}
-                </DrawerDescription>
-              </div>
-              <DrawerClose asChild>
-                <Button variant="ghost" size="icon">
-                  <X className="h-4 w-4" />
-                </Button>
-              </DrawerClose>
-            </div>
-
-            {selectedCoureur && (
-              <div className="flex items-center gap-6 mt-4 pt-4 border-t">
-                <div className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-primary" />
-                  <div>
-                    <div className="text-2xl font-bold">{selectedCoureur.points_total}</div>
-                    <div className="text-xs text-muted-foreground">Points totaux</div>
-                  </div>
-                </div>
-                <div className={`flex items-center gap-2 ${getRatioColor(selectedCoureur.ratio_points_par_prix)}`}>
-                  {selectedCoureur.ratio_points_par_prix > 1 ? (
-                    <TrendingUp className="h-5 w-5" />
-                  ) : selectedCoureur.ratio_points_par_prix < 1 ? (
-                    <TrendingDown className="h-5 w-5" />
-                  ) : null}
-                  <div>
-                    <div className="text-2xl font-bold">{selectedCoureur.ratio_points_par_prix.toFixed(2)}</div>
-                    <div className="text-xs text-muted-foreground">Ratio</div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </DrawerHeader>
-
-          <div className="overflow-y-auto p-6">
-            <h3 className="font-semibold mb-4">Historique des points</h3>
-            
-            {loadingDetail ? (
-              <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
-                ))}
-              </div>
-            ) : pointsDetail.length === 0 ? (
-              <div className="text-center py-12">
-                <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">Aucun point marqué</p>
-              </div>
-            ) : (
-              <Card>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Course</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Étape</TableHead>
-                      <TableHead className="text-right">Points</TableHead>
-                      <TableHead>Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pointsDetail.map((detail, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell className="font-medium">{detail.course_nom}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{detail.type_classement}</Badge>
-                        </TableCell>
-                        <TableCell>{detail.etape_numero || '—'}</TableCell>
-                        <TableCell className="text-right font-semibold">
-                          <div className="flex items-center justify-end gap-1">
-                            <Trophy className="h-3 w-3 text-primary" />
-                            {detail.points}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {new Date(detail.date_classement).toLocaleDateString('fr-FR')}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Card>
-            )}
-          </div>
-        </DrawerContent>
-      </Drawer>
+      {/* Rider Points Detail */}
+      <RiderPointsDetail
+        isOpen={!!selectedRider}
+        onClose={() => setSelectedRider(null)}
+        riderId={selectedRider?.id || ''}
+        riderName={selectedRider?.nom || ''}
+        riderTeam={selectedRider?.equipe || ''}
+        riderPrice={selectedRider?.prix || 0}
+        phaseId={selectedPhaseId || ''}
+        managerId={selectedManagerId || currentUserId || undefined}
+      />
     </div>
   );
 };

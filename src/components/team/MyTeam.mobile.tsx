@@ -4,10 +4,10 @@ import { toast } from "sonner";
 import {
   ChipGroup,
   MobileCard,
-  MobileBottomSheet,
   KPIRow,
   MobileEmptyState,
 } from "@/components/mobile";
+import { RiderPointsDetail } from "./RiderPointsDetail";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -66,10 +66,7 @@ export const MyTeamMobile = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   // Detail drawer
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [selectedCoureur, setSelectedCoureur] = useState<Coureur | null>(null);
-  const [pointsDetail, setPointsDetail] = useState<PointDetail[]>([]);
-  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string; equipe: string; prix: number } | null>(null);
 
   useEffect(() => {
     loadPhases();
@@ -166,32 +163,13 @@ export const MyTeamMobile = () => {
     }
   };
 
-  const openCoureurDetail = async (coureur: Coureur) => {
-    setSelectedCoureur(coureur);
-    setDetailsOpen(true);
-    setLoadingDetail(true);
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const { data, error } = await supabase.functions.invoke(
-        "manager-coureur-points-detail",
-        {
-          body: { coureur_id: coureur.coureur_id, phase_id: selectedPhaseId },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-
-      if (error) throw error;
-      setPointsDetail(data.history || []);
-    } catch (error) {
-      toast.error("Impossible de charger les détails");
-    } finally {
-      setLoadingDetail(false);
-    }
+  const openCoureurDetail = (coureur: Coureur) => {
+    setSelectedRider({
+      id: coureur.coureur_id,
+      nom: coureur.nom,
+      equipe: coureur.equipe,
+      prix: coureur.prix_achat
+    });
   };
 
   const sortedCoureurs = [...coureurs].sort((a, b) => {
@@ -359,63 +337,17 @@ export const MyTeamMobile = () => {
         </div>
       )}
 
-      {/* Detail bottom sheet */}
-      <MobileBottomSheet
-        open={detailsOpen}
-        onOpenChange={setDetailsOpen}
-        title={selectedCoureur?.nom || "Détails"}
-        description={selectedCoureur?.equipe}
-      >
-        {selectedCoureur && (
-          <div className="space-y-4">
-            <KPIRow
-              items={[
-                { label: "Points", value: selectedCoureur.points_total, icon: <Trophy className="h-4 w-4" /> },
-                { label: "Ratio", value: selectedCoureur.ratio_points_par_prix.toFixed(2) },
-                { label: "Prix", value: selectedCoureur.prix_achat.toFixed(0), icon: <DollarSign className="h-4 w-4" /> },
-              ]}
-            />
-
-            <div>
-              <h3 className="font-semibold mb-3">Historique des points</h3>
-              
-              {loadingDetail ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full rounded-xl" />
-                  ))}
-                </div>
-              ) : pointsDetail.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  Aucun point marqué
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {pointsDetail.map((detail, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 rounded-xl bg-muted/50 flex items-center justify-between"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{detail.course_nom}</p>
-                        <div className="flex gap-2 text-xs text-muted-foreground mt-1">
-                          <Badge variant="outline" className="text-xs">{detail.type_classement}</Badge>
-                          {detail.etape_numero && <span>Étape {detail.etape_numero}</span>}
-                          <span>{new Date(detail.date_classement).toLocaleDateString("fr-FR")}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 font-bold text-lg text-primary">
-                        <Trophy className="h-4 w-4" />
-                        {detail.points}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </MobileBottomSheet>
+      {/* Rider Points Detail */}
+      <RiderPointsDetail
+        isOpen={!!selectedRider}
+        onClose={() => setSelectedRider(null)}
+        riderId={selectedRider?.id || ''}
+        riderName={selectedRider?.nom || ''}
+        riderTeam={selectedRider?.equipe || ''}
+        riderPrice={selectedRider?.prix || 0}
+        phaseId={selectedPhaseId || ''}
+        managerId={selectedManagerId || currentUserId || undefined}
+      />
     </div>
   );
 };
