@@ -6,6 +6,7 @@ import { AuctionSearchFilters } from "./AuctionSearchFilters";
 import { RiderResultsList } from "./RiderResultsList";
 import { BidAmountPopover } from "./BidAmountPopover";
 import { MyBidsList } from "./MyBidsList";
+import { AuctionValidationConfirmation } from "./AuctionValidationConfirmation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2, Plus } from "lucide-react";
@@ -36,6 +37,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [showValidationScreen, setShowValidationScreen] = useState(false);
 
   const [debouncedSearch] = useDebounce(searchQuery, 250);
 
@@ -161,11 +163,8 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId] });
-      toast({
-        title: "Enchères validées !",
-        description: "Tes enchères ont été soumises avec succès",
-      });
       setShowSubmitDialog(false);
+      setShowValidationScreen(true);
     },
     onError: (error: any) => {
       toast({
@@ -213,6 +212,15 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
           </div>
         </CardContent>
       </Card>
+    );
+  }
+
+  if (showValidationScreen) {
+    return (
+      <AuctionValidationConfirmation
+        phaseId={phaseId}
+        onBack={() => setShowValidationScreen(false)}
+      />
     );
   }
 

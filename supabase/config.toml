@@ -3,6 +3,9 @@ project_id = "oisfvryhpovwxaxqbmow"
 [functions.import-data]
 verify_jwt = true
 
+[functions.auction-get-validation-status]
+verify_jwt = false
+
 [functions.reset-courses]
 verify_jwt = true
 

@@ -7,6 +7,7 @@ import { RiderResultsList } from "./RiderResultsList";
 import { BidAmountBottomSheet } from "./BidAmountBottomSheet";
 import { MyBidsList } from "./MyBidsList";
 import { AuctionSubmitButton } from "./AuctionSubmitButton";
+import { AuctionValidationConfirmation } from "./AuctionValidationConfirmation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +28,7 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [selectedRider, setSelectedRider] = useState<any>(null);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+  const [showValidationScreen, setShowValidationScreen] = useState(false);
 
   const [debouncedSearch] = useDebounce(searchQuery, 250);
 
@@ -160,10 +162,7 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId] });
-      toast({
-        title: "Enchères validées !",
-        description: "Tes enchères ont été soumises avec succès",
-      });
+      setShowValidationScreen(true);
     },
     onError: (error: any) => {
       toast({
@@ -219,6 +218,15 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
           </p>
         </div>
       </div>
+    );
+  }
+
+  if (showValidationScreen) {
+    return (
+      <AuctionValidationConfirmation
+        phaseId={phaseId}
+        onBack={() => setShowValidationScreen(false)}
+      />
     );
   }
 
