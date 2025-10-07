@@ -49,7 +49,7 @@ export const AdminPage = () => {
       </div>
 
       <Routes>
-        <Route index element={<Navigate to="/dashboard/admin/data" replace />} />
+        <Route index element={<Navigate to="/dashboard/admin/results" replace />} />
         
         <Route path="data" element={
           <div className="space-y-6">
