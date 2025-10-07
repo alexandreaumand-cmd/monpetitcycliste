@@ -255,17 +255,18 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         };
 
         for (const { type, key } of jerseyTypes) {
-          const { data: jerseyData } = await supabase.functions.invoke('results-course-rows', {
-            body: {
-              course_id: course.course_id,
-              type_classement: type,
-              etape_numero: currentStage
-            }
-          });
+          // ✅ Requête directe qui ne charge que les porteurs explicitement validés
+          const { data: jerseyData } = await supabase
+            .from('race_results')
+            .select('coureur_id')
+            .eq('course_id', course.course_id)
+            .eq('type_classement', type)  // "Porteur Général", etc.
+            .eq('etape_numero', currentStage)
+            .eq('position', 1)  // ✅ Vérifie que c'est bien un porteur validé
+            .maybeSingle();
 
-          const jerseyRows = jerseyData?.rows || [];
-          if (jerseyRows.length > 0 && jerseyRows[0].coureur_id) {
-            newJerseyHolders[key] = jerseyRows[0].coureur_id;
+          if (jerseyData?.coureur_id) {
+            newJerseyHolders[key] = jerseyData.coureur_id;
           }
         }
 
