@@ -92,75 +92,58 @@ export const AuctionTabs = ({
             />
           </div>
 
-          {/* Main content - Equal columns */}
-          <div className="grid grid-cols-2 gap-6 py-4">
-            {/* Left: Search Results */}
-            <div>
-              <div className="mb-2 flex items-center justify-between">
+          {/* Main content - Full height columns */}
+          <div className="grid grid-cols-2 gap-6 py-4 h-[calc(100vh-240px)]">
+            {/* Left: Search Results - Full height */}
+            <div className="flex flex-col h-full">
+              <div className="mb-2 flex items-center justify-between flex-shrink-0">
                 <h2 className="text-base font-semibold">Coureurs disponibles</h2>
                 <span className="text-xs text-muted-foreground">
                   {riders.length} résultat{riders.length > 1 ? 's' : ''}
                 </span>
               </div>
-              <Card className="shadow-sm">
-                <CardContent className="p-0">
-                  <div className="max-h-[calc(100vh-280px)] overflow-y-auto">
-                    <RiderResultsList
-                      riders={riders}
-                      onAddRider={() => {}}
-                      isLoading={isSearching}
-                      renderActionButton={(rider) => (
-                        <BidAmountPopover
-                          trigger={
-                            <Button size="sm" variant="default" className="gap-1">
-                              <Plus className="h-3 w-3" />
-                              Enchérir
-                            </Button>
-                          }
-                          rider={{
-                            rider_id: rider.rider_id,
-                            rider_nom: rider.rider_nom,
-                            rider_team: rider.rider_team,
-                            cote: rider.cote,
-                          }}
-                          onSubmit={(amount) => handleSubmitBid(amount, rider.rider_id)}
-                          remainingBudget={context?.totals.remaining_budget || 0}
-                          currency={context?.currency || "€"}
-                          step={context?.rules.step || 1}
-                        />
-                      )}
-                    />
-                  </div>
+              <Card className="shadow-sm flex-1 flex flex-col overflow-hidden">
+                <CardContent className="p-0 flex-1 overflow-y-auto">
+                  <RiderResultsList
+                    riders={riders}
+                    onAddRider={() => {}}
+                    isLoading={isSearching}
+                    renderActionButton={(rider) => (
+                      <BidAmountPopover
+                        trigger={
+                          <Button size="sm" variant="default" className="gap-1">
+                            <Plus className="h-3 w-3" />
+                            Enchérir
+                          </Button>
+                        }
+                        rider={{
+                          rider_id: rider.rider_id,
+                          rider_nom: rider.rider_nom,
+                          rider_team: rider.rider_team,
+                          cote: rider.cote,
+                        }}
+                        onSubmit={(amount) => handleSubmitBid(amount, rider.rider_id)}
+                        remainingBudget={context?.totals.remaining_budget || 0}
+                        currency={context?.currency || "€"}
+                        step={context?.rules.step || 1}
+                      />
+                    )}
+                  />
                 </CardContent>
               </Card>
             </div>
 
-            {/* Right: My Bids */}
-            <div>
-              <div className="mb-2 flex items-center justify-between">
+            {/* Right: My Bids - Full height */}
+            <div className="flex flex-col h-full">
+              <div className="mb-2 flex items-center justify-between flex-shrink-0">
                 <h2 className="text-base font-semibold">Mes enchères</h2>
                 <span className="text-xs text-muted-foreground">
                   {myBids.length} coureur{myBids.length > 1 ? 's' : ''}
                 </span>
               </div>
-              
-              <Card className="shadow-sm border-2 border-primary/20">
-                <CardContent className="p-0">
-                  <div className="max-h-[calc(100vh-380px)] overflow-y-auto">
-                    <MyBidsList
-                      bids={myBids}
-                      onUpdateAmount={handleUpdateAmount}
-                      onRemove={handleRemoveBid}
-                      currency={context?.currency || "€"}
-                      step={context?.rules.step || 1}
-                      isUpdating={isUpdating}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* Submit button - Always visible */}
-              <div className="mt-3 space-y-2">
+              {/* Submit button BEFORE the list */}
+              <div className="mb-3 space-y-2 flex-shrink-0">
                 <Button
                   onClick={handleSubmitAll}
                   disabled={!context?.validation_status?.can_submit || isSubmitting}
@@ -190,6 +173,19 @@ export const AuctionTabs = ({
                   </p>
                 )}
               </div>
+              
+              <Card className="shadow-sm border-2 border-primary/20 flex-1 flex flex-col overflow-hidden">
+                <CardContent className="p-0 flex-1 overflow-y-auto">
+                  <MyBidsList
+                    bids={myBids}
+                    onUpdateAmount={handleUpdateAmount}
+                    onRemove={handleRemoveBid}
+                    currency={context?.currency || "€"}
+                    step={context?.rules.step || 1}
+                    isUpdating={isUpdating}
+                  />
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
