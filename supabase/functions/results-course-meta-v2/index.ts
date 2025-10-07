@@ -15,17 +15,6 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      req.headers.get('Authorization')?.replace('Bearer ', '') || ''
-    );
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const { course_id } = await req.json();
 
     if (!course_id) {

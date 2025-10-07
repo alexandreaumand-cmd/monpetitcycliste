@@ -15,17 +15,6 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      req.headers.get('Authorization')?.replace('Bearer ', '') || ''
-    );
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const { course_id, type_classement, etape_numero } = await req.json();
 
     if (!course_id || !type_classement) {
@@ -35,14 +24,25 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get the manager ID for the current user
-    const { data: manager } = await supabase
-      .from('managers')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-
-    const managerId = manager?.id || null;
+    // Try to get the current user, but don't block if it fails
+    let managerId = null;
+    try {
+      const { data: { user } } = await supabase.auth.getUser(
+        req.headers.get('Authorization')?.replace('Bearer ', '') || ''
+      );
+      
+      if (user) {
+        const { data: manager } = await supabase
+          .from('managers')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+        managerId = manager?.id || null;
+      }
+    } catch (e) {
+      // If auth fails, continue with null manager_id (public view)
+      console.log('No authenticated user, showing public view');
+    }
 
     // Call the database function
     const { data: rows, error } = await supabase.rpc('results_course_table', {
