@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Trophy, Calendar, Search } from "lucide-react";
+import { Loader2, Trophy, Calendar, Search, Award } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebounce } from "use-debounce";
 import { CourseResultsDrawer } from "@/components/courses/CourseResultsDrawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AdminMaintenance } from "@/components/admin/AdminMaintenance";
+import { ManagerBonusDialog } from "@/components/admin/ManagerBonusDialog";
 
 interface Race {
   course_id: string;
@@ -54,6 +55,9 @@ export const ResultsPage = () => {
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  
+  // Bonus dialog state
+  const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
 
   useEffect(() => {
     loadPhases();
@@ -172,11 +176,20 @@ export const ResultsPage = () => {
       {/* Header with search */}
       <div className="sticky top-0 z-10 bg-background pb-4 border-b">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
-          <div>
-            <h1 className="text-3xl font-bold">Résultats</h1>
-            <p className="text-muted-foreground">
-              {races.length} course{races.length > 1 ? 's' : ''} avec résultats
-            </p>
+          <div className="flex justify-between items-start w-full">
+            <div>
+              <h1 className="text-3xl font-bold">Résultats</h1>
+              <p className="text-muted-foreground">
+                {races.length} course{races.length > 1 ? 's' : ''} avec résultats
+              </p>
+            </div>
+            
+            {selectedPhaseId && (
+              <Button onClick={() => setBonusDialogOpen(true)} variant="outline">
+                <Award className="h-4 w-4 mr-2" />
+                Bonus
+              </Button>
+            )}
           </div>
           
           <div className="flex items-center gap-2">
@@ -314,6 +327,13 @@ export const ResultsPage = () => {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         courseId={selectedCourseId}
+      />
+      
+      {/* Bonus dialog */}
+      <ManagerBonusDialog
+        open={bonusDialogOpen}
+        onOpenChange={setBonusDialogOpen}
+        phaseId={selectedPhaseId}
       />
     </div>
   );
