@@ -37,11 +37,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get all points for this course from points_ledger
+    // Get all points for this course from points_ledger - filter by phase_id
     const { data: ledgerData, error: ledgerError } = await supabaseClient
       .from('points_ledger')
       .select('coureur_id, type_classement, etape_numero, points')
-      .eq('course_id', course_id);
+      .eq('course_id', course_id)
+      .eq('phase_id', course.phase_id);
 
     if (ledgerError) throw ledgerError;
 

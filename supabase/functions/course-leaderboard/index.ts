@@ -35,20 +35,21 @@ Deno.serve(async (req) => {
 
     console.log('Getting leaderboard for course:', course_id, { type_classement, etape_numero });
 
-    // Get course info
+    // Get course info with phase_id
     const { data: course, error: courseError } = await supabaseClient
       .from('courses')
-      .select('id, nom, date_debut, date_fin, categorie')
+      .select('id, nom, date_debut, date_fin, categorie, phase_id')
       .eq('id', course_id)
       .single();
 
     if (courseError) throw courseError;
 
-    // Build points query
+    // Build points query - filter by phase_id to ensure season-specific data
     let pointsQuery = supabaseClient
       .from('points_ledger')
       .select('manager_id, coureur_id, points, type_classement, etape_numero')
-      .eq('course_id', course_id);
+      .eq('course_id', course_id)
+      .eq('phase_id', course.phase_id);
 
     if (type_classement) {
       pointsQuery = pointsQuery.eq('type_classement', type_classement);

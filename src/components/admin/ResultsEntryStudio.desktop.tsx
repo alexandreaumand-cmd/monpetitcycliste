@@ -89,12 +89,14 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const { data: stageCompletion } = useQuery({
     queryKey: ["stage-completion", course.course_id],
     queryFn: async () => {
-      // Get stages with results
+      // Get stages with results - filter by date
       const { data: resultsData, error: resultsError } = await supabase
         .from("race_results")
         .select("etape_numero")
         .eq("course_id", course.course_id)
-        .eq("type_classement", "Etape");
+        .eq("type_classement", "Etape")
+        .gte("date_classement", course.date_debut)
+        .lte("date_classement", course.date_fin);
 
       if (resultsError) throw resultsError;
 
@@ -286,7 +288,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         };
 
         for (const { type, key } of jerseyTypes) {
-          // ✅ Requête directe qui ne charge que les porteurs explicitement validés
+          // ✅ Requête directe qui ne charge que les porteurs explicitement validés - filter by date
           const { data: jerseyData } = await supabase
             .from('race_results')
             .select('coureur_id')
@@ -294,6 +296,8 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
             .eq('type_classement', type)  // "Porteur Général", etc.
             .eq('etape_numero', currentStage)
             .eq('position', 1)  // ✅ Vérifie que c'est bien un porteur validé
+            .gte('date_classement', course.date_debut)
+            .lte('date_classement', course.date_fin)
             .maybeSingle();
 
           if (jerseyData?.coureur_id) {
