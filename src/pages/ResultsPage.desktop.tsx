@@ -85,7 +85,8 @@ export const ResultsPage = () => {
           search: debouncedSearch || null,
           limit: 24,
           offset: currentOffset,
-          phase_id: selectedPhaseId
+          phase_id: selectedPhaseId,
+          saison_id: selectedSeason?.id
         }
       });
 
