@@ -580,6 +580,7 @@ export type Database = {
           bonus_coureurs: number
           bonus_first_win: number
           bonus_itt: number
+          bonus_scoreurs: number
           bonus_ttt: number
           commentaire: string | null
           created_at: string
@@ -593,6 +594,7 @@ export type Database = {
           bonus_coureurs?: number
           bonus_first_win?: number
           bonus_itt?: number
+          bonus_scoreurs?: number
           bonus_ttt?: number
           commentaire?: string | null
           created_at?: string
@@ -606,6 +608,7 @@ export type Database = {
           bonus_coureurs?: number
           bonus_first_win?: number
           bonus_itt?: number
+          bonus_scoreurs?: number
           bonus_ttt?: number
           commentaire?: string | null
           created_at?: string

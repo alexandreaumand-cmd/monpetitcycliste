@@ -21,7 +21,8 @@ interface BonusEntry {
   bonus_itt: number;
   bonus_ttt: number;
   bonus_first_win: number;
-  bonus_coureurs: number;
+  bonus_coureur: number;
+  bonus_scoreurs: number;
   commentaire: string;
 }
 
@@ -46,7 +47,7 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
       // Get existing bonus details
       const { data: bonusData, error: bonusError } = await supabase
         .from('manager_bonus_points')
-        .select('manager_id, bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, commentaire')
+        .select('manager_id, bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs, commentaire')
         .eq('phase_id', phaseId);
 
       if (bonusError) throw bonusError;
@@ -62,7 +63,8 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
           bonus_itt: existingBonus?.bonus_itt || 0,
           bonus_ttt: existingBonus?.bonus_ttt || 0,
           bonus_first_win: existingBonus?.bonus_first_win || 0,
-          bonus_coureurs: existingBonus?.bonus_coureurs || 0,
+          bonus_coureur: existingBonus?.bonus_coureurs || 0,
+          bonus_scoreurs: existingBonus?.bonus_scoreurs || 0,
           commentaire: existingBonus?.commentaire || ''
         };
       }) || [];
@@ -89,7 +91,7 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
   };
 
   const calculateTotal = (entry: BonusEntry) => {
-    return entry.bonus_itt + entry.bonus_ttt + entry.bonus_first_win + entry.bonus_coureurs;
+    return entry.bonus_itt + entry.bonus_ttt + entry.bonus_first_win + entry.bonus_coureur + entry.bonus_scoreurs;
   };
 
   const handleSave = async () => {
@@ -101,7 +103,8 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
           bonus_itt: Number(b.bonus_itt),
           bonus_ttt: Number(b.bonus_ttt),
           bonus_first_win: Number(b.bonus_first_win),
-          bonus_coureurs: Number(b.bonus_coureurs),
+          bonus_coureur: Number(b.bonus_coureur),
+          bonus_scoreurs: Number(b.bonus_scoreurs),
           commentaire: b.commentaire || null
         }));
 
@@ -153,7 +156,8 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
                     <th className="p-3 text-center font-medium whitespace-nowrap w-20">ITT</th>
                     <th className="p-3 text-center font-medium whitespace-nowrap w-20">TTT</th>
                     <th className="p-3 text-center font-medium whitespace-nowrap w-24">First Win</th>
-                    <th className="p-3 text-center font-medium whitespace-nowrap w-24">Coureurs</th>
+                    <th className="p-3 text-center font-medium whitespace-nowrap w-24">Coureur</th>
+                    <th className="p-3 text-center font-medium whitespace-nowrap w-24">Scoreurs</th>
                     <th className="p-3 text-right font-medium whitespace-nowrap w-24">Total Bonus</th>
                     <th className="p-3 text-left font-medium">Commentaire</th>
                   </tr>
@@ -195,8 +199,16 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
                         <td className="p-3">
                           <Input
                             type="number"
-                            value={bonus.bonus_coureurs}
-                            onChange={(e) => updateBonus(manager.manager_id, 'bonus_coureurs', Number(e.target.value))}
+                            value={bonus.bonus_coureur}
+                            onChange={(e) => updateBonus(manager.manager_id, 'bonus_coureur', Number(e.target.value))}
+                            className="w-20 text-center text-sm"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <Input
+                            type="number"
+                            value={bonus.bonus_scoreurs}
+                            onChange={(e) => updateBonus(manager.manager_id, 'bonus_scoreurs', Number(e.target.value))}
                             className="w-20 text-center text-sm"
                           />
                         </td>

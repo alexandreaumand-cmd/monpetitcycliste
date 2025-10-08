@@ -69,9 +69,9 @@ Deno.serve(async (req) => {
 
     // Process each bonus
     for (const bonus of bonuses) {
-      const { manager_id, bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, commentaire } = bonus;
+      const { manager_id, bonus_itt, bonus_ttt, bonus_first_win, bonus_coureur, bonus_scoreurs, commentaire } = bonus;
 
-      const totalBonus = (bonus_itt || 0) + (bonus_ttt || 0) + (bonus_first_win || 0) + (bonus_coureurs || 0);
+      const totalBonus = (bonus_itt || 0) + (bonus_ttt || 0) + (bonus_first_win || 0) + (bonus_coureur || 0) + (bonus_scoreurs || 0);
 
       if (totalBonus === 0 && !commentaire) {
         // Delete bonus if all bonuses are 0 and no comment
@@ -96,7 +96,8 @@ Deno.serve(async (req) => {
             bonus_itt: bonus_itt || 0,
             bonus_ttt: bonus_ttt || 0,
             bonus_first_win: bonus_first_win || 0,
-            bonus_coureurs: bonus_coureurs || 0,
+            bonus_coureurs: bonus_coureur || 0,
+            bonus_scoreurs: bonus_scoreurs || 0,
             commentaire,
             created_by: manager.id,
           }, {
