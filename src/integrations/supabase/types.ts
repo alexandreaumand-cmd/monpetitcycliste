@@ -3113,36 +3113,7 @@ export type Database = {
           race_points: number | null
           total_points: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "points_ledger_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["phase_id"]
-          },
-          {
-            foreignKeyName: "points_ledger_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "manager_phase_status"
-            referencedColumns: ["phase_id"]
-          },
-          {
-            foreignKeyName: "points_ledger_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "managers_rosters_status"
-            referencedColumns: ["phase_id"]
-          },
-          {
-            foreignKeyName: "points_ledger_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "phases"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       v_manager_standings_total: {
         Row: {
