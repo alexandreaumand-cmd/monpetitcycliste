@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { RouteImageUploader } from "@/components/startlist/RouteImageUploader";
 import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 const StartlistDesktop = () => {
   
@@ -35,8 +36,8 @@ const StartlistDesktop = () => {
   const [parseResult, setParseResult] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [races, setRaces] = useState<any[]>([]);
-  const [phases, setPhases] = useState<any[]>([]);
   const [showUnmatched, setShowUnmatched] = useState(false);
+  const { phases, isLoading: isLoadingContext } = useSeasonContext();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -62,7 +63,7 @@ const StartlistDesktop = () => {
   };
 
   const loadData = async () => {
-    // Load recent races
+    // Load recent races (will be filtered by season phases in query)
     const { data: racesData } = await supabase
       .from('courses')
       .select('id, nom, date_debut, phase_id')
@@ -70,15 +71,6 @@ const StartlistDesktop = () => {
       .limit(50);
     
     if (racesData) setRaces(racesData);
-
-    // Load active phases
-    const { data: phasesData } = await supabase
-      .from('phases')
-      .select('id, index_dans_saison, saisons(annee)')
-      .order('index_dans_saison', { ascending: false })
-      .limit(10);
-    
-    if (phasesData) setPhases(phasesData);
   };
 
   const handleParse = async () => {
@@ -151,10 +143,14 @@ const StartlistDesktop = () => {
     }
   };
 
+  const seasonPhaseIds = phases?.map(p => p.id) || [];
+
   // Fetch upcoming courses
   const { data: upcomingCourses, isLoading: isLoadingCourses } = useQuery({
-    queryKey: ['upcoming-courses-startlist'],
+    queryKey: ['upcoming-courses-startlist', seasonPhaseIds.join(',')],
     queryFn: async () => {
+      if (seasonPhaseIds.length === 0) return [];
+      
       const today = new Date().toISOString().split('T')[0];
       const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
@@ -173,13 +169,15 @@ const StartlistDesktop = () => {
             saisons (annee)
           )
         `)
+        .in('phase_id', seasonPhaseIds)
         .gte('date_debut', today)
         .lte('date_debut', in30Days)
         .order('date_debut', { ascending: true });
       
       if (error) throw error;
       return data || [];
-    }
+    },
+    enabled: !isLoadingContext && seasonPhaseIds.length > 0
   });
 
   // Check if startlist exists for a race
@@ -809,7 +807,7 @@ const StartlistDesktop = () => {
                 <SelectContent>
                   {phases.map(p => (
                     <SelectItem key={p.id} value={p.id}>
-                      Phase {p.index_dans_saison} - {(p.saisons as any)?.annee}
+                      Phase {p.index_dans_saison} ({new Date(p.date_debut).toLocaleDateString('fr-FR', { month: 'short' })} - {new Date(p.date_fin).toLocaleDateString('fr-FR', { month: 'short' })})
                     </SelectItem>
                   ))}
                 </SelectContent>

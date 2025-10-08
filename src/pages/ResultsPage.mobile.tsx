@@ -9,6 +9,7 @@ import { CourseResultsDrawer } from "@/components/courses/CourseResultsDrawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MobileCard, MobileEmptyState } from "@/components/mobile";
 import { AdminMaintenance } from "@/components/admin/AdminMaintenance";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 interface Race {
   course_id: string;
@@ -39,13 +40,13 @@ interface Phase {
 }
 
 export const ResultsPageMobile = () => {
+  const { selectedSeason, phases, activePhase, isLoading: isLoadingContext } = useSeasonContext();
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch] = useDebounce(searchQuery, 300);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [phases, setPhases] = useState<Phase[]>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   const [podiums, setPodiums] = useState<Record<string, ManagerPodium[]>>({});
   const [winners, setWinners] = useState<Record<string, RaceWinner>>({});
@@ -54,45 +55,17 @@ export const ResultsPageMobile = () => {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadPhases();
-  }, []);
+    if (activePhase && !selectedPhaseId) {
+      setSelectedPhaseId(activePhase.id);
+    }
+  }, [activePhase]);
 
   useEffect(() => {
-    if (selectedPhaseId) {
+    if (selectedPhaseId && !isLoadingContext) {
       loadRaces(true);
     }
-  }, [selectedPhaseId, debouncedSearch]);
+  }, [selectedPhaseId, debouncedSearch, isLoadingContext]);
 
-  const loadPhases = async () => {
-    const { data: saisonData } = await supabase
-      .from('saisons')
-      .select('id')
-      .eq('annee', 2025)
-      .single();
-
-    if (!saisonData) return;
-
-    const { data: phasesData } = await supabase
-      .from('phases')
-      .select('id, index_dans_saison, date_debut, date_fin, statut')
-      .eq('saison_id', saisonData.id)
-      .order('index_dans_saison', { ascending: true });
-
-    setPhases(phasesData || []);
-
-    const today = new Date();
-    const currentPhase = phasesData?.find(p => {
-      const debut = new Date(p.date_debut);
-      const fin = new Date(p.date_fin);
-      return today >= debut && today <= fin;
-    });
-
-    if (currentPhase) {
-      setSelectedPhaseId(currentPhase.id);
-    } else if (phasesData && phasesData.length > 0) {
-      setSelectedPhaseId(phasesData[phasesData.length - 1].id);
-    }
-  };
 
   const loadRaces = async (reset = false) => {
     if (reset) {
@@ -150,7 +123,7 @@ export const ResultsPageMobile = () => {
     setDrawerOpen(true);
   };
 
-  const getPhaseLabel = (phase: Phase) => {
+  const getPhaseLabel = (phase: any) => {
     const debut = new Date(phase.date_debut).toLocaleDateString('fr-FR', { month: 'short' });
     const fin = new Date(phase.date_fin).toLocaleDateString('fr-FR', { month: 'short' });
     

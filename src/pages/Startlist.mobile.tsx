@@ -32,10 +32,12 @@ import {
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 export const StartlistMobile = () => {
   const queryClient = useQueryClient();
   const { isAdmin } = useUserRole();
+  const { phases, isLoading: isLoadingContext } = useSeasonContext();
   const [viewMode, setViewMode] = useState<"list" | "parse" | "view">("list");
   const [selectedRaceId, setSelectedRaceId] = useState("");
   const [selectedPhaseId, setSelectedPhaseId] = useState("");
@@ -48,20 +50,26 @@ export const StartlistMobile = () => {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [expandedManagers, setExpandedManagers] = useState<Set<string>>(new Set());
 
+  const seasonPhaseIds = phases?.map(p => p.id) || [];
+
   // Fetch races
   const { data: races } = useQuery({
-    queryKey: ["startlist-races"],
+    queryKey: ["startlist-races", seasonPhaseIds.join(',')],
     queryFn: async () => {
+      if (seasonPhaseIds.length === 0) return [];
+      
       const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from("courses")
         .select("id, nom, date_debut, phase_id, categorie")
+        .in("phase_id", seasonPhaseIds)
         .gte("date_debut", today)
         .order("date_debut", { ascending: true })
         .limit(50);
       if (error) throw error;
       return data;
     },
+    enabled: !isLoadingContext && seasonPhaseIds.length > 0
   });
 
   // Fetch all startlist info in one query
@@ -85,19 +93,6 @@ export const StartlistMobile = () => {
     },
   });
 
-  // Fetch phases
-  const { data: phases } = useQuery({
-    queryKey: ["startlist-phases"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("phases")
-        .select("id, index_dans_saison, saisons(annee)")
-        .order("index_dans_saison", { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      return data;
-    },
-  });
 
   // Fetch startlist view data
   const { data: startlistViewData, isLoading: viewLoading } = useQuery({
@@ -256,7 +251,7 @@ export const StartlistMobile = () => {
               <SelectContent>
                 {phases?.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
-                    Phase {p.index_dans_saison} - {(p.saisons as any)?.annee}
+                    Phase {p.index_dans_saison} ({new Date(p.date_debut).toLocaleDateString('fr-FR', { month: 'short' })} - {new Date(p.date_fin).toLocaleDateString('fr-FR', { month: 'short' })})
                   </SelectItem>
                 ))}
               </SelectContent>
