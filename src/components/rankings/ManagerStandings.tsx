@@ -256,6 +256,14 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                         </span>
                         <span className="text-xs text-muted-foreground">pts</span>
                       </div>
+                      {standing.bonus_points !== undefined && standing.bonus_points !== 0 && (
+                        <div className={cn(
+                          "text-xs font-medium",
+                          standing.bonus_points > 0 ? "text-green-600" : "text-red-600"
+                        )}>
+                          {standing.bonus_points > 0 ? '+' : ''}{standing.bonus_points} bonus
+                        </div>
+                      )}
                       <div className="text-xs text-muted-foreground">
                         {percentage}%
                       </div>

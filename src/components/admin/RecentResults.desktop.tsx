@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { ResultsEntryStudio } from "./ResultsEntryStudio";
-import { Calendar, Trophy, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Calendar, Trophy, AlertCircle, CheckCircle2, Award } from "lucide-react";
+import { ManagerBonusDialog } from "./ManagerBonusDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
@@ -40,6 +41,7 @@ export const RecentResults = () => {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [studioMode, setStudioMode] = useState<'create' | 'edit'>('create');
   const [studioOpen, setStudioOpen] = useState(false);
+  const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
 
   // Fetch phases
   const { data: phases } = useQuery({
@@ -201,6 +203,18 @@ export const RecentResults = () => {
               </Button>
             );
           })}
+          
+          {viewMode === 'phase' && selectedPhase && (
+            <Button
+              onClick={() => setBonusDialogOpen(true)}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <Award className="h-4 w-4" />
+              Bonus
+            </Button>
+          )}
         </div>
 
         <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -381,6 +395,14 @@ export const RecentResults = () => {
           course={selectedCourse}
           mode={studioMode}
           onClose={() => setStudioOpen(false)}
+        />
+      )}
+
+      {selectedPhase && (
+        <ManagerBonusDialog
+          open={bonusDialogOpen}
+          onOpenChange={setBonusDialogOpen}
+          phaseId={selectedPhase}
         />
       )}
     </div>
