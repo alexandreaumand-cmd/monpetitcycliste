@@ -3983,6 +3983,10 @@ export type Database = {
           ratio_points_par_prix: number
         }[]
       }
+      migrate_tour_down_under_to_2025: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       normalize_text: {
         Args: { txt: string }
         Returns: string
