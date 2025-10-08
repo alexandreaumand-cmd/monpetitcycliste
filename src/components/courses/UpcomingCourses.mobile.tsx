@@ -37,12 +37,12 @@ export const UpcomingCoursesMobile = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [phaseFilter, setPhaseFilter] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<CourseData | null>(null);
-  const { selectedSeason, phases } = useSeasonContext();
+  const { selectedSeason, phases, isLoading: isLoadingContext } = useSeasonContext();
 
   const seasonPhaseIds = phases?.map(p => p.id) || [];
 
   const { data: courses, isLoading } = useQuery({
-    queryKey: ['all-courses', selectedSeason?.id],
+    queryKey: ['all-courses', selectedSeason?.id, seasonPhaseIds.join(',')],
     queryFn: async () => {
       if (!selectedSeason || seasonPhaseIds.length === 0) return [];
       
@@ -55,7 +55,7 @@ export const UpcomingCoursesMobile = () => {
       if (error) throw error;
       return data as CourseData[];
     },
-    enabled: !!selectedSeason && seasonPhaseIds.length > 0,
+    enabled: !!selectedSeason && !isLoadingContext && seasonPhaseIds.length > 0,
   });
 
   const filteredCourses = courses?.filter(course => {
@@ -102,7 +102,7 @@ export const UpcomingCoursesMobile = () => {
 
       {/* Liste des courses */}
       <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-3">
-        {isLoading ? (
+        {isLoading || isLoadingContext ? (
           <div className="space-y-3">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-40 bg-muted rounded-2xl animate-pulse" />

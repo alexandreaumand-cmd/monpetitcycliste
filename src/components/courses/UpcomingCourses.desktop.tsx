@@ -39,12 +39,12 @@ export const UpcomingCourses = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [phaseFilter, setPhaseFilter] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<CourseData | null>(null);
-  const { selectedSeason, phases } = useSeasonContext();
+  const { selectedSeason, phases, isLoading: isLoadingContext } = useSeasonContext();
 
   const seasonPhaseIds = phases?.map(p => p.id) || [];
 
   const { data: courses, isLoading } = useQuery({
-    queryKey: ['all-courses', selectedSeason?.id],
+    queryKey: ['all-courses', selectedSeason?.id, seasonPhaseIds.join(',')],
     queryFn: async () => {
       if (!selectedSeason || seasonPhaseIds.length === 0) return [];
       
@@ -57,7 +57,7 @@ export const UpcomingCourses = () => {
       if (error) throw error;
       return data as CourseData[];
     },
-    enabled: !!selectedSeason && seasonPhaseIds.length > 0,
+    enabled: !!selectedSeason && !isLoadingContext && seasonPhaseIds.length > 0,
   });
 
   const filteredCourses = courses?.filter(course => {
@@ -67,7 +67,7 @@ export const UpcomingCourses = () => {
     return matchesSearch && matchesPhase;
   });
 
-  if (isLoading) {
+  if (isLoading || isLoadingContext) {
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
