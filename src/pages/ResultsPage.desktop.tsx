@@ -105,9 +105,12 @@ export const ResultsPage = () => {
       // Load podiums and winners for the courses
       if (loadedRaces.length > 0) {
         const courseIds = loadedRaces.map((r: Race) => r.course_id);
-        const { data: podiumsData } = await supabase.functions.invoke('results-courses-podiums', {
-          body: { course_ids: courseIds }
-        });
+      const { data: podiumsData } = await supabase.functions.invoke('results-courses-podiums', {
+        body: { 
+          course_ids: courseIds,
+          saison_id: selectedSeason?.id
+        }
+      });
         
         if (podiumsData) {
           setPodiums(prev => reset ? (podiumsData.podiums || {}) : { ...prev, ...(podiumsData.podiums || {}) });
