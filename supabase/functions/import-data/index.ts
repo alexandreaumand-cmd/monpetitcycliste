@@ -653,6 +653,7 @@ Deno.serve(async (req) => {
       
       // Helper function to detect saison from date
       const detectSaisonFromDate = (date: string): string | null => {
+        if (!saisons) return null
         const year = new Date(date).getFullYear()
         const saison = saisons.find(s => s.annee === year)
         return saison ? saison.id : null

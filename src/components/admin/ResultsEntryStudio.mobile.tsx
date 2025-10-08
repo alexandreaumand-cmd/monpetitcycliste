@@ -308,6 +308,17 @@ export const ResultsEntryStudioMobile = ({
 
       const scoringMap = new Map(serverScoringRules.map(sr => [sr.place, sr.points]));
 
+      // Get saison_id from phase
+      const { data: phaseData } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', course.phase_id)
+        .single();
+
+      if (!phaseData?.saison_id) {
+        throw new Error('Impossible de trouver la saison pour cette course');
+      }
+
       const dateClassement = currentClassement === 'Etape'
         ? new Date(new Date(course.date_debut).getTime() + (currentStage - 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         : (course.date_fin || course.date_debut);
@@ -339,6 +350,7 @@ export const ResultsEntryStudioMobile = ({
           date_classement: dateClassement,
           manager_id: riderManagerMap.get(row.coureur_id!),
           points,
+          saison_id: phaseData.saison_id,
         };
       });
 
@@ -547,11 +559,18 @@ export const ResultsEntryStudioMobile = ({
                   .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
                   .single();
 
-                if (managerData?.id) {
+                const { data: phaseData } = await supabase
+                  .from('phases')
+                  .select('saison_id')
+                  .eq('id', course.phase_id)
+                  .single();
+
+                if (managerData?.id && phaseData?.saison_id) {
                   await supabase
                     .from('race_result_sets')
                     .upsert({
                       course_id: course.course_id,
+                      saison_id: phaseData.saison_id,
                       type_classement: currentClassement,
                       etape_numero: etapeNumeroValue,
                       is_cancelled: true,

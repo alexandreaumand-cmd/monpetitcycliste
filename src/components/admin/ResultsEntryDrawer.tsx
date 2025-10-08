@@ -257,6 +257,17 @@ export const ResultsEntryDrawer = ({
       const scoringMap = new Map(serverScoringRules.map(sr => [sr.place, sr.points]));
 
       // Calculate date_classement
+      // Get saison_id from phase
+      const { data: phaseData } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', course.phase_id)
+        .single();
+
+      if (!phaseData?.saison_id) {
+        throw new Error('Impossible de trouver la saison pour cette course');
+      }
+
       const dateClassement = classementType === 'Etape'
         ? new Date(new Date(course.date_debut).getTime() + (etapeNumero - 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         : course.date_fin;
@@ -290,6 +301,7 @@ export const ResultsEntryDrawer = ({
           date_classement: dateClassement,
           manager_id: riderManagerMap.get(row.coureur_id!),
           points,
+          saison_id: phaseData.saison_id,
         };
       });
 

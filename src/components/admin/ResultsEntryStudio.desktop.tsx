@@ -749,11 +749,18 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                         .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
                         .single();
 
-                      if (managerData?.id) {
+                      const { data: phaseData } = await supabase
+                        .from('phases')
+                        .select('saison_id')
+                        .eq('id', course.phase_id)
+                        .single();
+
+                      if (managerData?.id && phaseData?.saison_id) {
                         await supabase
                           .from('race_result_sets')
                           .upsert({
                             course_id: course.course_id,
+                            saison_id: phaseData.saison_id,
                             type_classement: classementType,
                             etape_numero: etapeNumeroValue,
                             is_cancelled: true,
