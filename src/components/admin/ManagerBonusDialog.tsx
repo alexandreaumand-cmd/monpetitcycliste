@@ -18,8 +18,10 @@ interface BonusEntry {
   manager_id: string;
   manager_nom: string;
   race_points: number;
-  current_bonus: number;
-  new_bonus: number;
+  bonus_itt: number;
+  bonus_ttt: number;
+  bonus_first_win: number;
+  bonus_coureurs: number;
   commentaire: string;
 }
 
@@ -41,24 +43,29 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
 
       if (standingsError) throw standingsError;
 
-      // Get existing bonus comments
+      // Get existing bonus details
       const { data: bonusData, error: bonusError } = await supabase
         .from('manager_bonus_points')
-        .select('manager_id, points, commentaire')
+        .select('manager_id, bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, commentaire')
         .eq('phase_id', phaseId);
 
       if (bonusError) throw bonusError;
 
       const bonusMap = new Map(bonusData?.map(b => [b.manager_id, b]) || []);
 
-      return standings?.map(s => ({
-        manager_id: s.manager_id,
-        manager_nom: s.manager_nom,
-        race_points: s.race_points || 0,
-        current_bonus: s.bonus_points || 0,
-        new_bonus: s.bonus_points || 0,
-        commentaire: bonusMap.get(s.manager_id)?.commentaire || ''
-      })) || [];
+      return standings?.map(s => {
+        const existingBonus = bonusMap.get(s.manager_id);
+        return {
+          manager_id: s.manager_id,
+          manager_nom: s.manager_nom,
+          race_points: s.race_points || 0,
+          bonus_itt: existingBonus?.bonus_itt || 0,
+          bonus_ttt: existingBonus?.bonus_ttt || 0,
+          bonus_first_win: existingBonus?.bonus_first_win || 0,
+          bonus_coureurs: existingBonus?.bonus_coureurs || 0,
+          commentaire: existingBonus?.commentaire || ''
+        };
+      }) || [];
     },
     enabled: open
   });
@@ -70,7 +77,7 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
     setBonuses(map);
   }
 
-  const updateBonus = (managerId: string, field: 'new_bonus' | 'commentaire', value: string | number) => {
+  const updateBonus = (managerId: string, field: keyof BonusEntry, value: string | number) => {
     setBonuses(prev => {
       const newMap = new Map(prev);
       const entry = newMap.get(managerId);
@@ -81,14 +88,20 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
     });
   };
 
+  const calculateTotal = (entry: BonusEntry) => {
+    return entry.bonus_itt + entry.bonus_ttt + entry.bonus_first_win + entry.bonus_coureurs;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
       const changedBonuses = Array.from(bonuses.values())
-        .filter(b => b.new_bonus !== b.current_bonus || b.commentaire)
         .map(b => ({
           manager_id: b.manager_id,
-          points: Number(b.new_bonus),
+          bonus_itt: Number(b.bonus_itt),
+          bonus_ttt: Number(b.bonus_ttt),
+          bonus_first_win: Number(b.bonus_first_win),
+          bonus_coureurs: Number(b.bonus_coureurs),
           commentaire: b.commentaire || null
         }));
 
@@ -120,7 +133,7 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Attribution de Points Bonus</DialogTitle>
         </DialogHeader>
@@ -131,49 +144,77 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th className="p-3 text-left font-medium">Manager</th>
-                    <th className="p-3 text-right font-medium">Points Courses</th>
-                    <th className="p-3 text-right font-medium">Bonus Actuel</th>
-                    <th className="p-3 text-right font-medium w-24">Nouveau Bonus</th>
+                    <th className="p-3 text-left font-medium whitespace-nowrap">Manager</th>
+                    <th className="p-3 text-right font-medium whitespace-nowrap">Points Courses</th>
+                    <th className="p-3 text-center font-medium whitespace-nowrap w-20">ITT</th>
+                    <th className="p-3 text-center font-medium whitespace-nowrap w-20">TTT</th>
+                    <th className="p-3 text-center font-medium whitespace-nowrap w-24">First Win</th>
+                    <th className="p-3 text-center font-medium whitespace-nowrap w-24">Coureurs</th>
+                    <th className="p-3 text-right font-medium whitespace-nowrap w-24">Total Bonus</th>
                     <th className="p-3 text-left font-medium">Commentaire</th>
                   </tr>
                 </thead>
                 <tbody>
                   {managers?.map((manager) => {
                     const bonus = bonuses.get(manager.manager_id) || manager;
+                    const total = calculateTotal(bonus);
                     return (
                       <tr key={manager.manager_id} className="border-t">
-                        <td className="p-3">{manager.manager_nom}</td>
+                        <td className="p-3 whitespace-nowrap">{manager.manager_nom}</td>
                         <td className="p-3 text-right text-muted-foreground">
                           {manager.race_points}
                         </td>
-                        <td className="p-3 text-right">
-                          {manager.current_bonus > 0 ? (
-                            <span className="text-green-600">+{manager.current_bonus}</span>
-                          ) : manager.current_bonus < 0 ? (
-                            <span className="text-red-600">{manager.current_bonus}</span>
+                        <td className="p-3">
+                          <Input
+                            type="number"
+                            value={bonus.bonus_itt}
+                            onChange={(e) => updateBonus(manager.manager_id, 'bonus_itt', Number(e.target.value))}
+                            className="w-16 text-center text-sm"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <Input
+                            type="number"
+                            value={bonus.bonus_ttt}
+                            onChange={(e) => updateBonus(manager.manager_id, 'bonus_ttt', Number(e.target.value))}
+                            className="w-16 text-center text-sm"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <Input
+                            type="number"
+                            value={bonus.bonus_first_win}
+                            onChange={(e) => updateBonus(manager.manager_id, 'bonus_first_win', Number(e.target.value))}
+                            className="w-20 text-center text-sm"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <Input
+                            type="number"
+                            value={bonus.bonus_coureurs}
+                            onChange={(e) => updateBonus(manager.manager_id, 'bonus_coureurs', Number(e.target.value))}
+                            className="w-20 text-center text-sm"
+                          />
+                        </td>
+                        <td className="p-3 text-right font-medium">
+                          {total > 0 ? (
+                            <span className="text-green-600">+{total}</span>
+                          ) : total < 0 ? (
+                            <span className="text-red-600">{total}</span>
                           ) : (
                             <span className="text-muted-foreground">0</span>
                           )}
                         </td>
                         <td className="p-3">
-                          <Input
-                            type="number"
-                            value={bonus.new_bonus}
-                            onChange={(e) => updateBonus(manager.manager_id, 'new_bonus', e.target.value)}
-                            className="w-20 text-right"
-                          />
-                        </td>
-                        <td className="p-3">
                           <Textarea
                             value={bonus.commentaire}
                             onChange={(e) => updateBonus(manager.manager_id, 'commentaire', e.target.value)}
-                            placeholder="Raison du bonus/malus..."
-                            className="min-h-[60px] resize-none"
+                            placeholder="Notes..."
+                            className="min-h-[50px] resize-none text-sm"
                           />
                         </td>
                       </tr>

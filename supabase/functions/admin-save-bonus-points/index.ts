@@ -69,10 +69,12 @@ Deno.serve(async (req) => {
 
     // Process each bonus
     for (const bonus of bonuses) {
-      const { manager_id, points, commentaire } = bonus;
+      const { manager_id, bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, commentaire } = bonus;
 
-      if (points === 0) {
-        // Delete bonus if points are 0
+      const totalBonus = (bonus_itt || 0) + (bonus_ttt || 0) + (bonus_first_win || 0) + (bonus_coureurs || 0);
+
+      if (totalBonus === 0 && !commentaire) {
+        // Delete bonus if all bonuses are 0 and no comment
         const { error: deleteError } = await supabase
           .from('manager_bonus_points')
           .delete()
@@ -91,7 +93,10 @@ Deno.serve(async (req) => {
           .upsert({
             phase_id,
             manager_id,
-            points,
+            bonus_itt: bonus_itt || 0,
+            bonus_ttt: bonus_ttt || 0,
+            bonus_first_win: bonus_first_win || 0,
+            bonus_coureurs: bonus_coureurs || 0,
             commentaire,
             created_by: manager.id,
           }, {
@@ -131,8 +136,9 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error in admin-save-bonus-points:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

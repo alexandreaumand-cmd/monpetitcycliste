@@ -577,33 +577,42 @@ export type Database = {
       }
       manager_bonus_points: {
         Row: {
+          bonus_coureurs: number
+          bonus_first_win: number
+          bonus_itt: number
+          bonus_ttt: number
           commentaire: string | null
           created_at: string
           created_by: string
           id: string
           manager_id: string
           phase_id: string
-          points: number
           updated_at: string
         }
         Insert: {
+          bonus_coureurs?: number
+          bonus_first_win?: number
+          bonus_itt?: number
+          bonus_ttt?: number
           commentaire?: string | null
           created_at?: string
           created_by: string
           id?: string
           manager_id: string
           phase_id: string
-          points?: number
           updated_at?: string
         }
         Update: {
+          bonus_coureurs?: number
+          bonus_first_win?: number
+          bonus_itt?: number
+          bonus_ttt?: number
           commentaire?: string | null
           created_at?: string
           created_by?: string
           id?: string
           manager_id?: string
           phase_id?: string
-          points?: number
           updated_at?: string
         }
         Relationships: [
