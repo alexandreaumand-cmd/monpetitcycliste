@@ -187,6 +187,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               <TableHead className="w-16">Rang</TableHead>
               <TableHead>Manager</TableHead>
               <TableHead className="text-right">Points</TableHead>
+              <TableHead className="text-right">dont bonus</TableHead>
               <TableHead className="text-right">Écart</TableHead>
               {(phaseId || previousGlobalStandings) && <TableHead className="w-24 text-center">Évolution</TableHead>}
             </TableRow>
@@ -256,18 +257,20 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                         </span>
                         <span className="text-xs text-muted-foreground">pts</span>
                       </div>
-                      {standing.bonus_points !== undefined && standing.bonus_points !== 0 && (
-                        <div className={cn(
-                          "text-xs font-medium",
-                          standing.bonus_points > 0 ? "text-green-600" : "text-red-600"
-                        )}>
-                          {standing.bonus_points > 0 ? '+' : ''}{standing.bonus_points} bonus
-                        </div>
-                      )}
                       <div className="text-xs text-muted-foreground">
                         {percentage}%
                       </div>
                     </div>
+                  </TableCell>
+                  <TableCell className="text-right py-2">
+                    <span className={cn(
+                      "text-sm font-mono font-medium",
+                      standing.bonus_points > 0 && "text-green-600",
+                      standing.bonus_points < 0 && "text-red-600",
+                      standing.bonus_points === 0 && "text-muted-foreground"
+                    )}>
+                      {standing.bonus_points > 0 ? `+${standing.bonus_points}` : standing.bonus_points === 0 ? '0' : standing.bonus_points}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right py-2">
                     {rank === 1 ? (
