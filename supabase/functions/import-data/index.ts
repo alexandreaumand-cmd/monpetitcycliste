@@ -8,7 +8,8 @@ const corsHeaders = {
 interface ImportRequest {
   table: 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates' | 'rosters'
   data: string // CSV content
-  saison_id?: string // Required for coureurs and scoring_rules
+  saison_id?: string // Required for coureurs, scoring_rules, and courses
+  phase_id?: string // Required for courses
 }
 
 /**
@@ -327,7 +328,7 @@ Deno.serve(async (req) => {
       throw new Error('Admin access required')
     }
 
-    const { table, data: csvData, saison_id }: ImportRequest = await req.json()
+    const { table, data: csvData, saison_id, phase_id }: ImportRequest = await req.json()
 
     // Validation pour coureurs et scoring_rules
     if ((table === 'coureurs' || table === 'scoring_rules') && !saison_id) {
@@ -335,6 +336,20 @@ Deno.serve(async (req) => {
         JSON.stringify({ 
           error: `saison_id requis pour import ${table}`,
           message: 'Veuillez sélectionner une saison cible' 
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Validation pour courses
+    if (table === 'courses' && (!saison_id || !phase_id)) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'saison_id et phase_id requis pour import courses',
+          message: 'Veuillez sélectionner une saison et une phase cible' 
         }),
         { 
           status: 400,
@@ -627,40 +642,34 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Special handling for courses - robust import with phase mapping
+    // Special handling for courses - with explicit saison/phase selection
     if (table === 'courses') {
-      console.log('🔧 Processing courses with robust import...')
+      console.log(`🔧 Processing courses for saison_id: ${saison_id}, phase_id: ${phase_id}`)
       
-      // Fetch all saisons for auto-detection
-      const { data: saisons, error: saisonsError } = await supabaseClient
-        .from('saisons')
-        .select('id, annee')
-        .order('annee')
-      
-      if (saisonsError || !saisons) {
-        throw new Error('Failed to fetch saisons for mapping')
-      }
-      
-      // Fetch all phases for mapping
-      const { data: phases, error: phasesError } = await supabaseClient
+      // Validate that phase belongs to saison
+      const { data: targetPhase, error: phaseError } = await supabaseClient
         .from('phases')
         .select('id, index_dans_saison, saison_id, date_debut, date_fin')
-        .order('saison_id, index_dans_saison')
+        .eq('id', phase_id)
+        .single()
       
-      if (phasesError || !phases) {
-        throw new Error('Failed to fetch phases for mapping')
+      if (phaseError || !targetPhase) {
+        throw new Error('Phase introuvable')
       }
       
-      // Helper function to detect saison from date
-      const detectSaisonFromDate = (date: string): string | null => {
-        if (!saisons) return null
-        const year = new Date(date).getFullYear()
-        const saison = saisons.find(s => s.annee === year)
-        return saison ? saison.id : null
+      if (targetPhase.saison_id !== saison_id) {
+        throw new Error(`La phase sélectionnée n'appartient pas à la saison sélectionnée`)
       }
       
-      console.log(`Available saisons: ${saisons.map(s => s.annee).join(', ')}`)
-      console.log(`Available phases: ${phases.map(p => `Phase ${p.index_dans_saison} (Saison ${saisons.find(s => s.id === p.saison_id)?.annee})`).join(', ')}`)
+      // Fetch saison info for logging
+      const { data: targetSaison } = await supabaseClient
+        .from('saisons')
+        .select('annee')
+        .eq('id', saison_id)
+        .single()
+      
+      console.log(`✅ Using Saison ${targetSaison?.annee}, Phase ${targetPhase.index_dans_saison}`)
+      console.log(`   Phase dates: ${targetPhase.date_debut} → ${targetPhase.date_fin}`)
       
       // Build column index map with synonym support
       const getColumnIndex = (aliases: string[]): number => {
@@ -687,9 +696,8 @@ Deno.serve(async (req) => {
       
       const coursesToInsert: any[] = []
       const errorDetails: string[] = []
-      const seenKeys = new Map<string, number>() // Track (nom, date_debut) -> line number for better error messages
-      const unmappedPhases = new Set<string>()
-      const mappedPhaseIds: string[] = []
+      const seenKeys = new Map<string, number>() // Track (nom, date_debut) -> line number
+      const dateWarnings: string[] = []
       
       for (let i = 1; i < lines.length; i++) {
         const values = parseCSVLine(lines[i], separator)
@@ -705,7 +713,6 @@ Deno.serve(async (req) => {
         const type_course = idxTypeCourse >= 0 ? values[idxTypeCourse]?.trim() || null : null
         let date_debut = idxDateDebut >= 0 ? values[idxDateDebut]?.trim() || null : null
         let date_fin = idxDateFin >= 0 ? values[idxDateFin]?.trim() || null : null
-        const phase_input = idxPhaseId >= 0 ? values[idxPhaseId]?.trim() || null : null
         const pays = idxPays >= 0 ? values[idxPays]?.trim() || null : null
         const statut = idxStatut >= 0 ? values[idxStatut]?.trim() || 'scheduled' : 'scheduled'
         const wt_tier = idxWtTier >= 0 ? values[idxWtTier]?.trim() || null : null
@@ -745,55 +752,12 @@ Deno.serve(async (req) => {
         }
         seenKeys.set(dedupeKey, i + 1)
         
-        // Auto-detect saison from date_debut
-        const detected_saison_id = detectSaisonFromDate(date_debut)
-        
-        if (!detected_saison_id) {
-          const year = new Date(date_debut).getFullYear()
-          errorDetails.push(
-            `Row ${i + 1}: Aucune saison trouvée pour l'année ${year} (course: "${nom}", date: ${date_debut})`
+        // Use the explicitly selected phase_id from UI
+        // Check if date is within phase boundaries (warning only, not blocking)
+        if (date_debut < targetPhase.date_debut || date_debut > targetPhase.date_fin) {
+          dateWarnings.push(
+            `Row ${i + 1}: "${nom}" (${date_debut}) est hors des dates de la Phase ${targetPhase.index_dans_saison} (${targetPhase.date_debut} → ${targetPhase.date_fin})`
           )
-          errors++
-          continue
-        }
-        
-        // Map phase_id using detected saison
-        let phase_id = null
-        if (phase_input) {
-          // Check if already a UUID
-          if (phase_input.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-            phase_id = phase_input
-            mappedPhaseIds.push(phase_id)
-          } else {
-            // Try to extract phase number
-            const phaseMatch = phase_input.match(/^(?:Phase\s*)?(\d+)$/i)
-            if (phaseMatch) {
-              const phaseNum = parseInt(phaseMatch[1], 10)
-              // Find phase in detected saison with matching index
-              const phase = phases.find(p => 
-                p.saison_id === detected_saison_id && 
-                p.index_dans_saison === phaseNum
-              )
-              
-              if (phase) {
-                phase_id = phase.id
-                mappedPhaseIds.push(phase_id)
-              } else {
-                const year = new Date(date_debut).getFullYear()
-                unmappedPhases.add(`Phase ${phaseNum} (Saison ${year})`)
-                errorDetails.push(
-                  `Row ${i + 1}: Phase "${phase_input}" introuvable pour la saison ${year} (course: "${nom}")`
-                )
-              }
-            } else {
-              unmappedPhases.add(phase_input)
-              errorDetails.push(`Row ${i + 1}: Format de phase non reconnu: "${phase_input}"`)
-            }
-          }
-        } else {
-          errorDetails.push(`Row ${i + 1}: Colonne phase_id manquante pour "${nom}"`)
-          errors++
-          continue
         }
         
         // Generate ID from nom if empty
@@ -808,7 +772,7 @@ Deno.serve(async (req) => {
           type_course,
           date_debut,
           date_fin,
-          phase_id,
+          phase_id: phase_id, // Use the explicit phase_id from UI
           pays,
           statut,
           wt_tier,
@@ -834,13 +798,10 @@ Deno.serve(async (req) => {
       }
       
       console.log(`✅ Imported ${imported} courses, ${errors} errors`)
-      if (unmappedPhases.size > 0) {
-        console.log(`⚠️  Unmapped phases: ${Array.from(unmappedPhases).join(', ')}`)
+      if (dateWarnings.length > 0) {
+        console.log(`⚠️  ${dateWarnings.length} date warnings`)
+        dateWarnings.slice(0, 5).forEach(w => console.log(`   ${w}`))
       }
-      
-      // Get first 3 distinct mapped phase IDs for diagnostics
-      const distinctPhaseIds = [...new Set(mappedPhaseIds)].slice(0, 3)
-      console.log(`📊 Sample mapped phase_ids: ${distinctPhaseIds.join(', ')}`)
       
       return new Response(
         JSON.stringify({
@@ -848,9 +809,8 @@ Deno.serve(async (req) => {
           imported,
           errors,
           errorDetails: errorDetails.slice(0, 10),
-          unmappedPhases: Array.from(unmappedPhases),
-          sampleMappedPhaseIds: distinctPhaseIds,
-          message: `Imported ${imported} courses with ${errors} errors. ${unmappedPhases.size > 0 ? `Unmapped phases: ${Array.from(unmappedPhases).join(', ')}` : ''}`
+          dateWarnings: dateWarnings.slice(0, 5),
+          message: `Importé ${imported} courses dans la Saison ${targetSaison?.annee}, Phase ${targetPhase.index_dans_saison}. ${errors > 0 ? `${errors} erreurs. ` : ''}${dateWarnings.length > 0 ? `${dateWarnings.length} avertissements de dates.` : ''}`
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
