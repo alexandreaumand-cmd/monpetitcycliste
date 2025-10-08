@@ -25,6 +25,7 @@ interface MobileDrawerProps {
   manager: any;
   isAdmin: boolean;
   onSignOut: () => void;
+  seasonSelector?: React.ReactNode;
 }
 
 export const MobileDrawer = ({
@@ -33,6 +34,7 @@ export const MobileDrawer = ({
   manager,
   isAdmin,
   onSignOut,
+  seasonSelector,
 }: MobileDrawerProps) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -102,6 +104,8 @@ export const MobileDrawer = ({
             </div>
           </div>
         </SheetHeader>
+
+        {seasonSelector}
 
         <nav className="flex-1 overflow-y-auto py-4 space-y-6">
           {sections.map((section, idx) => (

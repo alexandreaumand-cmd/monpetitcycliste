@@ -3,7 +3,9 @@ import { MobileHeader } from "./MobileHeader";
 import { MobileBottomBar } from "./MobileBottomBar";
 import { MobileDrawer } from "./MobileDrawer";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Menu } from "lucide-react";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -21,6 +23,7 @@ export const MobileLayout = ({
   title = "Mon Petit Cycliste",
 }: MobileLayoutProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { selectedSeason, setSelectedSeason, seasons, isLoading: seasonsLoading } = useSeasonContext();
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -51,13 +54,38 @@ export const MobileLayout = ({
       {/* Bottom navigation bar */}
       <MobileBottomBar isAdmin={isAdmin} />
 
-      {/* Side drawer */}
+      {/* Side drawer with Season Selector */}
       <MobileDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         manager={manager}
         isAdmin={isAdmin}
         onSignOut={onSignOut}
+        seasonSelector={
+          !seasonsLoading && seasons.length > 0 ? (
+            <div className="px-4 py-3 border-b">
+              <label className="text-sm font-medium block mb-2">Saison</label>
+              <Select
+                value={selectedSeason?.id || ""}
+                onValueChange={(value) => {
+                  const season = seasons.find(s => s.id === value);
+                  setSelectedSeason(season || null);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choisir une année" />
+                </SelectTrigger>
+                <SelectContent>
+                  {seasons.map((season) => (
+                    <SelectItem key={season.id} value={season.id}>
+                      {season.annee}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : undefined
+        }
       />
     </div>
   );

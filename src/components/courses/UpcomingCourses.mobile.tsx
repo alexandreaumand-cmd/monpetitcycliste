@@ -9,6 +9,7 @@ import { format, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { normalizeCourseType } from "@/lib/courseType";
 import { MobileCard, ChipGroup, MobileEmptyState } from "@/components/mobile";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 interface CourseData {
   course_id: string;
@@ -50,17 +51,7 @@ export const UpcomingCoursesMobile = () => {
     }
   });
 
-  const { data: phases } = useQuery({
-    queryKey: ['phases'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('phases')
-        .select('index_dans_saison')
-        .order('index_dans_saison');
-      if (error) throw error;
-      return data;
-    }
-  });
+  // phases already from context, no need to query
 
   const filteredCourses = courses?.filter(course => {
     const matchesSearch = course.nom.toLowerCase().includes(searchTerm.toLowerCase());

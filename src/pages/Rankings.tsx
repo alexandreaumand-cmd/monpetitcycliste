@@ -14,26 +14,15 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { TeamScoring } from "@/components/rankings/TeamScoring";
 import { CourseLeaderboard } from "@/components/rankings/CourseLeaderboard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 import { RankingsMobile } from "./Rankings.mobile";
 
 export default function Rankings() {
   const isMobile = useIsMobile();
+  const { selectedSeason, phases } = useSeasonContext();
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-
-  const { data: phases } = useQuery({
-    queryKey: ["phases-list"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("phases")
-        .select("id, index_dans_saison, date_debut, date_fin")
-        .order("date_debut", { ascending: true });
-      
-      if (error) throw error;
-      return data;
-    },
-  });
 
   const handleManagerClick = (managerId: string) => {
     setSelectedManager(managerId);
@@ -65,11 +54,11 @@ export default function Rankings() {
               value={selectedPhase || "all"} 
               onValueChange={(v) => setSelectedPhase(v === "all" ? null : v)}
             >
-              <SelectTrigger className="w-48 shrink-0">
-                <SelectValue placeholder="Toutes phases" />
+              <SelectTrigger className="w-56 shrink-0">
+                <SelectValue placeholder="Général (toute la saison)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes phases</SelectItem>
+                <SelectItem value="all">Général (toute la saison)</SelectItem>
                 {phases?.map((phase) => (
                   <SelectItem key={phase.id} value={phase.id}>
                     Phase {phase.index_dans_saison}
@@ -95,11 +84,11 @@ export default function Rankings() {
           </TabsContent>
 
           <TabsContent value="team" className="space-y-4">
-            <TeamScoring phaseId={selectedPhase} saisonId={null} />
+            <TeamScoring phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
           </TabsContent>
 
           <TabsContent value="course" className="space-y-4">
-            <CourseLeaderboard phaseId={selectedPhase} saisonId={null} />
+            <CourseLeaderboard phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
           </TabsContent>
         </Tabs>
 

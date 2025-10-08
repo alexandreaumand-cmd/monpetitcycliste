@@ -1,9 +1,12 @@
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X, ListChecks } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
+import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface HeaderProps {
   manager: any;
@@ -34,6 +37,8 @@ const mobileNavLinks = [
 export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const { selectedSeason, setSelectedSeason, seasons, isLoading: seasonsLoading } = useSeasonContext();
   
   const allDesktopLinks = isAdmin 
     ? [...desktopNavLinks, { label: 'Admin', href: '/dashboard/admin', icon: Shield }]
@@ -64,6 +69,28 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
               </div>
             )}
           </Link>
+
+          {/* Season Selector - Desktop */}
+          {!isMobile && !seasonsLoading && seasons.length > 0 && (
+            <Select
+              value={selectedSeason?.id || ""}
+              onValueChange={(value) => {
+                const season = seasons.find(s => s.id === value);
+                setSelectedSeason(season || null);
+              }}
+            >
+              <SelectTrigger className="w-[100px] h-9 ml-4">
+                <SelectValue placeholder="Année" />
+              </SelectTrigger>
+              <SelectContent>
+                {seasons.map((season) => (
+                  <SelectItem key={season.id} value={season.id}>
+                    {season.annee}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">

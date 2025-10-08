@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 type StandingsProps = {
   phaseId?: string | null;
@@ -13,10 +14,13 @@ type StandingsProps = {
 };
 
 export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) => {
+  const { selectedSeason } = useSeasonContext();
+  
   const { data: standings, isLoading } = useQuery({
-    queryKey: ["manager-standings", phaseId],
+    queryKey: ["manager-standings", phaseId, selectedSeason?.id],
     queryFn: async () => {
       if (phaseId) {
+        // Phase-specific standings
         const { data, error } = await supabase
           .from("v_manager_standings_by_phase")
           .select("*")
@@ -25,11 +29,22 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
         
         if (error) throw error;
         return data;
+      } else if (selectedSeason) {
+        // Season-specific standings (all phases of the season)
+        const { data, error } = await supabase
+          .from("v_manager_standings_by_season")
+          .select("*")
+          .eq("saison_id", selectedSeason.id)
+          .order("total_points", { ascending: false});
+        
+        if (error) throw error;
+        return data;
       } else {
+        // Global standings (all time)
         const { data, error } = await supabase
           .from("v_manager_standings_total")
           .select("*")
-          .order("total_points", { ascending: false });
+          .order("total_points", { ascending: false});
         
         if (error) throw error;
         return data;
