@@ -12,29 +12,18 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 type TabView = "standings" | "riders" | "timeline" | "teams" | "courses";
 
 export const RankingsMobile = () => {
+  const { selectedSeason, phases } = useSeasonContext();
   const [activeTab, setActiveTab] = useState<TabView>("standings");
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [ridersDisplayLimit, setRidersDisplayLimit] = useState(20);
 
-  // Fetch phases
-  const { data: phases } = useQuery({
-    queryKey: ["phases"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("phases")
-        .select("*")
-        .order("index_dans_saison", { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    },
-  });
 
   // Fetch standings
   const { data: standings, isLoading: standingsLoading } = useQuery({
@@ -147,30 +136,30 @@ export const RankingsMobile = () => {
     },
   });
 
-  // Fetch top riders
+  // Fetch top riders using edge function
   const { data: allTopRiders, isLoading: ridersLoading } = useQuery({
-    queryKey: ["top-riders-mobile", selectedPhase],
+    queryKey: ["top-riders-mobile", selectedPhase, selectedSeason?.id],
     queryFn: async () => {
-      if (selectedPhase) {
-        const { data, error } = await supabase
-          .from("v_top_riders_by_phase")
-          .select("*")
-          .eq("phase_id", selectedPhase)
-          .order("total_points", { ascending: false })
-          .limit(100);
-        
-        if (error) throw error;
-        return data;
-      } else {
-        const { data, error } = await supabase
-          .from("v_top_riders_global")
-          .select("*")
-          .order("total_points", { ascending: false })
-          .limit(100);
-        
-        if (error) throw error;
-        return data;
-      }
+      const { data, error } = await supabase.functions.invoke('get-top-riders', {
+        body: {
+          phase_id: selectedPhase,
+          saison_id: selectedSeason?.id || null,
+          limit: 100,
+        },
+      });
+
+      if (error) throw error;
+      
+      // Map to expected format for mobile
+      return data?.items?.map((item: any) => ({
+        coureur_id: item.rider_id,
+        coureur_nom: item.rider_nom,
+        coureur_equipe: item.rider_equipe,
+        total_points: item.total_points,
+        courses_count: item.courses_count,
+        prix_achat: item.prix_achat,
+        ratio_points_par_prix: item.ratio_points_par_prix,
+      })) || [];
     },
   });
 

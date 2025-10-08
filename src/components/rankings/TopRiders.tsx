@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 
 type TopRidersProps = {
   phaseId?: string | null;
+  saisonId?: string | null;
   limit?: number;
 };
 
@@ -60,7 +61,7 @@ type RiderPointsTableData = {
 
 type TopRidersSortColumn = "total_points" | "prix_achat" | "ratio_points_par_prix";
 
-export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
+export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => {
   const [selectedRider, setSelectedRider] = useState<TopRider | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -71,11 +72,12 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
   const [displayLimit, setDisplayLimit] = useState(20);
 
   const { data: allRiders, isLoading } = useQuery({
-    queryKey: ["top-riders", phaseId, 100],
+    queryKey: ["top-riders", phaseId, saisonId, 100],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-top-riders', {
         body: {
           phase_id: phaseId,
+          saison_id: saisonId,
           limit: 100,
         },
       });
@@ -88,7 +90,7 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
   const riders = allRiders?.slice(0, displayLimit);
 
   const { data: riderPointsData, isLoading: isLoadingDetails } = useQuery({
-    queryKey: ["rider-points-table", selectedRider?.rider_id, phaseId],
+    queryKey: ["rider-points-table", selectedRider?.rider_id, phaseId, saisonId],
     queryFn: async () => {
       if (!selectedRider) return null;
 
@@ -96,6 +98,7 @@ export const TopRiders = ({ phaseId, limit = 20 }: TopRidersProps) => {
         body: {
           rider_id: selectedRider.rider_id,
           phase_id: phaseId,
+          saison_id: saisonId,
         },
       });
 

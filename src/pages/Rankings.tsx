@@ -76,7 +76,7 @@ export default function Rankings() {
           </TabsContent>
 
           <TabsContent value="riders" className="space-y-4">
-            <TopRiders phaseId={selectedPhase} limit={20} />
+            <TopRiders phaseId={selectedPhase} saisonId={selectedSeason?.id || null} limit={20} />
           </TabsContent>
 
           <TabsContent value="timeline" className="space-y-4">
