@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
 import { MobileCard, MobileEmptyState } from "@/components/mobile";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 type Course = {
   course_id: string;
@@ -32,6 +33,8 @@ type ResultsStatus = {
 };
 
 export const RecentResultsMobile = () => {
+  const { selectedSeason, seasons, phases: allPhases } = useSeasonContext();
+  
   type ViewMode = '30days' | 'phase';
   const [viewMode, setViewMode] = useState<ViewMode>('30days');
   const [selectedPhase, setSelectedPhase] = useState<string>('');
@@ -41,27 +44,17 @@ export const RecentResultsMobile = () => {
   const [studioMode, setStudioMode] = useState<'create' | 'edit'>('create');
   const [studioOpen, setStudioOpen] = useState(false);
 
-  // Fetch phases
-  const { data: phases } = useQuery({
-    queryKey: ['phases'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('phases')
-        .select('id, index_dans_saison, date_debut, date_fin, statut')
-        .order('index_dans_saison', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    }
-  });
+  // Filter phases by selected season
+  const phases = allPhases?.filter(p => p.saison_id === selectedSeason?.id);
 
   // Fetch recent courses
   const { data: recentCourses, isLoading } = useQuery({
-    queryKey: ['recent-courses', viewMode, selectedPhase],
+    queryKey: ['recent-courses', viewMode, selectedPhase, selectedSeason?.id],
     queryFn: async () => {
       let query = supabase
         .from('courses')
-        .select('*')
+        .select('*, phases!inner(saison_id)')
+        .eq('phases.saison_id', selectedSeason?.id)
         .order('date_debut', { ascending: false });
       
       if (viewMode === '30days') {
@@ -150,7 +143,7 @@ export const RecentResultsMobile = () => {
           <div>
             <h1 className="text-xl font-bold">Résultats récents</h1>
             <p className="text-xs text-muted-foreground">
-              Saisie des résultats
+              Saison {selectedSeason?.annee}
             </p>
           </div>
 

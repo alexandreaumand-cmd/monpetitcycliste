@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { saison_id, phase_id, search, limit = 12 } = await req.json();
+    const { saison_id = null, phase_id, search, limit = 12 } = await req.json();
 
     // Get the manager ID for the current user
     const { data: manager } = await supabase
@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
 
     // Call the database function
     const { data: races, error } = await supabase.rpc('results_recent_races', {
-      p_saison_id: saison_id || null,
+      p_saison_id: saison_id,
       p_phase_id: phase_id || null,
       p_search: search || null,
       p_limit: limit,

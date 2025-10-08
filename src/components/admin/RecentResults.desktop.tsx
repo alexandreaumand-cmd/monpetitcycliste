@@ -11,6 +11,7 @@ import { ManagerBonusDialog } from "./ManagerBonusDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 type Course = {
   course_id: string;
@@ -33,6 +34,8 @@ type ResultsStatus = {
 };
 
 export const RecentResults = () => {
+  const { selectedSeason, seasons, phases: allPhases } = useSeasonContext();
+  
   type ViewMode = '30days' | 'phase';
   const [viewMode, setViewMode] = useState<ViewMode>('30days');
   const [selectedPhase, setSelectedPhase] = useState<string>('');
@@ -43,27 +46,17 @@ export const RecentResults = () => {
   const [studioOpen, setStudioOpen] = useState(false);
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
 
-  // Fetch phases
-  const { data: phases } = useQuery({
-    queryKey: ['phases'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('phases')
-        .select('id, index_dans_saison, date_debut, date_fin, statut')
-        .order('index_dans_saison', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    }
-  });
+  // Filter phases by selected season
+  const phases = allPhases?.filter(p => p.saison_id === selectedSeason?.id);
 
   // Fetch recent courses
   const { data: recentCourses, isLoading } = useQuery({
-    queryKey: ['recent-courses', viewMode, selectedPhase],
+    queryKey: ['recent-courses', viewMode, selectedPhase, selectedSeason?.id],
     queryFn: async () => {
       let query = supabase
         .from('courses')
-        .select('*')
+        .select('*, phases!inner(saison_id)')
+        .eq('phases.saison_id', selectedSeason?.id)
         .order('date_debut', { ascending: false });
       
       if (viewMode === '30days') {
@@ -125,15 +118,16 @@ export const RecentResults = () => {
           continue;
         }
         
-        // Get expected positions from scoring rules
+        // Get expected positions from scoring rules for the selected season
         const { data: scoringData } = await supabase
-          .from('scoring_rules_norm')
-          .select('type_canon, place')
-          .eq('cat_canon', course.categorie.toLowerCase())
+          .from('scoring_rules_saisons')
+          .select('type_classement, place')
+          .eq('saison_id', selectedSeason?.id)
+          .ilike('categorie', course.categorie)
           .order('place', { ascending: false });
         
-        const getMaxPlace = (type: string) => {
-          const filtered = scoringData?.filter(s => s.type_canon === type);
+        const getMaxPlace = (typeClassement: string) => {
+          const filtered = scoringData?.filter(s => s.type_classement === typeClassement);
           return filtered?.[0]?.place || 0;
         };
         
@@ -143,16 +137,16 @@ export const RecentResults = () => {
           nb_lignes_points: data?.filter(r => r.type_classement === 'Points' && r.coureur_id).length || 0,
           nb_lignes_montagne: data?.filter(r => r.type_classement === 'Montagne' && r.coureur_id).length || 0,
           nb_lignes_jeune: data?.filter(r => r.type_classement === 'Jeune' && r.coureur_id).length || 0,
-          expected_gc: getMaxPlace('general'),
-          expected_points: getMaxPlace('points'),
-          expected_montagne: getMaxPlace('montagne'),
-          expected_jeune: getMaxPlace('jeune'),
+          expected_gc: getMaxPlace('General'),
+          expected_points: getMaxPlace('Points'),
+          expected_montagne: getMaxPlace('Montagne'),
+          expected_jeune: getMaxPlace('Jeune'),
         };
       }
       
       return statusMap;
     },
-    enabled: !!recentCourses?.length,
+    enabled: !!recentCourses?.length && !!selectedSeason?.id,
   });
 
   const filteredCourses = recentCourses?.filter(course => {
@@ -172,7 +166,9 @@ export const RecentResults = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Résultats récents</h2>
-          <p className="text-muted-foreground">Saisie des résultats des courses des derniers jours</p>
+          <p className="text-muted-foreground">
+            Saisie des résultats • Saison {selectedSeason?.annee}
+          </p>
         </div>
       </div>
 
