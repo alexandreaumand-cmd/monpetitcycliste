@@ -342,6 +342,23 @@ export const ResultsEntryStudioMobile = ({
         };
       });
 
+      // Delete existing results before upserting to avoid position conflicts
+      let deleteResultsQuery = supabase
+        .from('race_results')
+        .delete()
+        .eq('course_id', course.course_id)
+        .eq('type_classement', currentClassement);
+      
+      if (currentClassement === 'Etape') {
+        deleteResultsQuery = deleteResultsQuery.eq('etape_numero', currentStage);
+      } else {
+        deleteResultsQuery = deleteResultsQuery.is('etape_numero', null);
+      }
+
+      const { error: deleteError } = await deleteResultsQuery;
+
+      if (deleteError) throw deleteError;
+
       const { error: resultsError } = await supabase
         .from('race_results')
         .upsert(resultsToUpsert, {
