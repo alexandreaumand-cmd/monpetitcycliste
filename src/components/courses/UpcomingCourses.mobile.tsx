@@ -37,21 +37,26 @@ export const UpcomingCoursesMobile = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [phaseFilter, setPhaseFilter] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<CourseData | null>(null);
+  const { selectedSeason, phases } = useSeasonContext();
+
+  const seasonPhaseIds = phases?.map(p => p.id) || [];
 
   const { data: courses, isLoading } = useQuery({
-    queryKey: ['all-courses'],
+    queryKey: ['all-courses', selectedSeason?.id],
     queryFn: async () => {
+      if (!selectedSeason || seasonPhaseIds.length === 0) return [];
+      
       const { data, error } = await supabase
         .from('v_course_points_theoriques')
         .select('*')
+        .in('phase_id', seasonPhaseIds)
         .order('date_debut', { ascending: false });
       
       if (error) throw error;
       return data as CourseData[];
-    }
+    },
+    enabled: !!selectedSeason && seasonPhaseIds.length > 0,
   });
-
-  // phases already from context, no need to query
 
   const filteredCourses = courses?.filter(course => {
     const matchesSearch = course.nom.toLowerCase().includes(searchTerm.toLowerCase());

@@ -11,6 +11,7 @@ import { CoursePointsDrawer } from "./CoursePointsDrawer";
 import { format, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 interface CourseData {
   course_id: string;

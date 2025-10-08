@@ -19,6 +19,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 interface Coureur {
   coureur_id: string;
@@ -38,13 +39,6 @@ interface PointDetail {
   date_classement: string;
 }
 
-interface Phase {
-  id: string;
-  index_dans_saison: number;
-  date_debut: string;
-  date_fin: string;
-  statut: "draft" | "active" | "completed" | "auction_open" | "auction_closed";
-}
 
 type SortBy = "points" | "ratio" | "prix" | "cote";
 
@@ -54,10 +48,10 @@ interface Manager {
 }
 
 export const MyTeamMobile = () => {
+  const { phases, activePhase, selectedSeason } = useSeasonContext();
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>("points");
-  const [phases, setPhases] = useState<Phase[]>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   
   // Manager selection state
@@ -69,10 +63,15 @@ export const MyTeamMobile = () => {
   const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string; equipe: string; prix: number } | null>(null);
 
   useEffect(() => {
-    loadPhases();
     loadManagers();
     loadCurrentUser();
   }, []);
+
+  useEffect(() => {
+    if (activePhase) {
+      setSelectedPhaseId(activePhase.id);
+    }
+  }, [activePhase]);
 
   useEffect(() => {
     if (selectedPhaseId) {
@@ -112,31 +111,6 @@ export const MyTeamMobile = () => {
     }
   };
 
-  const loadPhases = async () => {
-    try {
-      const { data: saisonData } = await supabase
-        .from("saisons")
-        .select("id")
-        .eq("annee", 2025)
-        .single();
-
-      if (!saisonData) return;
-
-      const { data: phasesData } = await supabase
-        .from("phases")
-        .select("*")
-        .eq("saison_id", saisonData.id)
-        .order("index_dans_saison", { ascending: false });
-
-      if (phasesData && phasesData.length > 0) {
-        setPhases(phasesData);
-        const activePhase = phasesData.find((p) => p.statut === "active");
-        setSelectedPhaseId(activePhase?.id || phasesData[0].id);
-      }
-    } catch (error) {
-      console.error("Error loading phases:", error);
-    }
-  };
 
   const loadTeam = async () => {
     setLoading(true);
@@ -203,7 +177,7 @@ export const MyTeamMobile = () => {
     return "bg-red-500/5 border-red-500/10";
   };
 
-  const getPhaseLabel = (phase: Phase) => {
+  const getPhaseLabel = (phase: any) => {
     const debut = new Date(phase.date_debut).toLocaleDateString("fr-FR", { month: "short" });
     const fin = new Date(phase.date_fin).toLocaleDateString("fr-FR", { month: "short" });
     return `Phase ${phase.index_dans_saison} (${debut} - ${fin})${

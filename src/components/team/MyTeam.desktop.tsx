@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RiderPointsDetail } from "./RiderPointsDetail";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 interface Coureur {
   coureur_id: string;
@@ -43,13 +44,6 @@ interface TeamKPIs {
   managers_count: number;
 }
 
-interface Phase {
-  id: string;
-  index_dans_saison: number;
-  date_debut: string;
-  date_fin: string;
-  statut: 'draft' | 'active' | 'completed' | 'auction_open' | 'auction_closed';
-}
 
 type SortBy = 'points' | 'ratio' | 'prix' | 'cote';
 
@@ -59,8 +53,8 @@ interface Manager {
 }
 
 export const MyTeamDesktop = () => {
-  
   const { toast } = useToast();
+  const { phases, activePhase, selectedSeason } = useSeasonContext();
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>('points');
@@ -73,7 +67,6 @@ export const MyTeamDesktop = () => {
   });
   
   // Phase state
-  const [phases, setPhases] = useState<Phase[]>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   
   // Manager selection state
@@ -87,10 +80,15 @@ export const MyTeamDesktop = () => {
   // Desktop version
 
   useEffect(() => {
-    loadPhases();
     loadManagers();
     loadCurrentUser();
   }, []);
+
+  useEffect(() => {
+    if (activePhase) {
+      setSelectedPhaseId(activePhase.id);
+    }
+  }, [activePhase]);
 
   useEffect(() => {
     if (selectedPhaseId) {
@@ -130,45 +128,6 @@ export const MyTeamDesktop = () => {
     }
   };
 
-  const loadPhases = async () => {
-    try {
-      // Récupérer la saison 2025
-      const { data: saisonData } = await supabase
-        .from('saisons')
-        .select('id')
-        .eq('annee', 2025)
-        .single();
-
-      if (!saisonData) {
-        console.error('No season 2025 found');
-        return;
-      }
-
-      // Récupérer les phases de la saison 2025
-      const { data: phasesData } = await supabase
-        .from('phases')
-        .select('id, index_dans_saison, date_debut, date_fin, statut')
-        .eq('saison_id', saisonData.id)
-        .order('index_dans_saison', { ascending: true });
-
-      setPhases(phasesData || []);
-
-      // Sélectionner la phase active par défaut
-      const activePhase = phasesData?.find(p => p.statut === 'active');
-      if (activePhase) {
-        setSelectedPhaseId(activePhase.id);
-      } else if (phasesData && phasesData.length > 0) {
-        setSelectedPhaseId(phasesData[0].id);
-      }
-    } catch (error) {
-      console.error('Error loading phases:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les phases",
-        variant: "destructive"
-      });
-    }
-  };
 
   const loadTeam = async () => {
     setLoading(true);
@@ -257,7 +216,7 @@ export const MyTeamDesktop = () => {
     return "";
   };
 
-  const getPhaseLabel = (phase: Phase) => {
+  const getPhaseLabel = (phase: any) => {
     const debut = new Date(phase.date_debut).toLocaleDateString('fr-FR', { month: 'short' });
     const fin = new Date(phase.date_fin).toLocaleDateString('fr-FR', { month: 'short' });
     return `Phase ${phase.index_dans_saison} (${debut} - ${fin})${phase.statut === 'active' ? ' ✓' : ''}`;
