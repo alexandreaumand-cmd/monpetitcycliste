@@ -525,6 +525,100 @@ export type Database = {
         }
         Relationships: []
       }
+      coureurs_saisons: {
+        Row: {
+          coureur_id: string
+          created_at: string | null
+          equipe: string | null
+          id: string
+          prix_initial: number | null
+          saison_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          coureur_id: string
+          created_at?: string | null
+          equipe?: string | null
+          id?: string
+          prix_initial?: number | null
+          saison_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          coureur_id?: string
+          created_at?: string | null
+          equipe?: string | null
+          id?: string
+          prix_initial?: number | null
+          saison_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coureurs_saisons_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_breakdown"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_by_phase"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_top_riders_global"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_saison_id_fkey"
+            columns: ["saison_id"]
+            isOneToOne: false
+            referencedRelation: "saisons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_saison_id_fkey"
+            columns: ["saison_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_season"
+            referencedColumns: ["saison_id"]
+          },
+        ]
+      }
       courses: {
         Row: {
           categorie: string | null
@@ -2120,6 +2214,54 @@ export type Database = {
           type_classement?: Database["public"]["Enums"]["type_classement"]
         }
         Relationships: []
+      }
+      scoring_rules_saisons: {
+        Row: {
+          categorie: string
+          created_at: string | null
+          id: string
+          place: number
+          points: number
+          saison_id: string
+          type: string | null
+          type_classement: Database["public"]["Enums"]["type_classement"]
+        }
+        Insert: {
+          categorie: string
+          created_at?: string | null
+          id?: string
+          place: number
+          points?: number
+          saison_id: string
+          type?: string | null
+          type_classement: Database["public"]["Enums"]["type_classement"]
+        }
+        Update: {
+          categorie?: string
+          created_at?: string | null
+          id?: string
+          place?: number
+          points?: number
+          saison_id?: string
+          type?: string | null
+          type_classement?: Database["public"]["Enums"]["type_classement"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scoring_rules_saisons_saison_id_fkey"
+            columns: ["saison_id"]
+            isOneToOne: false
+            referencedRelation: "saisons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scoring_rules_saisons_saison_id_fkey"
+            columns: ["saison_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_season"
+            referencedColumns: ["saison_id"]
+          },
+        ]
       }
       startlist_entries: {
         Row: {

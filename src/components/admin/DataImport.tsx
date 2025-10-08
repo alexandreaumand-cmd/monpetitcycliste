@@ -5,15 +5,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Loader2, Download } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 type TableType = 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates' | 'rosters';
 
 export const DataImport = () => {
   const [selectedTable, setSelectedTable] = useState<TableType>('coureurs');
+  const [selectedSaison, setSelectedSaison] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
+
+  // Load available seasons
+  const { data: saisons } = useQuery({
+    queryKey: ['saisons'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('saisons')
+        .select('id, annee')
+        .order('annee', { ascending: false });
+      return data || [];
+    }
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -31,6 +45,16 @@ export const DataImport = () => {
       return;
     }
 
+    // Validation saison pour coureurs et scoring_rules
+    if ((selectedTable === 'coureurs' || selectedTable === 'scoring_rules') && !selectedSaison) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner une saison pour l'import " + selectedTable,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setImporting(true);
 
     try {
@@ -40,6 +64,9 @@ export const DataImport = () => {
         body: {
           table: selectedTable,
           data: csvData,
+          ...((selectedTable === 'coureurs' || selectedTable === 'scoring_rules') && { 
+            saison_id: selectedSaison 
+          })
         },
       });
 
@@ -202,6 +229,29 @@ export const DataImport = () => {
             </SelectContent>
           </Select>
         </div>
+
+        {(selectedTable === 'coureurs' || selectedTable === 'scoring_rules') && (
+          <div className="space-y-2">
+            <label htmlFor="saison" className="text-sm font-medium">
+              Saison cible *
+            </label>
+            <Select value={selectedSaison} onValueChange={setSelectedSaison}>
+              <SelectTrigger id="saison">
+                <SelectValue placeholder="Sélectionner une saison" />
+              </SelectTrigger>
+              <SelectContent>
+                {saisons?.map(s => (
+                  <SelectItem key={s.id} value={s.id}>
+                    Saison {s.annee}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Les données importées seront liées à cette saison
+            </p>
+          </div>
+        )}
 
         <div className="space-y-2">
           <label htmlFor="file-input" className="text-sm font-medium">

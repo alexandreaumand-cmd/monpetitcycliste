@@ -8,6 +8,7 @@ const corsHeaders = {
 interface ImportRequest {
   table: 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates' | 'rosters'
   data: string // CSV content
+  saison_id?: string // Required for coureurs and scoring_rules
 }
 
 /**
@@ -326,9 +327,23 @@ Deno.serve(async (req) => {
       throw new Error('Admin access required')
     }
 
-    const { table, data: csvData }: ImportRequest = await req.json()
+    const { table, data: csvData, saison_id }: ImportRequest = await req.json()
 
-    console.log(`Importing data to table: ${table}`)
+    // Validation pour coureurs et scoring_rules
+    if ((table === 'coureurs' || table === 'scoring_rules') && !saison_id) {
+      return new Response(
+        JSON.stringify({ 
+          error: `saison_id requis pour import ${table}`,
+          message: 'Veuillez sélectionner une saison cible' 
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    console.log(`Importing data to table: ${table}${saison_id ? ` (saison: ${saison_id})` : ''}`)
 
     // Detect and clean CSV data
     let cleanedData = csvData
@@ -802,35 +817,131 @@ Deno.serve(async (req) => {
     }
 
     // For other tables (coureurs, scoring_rules, managers)
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i], separator)
-      
-      try {
-        let record = mapToTableFormat(table, headers, values)
+    if (table === 'coureurs') {
+      // Import coureurs with season historization
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i], separator)
         
-        if (record) {
-          // For scoring_rules, upsert based on unique constraint (categorie, type_classement, place)
-          const { error } = table === 'scoring_rules'
-            ? await supabaseClient
-                .from(table)
-                .upsert(record, { 
-                  onConflict: 'categorie,type_classement,place',
-                  ignoreDuplicates: false 
-                })
-            : await supabaseClient
-                .from(table)
-                .upsert(record, { onConflict: 'id' })
-
-          if (error) {
-            console.error(`Error importing row ${i}:`, error)
-            errors++
-          } else {
+        try {
+          let record = mapToTableFormat(table, headers, values)
+          
+          if (record) {
+            // 1. Upsert dans coureurs (table principale - fallback)
+            const { error: coureurError } = await supabaseClient
+              .from('coureurs')
+              .upsert({
+                id: record.id,
+                nom: record.nom,
+                equipe: record.equipe,
+                prix_initial: record.prix_initial,
+                uci_id: record.uci_id
+              }, { onConflict: 'id' })
+            
+            if (coureurError) {
+              console.error(`Error upserting coureur ${record.nom}:`, coureurError)
+              errors++
+              continue
+            }
+            
+            // 2. Upsert dans coureurs_saisons (historisation)
+            const { error: saisonError } = await supabaseClient
+              .from('coureurs_saisons')
+              .upsert({
+                coureur_id: record.id,
+                saison_id: saison_id,
+                equipe: record.equipe,
+                prix_initial: record.prix_initial
+              }, { onConflict: 'coureur_id,saison_id' })
+            
+            if (saisonError) {
+              console.error(`Error upserting coureur_saison for ${record.nom}:`, saisonError)
+              errors++
+              continue
+            }
+            
             imported++
           }
+        } catch (err) {
+          console.error(`Error processing row ${i}:`, err)
+          errors++
         }
-      } catch (err) {
-        console.error(`Error processing row ${i}:`, err)
-        errors++
+      }
+    } else if (table === 'scoring_rules') {
+      // Import scoring_rules with season historization
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i], separator)
+        
+        try {
+          let record = mapToTableFormat(table, headers, values)
+          
+          if (record) {
+            // 1. Upsert dans scoring_rules (table principale - fallback)
+            const { error: ruleError } = await supabaseClient
+              .from('scoring_rules')
+              .upsert({
+                id: record.id,
+                categorie: record.categorie,
+                type_classement: record.type_classement,
+                place: record.place,
+                points: record.points,
+                type: record.type
+              }, { onConflict: 'categorie,type_classement,place' })
+            
+            if (ruleError) {
+              console.error(`Error upserting scoring_rule:`, ruleError)
+              errors++
+              continue
+            }
+            
+            // 2. Upsert dans scoring_rules_saisons (historisation)
+            const { error: saisonError } = await supabaseClient
+              .from('scoring_rules_saisons')
+              .upsert({
+                saison_id: saison_id,
+                categorie: record.categorie,
+                type_classement: record.type_classement,
+                place: record.place,
+                points: record.points,
+                type: record.type
+              }, { onConflict: 'saison_id,categorie,type_classement,place' })
+            
+            if (saisonError) {
+              console.error(`Error upserting scoring_rule_saison:`, saisonError)
+              errors++
+              continue
+            }
+            
+            imported++
+          }
+        } catch (err) {
+          console.error(`Error processing row ${i}:`, err)
+          errors++
+        }
+      }
+    } else {
+      // For other tables (managers)
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i], separator)
+        
+        try {
+          let record = mapToTableFormat(table, headers, values)
+          
+          if (record) {
+            const { error } = await supabaseClient
+              .from(table)
+              .upsert(record, { onConflict: 'id' })
+
+            if (error) {
+              console.error(`Error importing row ${i}:`, error)
+              errors++
+            } else {
+              imported++
+            }
+          }
+        } catch (err) {
+          console.error(`Error processing row ${i}:`, err)
+          errors++
+        }
       }
     }
 
