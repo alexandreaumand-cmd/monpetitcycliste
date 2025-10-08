@@ -183,6 +183,87 @@ export type Database = {
           },
         ]
       }
+      announcement_banner: {
+        Row: {
+          id: string
+          is_active: boolean
+          message: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean
+          message?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          message?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_banner_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "announcement_banner_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "announcement_banner_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcement_banner_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "announcement_banner_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "announcement_banner_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_season"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "announcement_banner_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "announcement_banner_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
+        ]
+      }
       auctions: {
         Row: {
           closed_at: string | null

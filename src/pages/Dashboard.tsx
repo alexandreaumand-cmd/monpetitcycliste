@@ -3,6 +3,7 @@ import { useNavigate, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Header } from "@/components/layout/Header";
+import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { MobileLayout } from "@/components/mobile/MobileLayout";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AuctionsList } from "@/components/auction/AuctionsList";
@@ -66,28 +67,32 @@ const Dashboard = () => {
   // Mobile layout
   if (isMobile) {
     return (
-      <MobileLayout
-        manager={manager}
-        isAdmin={isAdmin}
-        onSignOut={handleSignOut}
-      >
-        <Routes>
-          <Route index element={<Navigate to="/dashboard/classement" replace />} />
-          <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
-          <Route path="mon-equipe" element={<MyTeam />} />
-          <Route path="courses" element={<UpcomingCourses />} />
-          <Route path="resultats" element={<ResultsPage />} />
-          <Route path="classement" element={<Rankings />} />
-          <Route path="startlist" element={<Startlist />} />
-          {isAdmin && <Route path="admin/*" element={<AdminPage />} />}
-        </Routes>
-      </MobileLayout>
+      <>
+        <AnnouncementBanner />
+        <MobileLayout
+          manager={manager}
+          isAdmin={isAdmin}
+          onSignOut={handleSignOut}
+        >
+          <Routes>
+            <Route index element={<Navigate to="/dashboard/classement" replace />} />
+            <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
+            <Route path="mon-equipe" element={<MyTeam />} />
+            <Route path="courses" element={<UpcomingCourses />} />
+            <Route path="resultats" element={<ResultsPage />} />
+            <Route path="classement" element={<Rankings />} />
+            <Route path="startlist" element={<Startlist />} />
+            {isAdmin && <Route path="admin/*" element={<AdminPage />} />}
+          </Routes>
+        </MobileLayout>
+      </>
     );
   }
 
   // Desktop layout
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
+      <AnnouncementBanner />
       <Header manager={manager} isAdmin={isAdmin} onSignOut={handleSignOut} />
       
       <main className="container mx-auto px-4 py-8">

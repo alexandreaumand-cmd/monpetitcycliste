@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, Trash2, Eye, RefreshCw, Calendar } from "lucide-react";
+import { AlertTriangle, Trash2, Eye, RefreshCw, Calendar, Megaphone } from "lucide-react";
 
 export const MaintenancePanel = () => {
   const [confirmInput, setConfirmInput] = useState("");
@@ -17,6 +19,53 @@ export const MaintenancePanel = () => {
   const queryClient = useQueryClient();
 
   const CONFIRM_PHRASE = "RESET TOUS RESULTATS";
+
+  // Announcement banner query
+  const { data: banner, refetch: refetchBanner } = useQuery({
+    queryKey: ['announcement-banner'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('announcement_banner')
+        .select('*')
+        .single();
+      
+      if (error) throw error;
+      return data as { id: string; is_active: boolean; message: string };
+    },
+  });
+
+  // Update announcement banner mutation
+  const updateBannerMutation = useMutation({
+    mutationFn: async (updates: { is_active?: boolean; message?: string }) => {
+      const { data: manager } = await supabase
+        .from('managers')
+        .select('id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      const { error } = await supabase
+        .from('announcement_banner')
+        .update({ ...updates, updated_by: manager?.id, updated_at: new Date().toISOString() })
+        .eq('id', banner?.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Bandeau mis à jour",
+        description: "Les modifications ont été enregistrées.",
+      });
+      refetchBanner();
+      queryClient.invalidateQueries({ queryKey: ['announcement-banner'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
 
   // Preview query (manual trigger)
   const { data: preview, refetch: fetchPreview, isLoading: isLoadingPreview } = useQuery({
@@ -125,6 +174,61 @@ export const MaintenancePanel = () => {
           Outils de maintenance pour les administrateurs
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Megaphone className="h-5 w-5" />
+            Bandeau d'annonce
+          </CardTitle>
+          <CardDescription>
+            Gérer le bandeau d'annonce affiché en haut de toutes les pages
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {banner && (
+            <>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="banner-active">Activer le bandeau</Label>
+                <Switch
+                  id="banner-active"
+                  checked={banner.is_active}
+                  onCheckedChange={(checked) => updateBannerMutation.mutate({ is_active: checked })}
+                  disabled={updateBannerMutation.isPending}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="banner-message">Message</Label>
+                <Textarea
+                  id="banner-message"
+                  value={banner.message}
+                  onChange={(e) => {
+                    // Update local state immediately for better UX
+                    const newMessage = e.target.value;
+                    queryClient.setQueryData(['announcement-banner'], {
+                      ...banner,
+                      message: newMessage
+                    });
+                  }}
+                  onBlur={(e) => {
+                    // Save to database on blur
+                    if (e.target.value !== banner.message) {
+                      updateBannerMutation.mutate({ message: e.target.value });
+                    }
+                  }}
+                  disabled={updateBannerMutation.isPending}
+                  className="min-h-[80px]"
+                  placeholder="En hommage à Guillaume Di Grazia - 1973-2025 🙏"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Le message sera affiché en haut de toutes les pages quand le bandeau est activé
+                </p>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
