@@ -631,20 +631,35 @@ Deno.serve(async (req) => {
     if (table === 'courses') {
       console.log('🔧 Processing courses with robust import...')
       
+      // Fetch all saisons for auto-detection
+      const { data: saisons, error: saisonsError } = await supabaseClient
+        .from('saisons')
+        .select('id, annee')
+        .order('annee')
+      
+      if (saisonsError || !saisons) {
+        throw new Error('Failed to fetch saisons for mapping')
+      }
+      
       // Fetch all phases for mapping
       const { data: phases, error: phasesError } = await supabaseClient
         .from('phases')
-        .select('id, index_dans_saison, date_debut, date_fin')
-        .order('index_dans_saison')
+        .select('id, index_dans_saison, saison_id, date_debut, date_fin')
+        .order('saison_id, index_dans_saison')
       
       if (phasesError || !phases) {
         throw new Error('Failed to fetch phases for mapping')
       }
       
-      // Build phase mapping
-      const phasesByIndex = new Map(phases.map(p => [p.index_dans_saison, p]))
+      // Helper function to detect saison from date
+      const detectSaisonFromDate = (date: string): string | null => {
+        const year = new Date(date).getFullYear()
+        const saison = saisons.find(s => s.annee === year)
+        return saison ? saison.id : null
+      }
       
-      console.log(`Available phases: ${phases.map(p => `Phase ${p.index_dans_saison}`).join(', ')}`)
+      console.log(`Available saisons: ${saisons.map(s => s.annee).join(', ')}`)
+      console.log(`Available phases: ${phases.map(p => `Phase ${p.index_dans_saison} (Saison ${saisons.find(s => s.id === p.saison_id)?.annee})`).join(', ')}`)
       
       // Build column index map with synonym support
       const getColumnIndex = (aliases: string[]): number => {
@@ -729,7 +744,19 @@ Deno.serve(async (req) => {
         }
         seenKeys.set(dedupeKey, i + 1)
         
-        // Map phase_id
+        // Auto-detect saison from date_debut
+        const detected_saison_id = detectSaisonFromDate(date_debut)
+        
+        if (!detected_saison_id) {
+          const year = new Date(date_debut).getFullYear()
+          errorDetails.push(
+            `Row ${i + 1}: Aucune saison trouvée pour l'année ${year} (course: "${nom}", date: ${date_debut})`
+          )
+          errors++
+          continue
+        }
+        
+        // Map phase_id using detected saison
         let phase_id = null
         if (phase_input) {
           // Check if already a UUID
@@ -741,19 +768,31 @@ Deno.serve(async (req) => {
             const phaseMatch = phase_input.match(/^(?:Phase\s*)?(\d+)$/i)
             if (phaseMatch) {
               const phaseNum = parseInt(phaseMatch[1], 10)
-              const phase = phasesByIndex.get(phaseNum)
+              // Find phase in detected saison with matching index
+              const phase = phases.find(p => 
+                p.saison_id === detected_saison_id && 
+                p.index_dans_saison === phaseNum
+              )
+              
               if (phase) {
                 phase_id = phase.id
                 mappedPhaseIds.push(phase_id)
               } else {
-                unmappedPhases.add(phase_input)
-                errorDetails.push(`Row ${i + 1}: Phase "${phase_input}" not found`)
+                const year = new Date(date_debut).getFullYear()
+                unmappedPhases.add(`Phase ${phaseNum} (Saison ${year})`)
+                errorDetails.push(
+                  `Row ${i + 1}: Phase "${phase_input}" introuvable pour la saison ${year} (course: "${nom}")`
+                )
               }
             } else {
               unmappedPhases.add(phase_input)
-              errorDetails.push(`Row ${i + 1}: Phase "${phase_input}" not recognized`)
+              errorDetails.push(`Row ${i + 1}: Format de phase non reconnu: "${phase_input}"`)
             }
           }
+        } else {
+          errorDetails.push(`Row ${i + 1}: Colonne phase_id manquante pour "${nom}"`)
+          errors++
+          continue
         }
         
         // Generate ID from nom if empty
