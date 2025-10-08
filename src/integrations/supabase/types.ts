@@ -1556,6 +1556,7 @@ export type Database = {
           etape_numero: number | null
           id: string
           is_cancelled: boolean
+          saison_id: string
           type_classement: Database["public"]["Enums"]["type_classement"]
         }
         Insert: {
@@ -1565,6 +1566,7 @@ export type Database = {
           etape_numero?: number | null
           id?: string
           is_cancelled?: boolean
+          saison_id: string
           type_classement: Database["public"]["Enums"]["type_classement"]
         }
         Update: {
@@ -1574,6 +1576,7 @@ export type Database = {
           etape_numero?: number | null
           id?: string
           is_cancelled?: boolean
+          saison_id?: string
           type_classement?: Database["public"]["Enums"]["type_classement"]
         }
         Relationships: [
@@ -1632,6 +1635,7 @@ export type Database = {
           points: number
           position: number | null
           result_set_id: string | null
+          saison_id: string
           statut: Database["public"]["Enums"]["result_statut"] | null
           type_classement: Database["public"]["Enums"]["type_classement"]
           updated_at: string | null
@@ -1647,6 +1651,7 @@ export type Database = {
           points?: number
           position?: number | null
           result_set_id?: string | null
+          saison_id: string
           statut?: Database["public"]["Enums"]["result_statut"] | null
           type_classement: Database["public"]["Enums"]["type_classement"]
           updated_at?: string | null
@@ -1662,6 +1667,7 @@ export type Database = {
           points?: number
           position?: number | null
           result_set_id?: string | null
+          saison_id?: string
           statut?: Database["public"]["Enums"]["result_statut"] | null
           type_classement?: Database["public"]["Enums"]["type_classement"]
           updated_at?: string | null
