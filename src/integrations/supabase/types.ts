@@ -3989,6 +3989,13 @@ export type Database = {
               p_limit?: number
               p_offset?: number
               p_phase_id?: string
+              p_saison_id?: string
+              p_search?: string
+            }
+          | {
+              p_limit?: number
+              p_offset?: number
+              p_phase_id?: string
               p_search?: string
             }
           | { p_limit?: number; p_offset?: number; p_search?: string }
