@@ -69,6 +69,19 @@ Deno.serve(async (req) => {
       throw ledgerError;
     }
 
+    // DEBUG: Log raw ledger data for Jonas in Phase 5
+    if (phase_id === '66edf120-0892-4c1c-ae83-0f9a1e0baf5f') {
+      const jonasEntries = ledgerData?.filter(e => e.coureur_id === 'jonas_vingegaard') || [];
+      console.log(`🔍 Jonas - Raw entries count: ${jonasEntries.length}`);
+      const rawSum = jonasEntries.reduce((sum, e) => sum + (e.points || 0), 0);
+      console.log(`🔍 Jonas - Raw sum of points: ${rawSum}`);
+      console.log(`🔍 Jonas - First 3 entries:`, jonasEntries.slice(0, 3).map(e => ({
+        course: e.course_id,
+        points: e.points,
+        type: typeof e.points
+      })));
+    }
+
     // Aggregate by coureur_id
     const ridersMap = new Map();
     
@@ -90,6 +103,18 @@ Deno.serve(async (req) => {
       rider.total_points += entry.points || 0;
       rider.courses_count.add(entry.course_id);
     });
+
+    // DEBUG: Log aggregated data for Jonas
+    if (phase_id === '66edf120-0892-4c1c-ae83-0f9a1e0baf5f') {
+      const jonasRider = ridersMap.get('jonas_vingegaard');
+      if (jonasRider) {
+        console.log(`🔍 Jonas - After aggregation:`, {
+          total_points: jonasRider.total_points,
+          courses_count: jonasRider.courses_count.size,
+          type_of_points: typeof jonasRider.total_points
+        });
+      }
+    }
 
     // Convert to array and format
     let items = Array.from(ridersMap.values()).map((rider: any) => ({
