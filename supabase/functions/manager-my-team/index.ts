@@ -139,7 +139,8 @@ Deno.serve(async (req) => {
       const { data: standings } = await supabase
         .from('points_ledger')
         .select('manager_id, points')
-        .eq('phase_id', phaseId);
+        .eq('phase_id', phaseId)
+        .not('manager_id', 'is', null);
 
       if (standings && standings.length > 0) {
         // Agréger les points par manager

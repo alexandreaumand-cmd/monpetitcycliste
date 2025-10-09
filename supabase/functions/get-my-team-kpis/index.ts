@@ -135,7 +135,8 @@ Deno.serve(async (req) => {
     const { data: allManagerPoints, error: leaderboardError } = await supabaseClient
       .from('points_ledger')
       .select('manager_id, points')
-      .in('phase_id', phaseIds);
+      .in('phase_id', phaseIds)
+      .not('manager_id', 'is', null);
 
     if (leaderboardError) throw leaderboardError;
 
