@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ChipGroup } from "@/components/mobile/ChipGroup";
@@ -12,7 +12,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { normalizeString } from "@/lib/stringUtils";
 
 type TabView = "standings" | "riders" | "timeline" | "teams" | "courses";
 
@@ -23,6 +26,8 @@ export const RankingsMobile = () => {
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [ridersDisplayLimit, setRidersDisplayLimit] = useState(20);
+  const [riderSearchTerm, setRiderSearchTerm] = useState("");
+  const [hideRidersWithoutManagers, setHideRidersWithoutManagers] = useState(false);
 
 
   // Fetch standings
@@ -159,11 +164,37 @@ export const RankingsMobile = () => {
         courses_count: item.courses_count,
         prix_achat: item.prix_achat,
         ratio_points_par_prix: item.ratio_points_par_prix,
+        owners: item.owners,
+        owners_all: item.owners_all,
       })) || [];
     },
   });
 
-  const topRiders = allTopRiders?.slice(0, ridersDisplayLimit);
+  // Filter riders by search term and manager ownership
+  const filteredTopRiders = useMemo(() => {
+    let filtered = allTopRiders || [];
+    
+    // Filter by search term (rider name or team)
+    if (riderSearchTerm) {
+      const searchNormalized = normalizeString(riderSearchTerm);
+      filtered = filtered.filter(rider => 
+        normalizeString(rider.coureur_nom).includes(searchNormalized) ||
+        normalizeString(rider.coureur_equipe || '').includes(searchNormalized)
+      );
+    }
+    
+    // Filter out riders without managers
+    if (hideRidersWithoutManagers) {
+      filtered = filtered.filter(rider => {
+        const owners = selectedPhase ? rider.owners : rider.owners_all;
+        return owners && owners.length > 0;
+      });
+    }
+    
+    return filtered;
+  }, [allTopRiders, riderSearchTerm, hideRidersWithoutManagers, selectedPhase]);
+
+  const topRiders = filteredTopRiders?.slice(0, ridersDisplayLimit);
 
   const phaseChips = [
     { label: "Global", value: "null" },
@@ -313,11 +344,42 @@ export const RankingsMobile = () => {
 
         {activeTab === "riders" && (
           <div className="space-y-3 pb-4">
+            <div className="space-y-3 mb-4">
+              <Input
+                placeholder="Rechercher un coureur ou une équipe..."
+                value={riderSearchTerm}
+                onChange={(e) => setRiderSearchTerm(e.target.value)}
+                className="h-10"
+              />
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="hide-no-managers-mobile"
+                  checked={hideRidersWithoutManagers}
+                  onCheckedChange={setHideRidersWithoutManagers}
+                />
+                <Label htmlFor="hide-no-managers-mobile" className="text-sm cursor-pointer">
+                  Masquer les coureurs sans manager
+                </Label>
+              </div>
+            </div>
+
             {ridersLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-20 w-full rounded-2xl" />
               ))
-            ) : topRiders && topRiders.length > 0 ? (
+            ) : !allTopRiders || allTopRiders.length === 0 ? (
+              <MobileEmptyState
+                icon={<User className="h-12 w-12" />}
+                title="Aucun coureur"
+                description="Les meilleurs coureurs apparaîtront ici"
+              />
+            ) : !topRiders || topRiders.length === 0 ? (
+              <MobileEmptyState
+                icon={<User className="h-12 w-12" />}
+                title="Aucun résultat"
+                description="Aucun coureur ne correspond à votre recherche"
+              />
+            ) : (
               <>
                 {topRiders.map((rider, idx) => (
                   <MobileCard
@@ -342,33 +404,27 @@ export const RankingsMobile = () => {
                     }
                   />
                 ))}
-                {allTopRiders && allTopRiders.length > ridersDisplayLimit && (
+                {filteredTopRiders && filteredTopRiders.length > ridersDisplayLimit && (
                   <div className="flex flex-col gap-2 pt-2">
                     <Button
                       variant="outline"
-                      onClick={() => setRidersDisplayLimit(prev => Math.min(prev + 20, allTopRiders.length))}
+                      onClick={() => setRidersDisplayLimit(prev => Math.min(prev + 20, filteredTopRiders!.length))}
                       className="w-full"
                     >
-                      Charger 20 de plus ({allTopRiders.length - ridersDisplayLimit} restants)
+                      Charger 20 de plus ({filteredTopRiders!.length - ridersDisplayLimit} restants)
                     </Button>
                     {ridersDisplayLimit >= 40 && (
                       <Button
                         variant="ghost"
-                        onClick={() => setRidersDisplayLimit(allTopRiders.length)}
+                        onClick={() => setRidersDisplayLimit(filteredTopRiders!.length)}
                         className="w-full"
                       >
-                        Voir tous ({allTopRiders.length})
+                        Voir tous ({filteredTopRiders!.length})
                       </Button>
                     )}
                   </div>
                 )}
               </>
-            ) : (
-              <MobileEmptyState
-                icon={<User className="h-12 w-12" />}
-                title="Aucun coureur"
-                description="Les meilleurs coureurs apparaîtront ici"
-              />
             )}
           </div>
         )}
