@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { saison_id, phase_id, limit = 20 } = await req.json();
+    const { saison_id, phase_id, limit = 5000 } = await req.json();
 
     console.log('Fetching top riders with filters:', { saison_id, phase_id, limit });
 
