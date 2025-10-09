@@ -47,31 +47,33 @@ Deno.serve(async (req) => {
       phaseIds = phases?.map(p => p.id) || [];
     }
 
-    // Get top 3 managers for each course (filtered by season phases)
-    let podiumsQuery = supabase
+    // Get all points with manager names in a single query
+    let allPointsQuery = supabase
       .from('points_ledger')
       .select(`
         course_id,
         manager_id,
+        points,
         managers!inner(nom)
       `)
       .in('course_id', course_ids);
     
     if (phaseIds.length > 0) {
-      podiumsQuery = podiumsQuery.in('phase_id', phaseIds);
+      allPointsQuery = allPointsQuery.in('phase_id', phaseIds);
     }
 
-    const { data: podiums, error } = await podiumsQuery;
+    const { data: allPoints, error } = await allPointsQuery;
 
     if (error) throw error;
 
     // Aggregate points by course and manager
     const aggregated: Record<string, Record<string, { manager_nom: string; points: number }>> = {};
 
-    podiums?.forEach((row: any) => {
+    allPoints?.forEach((row: any) => {
       const courseId = row.course_id;
       const managerId = row.manager_id;
-      const managerNom = row.managers.nom;
+      const managerNom = row.managers?.nom || 'Unknown';
+      const points = row.points || 0;
 
       if (!aggregated[courseId]) {
         aggregated[courseId] = {};
@@ -79,28 +81,7 @@ Deno.serve(async (req) => {
       if (!aggregated[courseId][managerId]) {
         aggregated[courseId][managerId] = { manager_nom: managerNom, points: 0 };
       }
-    });
-
-    // Now sum the actual points (filtered by season phases)
-    let pointsQuery = supabase
-      .from('points_ledger')
-      .select('course_id, manager_id, points')
-      .in('course_id', course_ids);
-    
-    if (phaseIds.length > 0) {
-      pointsQuery = pointsQuery.in('phase_id', phaseIds);
-    }
-
-    const { data: pointsData, error: pointsError } = await pointsQuery;
-
-    if (pointsError) throw pointsError;
-
-    pointsData?.forEach((row: any) => {
-      const courseId = row.course_id;
-      const managerId = row.manager_id;
-      if (aggregated[courseId]?.[managerId]) {
-        aggregated[courseId][managerId].points += row.points;
-      }
+      aggregated[courseId][managerId].points += points;
     });
 
     // Convert to array format and sort
