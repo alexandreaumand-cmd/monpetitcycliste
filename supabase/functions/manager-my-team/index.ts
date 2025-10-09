@@ -72,8 +72,6 @@ Deno.serve(async (req) => {
     const totalPoints = coureurs?.reduce((sum: number, c: any) => sum + Number(c.points_total || 0), 0) || 0;
     const scorersCount = coureurs?.filter((c: any) => Number(c.points_total || 0) > 0).length || 0;
 
-    // Utiliser le targetManagerId pour les calculs
-
     // Obtenir la phase active ou celle fournie
     let phaseId = phase_id;
     if (!phaseId) {
@@ -85,6 +83,25 @@ Deno.serve(async (req) => {
         .limit(1)
         .single();
       phaseId = activePhase?.id;
+    }
+
+    // Récupérer les points bonus du manager
+    let bonusPoints = 0;
+    if (phaseId && targetManagerId) {
+      const { data: bonusData } = await supabase
+        .from('manager_bonus_points')
+        .select('bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs')
+        .eq('manager_id', targetManagerId)
+        .eq('phase_id', phaseId)
+        .single();
+      
+      if (bonusData) {
+        bonusPoints = (bonusData.bonus_itt || 0) + 
+                      (bonusData.bonus_ttt || 0) + 
+                      (bonusData.bonus_first_win || 0) + 
+                      (bonusData.bonus_coureurs || 0) + 
+                      (bonusData.bonus_scoreurs || 0);
+      }
     }
 
     // Compter les courses gagnées (1ère position CG ou Etape)
@@ -152,6 +169,8 @@ Deno.serve(async (req) => {
       kpis: {
         scorers_count: scorersCount,
         total_points: totalPoints,
+        bonus_points: bonusPoints,
+        total_with_bonus: totalPoints + bonusPoints,
         wins_count: winsCount,
         my_rank: myRank,
         managers_count: managersCount

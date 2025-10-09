@@ -39,6 +39,8 @@ interface PointDetail {
 interface TeamKPIs {
   scorers_count: number;
   total_points: number;
+  bonus_points: number;
+  total_with_bonus: number;
   wins_count: number;
   my_rank: number | null;
   managers_count: number;
@@ -61,6 +63,8 @@ export const MyTeamDesktop = () => {
   const [kpis, setKpis] = useState<TeamKPIs>({
     scorers_count: 0,
     total_points: 0,
+    bonus_points: 0,
+    total_with_bonus: 0,
     wins_count: 0,
     my_rank: null,
     managers_count: 0
@@ -160,7 +164,7 @@ export const MyTeamDesktop = () => {
 
       if (error) throw error;
       setCoureurs(data.coureurs || []);
-      setKpis(data.kpis || { scorers_count: 0, total_points: 0, wins_count: 0, my_rank: null, managers_count: 0 });
+      setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, total_with_bonus: 0, wins_count: 0, my_rank: null, managers_count: 0 });
     } catch (error) {
       console.error('Error loading team:', error);
       toast({
@@ -406,7 +410,7 @@ export const MyTeamDesktop = () => {
 
       {/* Bannière KPI */}
       {coureurs.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex flex-col items-center">
@@ -428,9 +432,21 @@ export const MyTeamDesktop = () => {
             <CardContent className="pt-6">
               <div className="flex flex-col items-center">
                 <TrendingUp className="h-8 w-8 text-green-600 mb-2" />
-                <div className="text-3xl font-bold">{kpis.total_points}</div>
+                <div className="text-3xl font-bold">{kpis.total_with_bonus}</div>
                 <div className="text-sm text-muted-foreground text-center">
-                  Points marqués
+                  Points totaux
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center">
+                <span className="text-2xl mb-2">🎁</span>
+                <div className="text-3xl font-bold">{kpis.bonus_points}</div>
+                <div className="text-sm text-muted-foreground text-center">
+                  Points bonus
                 </div>
               </div>
             </CardContent>

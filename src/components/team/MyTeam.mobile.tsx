@@ -73,11 +73,6 @@ export const MyTeamMobile = () => {
     }
   }, [activePhase]);
 
-  useEffect(() => {
-    if (selectedPhaseId) {
-      loadTeam();
-    }
-  }, [selectedPhaseId, selectedManagerId]);
 
   const loadCurrentUser = async () => {
     try {
@@ -112,30 +107,6 @@ export const MyTeamMobile = () => {
   };
 
 
-  const loadTeam = async () => {
-    setLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const { data, error } = await supabase.functions.invoke("manager-my-team", {
-        body: { 
-          phase_id: selectedPhaseId,
-          manager_id: selectedManagerId 
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error) throw error;
-      setCoureurs(data.coureurs || []);
-    } catch (error: any) {
-      toast.error("Erreur : " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const openCoureurDetail = (coureur: Coureur) => {
     setSelectedRider({
@@ -202,8 +173,44 @@ export const MyTeamMobile = () => {
     );
   }
 
-  const scorersCount = coureurs.filter((c) => c.points_total > 0).length;
-  const totalPoints = coureurs.reduce((sum, c) => sum + c.points_total, 0);
+  const [kpis, setKpis] = useState({ 
+    scorers_count: 0, 
+    total_points: 0, 
+    bonus_points: 0, 
+    total_with_bonus: 0 
+  });
+
+  useEffect(() => {
+    if (selectedPhaseId) {
+      loadTeamWithKpis();
+    }
+  }, [selectedPhaseId, selectedManagerId]);
+
+  const loadTeamWithKpis = async () => {
+    setLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data, error } = await supabase.functions.invoke("manager-my-team", {
+        body: { 
+          phase_id: selectedPhaseId,
+          manager_id: selectedManagerId 
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+      setCoureurs(data.coureurs || []);
+      setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, total_with_bonus: 0 });
+    } catch (error: any) {
+      toast.error("Erreur : " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="p-4 space-y-4">
@@ -247,13 +254,15 @@ export const MyTeamMobile = () => {
       )}
 
       {/* KPIs */}
-      <KPIRow
-        items={[
-          { label: "Coureurs", value: coureurs.length, icon: <User className="h-4 w-4" /> },
-          { label: "Scoreurs", value: scorersCount, icon: <Trophy className="h-4 w-4" />, trend: scorersCount > 0 ? "up" : "neutral" },
-          { label: "Points", value: totalPoints, icon: <Trophy className="h-4 w-4" /> },
-        ]}
-      />
+      <div className="space-y-2">
+        <KPIRow
+          items={[
+            { label: "Points totaux", value: kpis.total_with_bonus, icon: <Trophy className="h-4 w-4" /> },
+            { label: "Bonus", value: kpis.bonus_points, icon: <span className="text-sm">🎁</span> },
+            { label: "Scoreurs", value: kpis.scorers_count, icon: <Trophy className="h-4 w-4" />, trend: kpis.scorers_count > 0 ? "up" : "neutral" },
+          ]}
+        />
+      </div>
 
       {/* Sort chips */}
       <ChipGroup items={sortChips} selected={sortBy} onSelect={(v) => setSortBy(v as SortBy)} />
