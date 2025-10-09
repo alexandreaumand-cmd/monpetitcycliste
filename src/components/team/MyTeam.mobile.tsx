@@ -64,6 +64,14 @@ export const MyTeamMobile = () => {
   // Detail drawer
   const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string; equipe: string; prix: number } | null>(null);
   
+  // KPIs state
+  const [kpis, setKpis] = useState({ 
+    scorers_count: 0, 
+    total_points: 0, 
+    bonus_points: 0, 
+    total_with_bonus: 0 
+  });
+  
   // Get manager sponsor for jersey display
   const displayedManagerId = selectedManagerId || currentUserId;
   const { data: managerSponsor } = useManagerSponsor(displayedManagerId, selectedSeason?.id);
@@ -78,6 +86,12 @@ export const MyTeamMobile = () => {
       setSelectedPhaseId(activePhase.id);
     }
   }, [activePhase]);
+
+  useEffect(() => {
+    if (selectedPhaseId) {
+      loadTeamWithKpis();
+    }
+  }, [selectedPhaseId, selectedManagerId]);
 
 
   const loadCurrentUser = async () => {
@@ -169,29 +183,6 @@ export const MyTeamMobile = () => {
     { label: "Cote", value: "cote" as SortBy },
   ];
 
-  if (loading) {
-    return (
-      <div className="p-4 space-y-4">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 w-full rounded-2xl" />
-        ))}
-      </div>
-    );
-  }
-
-  const [kpis, setKpis] = useState({ 
-    scorers_count: 0, 
-    total_points: 0, 
-    bonus_points: 0, 
-    total_with_bonus: 0 
-  });
-
-  useEffect(() => {
-    if (selectedPhaseId) {
-      loadTeamWithKpis();
-    }
-  }, [selectedPhaseId, selectedManagerId]);
-
   const loadTeamWithKpis = async () => {
     setLoading(true);
     try {
@@ -217,6 +208,16 @@ export const MyTeamMobile = () => {
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="p-4 space-y-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-24 w-full rounded-2xl" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 space-y-4">
