@@ -8,7 +8,7 @@ const corsHeaders = {
 interface RequestBody {
   saison_id?: string | null;
   phase_id?: string | null;
-  days: number;
+  view_mode?: 'current' | 'phase' | 'season';
   topN?: number | null;
   manager_ids?: string[] | null;
 }
@@ -29,13 +29,68 @@ Deno.serve(async (req) => {
       }
     );
 
-    const { days, phase_id, saison_id, topN = 5, manager_ids }: RequestBody = await req.json();
+    const { view_mode = 'current', phase_id, saison_id, topN = 10, manager_ids }: RequestBody = await req.json();
 
-    console.log('get-cumulative-points-series called with:', { days, phase_id, saison_id, topN, manager_ids });
+    console.log('get-cumulative-points-series called with:', { view_mode, phase_id, saison_id, topN, manager_ids });
 
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - (days - 1));
+    // Determine date range based on view_mode
+    let startDate: Date;
+    let endDate: Date = new Date();
+    let targetPhaseId: string | null = null;
+    let phaseInfo: any = null;
+
+    if (view_mode === 'phase' && phase_id) {
+      // Get phase dates
+      const { data: phase } = await supabaseClient
+        .from('phases')
+        .select('date_debut, date_fin, index_dans_saison')
+        .eq('id', phase_id)
+        .single();
+      
+      if (phase) {
+        startDate = new Date(phase.date_debut);
+        endDate = new Date(phase.date_fin);
+        targetPhaseId = phase_id;
+        phaseInfo = { index: phase.index_dans_saison, date_debut: phase.date_debut, date_fin: phase.date_fin };
+      } else {
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+      }
+    } else if (view_mode === 'season' && saison_id) {
+      // Get all phases for the season
+      const { data: phases } = await supabaseClient
+        .from('phases')
+        .select('date_debut, date_fin')
+        .eq('saison_id', saison_id)
+        .order('date_debut', { ascending: true });
+      
+      if (phases && phases.length > 0) {
+        startDate = new Date(phases[0].date_debut);
+        endDate = new Date(phases[phases.length - 1].date_fin);
+      } else {
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+      }
+    } else {
+      // Current mode - get active phase or default to 30 days
+      const { data: activePhase } = await supabaseClient
+        .from('phases')
+        .select('id, date_debut, date_fin, index_dans_saison')
+        .eq('statut', 'active')
+        .order('date_debut', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (activePhase) {
+        startDate = new Date(activePhase.date_debut);
+        endDate = new Date(activePhase.date_fin);
+        targetPhaseId = activePhase.id;
+        phaseInfo = { index: activePhase.index_dans_saison, date_debut: activePhase.date_debut, date_fin: activePhase.date_fin };
+      } else {
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+      }
+    }
 
     // Get points with course dates
     let query = supabaseClient
@@ -43,13 +98,15 @@ Deno.serve(async (req) => {
       .select(`
         manager_id,
         points,
-        managers(nom),
+        managers!inner(nom),
         courses!inner(date_fin, date_debut)
-      `);
+      `)
+      .not('managers.nom', 'is', null)
+      .neq('managers.nom', 'Unknown');
 
-    if (phase_id) {
-      query = query.eq('phase_id', phase_id);
-    } else if (saison_id) {
+    if (targetPhaseId) {
+      query = query.eq('phase_id', targetPhaseId);
+    } else if (view_mode === 'season' && saison_id) {
       const { data: phaseIds } = await supabaseClient
         .from('phases')
         .select('id')
@@ -80,7 +137,10 @@ Deno.serve(async (req) => {
       if (dateObj < startDate || dateObj > endDate) return;
       
       const managerId = row.manager_id;
-      const managerNom = row.managers?.nom || 'Unknown';
+      const managerNom = row.managers?.nom;
+      
+      // Skip if no valid manager name
+      if (!managerNom || managerNom === 'Unknown') return;
       
       managerNames.set(managerId, managerNom);
 
@@ -142,14 +202,16 @@ Deno.serve(async (req) => {
 
     const response = {
       meta: {
+        view_mode,
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0],
+        phase_info: phaseInfo,
         managers: selectedManagers.map(id => ({
           id,
-          nom: managerNames.get(id) || 'Unknown'
-        }))
+          nom: managerNames.get(id)
+        })).filter(m => m.nom && m.nom !== 'Unknown')
       },
-      series
+      series: series.filter(s => s.manager_nom && s.manager_nom !== 'Unknown')
     };
 
     console.log('Returning cumulative series:', response);
