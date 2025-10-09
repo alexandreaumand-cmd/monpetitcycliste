@@ -3,14 +3,35 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Shirt } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 
 type StandingsProps = {
   phaseId?: string | null;
   onManagerClick?: (managerId: string) => void;
+};
+
+const ManagerNameWithJersey = ({ managerId, managerName }: { managerId: string; managerName: string }) => {
+  const { selectedSeason } = useSeasonContext();
+  const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
+  
+  return (
+    <div className="flex items-center gap-2">
+      {sponsorData?.jersey_image_url ? (
+        <img 
+          src={sponsorData.jersey_image_url} 
+          alt="Maillot" 
+          className="w-6 h-6 object-contain"
+        />
+      ) : (
+        <Shirt className="w-4 h-4 text-muted-foreground" />
+      )}
+      <span>{managerName}</span>
+    </div>
+  );
 };
 
 export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) => {
@@ -257,7 +278,10 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                     {getRankIcon(rank, isBottomThree)}
                   </TableCell>
                   <TableCell className="font-semibold py-2">
-                    {standing.manager_nom}
+                    <ManagerNameWithJersey 
+                      managerId={standing.manager_id} 
+                      managerName={standing.manager_nom}
+                    />
                   </TableCell>
                   <TableCell className="text-right py-2">
                     <div className="space-y-0.5">

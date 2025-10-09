@@ -16,15 +16,17 @@ import { QuickRecalculateButton } from "@/components/admin/QuickRecalculateButto
 import { RecalculateCat21Button } from "@/components/admin/RecalculateCat21Button";
 import { RecalculateCat21Phase5Button } from "@/components/admin/RecalculateCat21Phase5Button";
 import { ManagerSponsorsManager } from "@/components/admin/ManagerSponsorsManager";
+import { JerseyManager } from "@/components/admin/JerseyManager";
 import { cn } from "@/lib/utils";
 
-const adminTabs = [
-  { label: 'Résultats', path: 'results' },
-  { label: 'Enchères', path: 'encheres' },
-  { label: 'Données', path: 'data' },
-  { label: 'Saisons', path: 'seasons' },
-  { label: 'Maintenance', path: 'maintenance' },
-];
+  const adminTabs = [
+    { label: 'Résultats', path: 'results' },
+    { label: 'Enchères', path: 'encheres' },
+    { label: 'Données', path: 'data' },
+    { label: 'Saisons', path: 'seasons' },
+    { label: 'Maillots', path: 'jerseys' },
+    { label: 'Maintenance', path: 'maintenance' },
+  ];
 
 export const AdminPage = () => {
   const location = useLocation();
@@ -92,6 +94,7 @@ export const AdminPage = () => {
             <ManagerSponsorsManager />
           </div>
         } />
+        <Route path="jerseys" element={<JerseyManager />} />
         <Route path="maintenance" element={<MaintenancePanel />} />
       </Routes>
     </div>

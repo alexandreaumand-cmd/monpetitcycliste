@@ -410,15 +410,23 @@ export const StartlistMobile = () => {
                       </div>
                     }
                     avatar={
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-primary/10">
-                          {manager.manager_nom
-                            .split(" ")
-                            .map((n: string) => n[0])
-                            .join("")
-                            .slice(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
+                      manager.jersey_image_url ? (
+                        <img 
+                          src={manager.jersey_image_url} 
+                          alt="Maillot" 
+                          className="h-10 w-10 object-contain"
+                        />
+                      ) : (
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-primary/10">
+                            {manager.manager_nom
+                              .split(" ")
+                              .map((n: string) => n[0])
+                              .join("")
+                              .slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                      )
                     }
                     badge={
                       <Badge variant="outline" className="text-xs">

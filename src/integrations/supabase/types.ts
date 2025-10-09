@@ -1132,6 +1132,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          jersey_image_url: string | null
           manager_id: string
           saison_id: string
           sponsor: string
@@ -1140,6 +1141,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          jersey_image_url?: string | null
           manager_id: string
           saison_id: string
           sponsor: string
@@ -1148,6 +1150,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          jersey_image_url?: string | null
           manager_id?: string
           saison_id?: string
           sponsor?: string

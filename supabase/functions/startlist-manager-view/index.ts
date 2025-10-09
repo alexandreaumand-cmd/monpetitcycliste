@@ -88,14 +88,18 @@ Deno.serve(async (req) => {
     const managerIds = [...new Set(rosters.map(r => r.manager_id))];
     const { data: seasonSponsors } = await supabase
       .from('manager_sponsors')
-      .select('manager_id, sponsor')
+      .select('manager_id, sponsor, jersey_image_url')
       .eq('saison_id', saisonId)
       .in('manager_id', managerIds);
 
-    // Create a map of manager_id -> season sponsor
+    // Create a map of manager_id -> season sponsor and jersey
     const seasonSponsorMap = new Map();
+    const seasonJerseyMap = new Map();
     seasonSponsors?.forEach(s => {
       seasonSponsorMap.set(s.manager_id, s.sponsor);
+      if (s.jersey_image_url) {
+        seasonJerseyMap.set(s.manager_id, s.jersey_image_url);
+      }
     });
 
     // Get points from last 5 weeks for each coureur in the startlist
@@ -219,11 +223,13 @@ Deno.serve(async (req) => {
         const rating = ratingsMap.get(roster.manager_id);
         // Use season sponsor if available, fallback to global sponsor
         const sponsor = seasonSponsorMap.get(roster.manager_id) || managerData.sponsor;
+        const jerseyImageUrl = seasonJerseyMap.get(roster.manager_id) || null;
         
         managerMap.set(roster.manager_id, {
           manager_id: roster.manager_id,
           manager_nom: managerData.nom,
           sponsor: sponsor,
+          jersey_image_url: jerseyImageUrl,
           rank_phase: phaseRank,
           rank_total: totalRank,
           points_phase: phaseStanding?.total_points || 0,
