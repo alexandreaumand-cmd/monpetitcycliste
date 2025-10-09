@@ -77,7 +77,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
   const [displayLimit, setDisplayLimit] = useState(20);
 
   const { data: allRiders, isLoading } = useQuery({
-    queryKey: ["top-riders", phaseId, saisonId, Date.now()],
+    queryKey: ["top-riders", phaseId, saisonId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-top-riders', {
         body: {
@@ -90,6 +90,8 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
       if (error) throw error;
       return data?.items as TopRider[] || [];
     },
+    refetchInterval: 60000, // Refetch every 60 seconds
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
 
   const riders = allRiders?.slice(0, displayLimit);

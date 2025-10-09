@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RefreshCw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const COURSES_21 = [
   { id: 'P1R4', name: 'AlUla Tour' },
@@ -14,6 +15,7 @@ const COURSES_21 = [
 
 export const RecalculateCat21Button = () => {
   const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const handleRecalculate = async () => {
     setLoading(true);
@@ -31,6 +33,10 @@ export const RecalculateCat21Button = () => {
       toast.success("Points recalculés avec succès !", {
         description: `${successCount}/${COURSES_21.length} courses traitées - ${data.total_rows_upserted} entrées mises à jour`
       });
+      
+      // Invalidate top riders cache
+      queryClient.invalidateQueries({ queryKey: ["top-riders"] });
+      queryClient.invalidateQueries({ queryKey: ["top-riders-mobile"] });
     } catch (error: any) {
       console.error('Erreur:', error);
       toast.error("Erreur lors du recalcul", {

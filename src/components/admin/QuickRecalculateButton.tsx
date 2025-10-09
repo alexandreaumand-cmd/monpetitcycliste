@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RefreshCw } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const QuickRecalculateButton = () => {
   const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const handleRecalculate = async () => {
     setLoading(true);
@@ -19,6 +21,10 @@ export const QuickRecalculateButton = () => {
       toast.success("Points recalculés avec succès !", {
         description: `${data.rows_upserted} entrées mises à jour pour Okolo Slovenska`
       });
+      
+      // Invalidate top riders cache
+      queryClient.invalidateQueries({ queryKey: ["top-riders"] });
+      queryClient.invalidateQueries({ queryKey: ["top-riders-mobile"] });
     } catch (error: any) {
       console.error('Erreur:', error);
       toast.error("Erreur lors du recalcul", {

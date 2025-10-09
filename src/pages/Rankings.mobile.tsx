@@ -143,7 +143,7 @@ export const RankingsMobile = () => {
 
   // Fetch top riders using edge function
   const { data: allTopRiders, isLoading: ridersLoading } = useQuery({
-    queryKey: ["top-riders-mobile", selectedPhase, selectedSeason?.id, Date.now()],
+    queryKey: ["top-riders-mobile", selectedPhase, selectedSeason?.id],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-top-riders', {
         body: {
@@ -168,6 +168,8 @@ export const RankingsMobile = () => {
         owners_all: item.owners_all,
       })) || [];
     },
+    refetchInterval: 60000, // Refetch every 60 seconds
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
 
   // Debug: log Jonas Vingegaard data
