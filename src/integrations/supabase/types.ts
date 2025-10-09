@@ -1629,13 +1629,6 @@ export type Database = {
             foreignKeyName: "points_ledger_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
-            referencedRelation: "v_bareme_missing_all"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "points_ledger_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
             referencedRelation: "v_course_points_theoriques"
             referencedColumns: ["course_id"]
           },
@@ -1789,13 +1782,6 @@ export type Database = {
             foreignKeyName: "race_result_sets_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
-            referencedRelation: "v_bareme_missing_all"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "race_result_sets_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
             referencedRelation: "v_course_points_theoriques"
             referencedColumns: ["course_id"]
           },
@@ -1926,13 +1912,6 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses_for_points_norm"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "race_results_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "v_bareme_missing_all"
             referencedColumns: ["id"]
           },
           {
@@ -2188,13 +2167,6 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses_for_points_norm"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_course"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "v_bareme_missing_all"
             referencedColumns: ["id"]
           },
           {
@@ -2802,13 +2774,6 @@ export type Database = {
             columns: ["race_id"]
             isOneToOne: false
             referencedRelation: "courses_for_points_norm"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "startlist_imports_race_id_fkey"
-            columns: ["race_id"]
-            isOneToOne: false
-            referencedRelation: "v_bareme_missing_all"
             referencedColumns: ["id"]
           },
           {
@@ -3524,15 +3489,6 @@ export type Database = {
         }
         Relationships: []
       }
-      v_bareme_missing_all: {
-        Row: {
-          cat_canon: string | null
-          categorie: string | null
-          id: string | null
-          nom: string | null
-        }
-        Relationships: []
-      }
       v_course_points_theoriques: {
         Row: {
           categorie: string | null
@@ -3788,13 +3744,6 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses_for_points_norm"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "race_results_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "v_bareme_missing_all"
             referencedColumns: ["id"]
           },
           {
