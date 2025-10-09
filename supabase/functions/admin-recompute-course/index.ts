@@ -28,15 +28,54 @@ Deno.serve(async (req) => {
       throw new Error('Accès refusé: réservé aux administrateurs');
     }
 
-    const { course_id } = await req.json();
+    const { course_id, course_ids } = await req.json();
 
+    // Handle multiple courses
+    if (course_ids && Array.isArray(course_ids)) {
+      console.log(`Recalcul des points pour ${course_ids.length} courses:`, course_ids);
+      
+      const results = [];
+      let totalRowsUpserted = 0;
+      
+      for (const cid of course_ids) {
+        try {
+          const { data, error } = await supabaseClient.rpc('admin_compute_points_for_course', {
+            p_course_id: cid
+          });
+          
+          if (error) {
+            console.error(`Erreur pour ${cid}:`, error);
+            results.push({ course_id: cid, success: false, error: error.message });
+          } else {
+            console.log(`✓ ${cid}: ${data.rows_upserted} entrées mises à jour`);
+            totalRowsUpserted += data.rows_upserted || 0;
+            results.push({ course_id: cid, success: true, rows_upserted: data.rows_upserted });
+          }
+        } catch (err) {
+          console.error(`Exception pour ${cid}:`, err);
+          const errorMsg = err instanceof Error ? err.message : 'Erreur inconnue';
+          results.push({ course_id: cid, success: false, error: errorMsg });
+        }
+      }
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          total_courses: course_ids.length,
+          total_rows_upserted: totalRowsUpserted,
+          results
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Handle single course
     if (!course_id) {
-      throw new Error('course_id est requis');
+      throw new Error('course_id ou course_ids est requis');
     }
 
     console.log(`Recalcul des points pour la course: ${course_id}`);
 
-    // Appeler la fonction RPC pour recalculer les points
     const { data, error } = await supabaseClient.rpc('admin_compute_points_for_course', {
       p_course_id: course_id
     });
