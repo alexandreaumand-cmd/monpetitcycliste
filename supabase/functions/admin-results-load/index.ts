@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
 
     const { course_id, context, etape_numero = null } = await req.json();
 
-    if (!course_id || !context || !['Etape', 'CG'].includes(context)) {
+    if (!course_id || !context || !['Etape', 'General'].includes(context)) {
       return new Response(JSON.stringify({ error: 'Invalid parameters' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
       const hasLeaders = leaders_base.general_leader_id && leaders_base.points_leader_id && leaders_base.montagne_leader_id;
       result.is_stage_complete = hasTop10 && hasLeaders;
 
-    } else if (context === 'CG') {
+    } else if (context === 'General') {
       // Determine required_top from scoring_rules
       const { data: gcRules } = await supabase
         .from('scoring_rules')

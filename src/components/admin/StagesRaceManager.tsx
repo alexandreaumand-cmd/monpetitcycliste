@@ -19,7 +19,7 @@ interface ResultsData {
     nb_etapes: number;
     phase_id: string;
   };
-  context: 'Etape' | 'CG';
+  context: 'Etape' | 'General';
   required_top?: 10 | 15;
   stage?: { etape_numero: number };
   top10_base?: Array<{ position: number; coureur_id: string | null }>;
@@ -49,7 +49,7 @@ interface ResultsData {
 
 export function StagesRaceManager() {
   const [selectedCourse, setSelectedCourse] = useState<string>("");
-  const [context, setContext] = useState<'Etape' | 'CG'>('Etape');
+  const [context, setContext] = useState<'Etape' | 'General'>('Etape');
   const [etapeNumero, setEtapeNumero] = useState<number>(1);
   const queryClient = useQueryClient();
 
@@ -174,13 +174,13 @@ export function StagesRaceManager() {
             
             <div className="space-y-2">
               <label className="text-sm font-medium">Contexte</label>
-              <Select value={context} onValueChange={(val) => setContext(val as 'Etape' | 'CG')}>
+              <Select value={context} onValueChange={(val) => setContext(val as 'Etape' | 'General')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Etape">Étape</SelectItem>
-                  <SelectItem value="CG">Classement Général (CG)</SelectItem>
+                  <SelectItem value="General">Classement Général (CG)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
