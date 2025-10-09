@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Star, Users, TrendingUp, Info, ArrowUpDown, Download, CheckCircle2 } from "lucide-react";
+import { Star, Users, TrendingUp, Info, ArrowUpDown, Download, CheckCircle2, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -689,8 +689,10 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <p className="font-medium">{race.race_nom}</p>
-                            {race.is_confirmed && (
+                            {race.is_confirmed ? (
                               <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-orange-500" />
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">

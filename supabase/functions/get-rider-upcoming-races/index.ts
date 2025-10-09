@@ -43,6 +43,8 @@ Deno.serve(async (req) => {
         status,
         startlist_imports!inner(
           race_id,
+          pcs_validated,
+          created_at,
           courses!inner(
             id,
             nom,
@@ -60,31 +62,37 @@ Deno.serve(async (req) => {
       throw error;
     }
 
-    // Transform the data to flatten the structure and add is_confirmed
+    console.log(`Found ${races?.length || 0} raw entries for rider ${rider_id}`);
+
+    // Transform the data to flatten the structure and add is_confirmed from pcs_validated
     const transformedRaces = races?.map((entry: any) => ({
       race_id: entry.startlist_imports.courses.id,
       race_nom: entry.startlist_imports.courses.nom,
       date_debut: entry.startlist_imports.courses.date_debut,
       date_fin: entry.startlist_imports.courses.date_fin,
-      is_confirmed: entry.status === 'confirmed'
+      is_confirmed: entry.startlist_imports.pcs_validated,
+      created_at: entry.startlist_imports.created_at
     })) || [];
 
-    // Remove duplicates (same race can appear multiple times if multiple startlists)
+    // Remove duplicates and keep the most recent startlist for each race
     const uniqueRaces = transformedRaces.reduce((acc: any[], race: any) => {
       const existing = acc.find(r => r.race_id === race.race_id);
       if (!existing) {
         acc.push(race);
-      } else if (race.is_confirmed && !existing.is_confirmed) {
-        // If we find a confirmed version of a race, replace the unconfirmed one
+      } else if (new Date(race.created_at) > new Date(existing.created_at)) {
+        // Keep the most recent startlist (by created_at)
         const index = acc.findIndex(r => r.race_id === race.race_id);
         acc[index] = race;
       }
       return acc;
     }, []);
 
-    console.log(`Returning ${uniqueRaces.length} upcoming races`);
+    // Remove created_at from final output (not needed in frontend)
+    const cleanedRaces = uniqueRaces.map(({ created_at, ...race }) => race);
 
-    return new Response(JSON.stringify({ races: uniqueRaces }), {
+    console.log(`Returning ${cleanedRaces.length} unique upcoming races`);
+
+    return new Response(JSON.stringify({ races: cleanedRaces }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
