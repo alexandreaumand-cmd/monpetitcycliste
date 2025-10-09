@@ -297,7 +297,7 @@ serve(async (req) => {
           
           const finalScore = similarity(entry.normalized, normalize(r.nom));
           
-          if (finalScore >= 0.84 && finalScore > matchScore) {
+          if (finalScore >= 0.9 && finalScore > matchScore) {
             matchScore = finalScore;
             bestMatch = r;
             matchType = 'fuzzy';
