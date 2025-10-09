@@ -4028,6 +4028,21 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["app_role"][]
       }
+      get_top_riders_optimized: {
+        Args: { p_limit?: number; p_phase_id?: string; p_saison_id?: string }
+        Returns: {
+          courses_count: number
+          owners: Json
+          owners_all: Json
+          owners_by_phase: Json
+          prix_achat: number
+          ratio_points_par_prix: number
+          rider_equipe: string
+          rider_id: string
+          rider_nom: string
+          total_points: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
