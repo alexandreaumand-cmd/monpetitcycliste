@@ -268,6 +268,12 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Returning ${items.length} top riders`);
+    
+    // Debug: log Jonas Vingegaard data
+    const jonas = items.find(r => r.rider_id === 'jonas_vingegaard');
+    if (jonas) {
+      console.log('🚴 Jonas in response:', jonas);
+    }
 
     return new Response(JSON.stringify({ items }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

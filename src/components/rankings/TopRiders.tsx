@@ -77,7 +77,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
   const [displayLimit, setDisplayLimit] = useState(20);
 
   const { data: allRiders, isLoading } = useQuery({
-    queryKey: ["top-riders", phaseId, saisonId, 5000],
+    queryKey: ["top-riders", phaseId, saisonId, Date.now()],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-top-riders', {
         body: {

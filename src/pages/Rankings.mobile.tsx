@@ -143,7 +143,7 @@ export const RankingsMobile = () => {
 
   // Fetch top riders using edge function
   const { data: allTopRiders, isLoading: ridersLoading } = useQuery({
-    queryKey: ["top-riders-mobile", selectedPhase, selectedSeason?.id],
+    queryKey: ["top-riders-mobile", selectedPhase, selectedSeason?.id, Date.now()],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-top-riders', {
         body: {
@@ -169,6 +169,19 @@ export const RankingsMobile = () => {
       })) || [];
     },
   });
+
+  // Debug: log Jonas Vingegaard data
+  useMemo(() => {
+    const jonas = allTopRiders?.find(r => r.coureur_id === 'jonas_vingegaard');
+    if (jonas) {
+      console.log('🚴 Jonas Vingegaard data:', {
+        total_points: jonas.total_points,
+        courses_count: jonas.courses_count,
+        owners: jonas.owners,
+        selectedPhase,
+      });
+    }
+  }, [allTopRiders, selectedPhase]);
 
   // Filter riders by search term and manager ownership
   const filteredTopRiders = useMemo(() => {
