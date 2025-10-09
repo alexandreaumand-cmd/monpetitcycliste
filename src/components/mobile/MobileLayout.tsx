@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Menu } from "lucide-react";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { NotificationCenter } from "@/components/layout/NotificationCenter";
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -44,7 +45,7 @@ export const MobileLayout = ({
             {title}
           </h1>
 
-          <div className="w-10" /> {/* Spacer for centering */}
+          <NotificationCenter />
         </div>
       </header>
 
