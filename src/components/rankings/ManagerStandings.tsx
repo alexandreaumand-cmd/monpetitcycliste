@@ -291,7 +291,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                   {phaseId && (
                     <TableCell className="text-right py-2">
                       <span className="text-sm font-mono text-muted-foreground">
-                        {standing.scoreurs_count || 0}
+                        {(standing as any).scoreurs_count ?? 0}
                       </span>
                     </TableCell>
                   )}
