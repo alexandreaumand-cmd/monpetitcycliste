@@ -839,7 +839,7 @@ export const ResultsEntryStudioMobile = ({
             <Collapsible open={combatifOpen} onOpenChange={(open) => {
               setCombatifOpen(open);
               if (open) setCurrentClassement("Combatif");
-            })}>
+            }}>
               <CollapsibleTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
                   <span>🏆 Super Combatif (150 pts)</span>
