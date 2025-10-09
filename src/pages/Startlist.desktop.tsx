@@ -973,10 +973,10 @@ const ManagerJerseyDisplay = ({ managerName, managerId }: { managerName: string;
         <img 
           src={sponsorData.jersey_image_url} 
           alt="Maillot" 
-          className="h-6 w-6 object-contain rounded"
+          className="h-12 w-12 object-contain rounded"
         />
       ) : (
-        <Shirt className="h-4 w-4 text-muted-foreground" />
+        <Shirt className="h-8 w-8 text-muted-foreground" />
       )}
       <span className="text-sm text-muted-foreground">{managerName}</span>
     </div>

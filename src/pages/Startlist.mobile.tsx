@@ -414,10 +414,10 @@ export const StartlistMobile = () => {
                         <img 
                           src={manager.jersey_image_url} 
                           alt="Maillot" 
-                          className="h-10 w-10 object-contain"
+                          className="h-20 w-20 object-contain"
                         />
                       ) : (
-                        <Avatar className="h-10 w-10">
+                        <Avatar className="h-20 w-20">
                           <AvatarFallback className="bg-primary/10">
                             {manager.manager_nom
                               .split(" ")

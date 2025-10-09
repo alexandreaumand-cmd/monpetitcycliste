@@ -330,7 +330,7 @@ export const MyTeamDesktop = () => {
             <img 
               src={managerSponsor.jersey_image_url} 
               alt="Maillot" 
-              className="h-12 w-12 object-contain rounded"
+              className="h-24 w-24 object-contain rounded"
             />
           )}
           <div>
