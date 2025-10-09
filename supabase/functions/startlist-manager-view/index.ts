@@ -244,21 +244,30 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Match entries to managers
+    // Match entries to managers and collect "Sans propriétaire"
+    const withoutOwner: any[] = [];
+    
     for (const entry of entries) {
       const coureurData = Array.isArray(entry.coureurs) ? entry.coureurs[0] : entry.coureurs;
       const roster = rosters.find(r => r.coureur_id === entry.coureur_id);
       if (roster) {
         const manager = managerMap.get(roster.manager_id);
-      manager.starters.push({
-        coureur_id: entry.coureur_id,
-        nom: coureurData.nom,
-        equipe: coureurData.equipe,
-        cote: coureurData.prix_initial,
-        bib_no: entry.bib_no,
-        recent_results: resultsMap.get(entry.coureur_id) || []
-      });
+        manager.starters.push({
+          coureur_id: entry.coureur_id,
+          nom: coureurData.nom,
+          equipe: coureurData.equipe,
+          cote: coureurData.prix_initial,
+          bib_no: entry.bib_no,
+          recent_results: resultsMap.get(entry.coureur_id) || []
+        });
         manager.starters_count++;
+      } else {
+        // Coureur matched but not in any roster for this phase
+        withoutOwner.push({
+          coureur_id: entry.coureur_id,
+          nom: coureurData.nom,
+          equipe: coureurData.equipe,
+        });
       }
     }
 
@@ -293,13 +302,15 @@ Deno.serve(async (req) => {
       },
       route_image_url: startlist.route_image_url || null,
       managers,
+      without_owner: withoutOwner.sort((a: any, b: any) => a.nom.localeCompare(b.nom)),
       scoring: {
         categorie: race.categorie,
         rules: scoringRules || []
       },
       totals: {
         managers: managers.length,
-        starters_all: entries.length
+        starters_all: entries.length,
+        without_owner: withoutOwner.length
       }
     };
 

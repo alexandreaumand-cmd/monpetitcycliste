@@ -24,6 +24,13 @@ function tokenSig(s: string): string {
 }
 
 
+// Extract last name from normalized text
+function extractLastName(normalized: string): string {
+  const tokens = normalized.split(/\s+/).filter(t => t.length > 0);
+  if (tokens.length === 0) return '';
+  return tokens[tokens.length - 1];
+}
+
 // Simple Levenshtein distance
 function levenshtein(a: string, b: string): number {
   const matrix: number[][] = [];
@@ -179,6 +186,15 @@ serve(async (req) => {
       }
     }
 
+    // Load ALL coureurs (not just from rosters) for off-roster matching
+    const { data: allCoureurs } = await supabase
+      .from('coureurs')
+      .select('id, nom, equipe');
+
+    if (!allCoureurs) {
+      throw new Error('Impossible de charger les coureurs');
+    }
+
     // Load name aliases for pre-matching
     const { data: aliases } = await supabase
       .from('name_aliases')
@@ -192,7 +208,7 @@ serve(async (req) => {
       }
     }
 
-    // Build maps for fast lookup
+    // Build maps for fast lookup (from rosters)
     const riderByNorm = new Map<string, any>();
     const riderBySig = new Map<string, any>();
     
@@ -203,6 +219,15 @@ serve(async (req) => {
       if (!riderBySig.has(sig)) riderBySig.set(sig, r);
     }
 
+    // Build ALL coureurs map (includes off-roster) with last name info
+    const allCoureursMap = new Map<string, any>();
+    for (const c of allCoureurs) {
+      allCoureursMap.set(c.id, {
+        ...c,
+        lastName: extractLastName(normalize(c.nom))
+      });
+    }
+
     // Match each entry
     const matched: any[] = [];
     const unmatched: any[] = [];
@@ -211,47 +236,77 @@ serve(async (req) => {
       let bestMatch = null;
       let matchType = 'none';
       let matchScore = 0;
+      let onRoster = false;
 
-      // 0) Alias match (highest priority)
+      const entryLastName = extractLastName(entry.normalized);
+
+      // 0) Alias match (highest priority) - check both roster and all coureurs
       const aliasKey = normalize(entry.source_name);
       if (aliasMap.has(aliasKey)) {
         const coureurId = aliasMap.get(aliasKey);
-        bestMatch = riders.find(r => r.id === coureurId);
-        if (bestMatch) {
-          matchType = 'alias';
-          matchScore = 1.0;
+        if (coureurId) {
+          // Try roster first
+          bestMatch = riders.find(r => r.id === coureurId);
+          if (bestMatch) {
+            matchType = 'alias';
+            matchScore = 1.0;
+            onRoster = true;
+          } else {
+            // Check all coureurs (off-roster)
+            const offRosterCoureur = allCoureursMap.get(coureurId);
+            if (offRosterCoureur) {
+              bestMatch = offRosterCoureur;
+              matchType = 'alias';
+              matchScore = 1.0;
+              onRoster = false;
+            }
+          }
         }
       }
 
-      // 1) Exact match
+      // 1) Exact match (roster only)
       if (!bestMatch && riderByNorm.has(entry.normalized)) {
         bestMatch = riderByNorm.get(entry.normalized);
         matchType = 'exact';
         matchScore = 1.0;
+        onRoster = true;
       }
       
-      // 2) Token signature match
+      // 2) Token signature match (roster only, with last name guard)
       if (!bestMatch && riderBySig.has(entry.key_sig)) {
-        bestMatch = riderBySig.get(entry.key_sig);
-        matchType = 'tokens';
-        matchScore = 0.95;
+        const candidate = riderBySig.get(entry.key_sig);
+        const candidateLastName = extractLastName(normalize(candidate.nom));
+        
+        if (candidateLastName === entryLastName) {
+          bestMatch = candidate;
+          matchType = 'tokens';
+          matchScore = 0.95;
+          onRoster = true;
+        }
       }
 
-      // 3) Fuzzy match (manual only, no RPC)
+      // 3) Fuzzy match (roster only, with strict last name guard)
       if (!bestMatch) {
         for (const r of riders) {
+          const riderLastName = extractLastName(normalize(r.nom));
+          
+          // STRICT: Only consider if last names match exactly
+          if (riderLastName !== entryLastName) {
+            continue;
+          }
+          
           const finalScore = similarity(entry.normalized, normalize(r.nom));
           
           if (finalScore >= 0.84 && finalScore > matchScore) {
             matchScore = finalScore;
             bestMatch = r;
             matchType = 'fuzzy';
+            onRoster = true;
           }
         }
       }
 
       if (bestMatch) {
-        // All matched riders are on_roster (we only match against rosters)
         matched.push({
           ...entry,
           coureur_id: bestMatch.id,
@@ -259,7 +314,7 @@ serve(async (req) => {
           equipe: bestMatch.equipe,
           confidence: matchScore,
           match_type: matchType,
-          on_roster: true,
+          on_roster: onRoster,
         });
 
         if (with_diagnostics) {
@@ -273,13 +328,20 @@ serve(async (req) => {
             score: matchScore,
             db_nom: bestMatch.nom,
             db_equipe: bestMatch.equipe,
-            on_roster: true,
+            on_roster: onRoster,
           });
         }
       } else {
-        // Get suggestions (all suggestions are from roster)
+        // Get suggestions (roster only, with strict last name guard)
         const suggestions = riders
           .map(r => {
+            const riderLastName = extractLastName(normalize(r.nom));
+            
+            // STRICT: Only suggest if last names match
+            if (riderLastName !== entryLastName) {
+              return null;
+            }
+            
             const score = similarity(entry.normalized, normalize(r.nom));
             return {
               coureur_id: r.id,
@@ -289,7 +351,7 @@ serve(async (req) => {
               on_roster: true,
             };
           })
-          .filter(s => s.score >= 0.65)
+          .filter((s): s is NonNullable<typeof s> => s !== null && s.score >= 0.65)
           .sort((a, b) => b.score - a.score)
           .slice(0, 5);
 
@@ -311,26 +373,36 @@ serve(async (req) => {
       }
     }
 
-    // Build manager map using rostersByRider
+    // Build manager map using rostersByRider (only for on_roster matches)
     const managerMap = new Map();
+    const withoutOwner: any[] = [];
 
     for (const m of matched) {
-      const owners = rostersByRider.get(m.coureur_id) || [];
-      
-      for (const owner of owners) {
-        if (!managerMap.has(owner.manager_id)) {
-          managerMap.set(owner.manager_id, {
-            manager_id: owner.manager_id,
-            manager_nom: owner.manager_nom,
-            starters: [],
+      if (m.on_roster) {
+        const owners = rostersByRider.get(m.coureur_id) || [];
+        
+        for (const owner of owners) {
+          if (!managerMap.has(owner.manager_id)) {
+            managerMap.set(owner.manager_id, {
+              manager_id: owner.manager_id,
+              manager_nom: owner.manager_nom,
+              starters: [],
+            });
+          }
+          
+          managerMap.get(owner.manager_id).starters.push({
+            coureur_id: m.coureur_id,
+            nom: m.nom,
+            equipe: m.equipe,
+            team_code: m.team_code,
           });
         }
-        
-        managerMap.get(owner.manager_id).starters.push({
+      } else {
+        // Off-roster matched coureur
+        withoutOwner.push({
           coureur_id: m.coureur_id,
           nom: m.nom,
           equipe: m.equipe,
-          team_code: m.team_code,
         });
       }
     }
@@ -417,6 +489,8 @@ serve(async (req) => {
 
     console.log(`✅ Saved ${entriesToInsert.length} entries to database (startlist_id: ${importRecord.id})`);
 
+    const onRosterCount = matched.filter(m => m.on_roster).length;
+
     return new Response(
       JSON.stringify({
         startlist_id: importRecord.id,
@@ -425,10 +499,12 @@ serve(async (req) => {
         counts: {
           parsed: parsedEntries.length,
           matched_db: matched.length,
-          on_roster: matched.length, // All matched are on roster
+          on_roster: onRosterCount,
+          without_owner: withoutOwner.length,
           unmatched: unmatched.length,
         },
         managers,
+        without_owner: withoutOwner.sort((a: any, b: any) => a.nom.localeCompare(b.nom)),
         unmatched: unmatched.sort((a, b) => a.line_no - b.line_no),
         diagnostics: with_diagnostics ? diagnostics : undefined,
       }),
