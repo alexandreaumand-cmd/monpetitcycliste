@@ -110,6 +110,8 @@ export const JerseyManager = () => {
           jersey_image_url: publicUrl,
           sponsor: currentJersey?.sponsor || '',
           updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'manager_id,saison_id'
         });
 
       if (upsertError) throw upsertError;
