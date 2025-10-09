@@ -308,6 +308,13 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         setJerseyHolders(newJerseyHolders);
       }
 
+      console.log('🔄 Chargement des résultats:', {
+        courseId: course.course_id,
+        classementType,
+        etapeNumero: selectedStageNumber,
+        resultsCount: existingResults.length
+      });
+
       if (existingResults.length > 0) {
         // Pre-existing results found - merge with full grid from scoring rules
         if (!scoringRules || scoringRules.length === 0) {
@@ -478,6 +485,12 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
       // Save jersey holders if on stage race + stages tab
       if (!isOneDay && activeTab === "stages" && etapeNumero) {
+        console.log('🔵 Sauvegarde des porteurs de maillots:', {
+          courseId: course.course_id,
+          etapeNumero: Number(etapeNumero),
+          jerseyHolders: jerseyHolders
+        });
+
         const jerseyMappings: Array<{ type: ClassementType; key: JerseyType }> = [
           { type: 'Porteur Général', key: 'general' },
           { type: 'Porteur Vert', key: 'vert' },
@@ -489,12 +502,19 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         for (const { type, key } of jerseyMappings) {
           const coureurId = jerseyHolders[key];
           if (coureurId) {
-            const { error: jerseyError } = await supabase.rpc("admin_result_save_lot", {
+            console.log(`🟡 Sauvegarde ${type} (étape ${etapeNumero}):`, {
+              coureurId,
+              typeClassement: type
+            });
+
+            const { data, error: jerseyError } = await supabase.rpc("admin_result_save_lot", {
               p_course_id: course.course_id,
               p_type_classement: type,
               p_etape_numero: Number(etapeNumero),
               p_rows: [{ coureur_id: coureurId, position: 1, statut: 'finished' as ResultStatut }],
             });
+
+            console.log(`✅ Réponse pour ${type}:`, { data, error: jerseyError });
             if (jerseyError) console.error(`Error saving ${type}:`, jerseyError);
           }
         }
