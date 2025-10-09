@@ -14,6 +14,7 @@ import { PointsComputeManager } from "@/components/admin/PointsComputeManager";
 import { StagesRaceManager } from "@/components/admin/StagesRaceManager";
 import { QuickRecalculateButton } from "@/components/admin/QuickRecalculateButton";
 import { RecalculateCat21Button } from "@/components/admin/RecalculateCat21Button";
+import { RecalculateCat21Phase5Button } from "@/components/admin/RecalculateCat21Phase5Button";
 import { cn } from "@/lib/utils";
 
 const adminTabs = [
@@ -61,6 +62,7 @@ export const AdminPage = () => {
                 <CardTitle>Importer des données CSV</CardTitle>
                 <div className="flex gap-2">
                   <RecalculateCat21Button />
+                  <RecalculateCat21Phase5Button />
                   <QuickRecalculateButton />
                 </div>
               </CardHeader>
