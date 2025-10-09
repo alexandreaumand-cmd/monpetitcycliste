@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { NotificationCenter } from "./NotificationCenter";
 
 interface HeaderProps {
   manager: any;
@@ -118,6 +119,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
+            <NotificationCenter />
             <Button variant="outline" size="sm" onClick={onSignOut} className="hidden sm:flex">
               <LogOut className="mr-2 h-4 w-4" />
               Déconnexion
