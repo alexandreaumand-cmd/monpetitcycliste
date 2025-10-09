@@ -168,22 +168,7 @@ export const RankingsMobile = () => {
         owners_all: item.owners_all,
       })) || [];
     },
-    refetchInterval: 60000, // Refetch every 60 seconds
-    staleTime: 30000, // Consider data fresh for 30 seconds
   });
-
-  // Debug: log Jonas Vingegaard data
-  useMemo(() => {
-    const jonas = allTopRiders?.find(r => r.coureur_id === 'jonas_vingegaard');
-    if (jonas) {
-      console.log('🚴 Jonas Vingegaard data:', {
-        total_points: jonas.total_points,
-        courses_count: jonas.courses_count,
-        owners: jonas.owners,
-        selectedPhase,
-      });
-    }
-  }, [allTopRiders, selectedPhase]);
 
   // Filter riders by search term and manager ownership
   const filteredTopRiders = useMemo(() => {

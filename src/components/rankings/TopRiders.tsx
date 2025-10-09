@@ -90,8 +90,6 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
       if (error) throw error;
       return data?.items as TopRider[] || [];
     },
-    refetchInterval: 60000, // Refetch every 60 seconds
-    staleTime: 30000, // Consider data fresh for 30 seconds
   });
 
   const riders = allRiders?.slice(0, displayLimit);
