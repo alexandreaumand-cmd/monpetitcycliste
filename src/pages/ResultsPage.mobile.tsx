@@ -24,6 +24,7 @@ interface Race {
 }
 
 interface ManagerPodium {
+  manager_id: string;
   manager_nom: string;
   points: number;
   rank: number;
