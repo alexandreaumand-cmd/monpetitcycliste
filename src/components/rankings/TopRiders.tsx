@@ -11,6 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { normalizeString } from "@/lib/stringUtils";
 
 type TopRidersProps = {
   phaseId?: string | null;
@@ -65,6 +68,8 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
   const [selectedRider, setSelectedRider] = useState<TopRider | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [riderSearchTerm, setRiderSearchTerm] = useState("");
+  const [hideRidersWithoutManagers, setHideRidersWithoutManagers] = useState(false);
   const [sortColumn, setSortColumn] = useState<TopRidersSortColumn>("total_points");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [detailsSortColumn, setDetailsSortColumn] = useState<keyof RiderPointRow>("points");
@@ -123,6 +128,33 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
       return 0;
     });
   }, [riders, sortColumn, sortDirection]);
+
+  // Filter riders by search term and manager ownership
+  const filteredRiders = useMemo(() => {
+    let filtered = sortedRiders;
+    
+    // Filter by search term (rider name or team)
+    if (riderSearchTerm) {
+      const searchNormalized = normalizeString(riderSearchTerm);
+      filtered = filtered.filter(rider => 
+        normalizeString(rider.rider_nom).includes(searchNormalized) ||
+        normalizeString(rider.rider_equipe || '').includes(searchNormalized)
+      );
+    }
+    
+    // Filter out riders without managers
+    if (hideRidersWithoutManagers) {
+      filtered = filtered.filter(rider => {
+        if (phaseId) {
+          return rider.owners && rider.owners.length > 0;
+        } else {
+          return rider.owners_all && rider.owners_all.length > 0;
+        }
+      });
+    }
+    
+    return filtered;
+  }, [sortedRiders, riderSearchTerm, hideRidersWithoutManagers, phaseId]);
 
   const hasMoreRiders = allRiders && allRiders.length > displayLimit;
 
@@ -252,7 +284,31 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
               Aucun point pour la période sélectionnée
             </div>
           ) : (
-            <div className="rounded-md border overflow-x-auto">
+            <>
+              <div className="space-y-3 mb-4">
+                <Input
+                  placeholder="Rechercher un coureur ou une équipe..."
+                  value={riderSearchTerm}
+                  onChange={(e) => setRiderSearchTerm(e.target.value)}
+                />
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="hide-no-managers"
+                    checked={hideRidersWithoutManagers}
+                    onCheckedChange={setHideRidersWithoutManagers}
+                  />
+                  <Label htmlFor="hide-no-managers" className="cursor-pointer">
+                    Masquer les coureurs sans manager
+                  </Label>
+                </div>
+              </div>
+              
+              {filteredRiders.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Aucun coureur ne correspond à votre recherche
+                </div>
+              ) : (
+                <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -290,8 +346,8 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedRiders.map((rider, idx) => (
-                    <TableRow 
+                  {filteredRiders.map((rider, idx) => (
+                    <TableRow
                       key={rider.rider_id}
                       className="cursor-pointer hover:bg-muted/50 transition-colors"
                       onClick={() => handleRiderClick(rider)}
@@ -392,6 +448,8 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                 </TableBody>
               </Table>
             </div>
+              )}
+            </>
           )}
           {hasMoreRiders && (
             <div className="flex flex-col gap-2 pt-4 border-t">
