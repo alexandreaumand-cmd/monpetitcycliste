@@ -146,7 +146,7 @@ export const RecentPointsChart = () => {
                   key={manager}
                   type="monotone"
                   dataKey={manager}
-                  stroke={`var(--color-${manager})`}
+                  stroke={chartConfig[manager]?.color || "hsl(var(--chart-1))"}
                   strokeWidth={2}
                   dot={{ r: 3 }}
                   activeDot={{ r: 5 }}
