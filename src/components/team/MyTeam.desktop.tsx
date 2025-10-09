@@ -81,6 +81,10 @@ export const MyTeamDesktop = () => {
   
   // Rider detail state
   const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string; equipe: string; prix: number } | null>(null);
+  
+  // Get manager sponsor for jersey display
+  const displayedManagerId = selectedManagerId || currentUserId;
+  const { data: managerSponsor } = useManagerSponsor(displayedManagerId, selectedSeason?.id);
 
   // Desktop version
 
@@ -321,15 +325,24 @@ export const MyTeamDesktop = () => {
 
       {/* Desktop layout */}
       <div className="hidden md:flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">
-            {selectedManagerId && selectedManagerId !== currentUserId
-              ? managers.find(m => m.id === selectedManagerId)?.nom
-              : 'Mon équipe'}
-          </h1>
-          <p className="text-muted-foreground">
-            {coureurs.length} coureur{coureurs.length > 1 ? 's' : ''}
-          </p>
+        <div className="flex items-center gap-3">
+          {managerSponsor?.jersey_image_url && (
+            <img 
+              src={managerSponsor.jersey_image_url} 
+              alt="Maillot" 
+              className="h-12 w-12 object-contain rounded"
+            />
+          )}
+          <div>
+            <h1 className="text-3xl font-bold">
+              {selectedManagerId && selectedManagerId !== currentUserId
+                ? managers.find(m => m.id === selectedManagerId)?.nom
+                : 'Mon équipe'}
+            </h1>
+            <p className="text-muted-foreground">
+              {coureurs.length} coureur{coureurs.length > 1 ? 's' : ''}
+            </p>
+          </div>
         </div>
         
         <div className="flex items-center gap-4">

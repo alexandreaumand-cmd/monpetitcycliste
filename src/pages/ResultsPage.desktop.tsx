@@ -55,7 +55,9 @@ export const ResultsPage = () => {
   const [winners, setWinners] = useState<Record<string, RaceWinner>>({});
   
   const winningManagerIds = Object.values(podiums).map(p => p[0]?.manager_id).filter(Boolean) as string[];
+  console.log('🏆 Winning manager IDs:', winningManagerIds);
   const { data: jerseys = {} } = useManagerJerseys(winningManagerIds, selectedSeason?.id);
+  console.log('🎽 Jerseys data:', jerseys);
   
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -247,12 +249,12 @@ export const ResultsPage = () => {
                     )}
                   </div>
                   
-                      {podiums[race.course_id] && podiums[race.course_id].length > 0 && (
+                  {podiums[race.course_id] && podiums[race.course_id].length > 0 && (
                     <div className="space-y-1.5 pt-2 border-t">
                       {podiums[race.course_id].slice(0, 3).map((manager, idx) => (
                         <div key={manager.manager_nom} className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-1.5">
-                            {idx === 0 && jerseys[manager.manager_id] ? (
+                            {jerseys[manager.manager_id] ? (
                               <img src={jerseys[manager.manager_id]} alt="Maillot" className="h-4 w-4 object-contain rounded" />
                             ) : (
                               <span className="text-base">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}</span>

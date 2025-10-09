@@ -55,7 +55,9 @@ export const ResultsPageMobile = () => {
   const [winners, setWinners] = useState<Record<string, RaceWinner>>({});
   
   const winningManagerIds = Object.values(podiums).map(p => p[0]?.manager_id).filter(Boolean) as string[];
+  console.log('🏆 Winning manager IDs:', winningManagerIds);
   const { data: jerseys = {} } = useManagerJerseys(winningManagerIds, selectedSeason?.id);
+  console.log('🎽 Jerseys data:', jerseys);
   
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
@@ -243,9 +245,13 @@ export const ResultsPageMobile = () => {
                       {racePodium.slice(0, 3).map((manager, idx) => (
                         <div key={manager.manager_nom} className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm">
-                              {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
-                            </span>
+                            {jerseys[manager.manager_id] ? (
+                              <img src={jerseys[manager.manager_id]} alt="Maillot" className="h-4 w-4 object-contain rounded" />
+                            ) : (
+                              <span className="text-sm">
+                                {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
+                              </span>
+                            )}
                             <span className="font-medium truncate">{manager.manager_nom}</span>
                           </div>
                           <span className="text-muted-foreground">

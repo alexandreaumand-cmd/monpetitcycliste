@@ -63,6 +63,10 @@ export const MyTeamMobile = () => {
   
   // Detail drawer
   const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string; equipe: string; prix: number } | null>(null);
+  
+  // Get manager sponsor for jersey display
+  const displayedManagerId = selectedManagerId || currentUserId;
+  const { data: managerSponsor } = useManagerSponsor(displayedManagerId, selectedSeason?.id);
 
   useEffect(() => {
     loadManagers();
@@ -216,6 +220,24 @@ export const MyTeamMobile = () => {
 
   return (
     <div className="p-4 space-y-4">
+      {/* Header with jersey */}
+      {managerSponsor?.jersey_image_url && (
+        <div className="flex items-center gap-3 pb-2 border-b">
+          <img 
+            src={managerSponsor.jersey_image_url} 
+            alt="Maillot" 
+            className="h-10 w-10 object-contain rounded"
+          />
+          <div>
+            <h2 className="font-bold">
+              {selectedManagerId && selectedManagerId !== currentUserId
+                ? managers.find(m => m.id === selectedManagerId)?.nom
+                : 'Mon équipe'}
+            </h2>
+          </div>
+        </div>
+      )}
+      
       {/* Manager selector */}
       {managers.length > 0 && (
         <div>
