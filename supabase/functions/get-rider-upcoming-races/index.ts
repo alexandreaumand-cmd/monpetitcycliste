@@ -54,8 +54,7 @@ Deno.serve(async (req) => {
         )
       `)
       .eq('coureur_id', rider_id)
-      .gte('startlist_imports.courses.date_debut', new Date().toISOString().split('T')[0])
-      .order('startlist_imports.courses.date_debut', { ascending: true });
+      .gte('startlist_imports.courses.date_debut', new Date().toISOString().split('T')[0]);
 
     if (error) {
       console.error('Error fetching upcoming races:', error);
@@ -89,6 +88,9 @@ Deno.serve(async (req) => {
 
     // Remove created_at from final output (not needed in frontend)
     const cleanedRaces = uniqueRaces.map(({ created_at, ...race }) => race);
+
+    // Sort by date_debut ascending (client-side sorting)
+    cleanedRaces.sort((a, b) => new Date(a.date_debut).getTime() - new Date(b.date_debut).getTime());
 
     console.log(`Returning ${cleanedRaces.length} unique upcoming races`);
 
