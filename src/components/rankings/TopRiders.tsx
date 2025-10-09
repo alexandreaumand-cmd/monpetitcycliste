@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Star, Users, TrendingUp, Info, ArrowUpDown, Download } from "lucide-react";
+import { Star, Users, TrendingUp, Info, ArrowUpDown, Download, CheckCircle2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -62,6 +62,14 @@ type RiderPointsTableData = {
   total: number;
 };
 
+type UpcomingRace = {
+  race_id: string;
+  race_nom: string;
+  date_debut: string;
+  date_fin: string;
+  is_confirmed: boolean;
+};
+
 type TopRidersSortColumn = "total_points" | "prix_achat" | "ratio_points_par_prix";
 
 export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => {
@@ -111,6 +119,21 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
       return data as RiderPointsTableData;
     },
     enabled: !!selectedRider,
+  });
+
+  const { data: upcomingRaces, isLoading: isLoadingUpcoming } = useQuery({
+    queryKey: ["rider-upcoming-races", selectedRider?.rider_id],
+    queryFn: async () => {
+      if (!selectedRider) return [];
+      
+      const { data, error } = await supabase.functions.invoke('get-rider-upcoming-races', {
+        body: { rider_id: selectedRider.rider_id }
+      });
+      
+      if (error) throw error;
+      return data?.races as UpcomingRace[] || [];
+    },
+    enabled: !!selectedRider && detailsOpen,
   });
 
   // Sort riders list
@@ -638,6 +661,51 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     {searchTerm ? 'Aucun résultat pour cette recherche' : 'Aucun point sur cette période'}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Programme à venir */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Programme à venir</CardTitle>
+                <CardDescription>Courses inscrites sur la startlist</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingUpcoming ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                  </div>
+                ) : upcomingRaces && upcomingRaces.length > 0 ? (
+                  <div className="space-y-2">
+                    {upcomingRaces.map((race) => (
+                      <div 
+                        key={race.race_id} 
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{race.race_nom}</p>
+                            {race.is_confirmed && (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(race.date_debut).toLocaleDateString('fr-FR')}
+                            {race.date_debut !== race.date_fin && 
+                              ` - ${new Date(race.date_fin).toLocaleDateString('fr-FR')}`
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Aucune course programmée
                   </div>
                 )}
               </CardContent>
