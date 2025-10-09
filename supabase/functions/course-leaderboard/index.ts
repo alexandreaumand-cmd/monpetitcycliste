@@ -19,12 +19,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     const { course_id, type_classement, etape_numero }: RequestBody = await req.json();
@@ -49,7 +44,8 @@ Deno.serve(async (req) => {
       .from('points_ledger')
       .select('manager_id, coureur_id, points, type_classement, etape_numero')
       .eq('course_id', course_id)
-      .eq('phase_id', course.phase_id);
+      .eq('phase_id', course.phase_id)
+      .not('manager_id', 'is', null);
 
     if (type_classement) {
       pointsQuery = pointsQuery.eq('type_classement', type_classement);
@@ -90,11 +86,14 @@ Deno.serve(async (req) => {
 
     // Get manager names
     const managerIds = Array.from(managerPoints.keys());
+    console.log('managerIds count:', managerIds.length);
+    
     const { data: managers } = await supabaseClient
       .from('managers')
       .select('id, nom')
       .in('id', managerIds);
 
+    console.log('managers fetched:', managers?.length || 0);
     const managerMap = new Map(managers?.map(m => [m.id, m.nom]) || []);
 
     // Get rider names
