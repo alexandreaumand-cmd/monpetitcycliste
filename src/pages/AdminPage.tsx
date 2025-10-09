@@ -12,6 +12,7 @@ import { SeasonManager } from "@/components/admin/SeasonManager";
 import { MaintenancePanel } from "@/components/admin/MaintenancePanel";
 import { PointsComputeManager } from "@/components/admin/PointsComputeManager";
 import { StagesRaceManager } from "@/components/admin/StagesRaceManager";
+import { QuickRecalculateButton } from "@/components/admin/QuickRecalculateButton";
 import { cn } from "@/lib/utils";
 
 const adminTabs = [
@@ -55,8 +56,9 @@ export const AdminPage = () => {
         <Route path="data" element={
           <div className="space-y-6">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Importer des données CSV</CardTitle>
+                <QuickRecalculateButton />
               </CardHeader>
               <CardContent>
                 <DataImport />
