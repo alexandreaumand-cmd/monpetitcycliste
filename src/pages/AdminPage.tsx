@@ -15,6 +15,7 @@ import { StagesRaceManager } from "@/components/admin/StagesRaceManager";
 import { QuickRecalculateButton } from "@/components/admin/QuickRecalculateButton";
 import { RecalculateCat21Button } from "@/components/admin/RecalculateCat21Button";
 import { RecalculateCat21Phase5Button } from "@/components/admin/RecalculateCat21Phase5Button";
+import { ManagerSponsorsManager } from "@/components/admin/ManagerSponsorsManager";
 import { cn } from "@/lib/utils";
 
 const adminTabs = [
@@ -85,7 +86,12 @@ export const AdminPage = () => {
         } />
         
         <Route path="results" element={<RecentResults />} />
-        <Route path="seasons" element={<SeasonManager />} />
+        <Route path="seasons" element={
+          <div className="space-y-6">
+            <SeasonManager />
+            <ManagerSponsorsManager />
+          </div>
+        } />
         <Route path="maintenance" element={<MaintenancePanel />} />
       </Routes>
     </div>

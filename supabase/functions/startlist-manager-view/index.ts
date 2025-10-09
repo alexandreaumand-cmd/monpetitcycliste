@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
 
     console.log('Fetching manager view for startlist:', startlist_id);
 
-    // Get startlist and race info
+    // Get startlist and race info with phase and saison
     const { data: startlist, error: startlistError } = await supabase
       .from('startlist_imports')
       .select(`
@@ -31,7 +31,11 @@ Deno.serve(async (req) => {
           nom,
           date_debut,
           phase_id,
-          categorie
+          categorie,
+          phases!inner(
+            id,
+            saison_id
+          )
         )
       `)
       .eq('id', startlist_id)
@@ -42,7 +46,9 @@ Deno.serve(async (req) => {
     }
 
     const race = Array.isArray(startlist.courses) ? startlist.courses[0] : startlist.courses;
+    const phaseData = Array.isArray(race.phases) ? race.phases[0] : race.phases;
     const phaseId = race.phase_id;
+    const saisonId = phaseData.saison_id;
 
     // Get all matched entries (any status as long as coureur_id is set)
     const { data: entries, error: entriesError } = await supabase
@@ -62,7 +68,7 @@ Deno.serve(async (req) => {
 
     if (entriesError) throw entriesError;
 
-    // Get rosters for this phase
+    // Get rosters for this phase with season sponsors
     const { data: rosters, error: rostersError } = await supabase
       .from('rosters')
       .select(`
@@ -77,6 +83,20 @@ Deno.serve(async (req) => {
       .eq('phase_id', phaseId);
 
     if (rostersError) throw rostersError;
+
+    // Get season-specific sponsors for all managers
+    const managerIds = [...new Set(rosters.map(r => r.manager_id))];
+    const { data: seasonSponsors } = await supabase
+      .from('manager_sponsors')
+      .select('manager_id, sponsor')
+      .eq('saison_id', saisonId)
+      .in('manager_id', managerIds);
+
+    // Create a map of manager_id -> season sponsor
+    const seasonSponsorMap = new Map();
+    seasonSponsors?.forEach(s => {
+      seasonSponsorMap.set(s.manager_id, s.sponsor);
+    });
 
     // Get points from last 5 weeks for each coureur in the startlist
     const coureurIds = entries.map(e => e.coureur_id).filter(Boolean);
@@ -197,10 +217,13 @@ Deno.serve(async (req) => {
         }
         
         const rating = ratingsMap.get(roster.manager_id);
+        // Use season sponsor if available, fallback to global sponsor
+        const sponsor = seasonSponsorMap.get(roster.manager_id) || managerData.sponsor;
+        
         managerMap.set(roster.manager_id, {
           manager_id: roster.manager_id,
           manager_nom: managerData.nom,
-          sponsor: managerData.sponsor,
+          sponsor: sponsor,
           rank_phase: phaseRank,
           rank_total: totalRank,
           points_phase: phaseStanding?.total_points || 0,

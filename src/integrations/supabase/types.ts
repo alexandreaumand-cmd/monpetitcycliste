@@ -1128,6 +1128,104 @@ export type Database = {
           },
         ]
       }
+      manager_sponsors: {
+        Row: {
+          created_at: string | null
+          id: string
+          manager_id: string
+          saison_id: string
+          sponsor: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          manager_id: string
+          saison_id: string
+          sponsor: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          manager_id?: string
+          saison_id?: string
+          sponsor?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_sponsors_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_sponsors_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_sponsors_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_sponsors_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_sponsors_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_sponsors_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_season"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_sponsors_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_sponsors_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_sponsors_saison_id_fkey"
+            columns: ["saison_id"]
+            isOneToOne: false
+            referencedRelation: "saisons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_sponsors_saison_id_fkey"
+            columns: ["saison_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_season"
+            referencedColumns: ["saison_id"]
+          },
+        ]
+      }
       managers: {
         Row: {
           created_at: string | null

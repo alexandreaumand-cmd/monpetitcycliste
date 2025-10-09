@@ -18,6 +18,8 @@ import {
   LogOut,
   User,
 } from "lucide-react";
+import { useManagerSponsor } from "@/hooks/useManagerSponsor";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 interface MobileDrawerProps {
   open: boolean;
@@ -38,6 +40,10 @@ export const MobileDrawer = ({
 }: MobileDrawerProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { selectedSeason } = useSeasonContext();
+  const { data: seasonSponsor } = useManagerSponsor(manager?.id, selectedSeason?.id);
+  
+  const displaySponsor = seasonSponsor || manager?.sponsor;
 
   const sections = [
     {
@@ -91,9 +97,9 @@ export const MobileDrawer = ({
               <SheetTitle className="text-base truncate">
                 {manager?.nom || "Manager"}
               </SheetTitle>
-              {manager?.sponsor && (
+              {displaySponsor && (
                 <p className="text-xs text-muted-foreground truncate">
-                  {manager.sponsor}
+                  {displaySponsor}
                 </p>
               )}
               {isAdmin && (

@@ -8,6 +8,7 @@ import logo from "@/assets/logo.png";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NotificationCenter } from "./NotificationCenter";
+import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 
 interface HeaderProps {
   manager: any;
@@ -40,6 +41,10 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
   const { selectedSeason, setSelectedSeason, seasons, isLoading: seasonsLoading } = useSeasonContext();
+  const { data: seasonSponsor } = useManagerSponsor(manager?.id, selectedSeason?.id);
+  
+  // Fallback: sponsor de la saison > sponsor global > null
+  const displaySponsor = seasonSponsor || manager?.sponsor;
   
   const allDesktopLinks = isAdmin 
     ? [...desktopNavLinks, { label: 'Admin', href: '/dashboard/admin', icon: Shield }]
@@ -64,7 +69,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
             {manager && (
               <div className="flex flex-col">
                 <p className="text-xs text-muted-foreground hidden sm:block">
-                  {manager.nom} {manager.sponsor && `• ${manager.sponsor}`}
+                  {manager.nom} {displaySponsor && `• ${displaySponsor}`}
                   {isAdmin && <span className="ml-1 text-secondary font-semibold">• Admin</span>}
                 </p>
               </div>
