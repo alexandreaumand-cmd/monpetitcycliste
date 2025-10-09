@@ -311,8 +311,8 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       console.log('🔄 Chargement des résultats:', {
         courseId: course.course_id,
         classementType,
-        etapeNumero: selectedStageNumber,
-        resultsCount: existingResults.length
+        etapeNumero,
+        existingResultsCount: existingResults.length
       });
 
       if (existingResults.length > 0) {
