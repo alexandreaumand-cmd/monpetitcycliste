@@ -55,7 +55,14 @@ export const RecentPointsChart = () => {
   
   // Build ChartConfig
   const chartConfig: ChartConfig = managers.reduce((config, manager, idx) => {
-    const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(var(--chart-6))"];
+    const colors = [
+      "hsl(220, 70%, 50%)",  // blue
+      "hsl(142, 71%, 45%)",  // green  
+      "hsl(38, 92%, 50%)",   // amber
+      "hsl(0, 72%, 51%)",    // red
+      "hsl(258, 90%, 66%)",  // purple
+      "hsl(330, 81%, 60%)"   // pink
+    ];
     config[manager] = {
       label: manager,
       color: colors[idx % colors.length],
