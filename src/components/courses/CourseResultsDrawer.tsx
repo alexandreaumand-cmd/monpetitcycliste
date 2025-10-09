@@ -342,6 +342,8 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
         return 'Maillot à Pois';
       case 'Jeune':
         return 'Maillot Blanc';
+      case 'Combatif':
+        return 'Super Combatif';
       default:
         return typeClassement;
     }

@@ -30,7 +30,7 @@ type Course = {
   phase_id: string;
 };
 
-type ClassementType = "Etape" | "General" | "Points" | "Montagne" | "Jeune";
+type ClassementType = "Etape" | "General" | "Points" | "Montagne" | "Jeune" | "Combatif";
 type StatutType = "finished" | "dnf" | "dns" | "dsq";
 
 type ResultRow = {
@@ -80,6 +80,8 @@ export const ResultsEntryStudioMobile = ({
   const [pointsOpen, setPointsOpen] = useState(false);
   const [montagneOpen, setMontagneOpen] = useState(false);
   const [jeuneOpen, setJeuneOpen] = useState(false);
+  const [combatifOpen, setCombatifOpen] = useState(false);
+  const [combatifWinner, setCombatifWinner] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch scoring rules using normalized views (same as desktop)
@@ -105,6 +107,7 @@ export const ResultsEntryStudioMobile = ({
         Points: "Points",
         Montagne: "Montagne",
         Jeune: "Jeune",
+        Combatif: "Combatif",
       };
       const typeCanon = typeMap[currentClassement] || currentClassement;
 
@@ -138,6 +141,26 @@ export const ResultsEntryStudioMobile = ({
       loadJerseyHolders();
     }
   }, [course.course_id, currentStage, currentClassement]);
+
+  // Load Combatif winner for WT GT
+  useEffect(() => {
+    if (courseIsStageRace && currentClassement === 'Combatif' && course.categorie === 'WT GT') {
+      loadCombatifWinner();
+    }
+  }, [course.course_id, currentClassement]);
+
+  const loadCombatifWinner = async () => {
+    const { data: combatifData } = await supabase
+      .from('race_results')
+      .select('coureur_id')
+      .eq('course_id', course.course_id)
+      .eq('type_classement', 'Combatif')
+      .is('etape_numero', null)
+      .eq('position', 1)
+      .maybeSingle();
+
+    setCombatifWinner(combatifData?.coureur_id || null);
+  };
 
   const loadResults = async () => {
     if (!scoringRules || scoringRules.length === 0) {
@@ -407,6 +430,24 @@ export const ResultsEntryStudioMobile = ({
             onConflict: 'course_id,coureur_id,type_classement,etape_numero',
           });
         }
+      }
+
+      // Save Combatif winner for WT GT
+      if (courseIsStageRace && currentClassement === 'Combatif' && course.categorie === 'WT GT' && combatifWinner) {
+        await supabase.from('race_results').upsert({
+          course_id: course.course_id,
+          coureur_id: combatifWinner,
+          type_classement: 'Combatif' as any,
+          etape_numero: null,
+          position: 1,
+          statut: 'finished' as const,
+          date_classement: dateClassement,
+          manager_id: riderManagerMap.get(combatifWinner),
+          points: 0,
+          saison_id: phaseData.saison_id,
+        } as any, {
+          onConflict: 'course_id,coureur_id,type_classement,etape_numero',
+        });
       }
 
       // Delete and reinsert points
@@ -789,6 +830,35 @@ export const ResultsEntryStudioMobile = ({
                     <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>
                   </div>
                 ))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {/* Super Combatif Section (WT GT only) */}
+          {courseIsStageRace && course.categorie === 'WT GT' && (
+            <Collapsible open={combatifOpen} onOpenChange={(open) => {
+              setCombatifOpen(open);
+              if (open) setCurrentClassement("Combatif");
+            })}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  <span>🏆 Super Combatif (150 pts)</span>
+                  <Badge variant={combatifOpen ? "default" : "secondary"}>
+                    {combatifWinner ? 1 : 0}
+                  </Badge>
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 space-y-2">
+                {currentClassement === "Combatif" && (
+                  <div className="p-3 bg-muted rounded-lg">
+                    <CoureursCombobox
+                      value={combatifWinner}
+                      onSelect={(coureur) => setCombatifWinner(coureur?.coureur_id || null)}
+                      phaseId={course.phase_id}
+                      disabled={isCancelled}
+                    />
+                  </div>
+                )}
               </CollapsibleContent>
             </Collapsible>
           )}

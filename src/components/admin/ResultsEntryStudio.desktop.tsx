@@ -27,7 +27,7 @@ type CourseData = {
   phase_id: string;
 };
 
-type ClassementType = "Etape" | "General" | "Points" | "Montagne" | "Jeune" | "Porteur Général" | "Porteur Vert" | "Porteur Montagne" | "Porteur Jeune" | "Porteur Combattif";
+type ClassementType = "Etape" | "General" | "Points" | "Montagne" | "Jeune" | "Combatif" | "Porteur Général" | "Porteur Vert" | "Porteur Montagne" | "Porteur Jeune" | "Porteur Combattif";
 type ResultStatut = "finished" | "dnf" | "dns" | "dsq";
 type JerseyType = 'general' | 'vert' | 'montagne' | 'jeune' | 'combattif';
 
@@ -73,6 +73,8 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     jeune: null,
     combattif: null,
   });
+  const [combatifWinner, setCombatifWinner] = useState<string | null>(null);
+  const [jeuneWinner, setJeuneWinner] = useState<string | null>(null);
   const [isCancelled, setIsCancelled] = useState(false);
 
   const isOneDay = course.type_course === "One day";
@@ -136,6 +138,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         Points: "Points",
         Montagne: "Montagne",
         Jeune: "Jeune",
+        Combatif: "Combatif",
       };
       const typeCanon = typeMap[classementType] || classementType;
 
@@ -306,6 +309,38 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         }
 
         setJerseyHolders(newJerseyHolders);
+      }
+
+      // Load Jeune winner if on finals tab
+      if (!isOneDay && activeTab === "finals" && currentFinalClassement === "Jeune") {
+        const { data: jeuneData } = await supabase
+          .from('race_results')
+          .select('coureur_id')
+          .eq('course_id', course.course_id)
+          .eq('type_classement', 'Jeune')
+          .is('etape_numero', null)
+          .eq('position', 1)
+          .gte('date_classement', course.date_debut)
+          .lte('date_classement', course.date_fin)
+          .maybeSingle();
+
+        setJeuneWinner(jeuneData?.coureur_id || null);
+      }
+
+      // Load Combatif winner if on finals tab for WT GT
+      if (!isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT') {
+        const { data: combatifData } = await supabase
+          .from('race_results')
+          .select('coureur_id')
+          .eq('course_id', course.course_id)
+          .eq('type_classement', 'Combatif')
+          .is('etape_numero', null)
+          .eq('position', 1)
+          .gte('date_classement', course.date_debut)
+          .lte('date_classement', course.date_fin)
+          .maybeSingle();
+
+        setCombatifWinner(combatifData?.coureur_id || null);
       }
 
       console.log('🔄 Chargement des résultats:', {
@@ -520,6 +555,26 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         }
       }
 
+      // Save Jeune winner if on finals tab
+      if (!isOneDay && activeTab === "finals" && currentFinalClassement === "Jeune" && jeuneWinner) {
+        await supabase.rpc("admin_result_save_lot", {
+          p_course_id: course.course_id,
+          p_type_classement: 'Jeune' as ClassementType,
+          p_etape_numero: null,
+          p_rows: [{ coureur_id: jeuneWinner, position: 1, statut: 'finished' as ResultStatut }],
+        });
+      }
+
+      // Save Combatif winner if on finals tab for WT GT
+      if (!isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT' && combatifWinner) {
+        await supabase.rpc("admin_result_save_lot", {
+          p_course_id: course.course_id,
+          p_type_classement: 'Combatif' as ClassementType,
+          p_etape_numero: null,
+          p_rows: [{ coureur_id: combatifWinner, position: 1, statut: 'finished' as ResultStatut }],
+        });
+      }
+
       // Compute points for this course
       const { data: pointsResult, error: pointsError } = await supabase.rpc("admin_compute_points_for_course", {
         p_course_id: course.course_id,
@@ -710,13 +765,15 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           {/* Finals Segmented Control */}
           {!isOneDay && activeTab === "finals" && (
             <div className="mb-6 flex gap-2">
-              {(["General", "Points", "Montagne", "Jeune"] as ClassementType[]).map((type) => (
+              {(["General", "Points", "Montagne", "Jeune"] as ClassementType[])
+                .concat(course.categorie === 'WT GT' ? ["Combatif"] : [])
+                .map((type) => (
                 <Button
                   key={type}
                   variant={currentFinalClassement === type ? "default" : "outline"}
                   onClick={() => setCurrentFinalClassement(type)}
                 >
-                  {type}
+                  {type === 'Combatif' ? 'Super Combatif' : type}
                 </Button>
               ))}
             </div>
@@ -902,6 +959,38 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                   setJerseyHolders(prev => ({ ...prev, [type]: coureurId }));
                   setIsDirty(true);
                 }}
+              />
+            </div>
+          )}
+
+          {/* Jeune Winner Input - Only for Stage Races on Finals Tab */}
+          {!isOneDay && activeTab === "finals" && currentFinalClassement === "Jeune" && (
+            <div className="mt-6 border rounded-lg p-4">
+              <h4 className="text-sm font-medium mb-3">Gagnant du Maillot Blanc</h4>
+              <CoureursCombobox
+                phaseId={course.phase_id}
+                value={jeuneWinner}
+                onSelect={(coureur) => {
+                  setJeuneWinner(coureur?.coureur_id || null);
+                  setIsDirty(true);
+                }}
+                showTakenRiders={true}
+              />
+            </div>
+          )}
+
+          {/* Super Combatif Winner Input - Only for WT GT on Finals Tab */}
+          {!isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT' && (
+            <div className="mt-6 border rounded-lg p-4">
+              <h4 className="text-sm font-medium mb-3">Gagnant du Super Combatif (150 points)</h4>
+              <CoureursCombobox
+                phaseId={course.phase_id}
+                value={combatifWinner}
+                onSelect={(coureur) => {
+                  setCombatifWinner(coureur?.coureur_id || null);
+                  setIsDirty(true);
+                }}
+                showTakenRiders={true}
               />
             </div>
           )}
