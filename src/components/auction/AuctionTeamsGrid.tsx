@@ -3,11 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, Shirt } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatAmount } from "@/lib/utils";
 import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
+import { useManagerSponsor } from "@/hooks/useManagerSponsor";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 interface AuctionTeamsGridProps {
   phaseId: string;
@@ -119,24 +121,45 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredManagers.map(([mgrId, data]: [string, any]) => (
-            <Card key={mgrId} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <CardTitle className="text-base">{data.managerName}</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {data.rosters.length}/{data.maxCoureurs} coureurs
-                    </p>
-                  </div>
-                  <Badge 
-                    variant={data.budgetRestant < 100 ? "destructive" : "secondary"}
-                    className="ml-2"
-                  >
-                    {formatAmount(data.budgetRestant)} restant
-                  </Badge>
+          {filteredManagers.map(([mgrId, data]: [string, any]) => {
+            const ManagerJerseyHeader = () => {
+              const { selectedSeason } = useSeasonContext();
+              const { data: sponsorData } = useManagerSponsor(mgrId, selectedSeason?.id);
+              
+              return (
+                <div className="flex items-center gap-2">
+                  {sponsorData?.jersey_image_url ? (
+                    <img 
+                      src={sponsorData.jersey_image_url} 
+                      alt="Maillot" 
+                      className="h-6 w-6 object-contain rounded"
+                    />
+                  ) : (
+                    <Shirt className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <CardTitle className="text-base">{data.managerName}</CardTitle>
                 </div>
-              </CardHeader>
+              );
+            };
+            
+            return (
+              <Card key={mgrId} className="hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <ManagerJerseyHeader />
+                      <p className="text-sm text-muted-foreground">
+                        {data.rosters.length}/{data.maxCoureurs} coureurs
+                      </p>
+                    </div>
+                    <Badge 
+                      variant={data.budgetRestant < 100 ? "destructive" : "secondary"}
+                      className="ml-2"
+                    >
+                      {formatAmount(data.budgetRestant)} restant
+                    </Badge>
+                  </div>
+                </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Slots restants:</span>
@@ -177,7 +200,8 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 

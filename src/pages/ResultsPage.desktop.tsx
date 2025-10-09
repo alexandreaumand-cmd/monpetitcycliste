@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Trophy, Calendar, Search } from "lucide-react";
+import { Loader2, Trophy, Calendar, Search, Shirt } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDebounce } from "use-debounce";
 import { CourseResultsDrawer } from "@/components/courses/CourseResultsDrawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AdminMaintenance } from "@/components/admin/AdminMaintenance";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useManagerJerseys } from "@/hooks/useManagerJerseys";
 
 interface Race {
   course_id: string;
@@ -51,6 +52,9 @@ export const ResultsPage = () => {
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   const [podiums, setPodiums] = useState<Record<string, ManagerPodium[]>>({});
   const [winners, setWinners] = useState<Record<string, RaceWinner>>({});
+  
+  const winningManagerIds = Object.values(podiums).map(p => p[0]?.manager_id).filter(Boolean) as string[];
+  const { data: jerseys = {} } = useManagerJerseys(winningManagerIds, selectedSeason?.id);
   
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -242,14 +246,16 @@ export const ResultsPage = () => {
                     )}
                   </div>
                   
-                  {podiums[race.course_id] && podiums[race.course_id].length > 0 && (
+                      {podiums[race.course_id] && podiums[race.course_id].length > 0 && (
                     <div className="space-y-1.5 pt-2 border-t">
                       {podiums[race.course_id].slice(0, 3).map((manager, idx) => (
                         <div key={manager.manager_nom} className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-base">
-                              {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
-                            </span>
+                            {idx === 0 && jerseys[manager.manager_id] ? (
+                              <img src={jerseys[manager.manager_id]} alt="Maillot" className="h-4 w-4 object-contain rounded" />
+                            ) : (
+                              <span className="text-base">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}</span>
+                            )}
                             <span className="font-medium truncate">{manager.manager_nom}</span>
                           </div>
                           <span className="text-muted-foreground">

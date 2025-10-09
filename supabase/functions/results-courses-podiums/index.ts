@@ -104,15 +104,16 @@ Deno.serve(async (req) => {
     });
 
     // Convert to array format and sort
-    const podiumResult: Record<string, Array<{ manager_nom: string; points: number; rank: number }>> = {};
+    const podiumResult: Record<string, Array<{ manager_id: string; manager_nom: string; points: number; rank: number }>> = {};
 
     Object.keys(aggregated).forEach(courseId => {
-      const managers = Object.values(aggregated[courseId])
-        .sort((a, b) => b.points - a.points)
+      const managers = Object.entries(aggregated[courseId])
+        .sort((a, b) => b[1].points - a[1].points)
         .slice(0, 3)
-        .map((m, idx) => ({
-          manager_nom: m.manager_nom,
-          points: m.points,
+        .map(([managerId, data], idx) => ({
+          manager_id: managerId,
+          manager_nom: data.manager_nom,
+          points: data.points,
           rank: idx + 1
         }));
       podiumResult[courseId] = managers;

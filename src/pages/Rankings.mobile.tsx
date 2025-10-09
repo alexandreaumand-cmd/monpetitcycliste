@@ -6,7 +6,7 @@ import { MobileCard } from "@/components/mobile/MobileCard";
 import { MobileBottomSheet } from "@/components/mobile/MobileBottomSheet";
 import { MobileEmptyState } from "@/components/mobile/MobileEmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, User, TrendingUp } from "lucide-react";
+import { Trophy, User, TrendingUp, Shirt } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { normalizeString } from "@/lib/stringUtils";
+import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 
 type TabView = "standings" | "riders" | "timeline" | "teams" | "courses";
 
@@ -28,7 +29,6 @@ export const RankingsMobile = () => {
   const [ridersDisplayLimit, setRidersDisplayLimit] = useState(20);
   const [riderSearchTerm, setRiderSearchTerm] = useState("");
   const [hideRidersWithoutManagers, setHideRidersWithoutManagers] = useState(false);
-
 
   // Fetch standings
   const { data: standings, isLoading: standingsLoading } = useQuery({
@@ -60,7 +60,6 @@ export const RankingsMobile = () => {
     queryKey: ["previous-manager-standings-mobile", selectedPhase],
     queryFn: async () => {
       if (!selectedPhase) {
-        // For global view, get previous global standings
         const { data: activePhase } = await supabase
           .from("phases")
           .select("id, index_dans_saison, saison_id")
@@ -105,7 +104,6 @@ export const RankingsMobile = () => {
         
         return rankMap;
       } else {
-        // For phase view, get previous phase standings
         const { data: currentPhase } = await supabase
           .from("phases")
           .select("index_dans_saison, saison_id")
@@ -155,7 +153,6 @@ export const RankingsMobile = () => {
 
       if (error) throw error;
       
-      // Map to expected format for mobile
       return data?.items?.map((item: any) => ({
         coureur_id: item.rider_id,
         coureur_nom: item.rider_nom,
@@ -174,7 +171,6 @@ export const RankingsMobile = () => {
   const filteredTopRiders = useMemo(() => {
     let filtered = allTopRiders || [];
     
-    // Filter by search term (rider name or team)
     if (riderSearchTerm) {
       const searchNormalized = normalizeString(riderSearchTerm);
       filtered = filtered.filter(rider => 
@@ -183,7 +179,6 @@ export const RankingsMobile = () => {
       );
     }
     
-    // Filter out riders without managers
     if (hideRidersWithoutManagers) {
       filtered = filtered.filter(rider => {
         const owners = selectedPhase ? rider.owners : rider.owners_all;
@@ -224,10 +219,28 @@ export const RankingsMobile = () => {
     setDetailsOpen(true);
   };
 
+  const ManagerJerseyAvatar = ({ managerId }: { managerId: string }) => {
+    const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
+    return (
+      <Avatar className="h-10 w-10">
+        {sponsorData?.jersey_image_url ? (
+          <img 
+            src={sponsorData.jersey_image_url} 
+            alt="Maillot" 
+            className="h-10 w-10 object-contain rounded"
+          />
+        ) : (
+          <AvatarFallback className="bg-primary/10">
+            <Shirt className="h-5 w-5 text-muted-foreground" />
+          </AvatarFallback>
+        )}
+      </Avatar>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="p-4 pb-0">
-        {/* Phase Filter - Select */}
         <div className="mb-4">
           <Label htmlFor="phase-select" className="text-xs text-muted-foreground mb-2 block">
             Période
@@ -250,13 +263,9 @@ export const RankingsMobile = () => {
         </div>
       </div>
 
-      {/* Sticky Tabs with Scroll Indicator */}
       <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-sm border-b">
         <div className="relative">
-          {/* Gradient fade-out gauche */}
           <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background/95 to-transparent z-10 pointer-events-none" />
-          
-          {/* Tabs scrollables */}
           <div className="py-2 px-4">
             <ChipGroup
               items={tabChips}
@@ -264,13 +273,10 @@ export const RankingsMobile = () => {
               onSelect={(value) => setActiveTab(value as TabView)}
             />
           </div>
-          
-          {/* Gradient fade-out droite */}
           <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background/95 to-transparent z-10 pointer-events-none" />
         </div>
       </div>
 
-      {/* Content */}
       <div className="p-4 pt-4">
         {activeTab === "standings" && (
           <div className="space-y-3 pb-4">
@@ -284,14 +290,13 @@ export const RankingsMobile = () => {
                 const totalPoints = standings.reduce((sum, s) => sum + s.total_points, 0) || 1;
                 const percentage = ((standing.total_points / totalPoints) * 100).toFixed(1);
                 
-                // Calculate evolution
                 let evolution: number | null = null;
                 let isNew = false;
                 
                 if (previousStandings) {
                   const previousRank = previousStandings.get(standing.manager_id);
                   if (previousRank) {
-                    evolution = previousRank - rank; // Positive = gained places
+                    evolution = previousRank - rank;
                   } else {
                     isNew = true;
                   }
@@ -323,11 +328,7 @@ export const RankingsMobile = () => {
                         </div>
                       ) : undefined
                     }
-                    avatar={
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-lg">
-                        {getRankBadge(rank)}
-                      </div>
-                    }
+                    avatar={<ManagerJerseyAvatar managerId={standing.manager_id} />}
                     onClick={() => handleManagerClick(standing.manager_id)}
                   />
                 );
@@ -454,7 +455,6 @@ export const RankingsMobile = () => {
         )}
       </div>
 
-      {/* Manager Details Bottom Sheet */}
       <MobileBottomSheet
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
@@ -463,7 +463,7 @@ export const RankingsMobile = () => {
       >
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Les détails du manager seront affichés ici
+            Fonctionnalité à venir
           </p>
         </div>
       </MobileBottomSheet>

@@ -3,13 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Trophy, Calendar, Search } from "lucide-react";
+import { Loader2, Trophy, Calendar, Search, Shirt } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { CourseResultsDrawer } from "@/components/courses/CourseResultsDrawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MobileCard, MobileEmptyState } from "@/components/mobile";
 import { AdminMaintenance } from "@/components/admin/AdminMaintenance";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useManagerJerseys } from "@/hooks/useManagerJerseys";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface Race {
   course_id: string;
@@ -50,6 +52,9 @@ export const ResultsPageMobile = () => {
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   const [podiums, setPodiums] = useState<Record<string, ManagerPodium[]>>({});
   const [winners, setWinners] = useState<Record<string, RaceWinner>>({});
+  
+  const winningManagerIds = Object.values(podiums).map(p => p[0]?.manager_id).filter(Boolean) as string[];
+  const { data: jerseys = {} } = useManagerJerseys(winningManagerIds, selectedSeason?.id);
   
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);

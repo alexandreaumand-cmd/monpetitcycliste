@@ -17,9 +17,11 @@ import {
   TrendingDown,
   User,
   DollarSign,
+  Shirt,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 
 interface Coureur {
   coureur_id: string;

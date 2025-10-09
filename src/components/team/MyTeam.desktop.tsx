@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt } from "lucide-react";
+import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -600,6 +601,45 @@ export const MyTeamDesktop = () => {
         managerId={selectedManagerId || currentUserId || undefined}
       />
     </div>
+  );
+};
+
+const ManagerJerseyDisplay = () => {
+  const { selectedSeason } = useSeasonContext();
+  const [selectedManagerId, setSelectedManagerId] = useState<string | null>(null);
+  
+  // Get current user's manager_id
+  useEffect(() => {
+    const loadCurrentManager = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      const { data: manager } = await supabase
+        .from('managers')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .single();
+        
+      if (manager) {
+        setSelectedManagerId(manager.id);
+      }
+    };
+    
+    loadCurrentManager();
+  }, []);
+  
+  const { data: sponsorData } = useManagerSponsor(selectedManagerId || undefined, selectedSeason?.id);
+  
+  if (!sponsorData?.jersey_image_url) {
+    return <Shirt className="h-8 w-8 text-muted-foreground" />;
+  }
+  
+  return (
+    <img 
+      src={sponsorData.jersey_image_url} 
+      alt="Maillot" 
+      className="h-10 w-10 object-contain rounded"
+    />
   );
 };
 

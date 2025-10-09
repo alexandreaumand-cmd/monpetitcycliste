@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Users, AlertCircle, Download, FileText, Calendar, Trophy, ArrowLeft, CheckCircle2, Star, Camera } from "lucide-react";
+import { Loader2, Users, AlertCircle, Download, FileText, Calendar, Trophy, ArrowLeft, CheckCircle2, Star, Camera, Shirt } from "lucide-react";
 import { toPng } from "html-to-image";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -22,6 +22,7 @@ import { RouteImageUploader } from "@/components/startlist/RouteImageUploader";
 import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 
 const StartlistDesktop = () => {
   
@@ -958,6 +959,26 @@ const StartlistDesktop = () => {
         </CardContent>
       </Card>
 
+    </div>
+  );
+};
+
+const ManagerJerseyDisplay = ({ managerName, managerId }: { managerName: string; managerId: string }) => {
+  const { selectedSeason } = useSeasonContext();
+  const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
+  
+  return (
+    <div className="flex items-center gap-2">
+      {sponsorData?.jersey_image_url ? (
+        <img 
+          src={sponsorData.jersey_image_url} 
+          alt="Maillot" 
+          className="h-6 w-6 object-contain rounded"
+        />
+      ) : (
+        <Shirt className="h-4 w-4 text-muted-foreground" />
+      )}
+      <span className="text-sm text-muted-foreground">{managerName}</span>
     </div>
   );
 };
