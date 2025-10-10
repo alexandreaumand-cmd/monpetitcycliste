@@ -285,10 +285,13 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                     {getRankIcon(rank, isBottomThree)}
                   </TableCell>
                   <TableCell className="font-semibold py-2">
-                    <ManagerNameWithJersey 
-                      managerId={standing.manager_id} 
-                      managerName={standing.manager_nom}
-                    />
+                    <div className="flex items-center gap-2">
+                      <ManagerNameWithJersey 
+                        managerId={standing.manager_id} 
+                        managerName={standing.manager_nom}
+                      />
+                      {rank === 10 && <span className="text-xl">🤡</span>}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right py-2">
                     <div className="space-y-0.5">

@@ -355,7 +355,12 @@ export const RankingsMobile = () => {
                 return (
                   <MobileCard
                     key={standing.manager_id}
-                    title={<ManagerNameWithSponsor managerId={standing.manager_id} managerName={standing.manager_nom} />}
+                    title={
+                      <div className="flex items-center gap-2">
+                        <ManagerNameWithSponsor managerId={standing.manager_id} managerName={standing.manager_nom} />
+                        {rank === 10 && <span className="text-lg">🤡</span>}
+                      </div>
+                    }
                     subtitle={`${percentage}% • ${getRankLabel(rank)}`}
                     meta={evolutionBadge}
                     avatar={<RankBadge rank={rank} />}
