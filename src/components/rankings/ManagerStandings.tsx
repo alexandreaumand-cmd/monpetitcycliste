@@ -29,7 +29,14 @@ const ManagerNameWithJersey = ({ managerId, managerName }: { managerId: string; 
       ) : (
         <Shirt className="h-8 w-8 text-muted-foreground" />
       )}
-      <span>{managerName}</span>
+      <div className="flex flex-col">
+        <span>{managerName}</span>
+        {sponsorData?.sponsor && (
+          <span className="text-xs text-muted-foreground italic">
+            {sponsorData.sponsor}
+          </span>
+        )}
+      </div>
     </div>
   );
 };
