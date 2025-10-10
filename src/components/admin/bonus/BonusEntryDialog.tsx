@@ -22,14 +22,25 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
 
+  // Fetch phase info
+  const { data: phaseData } = useQuery({
+    queryKey: ['phase', phaseId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('phases')
+        .select('index_dans_saison')
+        .eq('id', phaseId)
+        .single();
+      return data;
+    },
+    enabled: open,
+  });
+
   // Fetch existing bonuses
   const { data: bonusesData, isLoading } = useQuery({
     queryKey: ['bonus-points', phaseId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('admin-manage-bonus', {
-        method: 'GET',
-        body: { phase_id: phaseId }
-      });
+      const { data, error } = await supabase.functions.invoke(`admin-manage-bonus?phase_id=${phaseId}`);
 
       if (error) throw error;
       return data;
@@ -137,7 +148,8 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
 
   const handleDelete = async (bonusId: string) => {
     try {
-      const { error } = await supabase.functions.invoke(`admin-manage-bonus/${bonusId}`, {
+      const { error } = await supabase.functions.invoke('admin-manage-bonus', {
+        body: { id: bonusId },
         method: 'DELETE'
       });
 
@@ -164,7 +176,7 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Attribution de Points Bonus - Phase {phaseId.slice(0, 8)}</DialogTitle>
+          <DialogTitle>Attribution de Points Bonus - Phase {phaseData?.index_dans_saison || '...'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
