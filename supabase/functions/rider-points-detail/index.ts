@@ -45,6 +45,15 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
+    // Get bonus points for this rider
+    const { data: bonusData, error: bonusError } = await supabase
+      .from('bonus_points')
+      .select('points, bonus_type, commentaire, created_at')
+      .eq('coureur_id', coureur_id)
+      .eq('phase_id', phase_id);
+
+    if (bonusError) throw bonusError;
+
     // Transform the data to match the expected format
     const transformedHistory = (history || []).map((item: any) => ({
       course_nom: item.courses.nom,
@@ -54,11 +63,29 @@ Deno.serve(async (req) => {
       date_classement: item.courses.date_fin
     }));
 
-    // Calculate total points
-    const total_points = transformedHistory.reduce((sum: number, item: any) => sum + item.points, 0);
+    // Transform bonus data to match history format
+    const bonusHistory = (bonusData || []).map((bonus: any) => ({
+      course_nom: 'Bonus',
+      type_classement: bonus.bonus_type || 'Bonus',
+      etape_numero: null,
+      points: bonus.points,
+      date_classement: new Date(bonus.created_at).toISOString().split('T')[0],
+      commentaire: bonus.commentaire
+    }));
+
+    // Combine regular points and bonuses
+    const combinedHistory = [...transformedHistory, ...bonusHistory];
+
+    // Sort by date descending
+    combinedHistory.sort((a, b) => 
+      new Date(b.date_classement).getTime() - new Date(a.date_classement).getTime()
+    );
+
+    // Recalculate total
+    const total_points = combinedHistory.reduce((sum: number, item: any) => sum + item.points, 0);
 
     return new Response(JSON.stringify({ 
-      history: transformedHistory,
+      history: combinedHistory,
       total_points
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
