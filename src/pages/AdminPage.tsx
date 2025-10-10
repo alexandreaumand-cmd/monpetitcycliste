@@ -12,9 +12,6 @@ import { SeasonManager } from "@/components/admin/SeasonManager";
 import { MaintenancePanel } from "@/components/admin/MaintenancePanel";
 import { PointsComputeManager } from "@/components/admin/PointsComputeManager";
 import { StagesRaceManager } from "@/components/admin/StagesRaceManager";
-import { QuickRecalculateButton } from "@/components/admin/QuickRecalculateButton";
-import { RecalculateCat21Button } from "@/components/admin/RecalculateCat21Button";
-import { RecalculateCat21Phase5Button } from "@/components/admin/RecalculateCat21Phase5Button";
 import { ManagerSponsorsManager } from "@/components/admin/ManagerSponsorsManager";
 import { JerseyManager } from "@/components/admin/JerseyManager";
 import { cn } from "@/lib/utils";
@@ -61,13 +58,8 @@ export const AdminPage = () => {
         <Route path="data" element={
           <div className="space-y-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader>
                 <CardTitle>Importer des données CSV</CardTitle>
-                <div className="flex gap-2">
-                  <RecalculateCat21Button />
-                  <RecalculateCat21Phase5Button />
-                  <QuickRecalculateButton />
-                </div>
               </CardHeader>
               <CardContent>
                 <DataImport />
