@@ -72,8 +72,8 @@ Deno.serve(async (req) => {
         .select(`
           *,
           coureur:coureurs(nom, equipe),
-          manager:managers!bonus_points_manager_id_fkey(nom),
-          target_manager:managers!bonus_points_target_manager_id_fkey(nom)
+          manager:managers(nom),
+          target_manager:managers(nom)
         `)
         .eq('phase_id', phaseId)
         .order('created_at', { ascending: false });
@@ -176,12 +176,12 @@ Deno.serve(async (req) => {
 
     // DELETE - Remove a bonus
     if (method === 'DELETE') {
-      const pathParts = url.pathname.split('/');
-      const bonusId = pathParts[pathParts.length - 1];
+      const body = await req.json();
+      const { id: bonusId } = body;
 
-      if (!bonusId || bonusId === 'admin-manage-bonus') {
+      if (!bonusId) {
         return new Response(
-          JSON.stringify({ error: 'bonus_id requis dans l\'URL' }),
+          JSON.stringify({ error: 'id requis dans le body' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

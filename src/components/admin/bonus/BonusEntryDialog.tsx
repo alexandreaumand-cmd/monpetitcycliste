@@ -41,7 +41,9 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
     queryKey: ['bonus-points', phaseId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke(`admin-manage-bonus?phase_id=${phaseId}`);
-
+      
+      console.log('Bonuses received:', data);
+      
       if (error) throw error;
       return data;
     },
