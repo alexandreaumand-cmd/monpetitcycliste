@@ -74,7 +74,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     combattif: null,
   });
   const [combatifWinner, setCombatifWinner] = useState<string | null>(null);
-  const [jeuneWinner, setJeuneWinner] = useState<string | null>(null);
   const [isCancelled, setIsCancelled] = useState(false);
 
   const isOneDay = course.type_course === "One day";
@@ -311,21 +310,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         setJerseyHolders(newJerseyHolders);
       }
 
-      // Load Jeune winner if on finals tab
-      if (!isOneDay && activeTab === "finals" && currentFinalClassement === "Jeune") {
-        const { data: jeuneData } = await supabase
-          .from('race_results')
-          .select('coureur_id')
-          .eq('course_id', course.course_id)
-          .eq('type_classement', 'Jeune')
-          .is('etape_numero', null)
-          .eq('position', 1)
-          .gte('date_classement', course.date_debut)
-          .lte('date_classement', course.date_fin)
-          .maybeSingle();
-
-        setJeuneWinner(jeuneData?.coureur_id || null);
-      }
 
       // Load Combatif winner if on finals tab for WT GT
       if (!isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT') {
@@ -555,15 +539,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         }
       }
 
-      // Save Jeune winner if on finals tab
-      if (!isOneDay && activeTab === "finals" && currentFinalClassement === "Jeune" && jeuneWinner) {
-        await supabase.rpc("admin_result_save_lot", {
-          p_course_id: course.course_id,
-          p_type_classement: 'Jeune' as ClassementType,
-          p_etape_numero: null,
-          p_rows: [{ coureur_id: jeuneWinner, position: 1, statut: 'finished' as ResultStatut }],
-        });
-      }
 
       // Save Combatif winner if on finals tab for WT GT
       if (!isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT' && combatifWinner) {
@@ -963,21 +938,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
             </div>
           )}
 
-          {/* Jeune Winner Input - Only for Stage Races on Finals Tab */}
-          {!isOneDay && activeTab === "finals" && currentFinalClassement === "Jeune" && (
-            <div className="mt-6 border rounded-lg p-4">
-              <h4 className="text-sm font-medium mb-3">Gagnant du Maillot Blanc</h4>
-              <CoureursCombobox
-                phaseId={course.phase_id}
-                value={jeuneWinner}
-                onSelect={(coureur) => {
-                  setJeuneWinner(coureur?.coureur_id || null);
-                  setIsDirty(true);
-                }}
-                showTakenRiders={true}
-              />
-            </div>
-          )}
 
           {/* Super Combatif Winner Input - Only for WT GT on Finals Tab */}
           {!isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT' && (
