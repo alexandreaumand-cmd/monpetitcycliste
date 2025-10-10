@@ -65,6 +65,7 @@ type RiderPointsTableData = {
 type UpcomingRace = {
   race_id: string;
   race_nom: string;
+  categorie: string;
   date_debut: string;
   date_fin: string;
   is_confirmed: boolean;
@@ -695,12 +696,17 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                               <AlertCircle className="h-4 w-4 text-orange-500" />
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(race.date_debut).toLocaleDateString('fr-FR')}
-                            {race.date_debut !== race.date_fin && 
-                              ` - ${new Date(race.date_fin).toLocaleDateString('fr-FR')}`
-                            }
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {race.categorie}
+                            </Badge>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(race.date_debut).toLocaleDateString('fr-FR')}
+                              {race.date_debut !== race.date_fin && 
+                                ` - ${new Date(race.date_fin).toLocaleDateString('fr-FR')}`
+                              }
+                            </p>
+                          </div>
                         </div>
                       </div>
                     ))}

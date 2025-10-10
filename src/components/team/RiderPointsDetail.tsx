@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, TrendingUp, TrendingDown, X } from "lucide-react";
+import { Trophy, TrendingUp, TrendingDown, X, CheckCircle2, AlertCircle, Calendar } from "lucide-react";
 
 interface PointDetail {
   course_nom: string;
@@ -16,6 +16,15 @@ interface PointDetail {
   points: number;
   date_classement: string;
   commentaire?: string;
+}
+
+interface UpcomingRace {
+  race_id: string;
+  race_nom: string;
+  categorie: string;
+  date_debut: string;
+  date_fin: string;
+  is_confirmed: boolean;
 }
 
 interface RiderPointsDetailProps {
@@ -54,6 +63,19 @@ export const RiderPointsDetail = ({
       return data;
     },
     enabled: isOpen && !!riderId && !!phaseId
+  });
+
+  const { data: upcomingRaces, isLoading: isLoadingUpcoming } = useQuery({
+    queryKey: ['rider-upcoming-races', riderId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('get-rider-upcoming-races', {
+        body: { rider_id: riderId }
+      });
+
+      if (error) throw error;
+      return data?.races as UpcomingRace[] || [];
+    },
+    enabled: isOpen && !!riderId
   });
 
   const pointsDetail: PointDetail[] = data?.history || [];
@@ -177,6 +199,59 @@ export const RiderPointsDetail = ({
               </Table>
             </Card>
           )}
+
+          {/* Programme à venir */}
+          <div className="mt-6">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Programme à venir
+            </h3>
+            
+            {isLoadingUpcoming ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : upcomingRaces && upcomingRaces.length > 0 ? (
+              <div className="space-y-2">
+                {upcomingRaces.map((race) => (
+                  <Card key={race.race_id}>
+                    <div className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="font-medium">{race.race_nom}</p>
+                            {race.is_confirmed ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {race.categorie}
+                            </Badge>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(race.date_debut).toLocaleDateString('fr-FR')}
+                              {race.date_debut !== race.date_fin && 
+                                ` - ${new Date(race.date_fin).toLocaleDateString('fr-FR')}`
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Aucune course programmée</p>
+              </div>
+            )}
+          </div>
         </div>
       </DrawerContent>
     </Drawer>

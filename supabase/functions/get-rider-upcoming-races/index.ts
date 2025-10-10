@@ -41,17 +41,18 @@ Deno.serve(async (req) => {
       .select(`
         startlist_id,
         status,
-        startlist_imports!inner(
-          race_id,
-          pcs_validated,
-          created_at,
-          courses!inner(
-            id,
-            nom,
-            date_debut,
-            date_fin
-          )
+      startlist_imports!inner(
+        race_id,
+        pcs_validated,
+        created_at,
+        courses!inner(
+          id,
+          nom,
+          categorie,
+          date_debut,
+          date_fin
         )
+      )
       `)
       .eq('coureur_id', rider_id)
       .gte('startlist_imports.courses.date_debut', new Date().toISOString().split('T')[0]);
@@ -67,6 +68,7 @@ Deno.serve(async (req) => {
     const transformedRaces = races?.map((entry: any) => ({
       race_id: entry.startlist_imports.courses.id,
       race_nom: entry.startlist_imports.courses.nom,
+      categorie: entry.startlist_imports.courses.categorie,
       date_debut: entry.startlist_imports.courses.date_debut,
       date_fin: entry.startlist_imports.courses.date_fin,
       is_confirmed: entry.startlist_imports.pcs_validated,
