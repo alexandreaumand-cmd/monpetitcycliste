@@ -151,6 +151,10 @@ All colors MUST be HSL.
   .safe-right {
     padding-right: env(safe-area-inset-right);
   }
+  
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 
   /* Touch targets */
   .touch-target {

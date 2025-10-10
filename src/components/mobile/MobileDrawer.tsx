@@ -86,8 +86,8 @@ export const MobileDrawer = ({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-[280px] safe-bottom flex flex-col">
+    <Sheet open={open} onOpenChange={onOpenChange} modal={true}>
+      <SheetContent side="left" className="w-[280px] safe-bottom flex flex-col bg-background">
         <SheetHeader className="text-left pb-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
