@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -36,16 +36,11 @@ export const MaintenancePanel = () => {
   });
 
   // Synchronize local state with server data
-  useState(() => {
+  useEffect(() => {
     if (banner?.message) {
       setBannerMessage(banner.message);
     }
-  });
-
-  // Update local state when banner data changes
-  if (banner?.message && bannerMessage !== banner.message) {
-    setBannerMessage(banner.message);
-  }
+  }, [banner?.message]);
 
   // Update announcement banner mutation
   const updateBannerMutation = useMutation({
