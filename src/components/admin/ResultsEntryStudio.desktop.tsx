@@ -367,7 +367,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               coureur_nom: existing?.coureur_nom || null,
               manager_nom: existing?.manager_nom || null,
               statut: existing?.statut || ("finished" as ResultStatut),
-              points: rule?.points || 0,
+              points: existing?.points_theoriques || rule?.points || 0,
               grid_version: sel_key,
             };
           });
