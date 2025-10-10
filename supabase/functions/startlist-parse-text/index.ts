@@ -90,7 +90,7 @@ serve(async (req) => {
       }
     );
 
-    const { race_id, phase_id, text, with_diagnostics } = await req.json();
+    const { race_id, phase_id, text, with_diagnostics, startlisteur_note } = await req.json();
 
     if (!text) {
       return new Response(
@@ -438,6 +438,7 @@ serve(async (req) => {
         race_id: raceId,
         created_by_manager_id: managerData.id,
         raw_text: text,
+        startlisteur_note: startlisteur_note,
       })
       .select()
       .single();

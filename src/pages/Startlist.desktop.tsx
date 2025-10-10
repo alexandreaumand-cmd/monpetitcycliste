@@ -45,8 +45,6 @@ const StartlistDesktop = () => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const [startlisteurNote, setStartlisteurNote] = useState<string>("");
-  const [isEditingNote, setIsEditingNote] = useState(false);
-  const [isSavingNote, setIsSavingNote] = useState(false);
 
 
   useEffect(() => {
@@ -95,7 +93,8 @@ const StartlistDesktop = () => {
           race_id: selectedRaceId || null,
           phase_id: selectedPhaseId,
           text: textContent,
-          with_diagnostics: showDiagnostics
+          with_diagnostics: showDiagnostics,
+          startlisteur_note: startlisteurNote.trim() || null
         }
       });
 
@@ -109,6 +108,7 @@ const StartlistDesktop = () => {
       setSelectedStartlistId(newStartlistId);
       setSelectedRaceForViewing(selectedRaceForParsing);
       setViewMode('view');
+      setStartlisteurNote("");
       
       toast.success(
         `Startlist enregistrée : ${data.counts.matched_db} coureurs matchés sur ${data.counts.parsed}`
@@ -529,93 +529,16 @@ const StartlistDesktop = () => {
             )}
           </div>
 
-          {/* Le mot du startlisteur */}
-          {(canModify || startlistViewData.startlisteur_note) && (
-            <Card className="bg-amber-50 dark:bg-amber-950/20 p-4 border-amber-200 dark:border-amber-800">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-semibold text-sm flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Le mot du startlisteur
-                </h4>
-                {canModify && !isEditingNote && startlistViewData.startlisteur_note && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => {
-                      setStartlisteurNote(startlistViewData.startlisteur_note || "");
-                      setIsEditingNote(true);
-                    }}
-                  >
-                    Modifier
-                  </Button>
-                )}
+          {/* Le mot du startlisteur - Lecture seule */}
+          {startlistViewData.startlisteur_note && (
+            <Card className="bg-amber-50 dark:bg-amber-950/20 p-3 border-amber-200 dark:border-amber-800">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageSquare className="h-4 w-4 text-amber-600" />
+                <h4 className="font-semibold text-sm">Le mot du startlisteur</h4>
               </div>
-              
-              {canModify && (isEditingNote || !startlistViewData.startlisteur_note) ? (
-                <div className="space-y-2">
-                  <Textarea
-                    value={startlisteurNote}
-                    onChange={(e) => setStartlisteurNote(e.target.value)}
-                    placeholder="Ajoutez un commentaire sur cette startlist..."
-                    className="min-h-[100px] resize-none"
-                    maxLength={2000}
-                  />
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
-                      {startlisteurNote.length} / 2000 caractères
-                    </span>
-                    <div className="flex gap-2">
-                      {isEditingNote && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            setStartlisteurNote(startlistViewData.startlisteur_note || "");
-                            setIsEditingNote(false);
-                          }}
-                        >
-                          Annuler
-                        </Button>
-                      )}
-                      <Button 
-                        size="sm"
-                        onClick={async () => {
-                          if (!selectedStartlistId) return;
-                          
-                          setIsSavingNote(true);
-                          try {
-                            const { error } = await supabase
-                              .from('startlist_imports')
-                              .update({ startlisteur_note: startlisteurNote.trim() || null })
-                              .eq('id', selectedStartlistId);
-
-                            if (error) throw error;
-
-                            toast.success("Note enregistrée avec succès !");
-                            setIsEditingNote(false);
-                            
-                            queryClient.invalidateQueries({ queryKey: ['startlist-view', selectedStartlistId] });
-                          } catch (error: any) {
-                            console.error('Save error:', error);
-                            toast.error("Erreur lors de l'enregistrement : " + error.message);
-                          } finally {
-                            setIsSavingNote(false);
-                          }
-                        }}
-                        disabled={isSavingNote}
-                      >
-                        {isSavingNote ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enregistrer"}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                startlistViewData.startlisteur_note && (
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                    {startlistViewData.startlisteur_note}
-                  </p>
-                )
-              )}
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {startlistViewData.startlisteur_note}
+              </p>
             </Card>
           )}
 
@@ -932,6 +855,23 @@ const StartlistDesktop = () => {
               placeholder="0. MBH NESPOLI Lorenzo 0:00&#10;0. UAD LAENGEN Vegard Stake 0:00&#10;0. JAY DE MARCHI Alessandro 0:00"
               className="min-h-[200px] font-mono text-sm"
             />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Le mot du startlisteur (optionnel)
+            </label>
+            <Textarea
+              value={startlisteurNote}
+              onChange={(e) => setStartlisteurNote(e.target.value)}
+              placeholder="Ajoutez un commentaire sur cette startlist..."
+              className="min-h-[80px] resize-none"
+              maxLength={500}
+            />
+            <span className="text-xs text-muted-foreground mt-1 block">
+              {startlisteurNote.length} / 500 caractères
+            </span>
           </div>
 
           {isAdmin && (
