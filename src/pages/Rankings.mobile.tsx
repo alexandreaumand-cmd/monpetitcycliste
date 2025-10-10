@@ -219,22 +219,45 @@ export const RankingsMobile = () => {
     setDetailsOpen(true);
   };
 
-  const ManagerJerseyAvatar = ({ managerId }: { managerId: string }) => {
+  const ManagerNameWithSponsor = ({ managerId, managerName }: { managerId: string; managerName: string }) => {
     const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
     return (
-      <Avatar className="h-10 w-10">
-        {sponsorData?.jersey_image_url ? (
-          <img 
-            src={sponsorData.jersey_image_url} 
-            alt="Maillot" 
-            className="h-10 w-10 object-contain rounded"
-          />
-        ) : (
-          <AvatarFallback className="bg-primary/10">
-            <Shirt className="h-5 w-5 text-muted-foreground" />
-          </AvatarFallback>
+      <div className="flex flex-col">
+        <span className="font-semibold">{managerName}</span>
+        {sponsorData?.sponsor && (
+          <span className="text-xs text-muted-foreground italic">
+            {sponsorData.sponsor}
+          </span>
         )}
-      </Avatar>
+      </div>
+    );
+  };
+
+  const RankBadge = ({ rank }: { rank: number }) => {
+    const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : null;
+    
+    if (medal) {
+      return <div className="text-3xl">{medal}</div>;
+    }
+    
+    return (
+      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted">
+        <span className="text-sm font-bold text-muted-foreground">#{rank}</span>
+      </div>
+    );
+  };
+
+  const PointsBadge = ({ points, rank }: { points: number; rank: number }) => {
+    const isPodium = rank <= 3;
+    return (
+      <div className="flex flex-col items-end">
+        <div className="flex items-baseline gap-1">
+          <span className={`font-bold ${isPodium ? 'text-3xl text-primary' : 'text-2xl'}`}>
+            {points}
+          </span>
+          <span className="text-xs text-muted-foreground">pts</span>
+        </div>
+      </div>
     );
   };
 
@@ -302,33 +325,41 @@ export const RankingsMobile = () => {
                   }
                 }
 
+                const evolutionBadge = isNew ? (
+                  <Badge variant="outline" className="text-xs">NEW</Badge>
+                ) : evolution !== null && evolution !== 0 ? (
+                  <div className={`flex items-center gap-1 text-xs font-semibold ${
+                    evolution > 0 ? "text-green-600" : "text-red-600"
+                  }`}>
+                    {evolution > 0 ? (
+                      <>
+                        <TrendingUp className="h-3.5 w-3.5" />
+                        <span>+{evolution}</span>
+                      </>
+                    ) : (
+                      <>
+                        <TrendingUp className="h-3.5 w-3.5 rotate-180" />
+                        <span>{Math.abs(evolution)}</span>
+                      </>
+                    )}
+                  </div>
+                ) : null;
+
+                const getRankLabel = (r: number) => {
+                  if (r === 1) return "1er";
+                  if (r === 2) return "2e";
+                  if (r === 3) return "3e";
+                  return `${r}e`;
+                };
+
                 return (
                   <MobileCard
                     key={standing.manager_id}
-                    title={standing.manager_nom}
-                    subtitle={`${standing.total_points} pts • ${percentage}%`}
-                    meta={
-                      isNew ? (
-                        <Badge variant="outline" className="text-xs">NEW</Badge>
-                      ) : evolution !== null && evolution !== 0 ? (
-                        <div className={`flex items-center gap-1 text-xs font-semibold ${
-                          evolution > 0 ? "text-green-600" : "text-red-600"
-                        }`}>
-                          {evolution > 0 ? (
-                            <>
-                              <TrendingUp className="h-3.5 w-3.5" />
-                              <span>+{evolution}</span>
-                            </>
-                          ) : (
-                            <>
-                              <TrendingUp className="h-3.5 w-3.5 rotate-180" />
-                              <span>{Math.abs(evolution)}</span>
-                            </>
-                          )}
-                        </div>
-                      ) : undefined
-                    }
-                    avatar={<ManagerJerseyAvatar managerId={standing.manager_id} />}
+                    title={<ManagerNameWithSponsor managerId={standing.manager_id} managerName={standing.manager_nom} />}
+                    subtitle={`${percentage}% • ${getRankLabel(rank)}`}
+                    meta={evolutionBadge}
+                    avatar={<RankBadge rank={rank} />}
+                    badge={<PointsBadge points={standing.total_points} rank={rank} />}
                     onClick={() => handleManagerClick(standing.manager_id)}
                   />
                 );

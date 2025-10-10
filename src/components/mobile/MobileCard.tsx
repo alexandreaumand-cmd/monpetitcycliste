@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 
 interface MobileCardProps {
-  title: string;
+  title: string | React.ReactNode;
   subtitle?: string | React.ReactNode;
   meta?: string | React.ReactNode;
   avatar?: React.ReactNode;
@@ -30,9 +30,9 @@ export const MobileCard = ({
       
       <div className="flex-1 min-w-0 space-y-0.5">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="font-semibold text-sm leading-tight truncate">
+          <div className="font-semibold text-sm leading-tight truncate min-w-0">
             {title}
-          </h3>
+          </div>
           {badge && <div className="flex-shrink-0">{badge}</div>}
         </div>
         
