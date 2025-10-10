@@ -16,6 +16,12 @@ type Coureur = {
   coureur_equipe: string | null;
   is_taken: boolean;
   taken_by_manager_nom: string | null;
+  // For bonus form compatibility
+  id?: string;
+  nom?: string;
+  equipe?: string;
+  manager_id?: string;
+  manager_nom?: string;
 };
 
 type CoureursComboboxProps = {
@@ -25,6 +31,7 @@ type CoureursComboboxProps = {
   placeholder?: string;
   showTakenRiders?: boolean;
   disabled?: boolean;
+  showManager?: boolean;
 };
 
 export const CoureursCombobox = ({
@@ -34,6 +41,7 @@ export const CoureursCombobox = ({
   placeholder = "Sélectionner un coureur...",
   showTakenRiders = true,
   disabled = false,
+  showManager = false,
 }: CoureursComboboxProps) => {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -60,11 +68,59 @@ export const CoureursCombobox = ({
 
   // Fetch coureurs by search term
   const { data: coureurs = [], isLoading } = useQuery({
-    queryKey: ['coureurs-search', phaseId, debouncedSearchTerm],
+    queryKey: ['coureurs-search', phaseId, debouncedSearchTerm, showManager],
     queryFn: async () => {
       if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) return [];
       
       const normalizedSearch = normalizeString(debouncedSearchTerm);
+      
+      // If showManager is true, we need to join with rosters and managers
+      if (showManager) {
+        const { data, error } = await supabase
+          .from('coureurs_disponibilite')
+          .select('*')
+          .eq('phase_id', phaseId)
+          .ilike('search_text', `%${normalizedSearch}%`)
+          .order('is_taken', { ascending: true })
+          .order('coureur_nom', { ascending: true })
+          .limit(50);
+        
+        if (error) throw error;
+        
+        // Enrich with manager_id from rosters
+        const enrichedData = await Promise.all((data || []).map(async (coureur) => {
+          if (coureur.is_taken && coureur.coureur_id) {
+            const { data: roster } = await supabase
+              .from('rosters')
+              .select('manager_id')
+              .eq('phase_id', phaseId)
+              .eq('coureur_id', coureur.coureur_id)
+              .single();
+            
+            return {
+              ...coureur,
+              // Add compatibility fields
+              id: coureur.coureur_id,
+              nom: coureur.coureur_nom,
+              equipe: coureur.coureur_equipe,
+              manager_id: roster?.manager_id || null,
+              manager_nom: coureur.taken_by_manager_nom,
+            };
+          }
+          return {
+            ...coureur,
+            id: coureur.coureur_id,
+            nom: coureur.coureur_nom,
+            equipe: coureur.coureur_equipe,
+            manager_id: null,
+            manager_nom: null,
+          };
+        }));
+        
+        return enrichedData;
+      }
+      
+      // Original query without manager info
       const { data, error } = await supabase
         .from('coureurs_disponibilite')
         .select('*')
@@ -75,7 +131,12 @@ export const CoureursCombobox = ({
         .limit(50);
       
       if (error) throw error;
-      return data || [];
+      return (data || []).map(c => ({
+        ...c,
+        id: c.coureur_id,
+        nom: c.coureur_nom,
+        equipe: c.coureur_equipe,
+      }));
     },
     enabled: debouncedSearchTerm.length >= 2,
   });

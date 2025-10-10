@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { ResultsEntryStudio } from "./ResultsEntryStudio";
 import { Calendar, Trophy, AlertCircle, CheckCircle2, Award } from "lucide-react";
-import { ManagerBonusDialog } from "./ManagerBonusDialog";
+import { BonusEntryDialog } from "./bonus/BonusEntryDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
@@ -397,7 +397,7 @@ export const RecentResults = () => {
       )}
 
       {selectedPhase && (
-        <ManagerBonusDialog
+        <BonusEntryDialog
           open={bonusDialogOpen}
           onOpenChange={setBonusDialogOpen}
           phaseId={selectedPhase}
