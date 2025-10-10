@@ -43,7 +43,7 @@ export const MobileDrawer = ({
   const { selectedSeason } = useSeasonContext();
   const { data: seasonSponsor } = useManagerSponsor(manager?.id, selectedSeason?.id);
   
-  const displaySponsor = seasonSponsor || manager?.sponsor;
+  const displaySponsor = seasonSponsor?.sponsor || manager?.sponsor;
 
   const sections = [
     {
