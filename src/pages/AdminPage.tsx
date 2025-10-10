@@ -1,19 +1,15 @@
 import { Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DataImport } from "@/components/admin/DataImport";
-import { CoursesImportManager } from "@/components/admin/CoursesImportManager";
-import { CoursesResetManager } from "@/components/admin/CoursesResetManager";
 import { AuctionManager } from "@/components/admin/AuctionManager";
 import { RoundManager } from "@/components/admin/RoundManager";
 import { AnnouncementManager } from "@/components/admin/AnnouncementManager";
 import { RecentResults } from "@/components/admin/RecentResults";
 import { SeasonManager } from "@/components/admin/SeasonManager";
 import { MaintenancePanel } from "@/components/admin/MaintenancePanel";
-import { PointsComputeManager } from "@/components/admin/PointsComputeManager";
-import { StagesRaceManager } from "@/components/admin/StagesRaceManager";
 import { ManagerSponsorsManager } from "@/components/admin/ManagerSponsorsManager";
 import { JerseyManager } from "@/components/admin/JerseyManager";
+import { DataManagementTabs } from "@/components/admin/DataManagementTabs";
 import { cn } from "@/lib/utils";
 
   const adminTabs = [
@@ -55,21 +51,7 @@ export const AdminPage = () => {
       <Routes>
         <Route index element={<Navigate to="/dashboard/admin/results" replace />} />
         
-        <Route path="data" element={
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Importer des données CSV</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DataImport />
-              </CardContent>
-            </Card>
-            <CoursesResetManager />
-            <CoursesImportManager />
-            <PointsComputeManager />
-          </div>
-        } />
+        <Route path="data" element={<DataManagementTabs />} />
         
         <Route path="encheres" element={
           <div className="space-y-6">

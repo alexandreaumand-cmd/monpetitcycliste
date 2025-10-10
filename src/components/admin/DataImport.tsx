@@ -7,12 +7,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Upload, Loader2, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-type TableType = 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates' | 'rosters';
+type TableType = 'coureurs' | 'scoring_rules' | 'managers' | 'course_dates' | 'rosters';
 
 export const DataImport = () => {
   const [selectedTable, setSelectedTable] = useState<TableType>('coureurs');
   const [selectedSaison, setSelectedSaison] = useState<string>("");
-  const [selectedPhase, setSelectedPhase] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -30,20 +29,6 @@ export const DataImport = () => {
     }
   });
 
-  // Load available phases (filtered by selected season for courses)
-  const { data: phases } = useQuery({
-    queryKey: ['phases', selectedSaison],
-    queryFn: async () => {
-      if (!selectedSaison) return [];
-      const { data } = await supabase
-        .from('phases')
-        .select('id, index_dans_saison, saison_id, date_debut, date_fin')
-        .eq('saison_id', selectedSaison)
-        .order('index_dans_saison');
-      return data || [];
-    },
-    enabled: !!selectedSaison && selectedTable === 'courses'
-  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -71,25 +56,6 @@ export const DataImport = () => {
       return;
     }
 
-    // Validation saison + phase pour courses
-    if (selectedTable === 'courses') {
-      if (!selectedSaison) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez sélectionner une saison cible pour les courses",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (!selectedPhase) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez sélectionner une phase cible pour les courses",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
 
     setImporting(true);
 
@@ -102,10 +68,6 @@ export const DataImport = () => {
           data: csvData,
           ...((selectedTable === 'coureurs' || selectedTable === 'scoring_rules') && { 
             saison_id: selectedSaison 
-          }),
-          ...(selectedTable === 'courses' && { 
-            saison_id: selectedSaison,
-            phase_id: selectedPhase
           })
         },
       });
@@ -160,7 +122,6 @@ export const DataImport = () => {
   const tableLabels: Record<TableType, string> = {
     coureurs: 'Coureurs (Riders)',
     scoring_rules: 'Barèmes (Scoring Rules)',
-    courses: 'Courses (Races)',
     managers: 'Managers',
     course_dates: 'Dates des Courses',
     rosters: 'Rosters (Équipes)',
@@ -293,58 +254,6 @@ export const DataImport = () => {
           </div>
         )}
 
-        {selectedTable === 'courses' && (
-          <>
-            <div className="space-y-2">
-              <label htmlFor="saison-courses" className="text-sm font-medium">
-                Saison cible *
-              </label>
-              <Select value={selectedSaison} onValueChange={(val) => {
-                setSelectedSaison(val);
-                setSelectedPhase(""); // Reset phase when season changes
-              }}>
-                <SelectTrigger id="saison-courses">
-                  <SelectValue placeholder="Sélectionner une saison" />
-                </SelectTrigger>
-                <SelectContent>
-                  {saisons?.map(s => (
-                    <SelectItem key={s.id} value={s.id}>
-                      Saison {s.annee}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Toutes les courses importées seront rattachées à cette saison
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="phase-courses" className="text-sm font-medium">
-                Phase cible *
-              </label>
-              <Select 
-                value={selectedPhase} 
-                onValueChange={setSelectedPhase}
-                disabled={!selectedSaison}
-              >
-                <SelectTrigger id="phase-courses">
-                  <SelectValue placeholder={selectedSaison ? "Sélectionner une phase" : "Sélectionnez d'abord une saison"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {phases?.map(p => (
-                    <SelectItem key={p.id} value={p.id}>
-                      Phase {p.index_dans_saison}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Toutes les courses importées seront rattachées à cette phase
-              </p>
-            </div>
-          </>
-        )}
 
         <div className="space-y-2">
           <label htmlFor="file-input" className="text-sm font-medium">
@@ -425,10 +334,6 @@ export const DataImport = () => {
           <ul className="list-disc list-inside space-y-1 text-xs">
             <li><strong>Coureurs:</strong> Coureur, Equipe, Prix initial, id</li>
             <li><strong>Barèmes:</strong> id, Catégorie, Type classement, Place, Points, Type</li>
-            <li><strong>Courses:</strong> id,nom,date_debut,date_fin,categorie,type_course,pays</li>
-            <li className="text-xs text-muted-foreground ml-6">
-              La saison et la phase sont sélectionnées via les menus déroulants ci-dessus
-            </li>
             <li><strong>Managers:</strong> Nom manager, Sponsor</li>
             <li><strong>Dates des Courses:</strong> id, Course, date_debut, date_fin</li>
             <li><strong>Rosters:</strong> Coureur, Propriétaire, Phase, Prix</li>
