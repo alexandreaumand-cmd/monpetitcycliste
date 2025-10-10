@@ -324,6 +324,13 @@ export type Database = {
             referencedRelation: "phases"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
+          },
         ]
       }
       audits: {
@@ -798,6 +805,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bonus_points_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
+          },
+          {
             foreignKeyName: "bonus_points_target_manager_id_fkey"
             columns: ["target_manager_id"]
             isOneToOne: false
@@ -1057,6 +1071,13 @@ export type Database = {
             referencedRelation: "phases"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
+          },
         ]
       }
       manager_bonus_points: {
@@ -1243,6 +1264,13 @@ export type Database = {
             referencedRelation: "phases"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "manager_bonus_points_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
+          },
         ]
       }
       manager_fun_awards: {
@@ -1413,6 +1441,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "phases"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
           },
         ]
       }
@@ -2017,6 +2052,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "phases"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
           },
         ]
       }
@@ -2706,6 +2748,13 @@ export type Database = {
             referencedRelation: "phases"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "rosters_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
+          },
         ]
       }
       saisons: {
@@ -3251,6 +3300,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
+          },
+          {
             foreignKeyName: "bids_coureur_id_fkey"
             columns: ["coureur_id"]
             isOneToOne: false
@@ -3408,6 +3464,13 @@ export type Database = {
             referencedRelation: "phases"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
+          },
         ]
       }
       current_round_drafts: {
@@ -3533,6 +3596,13 @@ export type Database = {
             referencedRelation: "phases"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
+          },
         ]
       }
       last_round_winners: {
@@ -3574,6 +3644,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "phases"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
           },
         ]
       }
@@ -3647,6 +3724,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "phases"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
           },
           {
             foreignKeyName: "bids_manager_id_fkey"
@@ -3766,6 +3850,13 @@ export type Database = {
             referencedRelation: "phases"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
+          },
         ]
       }
       scoring_rules_norm: {
@@ -3829,6 +3920,13 @@ export type Database = {
             referencedRelation: "phases"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
+          },
         ]
       }
       v_home_recent_results: {
@@ -3882,6 +3980,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "phases"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonus_points_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
           },
         ]
       }
@@ -3961,12 +4066,11 @@ export type Database = {
       v_manager_standings_by_phase: {
         Row: {
           bonus_points: number | null
-          courses_count: number | null
+          course_points: number | null
           manager_id: string | null
           manager_nom: string | null
           phase_id: string | null
-          race_points: number | null
-          scoreurs_count: number | null
+          phase_index: number | null
           total_points: number | null
         }
         Relationships: []
@@ -4271,6 +4375,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "phases"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
           },
         ]
       }
