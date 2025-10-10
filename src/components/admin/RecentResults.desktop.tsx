@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { ResultsEntryStudio } from "./ResultsEntryStudio";
-import { Calendar, Trophy, AlertCircle, CheckCircle2, Award } from "lucide-react";
+import { Calendar, Trophy, AlertCircle, CheckCircle2, Award, XCircle } from "lucide-react";
 import { BonusEntryDialog } from "./bonus/BonusEntryDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,7 @@ type ResultsStatus = {
   nb_lignes_points: number;
   nb_lignes_montagne: number;
   nb_lignes_jeune: number;
+  is_cancelled?: boolean;
 };
 
 export const RecentResults = () => {
@@ -119,6 +120,17 @@ export const RecentResults = () => {
           console.error('Error fetching status:', error);
           continue;
         }
+
+        // Check if course is cancelled
+        const { data: cancelledData } = await supabase
+          .from('race_result_sets')
+          .select('id')
+          .eq('course_id', course.course_id)
+          .eq('type_classement', 'General')
+          .eq('is_cancelled', true)
+          .maybeSingle();
+
+        const is_cancelled = !!cancelledData;
         
         // Get expected positions from scoring rules for the selected season
         const { data: scoringData } = await supabase
@@ -139,6 +151,7 @@ export const RecentResults = () => {
           nb_lignes_points: data?.filter(r => r.type_classement === 'Points' && r.coureur_id).length || 0,
           nb_lignes_montagne: data?.filter(r => r.type_classement === 'Montagne' && r.coureur_id).length || 0,
           nb_lignes_jeune: data?.filter(r => r.type_classement === 'Jeune' && r.coureur_id).length || 0,
+          is_cancelled: is_cancelled,
           expected_gc: getMaxPlace('General'),
           expected_points: getMaxPlace('Points'),
           expected_montagne: getMaxPlace('Montagne'),
@@ -367,7 +380,12 @@ export const RecentResults = () => {
                       </>
                     ) : (
                       <div className="flex items-center gap-2">
-                        {status?.nb_lignes_gc ? (
+                        {status?.is_cancelled ? (
+                          <Badge variant="destructive" className="flex items-center gap-1">
+                            <XCircle className="h-3 w-3" />
+                            Annulée
+                          </Badge>
+                        ) : status?.nb_lignes_gc ? (
                           <Badge variant="default" className="flex items-center gap-1">
                             <CheckCircle2 className="h-3 w-3" />
                             Résultat saisi

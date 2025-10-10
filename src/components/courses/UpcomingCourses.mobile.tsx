@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Trophy, Clock, MapPin, Search } from "lucide-react";
+import { Calendar, Trophy, Clock, MapPin, Search, XCircle } from "lucide-react";
 import { CoursePointsDrawer } from "./CoursePointsDrawer";
 import { format, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -31,6 +31,7 @@ interface CourseData {
   points_etapes_unitaire: number;
   is_uwt: boolean;
   wt_tier: string | null;
+  is_cancelled?: boolean;
 }
 
 export const UpcomingCoursesMobile = () => {
@@ -46,14 +47,33 @@ export const UpcomingCoursesMobile = () => {
     queryFn: async () => {
       if (!selectedSeason || seasonPhaseIds.length === 0) return [];
       
-      const { data, error } = await supabase
+      const { data: coursesData, error } = await supabase
         .from('v_course_points_theoriques')
         .select('*')
         .in('phase_id', seasonPhaseIds)
         .order('date_debut', { ascending: false });
       
       if (error) throw error;
-      return data as CourseData[];
+
+      // Check cancelled status for each course
+      const coursesWithStatus = await Promise.all(
+        (coursesData || []).map(async (course) => {
+          const { data: cancelledData } = await supabase
+            .from('race_result_sets')
+            .select('id')
+            .eq('course_id', course.course_id)
+            .eq('type_classement', 'General')
+            .eq('is_cancelled', true)
+            .maybeSingle();
+          
+          return {
+            ...course,
+            is_cancelled: !!cancelledData
+          } as CourseData;
+        })
+      );
+
+      return coursesWithStatus;
     },
     enabled: !!selectedSeason && !isLoadingContext && seasonPhaseIds.length > 0,
   });
@@ -154,6 +174,12 @@ export const UpcomingCoursesMobile = () => {
                 onClick={() => setSelectedCourse(course)}
               >
                 <div className="flex items-center gap-2 flex-wrap mt-2">
+                  {course.is_cancelled && (
+                    <Badge variant="destructive" className="text-xs h-5 gap-1">
+                      <XCircle className="h-3 w-3" />
+                      Annulée
+                    </Badge>
+                  )}
                   <Badge variant="secondary" className="text-xs h-5">
                     Phase {course.phase_index}
                   </Badge>
