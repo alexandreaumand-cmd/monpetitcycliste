@@ -35,24 +35,26 @@ const BONUS_LABELS: Record<string, string> = {
   scoreurs: 'Scoreurs',
 };
 
-export const BonusListTable = ({ bonuses, onDelete, isDeleting }: BonusListTableProps) => {
-  if (bonuses.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        Aucun bonus attribué pour cette phase
-      </div>
-    );
-  }
+const RIDER_BONUS_TYPES = ['first_win', 'coureur_bonuse', 'itt'];
+const MANAGER_BONUS_TYPES = ['ttt', 'scoreurs'];
+
+const BonusTable = ({ bonuses, onDelete, isDeleting, title }: { 
+  bonuses: BonusPoint[]; 
+  onDelete: (id: string) => void; 
+  isDeleting: boolean;
+  title: string;
+}) => {
+  const isManagerBonus = MANAGER_BONUS_TYPES.includes(bonuses[0]?.bonus_type);
 
   return (
     <div className="space-y-2">
-      <h4 className="text-sm font-medium">Bonus attribués pour cette phase</h4>
+      <h4 className="text-sm font-medium">{title}</h4>
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Type</TableHead>
-              <TableHead>Coureur/Manager</TableHead>
+              <TableHead>{isManagerBonus ? 'Manager' : 'Coureur (Manager)'}</TableHead>
               <TableHead className="text-right">Points</TableHead>
               <TableHead>Commentaire</TableHead>
               <TableHead className="text-right">Action</TableHead>
@@ -98,6 +100,41 @@ export const BonusListTable = ({ bonuses, onDelete, isDeleting }: BonusListTable
           </TableBody>
         </Table>
       </div>
+    </div>
+  );
+};
+
+export const BonusListTable = ({ bonuses, onDelete, isDeleting }: BonusListTableProps) => {
+  if (bonuses.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Aucun bonus attribué pour cette phase
+      </div>
+    );
+  }
+
+  const riderBonuses = bonuses.filter(b => RIDER_BONUS_TYPES.includes(b.bonus_type));
+  const managerBonuses = bonuses.filter(b => MANAGER_BONUS_TYPES.includes(b.bonus_type));
+
+  return (
+    <div className="space-y-6">
+      {riderBonuses.length > 0 && (
+        <BonusTable 
+          bonuses={riderBonuses}
+          onDelete={onDelete}
+          isDeleting={isDeleting}
+          title="📝 Bonus Coureur"
+        />
+      )}
+      
+      {managerBonuses.length > 0 && (
+        <BonusTable 
+          bonuses={managerBonuses}
+          onDelete={onDelete}
+          isDeleting={isDeleting}
+          title="👤 Bonus Manager"
+        />
+      )}
     </div>
   );
 };
