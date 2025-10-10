@@ -122,15 +122,14 @@ export const RecentResults = () => {
         }
 
         // Check if course is cancelled
-        const { data: cancelledData } = await supabase
+        const { count } = await supabase
           .from('race_result_sets')
-          .select('id')
+          .select('*', { count: 'exact', head: true })
           .eq('course_id', course.course_id)
           .eq('type_classement', 'General')
-          .eq('is_cancelled', true)
-          .maybeSingle();
+          .eq('is_cancelled', true);
 
-        const is_cancelled = !!cancelledData;
+        const is_cancelled = (count ?? 0) > 0;
         
         // Get expected positions from scoring rules for the selected season
         const { data: scoringData } = await supabase

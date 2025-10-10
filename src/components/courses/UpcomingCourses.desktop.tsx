@@ -60,18 +60,17 @@ export const UpcomingCourses = () => {
       // Check cancelled status for each course
       const coursesWithStatus = await Promise.all(
         (coursesData || []).map(async (course) => {
-          const { data: cancelledData } = await supabase
-            .from('race_result_sets')
-            .select('id')
-            .eq('course_id', course.course_id)
-            .eq('type_classement', 'General')
-            .eq('is_cancelled', true)
-            .maybeSingle();
-          
-          return {
-            ...course,
-            is_cancelled: !!cancelledData
-          } as CourseData;
+      const { count } = await supabase
+        .from('race_result_sets')
+        .select('*', { count: 'exact', head: true })
+        .eq('course_id', course.course_id)
+        .eq('type_classement', 'General')
+        .eq('is_cancelled', true);
+      
+      return {
+        ...course,
+        is_cancelled: (count ?? 0) > 0
+      } as CourseData;
         })
       );
 
