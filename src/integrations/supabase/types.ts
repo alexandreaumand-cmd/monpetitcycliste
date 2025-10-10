@@ -4071,6 +4071,7 @@ export type Database = {
           manager_nom: string | null
           phase_id: string | null
           phase_index: number | null
+          scoreurs_count: number | null
           total_points: number | null
         }
         Relationships: []
