@@ -44,7 +44,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   const { data: seasonSponsor } = useManagerSponsor(manager?.id, selectedSeason?.id);
   
   // Fallback: sponsor de la saison > sponsor global > null
-  const displaySponsor = seasonSponsor || manager?.sponsor;
+  const displaySponsor = seasonSponsor?.sponsor || manager?.sponsor;
   
   const allDesktopLinks = isAdmin 
     ? [...desktopNavLinks, { label: 'Admin', href: '/dashboard/admin', icon: Shield }]
