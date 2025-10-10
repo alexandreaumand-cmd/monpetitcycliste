@@ -86,16 +86,25 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.functions.invoke('admin-manage-bonus', {
-        body: {
+      // Get current user's manager_id for created_by
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: managerData } = await supabase
+        .from('managers')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+
+      const { error } = await supabase
+        .from('bonus_points')
+        .insert({
           phase_id: phaseId,
           bonus_type: selectedBonus.type,
           coureur_id: data.coureur_id,
           manager_id: data.manager_id,
           points: data.points,
-          commentaire: data.commentaire,
-        }
-      });
+          commentaire: data.commentaire || null,
+          created_by: managerData?.id
+        });
 
       if (error) throw error;
 
@@ -129,15 +138,24 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.functions.invoke('admin-manage-bonus', {
-        body: {
+      // Get current user's manager_id for created_by
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: managerData } = await supabase
+        .from('managers')
+        .select('id')
+        .eq('user_id', user?.id)
+        .single();
+
+      const { error } = await supabase
+        .from('bonus_points')
+        .insert({
           phase_id: phaseId,
           bonus_type: selectedBonus.type,
           target_manager_id: data.target_manager_id,
           points: data.points,
-          commentaire: data.commentaire,
-        }
-      });
+          commentaire: data.commentaire || null,
+          created_by: managerData?.id
+        });
 
       if (error) throw error;
 
@@ -164,10 +182,10 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
 
   const handleDelete = async (bonusId: string) => {
     try {
-      const { error } = await supabase.functions.invoke('admin-manage-bonus', {
-        body: { id: bonusId },
-        method: 'DELETE'
-      });
+      const { error } = await supabase
+        .from('bonus_points')
+        .delete()
+        .eq('id', bonusId);
 
       if (error) throw error;
 
