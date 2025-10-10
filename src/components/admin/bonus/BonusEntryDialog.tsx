@@ -36,18 +36,32 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
     enabled: open,
   });
 
-  // Fetch existing bonuses
+  // Fetch existing bonuses - Direct DB call to bypass edge function deployment issue
   const { data: bonusesData, isLoading } = useQuery({
     queryKey: ['bonus-points', phaseId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke(`admin-manage-bonus?phase_id=${phaseId}`);
-      
-      console.log('Bonuses received:', data);
+      const { data, error } = await supabase
+        .from('bonus_points')
+        .select(`
+          id,
+          bonus_type,
+          points,
+          commentaire,
+          created_at,
+          coureur:coureurs(id, nom, equipe),
+          manager:managers!bonus_points_manager_id_fkey(id, nom),
+          target_manager:managers!bonus_points_target_manager_id_fkey(id, nom)
+        `)
+        .eq('phase_id', phaseId)
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      
+      return {
+        bonuses: data || []
+      };
     },
-    enabled: open,
+    enabled: open && !!phaseId,
   });
 
   const bonuses = bonusesData?.bonuses || [];
