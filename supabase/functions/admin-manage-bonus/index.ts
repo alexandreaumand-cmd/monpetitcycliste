@@ -74,8 +74,8 @@ Deno.serve(async (req) => {
         .select(`
           *,
           coureur:coureurs(nom, equipe),
-          manager:managers(nom),
-          target_manager:managers(nom)
+          manager:managers!bonus_points_manager_id_fkey(nom),
+          target_manager:managers!bonus_points_target_manager_id_fkey(nom)
         `)
         .eq('phase_id', phaseId)
         .order('created_at', { ascending: false });
