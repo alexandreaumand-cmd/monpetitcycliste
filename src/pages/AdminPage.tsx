@@ -6,7 +6,7 @@ import { RoundManager } from "@/components/admin/RoundManager";
 import { AnnouncementManager } from "@/components/admin/AnnouncementManager";
 import { RecentResults } from "@/components/admin/RecentResults";
 import { SeasonManager } from "@/components/admin/SeasonManager";
-import { MaintenancePanel } from "@/components/admin/MaintenancePanel";
+import { MaintenanceTabs } from "@/components/admin/MaintenanceTabs";
 import { ManagerSponsorsManager } from "@/components/admin/ManagerSponsorsManager";
 import { JerseyManager } from "@/components/admin/JerseyManager";
 import { DataManagementTabs } from "@/components/admin/DataManagementTabs";
@@ -69,7 +69,7 @@ export const AdminPage = () => {
           </div>
         } />
         <Route path="jerseys" element={<JerseyManager />} />
-        <Route path="maintenance" element={<MaintenancePanel />} />
+        <Route path="maintenance" element={<MaintenanceTabs />} />
       </Routes>
     </div>
   );
