@@ -17,7 +17,7 @@ interface ManagerBonusDialogProps {
 interface BonusEntry {
   manager_id: string;
   manager_nom: string;
-  race_points: number;
+  course_points: number;
   bonus_itt: number;
   bonus_ttt: number;
   bonus_first_win: number;
@@ -38,7 +38,7 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
       // Get managers standings for this phase
       const { data: standings, error: standingsError } = await supabase
         .from('v_manager_standings_by_phase')
-        .select('manager_id, manager_nom, race_points, bonus_points')
+        .select('manager_id, manager_nom, course_points, bonus_points')
         .eq('phase_id', phaseId)
         .order('manager_nom');
 
@@ -59,7 +59,7 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
         return {
           manager_id: s.manager_id,
           manager_nom: s.manager_nom,
-          race_points: s.race_points || 0,
+          course_points: s.course_points || 0,
           bonus_itt: existingBonus?.bonus_itt || 0,
           bonus_ttt: existingBonus?.bonus_ttt || 0,
           bonus_first_win: existingBonus?.bonus_first_win || 0,
@@ -170,7 +170,7 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
                       <tr key={manager.manager_id} className="border-t">
                         <td className="p-3 whitespace-nowrap">{manager.manager_nom}</td>
                         <td className="p-3 text-right text-muted-foreground">
-                          {manager.race_points}
+                          {manager.course_points}
                         </td>
                         <td className="p-3">
                           <Input
