@@ -18,6 +18,7 @@ import { useSeasonContext } from "@/contexts/SeasonContext";
 import { normalizeString } from "@/lib/stringUtils";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { ManagerBreakdown } from "@/components/rankings/ManagerBreakdown";
+import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
 
 type TabView = "standings" | "riders" | "timeline" | "teams" | "courses";
 
@@ -30,6 +31,13 @@ export const RankingsMobile = () => {
   const [ridersDisplayLimit, setRidersDisplayLimit] = useState(20);
   const [riderSearchTerm, setRiderSearchTerm] = useState("");
   const [hideRidersWithoutManagers, setHideRidersWithoutManagers] = useState(false);
+  const [selectedRider, setSelectedRider] = useState<{
+    id: string;
+    nom: string;
+    equipe: string;
+    prix: number;
+  } | null>(null);
+  const [riderDetailsOpen, setRiderDetailsOpen] = useState(false);
 
   // Fetch standings
   const { data: standings, isLoading: standingsLoading } = useQuery({
@@ -218,6 +226,16 @@ export const RankingsMobile = () => {
   const handleManagerClick = (managerId: string) => {
     setSelectedManager(managerId);
     setDetailsOpen(true);
+  };
+
+  const handleRiderClick = (rider: any) => {
+    setSelectedRider({
+      id: rider.coureur_id,
+      nom: rider.coureur_nom,
+      equipe: rider.coureur_equipe || '',
+      prix: rider.prix_achat || 0,
+    });
+    setRiderDetailsOpen(true);
   };
 
   const ManagerNameWithSponsor = ({ managerId, managerName }: { managerId: string; managerName: string }) => {
@@ -425,6 +443,7 @@ export const RankingsMobile = () => {
                     title={rider.coureur_nom}
                     subtitle={rider.coureur_equipe || "Équipe inconnue"}
                     meta={`${rider.courses_count || 0} courses`}
+                    onClick={() => handleRiderClick(rider)}
                     avatar={
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className="bg-primary/10">
@@ -502,6 +521,19 @@ export const RankingsMobile = () => {
           <ManagerBreakdown managerId={selectedManager} />
         )}
       </MobileBottomSheet>
+
+      <RiderPointsDetail
+        isOpen={riderDetailsOpen}
+        onClose={() => {
+          setRiderDetailsOpen(false);
+          setSelectedRider(null);
+        }}
+        riderId={selectedRider?.id || ''}
+        riderName={selectedRider?.nom || ''}
+        riderTeam={selectedRider?.equipe || ''}
+        riderPrice={selectedRider?.prix || 0}
+        phaseId={selectedPhase || ''}
+      />
     </div>
   );
 };
