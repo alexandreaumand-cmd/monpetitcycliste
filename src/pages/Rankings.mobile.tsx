@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { normalizeString } from "@/lib/stringUtils";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
+import { ManagerBreakdown } from "@/components/rankings/ManagerBreakdown";
 
 type TabView = "standings" | "riders" | "timeline" | "teams" | "courses";
 
@@ -497,11 +498,9 @@ export const RankingsMobile = () => {
         title="Détails Manager"
         description="Historique des points par course"
       >
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Fonctionnalité à venir
-          </p>
-        </div>
+        {selectedManager && (
+          <ManagerBreakdown managerId={selectedManager} />
+        )}
       </MobileBottomSheet>
     </div>
   );
