@@ -53,12 +53,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    const url = new URL(req.url);
-    const method = req.method;
+  const url = new URL(req.url);
+  const method = req.method;
+  const phaseIdParam = url.searchParams.get('phase_id');
 
-    // GET - List all bonuses for a phase
-    if (method === 'GET') {
-      const phaseId = url.searchParams.get('phase_id');
+  // GET or POST with phase_id in query (functions.invoke sends POST by default)
+  // List all bonuses for a phase
+  if ((method === 'GET' || method === 'POST') && phaseIdParam) {
+    const phaseId = phaseIdParam;
       
       if (!phaseId) {
         return new Response(
@@ -92,10 +94,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // POST - Add a new bonus
-    if (method === 'POST') {
-      const body = await req.json();
-      const { phase_id, bonus_type, coureur_id, manager_id, target_manager_id, points, commentaire } = body;
+  // POST - Add a new bonus (only if no phase_id in query params)
+  if (method === 'POST' && !phaseIdParam) {
+    const body = await req.json();
+    const { phase_id, bonus_type, coureur_id, manager_id, target_manager_id, points, commentaire } = body;
 
       if (!phase_id || !bonus_type || !points) {
         return new Response(
