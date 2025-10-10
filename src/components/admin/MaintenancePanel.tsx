@@ -10,11 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, Trash2, Eye, RefreshCw, Calendar, Megaphone } from "lucide-react";
+import { AlertTriangle, Trash2, Eye, RefreshCw, Calendar, Megaphone, Save } from "lucide-react";
 
 export const MaintenancePanel = () => {
   const [confirmInput, setConfirmInput] = useState("");
   const [cleanConfirmInput, setCleanConfirmInput] = useState("");
+  const [bannerMessage, setBannerMessage] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -33,6 +34,18 @@ export const MaintenancePanel = () => {
       return data as { id: string; is_active: boolean; message: string };
     },
   });
+
+  // Synchronize local state with server data
+  useState(() => {
+    if (banner?.message) {
+      setBannerMessage(banner.message);
+    }
+  });
+
+  // Update local state when banner data changes
+  if (banner?.message && bannerMessage !== banner.message) {
+    setBannerMessage(banner.message);
+  }
 
   // Update announcement banner mutation
   const updateBannerMutation = useMutation({
@@ -202,25 +215,29 @@ export const MaintenancePanel = () => {
                 <Label htmlFor="banner-message">Message</Label>
                 <Textarea
                   id="banner-message"
-                  value={banner.message}
-                  onChange={(e) => {
-                    // Update local state immediately for better UX
-                    const newMessage = e.target.value;
-                    queryClient.setQueryData(['announcement-banner'], {
-                      ...banner,
-                      message: newMessage
-                    });
-                  }}
-                  onBlur={(e) => {
-                    // Save to database on blur
-                    if (e.target.value !== banner.message) {
-                      updateBannerMutation.mutate({ message: e.target.value });
-                    }
-                  }}
+                  value={bannerMessage}
+                  onChange={(e) => setBannerMessage(e.target.value)}
                   disabled={updateBannerMutation.isPending}
                   className="min-h-[80px]"
                   placeholder="En hommage à Guillaume Di Grazia - 1973-2025 🙏"
                 />
+                <Button
+                  onClick={() => updateBannerMutation.mutate({ message: bannerMessage })}
+                  disabled={updateBannerMutation.isPending || bannerMessage === banner.message}
+                  className="w-full"
+                >
+                  {updateBannerMutation.isPending ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Sauvegarde en cours...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Sauvegarder le message
+                    </>
+                  )}
+                </Button>
                 <p className="text-sm text-muted-foreground">
                   Le message sera affiché en haut de toutes les pages quand le bandeau est activé
                 </p>
