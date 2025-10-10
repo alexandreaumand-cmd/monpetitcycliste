@@ -4091,7 +4091,6 @@ export type Database = {
       v_manager_standings_total: {
         Row: {
           bonus_points: number | null
-          courses_count: number | null
           manager_id: string | null
           manager_nom: string | null
           race_points: number | null
