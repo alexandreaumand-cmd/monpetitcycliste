@@ -29,6 +29,7 @@ import {
   AlertCircle,
   ArrowLeft,
   Image as ImageIcon,
+  MessageSquare,
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
@@ -375,6 +376,19 @@ export const StartlistMobile = () => {
                 alt="Parcours"
                 className="w-full h-auto object-cover"
               />
+            </div>
+          )}
+
+          {/* Le mot du startlisteur */}
+          {startlistViewData.startlisteur_note && (
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageSquare className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <h4 className="font-semibold text-sm">Le mot du startlisteur</h4>
+              </div>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {startlistViewData.startlisteur_note}
+              </p>
             </div>
           )}
 

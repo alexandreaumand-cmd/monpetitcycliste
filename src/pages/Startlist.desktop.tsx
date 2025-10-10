@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Users, AlertCircle, Download, FileText, Calendar, Trophy, ArrowLeft, CheckCircle2, Star, Camera, Shirt } from "lucide-react";
+import { Loader2, Users, AlertCircle, Download, FileText, Calendar, Trophy, ArrowLeft, CheckCircle2, Star, Camera, Shirt, MessageSquare } from "lucide-react";
 import { toPng } from "html-to-image";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -44,6 +44,9 @@ const StartlistDesktop = () => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const [startlisteurNote, setStartlisteurNote] = useState<string>("");
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [isSavingNote, setIsSavingNote] = useState(false);
 
 
   useEffect(() => {
@@ -525,6 +528,96 @@ const StartlistDesktop = () => {
               </Card>
             )}
           </div>
+
+          {/* Le mot du startlisteur */}
+          {(canModify || startlistViewData.startlisteur_note) && (
+            <Card className="bg-amber-50 dark:bg-amber-950/20 p-4 border-amber-200 dark:border-amber-800">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Le mot du startlisteur
+                </h4>
+                {canModify && !isEditingNote && startlistViewData.startlisteur_note && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      setStartlisteurNote(startlistViewData.startlisteur_note || "");
+                      setIsEditingNote(true);
+                    }}
+                  >
+                    Modifier
+                  </Button>
+                )}
+              </div>
+              
+              {canModify && (isEditingNote || !startlistViewData.startlisteur_note) ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={startlisteurNote}
+                    onChange={(e) => setStartlisteurNote(e.target.value)}
+                    placeholder="Ajoutez un commentaire sur cette startlist..."
+                    className="min-h-[100px] resize-none"
+                    maxLength={2000}
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">
+                      {startlisteurNote.length} / 2000 caractères
+                    </span>
+                    <div className="flex gap-2">
+                      {isEditingNote && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setStartlisteurNote(startlistViewData.startlisteur_note || "");
+                            setIsEditingNote(false);
+                          }}
+                        >
+                          Annuler
+                        </Button>
+                      )}
+                      <Button 
+                        size="sm"
+                        onClick={async () => {
+                          if (!selectedStartlistId) return;
+                          
+                          setIsSavingNote(true);
+                          try {
+                            const { error } = await supabase
+                              .from('startlist_imports')
+                              .update({ startlisteur_note: startlisteurNote.trim() || null })
+                              .eq('id', selectedStartlistId);
+
+                            if (error) throw error;
+
+                            toast.success("Note enregistrée avec succès !");
+                            setIsEditingNote(false);
+                            
+                            queryClient.invalidateQueries({ queryKey: ['startlist-view', selectedStartlistId] });
+                          } catch (error: any) {
+                            console.error('Save error:', error);
+                            toast.error("Erreur lors de l'enregistrement : " + error.message);
+                          } finally {
+                            setIsSavingNote(false);
+                          }
+                        }}
+                        disabled={isSavingNote}
+                      >
+                        {isSavingNote ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enregistrer"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                startlistViewData.startlisteur_note && (
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {startlistViewData.startlisteur_note}
+                  </p>
+                )
+              )}
+            </Card>
+          )}
 
             {/* Stats */}
             <div className="flex gap-4 text-xs">

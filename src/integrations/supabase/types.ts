@@ -2959,6 +2959,7 @@ export type Database = {
           race_id: string
           raw_text: string | null
           route_image_url: string | null
+          startlisteur_note: string | null
         }
         Insert: {
           created_at?: string | null
@@ -2972,6 +2973,7 @@ export type Database = {
           race_id: string
           raw_text?: string | null
           route_image_url?: string | null
+          startlisteur_note?: string | null
         }
         Update: {
           created_at?: string | null
@@ -2985,6 +2987,7 @@ export type Database = {
           race_id?: string
           raw_text?: string | null
           route_image_url?: string | null
+          startlisteur_note?: string | null
         }
         Relationships: [
           {
