@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
-import { X, ChevronLeft, ChevronRight, Save, Check, Info } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Save, Check, Info, MessageSquare } from "lucide-react";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -82,6 +82,7 @@ export const ResultsEntryStudioMobile = ({
   const [jeuneOpen, setJeuneOpen] = useState(false);
   const [combatifOpen, setCombatifOpen] = useState(false);
   const [combatifWinner, setCombatifWinner] = useState<string | null>(null);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch scoring rules using normalized views (same as desktop)
@@ -128,12 +129,12 @@ export const ResultsEntryStudioMobile = ({
     },
   });
 
-  // Load existing results when scoring rules are available
+  // Load existing results when scoring rules are available - only for current classement
   useEffect(() => {
     if (scoringRules && scoringRules.length > 0) {
       loadResults();
     }
-  }, [currentClassement, currentStage, scoringRules]);
+  }, [currentStage, scoringRules]); // Removed currentClassement to avoid loading all sections
 
   // Load jersey holders independently of scoring rules
   useEffect(() => {
@@ -491,6 +492,7 @@ export const ResultsEntryStudioMobile = ({
       }
     },
     onSuccess: (data: any) => {
+      setLastSaved(new Date());
       if (data.message === 'Annulation enregistrée') {
         toast.success("Annulation enregistrée");
       } else {
@@ -516,6 +518,23 @@ export const ResultsEntryStudioMobile = ({
     }
   };
 
+  // Calculate visible stages for optimized navigator
+  const getVisibleStages = (): (number | string)[] => {
+    if (course.nb_etapes <= 7) {
+      return Array.from({ length: course.nb_etapes }, (_, i) => i + 1);
+    }
+    
+    const stages: (number | string)[] = [];
+    if (currentStage <= 4) {
+      stages.push(...[1, 2, 3, 4, 5, '...', course.nb_etapes]);
+    } else if (currentStage >= course.nb_etapes - 3) {
+      stages.push(...[1, '...', course.nb_etapes - 4, course.nb_etapes - 3, course.nb_etapes - 2, course.nb_etapes - 1, course.nb_etapes]);
+    } else {
+      stages.push(...[1, '...', currentStage - 1, currentStage, currentStage + 1, '...', course.nb_etapes]);
+    }
+    return stages;
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-background">
       {/* Header */}
@@ -527,16 +546,17 @@ export const ResultsEntryStudioMobile = ({
           <div className="flex-1 text-center">
             <h2 className="font-bold text-sm truncate">{course.course_nom}</h2>
             {courseIsStageRace && (
-              <p className="text-xs text-muted-foreground">Étape {currentStage}/{course.nb_etapes}</p>
+              <p className="text-xs text-muted-foreground">
+                Étape {currentStage}/{course.nb_etapes}
+                {currentClassement && (
+                  <span className="ml-2 text-green-600 font-medium">
+                    {resultRows.filter(r => r.coureur_id && r.statut === 'finished').length}/{resultRows.filter(r => r.position > 0).length}
+                  </span>
+                )}
+              </p>
             )}
           </div>
-          <Button 
-            size="icon" 
-            onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending}
-          >
-            <Save className="h-5 w-5" />
-          </Button>
+          <div className="w-10" /> {/* Spacer to balance the close button */}
         </div>
 
         {/* Stage navigator */}
@@ -551,19 +571,26 @@ export const ResultsEntryStudioMobile = ({
               <ChevronLeft className="h-4 w-4" />
             </Button>
             
-            <div className="flex-1 flex gap-1 justify-center overflow-x-auto">
-              {Array.from({ length: course.nb_etapes }, (_, i) => i + 1).map((num) => (
-                <button
-                  key={num}
-                  onClick={() => setCurrentStage(num)}
-                  className={`min-w-[32px] h-8 rounded-full text-xs font-medium transition-colors ${
-                    num === currentStage
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  {num}
-                </button>
+            <div className="flex-1 flex gap-1 justify-center overflow-x-auto scrollbar-hide">
+              {getVisibleStages().map((stage, idx) => (
+                stage === '...' ? (
+                  <span key={`ellipsis-${idx}`} className="min-w-[32px] h-8 flex items-center justify-center text-muted-foreground">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={stage}
+                    onClick={() => setCurrentStage(stage as number)}
+                    className={cn(
+                      "min-w-[32px] h-8 rounded-full text-xs font-medium transition-all",
+                      stage === currentStage
+                        ? 'bg-primary text-primary-foreground shadow-md scale-110'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    )}
+                  >
+                    {stage}
+                  </button>
+                )
               ))}
             </div>
 
@@ -666,17 +693,32 @@ export const ResultsEntryStudioMobile = ({
               if (open) setCurrentClassement("Etape");
             }}>
               <CollapsibleTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                  <span>Étape {currentStage}</span>
-                  <Badge variant={etapeOpen ? "default" : "secondary"}>
+                <Button 
+                  variant={etapeOpen ? "default" : "outline"} 
+                  className={cn(
+                    "w-full justify-between transition-all",
+                    etapeOpen && "shadow-md"
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <ChevronRight className={cn(
+                      "h-4 w-4 transition-transform",
+                      etapeOpen && "rotate-90"
+                    )} />
+                    Étape {currentStage}
+                  </span>
+                  <Badge variant={etapeOpen ? "secondary" : "outline"}>
                     {currentClassement === "Etape" ? resultRows.filter(r => r.coureur_id && r.statut === 'finished').length : 0}
                   </Badge>
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-3 space-y-2">
+              <CollapsibleContent className="mt-3 space-y-1.5">
                 {currentClassement === "Etape" && resultRows.filter(r => r.position > 0).map((row, index) => (
-                  <div key={index} className={cn("flex items-center gap-2 p-3 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
-                    <span className="font-bold text-sm w-6">{row.position}</span>
+                  <div key={index} className={cn("flex items-center gap-1.5 p-2 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
+                    {row.coureur_id && (
+                      <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
+                    )}
+                    <span className="font-bold text-xs w-5">{row.position}</span>
                     <div className="flex-1">
                       <CoureursCombobox
                         value={row.coureur_id}
@@ -685,7 +727,7 @@ export const ResultsEntryStudioMobile = ({
                         disabled={isCancelled}
                       />
                     </div>
-                    <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
                   </div>
                 ))}
 
@@ -710,17 +752,32 @@ export const ResultsEntryStudioMobile = ({
             if (open) setCurrentClassement("General");
           }}>
             <CollapsibleTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                <span>{courseIsStageRace ? "Classement Général" : "Résultats"}</span>
-                <Badge variant={gcOpen ? "default" : "secondary"}>
+              <Button 
+                variant={gcOpen ? "default" : "outline"} 
+                className={cn(
+                  "w-full justify-between transition-all",
+                  gcOpen && "shadow-md"
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  <ChevronRight className={cn(
+                    "h-4 w-4 transition-transform",
+                    gcOpen && "rotate-90"
+                  )} />
+                  {courseIsStageRace ? "Classement Général" : "Résultats"}
+                </span>
+                <Badge variant={gcOpen ? "secondary" : "outline"}>
                   {currentClassement === "General" ? resultRows.filter(r => r.coureur_id).length : 0}
                 </Badge>
               </Button>
             </CollapsibleTrigger>
-              <CollapsibleContent className="mt-3 space-y-2">
+              <CollapsibleContent className="mt-3 space-y-1.5">
                 {currentClassement === "General" && resultRows.filter(r => r.position > 0).map((row, index) => (
-                  <div key={index} className={cn("flex items-center gap-2 p-3 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
-                    <span className="font-bold text-sm w-6">{row.position}</span>
+                  <div key={index} className={cn("flex items-center gap-1.5 p-2 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
+                    {row.coureur_id && (
+                      <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
+                    )}
+                    <span className="font-bold text-xs w-5">{row.position}</span>
                     <div className="flex-1">
                       <CoureursCombobox
                         value={row.coureur_id}
@@ -729,7 +786,7 @@ export const ResultsEntryStudioMobile = ({
                         disabled={isCancelled}
                       />
                     </div>
-                    <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
                   </div>
                 ))}
               </CollapsibleContent>
@@ -742,17 +799,32 @@ export const ResultsEntryStudioMobile = ({
               if (open) setCurrentClassement("Points");
             }}>
               <CollapsibleTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                  <span>Classement Points</span>
-                  <Badge variant={pointsOpen ? "default" : "secondary"}>
+                <Button 
+                  variant={pointsOpen ? "default" : "outline"} 
+                  className={cn(
+                    "w-full justify-between transition-all",
+                    pointsOpen && "shadow-md"
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <ChevronRight className={cn(
+                      "h-4 w-4 transition-transform",
+                      pointsOpen && "rotate-90"
+                    )} />
+                    Classement Points
+                  </span>
+                  <Badge variant={pointsOpen ? "secondary" : "outline"}>
                     {currentClassement === "Points" ? resultRows.filter(r => r.coureur_id).length : 0}
                   </Badge>
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-3 space-y-2">
+              <CollapsibleContent className="mt-3 space-y-1.5">
                 {currentClassement === "Points" && resultRows.filter(r => r.position > 0).map((row, index) => (
-                  <div key={index} className={cn("flex items-center gap-2 p-3 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
-                    <span className="font-bold text-sm w-6">{row.position}</span>
+                  <div key={index} className={cn("flex items-center gap-1.5 p-2 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
+                    {row.coureur_id && (
+                      <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
+                    )}
+                    <span className="font-bold text-xs w-5">{row.position}</span>
                     <div className="flex-1">
                       <CoureursCombobox
                         value={row.coureur_id}
@@ -761,7 +833,7 @@ export const ResultsEntryStudioMobile = ({
                         disabled={isCancelled}
                       />
                     </div>
-                    <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
                   </div>
                 ))}
               </CollapsibleContent>
@@ -775,17 +847,32 @@ export const ResultsEntryStudioMobile = ({
               if (open) setCurrentClassement("Montagne");
             }}>
               <CollapsibleTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                  <span>Classement Montagne</span>
-                  <Badge variant={montagneOpen ? "default" : "secondary"}>
+                <Button 
+                  variant={montagneOpen ? "default" : "outline"} 
+                  className={cn(
+                    "w-full justify-between transition-all",
+                    montagneOpen && "shadow-md"
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <ChevronRight className={cn(
+                      "h-4 w-4 transition-transform",
+                      montagneOpen && "rotate-90"
+                    )} />
+                    Classement Montagne
+                  </span>
+                  <Badge variant={montagneOpen ? "secondary" : "outline"}>
                     {currentClassement === "Montagne" ? resultRows.filter(r => r.coureur_id).length : 0}
                   </Badge>
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-3 space-y-2">
+              <CollapsibleContent className="mt-3 space-y-1.5">
                 {currentClassement === "Montagne" && resultRows.filter(r => r.position > 0).map((row, index) => (
-                  <div key={index} className={cn("flex items-center gap-2 p-3 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
-                    <span className="font-bold text-sm w-6">{row.position}</span>
+                  <div key={index} className={cn("flex items-center gap-1.5 p-2 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
+                    {row.coureur_id && (
+                      <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
+                    )}
+                    <span className="font-bold text-xs w-5">{row.position}</span>
                     <div className="flex-1">
                       <CoureursCombobox
                         value={row.coureur_id}
@@ -794,7 +881,7 @@ export const ResultsEntryStudioMobile = ({
                         disabled={isCancelled}
                       />
                     </div>
-                    <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
                   </div>
                 ))}
               </CollapsibleContent>
@@ -808,17 +895,32 @@ export const ResultsEntryStudioMobile = ({
               if (open) setCurrentClassement("Jeune");
             }}>
               <CollapsibleTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                  <span>Classement Jeune</span>
-                  <Badge variant={jeuneOpen ? "default" : "secondary"}>
+                <Button 
+                  variant={jeuneOpen ? "default" : "outline"} 
+                  className={cn(
+                    "w-full justify-between transition-all",
+                    jeuneOpen && "shadow-md"
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <ChevronRight className={cn(
+                      "h-4 w-4 transition-transform",
+                      jeuneOpen && "rotate-90"
+                    )} />
+                    Classement Jeune
+                  </span>
+                  <Badge variant={jeuneOpen ? "secondary" : "outline"}>
                     {currentClassement === "Jeune" ? resultRows.filter(r => r.coureur_id).length : 0}
                   </Badge>
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-3 space-y-2">
+              <CollapsibleContent className="mt-3 space-y-1.5">
                 {currentClassement === "Jeune" && resultRows.filter(r => r.position > 0).map((row, index) => (
-                  <div key={index} className={cn("flex items-center gap-2 p-3 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
-                    <span className="font-bold text-sm w-6">{row.position}</span>
+                  <div key={index} className={cn("flex items-center gap-1.5 p-2 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
+                    {row.coureur_id && (
+                      <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
+                    )}
+                    <span className="font-bold text-xs w-5">{row.position}</span>
                     <div className="flex-1">
                       <CoureursCombobox
                         value={row.coureur_id}
@@ -827,7 +929,7 @@ export const ResultsEntryStudioMobile = ({
                         disabled={isCancelled}
                       />
                     </div>
-                    <Badge variant="secondary" className="text-xs">{row.points}pts</Badge>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
                   </div>
                 ))}
               </CollapsibleContent>
@@ -841,9 +943,21 @@ export const ResultsEntryStudioMobile = ({
               if (open) setCurrentClassement("Combatif");
             }}>
               <CollapsibleTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                  <span>🏆 Super Combatif (150 pts)</span>
-                  <Badge variant={combatifOpen ? "default" : "secondary"}>
+                <Button 
+                  variant={combatifOpen ? "default" : "outline"} 
+                  className={cn(
+                    "w-full justify-between transition-all",
+                    combatifOpen && "shadow-md"
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <ChevronRight className={cn(
+                      "h-4 w-4 transition-transform",
+                      combatifOpen && "rotate-90"
+                    )} />
+                    🏆 Super Combatif (150 pts)
+                  </span>
+                  <Badge variant={combatifOpen ? "secondary" : "outline"}>
                     {combatifWinner ? 1 : 0}
                   </Badge>
                 </Button>
@@ -867,6 +981,11 @@ export const ResultsEntryStudioMobile = ({
 
       {/* Sticky bottom */}
       <div className="sticky bottom-0 bg-background border-t p-4">
+        {lastSaved && (
+          <div className="text-xs text-center text-muted-foreground mb-2">
+            Dernière sauvegarde: {lastSaved.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        )}
         <div className="flex gap-2">
           <Button 
             onClick={() => saveMutation.mutate()} 
