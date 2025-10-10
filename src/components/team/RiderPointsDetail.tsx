@@ -15,6 +15,7 @@ interface PointDetail {
   etape_numero: number | null;
   points: number;
   date_classement: string;
+  commentaire?: string;
 }
 
 interface RiderPointsDetailProps {
@@ -128,32 +129,50 @@ export const RiderPointsDetail = ({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Course</TableHead>
+                    <TableHead>Course / Bonus</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Étape</TableHead>
+                    <TableHead>Détails</TableHead>
                     <TableHead className="text-right">Points</TableHead>
                     <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pointsDetail.map((detail, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell className="font-medium">{detail.course_nom}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{detail.type_classement}</Badge>
-                      </TableCell>
-                      <TableCell>{detail.etape_numero || '—'}</TableCell>
-                      <TableCell className="text-right font-semibold">
-                        <div className="flex items-center justify-end gap-1">
-                          <Trophy className="h-3 w-3 text-primary" />
-                          {detail.points}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {new Date(detail.date_classement).toLocaleDateString('fr-FR')}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {pointsDetail.map((detail, idx) => {
+                    const isBonus = detail.course_nom === 'Bonus' || detail.type_classement.includes('Bonus');
+                    
+                    return (
+                      <TableRow key={idx} className={isBonus ? 'bg-amber-50/50 dark:bg-amber-950/10' : ''}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {isBonus && <span>🎁</span>}
+                            {detail.course_nom}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={isBonus ? "default" : "outline"}
+                            className={isBonus ? "bg-amber-500 hover:bg-amber-600" : ""}
+                          >
+                            {detail.type_classement}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {isBonus && detail.commentaire 
+                            ? detail.commentaire 
+                            : (detail.etape_numero ? `Étape ${detail.etape_numero}` : '—')}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          <div className="flex items-center justify-end gap-1">
+                            <Trophy className="h-3 w-3 text-primary" />
+                            {detail.points}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(detail.date_classement).toLocaleDateString('fr-FR')}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </Card>
