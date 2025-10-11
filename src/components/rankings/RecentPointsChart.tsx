@@ -102,7 +102,7 @@ export const RecentPointsChart = () => {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="space-y-3">
           <div>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
@@ -113,7 +113,7 @@ export const RecentPointsChart = () => {
             </CardDescription>
           </div>
           <Select value={currentValue} onValueChange={handleViewChange}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -134,7 +134,7 @@ export const RecentPointsChart = () => {
             Aucune donnée pour la période sélectionnée
           </div>
         ) : (
-          <ChartContainer config={chartConfig} className="h-[300px] w-full">
+          <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] w-full">
             <LineChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis 
@@ -147,7 +147,7 @@ export const RecentPointsChart = () => {
                 tick={{ fill: "hsl(var(--muted-foreground))" }}
               />
               <ChartTooltip content={<ChartTooltipContent />} />
-              <ChartLegend content={<ChartLegendContent />} />
+              <ChartLegend content={<ChartLegendContent className="flex-wrap gap-2 text-xs" />} wrapperStyle={{ paddingTop: "20px" }} />
               {managers.map((manager) => (
                 <Line
                   key={manager}
