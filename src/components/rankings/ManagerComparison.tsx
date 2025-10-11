@@ -522,9 +522,109 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
         </Card>
       )}
 
-      {/* Grid de comparaison des coureurs */}
+      {/* Contenu de la comparaison */}
       {managerA && managerB && (
         <>
+          {/* Métriques globales */}
+          <div className="grid grid-cols-4 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Total Points</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">{managerAName}</span>
+                    <span className="font-mono font-bold text-lg">{totalPointsA}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">{managerBName}</span>
+                    <span className="font-mono font-bold text-lg">{totalPointsB}</span>
+                  </div>
+                  <div className="pt-2 border-t flex justify-between items-center">
+                    <span className="text-sm font-medium">Écart</span>
+                    <Badge variant={totalPointsA > totalPointsB ? "default" : "destructive"}>
+                      {totalPointsA > totalPointsB ? "+" : ""}{totalPointsA - totalPointsB}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Nombre de scoreurs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">{managerAName}</span>
+                    <span className="font-mono font-bold text-lg">{scoreursA}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">{managerBName}</span>
+                    <span className="font-mono font-bold text-lg">{scoreursB}</span>
+                  </div>
+                  <div className="pt-2 border-t flex justify-between items-center">
+                    <span className="text-sm font-medium">Écart</span>
+                    <Badge variant={scoreursA > scoreursB ? "default" : "destructive"}>
+                      {scoreursA > scoreursB ? "+" : ""}{scoreursA - scoreursB}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">ROI moyen</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">{managerAName}</span>
+                    <span className="font-mono font-bold text-lg">×{roiA}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">{managerBName}</span>
+                    <span className="font-mono font-bold text-lg">×{roiB}</span>
+                  </div>
+                  <div className="pt-2 border-t flex justify-between items-center">
+                    <span className="text-sm font-medium">Meilleur ROI</span>
+                    <Badge variant="default">
+                      {parseFloat(roiA) > parseFloat(roiB) ? managerAName : managerBName}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Nombre de victoires</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">{managerAName}</span>
+                    <span className="font-mono font-bold text-lg">{victoiresA}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">{managerBName}</span>
+                    <span className="font-mono font-bold text-lg">{victoiresB}</span>
+                  </div>
+                  <div className="pt-2 border-t flex justify-between items-center">
+                    <span className="text-sm font-medium">Écart</span>
+                    <Badge variant={victoiresA > victoiresB ? "default" : victoiresA < victoiresB ? "destructive" : "outline"}>
+                      {victoiresA === victoiresB ? "=" : (victoiresA > victoiresB ? "+" : "")}{victoiresA - victoiresB}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Grid de comparaison des coureurs */}
           <div className="grid grid-cols-3 gap-4">
             {/* Coureurs communs */}
             <Card>
@@ -688,104 +788,6 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
             </Card>
           </div>
 
-          {/* Métriques globales */}
-          <div className="grid grid-cols-4 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Total Points</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{managerAName}</span>
-                    <span className="font-mono font-bold text-lg">{totalPointsA}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{managerBName}</span>
-                    <span className="font-mono font-bold text-lg">{totalPointsB}</span>
-                  </div>
-                  <div className="pt-2 border-t flex justify-between items-center">
-                    <span className="text-sm font-medium">Écart</span>
-                    <Badge variant={totalPointsA > totalPointsB ? "default" : "destructive"}>
-                      {totalPointsA > totalPointsB ? "+" : ""}{totalPointsA - totalPointsB}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Nombre de scoreurs</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{managerAName}</span>
-                    <span className="font-mono font-bold text-lg">{scoreursA}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{managerBName}</span>
-                    <span className="font-mono font-bold text-lg">{scoreursB}</span>
-                  </div>
-                  <div className="pt-2 border-t flex justify-between items-center">
-                    <span className="text-sm font-medium">Écart</span>
-                    <Badge variant={scoreursA > scoreursB ? "default" : "destructive"}>
-                      {scoreursA > scoreursB ? "+" : ""}{scoreursA - scoreursB}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">ROI moyen</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{managerAName}</span>
-                    <span className="font-mono font-bold text-lg">×{roiA}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{managerBName}</span>
-                    <span className="font-mono font-bold text-lg">×{roiB}</span>
-                  </div>
-                  <div className="pt-2 border-t flex justify-between items-center">
-                    <span className="text-sm font-medium">Meilleur ROI</span>
-                    <Badge variant="default">
-                      {parseFloat(roiA) > parseFloat(roiB) ? managerAName : managerBName}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Nombre de victoires</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{managerAName}</span>
-                    <span className="font-mono font-bold text-lg">{victoiresA}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{managerBName}</span>
-                    <span className="font-mono font-bold text-lg">{victoiresB}</span>
-                  </div>
-                  <div className="pt-2 border-t flex justify-between items-center">
-                    <span className="text-sm font-medium">Écart</span>
-                    <Badge variant={victoiresA > victoiresB ? "default" : victoiresA < victoiresB ? "destructive" : "outline"}>
-                      {victoiresA === victoiresB ? "=" : (victoiresA > victoiresB ? "+" : "")}{victoiresA - victoiresB}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </>
       )}
     </div>
