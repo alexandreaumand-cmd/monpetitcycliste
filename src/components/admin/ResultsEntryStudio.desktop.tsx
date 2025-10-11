@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -196,50 +196,9 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     }
   }, [sel_key, activeTab, etapeNumero, course.date_debut, course.date_fin]);
 
-  // Auto-prepare grid when scoring rules are loaded
-  useEffect(() => {
-    if (scoringRules && scoringRules.length > 0 && !gridPrepared) {
-      handlePrepareGrid();
-    }
-  }, [scoringRules, gridPrepared]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === "s") {
-        e.preventDefault();
-        if (gridPrepared && resultRows.length > 0) {
-          saveMutation.mutate();
-        }
-      }
-      if (e.ctrlKey && e.key === "ArrowRight" && activeTab === "stages" && currentStage < course.nb_etapes) {
-        e.preventDefault();
-        handleSaveAndNext();
-      }
-      if (e.ctrlKey && e.key === "ArrowLeft" && activeTab === "stages" && currentStage > 1) {
-        e.preventDefault();
-        setCurrentStage((prev) => prev - 1);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [gridPrepared, resultRows, activeTab, currentStage, course.nb_etapes]);
-
-  // Warn before closing if dirty
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isDirty]);
-
-  const handlePrepareGrid = async () => {
+  // Memoize handlePrepareGrid with all dependencies
+  const handlePrepareGrid = useCallback(async () => {
+    console.log('🔧 handlePrepareGrid called', { sel_key, classementType, etapeNumero });
     const newRequestId = ++requestIdRef.current;
     setCurrentRequestId(newRequestId);
 
@@ -258,6 +217,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       if (loadError) throw loadError;
 
       const existingResults = existingData?.rows || [];
+      console.log('📊 Résultats existants chargés:', existingResults.length);
 
       // Load cancellation status from race_result_sets
       const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
@@ -290,14 +250,13 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         };
 
         for (const { type, key } of jerseyTypes) {
-          // ✅ Requête directe qui ne charge que les porteurs explicitement validés - filter by date
           const { data: jerseyData } = await supabase
             .from('race_results')
             .select('coureur_id')
             .eq('course_id', course.course_id)
-            .eq('type_classement', type)  // "Porteur Général", etc.
+            .eq('type_classement', type)
             .eq('etape_numero', currentStage)
-            .eq('position', 1)  // ✅ Vérifie que c'est bien un porteur validé
+            .eq('position', 1)
             .gte('date_classement', course.date_debut)
             .lte('date_classement', course.date_fin)
             .maybeSingle();
@@ -309,7 +268,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
         setJerseyHolders(newJerseyHolders);
       }
-
 
       // Load Combatif winner if on finals tab for WT GT
       if (!isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT') {
@@ -335,6 +293,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       });
 
       if (existingResults.length > 0) {
+        console.log('✅ Résultats existants trouvés, barème disponible:', scoringRules?.length || 0);
         // Pre-existing results found - merge with full grid from scoring rules
         if (!scoringRules || scoringRules.length === 0) {
           toast({
@@ -373,6 +332,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           });
         }
       } else {
+        console.log('➕ Aucun résultat existant, création grille vide');
         // No existing results - create empty grid from scoring rules
         if (!scoringRules || scoringRules.length === 0) {
           toast({
@@ -427,12 +387,57 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       }
     }
 
+    console.log('📝 Grille finale créée:', rows.length, 'lignes');
     if (newRequestId === currentRequestId || newRequestId > currentRequestId) {
       setResultRows(rows);
       setGridPrepared(true);
       setIsDirty(false);
     }
-  };
+  }, [sel_key, course, classementType, etapeNumero, activeTab, currentStage, currentFinalClassement, scoringRules, isOneDay, gridPrepared, currentRequestId]);
+
+  // Auto-prepare grid when scoring rules are loaded
+  useEffect(() => {
+    if (scoringRules && scoringRules.length > 0 && !gridPrepared) {
+      handlePrepareGrid();
+    }
+  }, [scoringRules, gridPrepared, handlePrepareGrid]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "s") {
+        e.preventDefault();
+        if (gridPrepared && resultRows.length > 0) {
+          saveMutation.mutate();
+        }
+      }
+      if (e.ctrlKey && e.key === "ArrowRight" && activeTab === "stages" && currentStage < course.nb_etapes) {
+        e.preventDefault();
+        handleSaveAndNext();
+      }
+      if (e.ctrlKey && e.key === "ArrowLeft" && activeTab === "stages" && currentStage > 1) {
+        e.preventDefault();
+        setCurrentStage((prev) => prev - 1);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [gridPrepared, resultRows, activeTab, currentStage, course.nb_etapes]);
+
+  // Warn before closing if dirty
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
+
 
   const saveMutation = useMutation({
     mutationFn: async () => {

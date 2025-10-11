@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -129,42 +129,11 @@ export const ResultsEntryStudioMobile = ({
     },
   });
 
-  // Load existing results when scoring rules are available - only for current classement
-  useEffect(() => {
-    if (scoringRules && scoringRules.length > 0) {
-      loadResults();
-    }
-  }, [currentStage, scoringRules]); // Removed currentClassement to avoid loading all sections
-
-  // Load jersey holders independently of scoring rules
-  useEffect(() => {
-    if (courseIsStageRace && currentClassement === 'Etape') {
-      loadJerseyHolders();
-    }
-  }, [course.course_id, currentStage, currentClassement]);
-
-  // Load Combatif winner for WT GT
-  useEffect(() => {
-    if (courseIsStageRace && currentClassement === 'Combatif' && course.categorie === 'WT GT') {
-      loadCombatifWinner();
-    }
-  }, [course.course_id, currentClassement]);
-
-  const loadCombatifWinner = async () => {
-    const { data: combatifData } = await supabase
-      .from('race_results')
-      .select('coureur_id')
-      .eq('course_id', course.course_id)
-      .eq('type_classement', 'Combatif')
-      .is('etape_numero', null)
-      .eq('position', 1)
-      .maybeSingle();
-
-    setCombatifWinner(combatifData?.coureur_id || null);
-  };
-
-  const loadResults = async () => {
+  // Memoize loadResults with all dependencies
+  const loadResults = useCallback(async () => {
+    console.log('🔧 loadResults called', { currentClassement, currentStage });
     if (!scoringRules || scoringRules.length === 0) {
+      console.log('⚠️ Pas de barème disponible');
       return;
     }
 
@@ -193,11 +162,13 @@ export const ResultsEntryStudioMobile = ({
     }
     
     const { data: existingData } = await query.order('position', { ascending: true, nullsFirst: false });
+    console.log('📊 Résultats existants chargés:', existingData?.length || 0);
     
     const maxPlace = Math.max(...scoringRules.map(sr => sr.place));
     const rows: ResultRow[] = [];
 
     const finishedResults = existingData?.filter(r => r.statut === 'finished' && r.position) || [];
+    console.log('✅ Résultats "finished" avec position:', finishedResults.length);
     
     // Create rows based on scoring rules
     for (let i = 1; i <= maxPlace; i++) {
@@ -225,8 +196,44 @@ export const ResultsEntryStudioMobile = ({
       });
     });
 
+    console.log('📝 Grille finale créée:', rows.length, 'lignes');
     setResultRows(rows);
+  }, [scoringRules, currentClassement, currentStage, course.course_id]);
+
+  // Load existing results when scoring rules are available - only for current classement
+  useEffect(() => {
+    if (scoringRules && scoringRules.length > 0) {
+      loadResults();
+    }
+  }, [currentStage, scoringRules, loadResults]);
+
+  // Load jersey holders independently of scoring rules
+  useEffect(() => {
+    if (courseIsStageRace && currentClassement === 'Etape') {
+      loadJerseyHolders();
+    }
+  }, [course.course_id, currentStage, currentClassement]);
+
+  // Load Combatif winner for WT GT
+  useEffect(() => {
+    if (courseIsStageRace && currentClassement === 'Combatif' && course.categorie === 'WT GT') {
+      loadCombatifWinner();
+    }
+  }, [course.course_id, currentClassement]);
+
+  const loadCombatifWinner = async () => {
+    const { data: combatifData } = await supabase
+      .from('race_results')
+      .select('coureur_id')
+      .eq('course_id', course.course_id)
+      .eq('type_classement', 'Combatif')
+      .is('etape_numero', null)
+      .eq('position', 1)
+      .maybeSingle();
+
+    setCombatifWinner(combatifData?.coureur_id || null);
   };
+
 
   const loadJerseyHolders = async () => {
     const jerseyMappings: Array<{ key: 'general' | 'vert' | 'montagne' | 'jeune' | 'combattif'; type: string }> = [
