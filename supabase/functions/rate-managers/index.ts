@@ -52,7 +52,14 @@ serve(async (req) => {
       );
     }
 
-    const { startlist_id, ratings, global_note } = await req.json();
+    const { startlist_id, ratings = [], global_note = undefined } = await req.json();
+
+    console.log('rate-managers payload', {
+      startlist_id,
+      ratings_len: Array.isArray(ratings) ? ratings.length : 'n/a',
+      has_global: typeof global_note,
+      preview: typeof global_note === 'string' ? global_note.slice(0, 60) : null,
+    });
 
     if (!startlist_id || !Array.isArray(ratings)) {
       return new Response(
@@ -97,9 +104,10 @@ serve(async (req) => {
 
     // Update global note on startlist_imports
     if (global_note !== undefined) {
+      const cleaned = typeof global_note === 'string' ? global_note.trim() : null;
       const { error: updateError } = await supabase
         .from('startlist_imports')
-        .update({ admin_rating_note: global_note?.trim() || null })
+        .update({ admin_rating_note: cleaned || null })
         .eq('id', startlist_id);
       
       if (updateError) {
@@ -109,6 +117,7 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+      console.log('Global note updated', { startlist_id, length: cleaned ? cleaned.length : 0 });
     }
 
     // Fetch updated ratings aggregated
@@ -142,7 +151,10 @@ serve(async (req) => {
     }));
 
     return new Response(
-      JSON.stringify({ ratings: result }),
+      JSON.stringify({ 
+        ratings: result,
+        admin_rating_note: typeof global_note === 'string' ? global_note.trim() : null 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

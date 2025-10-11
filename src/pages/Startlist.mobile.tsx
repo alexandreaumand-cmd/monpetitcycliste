@@ -399,7 +399,7 @@ export const StartlistMobile = () => {
           )}
 
           {/* Note de l'admin */}
-          {startlistViewData.admin_rating_note && (
+          {startlistViewData.admin_rating_note?.trim()?.length > 0 && (
             <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
                 <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />

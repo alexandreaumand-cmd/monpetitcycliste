@@ -529,7 +529,7 @@ const StartlistDesktop = () => {
             )}
 
             {/* Note de l'admin - 3/4 de la largeur, sous le barème */}
-            {startlistViewData.admin_rating_note && (
+            {startlistViewData.admin_rating_note?.trim()?.length > 0 && (
               <Card className="bg-blue-50 dark:bg-blue-950/20 p-3 border-blue-200 dark:border-blue-800 col-span-3">
                 <div className="flex items-center gap-2 mb-2">
                   <MessageSquare className="h-4 w-4 text-blue-600" />
