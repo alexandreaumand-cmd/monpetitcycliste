@@ -23,6 +23,7 @@ import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
+import { cn } from "@/lib/utils";
 
 const StartlistDesktop = () => {
   
@@ -542,14 +543,20 @@ const StartlistDesktop = () => {
             )}
           </div>
 
-          {/* Le mot du startlisteur - Lecture seule - Pleine largeur */}
+          {/* Le mot du startlisteur */}
           {startlistViewData.startlisteur_note && (
-            <Card className="bg-amber-50 dark:bg-amber-950/20 p-3 border-amber-200 dark:border-amber-800">
+            <Card className={cn(
+              "col-span-4 bg-muted/30 border-amber-300/30 hover:border-amber-300/50 transition-colors",
+              startlistViewData.startlisteur_note.length > 250 ? "p-5 space-y-3" :
+              startlistViewData.startlisteur_note.length > 100 ? "p-4" : "p-3"
+            )}>
               <div className="flex items-center gap-2 mb-2">
-                <MessageSquare className="h-4 w-4 text-amber-600" />
-                <h4 className="font-semibold text-sm">Le mot du startlisteur</h4>
+                <MessageSquare className="h-4 w-4 text-amber-500" />
+                <h4 className="font-semibold text-sm text-amber-700 dark:text-amber-400">
+                  Le mot du startlisteur
+                </h4>
               </div>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+              <p className="text-base text-foreground/80 whitespace-pre-wrap leading-relaxed">
                 {startlistViewData.startlisteur_note}
               </p>
             </Card>

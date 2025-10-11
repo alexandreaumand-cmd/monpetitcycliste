@@ -411,14 +411,16 @@ export const StartlistMobile = () => {
             </div>
           )}
 
-          {/* Le mot du startlisteur - Lecture seule */}
+          {/* Le mot du startlisteur */}
           {startlistViewData.startlisteur_note && (
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
+            <div className="bg-muted/30 border border-amber-300/30 rounded-xl p-4 max-h-60 overflow-y-auto">
               <div className="flex items-center gap-2 mb-2">
-                <MessageSquare className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                <h4 className="font-semibold text-sm">Le mot du startlisteur</h4>
+                <MessageSquare className="h-4 w-4 text-amber-500" />
+                <h4 className="font-semibold text-sm text-amber-700 dark:text-amber-400">
+                  Le mot du startlisteur
+                </h4>
               </div>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+              <p className="text-base text-foreground/80 whitespace-pre-wrap leading-relaxed">
                 {startlistViewData.startlisteur_note}
               </p>
             </div>
