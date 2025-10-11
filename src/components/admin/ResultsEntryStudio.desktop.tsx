@@ -206,11 +206,17 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
     // ALWAYS try to load existing results first (both for 'edit' and 'create' modes)
     try {
+      console.log('🛰️ Fetching results-course-rows', {
+        course_id: course.course_id,
+        type_classement: classementType,
+        etape_numero: etapeNumero
+      });
+      
       const { data: existingData, error: loadError } = await supabase.functions.invoke('results-course-rows', {
         body: {
           course_id: course.course_id,
           type_classement: classementType,
-          etape_numero: activeTab === 'stages' ? currentStage : null
+          etape_numero: etapeNumero
         }
       });
 
