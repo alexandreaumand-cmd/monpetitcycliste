@@ -546,6 +546,7 @@ export const StartlistMobile = () => {
             onOpenChange={setShowRatingModal}
             startlistId={selectedStartlistId!}
             managers={startlistViewData.managers}
+            initialGlobalNote={startlistViewData.admin_rating_note || ""}
             onRatingsUpdated={() => queryClient.invalidateQueries({ queryKey: ['startlist-view-mobile', selectedStartlistId] })}
           />
         )}

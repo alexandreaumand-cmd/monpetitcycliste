@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,6 +28,7 @@ interface ManagerRatingModalProps {
   startlistId: string;
   managers: Manager[];
   onRatingsUpdated: () => void;
+  initialGlobalNote?: string;
 }
 
 export function ManagerRatingModal({ 
@@ -35,7 +36,8 @@ export function ManagerRatingModal({
   onOpenChange, 
   startlistId, 
   managers,
-  onRatingsUpdated 
+  onRatingsUpdated,
+  initialGlobalNote 
 }: ManagerRatingModalProps) {
   const [ratings, setRatings] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
@@ -49,6 +51,12 @@ export function ManagerRatingModal({
   const [globalNote, setGlobalNote] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    if (open) {
+      setGlobalNote(initialGlobalNote || "");
+    }
+  }, [initialGlobalNote, open]);
+
   const handleStarClick = (managerId: string, stars: number) => {
     setRatings(prev => ({ ...prev, [managerId]: stars }));
   };
@@ -58,7 +66,7 @@ export function ManagerRatingModal({
       .filter(([_, stars]) => stars > 0)
       .map(([manager_id, stars]) => ({ manager_id, stars }));
 
-    if (ratingsArray.length === 0) {
+    if (ratingsArray.length === 0 && !globalNote.trim()) {
       toast.error("Aucune note saisie");
       return;
     }

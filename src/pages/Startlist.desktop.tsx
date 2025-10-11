@@ -209,10 +209,10 @@ const StartlistDesktop = () => {
       
       if (error) throw error;
       
-      // Get PCS validation info
+      // Get PCS validation info and admin note
       const { data: startlistData } = await supabase
         .from('startlist_imports')
-        .select('pcs_validated, pcs_validated_at, pcs_validated_by_manager_id')
+        .select('pcs_validated, pcs_validated_at, pcs_validated_by_manager_id, admin_rating_note')
         .eq('id', selectedStartlistId)
         .single();
       
@@ -664,6 +664,7 @@ const StartlistDesktop = () => {
           onOpenChange={setShowRatingModal}
           startlistId={selectedStartlistId!}
           managers={startlistViewData.managers}
+          initialGlobalNote={startlistViewData.admin_rating_note || ""}
           onRatingsUpdated={() => queryClient.invalidateQueries({ queryKey: ['startlist-view', selectedStartlistId] })}
         />
       </div>
