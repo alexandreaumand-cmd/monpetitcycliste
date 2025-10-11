@@ -19,6 +19,7 @@ import { normalizeString } from "@/lib/stringUtils";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { ManagerBreakdown } from "@/components/rankings/ManagerBreakdown";
 import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
+import { RecentPointsChart } from "@/components/rankings/RecentPointsChart";
 
 type TabView = "standings" | "riders" | "timeline" | "teams" | "courses";
 
@@ -487,11 +488,9 @@ export const RankingsMobile = () => {
         )}
 
         {activeTab === "timeline" && (
-          <MobileEmptyState
-            icon={<TrendingUp className="h-12 w-12" />}
-            title="Chronologie"
-            description="Le graphique de chronologie sera disponible prochainement"
-          />
+          <div className="pb-4">
+            <RecentPointsChart />
+          </div>
         )}
 
         {activeTab === "teams" && (

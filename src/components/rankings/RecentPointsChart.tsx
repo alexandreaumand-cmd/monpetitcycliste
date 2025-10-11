@@ -155,7 +155,7 @@ export const RecentPointsChart = () => {
                   dataKey={manager}
                   stroke={chartConfig[manager]?.color || "hsl(var(--chart-1))"}
                   strokeWidth={2}
-                  dot={{ r: 3 }}
+                  dot={false}
                   activeDot={{ r: 5 }}
                 />
               ))}
