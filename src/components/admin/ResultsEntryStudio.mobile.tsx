@@ -543,7 +543,7 @@ export const ResultsEntryStudioMobile = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Header */}
       <div className="sticky top-0 z-20 bg-background border-b">
         <div className="flex items-center justify-between p-4">
@@ -691,8 +691,8 @@ export const ResultsEntryStudioMobile = ({
       </div>
 
       {/* Content */}
-      <ScrollArea className="h-[calc(100vh-140px)]">
-        <div className="p-4 space-y-3">
+      <ScrollArea className="flex-1 overflow-y-auto">
+        <div className="p-4 space-y-3 pb-32">
           {/* Étape Section (Stage race only) */}
           {courseIsStageRace && (
             <Collapsible open={etapeOpen} onOpenChange={(open) => {
@@ -987,7 +987,7 @@ export const ResultsEntryStudioMobile = ({
       </ScrollArea>
 
       {/* Sticky bottom */}
-      <div className="sticky bottom-0 bg-background border-t p-4">
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t p-4 safe-bottom shadow-lg">
         {lastSaved && (
           <div className="text-xs text-center text-muted-foreground mb-2">
             Dernière sauvegarde: {lastSaved.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
