@@ -8,8 +8,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
-import { useMemo, useState } from "react";
-import { RankingsFilters, FilterState } from "./RankingsFilters";
 
 type StandingsProps = {
   phaseId?: string | null;
@@ -45,28 +43,84 @@ const ManagerNameWithJersey = ({ managerId, managerName }: { managerId: string; 
 
 export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) => {
   const { selectedSeason } = useSeasonContext();
-
-  // État des filtres
-  const [filters, setFilters] = useState<FilterState>({
-    selectedSponsors: [],
-    pointsRange: [0, Infinity],
-    activeManagersOnly: false,
-    showGapAnalysis: false,
-  });
   
   const { data: standings, isLoading } = useQuery({
     queryKey: ["manager-standings", phaseId, selectedSeason?.id],
     queryFn: async () => {
       if (phaseId) {
-        // Phase-specific standings
-        const { data, error } = await supabase
-          .from("v_manager_standings_by_phase")
-          .select("*")
-          .eq("phase_id", phaseId)
-          .order("total_points", { ascending: false });
-        
-        if (error) throw error;
-        return data;
+        // Cumulative standings up to and including this phase
+        const { data: currentPhase } = await supabase
+          .from("phases")
+          .select("index_dans_saison, saison_id")
+          .eq("id", phaseId)
+          .single();
+
+        if (!currentPhase) throw new Error("Phase not found");
+
+        // Get all phases up to and including the current phase
+        const { data: phasesUpToNow } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", currentPhase.saison_id)
+          .lte("index_dans_saison", currentPhase.index_dans_saison);
+
+        if (!phasesUpToNow || phasesUpToNow.length === 0) return [];
+
+        const phaseIds = phasesUpToNow.map(p => p.id);
+
+        // Get cumulative points
+        const { data: pointsData } = await supabase
+          .from("points_ledger")
+          .select("manager_id, points")
+          .in("phase_id", phaseIds);
+
+        // Get bonus points
+        const { data: bonusData } = await supabase
+          .from("bonus_points")
+          .select("target_manager_id, points")
+          .in("phase_id", phaseIds);
+
+        // Get manager info
+        const { data: managers } = await supabase
+          .from("managers")
+          .select("id, nom");
+
+        if (!managers) return [];
+
+        // Aggregate by manager
+        const managerStats = new Map<string, { points: number; bonus: number; name: string }>();
+
+        managers.forEach(m => {
+          managerStats.set(m.id, { points: 0, bonus: 0, name: m.nom });
+        });
+
+        pointsData?.forEach(row => {
+          if (!row.manager_id) return;
+          const stats = managerStats.get(row.manager_id);
+          if (stats) {
+            stats.points += row.points || 0;
+          }
+        });
+
+        bonusData?.forEach(row => {
+          if (!row.target_manager_id) return;
+          const stats = managerStats.get(row.target_manager_id);
+          if (stats) {
+            stats.bonus += row.points || 0;
+          }
+        });
+
+        // Convert to array and sort
+        const result = Array.from(managerStats.entries())
+          .map(([managerId, stats]) => ({
+            manager_id: managerId,
+            manager_nom: stats.name,
+            total_points: stats.points + stats.bonus,
+            bonus_points: stats.bonus,
+          }))
+          .sort((a, b) => b.total_points - a.total_points);
+
+        return result;
       } else if (selectedSeason) {
         // Season-specific standings (all phases of the season)
         const { data, error } = await supabase
@@ -90,9 +144,9 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
     },
   });
 
-  // Fetch previous phase standings for evolution calculation
+  // Fetch cumulative standings up to previous phase for evolution calculation
   const { data: previousStandings } = useQuery({
-    queryKey: ["previous-manager-standings", phaseId],
+    queryKey: ["previous-cumulative-standings", phaseId],
     queryFn: async () => {
       if (!phaseId) return null;
 
@@ -105,60 +159,59 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
 
       if (!currentPhase || currentPhase.index_dans_saison <= 1) return null;
 
-      // Get previous phase
-      const { data: prevPhase } = await supabase
+      // Get all phases up to (but not including) the current phase
+      const { data: previousPhases } = await supabase
         .from("phases")
         .select("id")
         .eq("saison_id", currentPhase.saison_id)
-        .eq("index_dans_saison", currentPhase.index_dans_saison - 1)
-        .single();
+        .lt("index_dans_saison", currentPhase.index_dans_saison);
 
-      if (!prevPhase) return null;
+      if (!previousPhases || previousPhases.length === 0) return null;
 
-      // Get previous phase standings
-      const { data, error } = await supabase
-        .from("v_manager_standings_by_phase")
-        .select("*")
-        .eq("phase_id", prevPhase.id)
-        .order("total_points", { ascending: false });
+      const phaseIds = previousPhases.map(p => p.id);
 
-      if (error) return null;
+      // Get cumulative points for all previous phases
+      const { data: pointsData } = await supabase
+        .from("points_ledger")
+        .select("manager_id, points")
+        .in("phase_id", phaseIds);
 
-      // Create a map of manager_id -> rank
-      const rankMap = new Map();
-      data?.forEach((standing, idx) => {
-        rankMap.set(standing.manager_id, idx + 1);
+      // Get bonus points for all previous phases
+      const { data: bonusData } = await supabase
+        .from("bonus_points")
+        .select("target_manager_id, points")
+        .in("phase_id", phaseIds);
+
+      if (!pointsData) return null;
+
+      // Aggregate points by manager
+      const managerPoints = new Map<string, number>();
+      
+      pointsData.forEach(row => {
+        if (!row.manager_id) return;
+        const current = managerPoints.get(row.manager_id) || 0;
+        managerPoints.set(row.manager_id, current + (row.points || 0));
+      });
+
+      // Add bonus points
+      bonusData?.forEach(row => {
+        if (!row.target_manager_id) return;
+        const current = managerPoints.get(row.target_manager_id) || 0;
+        managerPoints.set(row.target_manager_id, current + (row.points || 0));
+      });
+
+      // Sort by total points and create rank map
+      const sorted = Array.from(managerPoints.entries())
+        .sort((a, b) => b[1] - a[1]);
+
+      const rankMap = new Map<string, number>();
+      sorted.forEach(([managerId], idx) => {
+        rankMap.set(managerId, idx + 1);
       });
 
       return rankMap;
     },
     enabled: !!phaseId,
-  });
-
-  // Récupérer tous les sponsors de la saison pour le filtre
-  const { data: allSponsors } = useQuery({
-    queryKey: ["all-sponsors", selectedSeason?.id],
-    queryFn: async () => {
-      if (!selectedSeason?.id) return [];
-
-      const { data, error } = await supabase
-        .from("manager_sponsors")
-        .select("manager_id, sponsor, jersey_image_url")
-        .eq("saison_id", selectedSeason.id);
-
-      if (error) throw error;
-
-      // Dédupliquer par sponsor
-      const uniqueSponsors = new Map();
-      data?.forEach((item) => {
-        if (!uniqueSponsors.has(item.sponsor)) {
-          uniqueSponsors.set(item.sponsor, item);
-        }
-      });
-
-      return Array.from(uniqueSponsors.values());
-    },
-    enabled: !!selectedSeason?.id,
   });
 
   // Fetch previous global standings for evolution calculation (global view only)
@@ -219,57 +272,8 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
     enabled: !phaseId, // Only if global standings
   });
 
-  // Filtrage côté client des standings
-  const filteredStandings = useMemo(() => {
-    let result: any[] = standings || [];
-
-    // Filtre par managers actifs
-    if (filters.activeManagersOnly) {
-      result = result.filter((s: any) => s.total_points > 0);
-    }
-
-    // Filtre par plage de points
-    result = result.filter(
-      (s: any) =>
-        s.total_points >= filters.pointsRange[0] &&
-        s.total_points <= filters.pointsRange[1]
-    );
-
-    // Filtre par sponsors
-    if (filters.selectedSponsors.length > 0) {
-      result = result.filter((s: any) => {
-        const managerSponsor = allSponsors?.find(
-          (sp: any) => sp.manager_id === s.manager_id
-        );
-        return (
-          managerSponsor &&
-          filters.selectedSponsors.includes(managerSponsor.sponsor)
-        );
-      });
-    }
-
-    return result;
-  }, [standings, filters, allSponsors]);
-
-  // Calculer min/max des points pour initialiser le slider
-  useMemo(() => {
-    if (standings && standings.length > 0) {
-      const points = standings.map((s) => s.total_points || 0);
-      const minPoints = Math.min(...points);
-      const maxPoints = Math.max(...points);
-      
-      // Initialiser le range si c'est la première fois
-      if (filters.pointsRange[1] === Infinity) {
-        setFilters((prev) => ({
-          ...prev,
-          pointsRange: [minPoints, maxPoints],
-        }));
-      }
-    }
-  }, [standings]);
-
-  const maxPoints = filteredStandings?.[0]?.total_points || 1;
-  const totalPoints = filteredStandings?.reduce((sum, s) => sum + s.total_points, 0) || 1;
+  const maxPoints = standings?.[0]?.total_points || 1;
+  const totalPoints = standings?.reduce((sum, s) => sum + s.total_points, 0) || 1;
 
   const getRankIcon = (rank: number, isBottomThree: boolean) => {
     if (rank === 1) return <span className="text-xl">🥇</span>;
@@ -298,24 +302,17 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
   }
 
   return (
-    <>
-      <RankingsFilters
-        standings={(standings || []) as any}
-        currentFilters={filters}
-        onFilterChange={setFilters}
-        seasonId={selectedSeason?.id}
-      />
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Classement des Managers
-          </CardTitle>
-          <CardDescription>
-            {phaseId ? "Classement pour la phase sélectionnée" : "Classement général"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5" />
+          Classement des Managers
+        </CardTitle>
+        <CardDescription>
+          {phaseId ? "Classement pour la phase sélectionnée" : "Classement général"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
@@ -325,15 +322,14 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               <TableHead className="text-right">dont bonus</TableHead>
               {phaseId && <TableHead className="text-right">Scoreurs</TableHead>}
               <TableHead className="text-right">Écart</TableHead>
-              {filters.showGapAnalysis && <TableHead className="w-32">Écart visuel</TableHead>}
               {(phaseId || previousGlobalStandings) && <TableHead className="w-24 text-center">Évolution</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStandings?.map((standing, idx) => {
+            {standings?.map((standing, idx) => {
               const rank = idx + 1;
-              const isBottomThree = filteredStandings && idx >= filteredStandings.length - 3;
-              const gapToPrevious = idx > 0 ? filteredStandings[idx - 1].total_points - standing.total_points : 0;
+              const isBottomThree = standings && idx >= standings.length - 3;
+              const gapToPrevious = idx > 0 ? standings[idx - 1].total_points - standing.total_points : 0;
               const percentage = ((standing.total_points / totalPoints) * 100).toFixed(1);
               
               // Calculate evolution
@@ -428,30 +424,10 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                     ) : (
                       <span className="text-xs text-muted-foreground font-mono">
                         -{gapToPrevious}
-                  </span>
-                )}
-              </TableCell>
-              
-              {/* Gap Analysis visuel */}
-              {filters.showGapAnalysis && (
-                <TableCell className="py-2">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-primary via-primary-light to-accent transition-smooth"
-                        style={{
-                          width: `${(standing.total_points / maxPoints) * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <span className="text-xs text-muted-foreground font-mono tabular-nums">
-                      {((standing.total_points / maxPoints) * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                </TableCell>
-              )}
-              
-              {(phaseId || previousGlobalStandings) && (
+                      </span>
+                    )}
+                  </TableCell>
+                  {(phaseId || previousGlobalStandings) && (
                     <TableCell className="text-center py-2">
                       {isNew ? (
                         <Badge variant="outline" className="text-xs">NEW</Badge>
@@ -489,6 +465,5 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
         )}
       </CardContent>
     </Card>
-    </>
   );
 };
