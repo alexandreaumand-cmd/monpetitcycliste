@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { TeamScoring } from "@/components/rankings/TeamScoring";
 import { CourseLeaderboard } from "@/components/rankings/CourseLeaderboard";
 import { ManagerHistory } from "@/components/rankings/ManagerHistory";
+import { ManagerComparison } from "@/components/rankings/ManagerComparison";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { RankingsMobile } from "./Rankings.mobile";
@@ -43,13 +44,14 @@ export default function Rankings() {
         {/* Main Content */}
         <Tabs defaultValue="standings" className="space-y-6">
           <div className="flex items-center justify-between gap-4">
-            <TabsList className="grid w-full grid-cols-6 max-w-4xl">
+            <TabsList className="grid w-full grid-cols-7 max-w-5xl">
               <TabsTrigger value="standings">Classement</TabsTrigger>
               <TabsTrigger value="riders">Top Coureurs</TabsTrigger>
               <TabsTrigger value="timeline">Chronologie</TabsTrigger>
               <TabsTrigger value="team">Détail par équipe</TabsTrigger>
               <TabsTrigger value="course">Par course</TabsTrigger>
               <TabsTrigger value="history">Historique</TabsTrigger>
+              <TabsTrigger value="comparison">Comparaison</TabsTrigger>
             </TabsList>
             
             <Select 
@@ -95,6 +97,10 @@ export default function Rankings() {
 
           <TabsContent value="history" className="space-y-4">
             <ManagerHistory phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
+          </TabsContent>
+
+          <TabsContent value="comparison" className="space-y-4">
+            <ManagerComparison phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
           </TabsContent>
         </Tabs>
 
