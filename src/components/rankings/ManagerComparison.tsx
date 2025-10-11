@@ -215,6 +215,109 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     },
   });
 
+  // 6. Récupérer les victoires (position = 1) des coureurs des deux managers
+  const { data: victoriesA } = useQuery({
+    queryKey: ["victories-manager-a", managerA, phaseId, saisonId],
+    queryFn: async () => {
+      if (!managerA || !rostersA) return null;
+
+      const coureurIds = rostersA.map(r => r.coureur_id);
+
+      let query = supabase
+        .from("race_results")
+        .select("id, coureur_id, course_id, type_classement")
+        .in("coureur_id", coureurIds)
+        .eq("position", 1)
+        .eq("statut", "finished");
+
+      if (phaseId) {
+        const { data: coursesInPhase } = await supabase
+          .from("courses")
+          .select("id")
+          .eq("phase_id", phaseId);
+        
+        if (coursesInPhase) {
+          const courseIds = coursesInPhase.map(c => c.id);
+          query = query.in("course_id", courseIds);
+        }
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        
+        if (phases) {
+          const phaseIds = phases.map(p => p.id);
+          const { data: coursesInSaison } = await supabase
+            .from("courses")
+            .select("id")
+            .in("phase_id", phaseIds);
+          
+          if (coursesInSaison) {
+            const courseIds = coursesInSaison.map(c => c.id);
+            query = query.in("course_id", courseIds);
+          }
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!managerA && !!rostersA,
+  });
+
+  const { data: victoriesB } = useQuery({
+    queryKey: ["victories-manager-b", managerB, phaseId, saisonId],
+    queryFn: async () => {
+      if (!managerB || !rostersB) return null;
+
+      const coureurIds = rostersB.map(r => r.coureur_id);
+
+      let query = supabase
+        .from("race_results")
+        .select("id, coureur_id, course_id, type_classement")
+        .in("coureur_id", coureurIds)
+        .eq("position", 1)
+        .eq("statut", "finished");
+
+      if (phaseId) {
+        const { data: coursesInPhase } = await supabase
+          .from("courses")
+          .select("id")
+          .eq("phase_id", phaseId);
+        
+        if (coursesInPhase) {
+          const courseIds = coursesInPhase.map(c => c.id);
+          query = query.in("course_id", courseIds);
+        }
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        
+        if (phases) {
+          const phaseIds = phases.map(p => p.id);
+          const { data: coursesInSaison } = await supabase
+            .from("courses")
+            .select("id")
+            .in("phase_id", phaseIds);
+          
+          if (coursesInSaison) {
+            const courseIds = coursesInSaison.map(c => c.id);
+            query = query.in("course_id", courseIds);
+          }
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!managerB && !!rostersB,
+  });
+
   // Calculs : coureurs communs et exclusifs
   const coureursCommuns = useMemo(() => {
     if (!rostersA || !rostersB || !pointsA || !pointsB || !coureurs) return [];
@@ -367,6 +470,9 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
   const roiA = (totalPointsA / budgetA).toFixed(2);
   const roiB = (totalPointsB / budgetB).toFixed(2);
+
+  const victoiresA = victoriesA?.length || 0;
+  const victoiresB = victoriesB?.length || 0;
 
   const managerAName = managers?.find(m => m.id === managerA)?.nom || "Manager A";
   const managerBName = managers?.find(m => m.id === managerB)?.nom || "Manager B";
@@ -591,7 +697,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
           </div>
 
           {/* Métriques globales */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Total Points</CardTitle>
@@ -658,6 +764,30 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
                     <span className="text-sm font-medium">Meilleur ROI</span>
                     <Badge variant="default">
                       {parseFloat(roiA) > parseFloat(roiB) ? managerAName : managerBName}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Nombre de victoires</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">{managerAName}</span>
+                    <span className="font-mono font-bold text-lg">{victoiresA}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">{managerBName}</span>
+                    <span className="font-mono font-bold text-lg">{victoiresB}</span>
+                  </div>
+                  <div className="pt-2 border-t flex justify-between items-center">
+                    <span className="text-sm font-medium">Écart</span>
+                    <Badge variant={victoiresA > victoiresB ? "default" : victoiresA < victoiresB ? "destructive" : "outline"}>
+                      {victoiresA === victoiresB ? "=" : (victoiresA > victoiresB ? "+" : "")}{victoiresA - victoiresB}
                     </Badge>
                   </div>
                 </div>
