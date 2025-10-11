@@ -393,6 +393,19 @@ export const StartlistMobile = () => {
             </div>
           )}
 
+          {/* Note de l'admin */}
+          {startlistViewData.admin_rating_note && (
+            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <h4 className="font-semibold text-sm">Note de l'administrateur</h4>
+              </div>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {startlistViewData.admin_rating_note}
+              </p>
+            </div>
+          )}
+
           {/* KPIs */}
           <KPIRow
             items={[

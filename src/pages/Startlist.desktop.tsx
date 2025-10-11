@@ -542,6 +542,19 @@ const StartlistDesktop = () => {
             </Card>
           )}
 
+          {/* Note de l'admin */}
+          {startlistViewData.admin_rating_note && (
+            <Card className="bg-blue-50 dark:bg-blue-950/20 p-3 border-blue-200 dark:border-blue-800">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageSquare className="h-4 w-4 text-blue-600" />
+                <h4 className="font-semibold text-sm">Note de l'administrateur</h4>
+              </div>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {startlistViewData.admin_rating_note}
+              </p>
+            </Card>
+          )}
+
             {/* Stats */}
             <div className="flex gap-4 text-xs">
               <div><span className="font-medium">Managers:</span> {startlistViewData.totals.managers}</div>

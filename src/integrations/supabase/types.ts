@@ -2948,6 +2948,7 @@ export type Database = {
       }
       startlist_imports: {
         Row: {
+          admin_rating_note: string | null
           created_at: string | null
           created_by_manager_id: string | null
           file_url: string | null
@@ -2962,6 +2963,7 @@ export type Database = {
           startlisteur_note: string | null
         }
         Insert: {
+          admin_rating_note?: string | null
           created_at?: string | null
           created_by_manager_id?: string | null
           file_url?: string | null
@@ -2976,6 +2978,7 @@ export type Database = {
           startlisteur_note?: string | null
         }
         Update: {
+          admin_rating_note?: string | null
           created_at?: string | null
           created_by_manager_id?: string | null
           file_url?: string | null

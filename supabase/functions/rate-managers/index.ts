@@ -52,7 +52,7 @@ serve(async (req) => {
       );
     }
 
-    const { startlist_id, ratings } = await req.json();
+    const { startlist_id, ratings, global_note } = await req.json();
 
     if (!startlist_id || !Array.isArray(ratings)) {
       return new Response(
@@ -93,6 +93,22 @@ serve(async (req) => {
         JSON.stringify({ error: `Failed to save ratings: ${upsertError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Update global note on startlist_imports
+    if (global_note !== undefined) {
+      const { error: updateError } = await supabase
+        .from('startlist_imports')
+        .update({ admin_rating_note: global_note?.trim() || null })
+        .eq('id', startlist_id);
+      
+      if (updateError) {
+        console.error('Error updating global note:', updateError);
+        return new Response(
+          JSON.stringify({ error: `Failed to update global note: ${updateError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Fetch updated ratings aggregated

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Star, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -45,6 +46,7 @@ export function ManagerRatingModal({
     });
     return initial;
   });
+  const [globalNote, setGlobalNote] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
 
   const handleStarClick = (managerId: string, stars: number) => {
@@ -65,7 +67,11 @@ export function ManagerRatingModal({
 
     try {
       const { error } = await supabase.functions.invoke('rate-managers', {
-        body: { startlist_id: startlistId, ratings: ratingsArray }
+        body: { 
+          startlist_id: startlistId, 
+          ratings: ratingsArray,
+          global_note: globalNote.trim() || null
+        }
       });
 
       if (error) throw error;
@@ -145,6 +151,24 @@ export function ManagerRatingModal({
             </Collapsible>
           ))}
         </div>
+        
+        {/* Commentaire global */}
+        <div className="border-t pt-4 mt-2">
+          <label className="text-sm font-medium mb-2 block">
+            Commentaire général sur la startlist (optionnel)
+          </label>
+          <Textarea
+            value={globalNote}
+            onChange={(e) => setGlobalNote(e.target.value)}
+            placeholder="Ex: Excellent niveau général, belles sélections stratégiques..."
+            className="min-h-[80px] resize-none"
+            maxLength={500}
+          />
+          <span className="text-xs text-muted-foreground mt-1 block">
+            {globalNote.length} / 500 caractères
+          </span>
+        </div>
+        
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annuler
