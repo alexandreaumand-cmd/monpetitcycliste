@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
+import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 
 export const StartlistMobile = () => {
@@ -505,6 +506,17 @@ export const StartlistMobile = () => {
               Noter les managers
             </Button>
           </MobileStickyBottom>
+        )}
+
+        {/* Modal de notation */}
+        {isAdmin && startlistViewData.managers.length > 0 && (
+          <ManagerRatingModal 
+            open={showRatingModal}
+            onOpenChange={setShowRatingModal}
+            startlistId={selectedStartlistId!}
+            managers={startlistViewData.managers}
+            onRatingsUpdated={() => queryClient.invalidateQueries({ queryKey: ['startlist-view-mobile', selectedStartlistId] })}
+          />
         )}
 
         {/* Image modal */}
