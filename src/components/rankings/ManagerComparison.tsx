@@ -287,8 +287,13 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     if (!pointsA || !pointsB || !courses) return null;
 
     const categories = [
-      { key: "1J", label: "Courses 1 Jour", filterCourse: (c: any) => c.type_course === "One day" },
-      { key: "ETAPES", label: "Courses par étapes", filterCourse: (c: any) => c.type_course === "Stage race" },
+      { key: "1J", label: "Courses 1 Jour", filterCourse: (c: any) => c.type_course === "One-day race" },
+      { 
+        key: "ETAPES", 
+        label: "Courses par étapes", 
+        filterCourse: (c: any) => c.type_course === "Stages race",
+        filterType: (typeClass: string) => typeClass === "Etape"
+      },
       { key: "GC", label: "Classement Général", filterType: (typeClass: string) => typeClass === "General" },
       { key: "PTS", label: "Points", filterType: (typeClass: string) => typeClass === "Points" },
       { key: "MONT", label: "Montagne", filterType: (typeClass: string) => typeClass === "Montagne" },
@@ -302,8 +307,19 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       let ptsA = 0;
       let ptsB = 0;
 
-      if (cat.filterCourse) {
-        // Filtrer par type de course
+      if (cat.key === "ETAPES") {
+        // Pour les étapes, compter à la fois les courses par étapes ET les points d'étapes
+        ptsA = pointsA.filter(p => {
+          const course = coursesMap.get(p.course_id);
+          return (course && cat.filterCourse(course)) || (cat.filterType && cat.filterType(p.type_classement));
+        }).reduce((sum, p) => sum + (p.points || 0), 0);
+
+        ptsB = pointsB.filter(p => {
+          const course = coursesMap.get(p.course_id);
+          return (course && cat.filterCourse(course)) || (cat.filterType && cat.filterType(p.type_classement));
+        }).reduce((sum, p) => sum + (p.points || 0), 0);
+      } else if (cat.filterCourse) {
+        // Pour les autres catégories avec filterCourse (1J uniquement)
         ptsA = pointsA.filter(p => {
           const course = coursesMap.get(p.course_id);
           return course && cat.filterCourse(course);
@@ -314,7 +330,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
           return course && cat.filterCourse(course);
         }).reduce((sum, p) => sum + (p.points || 0), 0);
       } else if (cat.filterType) {
-        // Filtrer par type_classement
+        // Filtrer par type_classement uniquement
         ptsA = pointsA.filter(p => cat.filterType(p.type_classement)).reduce((sum, p) => sum + (p.points || 0), 0);
         ptsB = pointsB.filter(p => cat.filterType(p.type_classement)).reduce((sum, p) => sum + (p.points || 0), 0);
       }
