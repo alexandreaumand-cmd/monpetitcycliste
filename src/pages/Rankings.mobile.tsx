@@ -20,8 +20,9 @@ import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { ManagerBreakdown } from "@/components/rankings/ManagerBreakdown";
 import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
 import { RecentPointsChart } from "@/components/rankings/RecentPointsChart";
+import { ManagerComparisonMobile } from "@/components/rankings/ManagerComparison.mobile";
 
-type TabView = "standings" | "riders" | "timeline" | "teams" | "courses";
+type TabView = "standings" | "riders" | "timeline" | "comparison" | "teams" | "courses";
 
 export const RankingsMobile = () => {
   const { selectedSeason, phases } = useSeasonContext();
@@ -213,6 +214,7 @@ export const RankingsMobile = () => {
     { label: "🏆 Général", value: "standings" as TabView },
     { label: "🚴 Top coureurs", value: "riders" as TabView },
     { label: "📈 Chrono", value: "timeline" as TabView },
+    { label: "⚖️ Comparaison", value: "comparison" as TabView },
     { label: "👥 Équipes", value: "teams" as TabView },
     { label: "🏁 Courses", value: "courses" as TabView },
   ];
@@ -491,6 +493,10 @@ export const RankingsMobile = () => {
           <div className="pb-4">
             <RecentPointsChart />
           </div>
+        )}
+
+        {activeTab === "comparison" && (
+          <ManagerComparisonMobile phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
         )}
 
         {activeTab === "teams" && (
