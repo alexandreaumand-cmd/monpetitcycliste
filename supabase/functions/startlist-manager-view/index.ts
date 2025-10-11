@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
         race_id,
         route_image_url,
         startlisteur_note,
+        admin_rating_note,
         courses!inner(
           id,
           nom,
@@ -295,6 +296,7 @@ Deno.serve(async (req) => {
       },
       route_image_url: startlist.route_image_url || null,
       startlisteur_note: startlist.startlisteur_note || null,
+      admin_rating_note: startlist.admin_rating_note || null,
       managers,
       scoring: {
         categorie: race.categorie,
