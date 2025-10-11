@@ -85,22 +85,17 @@ Deno.serve(async (req) => {
       phaseId = activePhase?.id;
     }
 
-    // Récupérer les points bonus du manager
+    // Récupérer les points bonus du manager depuis la nouvelle table bonus_points
     let bonusPoints = 0;
     if (phaseId && targetManagerId) {
       const { data: bonusData } = await supabase
-        .from('manager_bonus_points')
-        .select('bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs')
-        .eq('manager_id', targetManagerId)
-        .eq('phase_id', phaseId)
-        .single();
+        .from('bonus_points')
+        .select('points')
+        .eq('target_manager_id', targetManagerId)
+        .eq('phase_id', phaseId);
       
-      if (bonusData) {
-        bonusPoints = (bonusData.bonus_itt || 0) + 
-                      (bonusData.bonus_ttt || 0) + 
-                      (bonusData.bonus_first_win || 0) + 
-                      (bonusData.bonus_coureurs || 0) + 
-                      (bonusData.bonus_scoreurs || 0);
+      if (bonusData && bonusData.length > 0) {
+        bonusPoints = bonusData.reduce((sum, bonus) => sum + (bonus.points || 0), 0);
       }
     }
 
