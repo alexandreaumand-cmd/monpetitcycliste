@@ -527,9 +527,22 @@ const StartlistDesktop = () => {
                 </div>
               </Card>
             )}
+
+            {/* Note de l'admin - 3/4 de la largeur, sous le barème */}
+            {startlistViewData.admin_rating_note && (
+              <Card className="bg-blue-50 dark:bg-blue-950/20 p-3 border-blue-200 dark:border-blue-800 col-span-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="h-4 w-4 text-blue-600" />
+                  <h4 className="font-semibold text-sm">Note de l'administrateur</h4>
+                </div>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {startlistViewData.admin_rating_note}
+                </p>
+              </Card>
+            )}
           </div>
 
-          {/* Le mot du startlisteur - Lecture seule */}
+          {/* Le mot du startlisteur - Lecture seule - Pleine largeur */}
           {startlistViewData.startlisteur_note && (
             <Card className="bg-amber-50 dark:bg-amber-950/20 p-3 border-amber-200 dark:border-amber-800">
               <div className="flex items-center gap-2 mb-2">
@@ -538,19 +551,6 @@ const StartlistDesktop = () => {
               </div>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                 {startlistViewData.startlisteur_note}
-              </p>
-            </Card>
-          )}
-
-          {/* Note de l'admin */}
-          {startlistViewData.admin_rating_note && (
-            <Card className="bg-blue-50 dark:bg-blue-950/20 p-3 border-blue-200 dark:border-blue-800">
-              <div className="flex items-center gap-2 mb-2">
-                <MessageSquare className="h-4 w-4 text-blue-600" />
-                <h4 className="font-semibold text-sm">Note de l'administrateur</h4>
-              </div>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {startlistViewData.admin_rating_note}
               </p>
             </Card>
           )}

@@ -380,16 +380,21 @@ export const StartlistMobile = () => {
             </div>
           )}
 
-          {/* Le mot du startlisteur - Lecture seule */}
-          {startlistViewData.startlisteur_note && (
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <MessageSquare className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                <h4 className="font-semibold text-sm">Le mot du startlisteur</h4>
+          {/* Barème de points */}
+          {startlistViewData.scoring && startlistViewData.scoring.rules && startlistViewData.scoring.rules.length > 0 && (
+            <div className="bg-muted/50 rounded-xl p-3 border">
+              <h4 className="font-semibold text-xs mb-2">Barème ({startlistViewData.scoring.categorie})</h4>
+              <div className="grid grid-cols-5 gap-x-4 gap-y-1 text-xs">
+                {startlistViewData.scoring.rules
+                  .filter((r: any) => r.type_classement === 'General')
+                  .slice(0, 10)
+                  .map((rule: any) => (
+                    <div key={rule.place} className="flex gap-1">
+                      <span className="font-medium">{rule.place}e:</span>
+                      <span className="text-muted-foreground">{rule.points}pts</span>
+                    </div>
+                  ))}
               </div>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {startlistViewData.startlisteur_note}
-              </p>
             </div>
           )}
 
@@ -402,6 +407,19 @@ export const StartlistMobile = () => {
               </div>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                 {startlistViewData.admin_rating_note}
+              </p>
+            </div>
+          )}
+
+          {/* Le mot du startlisteur - Lecture seule */}
+          {startlistViewData.startlisteur_note && (
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageSquare className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <h4 className="font-semibold text-sm">Le mot du startlisteur</h4>
+              </div>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {startlistViewData.startlisteur_note}
               </p>
             </div>
           )}
