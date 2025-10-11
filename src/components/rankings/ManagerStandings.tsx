@@ -48,79 +48,15 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
     queryKey: ["manager-standings", phaseId, selectedSeason?.id],
     queryFn: async () => {
       if (phaseId) {
-        // Cumulative standings up to and including this phase
-        const { data: currentPhase } = await supabase
-          .from("phases")
-          .select("index_dans_saison, saison_id")
-          .eq("id", phaseId)
-          .single();
-
-        if (!currentPhase) throw new Error("Phase not found");
-
-        // Get all phases up to and including the current phase
-        const { data: phasesUpToNow } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", currentPhase.saison_id)
-          .lte("index_dans_saison", currentPhase.index_dans_saison);
-
-        if (!phasesUpToNow || phasesUpToNow.length === 0) return [];
-
-        const phaseIds = phasesUpToNow.map(p => p.id);
-
-        // Get cumulative points
-        const { data: pointsData } = await supabase
-          .from("points_ledger")
-          .select("manager_id, points")
-          .in("phase_id", phaseIds);
-
-        // Get bonus points
-        const { data: bonusData } = await supabase
-          .from("bonus_points")
-          .select("target_manager_id, points")
-          .in("phase_id", phaseIds);
-
-        // Get manager info
-        const { data: managers } = await supabase
-          .from("managers")
-          .select("id, nom");
-
-        if (!managers) return [];
-
-        // Aggregate by manager
-        const managerStats = new Map<string, { points: number; bonus: number; name: string }>();
-
-        managers.forEach(m => {
-          managerStats.set(m.id, { points: 0, bonus: 0, name: m.nom });
-        });
-
-        pointsData?.forEach(row => {
-          if (!row.manager_id) return;
-          const stats = managerStats.get(row.manager_id);
-          if (stats) {
-            stats.points += row.points || 0;
-          }
-        });
-
-        bonusData?.forEach(row => {
-          if (!row.target_manager_id) return;
-          const stats = managerStats.get(row.target_manager_id);
-          if (stats) {
-            stats.bonus += row.points || 0;
-          }
-        });
-
-        // Convert to array and sort
-        const result = Array.from(managerStats.entries())
-          .map(([managerId, stats]) => ({
-            manager_id: managerId,
-            manager_nom: stats.name,
-            total_points: stats.points + stats.bonus,
-            bonus_points: stats.bonus,
-          }))
-          .sort((a, b) => b.total_points - a.total_points);
-
-        return result;
+        // Phase-specific standings
+        const { data, error } = await supabase
+          .from("v_manager_standings_by_phase")
+          .select("*")
+          .eq("phase_id", phaseId)
+          .order("total_points", { ascending: false });
+        
+        if (error) throw error;
+        return data;
       } else if (selectedSeason) {
         // Season-specific standings (all phases of the season)
         const { data, error } = await supabase
@@ -144,9 +80,9 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
     },
   });
 
-  // Fetch cumulative standings up to previous phase for evolution calculation
+  // Fetch previous phase standings for evolution calculation
   const { data: previousStandings } = useQuery({
-    queryKey: ["previous-cumulative-standings", phaseId],
+    queryKey: ["previous-manager-standings", phaseId],
     queryFn: async () => {
       if (!phaseId) return null;
 
@@ -159,54 +95,29 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
 
       if (!currentPhase || currentPhase.index_dans_saison <= 1) return null;
 
-      // Get all phases up to (but not including) the current phase
-      const { data: previousPhases } = await supabase
+      // Get previous phase
+      const { data: prevPhase } = await supabase
         .from("phases")
         .select("id")
         .eq("saison_id", currentPhase.saison_id)
-        .lt("index_dans_saison", currentPhase.index_dans_saison);
+        .eq("index_dans_saison", currentPhase.index_dans_saison - 1)
+        .single();
 
-      if (!previousPhases || previousPhases.length === 0) return null;
+      if (!prevPhase) return null;
 
-      const phaseIds = previousPhases.map(p => p.id);
+      // Get previous phase standings
+      const { data, error } = await supabase
+        .from("v_manager_standings_by_phase")
+        .select("*")
+        .eq("phase_id", prevPhase.id)
+        .order("total_points", { ascending: false });
 
-      // Get cumulative points for all previous phases
-      const { data: pointsData } = await supabase
-        .from("points_ledger")
-        .select("manager_id, points")
-        .in("phase_id", phaseIds);
+      if (error) return null;
 
-      // Get bonus points for all previous phases
-      const { data: bonusData } = await supabase
-        .from("bonus_points")
-        .select("target_manager_id, points")
-        .in("phase_id", phaseIds);
-
-      if (!pointsData) return null;
-
-      // Aggregate points by manager
-      const managerPoints = new Map<string, number>();
-      
-      pointsData.forEach(row => {
-        if (!row.manager_id) return;
-        const current = managerPoints.get(row.manager_id) || 0;
-        managerPoints.set(row.manager_id, current + (row.points || 0));
-      });
-
-      // Add bonus points
-      bonusData?.forEach(row => {
-        if (!row.target_manager_id) return;
-        const current = managerPoints.get(row.target_manager_id) || 0;
-        managerPoints.set(row.target_manager_id, current + (row.points || 0));
-      });
-
-      // Sort by total points and create rank map
-      const sorted = Array.from(managerPoints.entries())
-        .sort((a, b) => b[1] - a[1]);
-
-      const rankMap = new Map<string, number>();
-      sorted.forEach(([managerId], idx) => {
-        rankMap.set(managerId, idx + 1);
+      // Create a map of manager_id -> rank
+      const rankMap = new Map();
+      data?.forEach((standing, idx) => {
+        rankMap.set(standing.manager_id, idx + 1);
       });
 
       return rankMap;
