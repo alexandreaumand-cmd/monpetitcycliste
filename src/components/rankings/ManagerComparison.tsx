@@ -100,13 +100,16 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
   // 3. Récupérer les points des coureurs pour les deux managers
   const { data: pointsA } = useQuery({
-    queryKey: ["points-manager-a", managerA, phaseId, saisonId],
+    queryKey: ["points-manager-a", managerA, phaseId, saisonId, rostersA],
     queryFn: async () => {
-      if (!managerA) return null;
+      if (!managerA || !rostersA) return null;
+
+      const coureurIds = rostersA.map(r => r.coureur_id);
 
       let query = supabase
         .from("points_ledger")
-        .select("coureur_id, points, type_classement, course_id");
+        .select("coureur_id, points, type_classement, course_id")
+        .in("coureur_id", coureurIds);
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -122,23 +125,24 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
         }
       }
 
-      query = query.eq("manager_id", managerA);
-
       const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!managerA,
+    enabled: !!managerA && !!rostersA,
   });
 
   const { data: pointsB } = useQuery({
-    queryKey: ["points-manager-b", managerB, phaseId, saisonId],
+    queryKey: ["points-manager-b", managerB, phaseId, saisonId, rostersB],
     queryFn: async () => {
-      if (!managerB) return null;
+      if (!managerB || !rostersB) return null;
+
+      const coureurIds = rostersB.map(r => r.coureur_id);
 
       let query = supabase
         .from("points_ledger")
-        .select("coureur_id, points, type_classement, course_id");
+        .select("coureur_id, points, type_classement, course_id")
+        .in("coureur_id", coureurIds);
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -154,13 +158,11 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
         }
       }
 
-      query = query.eq("manager_id", managerB);
-
       const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!managerB,
+    enabled: !!managerB && !!rostersB,
   });
 
   // 4. Récupérer les infos des coureurs
@@ -225,10 +227,11 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
       let query = supabase
         .from("race_results")
-        .select("id, coureur_id, course_id, type_classement")
-        .in("coureur_id", coureurIds)
-        .eq("position", 1)
-        .eq("statut", "finished");
+      .select("id, coureur_id, course_id, type_classement")
+      .in("coureur_id", coureurIds)
+      .eq("position", 1)
+      .eq("statut", "finished")
+      .eq("type_classement", "Etape");
 
       if (phaseId) {
         const { data: coursesInPhase } = await supabase
@@ -276,10 +279,11 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
       let query = supabase
         .from("race_results")
-        .select("id, coureur_id, course_id, type_classement")
-        .in("coureur_id", coureurIds)
-        .eq("position", 1)
-        .eq("statut", "finished");
+      .select("id, coureur_id, course_id, type_classement")
+      .in("coureur_id", coureurIds)
+      .eq("position", 1)
+      .eq("statut", "finished")
+      .eq("type_classement", "Etape");
 
       if (phaseId) {
         const { data: coursesInPhase } = await supabase
@@ -394,7 +398,6 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       { 
         key: "ETAPES", 
         label: "Courses par étapes", 
-        filterCourse: (c: any) => c.type_course === "Stages race",
         filterType: (typeClass: string) => typeClass === "Etape"
       },
       { key: "GC", label: "Classement Général", filterType: (typeClass: string) => typeClass === "General" },
@@ -410,18 +413,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       let ptsA = 0;
       let ptsB = 0;
 
-      if (cat.key === "ETAPES") {
-        // Pour les étapes, compter à la fois les courses par étapes ET les points d'étapes
-        ptsA = pointsA.filter(p => {
-          const course = coursesMap.get(p.course_id);
-          return (course && cat.filterCourse(course)) || (cat.filterType && cat.filterType(p.type_classement));
-        }).reduce((sum, p) => sum + (p.points || 0), 0);
-
-        ptsB = pointsB.filter(p => {
-          const course = coursesMap.get(p.course_id);
-          return (course && cat.filterCourse(course)) || (cat.filterType && cat.filterType(p.type_classement));
-        }).reduce((sum, p) => sum + (p.points || 0), 0);
-      } else if (cat.filterCourse) {
+      if (cat.filterCourse) {
         // Pour les autres catégories avec filterCourse (1J uniquement)
         ptsA = pointsA.filter(p => {
           const course = coursesMap.get(p.course_id);
@@ -685,8 +677,8 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
                       <PolarGrid />
                       <PolarAngleAxis dataKey="category" tick={{ fontSize: 11 }} />
                       <PolarRadiusAxis />
-                      <Radar name={managerAName} dataKey="managerA" stroke="hsl(var(--chart-1))" fill="hsl(var(--chart-1))" fillOpacity={0.6} />
-                      <Radar name={managerBName} dataKey="managerB" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2))" fillOpacity={0.6} />
+                  <Radar name={managerAName} dataKey="managerA" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+                  <Radar name={managerBName} dataKey="managerB" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} />
                       <Legend />
                       <Tooltip />
                     </RadarChart>
