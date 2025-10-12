@@ -347,6 +347,10 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         console.log('➕ Aucun résultat existant, création grille vide');
         // No existing results - create empty grid from scoring rules
         if (!scoringRules || scoringRules.length === 0) {
+          // No scoring rules and no results - set empty state and exit
+          setResultRows([]);
+          setGridPrepared(true);
+          setIsDirty(false);
           toast({
             title: "Barème introuvable",
             description: `Aucun barème défini pour ${course.categorie} / ${classementType}`,
@@ -917,6 +921,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                                 handleRiderChange(index, null, null, null);
                               }
                             }}
+                            placeholder={row.coureur_nom || "Sélectionner un coureur..."}
                             showTakenRiders={true}
                             disabled={isCancelled}
                           />

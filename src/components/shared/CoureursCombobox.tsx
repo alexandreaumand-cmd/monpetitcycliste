@@ -63,7 +63,7 @@ export const CoureursCombobox = ({
       if (error) return null;
       return data;
     },
-    enabled: !!value,
+    enabled: !!value && open,
   });
 
   // Fetch coureurs by search term
