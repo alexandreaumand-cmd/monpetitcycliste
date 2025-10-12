@@ -323,13 +323,11 @@ export const ResultsEntryStudioMobile = ({
         throw new Error("Aucun résultat à sauvegarder");
       }
 
-      const normalized = normalizeCourseType(course.type_course);
       const { data: serverScoringRules, error: rulesError } = await supabase
-        .from('scoring_rules')
-        .select('*')
-        .eq('categorie', course.categorie)
-        .eq('type_classement', currentClassement)
-        .eq('type', normalized.canonicalForRules)
+        .from('scoring_rules_norm')
+        .select('place, points')
+        .eq('cat_canon', course.categorie)
+        .eq('type_canon', currentClassement)
         .order('place');
 
       if (rulesError) throw rulesError;

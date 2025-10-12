@@ -86,14 +86,11 @@ export const ResultsEntryDrawer = ({
   const { data: scoringRules, isLoading: isLoadingRules, error: rulesError } = useQuery({
     queryKey: ['scoring-rules', sel_key],
     queryFn: async () => {
-      const normalized = normalizeCourseType(course.type_course);
-      
       const { data, error } = await supabase
-        .from('scoring_rules')
-        .select('*')
-        .eq('categorie', course.categorie)
-        .eq('type_classement', classementType)
-        .eq('type', normalized.canonicalForRules)
+        .from('scoring_rules_norm')
+        .select('place, points')
+        .eq('cat_canon', course.categorie)
+        .eq('type_canon', classementType)
         .order('place');
       
       if (error) throw error;
@@ -240,13 +237,11 @@ export const ResultsEntryDrawer = ({
       }
 
       // SERVER-SIDE: Reload scoring grid to recalculate points (source of truth)
-      const normalized = normalizeCourseType(course.type_course);
       const { data: serverScoringRules, error: rulesError } = await supabase
-        .from('scoring_rules')
-        .select('*')
-        .eq('categorie', course.categorie)
-        .eq('type_classement', classementType)
-        .eq('type', normalized.canonicalForRules)
+        .from('scoring_rules_norm')
+        .select('place, points')
+        .eq('cat_canon', course.categorie)
+        .eq('type_canon', classementType)
         .order('place');
 
       if (rulesError) throw rulesError;
