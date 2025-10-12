@@ -256,11 +256,11 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
       let query = supabase
         .from("race_results")
-        .select("id, coureur_id, course_id, type_classement")
-        .in("coureur_id", coureurIds)
-        .eq("position", 1)
-        .eq("statut", "finished")
-        .eq("type_classement", "Etape");
+      .select("id, coureur_id, course_id, type_classement")
+      .in("coureur_id", coureurIds)
+      .eq("position", 1)
+      .eq("statut", "finished")
+      .in("type_classement", ["Etape", "General"]);
 
       if (phaseId || saisonId) {
         // Only filter by courses if phase/season is specified
@@ -312,11 +312,11 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
       let query = supabase
         .from("race_results")
-        .select("id, coureur_id, course_id, type_classement")
-        .in("coureur_id", coureurIds)
-        .eq("position", 1)
-        .eq("statut", "finished")
-        .eq("type_classement", "Etape");
+      .select("id, coureur_id, course_id, type_classement")
+      .in("coureur_id", coureurIds)
+      .eq("position", 1)
+      .eq("statut", "finished")
+      .in("type_classement", ["Etape", "General"]);
 
       if (phaseId || saisonId) {
         // Only filter by courses if phase/season is specified
