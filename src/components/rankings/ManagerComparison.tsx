@@ -41,7 +41,8 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       
       let query = supabase
         .from("rosters")
-        .select("coureur_id, prix_signature");
+        .select("coureur_id, prix_signature, phase_id")
+        .eq("manager_id", managerA);
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -56,12 +57,24 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
           query = query.in("phase_id", phaseIds);
         }
       }
-
-      query = query.eq("manager_id", managerA);
+      // ELSE: No filter = all phases (global standings)
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      
+      // Aggregate by coureur_id (handle multi-phase rosters)
+      const aggregated = new Map<string, { coureur_id: string; prix_signature: number }>();
+      data?.forEach(r => {
+        if (!aggregated.has(r.coureur_id)) {
+          aggregated.set(r.coureur_id, { coureur_id: r.coureur_id, prix_signature: r.prix_signature });
+        } else {
+          // Sum prices if coureur appears in multiple phases
+          const existing = aggregated.get(r.coureur_id)!;
+          existing.prix_signature += r.prix_signature;
+        }
+      });
+      
+      return Array.from(aggregated.values());
     },
     enabled: !!managerA,
   });
@@ -73,7 +86,8 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       
       let query = supabase
         .from("rosters")
-        .select("coureur_id, prix_signature");
+        .select("coureur_id, prix_signature, phase_id")
+        .eq("manager_id", managerB);
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -88,12 +102,24 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
           query = query.in("phase_id", phaseIds);
         }
       }
-
-      query = query.eq("manager_id", managerB);
+      // ELSE: No filter = all phases (global standings)
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      
+      // Aggregate by coureur_id (handle multi-phase rosters)
+      const aggregated = new Map<string, { coureur_id: string; prix_signature: number }>();
+      data?.forEach(r => {
+        if (!aggregated.has(r.coureur_id)) {
+          aggregated.set(r.coureur_id, { coureur_id: r.coureur_id, prix_signature: r.prix_signature });
+        } else {
+          // Sum prices if coureur appears in multiple phases
+          const existing = aggregated.get(r.coureur_id)!;
+          existing.prix_signature += r.prix_signature;
+        }
+      });
+      
+      return Array.from(aggregated.values());
     },
     enabled: !!managerB,
   });
@@ -124,6 +150,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
           query = query.in("phase_id", phaseIds);
         }
       }
+      // ELSE: No filter = all phases (global standings)
 
       const { data, error } = await query;
       if (error) throw error;
@@ -157,6 +184,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
           query = query.in("phase_id", phaseIds);
         }
       }
+      // ELSE: No filter = all phases (global standings)
 
       const { data, error } = await query;
       if (error) throw error;
@@ -210,6 +238,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
           query = query.in("phase_id", phaseIds);
         }
       }
+      // ELSE: No filter = all courses (global standings)
 
       const { data, error } = await query;
       if (error) throw error;
@@ -227,41 +256,45 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
       let query = supabase
         .from("race_results")
-      .select("id, coureur_id, course_id, type_classement")
-      .in("coureur_id", coureurIds)
-      .eq("position", 1)
-      .eq("statut", "finished")
-      .eq("type_classement", "Etape");
+        .select("id, coureur_id, course_id, type_classement")
+        .in("coureur_id", coureurIds)
+        .eq("position", 1)
+        .eq("statut", "finished")
+        .eq("type_classement", "Etape");
 
-      if (phaseId) {
-        const { data: coursesInPhase } = await supabase
-          .from("courses")
-          .select("id")
-          .eq("phase_id", phaseId);
-        
-        if (coursesInPhase) {
-          const courseIds = coursesInPhase.map(c => c.id);
-          query = query.in("course_id", courseIds);
-        }
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          const phaseIds = phases.map(p => p.id);
-          const { data: coursesInSaison } = await supabase
+      if (phaseId || saisonId) {
+        // Only filter by courses if phase/season is specified
+        if (phaseId) {
+          const { data: coursesInPhase } = await supabase
             .from("courses")
             .select("id")
-            .in("phase_id", phaseIds);
+            .eq("phase_id", phaseId);
           
-          if (coursesInSaison) {
-            const courseIds = coursesInSaison.map(c => c.id);
+          if (coursesInPhase) {
+            const courseIds = coursesInPhase.map(c => c.id);
             query = query.in("course_id", courseIds);
+          }
+        } else if (saisonId) {
+          const { data: phases } = await supabase
+            .from("phases")
+            .select("id")
+            .eq("saison_id", saisonId);
+          
+          if (phases) {
+            const phaseIds = phases.map(p => p.id);
+            const { data: coursesInSaison } = await supabase
+              .from("courses")
+              .select("id")
+              .in("phase_id", phaseIds);
+            
+            if (coursesInSaison) {
+              const courseIds = coursesInSaison.map(c => c.id);
+              query = query.in("course_id", courseIds);
+            }
           }
         }
       }
+      // ELSE: No filter = all courses (global standings)
 
       const { data, error } = await query;
       if (error) throw error;
@@ -279,41 +312,45 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
       let query = supabase
         .from("race_results")
-      .select("id, coureur_id, course_id, type_classement")
-      .in("coureur_id", coureurIds)
-      .eq("position", 1)
-      .eq("statut", "finished")
-      .eq("type_classement", "Etape");
+        .select("id, coureur_id, course_id, type_classement")
+        .in("coureur_id", coureurIds)
+        .eq("position", 1)
+        .eq("statut", "finished")
+        .eq("type_classement", "Etape");
 
-      if (phaseId) {
-        const { data: coursesInPhase } = await supabase
-          .from("courses")
-          .select("id")
-          .eq("phase_id", phaseId);
-        
-        if (coursesInPhase) {
-          const courseIds = coursesInPhase.map(c => c.id);
-          query = query.in("course_id", courseIds);
-        }
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          const phaseIds = phases.map(p => p.id);
-          const { data: coursesInSaison } = await supabase
+      if (phaseId || saisonId) {
+        // Only filter by courses if phase/season is specified
+        if (phaseId) {
+          const { data: coursesInPhase } = await supabase
             .from("courses")
             .select("id")
-            .in("phase_id", phaseIds);
+            .eq("phase_id", phaseId);
           
-          if (coursesInSaison) {
-            const courseIds = coursesInSaison.map(c => c.id);
+          if (coursesInPhase) {
+            const courseIds = coursesInPhase.map(c => c.id);
             query = query.in("course_id", courseIds);
+          }
+        } else if (saisonId) {
+          const { data: phases } = await supabase
+            .from("phases")
+            .select("id")
+            .eq("saison_id", saisonId);
+          
+          if (phases) {
+            const phaseIds = phases.map(p => p.id);
+            const { data: coursesInSaison } = await supabase
+              .from("courses")
+              .select("id")
+              .in("phase_id", phaseIds);
+            
+            if (coursesInSaison) {
+              const courseIds = coursesInSaison.map(c => c.id);
+              query = query.in("course_id", courseIds);
+            }
           }
         }
       }
+      // ELSE: No filter = all courses (global standings)
 
       const { data, error } = await query;
       if (error) throw error;
