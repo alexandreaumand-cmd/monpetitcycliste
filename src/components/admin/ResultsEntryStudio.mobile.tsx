@@ -987,7 +987,7 @@ export const ResultsEntryStudioMobile = ({
       </ScrollArea>
 
       {/* Sticky bottom */}
-      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t p-4 safe-bottom shadow-lg">
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t p-4 safe-bottom shadow-lg z-[60]">
         {lastSaved && (
           <div className="text-xs text-center text-muted-foreground mb-2">
             Dernière sauvegarde: {lastSaved.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
