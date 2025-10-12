@@ -28,6 +28,10 @@ Deno.serve(async (req) => {
         route_image_url,
         startlisteur_note,
         admin_rating_note,
+        created_by_manager_id,
+        managers(
+          nom
+        ),
         courses!inner(
           id,
           nom,
@@ -286,6 +290,8 @@ Deno.serve(async (req) => {
         return a.manager_nom.localeCompare(b.manager_nom);
       });
 
+    const managerAuthor = Array.isArray(startlist.managers) ? startlist.managers[0] : startlist.managers;
+    
     const result = {
       race: {
         id: race.id,
@@ -297,6 +303,7 @@ Deno.serve(async (req) => {
       route_image_url: startlist.route_image_url || null,
       startlisteur_note: startlist.startlisteur_note || null,
       admin_rating_note: startlist.admin_rating_note || null,
+      admin_rating_author: managerAuthor?.nom || null,
       managers,
       scoring: {
         categorie: race.categorie,
