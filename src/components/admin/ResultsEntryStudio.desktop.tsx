@@ -399,7 +399,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       setGridPrepared(true);
       setIsDirty(false);
     }
-  }, [sel_key, course, classementType, etapeNumero, activeTab, currentStage, currentFinalClassement, scoringRules, isOneDay, gridPrepared, currentRequestId]);
+  }, [sel_key, course, classementType, etapeNumero, activeTab, currentStage, currentFinalClassement, scoringRules, isOneDay, currentRequestId]);
 
   // Auto-prepare grid when scoring rules are loaded
   useEffect(() => {
