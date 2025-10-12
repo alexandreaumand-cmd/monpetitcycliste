@@ -179,8 +179,9 @@ Deno.serve(async (req) => {
 
     // Get scoring rules for this race category
     const { data: scoringRules } = await supabase
-      .from('scoring_rules')
+      .from('scoring_rules_saisons')
       .select('type_classement, place, points')
+      .eq('saison_id', saisonId)
       .eq('categorie', race.categorie)
       .order('type_classement')
       .order('place');

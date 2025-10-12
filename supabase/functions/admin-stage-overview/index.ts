@@ -43,12 +43,26 @@ Deno.serve(async (req) => {
     // Get course info
     const { data: course, error: courseError } = await supabase
       .from('courses')
-      .select('id, nom, categorie, type_course')
+      .select('id, nom, categorie, type_course, phase_id')
       .eq('id', course_id)
       .single();
 
     if (courseError || !course) {
       return new Response(JSON.stringify({ error: 'Course not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Get saison_id from phase
+    const { data: phaseData } = await supabase
+      .from('phases')
+      .select('saison_id')
+      .eq('id', course.phase_id)
+      .single();
+
+    if (!phaseData) {
+      return new Response(JSON.stringify({ error: 'Phase not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -77,8 +91,9 @@ Deno.serve(async (req) => {
 
     // Calculate required top positions for GC based on scoring rules
     const { data: gcRules } = await supabase
-      .from('scoring_rules')
+      .from('scoring_rules_saisons')
       .select('place')
+      .eq('saison_id', phaseData.saison_id)
       .eq('categorie', course.categorie)
       .eq('type_classement', 'General')
       .order('place', { ascending: false })
@@ -88,8 +103,9 @@ Deno.serve(async (req) => {
 
     // Get required jerseys from scoring rules
     const { data: jerseyRules } = await supabase
-      .from('scoring_rules')
+      .from('scoring_rules_saisons')
       .select('type_classement')
+      .eq('saison_id', phaseData.saison_id)
       .eq('categorie', course.categorie)
       .in('type_classement', ['General', 'Points', 'Montagne', 'Jeune']);
 

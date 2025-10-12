@@ -54,6 +54,20 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Get saison_id from phase
+    const { data: phaseData } = await supabase
+      .from('phases')
+      .select('saison_id')
+      .eq('id', course.phase_id)
+      .single();
+
+    if (!phaseData) {
+      return new Response(JSON.stringify({ error: 'Phase not found for course' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Determine nb_etapes from race_results
     const { data: stagesData } = await supabase
       .from('race_results')
@@ -153,10 +167,11 @@ Deno.serve(async (req) => {
       result.is_stage_complete = hasTop10 && hasLeaders;
 
     } else if (context === 'General') {
-      // Determine required_top from scoring_rules
+      // Determine required_top from scoring_rules_saisons
       const { data: gcRules } = await supabase
-        .from('scoring_rules')
+        .from('scoring_rules_saisons')
         .select('place')
+        .eq('saison_id', phaseData.saison_id)
         .eq('categorie', course.categorie)
         .eq('type_classement', 'General')
         .order('place', { ascending: false })
