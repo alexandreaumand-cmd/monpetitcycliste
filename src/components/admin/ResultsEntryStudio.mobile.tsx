@@ -563,7 +563,20 @@ export const ResultsEntryStudioMobile = ({
               </p>
             )}
           </div>
-          <div className="w-10" /> {/* Spacer to balance the close button */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => saveMutation.mutate()}
+            disabled={saveMutation.isPending}
+            className="relative"
+          >
+            <Save className="h-5 w-5" />
+            {saveMutation.isPending && (
+              <span className="absolute inset-0 flex items-center justify-center">
+                <span className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+              </span>
+            )}
+          </Button>
         </div>
 
         {/* Stage navigator */}
