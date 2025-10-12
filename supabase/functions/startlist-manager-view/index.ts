@@ -25,14 +25,11 @@ Deno.serve(async (req) => {
       .select(`
         id,
         race_id,
-        route_image_url,
-        startlisteur_note,
-        admin_rating_note,
-        created_by_manager_id,
-        managers(
-          nom
-        ),
-        courses!inner(
+      route_image_url,
+      startlisteur_note,
+      admin_rating_note,
+      created_by_manager_id,
+      courses!inner(
           id,
           nom,
           date_debut,
@@ -49,6 +46,18 @@ Deno.serve(async (req) => {
 
     if (startlistError || !startlist) {
       throw new Error('Startlist not found');
+    }
+
+    // Fetch manager author name separately if created_by_manager_id exists
+    let managerAuthorName = null;
+    if (startlist.created_by_manager_id) {
+      const { data: managerData } = await supabase
+        .from('managers')
+        .select('nom')
+        .eq('id', startlist.created_by_manager_id)
+        .single();
+      
+      managerAuthorName = managerData?.nom || null;
     }
 
     const race = Array.isArray(startlist.courses) ? startlist.courses[0] : startlist.courses;
@@ -287,10 +296,8 @@ Deno.serve(async (req) => {
         // If same rating or both null, sort by starters_count
         if (a.starters_count !== b.starters_count) return b.starters_count - a.starters_count;
         // If same starters_count, sort by name
-        return a.manager_nom.localeCompare(b.manager_nom);
-      });
-
-    const managerAuthor = Array.isArray(startlist.managers) ? startlist.managers[0] : startlist.managers;
+      return a.manager_nom.localeCompare(b.manager_nom);
+    });
     
     const result = {
       race: {
@@ -303,7 +310,7 @@ Deno.serve(async (req) => {
       route_image_url: startlist.route_image_url || null,
       startlisteur_note: startlist.startlisteur_note || null,
       admin_rating_note: startlist.admin_rating_note || null,
-      admin_rating_author: managerAuthor?.nom || null,
+      admin_rating_author: managerAuthorName,
       managers,
       scoring: {
         categorie: race.categorie,
