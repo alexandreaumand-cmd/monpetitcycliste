@@ -87,6 +87,23 @@ function parseCSVLine(line: string, separator: string = ','): string[] {
   return result
 }
 
+// Helper to get value from object with multiple possible key variants
+function getVal(obj: Record<string, string>, ...aliases: string[]): string | undefined {
+  for (const alias of aliases) {
+    // Try exact match first
+    if (obj[alias] !== undefined && obj[alias] !== '') return obj[alias];
+    
+    // Try normalized version (lowercase, underscores)
+    const normalized = alias.toLowerCase().trim().replace(/\s+/g, '_');
+    if (obj[normalized] !== undefined && obj[normalized] !== '') return obj[normalized];
+    
+    // Try without accents
+    const noAccents = alias.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/\s+/g, '_');
+    if (obj[noAccents] !== undefined && obj[noAccents] !== '') return obj[noAccents];
+  }
+  return undefined;
+}
+
 function mapToTableFormat(
   table: string,
   headers: string[],
@@ -109,16 +126,29 @@ function mapToTableFormat(
       }
     
     case 'scoring_rules':
-      const typeClassement = normalizeTypeClassement(obj['Type classement']);
-      if (!typeClassement) return null; // Skip invalid rows
+      const rawTypeClassement = getVal(obj, 'type_classement', 'Type classement', 'type classement');
+      const typeClassement = normalizeTypeClassement(rawTypeClassement || '');
+      if (!typeClassement) {
+        console.log(`⚠️ Skipping row - invalid type_classement: "${rawTypeClassement}"`);
+        return null;
+      }
+      
+      const categorie = getVal(obj, 'catégorie', 'Catégorie', 'categorie', 'category') || '';
+      const placeStr = getVal(obj, 'place', 'Place', 'rang');
+      const pointsStr = getVal(obj, 'points', 'Points', 'pts');
+      const typeCourse = getVal(obj, 'type', 'Type');
+      const idStr = getVal(obj, 'id', 'Id', 'ID');
+      
+      const place = parseInt(placeStr || '0') || 0;
+      const points = Math.floor(parseFloat(pointsStr || '0') || 0);
       
       return {
-        id: obj['id'] || `${obj['Catégorie']}_${typeClassement}_${obj['Place']}`.toLowerCase().replace(/\s+/g, '_'),
-        categorie: obj['Catégorie'],
+        id: idStr || `${categorie}_${typeClassement}_${place}`.toLowerCase().replace(/\s+/g, '_'),
+        categorie: categorie,
         type_classement: typeClassement,
-        place: parseInt(obj['Place']) || 0,
-        points: Math.floor(parseFloat(obj['Points']) || 0),
-        type: obj['Type'] || null
+        place: place,
+        points: points,
+        type: typeCourse || null
       }
     
     case 'courses':
@@ -190,8 +220,10 @@ function sanitizeId(name: string): string {
 }
 
 function normalizeTypeClassement(type: string): string | null {
-  if (!type) return null; // Handle undefined/null values
+  if (!type) return null;
   const lowerType = type.toLowerCase();
+  
+  console.log(`🔍 Normalizing type_classement: "${type}" → "${lowerType}"`);
   
   // Map to allowed enum values: General, Etape, Points, Montagne, Jeune
   if (lowerType.includes('général') || lowerType.includes('general')) return 'General';
@@ -199,9 +231,10 @@ function normalizeTypeClassement(type: string): string | null {
   if (lowerType.includes('vert') || lowerType.includes('points')) return 'Points';
   if (lowerType.includes('montagne') || lowerType.includes('kom')) return 'Montagne';
   if (lowerType.includes('jeune') || lowerType.includes('youth')) return 'Jeune';
-  if (lowerType.includes('combatif') || lowerType.includes('combativity')) return null; // Ignore combativity
+  if (lowerType.includes('combatif') || lowerType.includes('combativity')) return null;
   
-  return null; // Unknown type, skip
+  console.warn(`⚠️ Type non reconnu: "${type}"`);
+  return null;
 }
 
 function normalizeName(name: string): string {
@@ -868,6 +901,17 @@ Deno.serve(async (req) => {
       }
     } else if (table === 'scoring_rules') {
       // Import scoring_rules with season historization
+      console.log(`📋 Processing ${lines.length - 1} scoring_rules rows...`);
+      
+      // Debug: log first 2 mapped rows
+      const testRows: any[] = [];
+      for (let i = 1; i <= Math.min(3, lines.length - 1); i++) {
+        const values = parseCSVLine(lines[i], separator);
+        const testRecord = mapToTableFormat(table, headers, values);
+        testRows.push({ line: i, record: testRecord });
+      }
+      console.log('📋 First rows mapped:', JSON.stringify(testRows, null, 2));
+      
       for (let i = 1; i < lines.length; i++) {
         const values = parseCSVLine(lines[i], separator)
         
@@ -918,6 +962,8 @@ Deno.serve(async (req) => {
           errors++
         }
       }
+      
+      console.log(`✅ Imported ${imported} scoring_rules, ${errors} errors`);
     } else {
       // For other tables (managers)
       for (let i = 1; i < lines.length; i++) {
