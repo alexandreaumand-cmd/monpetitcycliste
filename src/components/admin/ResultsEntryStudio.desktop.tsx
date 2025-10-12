@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle } from "lucide-react";
+import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
@@ -66,6 +66,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const [isDirty, setIsDirty] = useState(false);
   const requestIdRef = useRef(0);
   const [currentRequestId, setCurrentRequestId] = useState(0);
+  const [isLoadingGrid, setIsLoadingGrid] = useState(false);
   const [jerseyHolders, setJerseyHolders] = useState<JerseyHolders>({
     general: null,
     vert: null,
@@ -173,8 +174,8 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       }
       return Array.from(map.values());
     },
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes - scoring rules rarely change
+    gcTime: 10 * 60 * 1000,   // 10 minutes in cache
   });
 
   // Reset state when sel_key changes
@@ -206,52 +207,74 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     console.log('🔧 handlePrepareGrid called', { sel_key, classementType, etapeNumero });
     const newRequestId = ++requestIdRef.current;
     setCurrentRequestId(newRequestId);
+    setIsLoadingGrid(true);
 
     let rows: ResultRow[] = [];
 
-    // ALWAYS try to load existing results first (both for 'edit' and 'create' modes)
     try {
-      console.log('🛰️ Fetching results-course-rows', {
-        course_id: course.course_id,
-        type_classement: classementType,
-        etape_numero: etapeNumero
-      });
-      
-      const { data: existingData, error: loadError } = await supabase.functions.invoke('results-course-rows', {
-        body: {
-          course_id: course.course_id,
-          type_classement: classementType,
-          etape_numero: etapeNumero
-        }
-      });
+      console.log('🛰️ Starting parallel queries');
+      const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
 
-      if (loadError) throw loadError;
+      // Parallelize ALL queries using Promise.all
+      const [existingData, resultSetData, jerseyDataArray, combatifData] = await Promise.all([
+        // 1. Load existing results
+        supabase.functions.invoke('results-course-rows', {
+          body: {
+            course_id: course.course_id,
+            type_classement: classementType,
+            etape_numero: etapeNumero
+          }
+        }),
+        
+        // 2. Load cancellation status
+        supabase
+          .from('race_result_sets')
+          .select('is_cancelled')
+          .eq('course_id', course.course_id)
+          .eq('type_classement', classementType)
+          .eq('etape_numero', etapeNumeroValue)
+          .maybeSingle(),
+        
+        // 3. Load ALL jersey holders in one query (if needed)
+        !isOneDay && activeTab === "stages" && etapeNumero
+          ? supabase
+              .from('race_results')
+              .select('coureur_id, type_classement')
+              .eq('course_id', course.course_id)
+              .in('type_classement', ['Porteur Général', 'Porteur Vert', 'Porteur Montagne', 'Porteur Jeune', 'Porteur Combattif'])
+              .eq('etape_numero', currentStage)
+              .eq('position', 1)
+              .gte('date_classement', course.date_debut)
+              .lte('date_classement', course.date_fin)
+          : Promise.resolve({ data: [] }),
+        
+        // 4. Load Combatif winner (if needed)
+        !isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT'
+          ? supabase
+              .from('race_results')
+              .select('coureur_id')
+              .eq('course_id', course.course_id)
+              .eq('type_classement', 'Combatif')
+              .is('etape_numero', null)
+              .eq('position', 1)
+              .gte('date_classement', course.date_debut)
+              .lte('date_classement', course.date_fin)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
 
-      const existingResults = existingData?.rows || [];
+      console.log('✅ All parallel queries completed');
+
+      if (existingData.error) throw existingData.error;
+
+      const existingResults = existingData.data?.rows || [];
       console.log('📊 Résultats existants chargés:', existingResults.length);
 
-      // Load cancellation status from race_result_sets
-      const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
-      const { data: resultSetData } = await supabase
-        .from('race_result_sets')
-        .select('is_cancelled')
-        .eq('course_id', course.course_id)
-        .eq('type_classement', classementType)
-        .eq('etape_numero', etapeNumeroValue)
-        .maybeSingle();
+      // Set cancellation status
+      setIsCancelled(resultSetData?.data?.is_cancelled || false);
 
-      setIsCancelled(resultSetData?.is_cancelled || false);
-
-      // Load jersey holders if on stage race + stages tab
+      // Map jersey holders from single query
       if (!isOneDay && activeTab === "stages" && etapeNumero) {
-        const jerseyTypes: Array<{ type: ClassementType; key: JerseyType }> = [
-          { type: 'Porteur Général', key: 'general' },
-          { type: 'Porteur Vert', key: 'vert' },
-          { type: 'Porteur Montagne', key: 'montagne' },
-          { type: 'Porteur Jeune', key: 'jeune' },
-          { type: 'Porteur Combattif', key: 'combattif' },
-        ];
-
         const newJerseyHolders: JerseyHolders = {
           general: null,
           vert: null,
@@ -260,41 +283,19 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           combattif: null,
         };
 
-        for (const { type, key } of jerseyTypes) {
-          const { data: jerseyData } = await supabase
-            .from('race_results')
-            .select('coureur_id')
-            .eq('course_id', course.course_id)
-            .eq('type_classement', type)
-            .eq('etape_numero', currentStage)
-            .eq('position', 1)
-            .gte('date_classement', course.date_debut)
-            .lte('date_classement', course.date_fin)
-            .maybeSingle();
-
-          if (jerseyData?.coureur_id) {
-            newJerseyHolders[key] = jerseyData.coureur_id;
-          }
-        }
+        jerseyDataArray?.data?.forEach((j: any) => {
+          if (j.type_classement === 'Porteur Général') newJerseyHolders.general = j.coureur_id;
+          if (j.type_classement === 'Porteur Vert') newJerseyHolders.vert = j.coureur_id;
+          if (j.type_classement === 'Porteur Montagne') newJerseyHolders.montagne = j.coureur_id;
+          if (j.type_classement === 'Porteur Jeune') newJerseyHolders.jeune = j.coureur_id;
+          if (j.type_classement === 'Porteur Combattif') newJerseyHolders.combattif = j.coureur_id;
+        });
 
         setJerseyHolders(newJerseyHolders);
       }
 
-      // Load Combatif winner if on finals tab for WT GT
-      if (!isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT') {
-        const { data: combatifData } = await supabase
-          .from('race_results')
-          .select('coureur_id')
-          .eq('course_id', course.course_id)
-          .eq('type_classement', 'Combatif')
-          .is('etape_numero', null)
-          .eq('position', 1)
-          .gte('date_classement', course.date_debut)
-          .lte('date_classement', course.date_fin)
-          .maybeSingle();
-
-        setCombatifWinner(combatifData?.coureur_id || null);
-      }
+      // Set combatif winner
+      setCombatifWinner(combatifData?.data?.coureur_id || null);
 
       console.log('🔄 Chargement des résultats:', {
         courseId: course.course_id,
@@ -351,6 +352,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
             description: `Aucun barème défini pour ${course.categorie} / ${classementType}`,
             variant: "destructive",
           });
+          setIsLoadingGrid(false);
           return;
         }
 
@@ -369,49 +371,31 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           };
         });
       }
-    } catch (err: any) {
-      console.error('Error loading results:', err);
-      
-      // Fallback: try to create empty grid from scoring rules
-      if (scoringRules && scoringRules.length > 0) {
-        const maxPlace = Math.max(...scoringRules.map((r) => r.place));
-        rows = Array.from({ length: maxPlace }, (_, i) => {
-          const position = i + 1;
-          const rule = scoringRules.find((r) => r.place === position);
-          return {
-            position,
-            coureur_id: null,
-            coureur_nom: null,
-            manager_nom: null,
-            statut: "finished" as ResultStatut,
-            points: rule?.points || 0,
-            grid_version: sel_key,
-          };
-        });
-      } else {
-        toast({
-          title: "Erreur",
-          description: err.message || "Impossible de charger les résultats",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
 
-    console.log('📝 Grille finale créée:', rows.length, 'lignes');
-    if (newRequestId === currentRequestId || newRequestId > currentRequestId) {
-      setResultRows(rows);
-      setGridPrepared(true);
-      setIsDirty(false);
+      console.log('📝 Grille finale créée:', rows.length, 'lignes');
+      if (newRequestId === currentRequestId || newRequestId > currentRequestId) {
+        setResultRows(rows);
+        setGridPrepared(true);
+        setIsDirty(false);
+      }
+    } catch (err: any) {
+      console.error('Error in handlePrepareGrid:', err);
+      toast({
+        title: "Erreur",
+        description: err.message || "Impossible de charger les résultats",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingGrid(false);
     }
-  }, [sel_key, course, classementType, etapeNumero, activeTab, currentStage, currentFinalClassement, scoringRules, isOneDay, currentRequestId]);
+  }, [sel_key, scoringRules, isOneDay]);
 
   // Auto-prepare grid regardless of scoring rules
   useEffect(() => {
     if (!gridPrepared) {
       handlePrepareGrid();
     }
-  }, [sel_key, scoringRules, gridPrepared, handlePrepareGrid]);
+  }, [sel_key, gridPrepared, handlePrepareGrid]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -897,8 +881,16 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
             </Alert>
           )}
 
+          {/* Loading Indicator */}
+          {isLoadingGrid && (
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="h-6 w-6 animate-spin mr-3 text-primary" />
+              <span className="text-sm text-muted-foreground">Chargement de la grille...</span>
+            </div>
+          )}
+
           {/* Results Table */}
-          {gridPrepared && (
+          {!isLoadingGrid && gridPrepared && (
             <div key={sel_key} className="border rounded-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
