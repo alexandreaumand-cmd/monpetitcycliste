@@ -166,7 +166,12 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         return [];
       }
 
-      return rulesData || [];
+      // De-duplicate scoring rules by place
+      const map = new Map();
+      for (const r of rulesData || []) {
+        if (!map.has(r.place)) map.set(r.place, r);
+      }
+      return Array.from(map.values());
     },
     staleTime: 0,
     gcTime: 0,
@@ -401,12 +406,12 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     }
   }, [sel_key, course, classementType, etapeNumero, activeTab, currentStage, currentFinalClassement, scoringRules, isOneDay, currentRequestId]);
 
-  // Auto-prepare grid when scoring rules are loaded
+  // Auto-prepare grid regardless of scoring rules
   useEffect(() => {
-    if (scoringRules && scoringRules.length > 0 && !gridPrepared) {
+    if (!gridPrepared) {
       handlePrepareGrid();
     }
-  }, [scoringRules, gridPrepared, handlePrepareGrid]);
+  }, [sel_key, scoringRules, gridPrepared, handlePrepareGrid]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -877,10 +882,17 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           )}
 
           {/* Scoring Info */}
-          {scoringRules && scoringRules.length === 0 && (
+          {scoringRules && scoringRules.length === 0 && gridPrepared && resultRows.length === 0 && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
                 Aucun barème trouvé pour {course.categorie} / {classementType}
+              </AlertDescription>
+            </Alert>
+          )}
+          {scoringRules && scoringRules.length === 0 && gridPrepared && resultRows.length > 0 && (
+            <Alert className="mb-4">
+              <AlertDescription>
+                Barème introuvable — résultats affichés (points = 0).
               </AlertDescription>
             </Alert>
           )}
