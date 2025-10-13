@@ -22,6 +22,6 @@ export const getJerseyLabel = (typeClassement: string): string => {
   if (typeClassement.includes("Vert") || typeClassement.includes("Points")) return "Vert";
   if (typeClassement.includes("Montagne") || typeClassement.includes("Mont")) return "Montagne";
   if (typeClassement.includes("Jeune")) return "Jeune";
-  if (typeClassement.includes("Combatif")) return "Combattivité";
+  if (typeClassement.includes("Combatif")) return "Combativité";
   return typeClassement;
 };

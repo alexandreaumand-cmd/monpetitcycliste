@@ -21,7 +21,7 @@ const JERSEY_CONFIG = [
   { type: 'vert' as JerseyType, icon: '🟢', label: 'Vert' },
   { type: 'montagne' as JerseyType, icon: '🔴', label: 'Pois' },
   { type: 'jeune' as JerseyType, icon: '⚪', label: 'Blanc' },
-  { type: 'combattif' as JerseyType, icon: '🔵', label: 'Combattivité' },
+  { type: 'combattif' as JerseyType, icon: '🔵', label: 'Combativité' },
 ];
 
 export const JerseyHoldersInput = ({ phaseId, jerseyHolders, onChange }: JerseyHoldersInputProps) => {
