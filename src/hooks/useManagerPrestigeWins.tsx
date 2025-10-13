@@ -5,8 +5,12 @@ export type ManagerPrestige = {
   hasTourDeFrance: boolean;
   hasGiro: boolean;
   hasVuelta: boolean;
-  hasMonument: boolean;
-  hasWorldChamp: boolean;
+  monuments: string[];
+  worldChampionships: {
+    hasRR: boolean;
+    hasITT: boolean;
+    names: string[];
+  };
 };
 
 export const useManagerPrestigeWins = (phaseId?: string | null, saisonId?: string | null) => {

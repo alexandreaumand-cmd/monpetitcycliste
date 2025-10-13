@@ -17,18 +17,29 @@ export const ManagerPrestigeIcons = ({ managerId, phaseId, saisonId }: ManagerPr
     prestige.hasTourDeFrance || 
     prestige.hasGiro || 
     prestige.hasVuelta || 
-    prestige.hasMonument || 
-    prestige.hasWorldChamp;
+    prestige.monuments.length > 0 || 
+    (prestige.worldChampionships.hasRR || prestige.worldChampionships.hasITT);
 
   if (!hasAnyPrestige) return null;
 
+  const getWorldChampTooltip = () => {
+    if (prestige.worldChampionships.hasRR && prestige.worldChampionships.hasITT) {
+      return "Champion du Monde - Course en ligne & Contre-la-montre";
+    } else if (prestige.worldChampionships.hasRR) {
+      return "Champion du Monde - Course en ligne";
+    } else if (prestige.worldChampionships.hasITT) {
+      return "Champion du Monde - Contre-la-montre";
+    }
+    return "Champion du Monde";
+  };
+
   return (
     <TooltipProvider>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5 text-sm opacity-70">
         {prestige.hasTourDeFrance && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-lg cursor-help">🇫🇷</span>
+              <span className="cursor-help">🇫🇷</span>
             </TooltipTrigger>
             <TooltipContent>
               <p>Vainqueur du Tour de France</p>
@@ -39,7 +50,7 @@ export const ManagerPrestigeIcons = ({ managerId, phaseId, saisonId }: ManagerPr
         {prestige.hasGiro && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-lg cursor-help">🇮🇹</span>
+              <span className="cursor-help">🇮🇹</span>
             </TooltipTrigger>
             <TooltipContent>
               <p>Vainqueur du Giro d'Italia</p>
@@ -50,7 +61,7 @@ export const ManagerPrestigeIcons = ({ managerId, phaseId, saisonId }: ManagerPr
         {prestige.hasVuelta && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-lg cursor-help">🇪🇸</span>
+              <span className="cursor-help">🇪🇸</span>
             </TooltipTrigger>
             <TooltipContent>
               <p>Vainqueur de la Vuelta a España</p>
@@ -58,24 +69,28 @@ export const ManagerPrestigeIcons = ({ managerId, phaseId, saisonId }: ManagerPr
           </Tooltip>
         )}
         
-        {prestige.hasMonument && (
+        {prestige.monuments.length > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-lg cursor-help">🏛️</span>
+              <span className="flex gap-0.5 cursor-help">
+                {prestige.monuments.map((monument, idx) => (
+                  <span key={idx}>🏛️</span>
+                ))}
+              </span>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Vainqueur d'un Monument</p>
+              <p>Monument(s) : {prestige.monuments.join(', ')}</p>
             </TooltipContent>
           </Tooltip>
         )}
         
-        {prestige.hasWorldChamp && (
+        {(prestige.worldChampionships.hasRR || prestige.worldChampionships.hasITT) && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-lg cursor-help">🌈</span>
+              <span className="cursor-help">🌈</span>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Champion du Monde</p>
+              <p>{getWorldChampTooltip()}</p>
             </TooltipContent>
           </Tooltip>
         )}

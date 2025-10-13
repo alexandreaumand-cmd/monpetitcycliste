@@ -51,6 +51,8 @@ Deno.serve(async (req) => {
       .eq('position', 1)
       .eq('statut', 'finished')
       .eq('type_classement', 'General');
+    
+    console.log('Race results found:', resultsData?.length);
 
     if (resultsError) {
       console.error('Error fetching results:', resultsError);
@@ -104,8 +106,12 @@ Deno.serve(async (req) => {
       hasTourDeFrance: boolean;
       hasGiro: boolean;
       hasVuelta: boolean;
-      hasMonument: boolean;
-      hasWorldChamp: boolean;
+      monuments: string[];
+      worldChampionships: {
+        hasRR: boolean;
+        hasITT: boolean;
+        names: string[];
+      };
     }>();
 
     pointsData?.forEach(point => {
@@ -122,8 +128,12 @@ Deno.serve(async (req) => {
           hasTourDeFrance: false,
           hasGiro: false,
           hasVuelta: false,
-          hasMonument: false,
-          hasWorldChamp: false,
+          monuments: [],
+          worldChampionships: {
+            hasRR: false,
+            hasITT: false,
+            names: [],
+          },
         });
       }
 
@@ -140,14 +150,24 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Monuments
+      // Monuments - store each monument name
       if (course.categorie === 'WT Monument') {
-        prestige.hasMonument = true;
+        if (!prestige.monuments.includes(course.nom)) {
+          prestige.monuments.push(course.nom);
+        }
       }
 
-      // World Championships
-      if (course.categorie === 'WC RR' || course.categorie === 'WC ITT') {
-        prestige.hasWorldChamp = true;
+      // World Championships - distinguish RR and ITT
+      if (course.categorie === 'WC RR') {
+        prestige.worldChampionships.hasRR = true;
+        if (!prestige.worldChampionships.names.includes(course.nom)) {
+          prestige.worldChampionships.names.push(course.nom);
+        }
+      } else if (course.categorie === 'WC ITT') {
+        prestige.worldChampionships.hasITT = true;
+        if (!prestige.worldChampionships.names.includes(course.nom)) {
+          prestige.worldChampionships.names.push(course.nom);
+        }
       }
     });
 
