@@ -1003,7 +1003,11 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       <ExportResultsImage
         course={course}
         currentStage={currentStage}
-        currentClassement={activeTab === "stages" ? "Etape" : currentFinalClassement}
+        currentClassement={
+          course.type_course === "One day" 
+            ? "General"
+            : (activeTab === "stages" ? "Etape" : currentFinalClassement)
+        }
         open={exportDialogOpen}
         onOpenChange={setExportDialogOpen}
       />
