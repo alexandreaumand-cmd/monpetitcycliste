@@ -9,6 +9,7 @@ import {
 } from "@/components/mobile";
 import { RiderPointsDetail } from "./RiderPointsDetail";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -18,8 +19,16 @@ import {
   User,
   DollarSign,
   Shirt,
+  Star,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 
@@ -71,6 +80,11 @@ export const MyTeamMobile = () => {
     bonus_points: 0, 
     total_with_bonus: 0 
   });
+  
+  // Bonus rider state
+  const [bonusRiderSelection, setBonusRiderSelection] = useState<{ coureur_id: string; coureur_nom: string } | null>(null);
+  const [hasSelectedBonusRider, setHasSelectedBonusRider] = useState(false);
+  const [showBonusRiderDialog, setShowBonusRiderDialog] = useState(false);
   
   // Get manager sponsor for jersey display
   const displayedManagerId = selectedManagerId || currentUserId;
@@ -189,6 +203,13 @@ export const MyTeamMobile = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
+      // Déterminer le manager ID à utiliser
+      const targetManagerId = selectedManagerId || (await supabase
+        .from('managers')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .single()).data?.id;
+
       const { data, error } = await supabase.functions.invoke("manager-my-team", {
         body: { 
           phase_id: selectedPhaseId,
@@ -202,10 +223,67 @@ export const MyTeamMobile = () => {
       if (error) throw error;
       setCoureurs(data.coureurs || []);
       setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, total_with_bonus: 0 });
+
+      // Charger le coureur bonus sélectionné (s'il existe)
+      if (targetManagerId && selectedPhaseId) {
+        const { data: bonusRider } = await supabase
+          .from('bonus_rider_selections')
+          .select('coureur_id, coureurs(nom)')
+          .eq('manager_id', targetManagerId)
+          .eq('phase_id', selectedPhaseId)
+          .maybeSingle();
+
+        if (bonusRider) {
+          setBonusRiderSelection({
+            coureur_id: bonusRider.coureur_id,
+            coureur_nom: bonusRider.coureurs.nom
+          });
+          setHasSelectedBonusRider(true);
+        } else {
+          setBonusRiderSelection(null);
+          setHasSelectedBonusRider(false);
+        }
+      }
     } catch (error: any) {
       toast.error("Erreur : " + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectBonusRider = async (coureur_id: string, coureur_nom: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Non connecté');
+
+      const { data: manager } = await supabase
+        .from('managers')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .single();
+
+      if (!manager) throw new Error('Manager non trouvé');
+
+      const { error } = await supabase
+        .from('bonus_rider_selections')
+        .insert({
+          manager_id: manager.id,
+          phase_id: selectedPhaseId,
+          coureur_id,
+        });
+
+      if (error) throw error;
+
+      toast.success(`✅ ${coureur_nom} recevra désormais +25% de points bonus`);
+
+      setBonusRiderSelection({ coureur_id, coureur_nom });
+      setHasSelectedBonusRider(true);
+      setShowBonusRiderDialog(false);
+      
+      // Recharger l'équipe
+      loadTeamWithKpis();
+    } catch (error: any) {
+      toast.error("❌ Erreur : " + error.message);
     }
   };
 
@@ -289,6 +367,30 @@ export const MyTeamMobile = () => {
         />
       </div>
 
+      {/* Bouton Choisir coureur bonus */}
+      {!hasSelectedBonusRider && !selectedManagerId && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowBonusRiderDialog(true)}
+          className="w-full gap-2 border-amber-500 text-amber-600"
+        >
+          <Star className="h-4 w-4" />
+          Choisir coureur bonus
+        </Button>
+      )}
+
+      {/* Coureur bonus sélectionné */}
+      {bonusRiderSelection && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
+          <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
+          <div>
+            <div className="text-xs text-amber-700 font-medium">Coureur Bonus</div>
+            <div className="text-sm font-semibold">{bonusRiderSelection.coureur_nom}</div>
+          </div>
+        </div>
+      )}
+
       {/* Sort chips */}
       <ChipGroup items={sortChips} selected={sortBy} onSelect={(v) => setSortBy(v as SortBy)} />
 
@@ -304,7 +406,14 @@ export const MyTeamMobile = () => {
           {sortedCoureurs.map((coureur) => (
             <MobileCard
               key={coureur.coureur_id}
-              title={coureur.nom}
+              title={
+                <div className="flex items-center gap-2">
+                  {bonusRiderSelection?.coureur_id === coureur.coureur_id && (
+                    <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                  )}
+                  {coureur.nom}
+                </div>
+              }
               subtitle={coureur.equipe}
               meta={`Prix: ${coureur.prix_achat.toFixed(0)} • Cote: ${coureur.cote_initiale.toFixed(0)}`}
               className={getRatioBgColor(coureur.ratio_points_par_prix)}
@@ -344,6 +453,46 @@ export const MyTeamMobile = () => {
           ))}
         </div>
       )}
+
+      {/* Bonus Rider Selection Dialog */}
+      <Dialog open={showBonusRiderDialog} onOpenChange={setShowBonusRiderDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Choisir votre coureur bonus</DialogTitle>
+            <DialogDescription>
+              Sélectionnez un coureur coté 10 ou 20 qui recevra +25% de points bonus.
+              <br />⚠️ Ce choix est définitif pour cette phase.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {coureurs
+              .filter(c => c.prix_achat === 10 || c.prix_achat === 20)
+              .map((coureur) => (
+                <Button
+                  key={coureur.coureur_id}
+                  variant="outline"
+                  className="w-full justify-start gap-3 h-auto py-3"
+                  onClick={() => handleSelectBonusRider(coureur.coureur_id, coureur.nom)}
+                >
+                  <Star className="h-5 w-5 text-amber-500" />
+                  <div className="text-left">
+                    <div className="font-semibold">{coureur.nom}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {coureur.equipe} • Prix: {coureur.prix_achat} • {coureur.points_total} pts
+                    </div>
+                  </div>
+                </Button>
+              ))}
+            
+            {coureurs.filter(c => c.prix_achat === 10 || c.prix_achat === 20).length === 0 && (
+              <p className="text-center text-muted-foreground py-4">
+                Aucun coureur éligible (prix 10 ou 20)
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Rider Points Detail */}
       <RiderPointsDetail
