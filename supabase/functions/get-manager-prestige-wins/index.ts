@@ -43,14 +43,14 @@ Deno.serve(async (req) => {
 
     const courseIds = prestigeCourses?.map(c => c.id) || [];
     
-    // Step 2: Get race results for winners (position 1, GC or Général)
+    // Step 2: Get race results for winners (position 1, General classification)
     const { data: resultsData, error: resultsError } = await supabase
       .from('race_results')
       .select('course_id, coureur_id, type_classement')
       .in('course_id', courseIds)
       .eq('position', 1)
       .eq('statut', 'finished')
-      .in('type_classement', ['GC', 'Général']);
+      .eq('type_classement', 'General');
 
     if (resultsError) {
       console.error('Error fetching results:', resultsError);
