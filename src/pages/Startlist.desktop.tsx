@@ -502,7 +502,7 @@ const StartlistDesktop = () => {
               <Card className="bg-muted/50 p-3 col-span-2">
                 {/* Barème Général */}
                 {startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'General') && (
-                  <div className={startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'Etape') ? 'mb-3' : ''}>
+                  <div className="mb-3">
                     <h4 className="font-semibold text-xs mb-2">
                       Barème Général ({startlistViewData.scoring.categorie})
                     </h4>
@@ -520,7 +520,7 @@ const StartlistDesktop = () => {
                   </div>
                 )}
                 
-                {/* Séparateur si les deux barèmes existent */}
+                {/* Séparateur entre CG et Étapes */}
                 {startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'General') && 
                  startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'Etape') && (
                   <Separator className="my-3" />
@@ -528,7 +528,7 @@ const StartlistDesktop = () => {
                 
                 {/* Barème Étapes */}
                 {startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'Etape') && (
-                  <div>
+                  <div className={startlistViewData.admin_rating_note?.trim()?.length > 0 ? 'mb-3' : ''}>
                     <h4 className="font-semibold text-xs mb-2 text-primary">
                       Barème Étapes
                     </h4>
@@ -543,6 +543,31 @@ const StartlistDesktop = () => {
                           </div>
                         ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Séparateur avant l'avis */}
+                {(startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'General') || 
+                  startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'Etape')) && 
+                 startlistViewData.admin_rating_note?.trim()?.length > 0 && (
+                  <Separator className="my-3" />
+                )}
+
+                {/* Avis du startlisteur */}
+                {startlistViewData.admin_rating_note?.trim()?.length > 0 && (
+                  <div className="bg-blue-50/50 dark:bg-blue-950/10 border border-blue-200/50 dark:border-blue-800/50 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <h4 className="font-semibold text-xs">L'avis du startlisteur</h4>
+                    </div>
+                    <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                      "{startlistViewData.admin_rating_note}"
+                      {startlistViewData.admin_rating_author && (
+                        <span className="block mt-2 text-xs font-medium text-right italic">
+                          — {startlistViewData.admin_rating_author}
+                        </span>
+                      )}
+                    </p>
                   </div>
                 )}
               </Card>
@@ -562,24 +587,6 @@ const StartlistDesktop = () => {
                 </Card>
               )}
             </div>
-
-            {/* Ligne 2: Avis du startlisteur (si existe) */}
-            {startlistViewData.admin_rating_note?.trim()?.length > 0 && (
-              <Card className="bg-blue-50 dark:bg-blue-950/20 p-3 border-blue-200 dark:border-blue-800">
-                <div className="flex items-center gap-2 mb-2">
-                  <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <h4 className="font-semibold text-sm">L'avis du startlisteur</h4>
-                </div>
-                <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
-                  "{startlistViewData.admin_rating_note}"
-                  {startlistViewData.admin_rating_author && (
-                    <span className="block mt-2 text-xs font-medium text-right italic">
-                      — {startlistViewData.admin_rating_author}
-                    </span>
-                  )}
-                </p>
-              </Card>
-            )}
           </div>
 
           {/* Le mot du startlisteur */}
