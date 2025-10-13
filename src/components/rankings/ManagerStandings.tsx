@@ -45,7 +45,7 @@ const ManagerNameWithJersey = ({ managerId, managerName }: { managerId: string; 
 };
 
 export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) => {
-  const { selectedSeason } = useSeasonContext();
+  const { selectedSeason, activePhase } = useSeasonContext();
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [selectedBonusManager, setSelectedBonusManager] = useState<{
     id: string;
@@ -91,47 +91,79 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
 
   // Fetch previous global standings for evolution calculation (global view only)
   const { data: previousGlobalStandings } = useQuery({
-    queryKey: ["previous-global-standings", selectedSeason?.id],
+    queryKey: ["previous-global-standings", selectedSeason?.id, activePhase?.id],
     queryFn: async () => {
       if (phaseId) return null; // No evolution for individual phases
 
-      // Get current active phase
-      const activePhaseQuery = supabase
-        .from("phases")
-        .select("id, index_dans_saison, saison_id, date_debut")
-        .eq("statut", "active")
-        .order("date_debut", { ascending: false })
-        .limit(1);
+      // Determine the reference phase
+      let referencePhase: { id: string; index_dans_saison?: number; saison_id?: string; date_debut: string } | null = null;
 
       if (selectedSeason) {
-        // Vue saison spécifique : phase active de cette saison
-        activePhaseQuery.eq("saison_id", selectedSeason.id);
+        // For a specific season, use activePhase from context or fallback to last completed
+        if (activePhase && activePhase.saison_id === selectedSeason.id) {
+          referencePhase = {
+            id: activePhase.id,
+            index_dans_saison: activePhase.index_dans_saison,
+            saison_id: activePhase.saison_id,
+            date_debut: activePhase.date_debut
+          };
+        } else {
+          const { data: lastCompleted } = await supabase
+            .from("phases")
+            .select("id, index_dans_saison, saison_id, date_debut")
+            .eq("saison_id", selectedSeason.id)
+            .eq("statut", "completed")
+            .order("index_dans_saison", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (!lastCompleted) return null;
+          referencePhase = lastCompleted;
+        }
+      } else {
+        // Global view: find active or last completed phase
+        const { data: activeGlobal } = await supabase
+          .from("phases")
+          .select("id, index_dans_saison, saison_id, date_debut")
+          .eq("statut", "active")
+          .order("date_debut", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (activeGlobal) {
+          referencePhase = activeGlobal;
+        } else {
+          const { data: lastCompletedGlobal } = await supabase
+            .from("phases")
+            .select("id, index_dans_saison, saison_id, date_debut")
+            .eq("statut", "completed")
+            .order("date_debut", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (!lastCompletedGlobal) return null;
+          referencePhase = lastCompletedGlobal;
+        }
       }
 
-      const { data: activePhase } = await activePhaseQuery.maybeSingle();
+      if (!referencePhase) return null;
 
-      if (!activePhase) return null;
-
-      // Get all completed phases BEFORE the active phase
+      // Get completed phases before the reference phase
       let completedPhasesQuery = supabase
         .from("phases")
-        .select("id")
+        .select("id, date_fin")
         .eq("statut", "completed");
 
       if (selectedSeason) {
-        // Vue saison : phases complétées de cette saison avant la phase active
         completedPhasesQuery = completedPhasesQuery
           .eq("saison_id", selectedSeason.id)
-          .lt("index_dans_saison", activePhase.index_dans_saison);
+          .lt("index_dans_saison", referencePhase.index_dans_saison as number);
       } else {
-        // Vue globale : toutes les phases complétées avant la phase active
-        completedPhasesQuery = completedPhasesQuery
-          .lt("date_fin", activePhase.date_debut);
+        completedPhasesQuery = completedPhasesQuery.lt("date_fin", referencePhase.date_debut);
       }
 
       const { data: completedPhases } = await completedPhasesQuery;
-
-      if (!completedPhases || completedPhases.length === 0) return null;
+      if (!completedPhases?.length) return null;
 
       const completedPhaseIds = completedPhases.map((p) => p.id);
 
@@ -188,6 +220,13 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
       bpRiderRes.data?.forEach((row: any) => {
         if (!row.manager_id) return;
         totals.set(row.manager_id, (totals.get(row.manager_id) ?? 0) + (row.points ?? 0));
+      });
+
+      // Include all current managers with 0 default to ensure everyone gets a rank
+      standings?.forEach((s) => {
+        if (!totals.has(s.manager_id)) {
+          totals.set(s.manager_id, 0);
+        }
       });
 
       // Build ranking map from totals
