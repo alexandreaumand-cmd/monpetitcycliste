@@ -57,16 +57,24 @@ Deno.serve(async (req) => {
         startDate.setDate(startDate.getDate() - 30);
       }
     } else if (view_mode === 'season' && saison_id) {
-      // Get all phases for the season
-      const { data: phases } = await supabaseClient
+      // Get ALL phases to calculate cumulative from the beginning
+      const { data: allPhases } = await supabaseClient
+        .from('phases')
+        .select('saison_id, date_debut, date_fin')
+        .order('date_debut', { ascending: true });
+      
+      // Get target season phases to determine end date
+      const { data: targetSeasonPhases } = await supabaseClient
         .from('phases')
         .select('date_debut, date_fin')
         .eq('saison_id', saison_id)
         .order('date_debut', { ascending: true });
       
-      if (phases && phases.length > 0) {
-        startDate = new Date(phases[0].date_debut);
-        endDate = new Date(phases[phases.length - 1].date_fin);
+      if (allPhases && allPhases.length > 0 && targetSeasonPhases && targetSeasonPhases.length > 0) {
+        // Start from the first phase ever (for cumulative calculation)
+        startDate = new Date(allPhases[0].date_debut);
+        // End at the last phase of the selected season
+        endDate = new Date(targetSeasonPhases[targetSeasonPhases.length - 1].date_fin);
       } else {
         startDate = new Date();
         startDate.setDate(startDate.getDate() - 30);
@@ -107,13 +115,51 @@ Deno.serve(async (req) => {
     if (targetPhaseId) {
       query = query.eq('phase_id', targetPhaseId);
     }
-    // Pour le mode 'season', on ne filtre PAS par phase_id
-    // On récupère tous les points jusqu'à la date de fin de la saison
-    // Le filtre par date range se fait plus bas dans le code (lignes 137-138)
+    // For 'season' mode, we don't filter by phase_id
+    // We get all points and filter by date range later
 
     const { data: pointsData, error: pointsError } = await query;
 
     if (pointsError) throw pointsError;
+
+    // Get manager bonus points
+    let bonusManagerQuery = supabaseClient
+      .from('manager_bonus_points')
+      .select(`
+        manager_id,
+        phase_id,
+        bonus_itt,
+        bonus_ttt,
+        bonus_first_win,
+        bonus_coureurs,
+        bonus_scoreurs,
+        phases!inner(date_fin)
+      `);
+
+    if (targetPhaseId) {
+      bonusManagerQuery = bonusManagerQuery.eq('phase_id', targetPhaseId);
+    }
+
+    const { data: bonusManagerData, error: bonusManagerError } = await bonusManagerQuery;
+    if (bonusManagerError) throw bonusManagerError;
+
+    // Get rider bonus points
+    let bonusRiderQuery = supabaseClient
+      .from('bonus_points')
+      .select(`
+        manager_id,
+        target_manager_id,
+        phase_id,
+        points,
+        phases!inner(date_fin)
+      `);
+
+    if (targetPhaseId) {
+      bonusRiderQuery = bonusRiderQuery.eq('phase_id', targetPhaseId);
+    }
+
+    const { data: bonusRiderData, error: bonusRiderError } = await bonusRiderQuery;
+    if (bonusRiderError) throw bonusRiderError;
 
     // Aggregate points by manager and date (using course date)
     const pointsByManagerAndDate = new Map<string, Map<string, { points: number; nom: string }>>();
@@ -144,6 +190,59 @@ Deno.serve(async (req) => {
       const dateMap = pointsByManagerAndDate.get(managerId)!;
       const existing = dateMap.get(date) || { points: 0, nom: managerNom };
       existing.points += row.points;
+      dateMap.set(date, existing);
+    });
+
+    // Add manager bonus points (aggregated at phase end date)
+    bonusManagerData?.forEach((row: any) => {
+      const phaseEndDate = row.phases?.date_fin;
+      if (!phaseEndDate) return;
+      
+      const date = new Date(phaseEndDate).toISOString().split('T')[0];
+      const dateObj = new Date(date);
+      
+      if (dateObj < startDate || dateObj > endDate) return;
+      
+      const managerId = row.manager_id;
+      const totalBonus = (row.bonus_itt || 0) + (row.bonus_ttt || 0) + 
+                         (row.bonus_first_win || 0) + (row.bonus_coureurs || 0) + 
+                         (row.bonus_scoreurs || 0);
+      
+      if (totalBonus === 0) return;
+      
+      if (!pointsByManagerAndDate.has(managerId)) {
+        pointsByManagerAndDate.set(managerId, new Map());
+      }
+      
+      const dateMap = pointsByManagerAndDate.get(managerId)!;
+      const existing = dateMap.get(date) || { points: 0, nom: managerNames.get(managerId) || 'Unknown' };
+      existing.points += totalBonus;
+      dateMap.set(date, existing);
+    });
+
+    // Add rider bonus points (aggregated at phase end date)
+    bonusRiderData?.forEach((row: any) => {
+      const phaseEndDate = row.phases?.date_fin;
+      if (!phaseEndDate) return;
+      
+      const date = new Date(phaseEndDate).toISOString().split('T')[0];
+      const dateObj = new Date(date);
+      
+      if (dateObj < startDate || dateObj > endDate) return;
+      
+      const managerId = row.target_manager_id || row.manager_id;
+      if (!managerId) return;
+      
+      const bonusPoints = row.points || 0;
+      if (bonusPoints === 0) return;
+      
+      if (!pointsByManagerAndDate.has(managerId)) {
+        pointsByManagerAndDate.set(managerId, new Map());
+      }
+      
+      const dateMap = pointsByManagerAndDate.get(managerId)!;
+      const existing = dateMap.get(date) || { points: 0, nom: managerNames.get(managerId) || 'Unknown' };
+      existing.points += bonusPoints;
       dateMap.set(date, existing);
     });
 
