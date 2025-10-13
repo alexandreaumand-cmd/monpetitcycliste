@@ -175,6 +175,130 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     enabled: !!managerB && !!rostersB,
   });
 
+  // Fetch bonus_points for manager A
+  const { data: bonusPointsA } = useQuery({
+    queryKey: ["bonus-points-a", managerA, phaseId, saisonId],
+    queryFn: async () => {
+      if (!managerA) return null;
+
+      let query = supabase
+        .from("bonus_points")
+        .select("points")
+        .or(`target_manager_id.eq.${managerA},manager_id.eq.${managerA}`);
+
+      if (phaseId) {
+        query = query.eq("phase_id", phaseId);
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        
+        if (phases) {
+          query = query.in("phase_id", phases.map(p => p.id));
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!managerA,
+  });
+
+  // Fetch bonus_points for manager B
+  const { data: bonusPointsB } = useQuery({
+    queryKey: ["bonus-points-b", managerB, phaseId, saisonId],
+    queryFn: async () => {
+      if (!managerB) return null;
+
+      let query = supabase
+        .from("bonus_points")
+        .select("points")
+        .or(`target_manager_id.eq.${managerB},manager_id.eq.${managerB}`);
+
+      if (phaseId) {
+        query = query.eq("phase_id", phaseId);
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        
+        if (phases) {
+          query = query.in("phase_id", phases.map(p => p.id));
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!managerB,
+  });
+
+  // Fetch manager_bonus_points for manager A
+  const { data: managerBonusA } = useQuery({
+    queryKey: ["manager-bonus-a", managerA, phaseId, saisonId],
+    queryFn: async () => {
+      if (!managerA) return null;
+
+      let query = supabase
+        .from("manager_bonus_points")
+        .select("bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs")
+        .eq("manager_id", managerA);
+
+      if (phaseId) {
+        query = query.eq("phase_id", phaseId);
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        
+        if (phases) {
+          query = query.in("phase_id", phases.map(p => p.id));
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!managerA,
+  });
+
+  // Fetch manager_bonus_points for manager B
+  const { data: managerBonusB } = useQuery({
+    queryKey: ["manager-bonus-b", managerB, phaseId, saisonId],
+    queryFn: async () => {
+      if (!managerB) return null;
+
+      let query = supabase
+        .from("manager_bonus_points")
+        .select("bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs")
+        .eq("manager_id", managerB);
+
+      if (phaseId) {
+        query = query.eq("phase_id", phaseId);
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        
+        if (phases) {
+          query = query.in("phase_id", phases.map(p => p.id));
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!managerB,
+  });
+
   // Fetch courses
   const { data: courses } = useQuery({
     queryKey: ["courses-comparison", phaseId, saisonId],
@@ -203,58 +327,148 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     },
   });
 
-  // Fetch victories for manager A
+  // Fetch victories for manager A - CORRIGÉ: avec jointure rosters
   const { data: victoriesA } = useQuery({
-    queryKey: ["victories-a", managerA, phaseId, saisonId, rostersA],
+    queryKey: ["victories-a", managerA, phaseId, saisonId],
     queryFn: async () => {
-      if (!managerA || !rostersA) return null;
+      if (!managerA) return null;
 
-      const coureurIds = rostersA.map(r => r.coureur_id);
-
-      let query = supabase
-        .from("race_results")
-        .select("coureur_id, position")
-        .in("coureur_id", coureurIds)
-        .eq("position", 1)
-        .eq("statut", "finished")
-        .eq("type_classement", "Etape");
-
-      if (saisonId) {
-        query = query.eq("saison_id", saisonId);
+      // Récupérer les phase_ids concernés
+      let phaseIds: string[] = [];
+      if (phaseId) {
+        phaseIds = [phaseId];
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        phaseIds = phases?.map(p => p.id) || [];
       }
 
-      const { data, error } = await query;
+      // Récupérer les victoires avec courses
+      const { data: victories, error } = await supabase
+        .from("race_results")
+        .select(`
+          id, 
+          coureur_id, 
+          course_id,
+          courses!inner(phase_id)
+        `)
+        .eq("position", 1)
+        .eq("statut", "finished")
+        .in("type_classement", ["Etape", "General"]);
+
       if (error) throw error;
-      return data;
+
+      // Récupérer tous les rosters du manager
+      let rostersQuery = supabase
+        .from("rosters")
+        .select("coureur_id, phase_id")
+        .eq("manager_id", managerA);
+
+      if (phaseIds.length > 0) {
+        rostersQuery = rostersQuery.in("phase_id", phaseIds);
+      }
+
+      const { data: rostersData, error: rostersError } = await rostersQuery;
+      if (rostersError) throw rostersError;
+
+      // Map coureur -> phases
+      const rostersByRider = new Map<string, Set<string>>();
+      rostersData?.forEach(r => {
+        if (!rostersByRider.has(r.coureur_id)) {
+          rostersByRider.set(r.coureur_id, new Set());
+        }
+        rostersByRider.get(r.coureur_id)!.add(r.phase_id);
+      });
+
+      // Filtrer victoires
+      const filtered = victories?.filter(v => {
+        const coursePhaseId = v.courses?.phase_id;
+        if (!coursePhaseId) return false;
+        
+        const riderPhases = rostersByRider.get(v.coureur_id);
+        if (!riderPhases) return false;
+        
+        return riderPhases.has(coursePhaseId) && 
+               (phaseIds.length === 0 || phaseIds.includes(coursePhaseId));
+      }) || [];
+
+      return filtered;
     },
-    enabled: !!managerA && !!rostersA,
+    enabled: !!managerA,
   });
 
-  // Fetch victories for manager B
+  // Fetch victories for manager B - CORRIGÉ: avec jointure rosters
   const { data: victoriesB } = useQuery({
-    queryKey: ["victories-b", managerB, phaseId, saisonId, rostersB],
+    queryKey: ["victories-b", managerB, phaseId, saisonId],
     queryFn: async () => {
-      if (!managerB || !rostersB) return null;
+      if (!managerB) return null;
 
-      const coureurIds = rostersB.map(r => r.coureur_id);
-
-      let query = supabase
-        .from("race_results")
-        .select("coureur_id, position")
-        .in("coureur_id", coureurIds)
-        .eq("position", 1)
-        .eq("statut", "finished")
-        .eq("type_classement", "Etape");
-
-      if (saisonId) {
-        query = query.eq("saison_id", saisonId);
+      // Récupérer les phase_ids concernés
+      let phaseIds: string[] = [];
+      if (phaseId) {
+        phaseIds = [phaseId];
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        phaseIds = phases?.map(p => p.id) || [];
       }
 
-      const { data, error } = await query;
+      // Récupérer les victoires avec courses
+      const { data: victories, error } = await supabase
+        .from("race_results")
+        .select(`
+          id, 
+          coureur_id, 
+          course_id,
+          courses!inner(phase_id)
+        `)
+        .eq("position", 1)
+        .eq("statut", "finished")
+        .in("type_classement", ["Etape", "General"]);
+
       if (error) throw error;
-      return data;
+
+      // Récupérer tous les rosters du manager
+      let rostersQuery = supabase
+        .from("rosters")
+        .select("coureur_id, phase_id")
+        .eq("manager_id", managerB);
+
+      if (phaseIds.length > 0) {
+        rostersQuery = rostersQuery.in("phase_id", phaseIds);
+      }
+
+      const { data: rostersData, error: rostersError } = await rostersQuery;
+      if (rostersError) throw rostersError;
+
+      // Map coureur -> phases
+      const rostersByRider = new Map<string, Set<string>>();
+      rostersData?.forEach(r => {
+        if (!rostersByRider.has(r.coureur_id)) {
+          rostersByRider.set(r.coureur_id, new Set());
+        }
+        rostersByRider.get(r.coureur_id)!.add(r.phase_id);
+      });
+
+      // Filtrer victoires
+      const filtered = victories?.filter(v => {
+        const coursePhaseId = v.courses?.phase_id;
+        if (!coursePhaseId) return false;
+        
+        const riderPhases = rostersByRider.get(v.coureur_id);
+        if (!riderPhases) return false;
+        
+        return riderPhases.has(coursePhaseId) && 
+               (phaseIds.length === 0 || phaseIds.includes(coursePhaseId));
+      }) || [];
+
+      return filtered;
     },
-    enabled: !!managerB && !!rostersB,
+    enabled: !!managerB,
   });
 
   // Fetch coureurs details
@@ -269,36 +483,44 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     },
   });
 
-  // Calculate metrics
+  // Calculate metrics - CORRIGÉ: ajouter bonus
   const totalPointsA = useMemo(() => {
-    if (!pointsA) return 0;
-    return pointsA.reduce((sum, p) => sum + (p.points || 0), 0);
-  }, [pointsA]);
+    const racePts = pointsA?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
+    const bonusPts = bonusPointsA?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
+    const mgrBonus = managerBonusA?.reduce((sum, mb) => 
+      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) + 
+      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) + 
+      (mb.bonus_scoreurs || 0), 0) || 0;
+    return racePts + bonusPts + mgrBonus;
+  }, [pointsA, bonusPointsA, managerBonusA]);
 
   const totalPointsB = useMemo(() => {
-    if (!pointsB) return 0;
-    return pointsB.reduce((sum, p) => sum + (p.points || 0), 0);
-  }, [pointsB]);
+    const racePts = pointsB?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
+    const bonusPts = bonusPointsB?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
+    const mgrBonus = managerBonusB?.reduce((sum, mb) => 
+      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) + 
+      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) + 
+      (mb.bonus_scoreurs || 0), 0) || 0;
+    return racePts + bonusPts + mgrBonus;
+  }, [pointsB, bonusPointsB, managerBonusB]);
 
   const scoreursA = useMemo(() => {
-    if (!rostersA || !pointsA) return 0;
-    const rosterCoureurIds = new Set(rostersA.map(r => r.coureur_id));
+    if (!pointsA) return 0;
     return new Set(
       pointsA
-        .filter(p => (p.points || 0) > 0 && rosterCoureurIds.has(p.coureur_id))
+        .filter(p => (p.points || 0) > 0)
         .map(p => p.coureur_id)
     ).size;
-  }, [rostersA, pointsA]);
+  }, [pointsA]);
 
   const scoreursB = useMemo(() => {
-    if (!rostersB || !pointsB) return 0;
-    const rosterCoureurIds = new Set(rostersB.map(r => r.coureur_id));
+    if (!pointsB) return 0;
     return new Set(
       pointsB
-        .filter(p => (p.points || 0) > 0 && rosterCoureurIds.has(p.coureur_id))
+        .filter(p => (p.points || 0) > 0)
         .map(p => p.coureur_id)
     ).size;
-  }, [rostersB, pointsB]);
+  }, [pointsB]);
 
   const budgetA = useMemo(() => {
     if (!rostersA) return 0;

@@ -193,6 +193,134 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     enabled: !!managerB && !!rostersB,
   });
 
+  // Fetch bonus_points for manager A
+  const { data: bonusPointsA } = useQuery({
+    queryKey: ["bonus-points-a", managerA, phaseId, saisonId],
+    queryFn: async () => {
+      if (!managerA) return null;
+
+      let query = supabase
+        .from("bonus_points")
+        .select("points, phase_id")
+        .or(`target_manager_id.eq.${managerA},manager_id.eq.${managerA}`);
+
+      if (phaseId) {
+        query = query.eq("phase_id", phaseId);
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        
+        if (phases) {
+          const phaseIds = phases.map(p => p.id);
+          query = query.in("phase_id", phaseIds);
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!managerA,
+  });
+
+  // Fetch bonus_points for manager B
+  const { data: bonusPointsB } = useQuery({
+    queryKey: ["bonus-points-b", managerB, phaseId, saisonId],
+    queryFn: async () => {
+      if (!managerB) return null;
+
+      let query = supabase
+        .from("bonus_points")
+        .select("points, phase_id")
+        .or(`target_manager_id.eq.${managerB},manager_id.eq.${managerB}`);
+
+      if (phaseId) {
+        query = query.eq("phase_id", phaseId);
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        
+        if (phases) {
+          const phaseIds = phases.map(p => p.id);
+          query = query.in("phase_id", phaseIds);
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!managerB,
+  });
+
+  // Fetch manager_bonus_points for manager A
+  const { data: managerBonusA } = useQuery({
+    queryKey: ["manager-bonus-a", managerA, phaseId, saisonId],
+    queryFn: async () => {
+      if (!managerA) return null;
+
+      let query = supabase
+        .from("manager_bonus_points")
+        .select("bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs, phase_id")
+        .eq("manager_id", managerA);
+
+      if (phaseId) {
+        query = query.eq("phase_id", phaseId);
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        
+        if (phases) {
+          const phaseIds = phases.map(p => p.id);
+          query = query.in("phase_id", phaseIds);
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!managerA,
+  });
+
+  // Fetch manager_bonus_points for manager B
+  const { data: managerBonusB } = useQuery({
+    queryKey: ["manager-bonus-b", managerB, phaseId, saisonId],
+    queryFn: async () => {
+      if (!managerB) return null;
+
+      let query = supabase
+        .from("manager_bonus_points")
+        .select("bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs, phase_id")
+        .eq("manager_id", managerB);
+
+      if (phaseId) {
+        query = query.eq("phase_id", phaseId);
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        
+        if (phases) {
+          const phaseIds = phases.map(p => p.id);
+          query = query.in("phase_id", phaseIds);
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!managerB,
+  });
+
   // 4. Récupérer les infos des coureurs
   const { data: coureurs } = useQuery({
     queryKey: ["coureurs-comparison", managerA, managerB],
@@ -246,117 +374,151 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     },
   });
 
-  // 6. Récupérer les victoires (position = 1) des coureurs des deux managers
+  // 6. Récupérer les victoires (position = 1) - CORRIGÉ: avec jointure rosters
   const { data: victoriesA } = useQuery({
     queryKey: ["victories-manager-a", managerA, phaseId, saisonId],
     queryFn: async () => {
-      if (!managerA || !rostersA) return null;
+      if (!managerA) return null;
 
-      const coureurIds = rostersA.map(r => r.coureur_id);
-
-      let query = supabase
-        .from("race_results")
-      .select("id, coureur_id, course_id, type_classement")
-      .in("coureur_id", coureurIds)
-      .eq("position", 1)
-      .eq("statut", "finished")
-      .in("type_classement", ["Etape", "General"]);
-
-      if (phaseId || saisonId) {
-        // Only filter by courses if phase/season is specified
-        if (phaseId) {
-          const { data: coursesInPhase } = await supabase
-            .from("courses")
-            .select("id")
-            .eq("phase_id", phaseId);
-          
-          if (coursesInPhase) {
-            const courseIds = coursesInPhase.map(c => c.id);
-            query = query.in("course_id", courseIds);
-          }
-        } else if (saisonId) {
-          const { data: phases } = await supabase
-            .from("phases")
-            .select("id")
-            .eq("saison_id", saisonId);
-          
-          if (phases) {
-            const phaseIds = phases.map(p => p.id);
-            const { data: coursesInSaison } = await supabase
-              .from("courses")
-              .select("id")
-              .in("phase_id", phaseIds);
-            
-            if (coursesInSaison) {
-              const courseIds = coursesInSaison.map(c => c.id);
-              query = query.in("course_id", courseIds);
-            }
-          }
-        }
+      // Récupérer les phase_ids concernés
+      let phaseIds: string[] = [];
+      if (phaseId) {
+        phaseIds = [phaseId];
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        phaseIds = phases?.map(p => p.id) || [];
       }
-      // ELSE: No filter = all courses (global standings)
 
-      const { data, error } = await query;
+      // Récupérer les victoires avec rosters pour vérifier appartenance au roster
+      const { data: victories, error } = await supabase
+        .from("race_results")
+        .select(`
+          id, 
+          coureur_id, 
+          course_id, 
+          type_classement,
+          courses!inner(phase_id)
+        `)
+        .eq("position", 1)
+        .eq("statut", "finished")
+        .in("type_classement", ["Etape", "General"]);
+
       if (error) throw error;
-      return data;
+
+      // Récupérer tous les rosters du manager pour les phases concernées
+      let rostersQuery = supabase
+        .from("rosters")
+        .select("coureur_id, phase_id")
+        .eq("manager_id", managerA);
+
+      if (phaseIds.length > 0) {
+        rostersQuery = rostersQuery.in("phase_id", phaseIds);
+      }
+
+      const { data: rostersData, error: rostersError } = await rostersQuery;
+      if (rostersError) throw rostersError;
+
+      // Créer un Map pour accès rapide: coureur_id -> Set<phase_id>
+      const rostersByRider = new Map<string, Set<string>>();
+      rostersData?.forEach(r => {
+        if (!rostersByRider.has(r.coureur_id)) {
+          rostersByRider.set(r.coureur_id, new Set());
+        }
+        rostersByRider.get(r.coureur_id)!.add(r.phase_id);
+      });
+
+      // Filtrer les victoires pour ne garder que celles où le coureur était dans le roster
+      const filtered = victories?.filter(v => {
+        const coursePhaseId = v.courses?.phase_id;
+        if (!coursePhaseId) return false;
+        
+        // Vérifier si le coureur était dans le roster pour cette phase
+        const riderPhases = rostersByRider.get(v.coureur_id);
+        if (!riderPhases) return false;
+        
+        return riderPhases.has(coursePhaseId) && 
+               (phaseIds.length === 0 || phaseIds.includes(coursePhaseId));
+      }) || [];
+
+      return filtered;
     },
-    enabled: !!managerA && !!rostersA,
+    enabled: !!managerA,
   });
 
   const { data: victoriesB } = useQuery({
     queryKey: ["victories-manager-b", managerB, phaseId, saisonId],
     queryFn: async () => {
-      if (!managerB || !rostersB) return null;
+      if (!managerB) return null;
 
-      const coureurIds = rostersB.map(r => r.coureur_id);
-
-      let query = supabase
-        .from("race_results")
-      .select("id, coureur_id, course_id, type_classement")
-      .in("coureur_id", coureurIds)
-      .eq("position", 1)
-      .eq("statut", "finished")
-      .in("type_classement", ["Etape", "General"]);
-
-      if (phaseId || saisonId) {
-        // Only filter by courses if phase/season is specified
-        if (phaseId) {
-          const { data: coursesInPhase } = await supabase
-            .from("courses")
-            .select("id")
-            .eq("phase_id", phaseId);
-          
-          if (coursesInPhase) {
-            const courseIds = coursesInPhase.map(c => c.id);
-            query = query.in("course_id", courseIds);
-          }
-        } else if (saisonId) {
-          const { data: phases } = await supabase
-            .from("phases")
-            .select("id")
-            .eq("saison_id", saisonId);
-          
-          if (phases) {
-            const phaseIds = phases.map(p => p.id);
-            const { data: coursesInSaison } = await supabase
-              .from("courses")
-              .select("id")
-              .in("phase_id", phaseIds);
-            
-            if (coursesInSaison) {
-              const courseIds = coursesInSaison.map(c => c.id);
-              query = query.in("course_id", courseIds);
-            }
-          }
-        }
+      // Récupérer les phase_ids concernés
+      let phaseIds: string[] = [];
+      if (phaseId) {
+        phaseIds = [phaseId];
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        phaseIds = phases?.map(p => p.id) || [];
       }
-      // ELSE: No filter = all courses (global standings)
 
-      const { data, error } = await query;
+      // Récupérer les victoires avec rosters pour vérifier appartenance au roster
+      const { data: victories, error } = await supabase
+        .from("race_results")
+        .select(`
+          id, 
+          coureur_id, 
+          course_id, 
+          type_classement,
+          courses!inner(phase_id)
+        `)
+        .eq("position", 1)
+        .eq("statut", "finished")
+        .in("type_classement", ["Etape", "General"]);
+
       if (error) throw error;
-      return data;
+
+      // Récupérer tous les rosters du manager pour les phases concernées
+      let rostersQuery = supabase
+        .from("rosters")
+        .select("coureur_id, phase_id")
+        .eq("manager_id", managerB);
+
+      if (phaseIds.length > 0) {
+        rostersQuery = rostersQuery.in("phase_id", phaseIds);
+      }
+
+      const { data: rostersData, error: rostersError } = await rostersQuery;
+      if (rostersError) throw rostersError;
+
+      // Créer un Map pour accès rapide: coureur_id -> Set<phase_id>
+      const rostersByRider = new Map<string, Set<string>>();
+      rostersData?.forEach(r => {
+        if (!rostersByRider.has(r.coureur_id)) {
+          rostersByRider.set(r.coureur_id, new Set());
+        }
+        rostersByRider.get(r.coureur_id)!.add(r.phase_id);
+      });
+
+      // Filtrer les victoires pour ne garder que celles où le coureur était dans le roster
+      const filtered = victories?.filter(v => {
+        const coursePhaseId = v.courses?.phase_id;
+        if (!coursePhaseId) return false;
+        
+        // Vérifier si le coureur était dans le roster pour cette phase
+        const riderPhases = rostersByRider.get(v.coureur_id);
+        if (!riderPhases) return false;
+        
+        return riderPhases.has(coursePhaseId) && 
+               (phaseIds.length === 0 || phaseIds.includes(coursePhaseId));
+      }) || [];
+
+      return filtered;
     },
-    enabled: !!managerB && !!rostersB,
+    enabled: !!managerB,
   });
 
   // Calculs : coureurs communs et exclusifs
@@ -487,9 +649,22 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     }));
   }, [pointsByCategory]);
 
-  // Calculer les métriques globales
-  const totalPointsA = pointsA?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
-  const totalPointsB = pointsB?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
+  // Calculer les métriques globales - CORRIGÉ: ajouter bonus
+  const totalPointsA = 
+    (pointsA?.reduce((sum, p) => sum + (p.points || 0), 0) || 0) +
+    (bonusPointsA?.reduce((sum, b) => sum + (b.points || 0), 0) || 0) +
+    (managerBonusA?.reduce((sum, mb) => 
+      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) + 
+      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) + 
+      (mb.bonus_scoreurs || 0), 0) || 0);
+
+  const totalPointsB = 
+    (pointsB?.reduce((sum, p) => sum + (p.points || 0), 0) || 0) +
+    (bonusPointsB?.reduce((sum, b) => sum + (b.points || 0), 0) || 0) +
+    (managerBonusB?.reduce((sum, mb) => 
+      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) + 
+      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) + 
+      (mb.bonus_scoreurs || 0), 0) || 0);
 
   const scoreursA = new Set(pointsA?.filter(p => (p.points || 0) > 0).map(p => p.coureur_id)).size || 0;
   const scoreursB = new Set(pointsB?.filter(p => (p.points || 0) > 0).map(p => p.coureur_id)).size || 0;
