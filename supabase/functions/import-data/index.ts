@@ -795,15 +795,6 @@ Deno.serve(async (req) => {
         console.log(`✅ Using Saison ${targetSaison?.annee} (phases seront mappées automatiquement)`)
       }
       
-      // Build column index map with synonym support
-      const getColumnIndex = (aliases: string[]): number => {
-        for (const alias of aliases) {
-          const idx = headers.findIndex(h => h.trim().toLowerCase().replace(/\s+/g, '_') === alias.toLowerCase())
-          if (idx >= 0) return idx
-        }
-        return -1
-      }
-      
       const idxId = getColumnIndex(['id'])
       const idxNom = getColumnIndex(['nom', 'course', 'event', 'race', 'intitule', 'name'])
       const idxCategorie = getColumnIndex(['categorie', 'category', 'uci_cat', 'class'])
