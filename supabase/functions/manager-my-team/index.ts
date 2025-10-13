@@ -85,23 +85,30 @@ Deno.serve(async (req) => {
       phaseId = activePhase?.id;
     }
 
-    // Récupérer les points bonus du manager depuis la nouvelle table bonus_points
+    // Récupérer les points bonus du manager depuis la table bonus_points
     let bonusPoints = 0;
     let bonusRiderPoints = 0;
     if (phaseId && targetManagerId) {
-      const { data: bonusData } = await supabase
+      // 1. Bonus REÇUS (target_manager_id = manager)
+      const { data: receivedBonus } = await supabase
         .from('bonus_points')
-        .select('points, bonus_type')
+        .select('points')
         .eq('target_manager_id', targetManagerId)
         .eq('phase_id', phaseId);
       
-      if (bonusData && bonusData.length > 0) {
-        bonusPoints = bonusData.reduce((sum, bonus) => sum + (bonus.points || 0), 0);
-        // Calculer séparément les points bonus du coureur bonus
-        bonusRiderPoints = bonusData
-          .filter(b => b.bonus_type === 'coureur_bonuse')
-          .reduce((sum, bonus) => sum + (bonus.points || 0), 0);
-      }
+      // 2. Bonus de COUREUR BONUS (manager_id = manager, target_manager_id IS NULL, type = coureur_bonuse)
+      const { data: riderBonus } = await supabase
+        .from('bonus_points')
+        .select('points')
+        .eq('manager_id', targetManagerId)
+        .is('target_manager_id', null)
+        .eq('bonus_type', 'coureur_bonuse')
+        .eq('phase_id', phaseId);
+      
+      // Calculer les totaux
+      const receivedBonusTotal = receivedBonus?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
+      bonusRiderPoints = riderBonus?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
+      bonusPoints = receivedBonusTotal + bonusRiderPoints;
     }
 
     // Compter les courses gagnées (1ère position CG ou Etape)
