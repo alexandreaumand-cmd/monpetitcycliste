@@ -91,60 +91,80 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
 
   // Fetch previous global standings for evolution calculation (global view only)
   const { data: previousGlobalStandings } = useQuery({
-    queryKey: ["previous-global-standings"],
+    queryKey: ["previous-global-standings", selectedSeason?.id],
     queryFn: async () => {
-      if (phaseId) return null; // Only for global standings
-      
-      // 1. Find the active phase
-      const { data: activePhase } = await supabase
+      if (phaseId) return null; // No evolution for individual phases
+
+      // Get current active phase
+      const activePhaseQuery = supabase
         .from("phases")
-        .select("id, index_dans_saison, saison_id")
+        .select("id, index_dans_saison, saison_id, date_debut")
         .eq("statut", "active")
-        .order("index_dans_saison", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (!activePhase || activePhase.index_dans_saison === 1) return null;
-      
-      // 2. Find all completed phases before the active phase
-      const { data: completedPhases } = await supabase
+        .order("date_debut", { ascending: false })
+        .limit(1);
+
+      if (selectedSeason) {
+        // Vue saison spécifique : phase active de cette saison
+        activePhaseQuery.eq("saison_id", selectedSeason.id);
+      }
+
+      const { data: activePhase } = await activePhaseQuery.maybeSingle();
+
+      if (!activePhase) return null;
+
+      // Get all completed phases BEFORE the active phase
+      let completedPhasesQuery = supabase
         .from("phases")
         .select("id")
-        .eq("saison_id", activePhase.saison_id)
-        .eq("statut", "completed")
-        .lt("index_dans_saison", activePhase.index_dans_saison);
-      
+        .eq("statut", "completed");
+
+      if (selectedSeason) {
+        // Vue saison : phases complétées de cette saison avant la phase active
+        completedPhasesQuery = completedPhasesQuery
+          .eq("saison_id", selectedSeason.id)
+          .lt("index_dans_saison", activePhase.index_dans_saison);
+      } else {
+        // Vue globale : toutes les phases complétées avant la phase active
+        completedPhasesQuery = completedPhasesQuery
+          .lt("date_fin", activePhase.date_debut);
+      }
+
+      const { data: completedPhases } = await completedPhasesQuery;
+
       if (!completedPhases || completedPhases.length === 0) return null;
-      
-      const phaseIds = completedPhases.map(p => p.id);
-      
-      // 3. Calculate global standings up to the end of the previous phase
-      const { data: pointsData } = await supabase
+
+      const completedPhaseIds = completedPhases.map((p) => p.id);
+
+      // Calculate cumulative points from all completed phases
+      const { data: cumulativePoints, error } = await supabase
         .from("points_ledger")
         .select("manager_id, points")
-        .in("phase_id", phaseIds);
-      
-      if (!pointsData) return null;
-      
-      // 4. Aggregate by manager
+        .in("phase_id", completedPhaseIds);
+
+      if (error || !cumulativePoints) return null;
+
+      // Aggregate points by manager
       const managerPoints = new Map<string, number>();
-      pointsData.forEach(row => {
-        const current = managerPoints.get(row.manager_id) || 0;
-        managerPoints.set(row.manager_id, current + (row.points || 0));
+      cumulativePoints.forEach((entry) => {
+        if (entry.manager_id) {
+          const current = managerPoints.get(entry.manager_id) || 0;
+          managerPoints.set(entry.manager_id, current + entry.points);
+        }
       });
-      
-      // 5. Sort and create a rank map
-      const sorted = Array.from(managerPoints.entries())
+
+      // Create sorted array with ranks
+      const sortedManagers = Array.from(managerPoints.entries())
         .sort((a, b) => b[1] - a[1]);
-      
+
+      // Create rank map
       const rankMap = new Map<string, number>();
-      sorted.forEach(([managerId], idx) => {
+      sortedManagers.forEach(([managerId], idx) => {
         rankMap.set(managerId, idx + 1);
       });
-      
+
       return rankMap;
     },
-    enabled: !phaseId, // Only if global standings
+    enabled: !phaseId,
   });
 
   const maxPoints = standings?.[0]?.total_points || 1;
@@ -197,7 +217,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               <TableHead className="text-right">dont bonus</TableHead>
               <TableHead className="text-right">Scoreurs</TableHead>
               <TableHead className="text-right">Écart</TableHead>
-              {(phaseId || previousGlobalStandings) && <TableHead className="w-24 text-center">Évolution</TableHead>}
+              {previousGlobalStandings && <TableHead className="w-24 text-center">Évolution</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
