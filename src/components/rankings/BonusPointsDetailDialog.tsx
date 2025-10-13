@@ -43,7 +43,7 @@ export const BonusPointsDetailDialog = ({
           coureurs(nom, equipe),
           phases(index_dans_saison)
         `)
-        .eq("manager_id", managerId)
+        .or(`manager_id.eq.${managerId},target_manager_id.eq.${managerId}`)
         .order("phase_id", { ascending: true });
 
       if (phaseId) {
@@ -171,12 +171,16 @@ export const BonusPointsDetailDialog = ({
                                 Phase {bonus.phases?.index_dans_saison}
                               </div>
                             )}
-                            <div className="font-medium">
-                              {bonus.coureurs?.nom || 'Coureur inconnu'}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {bonus.coureurs?.equipe}
-                            </div>
+                            {bonus.coureur_id && (
+                              <>
+                                <div className="font-medium">
+                                  {bonus.coureurs?.nom}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {bonus.coureurs?.equipe}
+                                </div>
+                              </>
+                            )}
                             {bonus.commentaire && (
                               <div className="text-sm text-muted-foreground mt-1 italic">
                                 {bonus.commentaire}
@@ -215,12 +219,16 @@ export const BonusPointsDetailDialog = ({
                                 Phase {bonus.phases?.index_dans_saison}
                               </div>
                             )}
-                            <div className="font-medium">
-                              {bonus.coureurs?.nom || 'Coureur inconnu'}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {bonus.coureurs?.equipe}
-                            </div>
+                            {bonus.coureur_id && (
+                              <>
+                                <div className="font-medium">
+                                  {bonus.coureurs?.nom}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {bonus.coureurs?.equipe}
+                                </div>
+                              </>
+                            )}
                             {bonus.commentaire && (
                               <div className="text-sm text-muted-foreground mt-1 italic">
                                 {bonus.commentaire}
@@ -259,12 +267,16 @@ export const BonusPointsDetailDialog = ({
                                 Phase {bonus.phases?.index_dans_saison}
                               </div>
                             )}
-                            <div className="font-medium">
-                              {bonus.coureurs?.nom || 'Coureur inconnu'}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {bonus.coureurs?.equipe}
-                            </div>
+                            {bonus.coureur_id && (
+                              <>
+                                <div className="font-medium">
+                                  {bonus.coureurs?.nom}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {bonus.coureurs?.equipe}
+                                </div>
+                              </>
+                            )}
                             {bonus.commentaire && (
                               <div className="text-sm text-muted-foreground mt-1 italic">
                                 {bonus.commentaire}
