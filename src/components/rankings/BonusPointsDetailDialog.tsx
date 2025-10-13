@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -9,7 +10,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Award, Users, Trophy } from "lucide-react";
+import { Award, Users, Trophy, Clock, Zap } from "lucide-react";
 
 interface BonusPointsDetailDialogProps {
   open: boolean;
@@ -26,8 +27,8 @@ export const BonusPointsDetailDialog = ({
   managerName,
   phaseId,
 }: BonusPointsDetailDialogProps) => {
-  // Fetch rider bonus points
-  const { data: riderBonuses, isLoading: loadingRiderBonuses } = useQuery({
+  // Fetch all bonus points
+  const { data: allBonuses, isLoading } = useQuery({
     queryKey: ["bonus-points-detail", managerId, phaseId],
     queryFn: async () => {
       let query = supabase
@@ -56,45 +57,28 @@ export const BonusPointsDetailDialog = ({
     enabled: open,
   });
 
-  // Fetch manual bonus points
-  const { data: manualBonuses, isLoading: loadingManualBonuses } = useQuery({
-    queryKey: ["manager-bonus-points-detail", managerId, phaseId],
-    queryFn: async () => {
-      let query = supabase
-        .from("manager_bonus_points")
-        .select(`
-          id,
-          bonus_first_win,
-          bonus_coureurs,
-          bonus_scoreurs,
-          bonus_itt,
-          bonus_ttt,
-          commentaire,
-          phase_id,
-          phases(index_dans_saison)
-        `)
-        .eq("manager_id", managerId)
-        .order("phase_id", { ascending: true });
+  // Group bonuses by type
+  const bonusesByType = useMemo(() => {
+    if (!allBonuses) return {};
+    
+    return allBonuses.reduce((acc, bonus) => {
+      const type = bonus.bonus_type || 'other';
+      if (!acc[type]) acc[type] = [];
+      acc[type].push(bonus);
+      return acc;
+    }, {} as Record<string, typeof allBonuses>);
+  }, [allBonuses]);
 
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      }
+  // Calculate totals by type
+  const totalsByType = useMemo(() => {
+    return Object.entries(bonusesByType).reduce((acc, [type, bonuses]) => {
+      acc[type] = bonuses.reduce((sum, b) => sum + (b.points || 0), 0);
+      return acc;
+    }, {} as Record<string, number>);
+  }, [bonusesByType]);
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
-    enabled: open,
-  });
-
-  const isLoading = loadingRiderBonuses || loadingManualBonuses;
-
-  // Calculate totals
-  const riderBonusTotal = riderBonuses?.reduce((sum, b) => sum + b.points, 0) || 0;
-  const manualBonusTotal = manualBonuses?.reduce((sum, b) => 
-    sum + b.bonus_first_win + b.bonus_coureurs + b.bonus_scoreurs + b.bonus_itt + b.bonus_ttt, 0
-  ) || 0;
-  const totalBonus = riderBonusTotal + manualBonusTotal;
+  // Grand total
+  const grandTotal = Object.values(totalsByType).reduce((sum, val) => sum + val, 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -114,13 +98,16 @@ export const BonusPointsDetailDialog = ({
             </div>
           ) : (
             <>
-              {/* Rider bonuses */}
-              {riderBonuses && riderBonuses.length > 0 && (
+              {/* Bonus coureurs (+25%) */}
+              {bonusesByType['coureur_bonuse']?.length > 0 && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Users className="h-4 w-4" />
-                      Bonus coureurs (+25%)
+                    <CardTitle className="flex items-center justify-between text-lg">
+                      <span className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Bonus coureurs (+25%)
+                      </span>
+                      <span className="text-green-600 font-mono">+{totalsByType['coureur_bonuse']} pts</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -135,7 +122,7 @@ export const BonusPointsDetailDialog = ({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {riderBonuses.map((bonus) => (
+                        {bonusesByType['coureur_bonuse'].map((bonus) => (
                           <TableRow key={bonus.id}>
                             {!phaseId && (
                               <TableCell className="font-medium">
@@ -158,111 +145,155 @@ export const BonusPointsDetailDialog = ({
                         ))}
                       </TableBody>
                     </Table>
-                    <div className="mt-4 pt-4 border-t flex justify-between items-center">
-                      <span className="text-sm font-medium">Sous-total coureurs</span>
-                      <span className="font-mono font-bold text-green-600">+{riderBonusTotal}</span>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Bonus TTT */}
+              {bonusesByType['ttt']?.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between text-lg">
+                      <span className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Bonus Contre-la-Montre par équipe
+                      </span>
+                      <span className="text-green-600 font-mono">+{totalsByType['ttt']} pts</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {bonusesByType['ttt'].map((bonus) => (
+                        <div key={bonus.id} className="flex justify-between items-start border-b pb-2 last:border-0">
+                          <div className="flex-1">
+                            {!phaseId && (
+                              <div className="text-xs font-medium text-muted-foreground mb-1">
+                                Phase {bonus.phases?.index_dans_saison}
+                              </div>
+                            )}
+                            <div className="font-medium">
+                              {bonus.coureurs?.nom || 'Coureur inconnu'}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {bonus.coureurs?.equipe}
+                            </div>
+                            {bonus.commentaire && (
+                              <div className="text-sm text-muted-foreground mt-1 italic">
+                                {bonus.commentaire}
+                              </div>
+                            )}
+                          </div>
+                          <span className="font-mono font-medium text-green-600 ml-4">
+                            +{bonus.points}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
               )}
 
-              {/* Manual bonuses */}
-              {manualBonuses && manualBonuses.length > 0 && (
+              {/* Bonus scoreurs */}
+              {bonusesByType['scoreurs']?.length > 0 && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Award className="h-4 w-4" />
-                      Bonus manuels
+                    <CardTitle className="flex items-center justify-between text-lg">
+                      <span className="flex items-center gap-2">
+                        <Zap className="h-4 w-4" />
+                        Bonus scoreurs
+                      </span>
+                      <span className="text-green-600 font-mono">+{totalsByType['scoreurs']} pts</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      {manualBonuses.map((bonus) => {
-                        const phaseTotal = bonus.bonus_first_win + bonus.bonus_coureurs + 
-                                         bonus.bonus_scoreurs + bonus.bonus_itt + bonus.bonus_ttt;
-                        
-                        if (phaseTotal === 0) return null;
-
-                        return (
-                          <div key={bonus.id} className="border rounded-lg p-4 space-y-2">
+                    <div className="space-y-2">
+                      {bonusesByType['scoreurs'].map((bonus) => (
+                        <div key={bonus.id} className="flex justify-between items-start border-b pb-2 last:border-0">
+                          <div className="flex-1">
                             {!phaseId && (
-                              <div className="font-semibold text-sm">
+                              <div className="text-xs font-medium text-muted-foreground mb-1">
                                 Phase {bonus.phases?.index_dans_saison}
                               </div>
                             )}
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              {bonus.bonus_first_win !== 0 && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Première victoire</span>
-                                  <span className="font-mono font-medium text-green-600">
-                                    +{bonus.bonus_first_win}
-                                  </span>
-                                </div>
-                              )}
-                              {bonus.bonus_coureurs !== 0 && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Bonus coureurs</span>
-                                  <span className="font-mono font-medium text-green-600">
-                                    +{bonus.bonus_coureurs}
-                                  </span>
-                                </div>
-                              )}
-                              {bonus.bonus_scoreurs !== 0 && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Bonus scoreurs</span>
-                                  <span className="font-mono font-medium text-green-600">
-                                    +{bonus.bonus_scoreurs}
-                                  </span>
-                                </div>
-                              )}
-                              {bonus.bonus_itt !== 0 && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Bonus ITT</span>
-                                  <span className="font-mono font-medium text-green-600">
-                                    +{bonus.bonus_itt}
-                                  </span>
-                                </div>
-                              )}
-                              {bonus.bonus_ttt !== 0 && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Bonus TTT</span>
-                                  <span className="font-mono font-medium text-green-600">
-                                    +{bonus.bonus_ttt}
-                                  </span>
-                                </div>
-                              )}
+                            <div className="font-medium">
+                              {bonus.coureurs?.nom || 'Coureur inconnu'}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {bonus.coureurs?.equipe}
                             </div>
                             {bonus.commentaire && (
-                              <div className="text-sm text-muted-foreground italic pt-2 border-t">
+                              <div className="text-sm text-muted-foreground mt-1 italic">
                                 {bonus.commentaire}
                               </div>
                             )}
                           </div>
-                        );
-                      })}
+                          <span className="font-mono font-medium text-green-600 ml-4">
+                            +{bonus.points}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                    <div className="mt-4 pt-4 border-t flex justify-between items-center">
-                      <span className="text-sm font-medium">Sous-total manuels</span>
-                      <span className="font-mono font-bold text-green-600">+{manualBonusTotal}</span>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Bonus première victoire */}
+              {bonusesByType['first_win']?.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between text-lg">
+                      <span className="flex items-center gap-2">
+                        <Trophy className="h-4 w-4" />
+                        Bonus première victoire
+                      </span>
+                      <span className="text-green-600 font-mono">+{totalsByType['first_win']} pts</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {bonusesByType['first_win'].map((bonus) => (
+                        <div key={bonus.id} className="flex justify-between items-start border-b pb-2 last:border-0">
+                          <div className="flex-1">
+                            {!phaseId && (
+                              <div className="text-xs font-medium text-muted-foreground mb-1">
+                                Phase {bonus.phases?.index_dans_saison}
+                              </div>
+                            )}
+                            <div className="font-medium">
+                              {bonus.coureurs?.nom || 'Coureur inconnu'}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {bonus.coureurs?.equipe}
+                            </div>
+                            {bonus.commentaire && (
+                              <div className="text-sm text-muted-foreground mt-1 italic">
+                                {bonus.commentaire}
+                              </div>
+                            )}
+                          </div>
+                          <span className="font-mono font-medium text-green-600 ml-4">
+                            +{bonus.points}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
               )}
 
               {/* Empty state */}
-              {(!riderBonuses || riderBonuses.length === 0) && 
-               (!manualBonuses || manualBonuses.length === 0) && (
+              {Object.keys(bonusesByType).length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   Aucun bonus pour cette période
                 </div>
               )}
 
-              {/* Total */}
-              {totalBonus > 0 && (
+              {/* Grand total */}
+              {grandTotal > 0 && (
                 <div className="bg-muted/50 rounded-lg p-4 flex justify-between items-center">
-                  <span className="font-semibold">Total des bonus</span>
+                  <span className="font-semibold text-lg">Total des bonus</span>
                   <span className="text-2xl font-mono font-bold text-green-600">
-                    +{totalBonus} pts
+                    +{grandTotal} pts
                   </span>
                 </div>
               )}
