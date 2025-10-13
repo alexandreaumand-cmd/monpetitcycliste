@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { toJpeg } from "html-to-image";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Copy } from "lucide-react";
 import { getJerseyIcon, getJerseyLabel } from "@/lib/exportTemplates";
 
 type ExportScope = "top10" | "top20" | "full";
@@ -41,6 +41,7 @@ export const ExportResultsImage = ({
   const [scope, setScope] = useState<ExportScope>("top20");
   const [isGenerating, setIsGenerating] = useState(false);
   const [exportRef, setExportRef] = useState<HTMLDivElement | null>(null);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
 
   const isOneDay = course.type_course === "One day";
   const etapeNumero = !isOneDay && currentStage ? currentStage : null;
@@ -136,7 +137,7 @@ export const ExportResultsImage = ({
     enabled: open && !isOneDay,
   });
 
-  const handleGenerate = async () => {
+  const handleGeneratePreview = async () => {
     if (!exportRef || !topRiders || topRiders.length === 0) {
       toast.error("Aucune donnée à exporter");
       return;
@@ -157,17 +158,8 @@ export const ExportResultsImage = ({
         backgroundColor: "#ffffff",
       });
 
-      // Téléchargement
-      const link = document.createElement("a");
-      const courseName = course.course_nom.replace(/[^a-z0-9]/gi, "_");
-      const type = etapeNumero ? `Etape${etapeNumero}` : typeClassement;
-      const date = format(new Date(course.date_fin || course.date_debut), "yyyy-MM-dd");
-      link.download = `${courseName}_${type}_${date}.jpg`;
-      link.href = dataUrl;
-      link.click();
-
-      toast.success("Image exportée avec succès !");
-      onOpenChange(false);
+      setGeneratedImageUrl(dataUrl);
+      toast.success("Aperçu généré !");
     } catch (error) {
       console.error("Export error:", error);
       toast.error("Erreur lors de la génération de l'image");
@@ -176,75 +168,145 @@ export const ExportResultsImage = ({
     }
   };
 
+  const handleCopyImage = async () => {
+    if (!generatedImageUrl) return;
+    
+    try {
+      const response = await fetch(generatedImageUrl);
+      const blob = await response.blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+      toast.success("Image copiée dans le presse-papiers !");
+    } catch (error) {
+      console.error('Error copying image:', error);
+      toast.error("Échec de la copie. Essayez de télécharger l'image.");
+    }
+  };
+
+  const handleDownload = () => {
+    if (!generatedImageUrl) return;
+    
+    const link = document.createElement("a");
+    const courseName = course.course_nom.replace(/[^a-z0-9]/gi, "_");
+    const type = etapeNumero ? `Etape${etapeNumero}` : typeClassement;
+    const date = format(new Date(course.date_fin || course.date_debut), "yyyy-MM-dd");
+    link.download = `${courseName}_${type}_${date}.jpg`;
+    link.href = generatedImageUrl;
+    link.click();
+    toast.success("Image téléchargée !");
+  };
+
+  const handleReset = () => {
+    setGeneratedImageUrl(null);
+  };
+
   const isLoading = loadingRiders || loadingManagers || loadingJerseys;
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>📸 Exporter les résultats (JPEG)</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Portée de l'export</Label>
-              <RadioGroup value={scope} onValueChange={(v) => setScope(v as ExportScope)}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="top10" id="top10" />
-                  <Label htmlFor="top10" className="font-normal cursor-pointer">
-                    Top 10 (compact)
-                  </Label>
+          {!generatedImageUrl ? (
+            <>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Portée de l'export</Label>
+                  <RadioGroup value={scope} onValueChange={(v) => setScope(v as ExportScope)}>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="top10" id="top10" />
+                      <Label htmlFor="top10" className="font-normal cursor-pointer">
+                        Top 10 (compact)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="top20" id="top20" />
+                      <Label htmlFor="top20" className="font-normal cursor-pointer">
+                        Top 20 (standard)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="full" id="full" />
+                      <Label htmlFor="full" className="font-normal cursor-pointer">
+                        Complet (tous les coureurs)
+                      </Label>
+                    </div>
+                  </RadioGroup>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="top20" id="top20" />
-                  <Label htmlFor="top20" className="font-normal cursor-pointer">
-                    Top 20 (standard)
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="full" id="full" />
-                  <Label htmlFor="full" className="font-normal cursor-pointer">
-                    Complet (tous les coureurs)
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
 
-            <div className="text-sm text-muted-foreground space-y-1">
-              <p>Format: 1080 x 1920 (WhatsApp)</p>
-              <p>Qualité: Haute (JPEG 95%)</p>
-            </div>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>Format: 1080 x 1920 (WhatsApp)</p>
+                  <p>Qualité: Haute (JPEG 95%)</p>
+                </div>
 
-            {isLoading && (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                {isLoading && (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-              Annuler
-            </Button>
-            <Button
-              onClick={handleGenerate}
-              disabled={isLoading || isGenerating || !topRiders || topRiders.length === 0}
-              className="flex-1"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Génération...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4 mr-2" />
-                  Générer & Télécharger
-                </>
-              )}
-            </Button>
-          </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+                  Annuler
+                </Button>
+                <Button
+                  onClick={handleGeneratePreview}
+                  disabled={isLoading || isGenerating || !topRiders || topRiders.length === 0}
+                  className="flex-1"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Génération...
+                    </>
+                  ) : (
+                    "Générer l'aperçu"
+                  )}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-4 py-4">
+                <div className="bg-muted rounded-lg p-4 max-h-[500px] overflow-auto flex items-center justify-center">
+                  <img 
+                    src={generatedImageUrl} 
+                    alt="Aperçu de l'export" 
+                    className="max-w-full h-auto rounded shadow-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleReset}
+                  variant="outline"
+                >
+                  Modifier options
+                </Button>
+                <Button 
+                  onClick={handleCopyImage}
+                  variant="secondary"
+                  className="flex-1"
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copier l'image
+                </Button>
+                <Button 
+                  onClick={handleDownload}
+                  className="flex-1"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Télécharger
+                </Button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
