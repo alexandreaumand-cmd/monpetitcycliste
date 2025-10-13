@@ -4266,6 +4266,7 @@ export type Database = {
           manager_id: string | null
           manager_nom: string | null
           race_points: number | null
+          scorers_count: number | null
           total_points: number | null
         }
         Relationships: []
