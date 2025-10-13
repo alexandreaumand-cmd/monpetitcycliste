@@ -496,27 +496,56 @@ const StartlistDesktop = () => {
 
           {/* Section barème + parcours optimisée */}
           <div className="space-y-3 mb-3">
-            {/* Ligne 1: Barème CG + Parcours */}
+            {/* Ligne 1: Barèmes unifiés + Parcours */}
             <div className="grid grid-cols-3 gap-3">
-              {/* Barème Général - 2/3 */}
-              {startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'General') && (
-                <Card className="bg-muted/50 p-3 col-span-2">
-                  <h4 className="font-semibold text-xs mb-2">
-                    Barème Général ({startlistViewData.scoring.categorie})
-                  </h4>
-                  <div className="grid grid-cols-5 gap-x-4 gap-y-1 text-xs">
-                    {startlistViewData.scoring.rules
-                      .filter((r: any) => r.type_classement === 'General')
-                      .slice(0, 10)
-                      .map((rule: any) => (
-                        <div key={`gc-${rule.place}`} className="flex gap-1">
-                          <span className="font-medium">{rule.place}e:</span>
-                          <span className="text-muted-foreground">{rule.points}pts</span>
-                        </div>
-                      ))}
+              {/* Barèmes CG + Étapes - 2/3 */}
+              <Card className="bg-muted/50 p-3 col-span-2">
+                {/* Barème Général */}
+                {startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'General') && (
+                  <div className={startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'Etape') ? 'mb-3' : ''}>
+                    <h4 className="font-semibold text-xs mb-2">
+                      Barème Général ({startlistViewData.scoring.categorie})
+                    </h4>
+                    <div className="grid grid-cols-5 gap-x-4 gap-y-1 text-xs">
+                      {startlistViewData.scoring.rules
+                        .filter((r: any) => r.type_classement === 'General')
+                        .slice(0, 10)
+                        .map((rule: any) => (
+                          <div key={`gc-${rule.place}`} className="flex gap-1">
+                            <span className="font-medium">{rule.place}e:</span>
+                            <span className="text-muted-foreground">{rule.points}pts</span>
+                          </div>
+                        ))}
+                    </div>
                   </div>
-                </Card>
-              )}
+                )}
+                
+                {/* Séparateur si les deux barèmes existent */}
+                {startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'General') && 
+                 startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'Etape') && (
+                  <Separator className="my-3" />
+                )}
+                
+                {/* Barème Étapes */}
+                {startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'Etape') && (
+                  <div>
+                    <h4 className="font-semibold text-xs mb-2 text-primary">
+                      Barème Étapes
+                    </h4>
+                    <div className="grid grid-cols-5 gap-x-4 gap-y-1 text-xs">
+                      {startlistViewData.scoring.rules
+                        .filter((r: any) => r.type_classement === 'Etape')
+                        .slice(0, 10)
+                        .map((rule: any) => (
+                          <div key={`stage-${rule.place}`} className="flex gap-1">
+                            <span className="font-medium">{rule.place}e:</span>
+                            <span className="text-muted-foreground">{rule.points}pts</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
               
               {/* Image parcours - 1/3, plus grande */}
               {startlistViewData.route_image_url && (
@@ -534,27 +563,7 @@ const StartlistDesktop = () => {
               )}
             </div>
 
-            {/* Ligne 2: Barème Étapes - pleine largeur */}
-            {startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'Etape') && (
-              <Card className="bg-primary/5 p-3 border-primary/20">
-                <h4 className="font-semibold text-xs mb-2 text-primary">
-                  Barème Étapes
-                </h4>
-                <div className="grid grid-cols-10 gap-x-4 gap-y-1 text-xs">
-                  {startlistViewData.scoring.rules
-                    .filter((r: any) => r.type_classement === 'Etape')
-                    .slice(0, 20)
-                    .map((rule: any) => (
-                      <div key={`stage-${rule.place}`} className="flex gap-1">
-                        <span className="font-medium">{rule.place}e:</span>
-                        <span className="text-muted-foreground">{rule.points}pts</span>
-                      </div>
-                    ))}
-                </div>
-              </Card>
-            )}
-
-            {/* Ligne 3: Avis du startlisteur (si existe) */}
+            {/* Ligne 2: Avis du startlisteur (si existe) */}
             {startlistViewData.admin_rating_note?.trim()?.length > 0 && (
               <Card className="bg-blue-50 dark:bg-blue-950/20 p-3 border-blue-200 dark:border-blue-800">
                 <div className="flex items-center gap-2 mb-2">
