@@ -91,140 +91,28 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
 
   // Fetch previous global standings for evolution calculation (global view only)
   const { data: previousGlobalStandings } = useQuery({
-    queryKey: ["previous-global-standings", selectedSeason?.id, activePhase?.id, standings ? standings.map((s: any) => s.manager_id).join(",") : "no-standings"],
+    queryKey: ["previous-global-standings", selectedSeason?.id, activePhase?.id],
     queryFn: async () => {
-      if (phaseId) return null; // No evolution for individual phases
+      if (phaseId || !activePhase) return null;
 
-      // Determine the reference phase
-      let referencePhase: { id: string; index_dans_saison?: number; saison_id?: string; date_debut: string } | null = null;
+      const { data, error } = await supabase.rpc('get_previous_standings', {
+        p_saison_id: selectedSeason?.id || null,
+        p_reference_phase_id: activePhase.id
+      });
 
-      if (selectedSeason) {
-        // For a specific season, use activePhase from context or fallback to last completed
-        if (activePhase && activePhase.saison_id === selectedSeason.id) {
-          referencePhase = {
-            id: activePhase.id,
-            index_dans_saison: activePhase.index_dans_saison,
-            saison_id: activePhase.saison_id,
-            date_debut: activePhase.date_debut
-          };
-        } else {
-          const { data: lastCompleted } = await supabase
-            .from("phases")
-            .select("id, index_dans_saison, saison_id, date_debut")
-            .eq("saison_id", selectedSeason.id)
-            .eq("statut", "completed")
-            .order("index_dans_saison", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          
-          if (!lastCompleted) return null;
-          referencePhase = lastCompleted;
-        }
-      } else {
-        // Global view: find active or last completed phase
-        const { data: activeGlobal } = await supabase
-          .from("phases")
-          .select("id, index_dans_saison, saison_id, date_debut")
-          .eq("statut", "active")
-          .order("date_debut", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (activeGlobal) {
-          referencePhase = activeGlobal;
-        } else {
-          const { data: lastCompletedGlobal } = await supabase
-            .from("phases")
-            .select("id, index_dans_saison, saison_id, date_debut")
-            .eq("statut", "completed")
-            .order("date_debut", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          
-          if (!lastCompletedGlobal) return null;
-          referencePhase = lastCompletedGlobal;
-        }
+      if (error) {
+        console.error('Error fetching previous standings:', error);
+        return null;
       }
 
-      if (!referencePhase) return null;
-
-      // Get completed phases before the reference phase
-      let completedPhasesQuery = supabase
-        .from("phases")
-        .select("id, date_fin")
-        .eq("statut", "completed");
-
-      if (selectedSeason) {
-        completedPhasesQuery = completedPhasesQuery
-          .eq("saison_id", selectedSeason.id)
-          .lt("index_dans_saison", referencePhase.index_dans_saison as number);
-      } else {
-        completedPhasesQuery = completedPhasesQuery.lt("date_fin", referencePhase.date_debut);
-      }
-
-      const { data: completedPhases } = await completedPhasesQuery;
-      if (!completedPhases?.length) return null;
-
-      const completedPhaseIds = completedPhases.map((p) => p.id);
-
-      // Calculate cumulative totals across all completed phases: official points + manager bonuses + all bonus_points (targeted or manager-owned)
-      const [plRes, mbpRes, bpRes] = await Promise.all([
-        supabase
-          .from("points_ledger")
-          .select("manager_id, points")
-          .in("phase_id", completedPhaseIds),
-        supabase
-          .from("manager_bonus_points")
-          .select("manager_id, bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs")
-          .in("phase_id", completedPhaseIds),
-        supabase
-          .from("bonus_points")
-          .select("manager_id, target_manager_id, points")
-          .in("phase_id", completedPhaseIds),
-      ] as const);
-
-      // If no data at all, abort
-      if (!plRes.data && !mbpRes.data && !bpRes.data) return null;
-
-      const totals = new Map<string, number>();
-
-      // points_ledger (official points)
-      plRes.data?.forEach((row: any) => {
-        if (!row.manager_id) return;
-        totals.set(row.manager_id, (totals.get(row.manager_id) ?? 0) + (row.points ?? 0));
-      });
-
-      // manager_bonus_points (phase-level bonuses)
-      mbpRes.data?.forEach((row: any) => {
-        if (!row.manager_id) return;
-        const sum = (row.bonus_itt ?? 0) + (row.bonus_ttt ?? 0) + (row.bonus_first_win ?? 0) + (row.bonus_coureurs ?? 0) + (row.bonus_scoreurs ?? 0);
-        if (sum !== 0) {
-          totals.set(row.manager_id, (totals.get(row.manager_id) ?? 0) + sum);
-        }
-      });
-
-      // all bonus_points (both targeted and manager-owned)
-      bpRes.data?.forEach((row: any) => {
-        const recipient = row.target_manager_id ?? row.manager_id;
-        if (!recipient) return;
-        totals.set(recipient, (totals.get(recipient) ?? 0) + (row.points ?? 0));
-      });
-
-      // Include all current managers with 0 default to ensure everyone gets a rank
-      standings?.forEach((s) => {
-        if (!totals.has(s.manager_id)) {
-          totals.set(s.manager_id, 0);
-        }
-      });
-
-      // Build ranking map from totals
-      const sorted = Array.from(totals.entries()).sort((a, b) => b[1] - a[1]);
+      // Convert to Map<manager_id, rank>
       const rankMap = new Map<string, number>();
-      sorted.forEach(([managerId], idx) => rankMap.set(managerId, idx + 1));
-
+      data?.forEach((row: any) => {
+        rankMap.set(row.manager_id, row.previous_rank);
+      });
       return rankMap;
     },
-    enabled: !phaseId,
+    enabled: !phaseId && !!activePhase,
   });
 
   const maxPoints = standings?.[0]?.total_points || 1;
