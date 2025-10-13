@@ -6,6 +6,12 @@ verify_jwt = true
 [functions.get-consistency-scores]
 verify_jwt = true
 
+[functions.get-points-distribution]
+verify_jwt = true
+
+[functions.get-predictions]
+verify_jwt = true
+
 [functions.import-data]
 verify_jwt = true
 

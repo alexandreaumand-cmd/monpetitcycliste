@@ -5,6 +5,8 @@ import { useSeasonContext } from "@/contexts/SeasonContext";
 import { BarChart3 } from "lucide-react";
 import { PerformanceHeatmap } from "@/components/rankings/PerformanceHeatmap";
 import { ConsistencyScores } from "@/components/rankings/ConsistencyScores";
+import { PointsDistribution } from "@/components/rankings/PointsDistribution";
+import { ManagerPredictions } from "@/components/rankings/ManagerPredictions";
 
 const Statistics = () => {
   const { selectedSeason, setSelectedSeason, seasons, isLoading } = useSeasonContext();
@@ -63,9 +65,11 @@ const Statistics = () => {
       </div>
 
       <Tabs defaultValue="heatmap" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="heatmap">Heatmap performances</TabsTrigger>
-          <TabsTrigger value="consistency">Consistency score</TabsTrigger>
+        <TabsList className="grid w-full max-w-4xl grid-cols-4">
+          <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
+          <TabsTrigger value="consistency">Consistency</TabsTrigger>
+          <TabsTrigger value="distribution">Distribution</TabsTrigger>
+          <TabsTrigger value="predictions">Prédictions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="heatmap" className="mt-6">
@@ -74,6 +78,14 @@ const Statistics = () => {
 
         <TabsContent value="consistency" className="mt-6">
           <ConsistencyScores saisonId={selectedSeason.id} />
+        </TabsContent>
+
+        <TabsContent value="distribution" className="mt-6">
+          <PointsDistribution saisonId={selectedSeason.id} />
+        </TabsContent>
+
+        <TabsContent value="predictions" className="mt-6">
+          <ManagerPredictions saisonId={selectedSeason.id} />
         </TabsContent>
       </Tabs>
     </div>
