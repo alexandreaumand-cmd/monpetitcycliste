@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 interface BonusRiderSelectorProps {
   coureur_id: string;
   coureur_nom: string;
-  prix_achat: number;
+  cote_initiale: number;
   phase_id: string;
   manager_id: string;
   isSelected: boolean;
@@ -29,7 +29,7 @@ interface BonusRiderSelectorProps {
 export const BonusRiderSelector = ({
   coureur_id,
   coureur_nom,
-  prix_achat,
+  cote_initiale,
   phase_id,
   manager_id,
   isSelected,
@@ -40,9 +40,9 @@ export const BonusRiderSelector = ({
 
   const selectBonusRider = useMutation({
     mutationFn: async () => {
-      // Vérifier éligibilité (prix = 10 ou 20)
-      if (prix_achat !== 10 && prix_achat !== 20) {
-        throw new Error('Seuls les coureurs cotés 10 ou 20 sont éligibles');
+      // Vérifier éligibilité (cote initiale = 10 ou 20)
+      if (cote_initiale !== 10 && cote_initiale !== 20) {
+        throw new Error('Seuls les coureurs avec une cote initiale de 10 ou 20 sont éligibles');
       }
 
       // Vérifier qu'aucun coureur bonus n'est déjà sélectionné
@@ -95,7 +95,7 @@ export const BonusRiderSelector = ({
   }
 
   if (!canSelect) return null;
-  if (prix_achat !== 10 && prix_achat !== 20) return null;
+  if (cote_initiale !== 10 && cote_initiale !== 20) return null;
 
   return (
     <AlertDialog>

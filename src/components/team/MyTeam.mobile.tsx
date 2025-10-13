@@ -459,10 +459,10 @@ export const MyTeamMobile = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Choisir votre coureur bonus</DialogTitle>
-            <DialogDescription>
-              Sélectionnez un coureur coté 10 ou 20 qui recevra +25% de points bonus.
-              <br />⚠️ Ce choix est définitif pour cette phase.
-            </DialogDescription>
+          <DialogDescription>
+            Sélectionnez un coureur avec une cote initiale de 10 ou 20 qui recevra +25% de points bonus.
+            <br />⚠️ Ce choix est définitif pour cette phase.
+          </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -479,15 +479,15 @@ export const MyTeamMobile = () => {
                   <div className="text-left">
                     <div className="font-semibold">{coureur.nom}</div>
                     <div className="text-xs text-muted-foreground">
-                      {coureur.equipe} • Prix: {coureur.prix_achat} • {coureur.points_total} pts
+                      {coureur.equipe} • Cote: {coureur.cote_initiale} • {coureur.points_total} pts
                     </div>
                   </div>
                 </Button>
               ))}
             
-            {coureurs.filter(c => c.prix_achat === 10 || c.prix_achat === 20).length === 0 && (
+            {coureurs.filter(c => c.cote_initiale === 10 || c.cote_initiale === 20).length === 0 && (
               <p className="text-center text-muted-foreground py-4">
-                Aucun coureur éligible (prix 10 ou 20)
+                Aucun coureur éligible (cote initiale 10 ou 20)
               </p>
             )}
           </div>
