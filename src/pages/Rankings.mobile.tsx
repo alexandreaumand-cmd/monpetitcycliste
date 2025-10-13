@@ -44,13 +44,22 @@ export const RankingsMobile = () => {
 
   // Fetch standings
   const { data: standings, isLoading: standingsLoading } = useQuery({
-    queryKey: ["manager-standings-mobile", selectedPhase],
+    queryKey: ["manager-standings-mobile", selectedPhase, selectedSeason?.id],
     queryFn: async () => {
       if (selectedPhase) {
         const { data, error } = await supabase
           .from("v_manager_standings_by_phase")
           .select("*")
           .eq("phase_id", selectedPhase)
+          .order("total_points", { ascending: false });
+        
+        if (error) throw error;
+        return data;
+      } else if (selectedSeason) {
+        const { data, error } = await supabase
+          .from("v_manager_standings_by_season")
+          .select("*")
+          .eq("saison_id", selectedSeason.id)
           .order("total_points", { ascending: false });
         
         if (error) throw error;
