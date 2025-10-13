@@ -41,6 +41,7 @@ interface TeamKPIs {
   scorers_count: number;
   total_points: number;
   bonus_points: number;
+  bonus_rider_points: number;
   total_with_bonus: number;
   wins_count: number;
   my_rank: number | null;
@@ -65,6 +66,7 @@ export const MyTeamDesktop = () => {
     scorers_count: 0,
     total_points: 0,
     bonus_points: 0,
+    bonus_rider_points: 0,
     total_with_bonus: 0,
     wins_count: 0,
     my_rank: null,
@@ -169,7 +171,7 @@ export const MyTeamDesktop = () => {
 
       if (error) throw error;
       setCoureurs(data.coureurs || []);
-      setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, total_with_bonus: 0, wins_count: 0, my_rank: null, managers_count: 0 });
+      setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, bonus_rider_points: 0, total_with_bonus: 0, wins_count: 0, my_rank: null, managers_count: 0 });
     } catch (error) {
       console.error('Error loading team:', error);
       toast({

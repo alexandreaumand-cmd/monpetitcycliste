@@ -87,15 +87,20 @@ Deno.serve(async (req) => {
 
     // Récupérer les points bonus du manager depuis la nouvelle table bonus_points
     let bonusPoints = 0;
+    let bonusRiderPoints = 0;
     if (phaseId && targetManagerId) {
       const { data: bonusData } = await supabase
         .from('bonus_points')
-        .select('points')
+        .select('points, bonus_type')
         .eq('target_manager_id', targetManagerId)
         .eq('phase_id', phaseId);
       
       if (bonusData && bonusData.length > 0) {
         bonusPoints = bonusData.reduce((sum, bonus) => sum + (bonus.points || 0), 0);
+        // Calculer séparément les points bonus du coureur bonus
+        bonusRiderPoints = bonusData
+          .filter(b => b.bonus_type === 'coureur_bonuse')
+          .reduce((sum, bonus) => sum + (bonus.points || 0), 0);
       }
     }
 
@@ -166,6 +171,7 @@ Deno.serve(async (req) => {
         scorers_count: scorersCount,
         total_points: totalPoints,
         bonus_points: bonusPoints,
+        bonus_rider_points: bonusRiderPoints,
         total_with_bonus: totalPoints + bonusPoints,
         wins_count: winsCount,
         my_rank: myRank,
