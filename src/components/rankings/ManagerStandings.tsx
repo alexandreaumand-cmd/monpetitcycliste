@@ -165,6 +165,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               <TableHead className="text-right">Points</TableHead>
               <TableHead className="text-right">dont bonus</TableHead>
               <TableHead className="text-right">Scoreurs</TableHead>
+              <TableHead className="text-right">Victoires</TableHead>
               <TableHead className="text-right">Écart</TableHead>
               {previousGlobalStandings && <TableHead className="w-24 text-center">Évolution</TableHead>}
             </TableRow>
@@ -277,7 +278,12 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                   </TableCell>
                   <TableCell className="text-right py-2">
                     <span className="text-sm font-mono text-muted-foreground">
-                      {(standing as any).scorers_count ?? 0}
+                      {standing.scoreurs_count ?? 0}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right py-2">
+                    <span className="text-sm font-mono text-muted-foreground">
+                      {standing.victories_count ?? 0}
                     </span>
                   </TableCell>
                   <TableCell className="text-right py-2">

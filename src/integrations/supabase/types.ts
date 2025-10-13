@@ -4280,6 +4280,7 @@ export type Database = {
           phase_index: number | null
           scoreurs_count: number | null
           total_points: number | null
+          victories_count: number | null
         }
         Relationships: []
       }
@@ -4293,6 +4294,7 @@ export type Database = {
           saison_id: string | null
           scorers_count: number | null
           total_points: number | null
+          victories_count: number | null
         }
         Relationships: []
       }
@@ -4304,6 +4306,7 @@ export type Database = {
           race_points: number | null
           scorers_count: number | null
           total_points: number | null
+          victories_count: number | null
         }
         Relationships: []
       }

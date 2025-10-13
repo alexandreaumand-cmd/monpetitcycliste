@@ -395,7 +395,12 @@ export const RankingsMobile = () => {
                     avatar={<RankBadge rank={rank} />}
                     badge={<PointsBadge points={standing.total_points} rank={rank} />}
                     onClick={() => handleManagerClick(standing.manager_id)}
-                  />
+                  >
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                      <span>Scoreurs: {standing.scoreurs_count ?? 0}</span>
+                      <span>Victoires: {standing.victories_count ?? 0}</span>
+                    </div>
+                  </MobileCard>
                 );
               })
             ) : (
