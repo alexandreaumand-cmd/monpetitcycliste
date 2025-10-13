@@ -143,6 +143,17 @@ export const ExportResultsImage = ({
       return;
     }
 
+    // Vérifier qu'il y a au moins des données à exporter
+    const hasData = 
+      (topRiders && topRiders.length > 0) ||
+      (managerPoints && managerPoints.length > 0) ||
+      (jerseyHolders && jerseyHolders.length > 0);
+
+    if (!hasData) {
+      toast.error("Aucun résultat disponible pour cette course. Saisissez d'abord les résultats.");
+      return;
+    }
+
     try {
       setIsGenerating(true);
 
