@@ -52,6 +52,20 @@ serve(async (req) => {
       );
     }
 
+    // Get current manager for author tracking
+    const { data: currentManager, error: managerError } = await supabase
+      .from('managers')
+      .select('id, nom')
+      .eq('user_id', user.id)
+      .single();
+
+    if (managerError || !currentManager) {
+      return new Response(
+        JSON.stringify({ error: 'Manager profile not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { startlist_id, ratings = [], global_note = undefined } = await req.json();
 
     console.log('rate-managers payload', {
@@ -102,12 +116,15 @@ serve(async (req) => {
       );
     }
 
-    // Update global note on startlist_imports
+    // Update global note AND author on startlist_imports
     if (global_note !== undefined) {
       const cleaned = typeof global_note === 'string' ? global_note.trim() : null;
       const { error: updateError } = await supabase
         .from('startlist_imports')
-        .update({ admin_rating_note: cleaned || null })
+        .update({ 
+          admin_rating_note: cleaned || null,
+          admin_rating_author_id: cleaned ? currentManager.id : null
+        })
         .eq('id', startlist_id);
       
       if (updateError) {
@@ -117,7 +134,11 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      console.log('Global note updated', { startlist_id, length: cleaned ? cleaned.length : 0 });
+      console.log('Global note updated', { 
+        startlist_id, 
+        length: cleaned ? cleaned.length : 0,
+        author: currentManager.nom 
+      });
     }
 
     // Fetch updated ratings aggregated

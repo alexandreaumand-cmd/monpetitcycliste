@@ -3113,6 +3113,7 @@ export type Database = {
       }
       startlist_imports: {
         Row: {
+          admin_rating_author_id: string | null
           admin_rating_note: string | null
           created_at: string | null
           created_by_manager_id: string | null
@@ -3128,6 +3129,7 @@ export type Database = {
           startlisteur_note: string | null
         }
         Insert: {
+          admin_rating_author_id?: string | null
           admin_rating_note?: string | null
           created_at?: string | null
           created_by_manager_id?: string | null
@@ -3143,6 +3145,7 @@ export type Database = {
           startlisteur_note?: string | null
         }
         Update: {
+          admin_rating_author_id?: string | null
           admin_rating_note?: string | null
           created_at?: string | null
           created_by_manager_id?: string | null
@@ -3158,6 +3161,62 @@ export type Database = {
           startlisteur_note?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "startlist_imports_admin_rating_author_id_fkey"
+            columns: ["admin_rating_author_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_admin_rating_author_id_fkey"
+            columns: ["admin_rating_author_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_admin_rating_author_id_fkey"
+            columns: ["admin_rating_author_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_admin_rating_author_id_fkey"
+            columns: ["admin_rating_author_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_admin_rating_author_id_fkey"
+            columns: ["admin_rating_author_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_admin_rating_author_id_fkey"
+            columns: ["admin_rating_author_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_season"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_admin_rating_author_id_fkey"
+            columns: ["admin_rating_author_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_total"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_admin_rating_author_id_fkey"
+            columns: ["admin_rating_author_id"]
+            isOneToOne: false
+            referencedRelation: "v_recent_points"
+            referencedColumns: ["manager_id"]
+          },
           {
             foreignKeyName: "startlist_imports_created_by_manager_id_fkey"
             columns: ["created_by_manager_id"]

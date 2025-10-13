@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
       route_image_url,
       startlisteur_note,
       admin_rating_note,
-      created_by_manager_id,
+      admin_rating_author_id,
       courses!inner(
           id,
           nom,
@@ -48,16 +48,16 @@ Deno.serve(async (req) => {
       throw new Error('Startlist not found');
     }
 
-    // Fetch manager author name separately if created_by_manager_id exists
-    let managerAuthorName = null;
-    if (startlist.created_by_manager_id) {
+    // Fetch rating author name separately if admin_rating_author_id exists
+    let ratingAuthorName = null;
+    if (startlist.admin_rating_author_id) {
       const { data: managerData } = await supabase
         .from('managers')
         .select('nom')
-        .eq('id', startlist.created_by_manager_id)
+        .eq('id', startlist.admin_rating_author_id)
         .single();
       
-      managerAuthorName = managerData?.nom || null;
+      ratingAuthorName = managerData?.nom || null;
     }
 
     const race = Array.isArray(startlist.courses) ? startlist.courses[0] : startlist.courses;
@@ -311,7 +311,7 @@ Deno.serve(async (req) => {
       route_image_url: startlist.route_image_url || null,
       startlisteur_note: startlist.startlisteur_note || null,
       admin_rating_note: startlist.admin_rating_note || null,
-      admin_rating_author: managerAuthorName,
+      admin_rating_author: ratingAuthorName,
       managers,
       scoring: {
         categorie: race.categorie,
