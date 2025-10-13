@@ -308,11 +308,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         console.log('✅ Résultats existants trouvés, barème disponible:', scoringRules?.length || 0);
         // Pre-existing results found - merge with full grid from scoring rules
         if (!scoringRules || scoringRules.length === 0) {
-          toast({
-            title: "Barème introuvable",
-            description: `Résultats chargés mais aucun barème trouvé pour ${course.categorie} / ${classementType}. Points affichés = 0.`,
-            variant: "default",
-          });
           // Still display existing results even without scoring rules
           rows = existingResults.map((r: any) => ({
             position: r.row_position,
@@ -351,11 +346,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           setResultRows([]);
           setGridPrepared(true);
           setIsDirty(false);
-          toast({
-            title: "Barème introuvable",
-            description: `Aucun barème défini pour ${course.categorie} / ${classementType}`,
-            variant: "destructive",
-          });
           setIsLoadingGrid(false);
           return;
         }
@@ -865,22 +855,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               <Info className="h-4 w-4" />
               <AlertDescription>
                 Cette étape annulée ne bloque pas la saisie des classements finaux (CG, Points, etc.)
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Scoring Info */}
-          {scoringRules && scoringRules.length === 0 && gridPrepared && resultRows.length === 0 && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>
-                Aucun barème trouvé pour {course.categorie} / {classementType}
-              </AlertDescription>
-            </Alert>
-          )}
-          {scoringRules && scoringRules.length === 0 && gridPrepared && resultRows.length > 0 && (
-            <Alert className="mb-4">
-              <AlertDescription>
-                Barème introuvable — résultats affichés (points = 0).
               </AlertDescription>
             </Alert>
           )}

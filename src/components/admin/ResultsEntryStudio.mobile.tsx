@@ -332,7 +332,8 @@ export const ResultsEntryStudioMobile = ({
 
       if (rulesError) throw rulesError;
       if (!serverScoringRules?.length) {
-        throw new Error("Barème introuvable");
+        console.warn(`⚠️ Aucun barème trouvé pour ${currentClassement}`);
+        // Continue with empty scoring map
       }
 
       const scoringMap = new Map(serverScoringRules.map(sr => [sr.place, sr.points]));

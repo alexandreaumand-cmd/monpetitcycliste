@@ -246,7 +246,8 @@ export const ResultsEntryDrawer = ({
 
       if (rulesError) throw rulesError;
       if (!serverScoringRules?.length) {
-        throw new Error("Barème introuvable sur le serveur");
+        console.warn(`⚠️ Aucun barème trouvé pour ${course.categorie} / ${classementType}`);
+        // Continue with empty scoring map
       }
 
       const scoringMap = new Map(serverScoringRules.map(sr => [sr.place, sr.points]));
