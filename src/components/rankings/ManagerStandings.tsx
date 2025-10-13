@@ -135,32 +135,65 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
 
       const completedPhaseIds = completedPhases.map((p) => p.id);
 
-      // Calculate cumulative points from all completed phases
-      const { data: cumulativePoints, error } = await supabase
-        .from("points_ledger")
-        .select("manager_id, points")
-        .in("phase_id", completedPhaseIds);
+      // Calculate cumulative totals across all completed phases: official points + manager bonuses + targeted/rider bonuses
+      const [plRes, mbpRes, bpTargetRes, bpRiderRes] = await Promise.all([
+        supabase
+          .from("points_ledger")
+          .select("manager_id, points")
+          .in("phase_id", completedPhaseIds),
+        supabase
+          .from("manager_bonus_points")
+          .select("manager_id, bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs")
+          .in("phase_id", completedPhaseIds),
+        supabase
+          .from("bonus_points")
+          .select("target_manager_id, points")
+          .in("phase_id", completedPhaseIds)
+          .not("target_manager_id", "is", null),
+        supabase
+          .from("bonus_points")
+          .select("manager_id, points, coureur_id")
+          .in("phase_id", completedPhaseIds)
+          .not("manager_id", "is", null)
+          .not("coureur_id", "is", null),
+      ] as const);
 
-      if (error || !cumulativePoints) return null;
+      // If no data at all, abort
+      if (!plRes.data && !mbpRes.data && !bpTargetRes.data && !bpRiderRes.data) return null;
 
-      // Aggregate points by manager
-      const managerPoints = new Map<string, number>();
-      cumulativePoints.forEach((entry) => {
-        if (entry.manager_id) {
-          const current = managerPoints.get(entry.manager_id) || 0;
-          managerPoints.set(entry.manager_id, current + entry.points);
+      const totals = new Map<string, number>();
+
+      // points_ledger (official points)
+      plRes.data?.forEach((row: any) => {
+        if (!row.manager_id) return;
+        totals.set(row.manager_id, (totals.get(row.manager_id) ?? 0) + (row.points ?? 0));
+      });
+
+      // manager_bonus_points (phase-level bonuses)
+      mbpRes.data?.forEach((row: any) => {
+        if (!row.manager_id) return;
+        const sum = (row.bonus_itt ?? 0) + (row.bonus_ttt ?? 0) + (row.bonus_first_win ?? 0) + (row.bonus_coureurs ?? 0) + (row.bonus_scoreurs ?? 0);
+        if (sum !== 0) {
+          totals.set(row.manager_id, (totals.get(row.manager_id) ?? 0) + sum);
         }
       });
 
-      // Create sorted array with ranks
-      const sortedManagers = Array.from(managerPoints.entries())
-        .sort((a, b) => b[1] - a[1]);
-
-      // Create rank map
-      const rankMap = new Map<string, number>();
-      sortedManagers.forEach(([managerId], idx) => {
-        rankMap.set(managerId, idx + 1);
+      // bonus_points targeted to a manager (target_manager_id)
+      bpTargetRes.data?.forEach((row: any) => {
+        if (!row.target_manager_id) return;
+        totals.set(row.target_manager_id, (totals.get(row.target_manager_id) ?? 0) + (row.points ?? 0));
       });
+
+      // bonus_points earned via rider selection (credited to manager_id and with coureur_id present)
+      bpRiderRes.data?.forEach((row: any) => {
+        if (!row.manager_id) return;
+        totals.set(row.manager_id, (totals.get(row.manager_id) ?? 0) + (row.points ?? 0));
+      });
+
+      // Build ranking map from totals
+      const sorted = Array.from(totals.entries()).sort((a, b) => b[1] - a[1]);
+      const rankMap = new Map<string, number>();
+      sorted.forEach(([managerId], idx) => rankMap.set(managerId, idx + 1));
 
       return rankMap;
     },
