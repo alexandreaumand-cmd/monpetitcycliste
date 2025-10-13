@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { toJpeg } from "html-to-image";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Download, Loader2, Copy } from "lucide-react";
+import { Download, Loader2, Copy, Share2 } from "lucide-react";
 import { getJerseyIcon, getJerseyLabel } from "@/lib/exportTemplates";
 
 type ExportScope = "top10" | "top20" | "full";
@@ -138,8 +138,8 @@ export const ExportResultsImage = ({
   });
 
   const handleGeneratePreview = async () => {
-    if (!exportRef || !topRiders || topRiders.length === 0) {
-      toast.error("Aucune donnée à exporter");
+    if (!exportRef) {
+      toast.error("Impossible de générer l'aperçu. Réessayez.");
       return;
     }
 
@@ -171,6 +171,12 @@ export const ExportResultsImage = ({
   const handleCopyImage = async () => {
     if (!generatedImageUrl) return;
     
+    // Vérifier si l'API Clipboard est disponible
+    if (!navigator.clipboard || !navigator.clipboard.write) {
+      toast.info("Copie non supportée. Faites un appui long sur l'image pour la copier.");
+      return;
+    }
+    
     try {
       const response = await fetch(generatedImageUrl);
       const blob = await response.blob();
@@ -181,6 +187,29 @@ export const ExportResultsImage = ({
     } catch (error) {
       console.error('Error copying image:', error);
       toast.error("Échec de la copie. Essayez de télécharger l'image.");
+    }
+  };
+
+  const handleShareImage = async () => {
+    if (!generatedImageUrl) return;
+    
+    try {
+      const response = await fetch(generatedImageUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `export_${course.course_nom.replace(/[^a-z0-9]/gi, "_")}.jpg`, { type: 'image/jpeg' });
+      
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Résultats ${course.course_nom}`,
+        });
+        toast.success("Image partagée !");
+      } else {
+        toast.info("Partage non supporté. Téléchargez l'image.");
+      }
+    } catch (error) {
+      console.error('Error sharing image:', error);
+      toast.error("Échec du partage.");
     }
   };
 
@@ -282,17 +311,34 @@ export const ExportResultsImage = ({
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button 
                   onClick={handleReset}
                   variant="outline"
+                  className="w-full sm:w-auto"
                 >
                   Modifier options
                 </Button>
                 <Button 
                   onClick={handleCopyImage}
                   variant="secondary"
-                  className="flex-1"
+                  className="flex-1 sm:hidden"
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copier
+                </Button>
+                <Button 
+                  onClick={handleShareImage}
+                  variant="secondary"
+                  className="flex-1 sm:hidden"
+                >
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Partager
+                </Button>
+                <Button 
+                  onClick={handleCopyImage}
+                  variant="secondary"
+                  className="hidden sm:flex flex-1"
                 >
                   <Copy className="mr-2 h-4 w-4" />
                   Copier l'image
