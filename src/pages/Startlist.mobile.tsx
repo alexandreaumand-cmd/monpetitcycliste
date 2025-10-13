@@ -366,59 +366,89 @@ export const StartlistMobile = () => {
             </p>
           </div>
 
-          {/* Route image */}
-          {startlistViewData.route_image_url && (
-            <div
-              className="rounded-xl overflow-hidden border cursor-pointer"
-              onClick={() => setImageModalOpen(true)}
-            >
-              <img
-                src={startlistViewData.route_image_url}
-                alt="Parcours"
-                className="w-full h-auto object-cover"
-              />
-            </div>
-          )}
+          {/* Section Parcours + Avis - Layout optimisé */}
+          <div className="space-y-3">
+            {/* Image du parcours - Agrandie */}
+            {startlistViewData.route_image_url && (
+              <div
+                className="rounded-2xl overflow-hidden border-2 cursor-pointer shadow-lg"
+                onClick={() => setImageModalOpen(true)}
+              >
+                <img
+                  src={startlistViewData.route_image_url}
+                  alt="Parcours"
+                  className="w-full h-auto object-cover"
+                />
+              </div>
+            )}
 
-          {/* Barème de points */}
+            {/* L'avis du startlisteur - Sans espace vide */}
+            {startlistViewData.admin_rating_note?.trim()?.length > 0 && (
+              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <h4 className="font-semibold text-sm">L'avis du startlisteur</h4>
+                </div>
+                <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                  "{startlistViewData.admin_rating_note}"
+                  {startlistViewData.admin_rating_author && (
+                    <span className="block mt-2 text-xs font-medium text-right italic">
+                      — {startlistViewData.admin_rating_author}
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Barème de points - Optimisé pour courses à étapes */}
           {startlistViewData.scoring && startlistViewData.scoring.rules && startlistViewData.scoring.rules.length > 0 && (
-            <div className="bg-muted/50 rounded-xl p-3 border">
-              <h4 className="font-semibold text-xs mb-2">Barème ({startlistViewData.scoring.categorie})</h4>
-              <div className="grid grid-cols-5 gap-x-4 gap-y-1 text-xs">
-                {startlistViewData.scoring.rules
-                  .filter((r: any) => r.type_classement === 'General')
-                  .slice(0, 10)
-                  .map((rule: any) => (
-                    <div key={rule.place} className="flex gap-1">
-                      <span className="font-medium">{rule.place}e:</span>
-                      <span className="text-muted-foreground">{rule.points}pts</span>
-                    </div>
-                  ))}
-              </div>
+            <div className="space-y-2">
+              {/* Barème Général */}
+              {startlistViewData.scoring.rules.some((r: any) => r.type_classement === 'General') && (
+                <div className="bg-muted/50 rounded-xl p-3 border">
+                  <h4 className="font-semibold text-xs mb-2">
+                    Barème Général ({startlistViewData.scoring.categorie})
+                  </h4>
+                  <div className="grid grid-cols-5 gap-x-3 gap-y-1 text-xs">
+                    {startlistViewData.scoring.rules
+                      .filter((r: any) => r.type_classement === 'General')
+                      .slice(0, 10)
+                      .map((rule: any) => (
+                        <div key={`gc-${rule.place}`} className="flex gap-1">
+                          <span className="font-medium">{rule.place}e:</span>
+                          <span className="text-muted-foreground">{rule.points}pts</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Barème Étapes */}
+              {startlistViewData.scoring.rules.some((r: any) => r.type_classement === 'Etape') && (
+                <div className="bg-primary/5 rounded-xl p-3 border border-primary/20">
+                  <h4 className="font-semibold text-xs mb-2 text-primary">
+                    Barème Étapes
+                  </h4>
+                  <div className="grid grid-cols-5 gap-x-3 gap-y-1 text-xs">
+                    {startlistViewData.scoring.rules
+                      .filter((r: any) => r.type_classement === 'Etape')
+                      .slice(0, 10)
+                      .map((rule: any) => (
+                        <div key={`stage-${rule.place}`} className="flex gap-1">
+                          <span className="font-medium">{rule.place}e:</span>
+                          <span className="text-muted-foreground">{rule.points}pts</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Note de l'admin */}
-          {startlistViewData.admin_rating_note?.trim()?.length > 0 && (
-            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <h4 className="font-semibold text-sm">L'avis du startlisteur</h4>
-              </div>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                "{startlistViewData.admin_rating_note}"
-                {startlistViewData.admin_rating_author && (
-                  <span className="block mt-2 text-xs font-medium text-right italic">
-                    — {startlistViewData.admin_rating_author}
-                  </span>
-                )}
-              </p>
-            </div>
-          )}
-
-          {/* Le mot du startlisteur */}
+          {/* Le mot du startlisteur - Dernier */}
           {startlistViewData.startlisteur_note && (
-            <div className="bg-muted/30 border border-amber-300/30 rounded-xl p-4 max-h-60 overflow-y-auto">
+            <div className="bg-muted/30 border border-amber-300/30 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <MessageSquare className="h-4 w-4 text-amber-500" />
                 <h4 className="font-semibold text-sm text-amber-700 dark:text-amber-400">
