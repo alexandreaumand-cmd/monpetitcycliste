@@ -8,6 +8,7 @@ import {
   MobileEmptyState,
 } from "@/components/mobile";
 import { RiderPointsDetail } from "./RiderPointsDetail";
+import { BonusPointsDetailDialog } from "@/components/rankings/BonusPointsDetailDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,6 +86,9 @@ export const MyTeamMobile = () => {
   const [bonusRiderSelection, setBonusRiderSelection] = useState<{ coureur_id: string; coureur_nom: string } | null>(null);
   const [hasSelectedBonusRider, setHasSelectedBonusRider] = useState(false);
   const [showBonusRiderDialog, setShowBonusRiderDialog] = useState(false);
+  
+  // Bonus details dialog
+  const [bonusDetailsOpen, setBonusDetailsOpen] = useState(false);
   
   // Get manager sponsor for jersey display
   const displayedManagerId = selectedManagerId || currentUserId;
@@ -361,7 +365,7 @@ export const MyTeamMobile = () => {
         <KPIRow
           items={[
             { label: "Points totaux", value: kpis.total_with_bonus, icon: <Trophy className="h-4 w-4" /> },
-            { label: "Bonus", value: kpis.bonus_points, icon: <span className="text-sm">🎁</span> },
+            { label: "Bonus", value: kpis.bonus_points, icon: <span className="text-sm">🎁</span>, onClick: () => setBonusDetailsOpen(true) },
             { label: "Scoreurs", value: kpis.scorers_count, icon: <Trophy className="h-4 w-4" />, trend: kpis.scorers_count > 0 ? "up" : "neutral" },
           ]}
         />
@@ -493,6 +497,19 @@ export const MyTeamMobile = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bonus Details Dialog */}
+      <BonusPointsDetailDialog
+        open={bonusDetailsOpen}
+        onOpenChange={setBonusDetailsOpen}
+        managerId={selectedManagerId || currentUserId || ''}
+        managerName={
+          selectedManagerId && selectedManagerId !== currentUserId
+            ? managers.find(m => m.id === selectedManagerId)?.nom || ''
+            : 'Mon équipe'
+        }
+        phaseId={selectedPhaseId}
+      />
 
       {/* Rider Points Detail */}
       <RiderPointsDetail

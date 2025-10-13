@@ -6,6 +6,7 @@ interface KPIItem {
   value: string | number;
   trend?: "up" | "down" | "neutral";
   icon?: React.ReactNode;
+  onClick?: () => void;
 }
 
 interface KPIRowProps {
@@ -24,7 +25,11 @@ export const KPIRow = ({ items, className }: KPIRowProps) => {
       {displayItems.map((item, index) => (
         <Card
           key={index}
-          className="p-3 space-y-1 rounded-xl shadow-sm"
+          className={cn(
+            "p-3 space-y-1 rounded-xl shadow-sm",
+            item.onClick && "cursor-pointer hover:bg-muted/50 transition-colors"
+          )}
+          onClick={item.onClick}
         >
           <div className="flex items-center justify-between gap-1">
             <p className="text-xs text-muted-foreground line-clamp-1">
