@@ -21,6 +21,7 @@ import { ManagerBreakdown } from "@/components/rankings/ManagerBreakdown";
 import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
 import { RecentPointsChart } from "@/components/rankings/RecentPointsChart";
 import { ManagerComparisonMobile } from "@/components/rankings/ManagerComparison.mobile";
+import { ManagerPrestigeIcons } from "@/components/rankings/ManagerPrestigeIcons";
 
 type TabView = "standings" | "riders" | "timeline" | "comparison" | "teams" | "courses";
 
@@ -380,6 +381,11 @@ export const RankingsMobile = () => {
                     title={
                       <div className="flex items-center gap-2">
                         <ManagerNameWithSponsor managerId={standing.manager_id} managerName={standing.manager_nom} />
+                        <ManagerPrestigeIcons 
+                          managerId={standing.manager_id}
+                          phaseId={selectedPhase}
+                          saisonId={selectedSeason?.id}
+                        />
                         {rank === 10 && <span className="text-lg">🤡</span>}
                       </div>
                     }

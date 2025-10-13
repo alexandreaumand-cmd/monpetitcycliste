@@ -11,6 +11,7 @@ import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { BonusPointsDetailDialog } from "./BonusPointsDetailDialog";
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ManagerPrestigeIcons } from "./ManagerPrestigeIcons";
 
 type StandingsProps = {
   phaseId?: string | null;
@@ -210,6 +211,11 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                       <ManagerNameWithJersey 
                         managerId={standing.manager_id} 
                         managerName={standing.manager_nom}
+                      />
+                      <ManagerPrestigeIcons 
+                        managerId={standing.manager_id}
+                        phaseId={phaseId}
+                        saisonId={selectedSeason?.id}
                       />
                       {rank === 10 && <span className="text-xl">🤡</span>}
                     </div>
