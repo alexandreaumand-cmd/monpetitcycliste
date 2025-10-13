@@ -91,7 +91,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
 
   // Fetch previous global standings for evolution calculation (global view only)
   const { data: previousGlobalStandings } = useQuery({
-    queryKey: ["previous-global-standings", selectedSeason?.id, activePhase?.id],
+    queryKey: ["previous-global-standings", selectedSeason?.id, activePhase?.id, standings ? standings.map((s: any) => s.manager_id).join(",") : "no-standings"],
     queryFn: async () => {
       if (phaseId) return null; // No evolution for individual phases
 
@@ -167,8 +167,8 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
 
       const completedPhaseIds = completedPhases.map((p) => p.id);
 
-      // Calculate cumulative totals across all completed phases: official points + manager bonuses + targeted/rider bonuses
-      const [plRes, mbpRes, bpTargetRes, bpRiderRes] = await Promise.all([
+      // Calculate cumulative totals across all completed phases: official points + manager bonuses + all bonus_points (targeted or manager-owned)
+      const [plRes, mbpRes, bpRes] = await Promise.all([
         supabase
           .from("points_ledger")
           .select("manager_id, points")
@@ -179,19 +179,12 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
           .in("phase_id", completedPhaseIds),
         supabase
           .from("bonus_points")
-          .select("target_manager_id, points")
-          .in("phase_id", completedPhaseIds)
-          .not("target_manager_id", "is", null),
-        supabase
-          .from("bonus_points")
-          .select("manager_id, points, coureur_id")
-          .in("phase_id", completedPhaseIds)
-          .not("manager_id", "is", null)
-          .not("coureur_id", "is", null),
+          .select("manager_id, target_manager_id, points")
+          .in("phase_id", completedPhaseIds),
       ] as const);
 
       // If no data at all, abort
-      if (!plRes.data && !mbpRes.data && !bpTargetRes.data && !bpRiderRes.data) return null;
+      if (!plRes.data && !mbpRes.data && !bpRes.data) return null;
 
       const totals = new Map<string, number>();
 
@@ -210,16 +203,11 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
         }
       });
 
-      // bonus_points targeted to a manager (target_manager_id)
-      bpTargetRes.data?.forEach((row: any) => {
-        if (!row.target_manager_id) return;
-        totals.set(row.target_manager_id, (totals.get(row.target_manager_id) ?? 0) + (row.points ?? 0));
-      });
-
-      // bonus_points earned via rider selection (credited to manager_id and with coureur_id present)
-      bpRiderRes.data?.forEach((row: any) => {
-        if (!row.manager_id) return;
-        totals.set(row.manager_id, (totals.get(row.manager_id) ?? 0) + (row.points ?? 0));
+      // all bonus_points (both targeted and manager-owned)
+      bpRes.data?.forEach((row: any) => {
+        const recipient = row.target_manager_id ?? row.manager_id;
+        if (!recipient) return;
+        totals.set(recipient, (totals.get(recipient) ?? 0) + (row.points ?? 0));
       });
 
       // Include all current managers with 0 default to ensure everyone gets a rank
