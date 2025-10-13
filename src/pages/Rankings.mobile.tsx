@@ -385,6 +385,7 @@ export const RankingsMobile = () => {
                           managerId={standing.manager_id}
                           phaseId={selectedPhase}
                           saisonId={selectedSeason?.id}
+                          isMobile={true}
                         />
                         {rank === 10 && <span className="text-lg">🤡</span>}
                       </div>
