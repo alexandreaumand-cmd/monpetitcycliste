@@ -45,7 +45,7 @@ export default function Rankings() {
         <Tabs defaultValue="standings" className="space-y-6">
           <div className="flex items-center justify-between gap-4">
             <TabsList className="grid w-full grid-cols-7 max-w-5xl">
-              <TabsTrigger value="standings">Classement</TabsTrigger>
+              <TabsTrigger value="standings">Managers</TabsTrigger>
               <TabsTrigger value="riders">Top Coureurs</TabsTrigger>
               <TabsTrigger value="timeline">Chronologie</TabsTrigger>
               <TabsTrigger value="team">Détail par équipe</TabsTrigger>

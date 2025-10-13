@@ -211,7 +211,7 @@ export const RankingsMobile = () => {
   ];
 
   const tabChips = [
-    { label: "🏆 Général", value: "standings" as TabView },
+    { label: "🏆 Managers", value: "standings" as TabView },
     { label: "🚴 Top coureurs", value: "riders" as TabView },
     { label: "📈 Chrono", value: "timeline" as TabView },
     { label: "⚖️ Comparaison", value: "comparison" as TabView },
