@@ -30,6 +30,7 @@ export const BonusPointsDetailDialog = ({
 }: BonusPointsDetailDialogProps) => {
   // État pour gérer l'expansion des sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    coureur_bonuse: false,  // collapsed par défaut
     scoreurs: false,  // collapsed par défaut
   });
 
@@ -114,51 +115,66 @@ export const BonusPointsDetailDialog = ({
               {/* Bonus coureurs (+25%) */}
               {bonusesByType['coureur_bonuse']?.length > 0 && (
                 <Card>
-                  <CardHeader>
+                  <CardHeader 
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => toggleSection('coureur_bonuse')}
+                  >
                     <CardTitle className="flex items-center justify-between text-lg">
                       <span className="flex items-center gap-2">
                         <Users className="h-4 w-4" />
                         Bonus coureurs (+25%)
                       </span>
-                      <span className="text-green-600 font-mono">+{totalsByType['coureur_bonuse']} pts</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-green-600 font-mono">+{totalsByType['coureur_bonuse']} pts</span>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          {expandedSections['coureur_bonuse'] ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          {!phaseId && <TableHead>Phase</TableHead>}
-                          <TableHead>Coureur</TableHead>
-                          <TableHead>Équipe</TableHead>
-                          <TableHead>Détail</TableHead>
-                          <TableHead className="text-right">Points</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {bonusesByType['coureur_bonuse'].map((bonus) => (
-                          <TableRow key={bonus.id}>
-                            {!phaseId && (
-                              <TableCell className="font-medium">
-                                P{bonus.phases?.index_dans_saison}
-                              </TableCell>
-                            )}
-                            <TableCell className="font-medium">
-                              {bonus.coureurs?.nom}
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {bonus.coureurs?.equipe}
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                              {bonus.commentaire}
-                            </TableCell>
-                            <TableCell className="text-right font-mono font-medium text-green-600">
-                              +{bonus.points}
-                            </TableCell>
+                  
+                  {expandedSections['coureur_bonuse'] && (
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            {!phaseId && <TableHead>Phase</TableHead>}
+                            <TableHead>Coureur</TableHead>
+                            <TableHead>Équipe</TableHead>
+                            <TableHead>Détail</TableHead>
+                            <TableHead className="text-right">Points</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
+                        </TableHeader>
+                        <TableBody>
+                          {bonusesByType['coureur_bonuse'].map((bonus) => (
+                            <TableRow key={bonus.id}>
+                              {!phaseId && (
+                                <TableCell className="font-medium">
+                                  P{bonus.phases?.index_dans_saison}
+                                </TableCell>
+                              )}
+                              <TableCell className="font-medium">
+                                {bonus.coureurs?.nom}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {bonus.coureurs?.equipe}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
+                                {bonus.commentaire}
+                              </TableCell>
+                              <TableCell className="text-right font-mono font-medium text-green-600">
+                                +{bonus.points}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  )}
                 </Card>
               )}
 
