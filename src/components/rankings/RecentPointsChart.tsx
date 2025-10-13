@@ -1,29 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
 import { TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartConfig } from "@/components/ui/chart";
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
-import { useSeasonContext } from "@/contexts/SeasonContext";
 
-export const RecentPointsChart = () => {
-  const { selectedSeason, phases } = useSeasonContext();
-  const [viewMode, setViewMode] = useState<'current' | 'phase' | 'season'>('current');
-  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
+interface RecentPointsChartProps {
+  phaseId?: string | null;
+  saisonId?: string | null;
+}
+
+export const RecentPointsChart = ({ phaseId, saisonId }: RecentPointsChartProps) => {
 
   const { data: seriesData, isLoading } = useQuery({
-    queryKey: ["cumulative-points", viewMode, selectedPhaseId, selectedSeason?.id],
+    queryKey: ["cumulative-points", phaseId, saisonId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("get-cumulative-points-series", {
         body: { 
-          view_mode: viewMode,
-          phase_id: viewMode === 'phase' ? selectedPhaseId : null,
-          saison_id: viewMode === 'season' ? selectedSeason?.id : null,
+          view_mode: phaseId ? 'phase' : 'season',
+          phase_id: phaseId || null,
+          saison_id: saisonId || null,
           topN: 10 
         }
       });
@@ -69,19 +68,6 @@ export const RecentPointsChart = () => {
     };
     return config;
   }, {} as ChartConfig);
-  
-  const handleViewChange = (value: string) => {
-    if (value === 'current') {
-      setViewMode('current');
-      setSelectedPhaseId(null);
-    } else if (value === 'season') {
-      setViewMode('season');
-      setSelectedPhaseId(null);
-    } else {
-      setViewMode('phase');
-      setSelectedPhaseId(value);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -97,36 +83,16 @@ export const RecentPointsChart = () => {
     );
   }
 
-  const currentValue = viewMode === 'current' ? 'current' : viewMode === 'season' ? 'season' : selectedPhaseId || 'current';
-
   return (
     <Card>
       <CardHeader>
-        <div className="space-y-3">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Évolution des points
-            </CardTitle>
-            <CardDescription>
-              Points cumulés {seriesData?.meta?.phase_info && `• Phase ${seriesData.meta.phase_info.index}`}
-            </CardDescription>
-          </div>
-          <Select value={currentValue} onValueChange={handleViewChange}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="current">Phase actuelle</SelectItem>
-              <SelectItem value="season">Toute la saison</SelectItem>
-              {phases?.map((phase) => (
-                <SelectItem key={phase.id} value={phase.id}>
-                  Phase {phase.index_dans_saison}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5" />
+          Évolution des points
+        </CardTitle>
+        <CardDescription>
+          Points cumulés {seriesData?.meta?.phase_info && `• Phase ${seriesData.meta.phase_info.index}`}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {chartData.length === 0 ? (

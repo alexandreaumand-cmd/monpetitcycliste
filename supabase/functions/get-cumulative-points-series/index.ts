@@ -106,17 +106,10 @@ Deno.serve(async (req) => {
 
     if (targetPhaseId) {
       query = query.eq('phase_id', targetPhaseId);
-    } else if (view_mode === 'season' && saison_id) {
-      const { data: phaseIds } = await supabaseClient
-        .from('phases')
-        .select('id')
-        .eq('saison_id', saison_id);
-      
-      if (phaseIds && phaseIds.length > 0) {
-        const ids = phaseIds.map(p => p.id);
-        query = query.in('phase_id', ids);
-      }
     }
+    // Pour le mode 'season', on ne filtre PAS par phase_id
+    // On récupère tous les points jusqu'à la date de fin de la saison
+    // Le filtre par date range se fait plus bas dans le code (lignes 137-138)
 
     const { data: pointsData, error: pointsError } = await query;
 
