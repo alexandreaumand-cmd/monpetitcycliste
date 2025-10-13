@@ -9,7 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle, Loader2 } from "lucide-react";
+import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle, Loader2, Camera } from "lucide-react";
+import { ExportResultsImage } from "./ExportResultsImage";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
@@ -76,6 +77,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   });
   const [combatifWinner, setCombatifWinner] = useState<string | null>(null);
   const [isCancelled, setIsCancelled] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   const isOneDay = course.type_course === "One day";
   const classementType: ClassementType = isOneDay
@@ -974,6 +976,14 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                 Retour
               </Button>
 
+              <Button
+                variant="outline"
+                onClick={() => setExportDialogOpen(true)}
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                Exporter JPEG
+              </Button>
+
               <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
                 <Save className="h-4 w-4 mr-2" />
                 Enregistrer
@@ -989,6 +999,14 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           </div>
         </div>
       )}
+
+      <ExportResultsImage
+        course={course}
+        currentStage={currentStage}
+        currentClassement={activeTab === "stages" ? "Etape" : currentFinalClassement}
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+      />
     </div>
   );
 };

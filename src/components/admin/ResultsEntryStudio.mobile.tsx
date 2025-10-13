@@ -7,7 +7,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
-import { X, ChevronLeft, ChevronRight, Save, Check, Info, MessageSquare } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Save, Check, Info, MessageSquare, Camera } from "lucide-react";
+import { ExportResultsImage } from "./ExportResultsImage";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -77,6 +78,7 @@ export const ResultsEntryStudioMobile = ({
   });
   const [etapeOpen, setEtapeOpen] = useState(true);
   const [gcOpen, setGcOpen] = useState(!courseIsStageRace);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [pointsOpen, setPointsOpen] = useState(false);
   const [montagneOpen, setMontagneOpen] = useState(false);
   const [jeuneOpen, setJeuneOpen] = useState(false);
@@ -1005,6 +1007,16 @@ export const ResultsEntryStudioMobile = ({
             Dernière sauvegarde: {lastSaved.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
           </div>
         )}
+        <div className="flex gap-2 mb-2">
+          <Button
+            variant="outline"
+            onClick={() => setExportDialogOpen(true)}
+            className="flex-1"
+          >
+            <Camera className="h-4 w-4 mr-2" />
+            Exporter JPEG
+          </Button>
+        </div>
         <div className="flex gap-2">
           <Button 
             onClick={() => saveMutation.mutate()} 
@@ -1029,6 +1041,14 @@ export const ResultsEntryStudioMobile = ({
           )}
         </div>
       </div>
+
+      <ExportResultsImage
+        course={course}
+        currentStage={currentStage}
+        currentClassement={currentClassement}
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+      />
     </div>
   );
 };
