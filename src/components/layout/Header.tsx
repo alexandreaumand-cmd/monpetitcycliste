@@ -19,11 +19,11 @@ interface HeaderProps {
 // Desktop navigation order
 const desktopNavLinks = [
   { label: 'Classement', href: '/dashboard/classement', icon: BarChart3 },
-  { label: 'Statistiques', href: '/dashboard/statistiques', icon: LineChart },
   { label: 'Équipes', href: '/dashboard/mon-equipe', icon: Users },
   { label: 'Résultats', href: '/dashboard/resultats', icon: BarChart3 },
   { label: 'Courses', href: '/dashboard/courses', icon: Calendar },
   { label: 'Startlist', href: '/dashboard/startlist', icon: ListChecks },
+  { label: 'Statistiques', href: '/dashboard/statistiques', icon: LineChart },
   { label: 'Enchères', href: '/dashboard/encheres', icon: Trophy },
 ];
 
@@ -35,6 +35,7 @@ const mobileNavLinks = [
   { label: 'Résultats', href: '/dashboard/resultats', icon: BarChart3 },
   { label: 'Classement', href: '/dashboard/classement', icon: BarChart3 },
   { label: 'Startlist', href: '/dashboard/startlist', icon: ListChecks },
+  { label: 'Statistiques', href: '/dashboard/statistiques', icon: LineChart },
 ];
 
 export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
