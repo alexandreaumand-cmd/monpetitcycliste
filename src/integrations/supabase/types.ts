@@ -4251,11 +4251,11 @@ export type Database = {
         Row: {
           annee: number | null
           bonus_points: number | null
-          courses_count: number | null
           manager_id: string | null
           manager_nom: string | null
           race_points: number | null
           saison_id: string | null
+          scorers_count: number | null
           total_points: number | null
         }
         Relationships: []
