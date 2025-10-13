@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
 
     if (pointsError) throw pointsError;
 
-    // Get manager bonus points
+    // Get manager bonus points - récupérer tous les bonus si pas de targetPhaseId (mode season)
     let bonusManagerQuery = supabaseClient
       .from('manager_bonus_points')
       .select(`
@@ -133,17 +133,21 @@ Deno.serve(async (req) => {
         bonus_first_win,
         bonus_coureurs,
         bonus_scoreurs,
-        phases!inner(date_fin)
+        phases!inner(date_fin, saison_id)
       `);
 
+    // En mode phase, on filtre par phase_id
+    // En mode season, on récupère tous et on filtre par date après
     if (targetPhaseId) {
       bonusManagerQuery = bonusManagerQuery.eq('phase_id', targetPhaseId);
+    } else if (view_mode === 'season' && saison_id) {
+      bonusManagerQuery = bonusManagerQuery.eq('phases.saison_id', saison_id);
     }
 
     const { data: bonusManagerData, error: bonusManagerError } = await bonusManagerQuery;
     if (bonusManagerError) throw bonusManagerError;
 
-    // Get rider bonus points
+    // Get rider bonus points - récupérer tous les bonus si pas de targetPhaseId (mode season)
     let bonusRiderQuery = supabaseClient
       .from('bonus_points')
       .select(`
@@ -151,11 +155,15 @@ Deno.serve(async (req) => {
         target_manager_id,
         phase_id,
         points,
-        phases!inner(date_fin)
+        phases!inner(date_fin, saison_id)
       `);
 
+    // En mode phase, on filtre par phase_id
+    // En mode season, on récupère tous et on filtre par date après
     if (targetPhaseId) {
       bonusRiderQuery = bonusRiderQuery.eq('phase_id', targetPhaseId);
+    } else if (view_mode === 'season' && saison_id) {
+      bonusRiderQuery = bonusRiderQuery.eq('phases.saison_id', saison_id);
     }
 
     const { data: bonusRiderData, error: bonusRiderError } = await bonusRiderQuery;

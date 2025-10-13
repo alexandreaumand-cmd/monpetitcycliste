@@ -52,19 +52,33 @@ export const RecentPointsChart = ({ phaseId, saisonId }: RecentPointsChartProps)
 
   const managers = filteredSeries.map((s: any) => s.manager_nom);
   
-  // Build ChartConfig
-  const chartConfig: ChartConfig = managers.reduce((config, manager, idx) => {
+  // Fonction de hash stable pour assigner les couleurs selon le nom du manager
+  const getColorIndex = (name: string) => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return Math.abs(hash);
+  };
+  
+  // Build ChartConfig avec des couleurs stables par manager
+  const chartConfig: ChartConfig = managers.reduce((config, manager) => {
     const colors = [
       "hsl(220, 70%, 50%)",  // blue
       "hsl(142, 71%, 45%)",  // green  
       "hsl(38, 92%, 50%)",   // amber
       "hsl(0, 72%, 51%)",    // red
       "hsl(258, 90%, 66%)",  // purple
-      "hsl(330, 81%, 60%)"   // pink
+      "hsl(330, 81%, 60%)",  // pink
+      "hsl(280, 70%, 50%)",  // violet
+      "hsl(160, 70%, 50%)",  // teal
+      "hsl(25, 95%, 53%)",   // orange
+      "hsl(340, 82%, 52%)"   // rose
     ];
+    const colorIndex = getColorIndex(manager) % colors.length;
     config[manager] = {
       label: manager,
-      color: colors[idx % colors.length],
+      color: colors[colorIndex],
     };
     return config;
   }, {} as ChartConfig);
