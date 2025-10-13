@@ -377,18 +377,9 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Validation pour courses
-    if (table === 'courses' && (!saison_id || !phase_id)) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'saison_id et phase_id requis pour import courses',
-          message: 'Veuillez sélectionner une saison et une phase cible' 
-        }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
+    // Validation pour courses - mode manuel si saison_id et phase_id fournis
+    if (table === 'courses' && saison_id && phase_id) {
+      console.log('✅ Mode manuel: saison et phase explicites fournis')
     }
 
     console.log(`Importing data to table: ${table}${saison_id ? ` (saison: ${saison_id})` : ''}`)
@@ -675,34 +666,134 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Special handling for courses - with explicit saison/phase selection
+    // Special handling for courses - with auto-detection or explicit saison/phase
     if (table === 'courses') {
-      console.log(`🔧 Processing courses for saison_id: ${saison_id}, phase_id: ${phase_id}`)
+      let detectedSaisonId: string | null = saison_id || null
+      let detectedPhaseId: string | null = phase_id || null
+      let targetPhase: any = null
+      let targetSaison: any = null
+      let allPhases: any[] = []
+      const phaseMapping = new Map<string, string>()
       
-      // Validate that phase belongs to saison
-      const { data: targetPhase, error: phaseError } = await supabaseClient
-        .from('phases')
-        .select('id, index_dans_saison, saison_id, date_debut, date_fin')
-        .eq('id', phase_id)
-        .single()
-      
-      if (phaseError || !targetPhase) {
-        throw new Error('Phase introuvable')
+      // Build column index map first to check if we have dates
+      const getColumnIndex = (aliases: string[]): number => {
+        for (const alias of aliases) {
+          const idx = headers.findIndex(h => h.trim().toLowerCase().replace(/\s+/g, '_') === alias.toLowerCase())
+          if (idx >= 0) return idx
+        }
+        return -1
       }
       
-      if (targetPhase.saison_id !== saison_id) {
-        throw new Error(`La phase sélectionnée n'appartient pas à la saison sélectionnée`)
+      const idxDateDebut = getColumnIndex(['date_debut', 'date', 'start', 'start_date', 'from'])
+      const idxPhaseId = getColumnIndex(['phase_id', 'phase', 'phaseuuid', 'id_phase'])
+      
+      // MODE AUTOMATIQUE: Si saison_id n'est pas fourni, le détecter depuis les dates
+      if (!detectedSaisonId && idxDateDebut >= 0) {
+        console.log('🔍 Mode automatique: détection de la saison depuis les dates du CSV')
+        
+        // Extraire toutes les années des dates
+        const years = new Set<number>()
+        for (let i = 1; i < lines.length; i++) {
+          const values = parseCSVLine(lines[i], separator)
+          const dateStr = idxDateDebut >= 0 ? values[idxDateDebut]?.trim() : null
+          const date = parseFlexibleDate(dateStr)
+          if (date) {
+            years.add(new Date(date).getFullYear())
+          }
+        }
+        
+        if (years.size === 0) {
+          throw new Error('Aucune date valide trouvée dans le CSV pour détecter la saison')
+        }
+        
+        if (years.size > 1) {
+          console.warn(`⚠️ Plusieurs années détectées: ${Array.from(years).join(', ')} - utilisation de la première`)
+        }
+        
+        // Utiliser l'année la plus fréquente (ou la première trouvée)
+        const targetYear = Array.from(years)[0]
+        
+        // Récupérer la saison correspondante
+        const { data: saisonData, error: saisonError } = await supabaseClient
+          .from('saisons')
+          .select('id, annee')
+          .eq('annee', targetYear)
+          .single()
+          
+        if (saisonError || !saisonData) {
+          throw new Error(`Aucune saison trouvée pour l'année ${targetYear}`)
+        }
+        
+        detectedSaisonId = saisonData.id
+        console.log(`🔍 Saison détectée automatiquement: ${targetYear} (${detectedSaisonId})`)
+      }
+      
+      // MODE MANUEL: Si phase_id explicite fourni, valider qu'elle appartient à la saison
+      if (detectedPhaseId && detectedSaisonId) {
+        console.log(`🔧 Mode manuel: validation de la phase ${detectedPhaseId}`)
+        
+        const { data: manualPhase, error: phaseError } = await supabaseClient
+          .from('phases')
+          .select('id, index_dans_saison, saison_id, date_debut, date_fin')
+          .eq('id', detectedPhaseId)
+          .single()
+        
+        if (phaseError || !manualPhase) {
+          throw new Error('Phase introuvable')
+        }
+        
+        if (manualPhase.saison_id !== detectedSaisonId) {
+          throw new Error(`La phase sélectionnée n'appartient pas à la saison détectée`)
+        }
+        
+        targetPhase = manualPhase
+      }
+      
+      // Récupérer toutes les phases de la saison pour le mapping automatique
+      if (detectedSaisonId) {
+        const { data: phasesData, error: phasesError } = await supabaseClient
+          .from('phases')
+          .select('id, index_dans_saison, date_debut, date_fin, saison_id')
+          .eq('saison_id', detectedSaisonId)
+          .order('index_dans_saison')
+        
+        if (phasesError) {
+          throw new Error(`Erreur lors de la récupération des phases: ${phasesError.message}`)
+        }
+        
+        if (!phasesData || phasesData.length === 0) {
+          throw new Error('Aucune phase trouvée pour cette saison')
+        }
+        
+        allPhases = phasesData
+        
+        // Construire le mapping "Phase 1" → UUID, "phase 1" → UUID, "1" → UUID
+        allPhases.forEach(p => {
+          phaseMapping.set(`Phase ${p.index_dans_saison}`, p.id)
+          phaseMapping.set(`phase ${p.index_dans_saison}`, p.id)
+          phaseMapping.set(`${p.index_dans_saison}`, p.id)
+        })
+        
+        console.log(`📋 Phases disponibles pour mapping: ${Array.from(phaseMapping.keys()).join(', ')}`)
       }
       
       // Fetch saison info for logging
-      const { data: targetSaison } = await supabaseClient
-        .from('saisons')
-        .select('annee')
-        .eq('id', saison_id)
-        .single()
+      if (detectedSaisonId) {
+        const { data: saisonData } = await supabaseClient
+          .from('saisons')
+          .select('annee')
+          .eq('id', detectedSaisonId)
+          .single()
+        
+        targetSaison = saisonData
+      }
       
-      console.log(`✅ Using Saison ${targetSaison?.annee}, Phase ${targetPhase.index_dans_saison}`)
-      console.log(`   Phase dates: ${targetPhase.date_debut} → ${targetPhase.date_fin}`)
+      if (targetPhase) {
+        console.log(`✅ Using Saison ${targetSaison?.annee}, Phase ${targetPhase.index_dans_saison}`)
+        console.log(`   Phase dates: ${targetPhase.date_debut} → ${targetPhase.date_fin}`)
+      } else {
+        console.log(`✅ Using Saison ${targetSaison?.annee} (phases seront mappées automatiquement)`)
+      }
       
       // Build column index map with synonym support
       const getColumnIndex = (aliases: string[]): number => {
@@ -717,9 +808,9 @@ Deno.serve(async (req) => {
       const idxNom = getColumnIndex(['nom', 'course', 'event', 'race', 'intitule', 'name'])
       const idxCategorie = getColumnIndex(['categorie', 'category', 'uci_cat', 'class'])
       const idxTypeCourse = getColumnIndex(['type_course', 'type', 'race_type', 'discipline'])
-      const idxDateDebut = getColumnIndex(['date_debut', 'date', 'start', 'start_date', 'from'])
+      // idxDateDebut already defined above for auto-detection
       const idxDateFin = getColumnIndex(['date_fin', 'end', 'end_date', 'to'])
-      const idxPhaseId = getColumnIndex(['phase_id', 'phase', 'phaseuuid', 'id_phase'])
+      // idxPhaseId already defined above for auto-detection
       const idxPays = getColumnIndex(['pays', 'country'])
       const idxStatut = getColumnIndex(['statut', 'status'])
       const idxWtTier = getColumnIndex(['wt_tier', 'tier'])
@@ -785,9 +876,53 @@ Deno.serve(async (req) => {
         }
         seenKeys.set(dedupeKey, i + 1)
         
-        // Use the explicitly selected phase_id from UI
-        // Check if date is within phase boundaries (warning only, not blocking)
-        if (date_debut < targetPhase.date_debut || date_debut > targetPhase.date_fin) {
+        // Déterminer le phase_id pour cette course
+        let coursePhaseid: string | null = null
+        
+        // 1. Si phase_id manuel fourni (mode manuel), l'utiliser
+        if (detectedPhaseId) {
+          coursePhaseid = detectedPhaseId
+        } else {
+          // 2. Sinon, chercher dans le CSV
+          const csvPhaseText = idxPhaseId >= 0 ? values[idxPhaseId]?.trim() : null
+          
+          if (csvPhaseText && phaseMapping.has(csvPhaseText)) {
+            coursePhaseid = phaseMapping.get(csvPhaseText) || null
+          } else if (csvPhaseText) {
+            // Phase non mappée - ajouter à la liste des erreurs
+            errorDetails.push(`Row ${i + 1}: Phase "${csvPhaseText}" non reconnue pour "${nom}"`)
+            errors++
+            continue
+          }
+          
+          // 3. Si toujours pas de phase, tenter de déduire depuis la date
+          if (!coursePhaseid && date_debut) {
+            const courseDate = new Date(date_debut)
+            for (const p of allPhases) {
+              const phaseStart = new Date(p.date_debut)
+              const phaseEnd = new Date(p.date_fin)
+              if (courseDate >= phaseStart && courseDate <= phaseEnd) {
+                coursePhaseid = p.id
+                break
+              }
+            }
+          }
+          
+          // 4. Fallback: utiliser la première phase
+          if (!coursePhaseid && allPhases.length > 0) {
+            console.warn(`⚠️ Aucune phase trouvée pour "${nom}" (${date_debut}), utilisation de Phase ${allPhases[0].index_dans_saison}`)
+            coursePhaseid = allPhases[0].id
+          }
+        }
+        
+        if (!coursePhaseid) {
+          errorDetails.push(`Row ${i + 1}: Impossible de déterminer la phase pour "${nom}"`)
+          errors++
+          continue
+        }
+        
+        // Vérifier si la date est dans les limites de la phase (warning seulement)
+        if (targetPhase && (date_debut < targetPhase.date_debut || date_debut > targetPhase.date_fin)) {
           dateWarnings.push(
             `Row ${i + 1}: "${nom}" (${date_debut}) est hors des dates de la Phase ${targetPhase.index_dans_saison} (${targetPhase.date_debut} → ${targetPhase.date_fin})`
           )
@@ -805,7 +940,7 @@ Deno.serve(async (req) => {
           type_course,
           date_debut,
           date_fin,
-          phase_id: phase_id, // Use the explicit phase_id from UI
+          phase_id: coursePhaseid,
           pays,
           statut,
           wt_tier,
@@ -836,6 +971,10 @@ Deno.serve(async (req) => {
         dateWarnings.slice(0, 5).forEach(w => console.log(`   ${w}`))
       }
       
+      const modeMessage = detectedPhaseId && targetPhase
+        ? `Saison ${targetSaison?.annee}, Phase ${targetPhase.index_dans_saison}`
+        : `Saison ${targetSaison?.annee} (phases mappées automatiquement)`
+      
       return new Response(
         JSON.stringify({
           success: true,
@@ -843,7 +982,7 @@ Deno.serve(async (req) => {
           errors,
           errorDetails: errorDetails.slice(0, 10),
           dateWarnings: dateWarnings.slice(0, 5),
-          message: `Importé ${imported} courses dans la Saison ${targetSaison?.annee}, Phase ${targetPhase.index_dans_saison}. ${errors > 0 ? `${errors} erreurs. ` : ''}${dateWarnings.length > 0 ? `${dateWarnings.length} avertissements de dates.` : ''}`
+          message: `Importé ${imported} courses dans ${modeMessage}. ${errors > 0 ? `${errors} erreurs. ` : ''}${dateWarnings.length > 0 ? `${dateWarnings.length} avertissements de dates.` : ''}`
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )

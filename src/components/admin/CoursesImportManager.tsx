@@ -287,7 +287,8 @@ export const CoursesImportManager = () => {
             <p className="font-medium mb-2">Format CSV attendu:</p>
             <code className="text-xs">id,nom,categorie,type_course,date_debut,date_fin,phase_id</code>
             <ul className="text-xs mt-2 space-y-1 list-disc list-inside">
-              <li><strong>phase_id</strong> peut être "Phase 1", "Phase 2", "1", "2" ou un UUID</li>
+              <li><strong>✨ Mapping automatique des phases</strong>: "Phase 1", "Phase 2", "1", "2" ou UUID</li>
+              <li><strong>🔍 Détection automatique de la saison</strong> depuis l'année des dates</li>
               <li><strong>Dates</strong>: YYYY-MM-DD, DD/MM/YYYY ou MM/DD/YYYY</li>
               <li><strong>Séparateur</strong>: virgule ou point-virgule (auto-détecté)</li>
               <li><strong>id</strong> sera généré automatiquement si vide</li>
