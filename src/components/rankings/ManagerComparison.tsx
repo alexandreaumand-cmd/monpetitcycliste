@@ -134,7 +134,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
     let query = supabase
       .from("points_ledger")
-      .select("coureur_id, points, type_classement, course_id")
+      .select("coureur_id, points, type_classement, course_id, phase_id")
       .eq("manager_id", managerA)
       .in("coureur_id", coureurIds);
 
@@ -169,7 +169,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
     let query = supabase
       .from("points_ledger")
-      .select("coureur_id, points, type_classement, course_id")
+      .select("coureur_id, points, type_classement, course_id, phase_id")
       .eq("manager_id", managerB)
       .in("coureur_id", coureurIds);
 
@@ -668,8 +668,8 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) + 
       (mb.bonus_scoreurs || 0), 0) || 0);
 
-  const scoreursA = new Set(pointsA?.filter(p => (p.points || 0) > 0).map(p => p.coureur_id)).size || 0;
-  const scoreursB = new Set(pointsB?.filter(p => (p.points || 0) > 0).map(p => p.coureur_id)).size || 0;
+  const scoreursA = new Set(pointsA?.filter(p => (p.points || 0) > 0).map(p => `${p.coureur_id}|${p.phase_id}`)).size || 0;
+  const scoreursB = new Set(pointsB?.filter(p => (p.points || 0) > 0).map(p => `${p.coureur_id}|${p.phase_id}`)).size || 0;
 
   const budgetA = rostersA?.reduce((sum, r) => sum + (r.prix_signature || 0), 0) || 1;
   const budgetB = rostersB?.reduce((sum, r) => sum + (r.prix_signature || 0), 0) || 1;

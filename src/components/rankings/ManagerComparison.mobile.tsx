@@ -117,7 +117,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
 
       let query = supabase
         .from("points_ledger")
-        .select("coureur_id, points, type_classement, course_id")
+        .select("coureur_id, points, type_classement, course_id, phase_id")
         .eq("manager_id", managerA)
         .in("coureur_id", coureurIds);
 
@@ -152,7 +152,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
 
     let query = supabase
       .from("points_ledger")
-      .select("coureur_id, points, type_classement, course_id")
+      .select("coureur_id, points, type_classement, course_id, phase_id")
       .eq("manager_id", managerB)
       .in("coureur_id", coureurIds);
 
@@ -511,7 +511,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     return new Set(
       pointsA
         .filter(p => (p.points || 0) > 0)
-        .map(p => p.coureur_id)
+        .map(p => `${p.coureur_id}|${p.phase_id}`)
     ).size;
   }, [pointsA]);
 
@@ -520,7 +520,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     return new Set(
       pointsB
         .filter(p => (p.points || 0) > 0)
-        .map(p => p.coureur_id)
+        .map(p => `${p.coureur_id}|${p.phase_id}`)
     ).size;
   }, [pointsB]);
 
