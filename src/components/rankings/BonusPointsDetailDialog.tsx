@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -10,7 +10,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Award, Users, Trophy, Clock, Zap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Award, Users, Trophy, Clock, Zap, ChevronDown, ChevronUp } from "lucide-react";
 
 interface BonusPointsDetailDialogProps {
   open: boolean;
@@ -27,6 +28,18 @@ export const BonusPointsDetailDialog = ({
   managerName,
   phaseId,
 }: BonusPointsDetailDialogProps) => {
+  // État pour gérer l'expansion des sections
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    scoreurs: false,  // collapsed par défaut
+  });
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
   // Fetch all bonus points
   const { data: allBonuses, isLoading } = useQuery({
     queryKey: ["bonus-points-detail", managerId, phaseId],
@@ -200,48 +213,63 @@ export const BonusPointsDetailDialog = ({
               {/* Bonus scoreurs */}
               {bonusesByType['scoreurs']?.length > 0 && (
                 <Card>
-                  <CardHeader>
+                  <CardHeader 
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => toggleSection('scoreurs')}
+                  >
                     <CardTitle className="flex items-center justify-between text-lg">
                       <span className="flex items-center gap-2">
                         <Zap className="h-4 w-4" />
                         Bonus scoreurs
                       </span>
-                      <span className="text-green-600 font-mono">+{totalsByType['scoreurs']} pts</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-green-600 font-mono">+{totalsByType['scoreurs']} pts</span>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          {expandedSections['scoreurs'] ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {bonusesByType['scoreurs'].map((bonus) => (
-                        <div key={bonus.id} className="flex justify-between items-start border-b pb-2 last:border-0">
-                          <div className="flex-1">
-                            {!phaseId && (
-                              <div className="text-xs font-medium text-muted-foreground mb-1">
-                                Phase {bonus.phases?.index_dans_saison}
-                              </div>
-                            )}
-                            {bonus.coureur_id && (
-                              <>
-                                <div className="font-medium">
-                                  {bonus.coureurs?.nom}
+                  
+                  {expandedSections['scoreurs'] && (
+                    <CardContent>
+                      <div className="space-y-2">
+                        {bonusesByType['scoreurs'].map((bonus) => (
+                          <div key={bonus.id} className="flex justify-between items-start border-b pb-2 last:border-0">
+                            <div className="flex-1">
+                              {!phaseId && (
+                                <div className="text-xs font-medium text-muted-foreground mb-1">
+                                  Phase {bonus.phases?.index_dans_saison}
                                 </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {bonus.coureurs?.equipe}
+                              )}
+                              {bonus.coureur_id && (
+                                <>
+                                  <div className="font-medium">
+                                    {bonus.coureurs?.nom}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {bonus.coureurs?.equipe}
+                                  </div>
+                                </>
+                              )}
+                              {bonus.commentaire && (
+                                <div className="text-sm text-muted-foreground mt-1 italic">
+                                  {bonus.commentaire}
                                 </div>
-                              </>
-                            )}
-                            {bonus.commentaire && (
-                              <div className="text-sm text-muted-foreground mt-1 italic">
-                                {bonus.commentaire}
-                              </div>
-                            )}
+                              )}
+                            </div>
+                            <span className="font-mono font-medium text-green-600 ml-4">
+                              +{bonus.points}
+                            </span>
                           </div>
-                          <span className="font-mono font-medium text-green-600 ml-4">
-                            +{bonus.points}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
+                        ))}
+                      </div>
+                    </CardContent>
+                  )}
                 </Card>
               )}
 
