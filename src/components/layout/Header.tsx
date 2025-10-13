@@ -1,7 +1,7 @@
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X, ListChecks } from "lucide-react";
+import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X, ListChecks, LineChart } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
@@ -19,6 +19,7 @@ interface HeaderProps {
 // Desktop navigation order
 const desktopNavLinks = [
   { label: 'Classement', href: '/dashboard/classement', icon: BarChart3 },
+  { label: 'Statistiques', href: '/dashboard/statistiques', icon: LineChart },
   { label: 'Équipes', href: '/dashboard/mon-equipe', icon: Users },
   { label: 'Résultats', href: '/dashboard/resultats', icon: BarChart3 },
   { label: 'Courses', href: '/dashboard/courses', icon: Calendar },

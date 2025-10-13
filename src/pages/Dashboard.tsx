@@ -13,6 +13,7 @@ import { ResultsPage } from "./ResultsPage";
 import Rankings from "./Rankings";
 import { AdminPage } from "./AdminPage";
 import Startlist from "./Startlist";
+import Statistics from "./Statistics";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -81,6 +82,7 @@ const Dashboard = () => {
             <Route path="courses" element={<UpcomingCourses />} />
             <Route path="resultats" element={<ResultsPage />} />
             <Route path="classement" element={<Rankings />} />
+            <Route path="statistiques" element={<Statistics />} />
             <Route path="startlist" element={<Startlist />} />
             {isAdmin && <Route path="admin/*" element={<AdminPage />} />}
           </Routes>
@@ -103,6 +105,7 @@ const Dashboard = () => {
           <Route path="courses" element={<UpcomingCourses />} />
           <Route path="resultats" element={<ResultsPage />} />
           <Route path="classement" element={<Rankings />} />
+          <Route path="statistiques" element={<Statistics />} />
           <Route path="startlist" element={<Startlist />} />
           {isAdmin && <Route path="admin/*" element={<AdminPage />} />}
         </Routes>

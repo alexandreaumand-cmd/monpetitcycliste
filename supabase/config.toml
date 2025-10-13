@@ -1,5 +1,11 @@
 project_id = "oisfvryhpovwxaxqbmow"
 
+[functions.get-performance-matrix]
+verify_jwt = true
+
+[functions.get-consistency-scores]
+verify_jwt = true
+
 [functions.import-data]
 verify_jwt = true
 
