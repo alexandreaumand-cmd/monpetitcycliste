@@ -180,8 +180,10 @@ export const ExportResultsImage = ({
     try {
       const response = await fetch(generatedImageUrl);
       const blob = await response.blob();
+      // Créer un blob JPEG explicite (toJpeg génère du JPEG, pas du PNG)
+      const jpegBlob = new Blob([blob], { type: 'image/jpeg' });
       await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': blob })
+        new ClipboardItem({ 'image/jpeg': jpegBlob })
       ]);
       toast.success("Image copiée dans le presse-papiers !");
     } catch (error) {
