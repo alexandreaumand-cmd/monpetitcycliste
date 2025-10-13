@@ -47,6 +47,63 @@ Deno.serve(async (req) => {
 
     if (managersError) throw managersError;
 
+    // STEP 1: Calculate all phase standings once (cache optimization)
+    const phaseStandingsCache = new Map<string, Array<{ manager_id: string; total_points: number }>>();
+
+    for (const phase of phases) {
+      const allManagersPoints: Array<{ manager_id: string; total_points: number }> = [];
+
+      for (const mgr of managers) {
+        // Get race points
+        const { data: racePts } = await supabase
+          .from('points_ledger')
+          .select('points')
+          .eq('phase_id', phase.id)
+          .eq('manager_id', mgr.id);
+
+        const raceTotalMgr = racePts?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
+
+        // Get manager bonus
+        const { data: mgrBonus } = await supabase
+          .from('manager_bonus_points')
+          .select('bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs')
+          .eq('phase_id', phase.id)
+          .eq('manager_id', mgr.id)
+          .single();
+
+        const bonusTotalMgr = mgrBonus
+          ? (mgrBonus.bonus_itt || 0) +
+            (mgrBonus.bonus_ttt || 0) +
+            (mgrBonus.bonus_first_win || 0) +
+            (mgrBonus.bonus_coureurs || 0) +
+            (mgrBonus.bonus_scoreurs || 0)
+          : 0;
+
+        // Get rider bonus
+        const { data: riderBonusMgr } = await supabase
+          .from('bonus_points')
+          .select('points')
+          .eq('phase_id', phase.id)
+          .or(`manager_id.eq.${mgr.id},target_manager_id.eq.${mgr.id}`);
+
+        const riderBonusTotalMgr = riderBonusMgr?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
+
+        const totalMgr = raceTotalMgr + bonusTotalMgr + riderBonusTotalMgr;
+
+        allManagersPoints.push({
+          manager_id: mgr.id,
+          total_points: totalMgr
+        });
+      }
+
+      // Sort and cache
+      phaseStandingsCache.set(
+        phase.id,
+        allManagersPoints.sort((a, b) => b.total_points - a.total_points)
+      );
+    }
+
+    // STEP 2: Build consistency scores using cached standings
     const scores = [];
 
     for (const manager of managers) {
@@ -54,49 +111,12 @@ Deno.serve(async (req) => {
       const ranksByPhase = [];
 
       for (const phase of phases) {
-        // Get race points
-        const { data: racePoints } = await supabase
-          .from('points_ledger')
-          .select('points')
-          .eq('phase_id', phase.id)
-          .eq('manager_id', manager.id);
-
-        const raceTotal = racePoints?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
-
-        // Get manager bonus
-        const { data: managerBonus } = await supabase
-          .from('manager_bonus_points')
-          .select('bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs')
-          .eq('phase_id', phase.id)
-          .eq('manager_id', manager.id)
-          .single();
-
-        const bonusTotal = managerBonus 
-          ? (managerBonus.bonus_itt || 0) + 
-            (managerBonus.bonus_ttt || 0) + 
-            (managerBonus.bonus_first_win || 0) + 
-            (managerBonus.bonus_coureurs || 0) + 
-            (managerBonus.bonus_scoreurs || 0)
-          : 0;
-
-        // Get rider bonus
-        const { data: riderBonus } = await supabase
-          .from('bonus_points')
-          .select('points')
-          .eq('phase_id', phase.id)
-          .or(`manager_id.eq.${manager.id},target_manager_id.eq.${manager.id}`);
-
-        const riderBonusTotal = riderBonus?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
-
-        const phasePoints = raceTotal + bonusTotal + riderBonusTotal;
-
-        // Calculate rank
-        const { data: allManagersPoints } = await supabase.rpc('calculate_phase_standings', {
-          p_phase_id: phase.id
-        });
-
-        const sortedManagers = (allManagersPoints || []).sort((a: any, b: any) => b.total_points - a.total_points);
-        const rank = sortedManagers.findIndex((m: any) => m.manager_id === manager.id) + 1;
+        // Get standings from cache
+        const sortedManagers = phaseStandingsCache.get(phase.id)!;
+        const rank = sortedManagers.findIndex((m) => m.manager_id === manager.id) + 1;
+        
+        // Get points from cache
+        const phasePoints = sortedManagers.find(m => m.manager_id === manager.id)?.total_points || 0;
 
         pointsByPhase.push({
           phase_id: phase.id,
