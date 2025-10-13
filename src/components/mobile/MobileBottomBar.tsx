@@ -12,7 +12,7 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
 
   const mainRoutes = [
     { label: "Classement", path: "/dashboard/classement", icon: BarChart3 },
-    { label: "Mon Équipe", path: "/dashboard/mon-equipe", icon: Users },
+    { label: "Equipes", path: "/dashboard/mon-equipe", icon: Users },
     { label: "Startlist", path: "/dashboard/startlist", icon: ListChecks },
     { label: "Résultats", path: "/dashboard/resultats", icon: Medal },
     { label: "Courses", path: "/dashboard/courses", icon: Calendar },
