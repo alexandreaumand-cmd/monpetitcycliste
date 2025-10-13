@@ -88,50 +88,6 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
     },
   });
 
-  // Fetch standings from IMMEDIATE previous phase for evolution calculation
-  const { data: previousStandings } = useQuery({
-    queryKey: ["previous-phase-standings", phaseId],
-    queryFn: async () => {
-      if (!phaseId) return null;
-
-      // Get current phase info
-      const { data: currentPhase } = await supabase
-        .from("phases")
-        .select("index_dans_saison, saison_id")
-        .eq("id", phaseId)
-        .single();
-
-      if (!currentPhase || currentPhase.index_dans_saison <= 1) return null;
-
-      // Get IMMEDIATE previous phase (not cumulative)
-      const { data: prevPhase } = await supabase
-        .from("phases")
-        .select("id")
-        .eq("saison_id", currentPhase.saison_id)
-        .eq("index_dans_saison", currentPhase.index_dans_saison - 1)
-        .single();
-
-      if (!prevPhase) return null;
-
-      // Get standings from that specific phase
-      const { data, error } = await supabase
-        .from("v_manager_standings_by_phase")
-        .select("*")
-        .eq("phase_id", prevPhase.id)
-        .order("total_points", { ascending: false });
-
-      if (error) return null;
-
-      // Create rank map
-      const rankMap = new Map<string, number>();
-      data?.forEach((standing, idx) => {
-        rankMap.set(standing.manager_id, idx + 1);
-      });
-
-      return rankMap;
-    },
-    enabled: !!phaseId,
-  });
 
   // Fetch previous global standings for evolution calculation (global view only)
   const { data: previousGlobalStandings } = useQuery({
@@ -251,21 +207,10 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               const gapToPrevious = idx > 0 ? standings[idx - 1].total_points - standing.total_points : 0;
               const percentage = ((standing.total_points / totalPoints) * 100).toFixed(1);
               
-              // Calculate evolution
+              // Calculate evolution - ONLY for global view
               let evolution: number | null = null;
               let isNew = false;
               
-              // For phase-specific view
-              if (phaseId && previousStandings) {
-                const previousRank = previousStandings.get(standing.manager_id);
-                if (previousRank) {
-                  evolution = previousRank - rank; // Positive = gained places
-                } else {
-                  isNew = true;
-                }
-              }
-              
-              // For global view
               if (!phaseId && previousGlobalStandings) {
                 const previousRank = previousGlobalStandings.get(standing.manager_id);
                 if (previousRank) {
@@ -370,7 +315,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                       </span>
                     )}
                   </TableCell>
-                  {(phaseId || previousGlobalStandings) && (
+                  {previousGlobalStandings && (
                     <TableCell className="text-center py-2">
                       {isNew ? (
                         <Badge variant="outline" className="text-xs">NEW</Badge>
