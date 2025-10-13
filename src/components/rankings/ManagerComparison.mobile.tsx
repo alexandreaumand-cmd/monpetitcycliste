@@ -118,6 +118,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
       let query = supabase
         .from("points_ledger")
         .select("coureur_id, points, type_classement, course_id")
+        .eq("manager_id", managerA)
         .in("coureur_id", coureurIds);
 
       if (phaseId) {
@@ -149,10 +150,11 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
 
       const coureurIds = rostersB.map(r => r.coureur_id);
 
-      let query = supabase
-        .from("points_ledger")
-        .select("coureur_id, points, type_classement, course_id")
-        .in("coureur_id", coureurIds);
+    let query = supabase
+      .from("points_ledger")
+      .select("coureur_id, points, type_classement, course_id")
+      .eq("manager_id", managerB)
+      .in("coureur_id", coureurIds);
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
