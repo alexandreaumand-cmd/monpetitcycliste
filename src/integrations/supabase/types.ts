@@ -4286,14 +4286,15 @@ export type Database = {
       }
       v_manager_standings_by_season: {
         Row: {
-          annee: number | null
-          bonus_points: number | null
+          manager_bonus_total: number | null
           manager_id: string | null
           manager_nom: string | null
+          points_total: number | null
           race_points: number | null
+          rider_bonus_total: number | null
+          saison_annee: number | null
           saison_id: string | null
-          scorers_count: number | null
-          total_points: number | null
+          scoreurs_count: number | null
           victories_count: number | null
         }
         Relationships: []
