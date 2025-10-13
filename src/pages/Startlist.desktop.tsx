@@ -494,18 +494,58 @@ const StartlistDesktop = () => {
               </p>
             </div>
 
-          {/* Section barème + image côte à côte */}
-          <div className="grid grid-cols-4 gap-3 mb-3">
-            {/* Barème de points - 3/4 de la largeur */}
-            {startlistViewData.scoring && startlistViewData.scoring.rules && startlistViewData.scoring.rules.length > 0 && (
-              <Card className="bg-muted/50 p-3 col-span-3">
-                <h4 className="font-semibold text-xs mb-2">Barème ({startlistViewData.scoring.categorie})</h4>
-                <div className="grid grid-cols-5 gap-x-4 gap-y-1 text-xs">
+          {/* Section barème + parcours optimisée */}
+          <div className="space-y-3 mb-3">
+            {/* Ligne 1: Barème CG + Parcours */}
+            <div className="grid grid-cols-3 gap-3">
+              {/* Barème Général - 2/3 */}
+              {startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'General') && (
+                <Card className="bg-muted/50 p-3 col-span-2">
+                  <h4 className="font-semibold text-xs mb-2">
+                    Barème Général ({startlistViewData.scoring.categorie})
+                  </h4>
+                  <div className="grid grid-cols-5 gap-x-4 gap-y-1 text-xs">
+                    {startlistViewData.scoring.rules
+                      .filter((r: any) => r.type_classement === 'General')
+                      .slice(0, 10)
+                      .map((rule: any) => (
+                        <div key={`gc-${rule.place}`} className="flex gap-1">
+                          <span className="font-medium">{rule.place}e:</span>
+                          <span className="text-muted-foreground">{rule.points}pts</span>
+                        </div>
+                      ))}
+                  </div>
+                </Card>
+              )}
+              
+              {/* Image parcours - 1/3, plus grande */}
+              {startlistViewData.route_image_url && (
+                <Card className="p-3 overflow-hidden col-span-1">
+                  <h4 className="font-semibold text-xs mb-2">Parcours</h4>
+                  <div className="overflow-hidden rounded-lg border-2 shadow-md">
+                    <img 
+                      src={startlistViewData.route_image_url} 
+                      alt="Parcours" 
+                      className="w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => setIsImageModalOpen(true)}
+                    />
+                  </div>
+                </Card>
+              )}
+            </div>
+
+            {/* Ligne 2: Barème Étapes - pleine largeur */}
+            {startlistViewData.scoring?.rules?.some((r: any) => r.type_classement === 'Etape') && (
+              <Card className="bg-primary/5 p-3 border-primary/20">
+                <h4 className="font-semibold text-xs mb-2 text-primary">
+                  Barème Étapes
+                </h4>
+                <div className="grid grid-cols-10 gap-x-4 gap-y-1 text-xs">
                   {startlistViewData.scoring.rules
-                    .filter((r: any) => r.type_classement === 'General')
-                    .slice(0, 10)
+                    .filter((r: any) => r.type_classement === 'Etape')
+                    .slice(0, 20)
                     .map((rule: any) => (
-                      <div key={rule.place} className="flex gap-1">
+                      <div key={`stage-${rule.place}`} className="flex gap-1">
                         <span className="font-medium">{rule.place}e:</span>
                         <span className="text-muted-foreground">{rule.points}pts</span>
                       </div>
@@ -513,30 +553,15 @@ const StartlistDesktop = () => {
                 </div>
               </Card>
             )}
-            
-            {/* Image de parcours - 1/4 de la largeur */}
-            {startlistViewData.route_image_url && (
-              <Card className="bg-muted/50 p-3 overflow-hidden col-span-1">
-                <h4 className="font-semibold text-xs mb-2">Parcours</h4>
-                <div className="overflow-hidden rounded border">
-                  <img 
-                    src={startlistViewData.route_image_url} 
-                    alt="Parcours" 
-                    className="w-full h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => setIsImageModalOpen(true)}
-                  />
-                </div>
-              </Card>
-            )}
 
-            {/* Note de l'admin - 3/4 de la largeur, sous le barème */}
+            {/* Ligne 3: Avis du startlisteur (si existe) */}
             {startlistViewData.admin_rating_note?.trim()?.length > 0 && (
-              <Card className="bg-blue-50 dark:bg-blue-950/20 p-3 border-blue-200 dark:border-blue-800 col-span-3">
+              <Card className="bg-blue-50 dark:bg-blue-950/20 p-3 border-blue-200 dark:border-blue-800">
                 <div className="flex items-center gap-2 mb-2">
-                  <MessageSquare className="h-4 w-4 text-blue-600" />
+                  <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   <h4 className="font-semibold text-sm">L'avis du startlisteur</h4>
                 </div>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
                   "{startlistViewData.admin_rating_note}"
                   {startlistViewData.admin_rating_author && (
                     <span className="block mt-2 text-xs font-medium text-right italic">
