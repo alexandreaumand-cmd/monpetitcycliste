@@ -256,7 +256,7 @@ export const ExportResultsImage = ({
                 </Button>
                 <Button
                   onClick={handleGeneratePreview}
-                  disabled={isLoading || isGenerating || !topRiders || topRiders.length === 0}
+                  disabled={isLoading || isGenerating}
                   className="flex-1"
                 >
                   {isGenerating ? (
