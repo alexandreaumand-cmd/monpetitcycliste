@@ -8,6 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
+import { BonusPointsDetailDialog } from "./BonusPointsDetailDialog";
+import { useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type StandingsProps = {
   phaseId?: string | null;
@@ -43,6 +46,11 @@ const ManagerNameWithJersey = ({ managerId, managerName }: { managerId: string; 
 
 export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) => {
   const { selectedSeason } = useSeasonContext();
+  const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
+  const [selectedBonusManager, setSelectedBonusManager] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   
   const { data: standings, isLoading } = useQuery({
     queryKey: ["manager-standings", phaseId, selectedSeason?.id],
@@ -312,15 +320,41 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right py-2">
-                    <span className={cn(
-                      "text-sm font-mono font-medium",
-                      standing.bonus_points > 0 && "text-green-600",
-                      standing.bonus_points < 0 && "text-red-600",
-                      standing.bonus_points === 0 && "text-muted-foreground"
-                    )}>
-                      {standing.bonus_points > 0 ? `+${standing.bonus_points}` : standing.bonus_points === 0 ? '0' : standing.bonus_points}
-                    </span>
+                  <TableCell 
+                    className={cn(
+                      "text-right py-2 transition-colors",
+                      standing.bonus_points !== 0 && "cursor-pointer hover:bg-muted/50"
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (standing.bonus_points !== 0) {
+                        setSelectedBonusManager({
+                          id: standing.manager_id,
+                          name: standing.manager_nom
+                        });
+                        setBonusDialogOpen(true);
+                      }
+                    }}
+                  >
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className={cn(
+                            "text-sm font-mono font-medium",
+                            standing.bonus_points > 0 && "text-green-600 underline decoration-dotted",
+                            standing.bonus_points < 0 && "text-red-600 underline decoration-dotted",
+                            standing.bonus_points === 0 && "text-muted-foreground"
+                          )}>
+                            {standing.bonus_points > 0 ? `+${standing.bonus_points}` : standing.bonus_points === 0 ? '0' : standing.bonus_points}
+                          </span>
+                        </TooltipTrigger>
+                        {standing.bonus_points !== 0 && (
+                          <TooltipContent>
+                            <p className="text-xs">Cliquer pour voir le détail</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   {phaseId && (
                     <TableCell className="text-right py-2">
@@ -375,6 +409,16 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
           </div>
         )}
       </CardContent>
+
+      {selectedBonusManager && (
+        <BonusPointsDetailDialog
+          open={bonusDialogOpen}
+          onOpenChange={setBonusDialogOpen}
+          managerId={selectedBonusManager.id}
+          managerName={selectedBonusManager.name}
+          phaseId={phaseId || null}
+        />
+      )}
     </Card>
   );
 };
