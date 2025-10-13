@@ -4172,6 +4172,7 @@ export type Database = {
           etape_numero: number | null
           manager_id: string | null
           manager_nom: string | null
+          phase_id: string | null
           points: number | null
           type_classement: Database["public"]["Enums"]["type_classement"] | null
         }
@@ -4231,6 +4232,41 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_recent_points"
             referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_phase"
+            referencedColumns: ["phase_id"]
           },
         ]
       }

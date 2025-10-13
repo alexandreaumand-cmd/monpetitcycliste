@@ -117,7 +117,7 @@ export default function Rankings() {
               <SheetTitle>Détails Manager</SheetTitle>
             </SheetHeader>
             <div className="mt-6">
-              {selectedManager && <ManagerBreakdown managerId={selectedManager} />}
+              {selectedManager && <ManagerBreakdown managerId={selectedManager} phaseId={selectedPhase} />}
             </div>
           </SheetContent>
         </Sheet>
