@@ -47,3 +47,9 @@ verify_jwt = true
 
 [functions.auction-get-live-status]
 verify_jwt = true
+
+[functions.get-knowledge-ranking]
+verify_jwt = true
+
+[functions.get-luck-ranking]
+verify_jwt = true

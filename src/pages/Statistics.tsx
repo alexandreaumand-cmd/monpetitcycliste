@@ -7,6 +7,8 @@ import { PerformanceHeatmap } from "@/components/rankings/PerformanceHeatmap";
 import { ConsistencyScores } from "@/components/rankings/ConsistencyScores";
 import { PointsDistribution } from "@/components/rankings/PointsDistribution";
 import { ManagerPredictions } from "@/components/rankings/ManagerPredictions";
+import { BikeKnowledgeRanking } from "@/components/rankings/BikeKnowledgeRanking";
+import { LuckRanking } from "@/components/rankings/LuckRanking";
 
 const Statistics = () => {
   const { selectedSeason, setSelectedSeason, seasons, isLoading } = useSeasonContext();
@@ -65,11 +67,13 @@ const Statistics = () => {
       </div>
 
       <Tabs defaultValue="heatmap" className="w-full">
-        <TabsList className="grid w-full max-w-4xl grid-cols-4">
+        <TabsList className="grid w-full max-w-4xl grid-cols-6">
           <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
           <TabsTrigger value="consistency">Consistency</TabsTrigger>
           <TabsTrigger value="distribution">Distribution</TabsTrigger>
           <TabsTrigger value="predictions">Prédictions</TabsTrigger>
+          <TabsTrigger value="knowledge">🧠 Connaissance</TabsTrigger>
+          <TabsTrigger value="luck">🍀 La Chatte</TabsTrigger>
         </TabsList>
 
         <TabsContent value="heatmap" className="mt-6">
@@ -86,6 +90,14 @@ const Statistics = () => {
 
         <TabsContent value="predictions" className="mt-6">
           <ManagerPredictions saisonId={selectedSeason.id} />
+        </TabsContent>
+
+        <TabsContent value="knowledge" className="mt-6">
+          <BikeKnowledgeRanking saisonId={selectedSeason.id} />
+        </TabsContent>
+
+        <TabsContent value="luck" className="mt-6">
+          <LuckRanking saisonId={selectedSeason.id} />
         </TabsContent>
       </Tabs>
     </div>
