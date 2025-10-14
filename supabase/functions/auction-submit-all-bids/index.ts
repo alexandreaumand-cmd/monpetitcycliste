@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
     if (totalSlots !== phase.max_coureurs) {
       return new Response(
         JSON.stringify({ 
-          error: `Tu dois avoir exactement ${phase.max_coureurs} coureurs au total. Actuellement: ${currentRosterCount} en roster + ${draftBids.length} enchères = ${totalSlots} coureurs` 
+          error: `Effectif incorrect : tu dois avoir exactement ${phase.max_coureurs} coureurs. Actuellement: ${currentRosterCount} en roster + ${draftBids.length} enchères = ${totalSlots} coureurs` 
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -131,10 +131,12 @@ Deno.serve(async (req) => {
     const totalSpent = rosterSpent + draftSum;
     
     if (Math.abs(totalSpent - phase.budget) > 0) {
+      const diff = totalSpent - phase.budget;
+      const message = diff > 0 
+        ? `Budget dépassé de ${diff}. Total: ${totalSpent} (roster: ${rosterSpent} + enchères: ${draftSum}). Budget: ${phase.budget}`
+        : `Budget sous-utilisé de ${Math.abs(diff)}. Total: ${totalSpent} (roster: ${rosterSpent} + enchères: ${draftSum}). Budget: ${phase.budget}`;
       return new Response(
-        JSON.stringify({ 
-          error: `Budget incorrect. Total dépensé: ${totalSpent}€ (roster: ${rosterSpent}€ + enchères: ${draftSum}€). Budget: ${phase.budget}€` 
-        }),
+        JSON.stringify({ error: message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -169,7 +171,7 @@ Deno.serve(async (req) => {
       if (bid.montant < coureur.prix_initial) {
         return new Response(
           JSON.stringify({ 
-            error: `Le montant pour ${coureur.nom} (${bid.montant}€) est inférieur au prix initial (${coureur.prix_initial}€)` 
+            error: `Le montant pour ${coureur.nom} (${bid.montant}) est inférieur au prix initial (${coureur.prix_initial})` 
           }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );

@@ -24,13 +24,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { phase_id, manager_id: input_manager_id, rider_id, amount } = await req.json();
+    const { phase_id, manager_id: input_manager_id, rider_id, amount: rawAmount } = await req.json();
 
-    if (!phase_id || !rider_id || amount === undefined) {
+    if (!phase_id || !rider_id || rawAmount === undefined) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Force integer amount (no decimals allowed)
+    const amount = Math.floor(Number(rawAmount));
+    if (amount !== Number(rawAmount)) {
+      console.warn(`Decimal amount ${rawAmount} coerced to ${amount}`);
     }
 
     // Get manager_id
@@ -85,7 +91,7 @@ Deno.serve(async (req) => {
     if (amount < coureur.prix_initial) {
       return new Response(
         JSON.stringify({ 
-          error: `Le montant doit être au moins ${coureur.prix_initial}€ (prix initial de ${coureur.nom})` 
+          error: `Le montant doit être au moins ${coureur.prix_initial} (prix initial de ${coureur.nom})` 
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -134,15 +140,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check budget
-    if (newTotal > phase.budget) {
-      return new Response(
-        JSON.stringify({ 
-          error: `Budget insuffisant (total: ${newTotal}€, budget: ${phase.budget}€)` 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Check budget (allow draft to exceed, will be validated on submit)
+    // But return warning for UI feedback
+    const budgetExceeded = newTotal > phase.budget;
 
     // Check max_bids (only if adding new bid)
     const isNewBid = !currentBids?.some(b => b.coureur_id === rider_id);
@@ -191,6 +191,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         totals: { draft_sum, draft_count, remaining_budget, remaining_slots },
+        warnings: budgetExceeded ? ['Budget dépassé - validation bloquée jusqu\'à correction'] : [],
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -40,7 +40,8 @@ export function MyBidsList({
   };
 
   const handleSaveEdit = (bid: MyBid) => {
-    const newAmount = parseFloat(editValue);
+    const sanitized = editValue.replace(/[^0-9]/g, '');
+    const newAmount = parseInt(sanitized) || 0;
     if (newAmount >= (bid.cote || 1)) {
       onUpdateAmount(bid.bid_id, bid.coureur_id, newAmount);
     }
@@ -110,9 +111,11 @@ export function MyBidsList({
                 {editingId === bid.bid_id ? (
                   <>
                     <Input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      onChange={(e) => setEditValue(e.target.value.replace(/[^0-9]/g, ''))}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleSaveEdit(bid);
                         if (e.key === "Escape") handleCancelEdit();

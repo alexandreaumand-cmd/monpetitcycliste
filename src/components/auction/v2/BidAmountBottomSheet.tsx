@@ -58,7 +58,9 @@ export function BidAmountBottomSheet({
   };
 
   const handleAmountChange = (value: string) => {
-    const num = parseFloat(value) || 0;
+    // Strip non-digits and convert to integer
+    const sanitized = value.replace(/[^0-9]/g, '');
+    const num = parseInt(sanitized) || 0;
     setAmount(num);
     setError("");
   };
@@ -105,14 +107,12 @@ export function BidAmountBottomSheet({
             <div className="relative flex-1">
               <Input
                 id="amount"
-                type="number"
+                type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
                 value={amount}
                 onChange={(e) => handleAmountChange(e.target.value)}
                 className="h-14 text-center text-2xl font-bold"
-                min={minAmount}
-                step={step}
               />
             </div>
 

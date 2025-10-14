@@ -56,7 +56,9 @@ export function BidAmountPopover({
   };
 
   const handleAmountChange = (value: string) => {
-    const num = parseFloat(value) || 0;
+    // Strip non-digits and convert to integer
+    const sanitized = value.replace(/[^0-9]/g, '');
+    const num = parseInt(sanitized) || 0;
     setAmount(num);
     setError("");
   };
@@ -107,12 +109,12 @@ export function BidAmountPopover({
               <div className="relative flex-1">
                 <Input
                   id="amount-desktop"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={amount}
                   onChange={(e) => handleAmountChange(e.target.value)}
                   className="text-center"
-                  min={minAmount}
-                  step={step}
                 />
               </div>
 

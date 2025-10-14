@@ -60,7 +60,7 @@ export const ManagerStatusCard = ({ manager }: ManagerStatusCardProps) => {
       <div className="space-y-2">
         <div>
           <div className="flex justify-between text-xs text-muted-foreground mb-1">
-            <span>Slots</span>
+            <span>Coureurs</span>
             <span>{manager.slots_filled}/{manager.max_slots}</span>
           </div>
           <Progress value={slotsProgress} className="h-1.5" />
@@ -68,8 +68,8 @@ export const ManagerStatusCard = ({ manager }: ManagerStatusCardProps) => {
         
         <div>
           <div className="flex justify-between text-xs text-muted-foreground mb-1">
-            <span>Budget</span>
-            <span>{manager.budget_used}/{manager.total_budget}</span>
+            <span>Avancement budget</span>
+            <span>{Math.round(budgetProgress)}%</span>
           </div>
           <Progress value={budgetProgress} className="h-1.5" />
         </div>
