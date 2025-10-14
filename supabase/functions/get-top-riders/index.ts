@@ -46,7 +46,13 @@ Deno.serve(async (req) => {
 
     console.log(`Returning ${items.length} top riders`)
 
-    return new Response(JSON.stringify({ items }), {
+    // Map rider_name to rider_nom for frontend compatibility
+    const mappedItems = items.map((item: any) => ({
+      ...item,
+      rider_nom: item.rider_name
+    }));
+
+    return new Response(JSON.stringify({ items: mappedItems }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
