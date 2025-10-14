@@ -74,7 +74,9 @@ export const CoureursImportSection = () => {
 
       toast({
         title: "✅ Import réussi",
-        description: `${data.imported || 0} coureurs importés`,
+        description: data.details 
+          ? `${data.details.imported_count} coureurs importés sur ${data.details.total_rows} lignes (${data.details.error_count} erreurs)`
+          : `${data.imported || 0} coureurs importés`,
       });
 
       setFile(null);

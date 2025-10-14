@@ -117,13 +117,18 @@ function mapToTableFormat(
 
   switch (table) {
     case 'coureurs':
+      // Use getVal for flexible column lookup (handles various formats and case)
+      const coureurNom = getVal(obj, 'coureur', 'nom', 'name', 'Coureur') || '';
+      const equipe = getVal(obj, 'equipe', 'team', 'équipe', 'Equipe');
+      const prixInitial = getVal(obj, 'prix_initial', 'prix', 'price', 'cote', 'Prix initial') || '10';
+      const uciId = getVal(obj, 'id', 'uci_id', 'rider_id');
+      
       return {
-        coureur_id: sanitizeId(obj['Coureur']),
-        nom: obj['Coureur'],
-        equipe: obj['Equipe'],
-        prix_initial: parseFloat(obj['Prix initial']) || 10,
-        uci_id: obj['id'] || null,
-        saison_id: null // Will be added later during import
+        id: sanitizeId(coureurNom),        // ✅ Use 'id' directly (not coureur_id)
+        nom: coureurNom,
+        equipe: equipe,
+        prix_initial: parseFloat(prixInitial) || 10,
+        uci_id: uciId || null
       }
     
     case 'scoring_rules':
@@ -989,7 +994,24 @@ Deno.serve(async (req) => {
         try {
           let record = mapToTableFormat(table, headers, values)
           
+          // Debug: log first 3 rows
+          if (i <= 3) {
+            console.log(`\n🔍 Debug row ${i}:`);
+            console.log(`  Headers:`, headers);
+            console.log(`  Values:`, values);
+            console.log(`  Mapped object:`, record);
+          }
+          
           if (record) {
+            // ✅ Strict validation before upsert
+            if (!record.id || !record.nom) {
+              console.error(`Row ${i}: Missing id or nom - Record:`, record);
+              errors++;
+              continue;
+            }
+            
+            console.log(`📝 Row ${i}: Processing ${record.nom} (id: ${record.id})`);
+            
             // 1. Upsert dans coureurs (table principale - fallback)
             const { error: coureurError } = await supabaseClient
               .from('coureurs')
@@ -1127,7 +1149,14 @@ Deno.serve(async (req) => {
         success: true, 
         imported, 
         errors,
-        message: `Imported ${imported} records with ${errors} errors` 
+        details: {
+          total_rows: lines.length - 1,
+          imported_count: imported,
+          error_count: errors,
+          table: table,
+          saison_id: saison_id || null
+        },
+        message: `✅ ${imported} ${table} importés, ${errors} erreurs` 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

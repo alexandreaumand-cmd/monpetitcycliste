@@ -41,9 +41,9 @@ P1R3;Paris-Roubaix;WT;one_day;2025-04-13;2025-04-13;Phase 1`;
  */
 export const generateCoureursTemplate = (): string => {
   return `Coureur;Equipe;Prix initial;id
-Tadej POGACAR;UAE Team Emirates;120;POG001
-Jonas VINGEGAARD;Visma-Lease a Bike;115;VIN001
-Remco EVENEPOEL;Soudal Quick-Step;110;EVE001`;
+Tadej POGACAR;UAE Team Emirates;120;pogacar_tadej
+Jonas VINGEGAARD;Visma-Lease a Bike;115;vingegaard_jonas
+Remco EVENEPOEL;Soudal Quick-Step;110;evenepoel_remco`;
 };
 
 /**
