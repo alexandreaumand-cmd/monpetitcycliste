@@ -547,26 +547,36 @@ export const ResultsEntryStudioMobile = ({
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Header */}
       <div className="sticky top-0 z-20 bg-background border-b">
-        <div className="flex items-center justify-between p-3">
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
+      <div className="flex items-center justify-between p-3">
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="h-5 w-5" />
+        </Button>
+        <div className="flex-1 text-center">
+          <h2 className="font-bold text-sm truncate">{course.course_nom}</h2>
+          {courseIsStageRace && (
+            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <span>Étape {currentStage}/{course.nb_etapes}</span>
+              {currentClassement && (
+                <>
+                  <span>•</span>
+                  <span className="text-green-600 font-medium">
+                    {resultRows.filter(r => r.coureur_id && r.statut === 'finished').length}/{resultRows.filter(r => r.position > 0).length}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => setExportDialogOpen(true)}
+            className="relative"
+          >
+            <Share2 className="h-5 w-5 text-blue-600" />
           </Button>
-          <div className="flex-1 text-center">
-            <h2 className="font-bold text-sm truncate">{course.course_nom}</h2>
-            {courseIsStageRace && (
-              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                <span>Étape {currentStage}/{course.nb_etapes}</span>
-                {currentClassement && (
-                  <>
-                    <span>•</span>
-                    <span className="text-green-600 font-medium">
-                      {resultRows.filter(r => r.coureur_id && r.statut === 'finished').length}/{resultRows.filter(r => r.position > 0).length}
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+          
           <Button 
             variant="ghost" 
             size="icon" 
@@ -580,6 +590,7 @@ export const ResultsEntryStudioMobile = ({
             )} />
           </Button>
         </div>
+      </div>
         
         {/* Barre de progression */}
         {courseIsStageRace && (
@@ -1028,24 +1039,14 @@ export const ResultsEntryStudioMobile = ({
           <Button 
             onClick={() => saveMutation.mutate()} 
             disabled={saveMutation.isPending}
-            variant="outline"
-            className="flex-1"
+            variant="default"
+            className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
           >
             <Save className="h-4 w-4 mr-1" />
-            {saveMutation.isPending ? "..." : "Sauver"}
+            {saveMutation.isPending ? "..." : "Enregistrer"}
           </Button>
           
-          {/* Bouton Partager */}
-          <Button
-            variant="default"
-            onClick={() => setExportDialogOpen(true)}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-          >
-            <Share2 className="h-4 w-4 mr-1" />
-            Partager
-          </Button>
-          
-          {/* Bouton Suivant (courses par étapes uniquement) */}
+          {/* Bouton Étape suivante (courses par étapes uniquement) */}
           {courseIsStageRace && currentStage < course.nb_etapes && (
             <Button 
               onClick={() => {
@@ -1054,9 +1055,10 @@ export const ResultsEntryStudioMobile = ({
               }}
               disabled={saveMutation.isPending}
               variant="outline"
-              size="icon"
+              className="flex-1"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4 mr-1" />
+              Étape suivante
             </Button>
           )}
         </div>
