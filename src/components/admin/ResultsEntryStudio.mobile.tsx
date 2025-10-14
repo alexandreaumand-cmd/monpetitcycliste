@@ -321,53 +321,68 @@ export const ResultsEntryStudioMobile = ({
       // Otherwise, save results normally
       const validRows = resultRows.filter(r => r.coureur_id);
       
-      if (validRows.length === 0) {
+      // Allow save if either:
+      // 1. We have valid rows in resultRows
+      // 2. OR we have a Super Combatif winner (WT GT only)
+      const hasSuperCombatif = courseIsStageRace && course.categorie === 'WT GT' && currentClassement === 'Combatif' && combatifWinner;
+
+      if (validRows.length === 0 && !hasSuperCombatif) {
         throw new Error("Aucun résultat à sauvegarder");
       }
 
-      const { data: serverScoringRules, error: rulesError } = await supabase
+      // Skip scoring lookup if we're only saving Super Combatif
+      let scoringMap = new Map();
+      let phaseData = null;
+      let riderManagerMap = new Map<string, string | null>();
+      let dateClassement = '';
+
+      if (validRows.length > 0) {
+        const { data: serverScoringRules, error: rulesError } = await supabase
         .from('scoring_rules_norm')
         .select('place, points')
         .eq('cat_canon', course.categorie)
         .eq('type_canon', currentClassement)
         .order('place');
 
-      if (rulesError) throw rulesError;
-      if (!serverScoringRules?.length) {
-        console.warn(`⚠️ Aucun barème trouvé pour ${currentClassement}`);
-        // Continue with empty scoring map
+        if (rulesError) throw rulesError;
+        if (!serverScoringRules?.length) {
+          console.warn(`⚠️ Aucun barème trouvé pour ${currentClassement}`);
+          // Continue with empty scoring map
+        }
+
+        scoringMap = new Map(serverScoringRules.map(sr => [sr.place, sr.points]));
       }
 
-      const scoringMap = new Map(serverScoringRules.map(sr => [sr.place, sr.points]));
-
       // Get saison_id from phase
-      const { data: phaseData } = await supabase
+      const { data: phaseDataResult } = await supabase
         .from('phases')
         .select('saison_id')
         .eq('id', course.phase_id)
         .single();
 
+      phaseData = phaseDataResult;
+
       if (!phaseData?.saison_id) {
         throw new Error('Impossible de trouver la saison pour cette course');
       }
 
-      const dateClassement = currentClassement === 'Etape'
+      dateClassement = currentClassement === 'Etape'
         ? new Date(new Date(course.date_debut).getTime() + (currentStage - 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         : (course.date_fin || course.date_debut);
 
-      const riderManagerMap = new Map<string, string | null>();
-      for (const row of validRows) {
-        const { data: roster } = await supabase
-          .from('rosters')
-          .select('manager_id')
-          .eq('phase_id', course.phase_id)
-          .eq('coureur_id', row.coureur_id!)
-          .maybeSingle();
-        
-        riderManagerMap.set(row.coureur_id!, roster?.manager_id || null);
-      }
+      if (validRows.length > 0) {
+        for (const row of validRows) {
+          const { data: roster } = await supabase
+            .from('rosters')
+            .select('manager_id')
+            .eq('phase_id', course.phase_id)
+            .eq('coureur_id', row.coureur_id!)
+            .maybeSingle();
+          
+          riderManagerMap.set(row.coureur_id!, roster?.manager_id || null);
+        }
 
-      const resultsToUpsert = validRows.map(row => {
+        const resultsToUpsert = validRows.map(row => {
         const isFinished = row.statut === 'finished';
         const positionValue = isFinished && row.position > 0 ? row.position : null;
         const points = isFinished && row.position > 0 ? (scoringMap.get(row.position) || 0) : 0;
@@ -384,32 +399,33 @@ export const ResultsEntryStudioMobile = ({
           points,
           saison_id: phaseData.saison_id,
         };
-      });
-
-      // Delete existing results before upserting to avoid position conflicts
-      let deleteResultsQuery = supabase
-        .from('race_results')
-        .delete()
-        .eq('course_id', course.course_id)
-        .eq('type_classement', currentClassement);
-      
-      if (currentClassement === 'Etape') {
-        deleteResultsQuery = deleteResultsQuery.eq('etape_numero', currentStage);
-      } else {
-        deleteResultsQuery = deleteResultsQuery.is('etape_numero', null);
-      }
-
-      const { error: deleteError } = await deleteResultsQuery;
-
-      if (deleteError) throw deleteError;
-
-      const { error: resultsError } = await supabase
-        .from('race_results')
-        .upsert(resultsToUpsert, {
-          onConflict: 'course_id,coureur_id,type_classement,etape_numero',
         });
 
-      if (resultsError) throw resultsError;
+        // Delete existing results before upserting to avoid position conflicts
+        let deleteResultsQuery = supabase
+          .from('race_results')
+          .delete()
+          .eq('course_id', course.course_id)
+          .eq('type_classement', currentClassement);
+        
+        if (currentClassement === 'Etape') {
+          deleteResultsQuery = deleteResultsQuery.eq('etape_numero', currentStage);
+        } else {
+          deleteResultsQuery = deleteResultsQuery.is('etape_numero', null);
+        }
+
+        const { error: deleteError } = await deleteResultsQuery;
+
+        if (deleteError) throw deleteError;
+
+        const { error: resultsError } = await supabase
+          .from('race_results')
+          .upsert(resultsToUpsert, {
+            onConflict: 'course_id,coureur_id,type_classement,etape_numero',
+          });
+
+        if (resultsError) throw resultsError;
+      }
 
       // Save jersey holders
       if (courseIsStageRace && currentClassement === 'Etape') {
@@ -443,6 +459,14 @@ export const ResultsEntryStudioMobile = ({
 
       // Save Combatif winner for WT GT
       if (courseIsStageRace && currentClassement === 'Combatif' && course.categorie === 'WT GT' && combatifWinner) {
+        // Get manager for combatif winner
+        const { data: combatifRoster } = await supabase
+          .from('rosters')
+          .select('manager_id')
+          .eq('phase_id', course.phase_id)
+          .eq('coureur_id', combatifWinner)
+          .maybeSingle();
+
         await supabase.from('race_results').upsert({
           course_id: course.course_id,
           coureur_id: combatifWinner,
@@ -451,9 +475,9 @@ export const ResultsEntryStudioMobile = ({
           position: 1,
           statut: 'finished' as const,
           date_classement: dateClassement,
-          manager_id: riderManagerMap.get(combatifWinner),
+          manager_id: combatifRoster?.manager_id || null,
           points: 0,
-          saison_id: phaseData.saison_id,
+          saison_id: phaseData!.saison_id,
         } as any, {
           onConflict: 'course_id,coureur_id,type_classement,etape_numero',
         });

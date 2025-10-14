@@ -456,7 +456,13 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
       // Otherwise, save results normally
       const validRows = resultRows.filter((r) => r.coureur_id);
-      if (validRows.length === 0) {
+      
+      // Allow save if either:
+      // 1. We have valid rows in resultRows
+      // 2. OR we have a Super Combatif winner (WT GT only, finals tab)
+      const hasSuperCombatif = !isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT' && combatifWinner;
+
+      if (validRows.length === 0 && !hasSuperCombatif) {
         throw new Error("Aucune ligne à enregistrer");
       }
 
@@ -472,22 +478,27 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         throw new Error("Doublons détectés dans la saisie");
       }
 
-      // Prepare rows for DB function
-      const rowsForDb = validRows.map((row) => ({
-        coureur_id: row.coureur_id!,
-        position: Number(row.position),
-        statut: row.statut,
-      }));
+      // Only process validRows if we have them
+      let saveResult = null;
+      if (validRows.length > 0) {
+        // Prepare rows for DB function
+        const rowsForDb = validRows.map((row) => ({
+          coureur_id: row.coureur_id!,
+          position: Number(row.position),
+          statut: row.statut,
+        }));
 
-      // Call unified UPSERT function (handles both create and update)
-      const { data: saveResult, error: saveError } = await supabase.rpc("admin_result_save_lot", {
-        p_course_id: course.course_id,
-        p_type_classement: classementType,
-        p_etape_numero: etapeNumeroValue,
-        p_rows: rowsForDb,
-      });
+        // Call unified UPSERT function (handles both create and update)
+        const { data, error: saveError } = await supabase.rpc("admin_result_save_lot", {
+          p_course_id: course.course_id,
+          p_type_classement: classementType,
+          p_etape_numero: etapeNumeroValue,
+          p_rows: rowsForDb,
+        });
 
-      if (saveError) throw saveError;
+        if (saveError) throw saveError;
+        saveResult = data;
+      }
 
       // Immediately recompute points for this course to reflect Porteur points
       const { error: computeError } = await supabase.functions.invoke('compute-points', {
