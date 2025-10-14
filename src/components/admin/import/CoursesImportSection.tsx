@@ -5,15 +5,30 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Download, Upload, Loader2, Info, MapPin } from "lucide-react";
 import { generateCoursesTemplate, downloadCSV } from "@/lib/exportTemplates";
+import { useQuery } from "@tanstack/react-query";
 
 export const CoursesImportSection = () => {
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  const [phaseId, setPhaseId] = useState<string>("");
   const { toast } = useToast();
+
+  const { data: phases } = useQuery({
+    queryKey: ['phases'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('phases')
+        .select('id, index_dans_saison, saisons(annee)')
+        .order('index_dans_saison', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
 
   const handleDownloadTemplate = () => {
     downloadCSV(generateCoursesTemplate(), 'template_courses.csv');
@@ -33,6 +48,15 @@ export const CoursesImportSection = () => {
       return;
     }
 
+    if (!phaseId) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner une phase",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setImporting(true);
 
     try {
@@ -42,6 +66,7 @@ export const CoursesImportSection = () => {
         body: {
           table: 'courses',
           data: csvData,
+          phase_id: phaseId,
         },
       });
 
@@ -53,6 +78,7 @@ export const CoursesImportSection = () => {
       });
 
       setFile(null);
+      setPhaseId("");
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
       if (input) input.value = '';
     } catch (error) {
@@ -104,6 +130,22 @@ export const CoursesImportSection = () => {
         </Button>
 
         <div className="space-y-2">
+          <Label>Phase cible</Label>
+          <Select value={phaseId} onValueChange={setPhaseId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionner une phase" />
+            </SelectTrigger>
+            <SelectContent>
+              {phases?.map((phase) => (
+                <SelectItem key={phase.id} value={phase.id}>
+                  Phase {phase.index_dans_saison} - {phase.saisons?.annee}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
           <Label>Fichier CSV</Label>
           <Input
             type="file"
@@ -114,7 +156,7 @@ export const CoursesImportSection = () => {
 
         <Button 
           onClick={handleImport} 
-          disabled={!file || importing}
+          disabled={!file || !phaseId || importing}
           className="w-full"
         >
           {importing ? (

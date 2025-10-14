@@ -6,10 +6,10 @@ const corsHeaders = {
 }
 
 interface ImportRequest {
-  table: 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates' | 'rosters'
+  table: 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates' | 'rosters' | 'resultats'
   data: string // CSV content
-  saison_id?: string // Required for coureurs, scoring_rules, and courses
-  phase_id?: string // Required for courses
+  saison_id?: string // Required for coureurs, scoring_rules, and resultats
+  phase_id?: string // Required for courses and rosters
 }
 
 /**
@@ -122,7 +122,8 @@ function mapToTableFormat(
         nom: obj['Coureur'],
         equipe: obj['Equipe'],
         prix_initial: parseFloat(obj['Prix initial']) || 10,
-        uci_id: obj['id'] || null
+        uci_id: obj['id'] || null,
+        saison_id: null // Will be added later during import
       }
     
     case 'scoring_rules':
