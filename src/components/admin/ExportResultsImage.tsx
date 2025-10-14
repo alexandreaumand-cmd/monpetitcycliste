@@ -115,24 +115,22 @@ export const ExportResultsImage = ({
     queryFn: async () => {
       if (isOneDay) return [];
 
-      const { data, error } = await supabase
-        .from("race_results")
-        .select(
-          `
-          type_classement,
-          coureur_id,
-          coureurs!inner(nom),
-          manager_id,
-          managers(nom)
-        `
-        )
-        .eq("course_id", course.course_id)
-        .like("type_classement", "Porteur%")
-        .eq("etape_numero", etapeNumero || 1)
-        .eq("statut", "finished");
+      // Appeler l'edge function qui récupère correctement les porteurs
+      const { data, error } = await supabase.functions.invoke("stage-jersey-bonuses", {
+        body: {
+          course_id: course.course_id,
+          etape_numero: etapeNumero || 1,
+        },
+      });
 
       if (error) throw error;
-      return data || [];
+
+      // Transformer les données au format attendu
+      return (data?.jerseys || []).map((jersey: any) => ({
+        type_classement: jersey.type,
+        coureurs: { nom: jersey.rider_name },
+        managers: { nom: jersey.manager_name || null },
+      }));
     },
     enabled: open && !isOneDay,
   });
@@ -209,7 +207,11 @@ export const ExportResultsImage = ({
     try {
       const response = await fetch(generatedImageUrl);
       const blob = await response.blob();
-      const file = new File([blob], `export_${course.course_nom.replace(/[^a-z0-9]/gi, "_")}.jpg`, { type: 'image/jpeg' });
+      const file = new File(
+        [blob], 
+        `resultats_${course.course_nom.replace(/[^a-z0-9]/gi, "_")}_${etapeNumero ? `etape${etapeNumero}` : typeClassement}.jpg`, 
+        { type: 'image/jpeg' }
+      );
       
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
@@ -219,9 +221,16 @@ export const ExportResultsImage = ({
         });
         toast.success("Image partagée !");
       } else {
-        toast.info("Partage non supporté. Téléchargez l'image.");
+        // Fallback : téléchargement automatique
+        handleDownload();
+        toast.info("Partage non supporté. Image téléchargée.");
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Si l'utilisateur annule le partage, ne pas afficher d'erreur
+      if (error.name === 'AbortError') {
+        console.log('Partage annulé par l\'utilisateur');
+        return;
+      }
       console.error('Error sharing image:', error);
       toast.error("Échec du partage.");
     }
@@ -340,20 +349,19 @@ export const ExportResultsImage = ({
                   Modifier options
                 </Button>
                 <Button 
-                  onClick={handleCopyImage}
-                  variant="secondary"
-                  className="flex-1 sm:hidden"
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copier
-                </Button>
-                <Button 
                   onClick={handleShareImage}
-                  variant="secondary"
-                  className="flex-1 sm:hidden"
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white sm:hidden"
                 >
                   <Share2 className="mr-2 h-4 w-4" />
                   Partager
+                </Button>
+                <Button 
+                  onClick={handleDownload}
+                  variant="outline"
+                  className="flex-1 sm:hidden"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Télécharger
                 </Button>
                 <Button 
                   onClick={handleCopyImage}
@@ -365,7 +373,7 @@ export const ExportResultsImage = ({
                 </Button>
                 <Button 
                   onClick={handleDownload}
-                  className="flex-1"
+                  className="hidden sm:flex flex-1"
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Télécharger
