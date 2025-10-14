@@ -15,7 +15,20 @@ import { useQuery } from "@tanstack/react-query";
 export const CoursesImportSection = () => {
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  const [selectedSaison, setSelectedSaison] = useState<string>("");
   const { toast } = useToast();
+
+  const { data: saisons } = useQuery({
+    queryKey: ['saisons'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('saisons')
+        .select('id, annee')
+        .order('annee', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
 
   const handleDownloadTemplate = () => {
     downloadCSV(generateCoursesTemplate(), 'template_courses.csv');
@@ -35,6 +48,15 @@ export const CoursesImportSection = () => {
       return;
     }
 
+    if (!selectedSaison) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner une saison",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setImporting(true);
 
     try {
@@ -44,6 +66,7 @@ export const CoursesImportSection = () => {
         body: {
           table: 'courses',
           data: csvData,
+          saison_id: selectedSaison,
         },
       });
 
@@ -55,6 +78,7 @@ export const CoursesImportSection = () => {
       });
 
       setFile(null);
+      setSelectedSaison("");
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
       if (input) input.value = '';
     } catch (error) {
@@ -106,6 +130,22 @@ export const CoursesImportSection = () => {
         </Button>
 
         <div className="space-y-2">
+          <Label>Saison</Label>
+          <Select value={selectedSaison} onValueChange={setSelectedSaison}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionner une saison" />
+            </SelectTrigger>
+            <SelectContent>
+              {saisons?.map((saison) => (
+                <SelectItem key={saison.id} value={saison.id}>
+                  Saison {saison.annee}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
           <Label>Fichier CSV</Label>
           <Input
             type="file"
@@ -116,7 +156,7 @@ export const CoursesImportSection = () => {
 
         <Button 
           onClick={handleImport} 
-          disabled={!file || importing}
+          disabled={!file || !selectedSaison || importing}
           className="w-full"
         >
           {importing ? (
