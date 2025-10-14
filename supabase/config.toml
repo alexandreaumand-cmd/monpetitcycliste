@@ -1,5 +1,8 @@
 project_id = "oisfvryhpovwxaxqbmow"
 
+[functions.admin-delete-season]
+verify_jwt = true
+
 [functions.get-performance-matrix]
 verify_jwt = true
 

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatAmount } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { SeasonDeleteManager } from "./SeasonDeleteManager";
 
 export const SeasonManager = () => {
   const { toast } = useToast();
@@ -447,6 +448,9 @@ export const SeasonManager = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Danger Zone */}
+      <SeasonDeleteManager />
     </div>
   );
 };
