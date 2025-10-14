@@ -78,8 +78,8 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
             )}
           </Link>
 
-          {/* Season Selector - Desktop */}
-          {!isMobile && !seasonsLoading && seasons.length > 0 && (
+          {/* Season Selector - Responsive */}
+          {!seasonsLoading && seasons.length > 0 && (
             <Select
               value={selectedSeason?.id || ""}
               onValueChange={(value) => {
@@ -87,7 +87,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                 setSelectedSeason(season || null);
               }}
             >
-              <SelectTrigger className="w-[100px] h-9 ml-4">
+              <SelectTrigger className="w-[80px] md:w-[100px] h-8 md:h-9 ml-2 md:ml-4 text-xs md:text-sm">
                 <SelectValue placeholder="Année" />
               </SelectTrigger>
               <SelectContent>
