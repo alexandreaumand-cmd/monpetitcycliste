@@ -8,8 +8,8 @@ import { RoundStats } from "./rounds/RoundStats";
 import { RoundActions } from "./rounds/RoundActions";
 import { ManagersSupervision } from "./rounds/ManagersSupervision";
 import { AnnouncementsLive } from "./rounds/AnnouncementsLive";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PhaseSelector } from "./rounds/PhaseSelector";
+import { Card, CardContent } from "@/components/ui/card";
 
 export const RoundControlCenter = () => {
   const queryClient = useQueryClient();
@@ -230,25 +230,15 @@ export const RoundControlCenter = () => {
   return (
     <div className="space-y-6">
       {/* Phase Selector */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Sélectionner une phase</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Select value={selectedPhaseId} onValueChange={setSelectedPhaseId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choisir une phase" />
-            </SelectTrigger>
-            <SelectContent>
-              {phases?.map((phase) => (
-                <SelectItem key={phase.id} value={phase.id}>
-                  Saison {phase.saisons?.annee} - Phase {phase.index_dans_saison}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+      {phases && phases.length > 0 && (
+        <PhaseSelector
+          phases={phases}
+          selectedPhaseId={selectedPhaseId}
+          onPhaseChange={setSelectedPhaseId}
+          currentAuction={currentAuction}
+          isLoading={loadingPhases || loadingAuction}
+        />
+      )}
 
       {/* Actions - Always visible when a phase is selected */}
       {selectedPhaseId && (
