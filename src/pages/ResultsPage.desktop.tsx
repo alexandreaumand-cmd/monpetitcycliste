@@ -54,10 +54,10 @@ export const ResultsPage = () => {
   const [podiums, setPodiums] = useState<Record<string, ManagerPodium[]>>({});
   const [winners, setWinners] = useState<Record<string, RaceWinner>>({});
   
-  const winningManagerIds = Object.values(podiums).map(p => p[0]?.manager_id).filter(Boolean) as string[];
-  console.log('🏆 Winning manager IDs:', winningManagerIds);
-  const { data: jerseys = {} } = useManagerJerseys(winningManagerIds, selectedSeason?.id);
-  console.log('🎽 Jerseys data:', jerseys);
+  const allPodiumManagerIds = Object.values(podiums)
+    .flatMap(p => p.slice(0, 3).map(m => m.manager_id))
+    .filter(Boolean) as string[];
+  const { data: jerseys = {} } = useManagerJerseys(allPodiumManagerIds, selectedSeason?.id);
   
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
