@@ -68,20 +68,36 @@ Deno.serve(async (req) => {
     // Get all matched entries (any status as long as coureur_id is set)
     const { data: entries, error: entriesError } = await supabase
       .from('startlist_entries')
-      .select(`
-        coureur_id,
-        bib_no,
-        coureurs!inner(
-          id,
-          nom,
-          equipe,
-          prix_initial
-        )
-      `)
+      .select('coureur_id, bib_no')
       .eq('startlist_id', startlist_id)
       .not('coureur_id', 'is', null);
 
     if (entriesError) throw entriesError;
+
+    // Enrich entries with coureurs_saisons data
+    const coureurIds = (entries || []).map(e => e.coureur_id);
+    const { data: coureurs } = coureurIds.length > 0 ? await supabase
+      .from('coureurs_saisons')
+      .select('coureur_id, coureurs!inner(id, nom), equipe, prix_initial')
+      .eq('saison_id', saisonId)
+      .in('coureur_id', coureurIds)
+      : { data: [] };
+
+    const coureursMap = new Map((coureurs || []).map((cs: any) => [
+      cs.coureur_id,
+      {
+        id: cs.coureurs?.id || cs.coureur_id,
+        nom: cs.coureurs?.nom || '',
+        equipe: cs.equipe,
+        prix_initial: cs.prix_initial
+      }
+    ]));
+
+    // Enrich entries with coureur data
+    const enrichedEntries = (entries || []).map(e => ({
+      ...e,
+      coureurs: coureursMap.get(e.coureur_id) || { id: e.coureur_id, nom: '', equipe: '', prix_initial: 10 }
+    }));
 
     // Get rosters for this phase with season sponsors
     const { data: rosters, error: rostersError } = await supabase
@@ -118,13 +134,13 @@ Deno.serve(async (req) => {
     });
 
     // Get points from last 5 weeks for each coureur in the startlist
-    const coureurIds = entries.map(e => e.coureur_id).filter(Boolean);
+    const pointsCoureurIds = enrichedEntries.map(e => e.coureur_id).filter(Boolean);
     
     // Get all points for coureurs in startlist with course info
     const { data: allPoints } = await supabase
       .from('points_ledger')
       .select('coureur_id, points, course_id')
-      .in('coureur_id', coureurIds);
+      .in('coureur_id', pointsCoureurIds);
 
     // Get course dates
     const courseIds = [...new Set(allPoints?.map(p => p.course_id) || [])];
@@ -261,8 +277,8 @@ Deno.serve(async (req) => {
     }
 
     // Match entries to managers (ignore riders without roster)
-    for (const entry of entries) {
-      const coureurData = Array.isArray(entry.coureurs) ? entry.coureurs[0] : entry.coureurs;
+    for (const entry of enrichedEntries) {
+      const coureurData = entry.coureurs;
       const roster = rosters.find(r => r.coureur_id === entry.coureur_id);
       if (roster) {
         const manager = managerMap.get(roster.manager_id);

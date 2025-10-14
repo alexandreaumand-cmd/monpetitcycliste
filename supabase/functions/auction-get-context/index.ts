@@ -42,10 +42,10 @@ Deno.serve(async (req) => {
 
     const manager_id = input_manager_id || manager.id;
 
-    // Get phase info
+    // Get phase info with saison_id
     const { data: phase } = await supabase
       .from('phases')
-      .select('budget, max_coureurs')
+      .select('budget, max_coureurs, saison_id')
       .eq('id', phase_id)
       .single();
 
@@ -115,21 +115,34 @@ Deno.serve(async (req) => {
 
     const has_validated = submitted_bids.length > 0;
 
-    // Get existing roster with rider details
+    // Get existing roster with rider details from coureurs_saisons
     const { data: existingRoster } = await supabase
       .from('rosters')
       .select(`
         coureur_id,
-        prix_signature,
-        coureurs!inner (
-          id,
-          nom,
-          equipe,
-          prix_initial
-        )
+        prix_signature
       `)
       .eq('manager_id', manager_id)
       .eq('phase_id', phase_id);
+
+    // Enrich roster with coureurs_saisons data
+    const rosterCoureurIds = (existingRoster || []).map(r => r.coureur_id);
+    const { data: rosterCoureurs } = rosterCoureurIds.length > 0 ? await supabase
+      .from('coureurs_saisons')
+      .select('coureur_id, coureurs!inner(id, nom), equipe, prix_initial')
+      .eq('saison_id', phase.saison_id)
+      .in('coureur_id', rosterCoureurIds)
+      : { data: [] };
+
+    const rosterCoureursMap = new Map((rosterCoureurs || []).map((cs: any) => [
+      cs.coureur_id,
+      {
+        id: cs.coureurs?.id || cs.coureur_id,
+        nom: cs.coureurs?.nom || '',
+        equipe: cs.equipe,
+        prix_initial: cs.prix_initial
+      }
+    ]));
 
     const roster_count = existingRoster?.length || 0;
     const budget_spent = existingRoster?.reduce((sum, r) => sum + Number(r.prix_signature), 0) || 0;
@@ -143,24 +156,37 @@ Deno.serve(async (req) => {
 
     const roundMap = new Map((rosterAnnonces || []).map(a => [a.coureur_id, a.round_number]));
 
-    const enriched_roster = (existingRoster || []).map((r: any) => ({
-      coureur_id: r.coureur_id,
-      rider_nom: r.coureurs?.nom || '',
-      rider_team: r.coureurs?.equipe || '',
-      amount: Number(r.prix_signature),
-      round_number: roundMap.get(r.coureur_id) || null,
-      is_existing: true,
-      cote: r.coureurs?.prix_initial || null,
-    }));
+    const enriched_roster = (existingRoster || []).map((r: any) => {
+      const coureur = rosterCoureursMap.get(r.coureur_id);
+      return {
+        coureur_id: r.coureur_id,
+        rider_nom: coureur?.nom || '',
+        rider_team: coureur?.equipe || '',
+        amount: Number(r.prix_signature),
+        round_number: roundMap.get(r.coureur_id) || null,
+        is_existing: true,
+        cote: coureur?.prix_initial || null,
+      };
+    });
 
-    // Get coureur details for bids
+    // Get coureur details for bids from coureurs_saisons
     const coureur_ids = [...my_bids, ...submitted_bids].map(b => b.coureur_id);
-    const { data: coureurs } = await supabase
-      .from('coureurs')
-      .select('id, nom, equipe, prix_initial')
-      .in('id', coureur_ids);
+    const { data: coureurs } = coureur_ids.length > 0 ? await supabase
+      .from('coureurs_saisons')
+      .select('coureur_id, coureurs!inner(id, nom), equipe, prix_initial')
+      .eq('saison_id', phase.saison_id)
+      .in('coureur_id', coureur_ids)
+      : { data: [] };
 
-    const coureursMap = new Map((coureurs || []).map(c => [c.id, c]));
+    const coureursMap = new Map((coureurs || []).map((cs: any) => [
+      cs.coureur_id,
+      {
+        id: cs.coureurs?.id || cs.coureur_id,
+        nom: cs.coureurs?.nom || '',
+        equipe: cs.equipe,
+        prix_initial: cs.prix_initial
+      }
+    ]));
 
     // Enrich bids with coureur info
     const enriched_my_bids = my_bids.map(b => ({

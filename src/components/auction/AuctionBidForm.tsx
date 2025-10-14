@@ -76,9 +76,18 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
   const { data: draftBids = [], isLoading: loadingDraftBids } = useQuery({
     queryKey: ['draft-bids', auction.id, managerId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get phase saison_id
+      const { data: phaseData } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', auction.phase_id)
+        .single();
+
+      if (!phaseData) throw new Error('Phase not found');
+
+      const { data: bids, error } = await supabase
         .from('bids')
-        .select('*, coureurs(nom, prix_initial, equipe)')
+        .select('id, coureur_id, montant, statut, created_at, auction_id, manager_id, round_number')
         .eq('auction_id', auction.id)
         .eq('manager_id', managerId)
         .eq('round_number', auction.round_number)
@@ -86,23 +95,82 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+
+      // Enrich with coureurs_saisons data
+      if (!bids || bids.length === 0) return [];
+
+      const coureurIds = bids.map(b => b.coureur_id);
+      const { data: coureurs } = await supabase
+        .from('coureurs_saisons')
+        .select('coureur_id, coureurs!inner(nom), equipe, prix_initial')
+        .eq('saison_id', phaseData.saison_id)
+        .in('coureur_id', coureurIds);
+
+      const coureursMap = new Map(
+        (coureurs || []).map(cs => [
+          cs.coureur_id,
+          {
+            nom: cs.coureurs.nom,
+            equipe: cs.equipe,
+            prix_initial: cs.prix_initial
+          }
+        ])
+      );
+
+      return bids.map(bid => ({
+        ...bid,
+        coureurs: coureursMap.get(bid.coureur_id) || { nom: '', equipe: '', prix_initial: 10 }
+      }));
     }
   });
 
   const { data: submittedBids = [] } = useQuery({
     queryKey: ['submitted-bids', auction.id, managerId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get phase saison_id
+      const { data: phaseData } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', auction.phase_id)
+        .single();
+
+      if (!phaseData) throw new Error('Phase not found');
+
+      const { data: bids, error } = await supabase
         .from('bids')
-        .select('*, coureurs(nom, prix_initial, equipe)')
+        .select('id, coureur_id, montant, statut, created_at, auction_id, manager_id, round_number')
         .eq('auction_id', auction.id)
         .eq('manager_id', managerId)
         .eq('round_number', auction.round_number)
         .eq('statut', 'pending');
 
       if (error) throw error;
-      return data || [];
+
+      // Enrich with coureurs_saisons data
+      if (!bids || bids.length === 0) return [];
+
+      const coureurIds = bids.map(b => b.coureur_id);
+      const { data: coureurs } = await supabase
+        .from('coureurs_saisons')
+        .select('coureur_id, coureurs!inner(nom), equipe, prix_initial')
+        .eq('saison_id', phaseData.saison_id)
+        .in('coureur_id', coureurIds);
+
+      const coureursMap = new Map(
+        (coureurs || []).map(cs => [
+          cs.coureur_id,
+          {
+            nom: cs.coureurs.nom,
+            equipe: cs.equipe,
+            prix_initial: cs.prix_initial
+          }
+        ])
+      );
+
+      return bids.map(bid => ({
+        ...bid,
+        coureurs: coureursMap.get(bid.coureur_id) || { nom: '', equipe: '', prix_initial: 10 }
+      }));
     }
   });
 
