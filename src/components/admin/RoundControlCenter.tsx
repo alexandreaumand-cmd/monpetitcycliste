@@ -119,11 +119,11 @@ export const RoundControlCenter = () => {
 
   // Mutations
   const openRoundMutation = useMutation({
-    mutationFn: async (deadlineHours: number) => {
+    mutationFn: async (deadlineAt: string) => {
       const { data, error } = await supabase.functions.invoke('ouvrir-nouveau-round', {
         body: { 
           phase_id: selectedPhaseId, 
-          deadline_hours: deadlineHours 
+          deadline_at: deadlineAt 
         }
       });
       if (error) throw error;
