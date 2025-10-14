@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { toPng } from 'html-to-image';
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -30,11 +31,13 @@ import {
   ArrowLeft,
   Image as ImageIcon,
   MessageSquare,
+  Share2,
 } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
 import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { StartlistDesktopExport } from "@/components/startlist/StartlistDesktopExport";
 
 export const StartlistMobile = () => {
   const queryClient = useQueryClient();
@@ -51,6 +54,8 @@ export const StartlistMobile = () => {
   const [showUnmatched, setShowUnmatched] = useState(false);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [expandedManagers, setExpandedManagers] = useState<Set<string>>(new Set());
+  const exportRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const seasonPhaseIds = phases?.map(p => p.id) || [];
 
@@ -111,6 +116,59 @@ export const StartlistMobile = () => {
     },
     enabled: !!selectedStartlistId && viewMode === "view",
   });
+
+  const handleShareStartlist = async () => {
+    if (!startlistViewData || !exportRef.current) return;
+    
+    setIsExporting(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 150));
+      
+      const dataUrl = await toPng(exportRef.current, {
+        quality: 1,
+        pixelRatio: 2,
+        cacheBust: true,
+        backgroundColor: '#ffffff'
+      });
+      
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      const fileName = `startlist-${startlistViewData.race.nom}-${format(new Date(), 'yyyy-MM-dd')}.png`;
+      
+      if (navigator.share && navigator.canShare) {
+        const file = new File([blob], fileName, { type: 'image/png' });
+        
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: 'Startlist',
+              text: `Startlist - ${startlistViewData.race.nom}`
+            });
+            toast.success("Startlist partagée !");
+            return;
+          } catch (shareError: any) {
+            if (shareError.name !== 'AbortError') {
+              console.warn('Partage annulé');
+            }
+          }
+        }
+      }
+      
+      const link = document.createElement('a');
+      link.download = fileName;
+      link.href = dataUrl;
+      link.click();
+      toast.success("Startlist téléchargée !");
+      
+    } catch (error) {
+      console.error('Erreur export:', error);
+      toast.error("Erreur lors de l'export");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleParse = async () => {
     if (!textContent.trim()) {
@@ -563,6 +621,37 @@ export const StartlistMobile = () => {
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Bouton Partager */}
+          <div className="mt-4">
+            <Button 
+              onClick={handleShareStartlist}
+              disabled={isExporting}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Génération en cours...
+                </>
+              ) : (
+                <>
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Partager la startlist
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Composant caché pour l'export desktop */}
+        <div className="fixed left-[-9999px] top-0 w-[1200px] bg-white">
+          {startlistViewData && (
+            <StartlistDesktopExport 
+              ref={exportRef}
+              startlistData={startlistViewData}
+            />
           )}
         </div>
 
