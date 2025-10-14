@@ -1,24 +1,17 @@
 import { Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AuctionManager } from "@/components/admin/AuctionManager";
-import { RoundManager } from "@/components/admin/RoundManager";
-import { AnnouncementManager } from "@/components/admin/AnnouncementManager";
-import { RecentResults } from "@/components/admin/RecentResults";
-import { SeasonManager } from "@/components/admin/SeasonManager";
+import { CourseManagementTabs } from "@/components/admin/CourseManagementTabs";
+import { GameManagementTabs } from "@/components/admin/GameManagementTabs";
+import { ConfigurationTabs } from "@/components/admin/ConfigurationTabs";
 import { MaintenanceTabs } from "@/components/admin/MaintenanceTabs";
-import { ManagerSponsorsManager } from "@/components/admin/ManagerSponsorsManager";
-import { JerseyManager } from "@/components/admin/JerseyManager";
-import { DataManagementTabs } from "@/components/admin/DataManagementTabs";
 import { cn } from "@/lib/utils";
 
   const adminTabs = [
-    { label: 'Résultats', path: 'results' },
-    { label: 'Enchères', path: 'encheres' },
-    { label: 'Données', path: 'data' },
-    { label: 'Saisons', path: 'seasons' },
-    { label: 'Maillots', path: 'jerseys' },
-    { label: 'Maintenance', path: 'maintenance' },
+    { label: '🏁 Courses', path: 'courses' },
+    { label: '🎮 Enchères', path: 'encheres' },
+    { label: '⚙️ Configuration', path: 'config' },
+    { label: '🔧 Maintenance', path: 'maintenance' },
   ];
 
 export const AdminPage = () => {
@@ -49,26 +42,11 @@ export const AdminPage = () => {
       </div>
 
       <Routes>
-        <Route index element={<Navigate to="/dashboard/admin/results" replace />} />
+        <Route index element={<Navigate to="/dashboard/admin/courses" replace />} />
         
-        <Route path="data" element={<DataManagementTabs />} />
-        
-        <Route path="encheres" element={
-          <div className="space-y-6">
-            <RoundManager />
-            <AuctionManager />
-            <AnnouncementManager />
-          </div>
-        } />
-        
-        <Route path="results" element={<RecentResults />} />
-        <Route path="seasons" element={
-          <div className="space-y-6">
-            <SeasonManager />
-            <ManagerSponsorsManager />
-          </div>
-        } />
-        <Route path="jerseys" element={<JerseyManager />} />
+        <Route path="courses" element={<CourseManagementTabs />} />
+        <Route path="encheres" element={<GameManagementTabs />} />
+        <Route path="config" element={<ConfigurationTabs />} />
         <Route path="maintenance" element={<MaintenanceTabs />} />
       </Routes>
     </div>
