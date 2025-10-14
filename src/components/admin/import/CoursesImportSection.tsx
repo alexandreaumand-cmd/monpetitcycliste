@@ -15,20 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 export const CoursesImportSection = () => {
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
-  const [phaseId, setPhaseId] = useState<string>("");
   const { toast } = useToast();
-
-  const { data: phases } = useQuery({
-    queryKey: ['phases'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('phases')
-        .select('id, index_dans_saison, saisons(annee)')
-        .order('index_dans_saison', { ascending: false });
-      if (error) throw error;
-      return data;
-    }
-  });
 
   const handleDownloadTemplate = () => {
     downloadCSV(generateCoursesTemplate(), 'template_courses.csv');
@@ -48,15 +35,6 @@ export const CoursesImportSection = () => {
       return;
     }
 
-    if (!phaseId) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez sélectionner une phase",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setImporting(true);
 
     try {
@@ -66,7 +44,6 @@ export const CoursesImportSection = () => {
         body: {
           table: 'courses',
           data: csvData,
-          phase_id: phaseId,
         },
       });
 
@@ -78,7 +55,6 @@ export const CoursesImportSection = () => {
       });
 
       setFile(null);
-      setPhaseId("");
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
       if (input) input.value = '';
     } catch (error) {
@@ -112,8 +88,8 @@ export const CoursesImportSection = () => {
               id;nom;categorie;type_course;date_debut;date_fin;phase_id
             </code>
             <ul className="text-xs space-y-1 list-disc list-inside">
-              <li><strong>id</strong> : Identifiant unique (ex: P1R1, P2R5)</li>
-              <li><strong>phase_id</strong> : "Phase 1", "Phase 2" ou UUID exact</li>
+              <li><strong>id</strong> : Identifiant unique (ex: P1R1, P2R5) ou vide (généré depuis le nom)</li>
+              <li><strong>phase_id</strong> : UUID exact, "Phase 1"/"Phase 2", ou vide (déduit depuis les dates)</li>
               <li><strong>dates</strong> : Format YYYY-MM-DD ou DD/MM/YYYY</li>
               <li><strong>categorie</strong> : WT, ProSeries, 1.UWT, etc.</li>
             </ul>
@@ -130,22 +106,6 @@ export const CoursesImportSection = () => {
         </Button>
 
         <div className="space-y-2">
-          <Label>Phase cible</Label>
-          <Select value={phaseId} onValueChange={setPhaseId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionner une phase" />
-            </SelectTrigger>
-            <SelectContent>
-              {phases?.map((phase) => (
-                <SelectItem key={phase.id} value={phase.id}>
-                  Phase {phase.index_dans_saison} - {phase.saisons?.annee}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
           <Label>Fichier CSV</Label>
           <Input
             type="file"
@@ -156,7 +116,7 @@ export const CoursesImportSection = () => {
 
         <Button 
           onClick={handleImport} 
-          disabled={!file || !phaseId || importing}
+          disabled={!file || importing}
           className="w-full"
         >
           {importing ? (
