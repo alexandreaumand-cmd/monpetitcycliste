@@ -1,9 +1,9 @@
 import { useState, ReactNode } from "react";
-import { MobileHeader } from "./MobileHeader";
+
 import { MobileBottomBar } from "./MobileBottomBar";
 import { MobileDrawer } from "./MobileDrawer";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { Menu } from "lucide-react";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
@@ -43,6 +43,9 @@ export const MobileLayout = ({
 
           <h1 className="text-lg font-bold truncate flex-1 text-center">
             {title}
+            {selectedSeason?.annee && (
+              <span className="ml-2 text-xs text-muted-foreground">• {selectedSeason.annee}</span>
+            )}
           </h1>
 
           <NotificationCenter />
@@ -66,24 +69,23 @@ export const MobileLayout = ({
           !seasonsLoading && seasons.length > 0 ? (
             <div className="px-4 py-3 border-b">
               <label className="text-sm font-medium block mb-2">Saison</label>
-              <Select
+              <select
+                aria-label="Choisir l'année"
+                className="w-full h-9 rounded-md border border-input bg-background text-foreground px-3 focus:outline-none focus:ring-2 focus:ring-ring"
                 value={selectedSeason?.id || ""}
-                onValueChange={(value) => {
-                  const season = seasons.find(s => s.id === value);
-                  setSelectedSeason(season || null);
+                onChange={(e) => {
+                  const season = seasons.find(s => s.id === e.target.value) || null;
+                  console.log("[MobileLayout] Saison changée:", e.target.value, "→", season?.annee);
+                  setSelectedSeason(season);
                 }}
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choisir une année" />
-                </SelectTrigger>
-                <SelectContent>
-                  {seasons.map((season) => (
-                    <SelectItem key={season.id} value={season.id}>
-                      {season.annee}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="" disabled>Choisir une année</option>
+                {seasons.map((season) => (
+                  <option key={season.id} value={season.id}>
+                    {season.annee}
+                  </option>
+                ))}
+              </select>
             </div>
           ) : undefined
         }
