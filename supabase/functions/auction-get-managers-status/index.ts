@@ -1,0 +1,164 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { corsHeaders } from '../_shared/cors.ts';
+
+interface ManagerStatus {
+  nom: string;
+  status: 'validated' | 'pending' | 'incomplete';
+  slots_filled: number;
+  max_slots: number;
+  budget_used: number;
+  total_budget: number;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        auth: {
+          persistSession: false,
+        },
+      }
+    );
+
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      supabaseClient.auth.setSession({
+        access_token: authHeader.replace('Bearer ', ''),
+        refresh_token: '',
+      });
+    }
+
+    const { auction_id, phase_id } = await req.json();
+
+    if (!auction_id || !phase_id) {
+      throw new Error('Missing auction_id or phase_id');
+    }
+
+    console.log(`Fetching manager statuses for auction ${auction_id}, phase ${phase_id}`);
+
+    // Récupérer les informations de la phase (budget et max_coureurs)
+    const { data: phase, error: phaseError } = await supabaseClient
+      .from('phases')
+      .select('budget, max_coureurs')
+      .eq('id', phase_id)
+      .single();
+
+    if (phaseError) {
+      console.error('Error fetching phase:', phaseError);
+      throw phaseError;
+    }
+
+    // Récupérer tous les managers
+    const { data: managers, error: managersError } = await supabaseClient
+      .from('managers')
+      .select('id, nom')
+      .order('nom');
+
+    if (managersError) {
+      console.error('Error fetching managers:', managersError);
+      throw managersError;
+    }
+
+    // Pour chaque manager, calculer son statut
+    const managerStatuses: ManagerStatus[] = await Promise.all(
+      managers.map(async (manager) => {
+        // Compter les coureurs dans le roster
+        const { count: rosterCount, error: rosterError } = await supabaseClient
+          .from('rosters')
+          .select('*', { count: 'exact', head: true })
+          .eq('manager_id', manager.id)
+          .eq('phase_id', phase_id);
+
+        if (rosterError) {
+          console.error(`Error counting roster for manager ${manager.nom}:`, rosterError);
+        }
+
+        // Calculer le budget dépensé (rosters)
+        const { data: rosterData, error: rosterBudgetError } = await supabaseClient
+          .from('rosters')
+          .select('prix_signature')
+          .eq('manager_id', manager.id)
+          .eq('phase_id', phase_id);
+
+        if (rosterBudgetError) {
+          console.error(`Error fetching roster budget for manager ${manager.nom}:`, rosterBudgetError);
+        }
+
+        const budgetSpent = rosterData?.reduce((sum, r) => sum + Number(r.prix_signature || 0), 0) || 0;
+
+        // Compter les enchères
+        const { data: bids, error: bidsError } = await supabaseClient
+          .from('bids')
+          .select('statut, montant')
+          .eq('manager_id', manager.id)
+          .eq('auction_id', auction_id);
+
+        if (bidsError) {
+          console.error(`Error fetching bids for manager ${manager.nom}:`, bidsError);
+        }
+
+        const draftCount = bids?.filter(b => b.statut === 'draft').length || 0;
+        const pendingCount = bids?.filter(b => b.statut === 'pending').length || 0;
+        const draftSum = bids?.filter(b => b.statut === 'draft').reduce((sum, b) => sum + Number(b.montant || 0), 0) || 0;
+        const pendingSum = bids?.filter(b => b.statut === 'pending').reduce((sum, b) => sum + Number(b.montant || 0), 0) || 0;
+
+        const totalRosterCount = rosterCount || 0;
+        const slotsFilled = totalRosterCount + draftCount + pendingCount;
+        const budgetUsed = budgetSpent + draftSum + pendingSum;
+
+        // Déterminer le statut
+        let status: 'validated' | 'pending' | 'incomplete';
+        if (pendingCount > 0) {
+          status = 'validated';
+        } else if (slotsFilled < phase.max_coureurs) {
+          status = 'incomplete';
+        } else {
+          status = 'pending';
+        }
+
+        return {
+          nom: manager.nom,
+          status,
+          slots_filled: slotsFilled,
+          max_slots: phase.max_coureurs,
+          budget_used: Math.round(budgetUsed),
+          total_budget: Number(phase.budget),
+        };
+      })
+    );
+
+    // Trier par statut (incomplete > pending > validated)
+    const sortedStatuses = managerStatuses.sort((a, b) => {
+      const statusOrder = { incomplete: 0, pending: 1, validated: 2 };
+      if (statusOrder[a.status] !== statusOrder[b.status]) {
+        return statusOrder[a.status] - statusOrder[b.status];
+      }
+      return a.nom.localeCompare(b.nom);
+    });
+
+    console.log(`Found ${sortedStatuses.length} managers with statuses`);
+
+    return new Response(
+      JSON.stringify({ managers: sortedStatuses }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  } catch (error) {
+    console.error('Error in auction-get-managers-status:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
+});

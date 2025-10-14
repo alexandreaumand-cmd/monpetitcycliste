@@ -70,25 +70,25 @@ export const RoundControlCenter = () => {
     refetchInterval: 10000
   });
 
-  // Simplified manager statuses - mock data for now
-  const managerStatuses = currentAuction?.statut === 'open' ? [
-    {
-      nom: "Manager 1",
-      status: 'validated' as const,
-      slots_filled: 15,
-      max_slots: 15,
-      budget_used: 800,
-      total_budget: 1000
+  // Fetch real manager statuses
+  const { data: managerStatuses, isLoading: loadingManagers } = useQuery({
+    queryKey: ['manager-statuses', currentAuction?.id, selectedPhaseId],
+    queryFn: async () => {
+      if (!currentAuction?.id || !selectedPhaseId) return [];
+      
+      const { data, error } = await supabase.functions.invoke('auction-get-managers-status', {
+        body: { 
+          auction_id: currentAuction.id,
+          phase_id: selectedPhaseId 
+        }
+      });
+      
+      if (error) throw error;
+      return data.managers || [];
     },
-    {
-      nom: "Manager 2",
-      status: 'pending' as const,
-      slots_filled: 12,
-      max_slots: 15,
-      budget_used: 650,
-      total_budget: 1000
-    }
-  ] : [];
+    enabled: !!currentAuction?.id && !!selectedPhaseId && currentAuction?.statut === 'open',
+    refetchInterval: 10000, // Refresh toutes les 10s
+  });
 
   // Fetch announcements
   const { data: announcements } = useQuery({
@@ -286,7 +286,7 @@ export const RoundControlCenter = () => {
               <div className="lg:col-span-2">
                 <ManagersSupervision
                   managers={managerStatuses || []}
-                  isLoading={loadingAuction}
+                  isLoading={loadingManagers}
                 />
               </div>
             )}

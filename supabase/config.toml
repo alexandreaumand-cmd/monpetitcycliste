@@ -1,5 +1,8 @@
 project_id = "oisfvryhpovwxaxqbmow"
 
+[functions.auction-get-managers-status]
+verify_jwt = true
+
 [functions.admin-delete-season]
 verify_jwt = true
 
