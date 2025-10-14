@@ -71,13 +71,18 @@ export const ExportResultsImage = ({
   const { data: managerPoints, isLoading: loadingManagers } = useQuery({
     queryKey: ["export-manager-points", course.course_id, typeClassement, etapeNumero],
     queryFn: async () => {
+      // Pour les courses par étapes, inclure TOUS les points de l'étape (Etape + Porteurs)
+      const typeFilter = etapeNumero 
+        ? ['Etape', 'Porteur Général', 'Porteur Vert', 'Porteur Montagne', 'Porteur Jeune', 'Porteur Combattif']
+        : [typeClassement];
+
       // @ts-ignore - Type classement is dynamic
       let query = supabase
         .from("points_ledger")
         .select("manager_id, managers!inner(nom), points")
         .eq("course_id", course.course_id)
         // @ts-ignore
-        .eq("type_classement", typeClassement)
+        .in("type_classement", typeFilter)
         .not("manager_id", "is", null);
 
       if (etapeNumero) {
@@ -125,11 +130,12 @@ export const ExportResultsImage = ({
 
       if (error) throw error;
 
-      // Transformer les données au format attendu
-      return (data?.jerseys || []).map((jersey: any) => ({
-        type_classement: jersey.type,
-        coureurs: { nom: jersey.rider_name },
-        managers: { nom: jersey.manager_name || null },
+      // L'edge function retourne { bonuses: [...] } avec coureur_nom, manager_nom
+      return (data?.bonuses || []).map((jersey: any) => ({
+        type_classement: `Porteur ${jersey.jersey_type.charAt(0).toUpperCase() + jersey.jersey_type.slice(1)}`,
+        icon: jersey.icon,
+        coureurs: { nom: jersey.coureur_nom },
+        managers: { nom: jersey.manager_nom || null },
       }));
     },
     enabled: open && !isOneDay,
