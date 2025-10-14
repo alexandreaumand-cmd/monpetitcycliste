@@ -12,7 +12,7 @@ import { fr } from "date-fns/locale";
 import { Download, Loader2, Copy, Share2 } from "lucide-react";
 import { getJerseyIcon, getJerseyLabel } from "@/lib/exportTemplates";
 
-type ExportScope = "top10" | "top20" | "full";
+type ExportScope = "top10" | "top15" | "top20" | "full";
 
 type ExportResultsImageProps = {
   course: {
@@ -38,7 +38,7 @@ export const ExportResultsImage = ({
   open,
   onOpenChange,
 }: ExportResultsImageProps) => {
-  const [scope, setScope] = useState<ExportScope>("top20");
+  const [scope, setScope] = useState<ExportScope>("top15");
   const [isGenerating, setIsGenerating] = useState(false);
   const [exportRef, setExportRef] = useState<HTMLDivElement | null>(null);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export const ExportResultsImage = ({
   const { data: topRiders, isLoading: loadingRiders } = useQuery({
     queryKey: ["export-top-riders", course.course_id, typeClassement, etapeNumero, scope],
     queryFn: async () => {
-      const limit = scope === "top10" ? 10 : scope === "top20" ? 20 : 100;
+      const limit = scope === "top10" ? 10 : scope === "top15" ? 15 : scope === "top20" ? 20 : 100;
       
       // @ts-ignore - Type classement is dynamic, RPC will validate
       const { data, error } = await supabase.rpc("results_course_top", {
@@ -215,6 +215,7 @@ export const ExportResultsImage = ({
         await navigator.share({
           files: [file],
           title: `Résultats ${course.course_nom}`,
+          text: `🏁 ${course.course_nom} - ${typeClassement}${etapeNumero ? ` Étape ${etapeNumero}` : ''}`,
         });
         toast.success("Image partagée !");
       } else {
@@ -250,7 +251,7 @@ export const ExportResultsImage = ({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>📸 Exporter les résultats (JPEG)</DialogTitle>
+            <DialogTitle>📤 Partager les résultats</DialogTitle>
           </DialogHeader>
 
           {!generatedImageUrl ? (
@@ -266,9 +267,15 @@ export const ExportResultsImage = ({
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="top15" id="top15" />
+                      <Label htmlFor="top15" className="font-normal cursor-pointer">
+                        Top 15 (courses d'un jour)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
                       <RadioGroupItem value="top20" id="top20" />
                       <Label htmlFor="top20" className="font-normal cursor-pointer">
-                        Top 20 (standard)
+                        Top 20 (courses par étapes)
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -410,7 +417,7 @@ export const ExportResultsImage = ({
               }}
             >
               <h2 style={{ fontSize: "36px", marginBottom: "20px", fontWeight: "bold" }}>
-                🚴 Top {scope === "top10" ? "10" : scope === "top20" ? "20" : ""} Coureurs
+                🚴 Top {scope === "top10" ? "10" : scope === "top15" ? "15" : scope === "top20" ? "20" : ""} Coureurs
               </h2>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>

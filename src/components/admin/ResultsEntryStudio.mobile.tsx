@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
-import { X, ChevronLeft, ChevronRight, Save, Check, Info, MessageSquare, Camera } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Save, Check, Info, MessageSquare, Share2 } from "lucide-react";
 import { ExportResultsImage } from "./ExportResultsImage";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -547,21 +547,24 @@ export const ResultsEntryStudioMobile = ({
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Header */}
       <div className="sticky top-0 z-20 bg-background border-b">
-        <div className="flex items-center justify-between p-4">
+        <div className="flex items-center justify-between p-3">
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-5 w-5" />
           </Button>
           <div className="flex-1 text-center">
             <h2 className="font-bold text-sm truncate">{course.course_nom}</h2>
             {courseIsStageRace && (
-              <p className="text-xs text-muted-foreground">
-                Étape {currentStage}/{course.nb_etapes}
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                <span>Étape {currentStage}/{course.nb_etapes}</span>
                 {currentClassement && (
-                  <span className="ml-2 text-green-600 font-medium">
-                    {resultRows.filter(r => r.coureur_id && r.statut === 'finished').length}/{resultRows.filter(r => r.position > 0).length}
-                  </span>
+                  <>
+                    <span>•</span>
+                    <span className="text-green-600 font-medium">
+                      {resultRows.filter(r => r.coureur_id && r.statut === 'finished').length}/{resultRows.filter(r => r.position > 0).length}
+                    </span>
+                  </>
                 )}
-              </p>
+              </div>
             )}
           </div>
           <Button 
@@ -571,31 +574,42 @@ export const ResultsEntryStudioMobile = ({
             disabled={saveMutation.isPending}
             className="relative"
           >
-            <Save className="h-5 w-5" />
-            {saveMutation.isPending && (
-              <span className="absolute inset-0 flex items-center justify-center">
-                <span className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-              </span>
-            )}
+            <Save className={cn(
+              "h-5 w-5 transition-colors",
+              saveMutation.isPending && "text-green-600"
+            )} />
           </Button>
         </div>
+        
+        {/* Barre de progression */}
+        {courseIsStageRace && (
+          <div className="h-1 bg-muted">
+            <div 
+              className="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-300"
+              style={{ 
+                width: `${(resultRows.filter(r => r.coureur_id && r.statut === 'finished').length / Math.max(resultRows.filter(r => r.position > 0).length, 1)) * 100}%` 
+              }}
+            />
+          </div>
+        )}
 
         {/* Stage navigator */}
         {courseIsStageRace && (
-          <div className="flex items-center justify-between px-4 pb-3 gap-2">
+          <div className="flex items-center justify-between px-3 pb-2 gap-2">
             <Button 
               variant="outline" 
               size="icon"
+              className="h-7 w-7"
               onClick={handlePrevStage}
               disabled={currentStage === 1}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3 w-3" />
             </Button>
             
             <div className="flex-1 flex gap-1 justify-center overflow-x-auto scrollbar-hide">
               {getVisibleStages().map((stage, idx) => (
                 stage === '...' ? (
-                  <span key={`ellipsis-${idx}`} className="min-w-[32px] h-8 flex items-center justify-center text-muted-foreground">
+                  <span key={`ellipsis-${idx}`} className="min-w-[28px] h-7 flex items-center justify-center text-muted-foreground text-xs">
                     ...
                   </span>
                 ) : (
@@ -603,7 +617,7 @@ export const ResultsEntryStudioMobile = ({
                     key={stage}
                     onClick={() => setCurrentStage(stage as number)}
                     className={cn(
-                      "min-w-[32px] h-8 rounded-full text-xs font-medium transition-all",
+                      "min-w-[28px] h-7 rounded-full text-xs font-medium transition-all",
                       stage === currentStage
                         ? 'bg-primary text-primary-foreground shadow-md scale-110'
                         : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -618,10 +632,11 @@ export const ResultsEntryStudioMobile = ({
             <Button 
               variant="outline" 
               size="icon"
+              className="h-7 w-7"
               onClick={handleNextStage}
               disabled={currentStage === course.nb_etapes}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3 w-3" />
             </Button>
           </div>
         )}
@@ -735,12 +750,12 @@ export const ResultsEntryStudioMobile = ({
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-3 space-y-1.5">
                 {currentClassement === "Etape" && resultRows.filter(r => r.position > 0).map((row, index) => (
-                  <div key={index} className={cn("flex items-center gap-1.5 p-2 bg-muted rounded-lg", isCancelled && "opacity-50 pointer-events-none")}>
+                  <div key={index} className={cn("flex items-center gap-1 p-1.5 bg-muted rounded-md", isCancelled && "opacity-50 pointer-events-none")}>
                     {row.coureur_id && (
                       <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
                     )}
-                    <span className="font-bold text-xs w-5">{row.position}</span>
-                    <div className="flex-1">
+                    <span className="font-bold text-[11px] w-4">{row.position}</span>
+                    <div className="flex-1 min-w-0">
                       <CoureursCombobox
                         value={row.coureur_id}
                         onSelect={(coureur) => handleRiderChange(index, coureur)}
@@ -748,13 +763,13 @@ export const ResultsEntryStudioMobile = ({
                         disabled={isCancelled}
                       />
                     </div>
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
+                    <Badge variant="secondary" className="text-[9px] px-1 py-0 whitespace-nowrap">{row.points}pts</Badge>
                   </div>
                 ))}
 
                 {/* Jersey Holders */}
-                <div className="mt-4 pt-4 border-t">
-                  <h4 className="text-sm font-medium mb-2">Porteurs de maillot</h4>
+                <div className="mt-3 pt-3 border-t border-dashed">
+                  <h4 className="text-xs font-medium mb-2 text-muted-foreground">🏅 Porteurs de maillot</h4>
                   <JerseyHoldersInput
                     jerseyHolders={jerseyHolders}
                     onChange={(type, coureurId) => {
@@ -1001,30 +1016,36 @@ export const ResultsEntryStudioMobile = ({
       </ScrollArea>
 
       {/* Sticky bottom */}
-      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t p-4 safe-bottom shadow-lg z-[60]">
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t p-3 safe-bottom shadow-lg z-[60]">
         {lastSaved && (
-          <div className="text-xs text-center text-muted-foreground mb-2">
+          <div className="text-[10px] text-center text-muted-foreground mb-2">
             Dernière sauvegarde: {lastSaved.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
           </div>
         )}
-        <div className="flex gap-2 mb-2">
-          <Button
-            variant="outline"
-            onClick={() => setExportDialogOpen(true)}
-            className="flex-1"
-          >
-            <Camera className="h-4 w-4 mr-2" />
-            Exporter JPEG
-          </Button>
-        </div>
+        
         <div className="flex gap-2">
+          {/* Bouton Enregistrer */}
           <Button 
             onClick={() => saveMutation.mutate()} 
             disabled={saveMutation.isPending}
+            variant="outline"
             className="flex-1"
           >
-            {saveMutation.isPending ? "Enregistrement..." : "Enregistrer"}
+            <Save className="h-4 w-4 mr-1" />
+            {saveMutation.isPending ? "..." : "Sauver"}
           </Button>
+          
+          {/* Bouton Partager */}
+          <Button
+            variant="default"
+            onClick={() => setExportDialogOpen(true)}
+            className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+          >
+            <Share2 className="h-4 w-4 mr-1" />
+            Partager
+          </Button>
+          
+          {/* Bouton Suivant (courses par étapes uniquement) */}
           {courseIsStageRace && currentStage < course.nb_etapes && (
             <Button 
               onClick={() => {
@@ -1033,10 +1054,9 @@ export const ResultsEntryStudioMobile = ({
               }}
               disabled={saveMutation.isPending}
               variant="outline"
-              className="flex-1"
+              size="icon"
             >
-              <span>Sauver & Suivant</span>
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
           )}
         </div>
