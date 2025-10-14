@@ -78,26 +78,44 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
             )}
           </Link>
 
-          {/* Season Selector - Responsive */}
+          {/* Season Selector - Native on mobile, Radix on desktop */}
           {!seasonsLoading && seasons.length > 0 && (
-            <Select
-              value={selectedSeason?.id || ""}
-              onValueChange={(value) => {
-                const season = seasons.find(s => s.id === value);
-                setSelectedSeason(season || null);
-              }}
-            >
-              <SelectTrigger className="w-[80px] md:w-[100px] h-8 md:h-9 ml-2 md:ml-4 text-xs md:text-sm">
-                <SelectValue placeholder="Année" />
-              </SelectTrigger>
-              <SelectContent>
+            isMobile ? (
+              <select
+                aria-label="Choisir l'année"
+                className="w-[84px] h-8 ml-2 text-xs rounded-md border border-input bg-background text-foreground px-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                value={selectedSeason?.id ?? ""}
+                onChange={(e) => {
+                  const season = seasons.find(s => s.id === e.target.value);
+                  setSelectedSeason(season || null);
+                }}
+              >
                 {seasons.map((season) => (
-                  <SelectItem key={season.id} value={season.id}>
+                  <option key={season.id} value={season.id}>
                     {season.annee}
-                  </SelectItem>
+                  </option>
                 ))}
-              </SelectContent>
-            </Select>
+              </select>
+            ) : (
+              <Select
+                value={selectedSeason?.id || ""}
+                onValueChange={(value) => {
+                  const season = seasons.find(s => s.id === value);
+                  setSelectedSeason(season || null);
+                }}
+              >
+                <SelectTrigger className="w-[100px] h-9 ml-4">
+                  <SelectValue placeholder="Année" />
+                </SelectTrigger>
+                <SelectContent>
+                  {seasons.map((season) => (
+                    <SelectItem key={season.id} value={season.id}>
+                      {season.annee}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )
           )}
 
           {/* Desktop Navigation */}
