@@ -72,51 +72,57 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
               <div className="flex flex-col">
                 <p className="text-xs text-muted-foreground hidden sm:block">
                   {manager.nom} {displaySponsor && `• ${displaySponsor}`}
-                  {isAdmin && <span className="ml-1 text-secondary font-semibold">• Admin</span>}
+                  {selectedSeason?.annee && ` • ${selectedSeason.annee}`}
+                  {isAdmin && <span className="ml-1 text-secondary font-semibold"> • Admin</span>}
                 </p>
               </div>
             )}
           </Link>
 
-          {/* Season Selector - Native on mobile, Radix on desktop */}
-          {!seasonsLoading && seasons.length > 0 && (
-            isMobile ? (
-              <select
-                aria-label="Choisir l'année"
-                className="w-[84px] h-8 ml-2 text-xs rounded-md border border-input bg-background text-foreground px-2 focus:outline-none focus:ring-2 focus:ring-ring"
-                value={selectedSeason?.id ?? ""}
-                onChange={(e) => {
-                  const season = seasons.find(s => s.id === e.target.value);
-                  setSelectedSeason(season || null);
-                }}
-              >
-                {seasons.map((season) => (
-                  <option key={season.id} value={season.id}>
-                    {season.annee}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <Select
-                value={selectedSeason?.id || ""}
-                onValueChange={(value) => {
-                  const season = seasons.find(s => s.id === value);
-                  setSelectedSeason(season || null);
-                }}
-              >
-                <SelectTrigger className="w-[100px] h-9 ml-4">
-                  <SelectValue placeholder="Année" />
-                </SelectTrigger>
-                <SelectContent>
+          {/* Season Selector - Both versions rendered, controlled by CSS breakpoints */}
+          {!seasonsLoading && seasons.length > 0 && (() => {
+            const handleSeasonChange = (seasonId: string) => {
+              const season = seasons.find(s => s.id === seasonId) || null;
+              console.log("[Header] Changement saison:", seasonId, "→", season?.annee);
+              setSelectedSeason(season);
+            };
+
+            return (
+              <>
+                {/* Mobile: Native select */}
+                <select
+                  aria-label="Choisir l'année"
+                  className="md:hidden w-[100px] h-8 ml-2 text-xs rounded-md border border-input bg-background text-foreground px-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={selectedSeason?.id || ""}
+                  onChange={(e) => handleSeasonChange(e.target.value)}
+                >
+                  <option value="" disabled>Année</option>
                   {seasons.map((season) => (
-                    <SelectItem key={season.id} value={season.id}>
+                    <option key={season.id} value={season.id}>
                       {season.annee}
-                    </SelectItem>
+                    </option>
                   ))}
-                </SelectContent>
-              </Select>
-            )
-          )}
+                </select>
+
+                {/* Desktop: Radix Select */}
+                <Select
+                  value={selectedSeason?.id || ""}
+                  onValueChange={handleSeasonChange}
+                >
+                  <SelectTrigger className="hidden md:flex w-[100px] h-9 ml-4">
+                    <SelectValue placeholder="Année" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50 bg-popover">
+                    {seasons.map((season) => (
+                      <SelectItem key={season.id} value={season.id}>
+                        {season.annee}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            );
+          })()}
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">

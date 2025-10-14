@@ -131,6 +131,7 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
 
   // Persist season selection
   const setSelectedSeason = (season: Season | null) => {
+    console.log("[SeasonContext] setSelectedSeason:", season?.id, season?.annee);
     setSelectedSeasonState(season);
     if (season) {
       localStorage.setItem("selectedSeasonId", season.id);
