@@ -26,19 +26,35 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch all coureurs with pagination (Supabase limit is 1000 per query)
+    // Get saison_id from request body
+    const { saison_id } = await req.json();
+
+    if (!saison_id) {
+      return new Response(JSON.stringify({ error: 'saison_id requis' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Fetch all coureurs from coureurs_saisons with pagination
     const pageSize = 1000;
     let from = 0;
     let allCoureurs: any[] = [];
     let hasMore = true;
 
-    console.log('Starting pagination to fetch all riders...');
+    console.log('Starting pagination to fetch all riders for saison:', saison_id);
 
     while (hasMore) {
       const { data, error } = await supabase
-        .from('coureurs')
-        .select('id, nom, equipe, prix_initial')
-        .order('nom', { ascending: true })
+        .from('coureurs_saisons')
+        .select(`
+          coureur_id,
+          equipe,
+          prix_initial,
+          coureurs!inner(id, nom, uci_id)
+        `)
+        .eq('saison_id', saison_id)
+        .order('coureurs(nom)', { ascending: true })
         .range(from, from + pageSize - 1);
 
       if (error) throw error;
@@ -67,8 +83,8 @@ Deno.serve(async (req) => {
 
     for (const coureur of coureurs || []) {
       const row = [
-        coureur.id || '',
-        `"${(coureur.nom || '').replace(/"/g, '""')}"`,
+        coureur.coureur_id || coureur.coureurs?.id || '',
+        `"${(coureur.coureurs?.nom || '').replace(/"/g, '""')}"`,
         `"${(coureur.equipe || '').replace(/"/g, '""')}"`,
         coureur.prix_initial || '0'
       ];

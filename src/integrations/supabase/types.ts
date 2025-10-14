@@ -94,6 +94,13 @@ export type Database = {
             foreignKeyName: "annonces_coureur_id_fkey"
             columns: ["coureur_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "annonces_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
             referencedRelation: "last_round_winners"
             referencedColumns: ["coureur_id"]
           },
@@ -307,6 +314,13 @@ export type Database = {
             foreignKeyName: "auctions_phase_id_fkey"
             columns: ["phase_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
             referencedRelation: "manager_phase_status"
             referencedColumns: ["phase_id"]
           },
@@ -485,6 +499,13 @@ export type Database = {
             foreignKeyName: "bids_coureur_id_fkey"
             columns: ["coureur_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bids_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
             referencedRelation: "last_round_winners"
             referencedColumns: ["coureur_id"]
           },
@@ -633,6 +654,13 @@ export type Database = {
             foreignKeyName: "bonus_points_coureur_id_fkey"
             columns: ["coureur_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonus_points_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
             referencedRelation: "last_round_winners"
             referencedColumns: ["coureur_id"]
           },
@@ -781,6 +809,13 @@ export type Database = {
             columns: ["phase_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "bonus_points_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
             referencedColumns: ["phase_id"]
           },
           {
@@ -910,6 +945,13 @@ export type Database = {
             foreignKeyName: "bonus_rider_selections_coureur_id_fkey"
             columns: ["coureur_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonus_rider_selections_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
             referencedRelation: "last_round_winners"
             referencedColumns: ["coureur_id"]
           },
@@ -1002,6 +1044,13 @@ export type Database = {
             columns: ["phase_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "bonus_rider_selections_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
             referencedColumns: ["phase_id"]
           },
           {
@@ -1120,6 +1169,13 @@ export type Database = {
             foreignKeyName: "coureurs_saisons_coureur_id_fkey"
             columns: ["coureur_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
             referencedRelation: "last_round_winners"
             referencedColumns: ["coureur_id"]
           },
@@ -1213,6 +1269,13 @@ export type Database = {
             columns: ["phase_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
             referencedColumns: ["phase_id"]
           },
           {
@@ -1412,6 +1475,13 @@ export type Database = {
             foreignKeyName: "manager_bonus_points_phase_id_fkey"
             columns: ["phase_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "manager_bonus_points_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
             referencedRelation: "manager_phase_status"
             referencedColumns: ["phase_id"]
           },
@@ -1584,6 +1654,13 @@ export type Database = {
             columns: ["phase_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
             referencedColumns: ["phase_id"]
           },
           {
@@ -1783,6 +1860,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
             referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "name_aliases_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "name_aliases_coureur_id_fkey"
@@ -2068,6 +2152,13 @@ export type Database = {
             foreignKeyName: "points_ledger_coureur_id_fkey"
             columns: ["coureur_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
             referencedRelation: "last_round_winners"
             referencedColumns: ["coureur_id"]
           },
@@ -2195,6 +2286,13 @@ export type Database = {
             columns: ["phase_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
             referencedColumns: ["phase_id"]
           },
           {
@@ -2359,6 +2457,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
             referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "race_results_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "race_results_coureur_id_fkey"
@@ -2619,6 +2724,13 @@ export type Database = {
             foreignKeyName: "fk_coureur"
             columns: ["coureur_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_coureur"
+            columns: ["coureur_id"]
+            isOneToOne: false
             referencedRelation: "last_round_winners"
             referencedColumns: ["coureur_id"]
           },
@@ -2798,6 +2910,13 @@ export type Database = {
             foreignKeyName: "rosters_coureur_id_fkey"
             columns: ["coureur_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rosters_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
             referencedRelation: "last_round_winners"
             referencedColumns: ["coureur_id"]
           },
@@ -2890,6 +3009,13 @@ export type Database = {
             columns: ["phase_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "rosters_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
             referencedColumns: ["phase_id"]
           },
           {
@@ -3066,6 +3192,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
             referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "startlist_entries_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "startlist_entries_coureur_id_fkey"
@@ -3512,6 +3645,13 @@ export type Database = {
             foreignKeyName: "auctions_phase_id_fkey"
             columns: ["phase_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
             referencedRelation: "manager_phase_status"
             referencedColumns: ["phase_id"]
           },
@@ -3549,6 +3689,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
             referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "bids_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "bids_coureur_id_fkey"
@@ -3656,6 +3803,36 @@ export type Database = {
         }
         Relationships: []
       }
+      coureurs_disponibilite_enrichie: {
+        Row: {
+          equipe: string | null
+          id: string | null
+          is_taken: boolean | null
+          nom: string | null
+          phase_id: string | null
+          phase_statut: Database["public"]["Enums"]["phase_statut"] | null
+          prix_initial: number | null
+          saison_id: string | null
+          taken_by_manager_nom: string | null
+          uci_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coureurs_saisons_saison_id_fkey"
+            columns: ["saison_id"]
+            isOneToOne: false
+            referencedRelation: "saisons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_saison_id_fkey"
+            columns: ["saison_id"]
+            isOneToOne: false
+            referencedRelation: "v_manager_standings_by_season"
+            referencedColumns: ["saison_id"]
+          },
+        ]
+      }
       courses_for_points_norm: {
         Row: {
           cat_canon: string | null
@@ -3671,6 +3848,13 @@ export type Database = {
             columns: ["phase_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
             referencedColumns: ["phase_id"]
           },
           {
@@ -3809,6 +3993,13 @@ export type Database = {
             foreignKeyName: "auctions_phase_id_fkey"
             columns: ["phase_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
             referencedRelation: "manager_phase_status"
             referencedColumns: ["phase_id"]
           },
@@ -3852,6 +4043,13 @@ export type Database = {
             columns: ["phase_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
             referencedColumns: ["phase_id"]
           },
           {
@@ -3932,6 +4130,13 @@ export type Database = {
             columns: ["phase_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
             referencedColumns: ["phase_id"]
           },
           {
@@ -4063,6 +4268,13 @@ export type Database = {
             foreignKeyName: "auctions_phase_id_fkey"
             columns: ["phase_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
             referencedRelation: "manager_phase_status"
             referencedColumns: ["phase_id"]
           },
@@ -4133,6 +4345,13 @@ export type Database = {
             foreignKeyName: "courses_phase_id_fkey"
             columns: ["phase_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "courses_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
             referencedRelation: "manager_phase_status"
             referencedColumns: ["phase_id"]
           },
@@ -4188,6 +4407,13 @@ export type Database = {
             columns: ["phase_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "bonus_points_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
             referencedColumns: ["phase_id"]
           },
           {
@@ -4303,6 +4529,13 @@ export type Database = {
             foreignKeyName: "points_ledger_phase_id_fkey"
             columns: ["phase_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
             referencedRelation: "manager_phase_status"
             referencedColumns: ["phase_id"]
           },
@@ -4402,6 +4635,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
             referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "race_results_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "race_results_coureur_id_fkey"
@@ -4629,6 +4869,13 @@ export type Database = {
             foreignKeyName: "points_ledger_phase_id_fkey"
             columns: ["phase_id"]
             isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
             referencedRelation: "manager_phase_status"
             referencedColumns: ["phase_id"]
           },
@@ -4692,6 +4939,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
             referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite_enrichie"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "points_ledger_coureur_id_fkey"

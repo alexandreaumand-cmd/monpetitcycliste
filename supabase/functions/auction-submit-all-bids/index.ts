@@ -151,8 +151,9 @@ Deno.serve(async (req) => {
 
     // 4. Check all amounts >= prix_initial
     const { data: coureurs } = await supabase
-      .from('coureurs')
+      .from('coureurs_disponibilite_enrichie')
       .select('id, nom, prix_initial')
+      .eq('phase_id', phase_id)
       .in('id', coureurIds);
 
     const coureursMap = new Map((coureurs || []).map(c => [c.id, c]));

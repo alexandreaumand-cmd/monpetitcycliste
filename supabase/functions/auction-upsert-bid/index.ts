@@ -68,8 +68,9 @@ Deno.serve(async (req) => {
 
     // Get coureur info
     const { data: coureur } = await supabase
-      .from('coureurs')
+      .from('coureurs_disponibilite_enrichie')
       .select('id, nom, prix_initial')
+      .eq('phase_id', phase_id)
       .eq('id', rider_id)
       .single();
 

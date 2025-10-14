@@ -118,7 +118,7 @@ function mapToTableFormat(
   switch (table) {
     case 'coureurs':
       return {
-        id: sanitizeId(obj['Coureur']),
+        coureur_id: sanitizeId(obj['Coureur']),
         nom: obj['Coureur'],
         equipe: obj['Equipe'],
         prix_initial: parseFloat(obj['Prix initial']) || 10,
