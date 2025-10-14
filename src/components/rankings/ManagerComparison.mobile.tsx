@@ -473,15 +473,37 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     enabled: !!managerB,
   });
 
-  // Fetch coureurs details
+  // Fetch coureurs details with season team
   const { data: coureurs } = useQuery({
-    queryKey: ["coureurs-all"],
+    queryKey: ["coureurs-all-comparison", saisonId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("coureurs")
-        .select("id, nom, equipe");
+        .select("id, nom");
       if (error) throw error;
-      return data;
+
+      // Enrichir avec l'équipe de la saison si disponible
+      if (!saisonId) {
+        return (data || []).map(c => ({ ...c, equipe: 'N/A' as string }));
+      }
+
+      const enrichedData = await Promise.all(
+        (data || []).map(async (coureur) => {
+          const { data: seasonData } = await supabase
+            .from('coureurs_saisons')
+            .select('equipe')
+            .eq('coureur_id', coureur.id)
+            .eq('saison_id', saisonId)
+            .maybeSingle();
+
+          return {
+            ...coureur,
+            equipe: seasonData?.equipe || 'N/A' as string
+          };
+        })
+      );
+
+      return enrichedData;
     },
   });
 

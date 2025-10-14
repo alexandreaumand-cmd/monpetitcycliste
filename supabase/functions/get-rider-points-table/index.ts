@@ -38,13 +38,36 @@ Deno.serve(async (req) => {
     // Get rider info
     const { data: riderData, error: riderError } = await supabase
       .from('coureurs')
-      .select('id, nom, equipe')
+      .select('id, nom')
       .eq('id', rider_id)
       .single();
 
     if (riderError) {
       console.error('Error fetching rider:', riderError);
       throw riderError;
+    }
+
+    // Determine saison_id from filters
+    let targetSaisonId = saison_id;
+    if (!targetSaisonId && phase_id) {
+      const { data: phaseData } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', phase_id)
+        .single();
+      targetSaisonId = phaseData?.saison_id;
+    }
+
+    // Get team for the season
+    let equipe = 'N/A';
+    if (targetSaisonId) {
+      const { data: seasonData } = await supabase
+        .from('coureurs_saisons')
+        .select('equipe')
+        .eq('coureur_id', rider_id)
+        .eq('saison_id', targetSaisonId)
+        .maybeSingle();
+      equipe = seasonData?.equipe || 'N/A';
     }
 
     // Build query for points with joins
@@ -161,7 +184,7 @@ Deno.serve(async (req) => {
       rider: {
         id: riderData.id,
         nom: riderData.nom,
-        equipe: riderData.equipe || '',
+        equipe: equipe,
         total_points: total,
       },
       rows: cleanRows,

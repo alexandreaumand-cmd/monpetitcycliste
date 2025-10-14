@@ -40,6 +40,13 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
   const { data: bonusesData, isLoading } = useQuery({
     queryKey: ['bonus-points', phaseId],
     queryFn: async () => {
+      // Récupérer la saison_id de la phase
+      const { data: phaseInfo } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', phaseId)
+        .single();
+
       const { data, error } = await supabase
         .from('bonus_points')
         .select(`
@@ -48,7 +55,8 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
           points,
           commentaire,
           created_at,
-          coureur:coureurs(id, nom, equipe),
+          coureur_id,
+          coureur:coureurs(id, nom),
           manager:managers!bonus_points_manager_id_fkey(id, nom),
           target_manager:managers!bonus_points_target_manager_id_fkey(id, nom)
         `)
@@ -56,9 +64,33 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
         .order('created_at', { ascending: false });
       
       if (error) throw error;
+
+      // Enrichir avec l'équipe de la saison
+      const enrichedData = await Promise.all(
+        (data || []).map(async (bonus) => {
+          if (!bonus.coureur_id || !phaseInfo?.saison_id) {
+            return { ...bonus, coureur: { ...bonus.coureur, equipe: 'N/A' } };
+          }
+
+          const { data: seasonData } = await supabase
+            .from('coureurs_saisons')
+            .select('equipe')
+            .eq('coureur_id', bonus.coureur_id)
+            .eq('saison_id', phaseInfo.saison_id)
+            .maybeSingle();
+
+          return {
+            ...bonus,
+            coureur: {
+              ...bonus.coureur,
+              equipe: seasonData?.equipe || 'N/A'
+            }
+          };
+        })
+      );
       
       return {
-        bonuses: data || []
+        bonuses: enrichedData
       };
     },
     enabled: open && !!phaseId,

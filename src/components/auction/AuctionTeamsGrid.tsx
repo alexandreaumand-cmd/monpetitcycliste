@@ -29,18 +29,46 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
   const { data: allManagersRosters = [], isLoading } = useQuery({
     queryKey: ['all-managers-rosters', phaseId],
     queryFn: async () => {
+      // Récupérer la saison_id de la phase
+      const { data: phaseInfo } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', phaseId)
+        .single();
+
       const { data, error } = await supabase
         .from('rosters')
         .select(`
           *,
-          coureurs(nom, equipe),
+          coureurs!inner(id, nom),
           managers(nom)
         `)
         .eq('phase_id', phaseId)
         .order('manager_id');
 
       if (error) throw error;
-      return data || [];
+
+      // Enrichir avec l'équipe de la saison
+      const enrichedData = await Promise.all(
+        (data || []).map(async (roster) => {
+          const { data: seasonData } = await supabase
+            .from('coureurs_saisons')
+            .select('equipe')
+            .eq('coureur_id', roster.coureur_id)
+            .eq('saison_id', phaseInfo?.saison_id || '')
+            .maybeSingle();
+
+          return {
+            ...roster,
+            coureurs: {
+              ...roster.coureurs,
+              equipe: seasonData?.equipe || 'N/A'
+            }
+          };
+        })
+      );
+
+      return enrichedData;
     }
   });
 

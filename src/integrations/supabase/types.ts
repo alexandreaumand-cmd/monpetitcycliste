@@ -5052,6 +5052,10 @@ export type Database = {
           previous_rank: number
         }[]
       }
+      get_rider_team_for_season: {
+        Args: { p_coureur_id: string; p_saison_id: string }
+        Returns: string
+      }
       get_top_riders_optimized: {
         Args: { p_limit?: number; p_phase_id?: string; p_saison_id?: string }
         Returns: {

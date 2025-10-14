@@ -323,9 +323,9 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     enabled: !!managerB,
   });
 
-  // 4. Récupérer les infos des coureurs
+  // 4. Récupérer les infos des coureurs avec équipe de saison
   const { data: coureurs } = useQuery({
-    queryKey: ["coureurs-comparison", managerA, managerB],
+    queryKey: ["coureurs-comparison", managerA, managerB, saisonId],
     queryFn: async () => {
       if (!rostersA || !rostersB) return null;
 
@@ -338,11 +338,33 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
       const { data, error } = await supabase
         .from("coureurs")
-        .select("id, nom, equipe")
+        .select("id, nom")
         .in("id", allCoureurIds);
       
       if (error) throw error;
-      return data;
+
+      // Enrichir avec l'équipe de la saison si saisonId disponible
+      if (!saisonId) {
+        return (data || []).map(c => ({ ...c, equipe: 'N/A' as string }));
+      }
+
+      const enrichedData = await Promise.all(
+        (data || []).map(async (coureur) => {
+          const { data: seasonData } = await supabase
+            .from('coureurs_saisons')
+            .select('equipe')
+            .eq('coureur_id', coureur.id)
+            .eq('saison_id', saisonId)
+            .maybeSingle();
+
+          return {
+            ...coureur,
+            equipe: seasonData?.equipe || 'N/A' as string
+          };
+        })
+      );
+
+      return enrichedData;
     },
     enabled: !!rostersA && !!rostersB,
   });

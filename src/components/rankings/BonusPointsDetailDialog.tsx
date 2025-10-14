@@ -54,8 +54,8 @@ export const BonusPointsDetailDialog = ({
           bonus_type,
           coureur_id,
           phase_id,
-          coureurs(nom, equipe),
-          phases(index_dans_saison)
+          coureurs!inner(id, nom),
+          phases!inner(index_dans_saison, saison_id)
         `)
         .or(`manager_id.eq.${managerId},target_manager_id.eq.${managerId}`)
         .order("phase_id", { ascending: true });
@@ -66,7 +66,27 @@ export const BonusPointsDetailDialog = ({
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+
+      // Enrichir avec l'équipe de la saison
+      const enrichedData = await Promise.all(
+        (data || []).map(async (bonus) => {
+          if (!bonus.coureur_id) return { ...bonus, coureur_equipe: null };
+
+          const { data: seasonData } = await supabase
+            .from('coureurs_saisons')
+            .select('equipe')
+            .eq('coureur_id', bonus.coureur_id)
+            .eq('saison_id', bonus.phases.saison_id)
+            .maybeSingle();
+
+          return {
+            ...bonus,
+            coureur_equipe: seasonData?.equipe || 'N/A'
+          };
+        })
+      );
+
+      return enrichedData;
     },
     enabled: open,
   });
@@ -161,7 +181,7 @@ export const BonusPointsDetailDialog = ({
                                 {bonus.coureurs?.nom}
                               </TableCell>
                               <TableCell className="text-sm text-muted-foreground">
-                                {bonus.coureurs?.equipe}
+                                {bonus.coureur_equipe}
                               </TableCell>
                               <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
                                 {bonus.commentaire}
@@ -206,7 +226,7 @@ export const BonusPointsDetailDialog = ({
                                   {bonus.coureurs?.nom}
                                 </div>
                                 <div className="text-sm text-muted-foreground">
-                                  {bonus.coureurs?.equipe}
+                                  {bonus.coureur_equipe}
                                 </div>
                               </>
                             )}
@@ -267,9 +287,9 @@ export const BonusPointsDetailDialog = ({
                                   <div className="font-medium">
                                     {bonus.coureurs?.nom}
                                   </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {bonus.coureurs?.equipe}
-                                  </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {bonus.coureur_equipe}
+                                </div>
                                 </>
                               )}
                               {bonus.commentaire && (
@@ -317,7 +337,7 @@ export const BonusPointsDetailDialog = ({
                                   {bonus.coureurs?.nom}
                                 </div>
                                 <div className="text-sm text-muted-foreground">
-                                  {bonus.coureurs?.equipe}
+                                  {bonus.coureur_equipe}
                                 </div>
                               </>
                             )}
