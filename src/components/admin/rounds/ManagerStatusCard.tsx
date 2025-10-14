@@ -43,7 +43,6 @@ export const ManagerStatusCard = ({ manager }: ManagerStatusCardProps) => {
   const config = statusConfig[manager.status];
   const Icon = config.icon;
   const slotsProgress = (manager.slots_filled / manager.max_slots) * 100;
-  const budgetProgress = (manager.budget_used / manager.total_budget) * 100;
 
   return (
     <div className={`p-4 rounded-lg border ${config.bgColor} transition-all hover:shadow-md`}>
@@ -64,14 +63,6 @@ export const ManagerStatusCard = ({ manager }: ManagerStatusCardProps) => {
             <span>{manager.slots_filled}/{manager.max_slots}</span>
           </div>
           <Progress value={slotsProgress} className="h-1.5" />
-        </div>
-        
-        <div>
-          <div className="flex justify-between text-xs text-muted-foreground mb-1">
-            <span>Avancement budget</span>
-            <span>{Math.round(budgetProgress)}%</span>
-          </div>
-          <Progress value={budgetProgress} className="h-1.5" />
         </div>
       </div>
     </div>
