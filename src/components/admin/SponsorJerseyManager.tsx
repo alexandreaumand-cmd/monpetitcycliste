@@ -93,6 +93,14 @@ export const SponsorJerseyManager = () => {
       const season = seasons?.find(s => s.id === selectedSeason);
       if (!season) throw new Error("Saison non trouvée");
 
+      // Get existing sponsor
+      const { data: existing } = await supabase
+        .from('manager_sponsors')
+        .select('sponsor')
+        .eq('manager_id', managerId)
+        .eq('saison_id', selectedSeason)
+        .single();
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${managerNom}_${season.annee}.${fileExt}`;
       const filePath = fileName;
@@ -115,9 +123,8 @@ export const SponsorJerseyManager = () => {
         .upsert({
           manager_id: managerId,
           saison_id: selectedSeason,
+          sponsor: existing?.sponsor || '',
           jersey_image_url: publicUrl,
-        }, {
-          onConflict: 'manager_id,saison_id'
         });
 
       if (updateError) throw updateError;

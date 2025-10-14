@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,51 +8,136 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Calculator, AlertCircle, Wrench } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 export const PointsComputeManager = () => {
-  const [selectedPhase, setSelectedPhase] = useState<string>("");
-  const [computing, setComputing] = useState(false);
-  const [fixing, setFixing] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [fixResult, setFixResult] = useState<any>(null);
-  const [selectedCoursePhase, setSelectedCoursePhase] = useState<string>("");
-  const [selectedCourse, setSelectedCourse] = useState<string>("");
-  const [computingCourse, setComputingCourse] = useState(false);
-  const [courseResult, setCourseResult] = useState<any>(null);
+  const { selectedSeason } = useSeasonContext();
   const { toast } = useToast();
 
-  const { data: phases } = useQuery({
-    queryKey: ['phases'],
+  // Section "Recalcul complet d'une phase"
+  const [fullRecalcSeasonId, setFullRecalcSeasonId] = useState<string>("");
+  const [fullRecalcPhaseId, setFullRecalcPhaseId] = useState<string>("");
+  const [computing, setComputing] = useState(false);
+  const [result, setResult] = useState<any>(null);
+
+  // Section "Recalcul course spécifique"
+  const [courseSeasonId, setCourseSeasonId] = useState<string>("");
+  const [coursePhaseId, setCoursePhaseId] = useState<string>("");
+  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [computingCourse, setComputingCourse] = useState(false);
+  const [courseResult, setCourseResult] = useState<any>(null);
+
+  // Section "Réparation automatique"
+  const [fixing, setFixing] = useState(false);
+  const [fixResult, setFixResult] = useState<any>(null);
+
+  // Fetch saisons
+  const { data: seasons } = useQuery({
+    queryKey: ['saisons'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('phases')
-        .select('*')
-        .order('date_debut', { ascending: false });
-      
+        .from('saisons')
+        .select('id, annee')
+        .order('annee', { ascending: false });
       if (error) throw error;
       return data;
     }
   });
 
-  const { data: courses } = useQuery({
-    queryKey: ['courses', selectedCoursePhase],
+  // Fetch phases pour section "Recalcul complet"
+  const { data: fullRecalcPhases } = useQuery({
+    queryKey: ['phases-full-recalc', fullRecalcSeasonId],
     queryFn: async () => {
-      if (!selectedCoursePhase) return [];
-      
+      if (!fullRecalcSeasonId) return [];
       const { data, error } = await supabase
-        .from('courses')
-        .select('id, nom, categorie, date_debut, date_fin')
-        .eq('phase_id', selectedCoursePhase)
-        .order('date_debut', { ascending: false });
-      
+        .from('phases')
+        .select('*')
+        .eq('saison_id', fullRecalcSeasonId)
+        .order('index_dans_saison', { ascending: true });
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedCoursePhase
+    enabled: !!fullRecalcSeasonId
   });
 
+  // Fetch phases pour section "Recalcul course"
+  const { data: coursePhases } = useQuery({
+    queryKey: ['phases-course-recalc', courseSeasonId],
+    queryFn: async () => {
+      if (!courseSeasonId) return [];
+      const { data, error } = await supabase
+        .from('phases')
+        .select('*')
+        .eq('saison_id', courseSeasonId)
+        .order('index_dans_saison', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!courseSeasonId
+  });
+
+  // Fetch courses
+  const { data: courses } = useQuery({
+    queryKey: ['courses', coursePhaseId],
+    queryFn: async () => {
+      if (!coursePhaseId) return [];
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, nom, categorie, date_debut, date_fin')
+        .eq('phase_id', coursePhaseId)
+        .order('date_debut', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!coursePhaseId
+  });
+
+  // Auto-sélection de la saison courante au chargement
+  useEffect(() => {
+    if (selectedSeason && !fullRecalcSeasonId) {
+      setFullRecalcSeasonId(selectedSeason.id);
+    }
+    if (selectedSeason && !courseSeasonId) {
+      setCourseSeasonId(selectedSeason.id);
+    }
+  }, [selectedSeason]);
+
+  // Auto-sélection de la phase active pour "Recalcul complet"
+  useEffect(() => {
+    if (fullRecalcPhases && fullRecalcPhases.length > 0) {
+      const activePhase = fullRecalcPhases.find(p => p.statut === 'active');
+      setFullRecalcPhaseId(activePhase?.id || fullRecalcPhases[0].id);
+    }
+  }, [fullRecalcPhases]);
+
+  // Auto-sélection de la phase active pour "Recalcul course"
+  useEffect(() => {
+    if (coursePhases && coursePhases.length > 0) {
+      const activePhase = coursePhases.find(p => p.statut === 'active');
+      setCoursePhaseId(activePhase?.id || coursePhases[0].id);
+    }
+  }, [coursePhases]);
+
+  // Reset en cascade
+  const handleFullRecalcSeasonChange = (seasonId: string) => {
+    setFullRecalcSeasonId(seasonId);
+    setFullRecalcPhaseId("");
+  };
+
+  const handleCourseSeasonChange = (seasonId: string) => {
+    setCourseSeasonId(seasonId);
+    setCoursePhaseId("");
+    setSelectedCourseId("");
+  };
+
+  const handleCoursePhaseChange = (phaseId: string) => {
+    setCoursePhaseId(phaseId);
+    setSelectedCourseId("");
+  };
+
   const handleCompute = async () => {
-    if (!selectedPhase) {
+    if (!fullRecalcPhaseId) {
       toast({
         title: "Erreur",
         description: "Veuillez sélectionner une phase",
@@ -61,7 +146,6 @@ export const PointsComputeManager = () => {
       return;
     }
 
-    // Confirmation dialog
     const confirmed = window.confirm(
       "⚠️ ATTENTION : Cette action va recalculer TOUS les points pour cette phase.\n\n" +
       "Cela va :\n" +
@@ -78,7 +162,7 @@ export const PointsComputeManager = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('compute-points', {
-        body: { phase_id: selectedPhase }
+        body: { phase_id: fullRecalcPhaseId }
       });
 
       if (error) throw error;
@@ -101,7 +185,7 @@ export const PointsComputeManager = () => {
   };
 
   const handleComputeCourse = async () => {
-    if (!selectedCourse) {
+    if (!selectedCourseId) {
       toast({
         title: "Erreur",
         description: "Veuillez sélectionner une course",
@@ -115,7 +199,7 @@ export const PointsComputeManager = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('admin-recompute-course', {
-        body: { course_id: selectedCourse }
+        body: { course_id: selectedCourseId }
       });
 
       if (error) throw error;
@@ -123,7 +207,7 @@ export const PointsComputeManager = () => {
       setCourseResult(data);
       toast({
         title: "✅ Calcul terminé avec succès",
-        description: `${data.rows_upserted} entrées mises à jour pour la course ${selectedCourse}`
+        description: `${data.rows_upserted} entrées mises à jour pour la course ${selectedCourseId}`
       });
     } catch (error: any) {
       console.error('Error computing course points:', error);
@@ -174,27 +258,60 @@ export const PointsComputeManager = () => {
           ⚠️ Recalcule TOUS les points pour une phase complète (toutes les courses). Cette action reconstruit complètement le ledger de points.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex gap-4">
-          <Select value={selectedPhase} onValueChange={setSelectedPhase}>
-            <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Sélectionner une phase" />
-            </SelectTrigger>
-            <SelectContent>
-              {phases?.map((phase) => (
-                <SelectItem key={phase.id} value={phase.id}>
-                  Phase {phase.index_dans_saison} - {phase.statut}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <CardContent className="space-y-6">
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold mb-2">🔁 Recalcul complet d'une phase</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Recalcule tous les points de toutes les courses d'une phase
+            </p>
+          </div>
 
-          <Button 
-            onClick={handleCompute}
-            disabled={computing || !selectedPhase}
-          >
-            {computing ? "Calcul en cours..." : "Recalculer"}
-          </Button>
+          <div className="space-y-4">
+            <div>
+              <Label>Saison</Label>
+              <Select value={fullRecalcSeasonId} onValueChange={handleFullRecalcSeasonChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner une saison" />
+                </SelectTrigger>
+                <SelectContent>
+                  {seasons?.map((season) => (
+                    <SelectItem key={season.id} value={season.id}>
+                      Saison {season.annee}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Phase</Label>
+              <Select 
+                value={fullRecalcPhaseId} 
+                onValueChange={setFullRecalcPhaseId}
+                disabled={!fullRecalcSeasonId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner une phase" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fullRecalcPhases?.map((phase) => (
+                    <SelectItem key={phase.id} value={phase.id}>
+                      Phase {phase.index_dans_saison} - {phase.statut}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button 
+              onClick={handleCompute}
+              disabled={computing || !fullRecalcPhaseId}
+              className="w-full"
+            >
+              {computing ? "Calcul en cours..." : "Recalculer toute la phase"}
+            </Button>
+          </div>
         </div>
 
         {result && (
@@ -224,47 +341,75 @@ export const PointsComputeManager = () => {
 
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold mb-2">Recalculer une course spécifique</h3>
+            <h3 className="text-lg font-semibold mb-2">🎯 Recalcul d'une course spécifique</h3>
             <p className="text-sm text-muted-foreground mb-4">
               Recalcule les points d'une seule course
             </p>
           </div>
 
-          <div className="flex gap-4">
-            <Select value={selectedCoursePhase} onValueChange={(value) => {
-              setSelectedCoursePhase(value);
-              setSelectedCourse("");
-            }}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Sélectionner une phase" />
-              </SelectTrigger>
-              <SelectContent>
-                {phases?.map((phase) => (
-                  <SelectItem key={phase.id} value={phase.id}>
-                    Phase {phase.index_dans_saison} - {phase.statut}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-4">
+            <div>
+              <Label>Saison</Label>
+              <Select value={courseSeasonId} onValueChange={handleCourseSeasonChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner une saison" />
+                </SelectTrigger>
+                <SelectContent>
+                  {seasons?.map((season) => (
+                    <SelectItem key={season.id} value={season.id}>
+                      Saison {season.annee}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Select value={selectedCourse} onValueChange={setSelectedCourse} disabled={!selectedCoursePhase}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Sélectionner une course" />
-              </SelectTrigger>
-              <SelectContent>
-                {courses?.map((course) => (
-                  <SelectItem key={course.id} value={course.id}>
-                    {course.id} - {course.nom}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div>
+              <Label>Phase</Label>
+              <Select 
+                value={coursePhaseId} 
+                onValueChange={handleCoursePhaseChange}
+                disabled={!courseSeasonId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner une phase" />
+                </SelectTrigger>
+                <SelectContent>
+                  {coursePhases?.map((phase) => (
+                    <SelectItem key={phase.id} value={phase.id}>
+                      Phase {phase.index_dans_saison} - {phase.statut}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Course</Label>
+              <Select 
+                value={selectedCourseId} 
+                onValueChange={setSelectedCourseId}
+                disabled={!coursePhaseId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner une course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses?.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.id} - {course.nom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <Button 
               onClick={handleComputeCourse}
-              disabled={computingCourse || !selectedCourse}
+              disabled={computingCourse || !selectedCourseId}
+              className="w-full"
             >
-              {computingCourse ? "Calcul..." : "Recalculer"}
+              {computingCourse ? "Calcul en cours..." : "Recalculer cette course"}
             </Button>
           </div>
 
