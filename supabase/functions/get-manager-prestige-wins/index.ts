@@ -30,18 +30,41 @@ Deno.serve(async (req) => {
 
     console.log('Fetching prestige wins with filters:', { phase_id, saison_id });
 
-    // Step 1: Get all prestige courses and their winners
+    // Determine which phases to consider
+    let targetPhaseIds: string[] = [];
+    if (phase_id) {
+      targetPhaseIds = [phase_id];
+    } else if (saison_id) {
+      const { data: phaseIds } = await supabase
+        .from('phases')
+        .select('id')
+        .eq('saison_id', saison_id);
+      
+      if (phaseIds && phaseIds.length > 0) {
+        targetPhaseIds = phaseIds.map(p => p.id);
+      }
+    }
+
+    // Step 1: Get all prestige courses with their phase_id
     const { data: prestigeCourses, error: coursesError } = await supabase
       .from('courses')
-      .select('id, nom, categorie')
-      .in('categorie', ['WT GT', 'WT Monument', 'WC RR', 'WC ITT']);
+      .select('id, nom, categorie, phase_id')
+      .in('categorie', ['WT GT', 'WT Monument', 'WC RR', 'WC ITT'])
+      .in('phase_id', targetPhaseIds);
 
     if (coursesError) {
       console.error('Error fetching prestige courses:', coursesError);
       throw coursesError;
     }
 
-    const courseIds = prestigeCourses?.map(c => c.id) || [];
+    if (!prestigeCourses || prestigeCourses.length === 0) {
+      console.log('No prestige courses found for filters');
+      return new Response(JSON.stringify({}), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const courseIds = prestigeCourses.map(c => c.id);
     
     // Step 2: Get race results for winners (position 1, General classification)
     const { data: resultsData, error: resultsError } = await supabase
@@ -59,49 +82,14 @@ Deno.serve(async (req) => {
       throw resultsError;
     }
 
-    // Step 3: Get points_ledger to map coureurs to managers
-    let pointsQuery = supabase
-      .from('points_ledger')
-      .select('manager_id, coureur_id, course_id')
-      .in('course_id', courseIds)
-      .not('manager_id', 'is', null);
-
-    // Apply filters
-    if (phase_id) {
-      pointsQuery = pointsQuery.eq('phase_id', phase_id);
-    } else if (saison_id) {
-      const { data: phaseIds } = await supabase
-        .from('phases')
-        .select('id')
-        .eq('saison_id', saison_id);
-      
-      if (phaseIds && phaseIds.length > 0) {
-        pointsQuery = pointsQuery.in('phase_id', phaseIds.map(p => p.id));
-      }
+    if (!resultsData || resultsData.length === 0) {
+      console.log('No prestige wins found');
+      return new Response(JSON.stringify({}), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const { data: pointsData, error: pointsError } = await pointsQuery;
-
-    if (pointsError) {
-      console.error('Error fetching points data:', pointsError);
-      throw pointsError;
-    }
-
-    // Build maps
-    const courseMap = new Map<string, any>();
-    prestigeCourses?.forEach(course => {
-      courseMap.set(course.id, course);
-    });
-
-    const courseWinners = new Map<string, Set<string>>();
-    resultsData?.forEach(result => {
-      if (!courseWinners.has(result.course_id)) {
-        courseWinners.set(result.course_id, new Set());
-      }
-      courseWinners.get(result.course_id)!.add(result.coureur_id);
-    });
-
-    // Calculate prestige wins per manager
+    // Step 3: For each victory, check which managers owned the winning rider during that course's phase
     const prestigeMap = new Map<string, {
       hasTourDeFrance: boolean;
       hasGiro: boolean;
@@ -114,62 +102,78 @@ Deno.serve(async (req) => {
       };
     }>();
 
-    pointsData?.forEach(point => {
-      if (!point.manager_id) return;
+    // Process each prestige victory
+    for (const result of resultsData) {
+      const course = prestigeCourses.find(c => c.id === result.course_id);
+      if (!course || !course.phase_id) continue;
 
-      const course = courseMap.get(point.course_id);
-      if (!course) return;
+      // Find which managers owned this rider during this course's phase
+      const { data: owners, error: ownersError } = await supabase
+        .from('rosters')
+        .select('manager_id')
+        .eq('coureur_id', result.coureur_id)
+        .eq('phase_id', course.phase_id);
 
-      const winners = courseWinners.get(point.course_id);
-      if (!winners || !winners.has(point.coureur_id)) return;
-
-      if (!prestigeMap.has(point.manager_id)) {
-        prestigeMap.set(point.manager_id, {
-          hasTourDeFrance: false,
-          hasGiro: false,
-          hasVuelta: false,
-          monuments: [],
-          worldChampionships: {
-            hasRR: false,
-            hasITT: false,
-            names: [],
-          },
-        });
+      if (ownersError) {
+        console.error('Error fetching owners:', ownersError);
+        continue;
       }
 
-      const prestige = prestigeMap.get(point.manager_id)!;
+      if (!owners || owners.length === 0) continue;
 
-      // Grand Tours
-      if (course.categorie === 'WT GT') {
-        if (course.nom?.toLowerCase().includes('tour de france')) {
-          prestige.hasTourDeFrance = true;
-        } else if (course.nom?.toLowerCase().includes('giro')) {
-          prestige.hasGiro = true;
-        } else if (course.nom?.toLowerCase().includes('vuelta')) {
-          prestige.hasVuelta = true;
+      // Attribute the prestige win to each manager who owned the rider
+      for (const owner of owners) {
+        const managerId = owner.manager_id;
+        if (!managerId) continue;
+
+        if (!prestigeMap.has(managerId)) {
+          prestigeMap.set(managerId, {
+            hasTourDeFrance: false,
+            hasGiro: false,
+            hasVuelta: false,
+            monuments: [],
+            worldChampionships: {
+              hasRR: false,
+              hasITT: false,
+              names: [],
+            },
+          });
+        }
+
+        const prestige = prestigeMap.get(managerId)!;
+
+        // Grand Tours
+        if (course.categorie === 'WT GT') {
+          if (course.nom?.toLowerCase().includes('tour de france')) {
+            prestige.hasTourDeFrance = true;
+          } else if (course.nom?.toLowerCase().includes('giro')) {
+            prestige.hasGiro = true;
+          } else if (course.nom?.toLowerCase().includes('vuelta')) {
+            prestige.hasVuelta = true;
+          }
+        }
+
+        // Monuments - store each monument name
+        if (course.categorie === 'WT Monument') {
+          if (!prestige.monuments.includes(course.nom)) {
+            prestige.monuments.push(course.nom);
+          }
+        }
+
+        // World Championships - distinguish RR and ITT
+        if (course.categorie === 'WC RR') {
+          prestige.worldChampionships.hasRR = true;
+          if (!prestige.worldChampionships.names.includes(course.nom)) {
+            prestige.worldChampionships.names.push(course.nom);
+          }
+        } else if (course.categorie === 'WC ITT') {
+          prestige.worldChampionships.hasITT = true;
+          if (!prestige.worldChampionships.names.includes(course.nom)) {
+            prestige.worldChampionships.names.push(course.nom);
+          }
         }
       }
-
-      // Monuments - store each monument name
-      if (course.categorie === 'WT Monument') {
-        if (!prestige.monuments.includes(course.nom)) {
-          prestige.monuments.push(course.nom);
-        }
-      }
-
-      // World Championships - distinguish RR and ITT
-      if (course.categorie === 'WC RR') {
-        prestige.worldChampionships.hasRR = true;
-        if (!prestige.worldChampionships.names.includes(course.nom)) {
-          prestige.worldChampionships.names.push(course.nom);
-        }
-      } else if (course.categorie === 'WC ITT') {
-        prestige.worldChampionships.hasITT = true;
-        if (!prestige.worldChampionships.names.includes(course.nom)) {
-          prestige.worldChampionships.names.push(course.nom);
-        }
-      }
-    });
+    }
 
     // Convert map to object
     const result: Record<string, any> = {};
