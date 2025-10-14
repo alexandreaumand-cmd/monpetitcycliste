@@ -1,33 +1,21 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CoursesImportManager } from "./CoursesImportManager";
-import { CoursesResetManager } from "./CoursesResetManager";
-import { PointsComputeManager } from "./PointsComputeManager";
-import { DataImport } from "./DataImport";
+import { DataImportManager } from "./DataImportManager";
+import { DataExportManager } from "./DataExportManager";
 
 export const DataManagementTabs = () => {
   return (
-    <Tabs defaultValue="courses" className="w-full">
-      <TabsList className="grid w-full grid-cols-4">
-        <TabsTrigger value="courses">Import Courses</TabsTrigger>
-        <TabsTrigger value="other">Import Autres</TabsTrigger>
-        <TabsTrigger value="points">Calcul Points</TabsTrigger>
-        <TabsTrigger value="reset">Reset/Purge</TabsTrigger>
+    <Tabs defaultValue="import" className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="import">📥 Import</TabsTrigger>
+        <TabsTrigger value="export">📤 Export</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="courses" className="space-y-6">
-        <CoursesImportManager />
+      <TabsContent value="import" className="space-y-6">
+        <DataImportManager />
       </TabsContent>
 
-      <TabsContent value="other" className="space-y-6">
-        <DataImport />
-      </TabsContent>
-
-      <TabsContent value="points" className="space-y-6">
-        <PointsComputeManager />
-      </TabsContent>
-
-      <TabsContent value="reset" className="space-y-6">
-        <CoursesResetManager />
+      <TabsContent value="export" className="space-y-6">
+        <DataExportManager />
       </TabsContent>
     </Tabs>
   );

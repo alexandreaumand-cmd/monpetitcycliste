@@ -9,7 +9,7 @@ export const ConfigurationTabs = () => {
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="seasons">📅 Saisons</TabsTrigger>
         <TabsTrigger value="managers">👤 Managers</TabsTrigger>
-        <TabsTrigger value="import">📥 Import</TabsTrigger>
+        <TabsTrigger value="data">💾 Données</TabsTrigger>
       </TabsList>
 
       <TabsContent value="seasons" className="space-y-6">
@@ -20,7 +20,7 @@ export const ConfigurationTabs = () => {
         <SponsorJerseyManager />
       </TabsContent>
 
-      <TabsContent value="import" className="space-y-6">
+      <TabsContent value="data" className="space-y-6">
         <DataManagementTabs />
       </TabsContent>
     </Tabs>
