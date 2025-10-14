@@ -250,6 +250,18 @@ export const RoundControlCenter = () => {
         </CardContent>
       </Card>
 
+      {/* Actions - Always visible when a phase is selected */}
+      {selectedPhaseId && (
+        <RoundActions
+          isOpen={currentAuction?.statut === 'open'}
+          canLaunch={!currentAuction || currentAuction.statut !== 'open'}
+          canClose={currentAuction?.statut === 'open'}
+          onLaunch={(hours) => openRoundMutation.mutate(hours)}
+          onClose={() => closeRoundMutation.mutate()}
+          isLoading={isLoading}
+        />
+      )}
+
       {selectedPhaseId && currentAuction && (
         <>
           {/* Header */}
@@ -271,16 +283,6 @@ export const RoundControlCenter = () => {
               validatedManagers={stats.validated_managers || 0}
             />
           )}
-
-          {/* Actions */}
-          <RoundActions
-            isOpen={currentAuction.statut === 'open'}
-            canLaunch={currentAuction.statut !== 'open'}
-            canClose={currentAuction.statut === 'open'}
-            onLaunch={(hours) => openRoundMutation.mutate(hours)}
-            onClose={() => closeRoundMutation.mutate()}
-            isLoading={isLoading}
-          />
 
           {/* 3 Columns Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -319,7 +321,7 @@ export const RoundControlCenter = () => {
       {selectedPhaseId && !currentAuction && !loadingAuction && (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
-            Aucun round pour cette phase. Lancez-en un nouveau ci-dessus.
+            Aucun round actif pour cette phase.
           </CardContent>
         </Card>
       )}
