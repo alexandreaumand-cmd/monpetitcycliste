@@ -348,15 +348,15 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                         <SortIcon column="total_points" />
                       </div>
                     </TableHead>
-                    <TableHead 
-                      className="text-right cursor-pointer hover:bg-muted/50 transition-colors"
-                      onClick={() => handleSort("prix_achat")}
-                    >
-                      <div className="flex items-center justify-end">
-                        Prix
-                        <SortIcon column="prix_achat" />
-                      </div>
-                    </TableHead>
+              <TableHead 
+                className="text-right cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSort("prix_achat")}
+              >
+                <div className="flex items-center justify-end">
+                  Prix d'achat
+                  <SortIcon column="prix_achat" />
+                </div>
+              </TableHead>
                     <TableHead 
                       className="text-right cursor-pointer hover:bg-muted/50 transition-colors"
                       onClick={() => handleSort("ratio_points_par_prix")}
