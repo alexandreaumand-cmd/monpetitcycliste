@@ -139,9 +139,8 @@ Deno.serve(async (req) => {
     // Map and enrich each item
     const mappedItems = items.map((item: any) => {
       const ownerData = ownersMap[item.rider_id] || {};
-      // ✅ Utiliser prix_achat (SOMME des prix payés) au lieu de prix_initial (côte)
-      const ratio = item.prix_achat > 0 
-        ? Number((item.total_points / item.prix_achat).toFixed(2))
+      const ratio = item.prix_initial > 0 
+        ? Number((item.total_points / item.prix_initial).toFixed(2))
         : 0;
 
       return {
@@ -149,7 +148,7 @@ Deno.serve(async (req) => {
         rider_nom: item.rider_name,
         rider_equipe: item.rider_equipe,
         total_points: item.total_points,
-        prix_achat: item.prix_achat,
+        prix_achat: item.prix_initial,
         ratio_points_par_prix: ratio,
         courses_count: item.race_count,
         // Add owners based on context

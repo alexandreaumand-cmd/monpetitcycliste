@@ -466,23 +466,7 @@ export const RankingsMobile = () => {
                     key={rider.coureur_id}
                     title={rider.coureur_nom}
                     subtitle={rider.coureur_equipe || "Équipe inconnue"}
-                    meta={
-                      <div className="flex gap-2 text-xs text-muted-foreground">
-                        <span>{rider.courses_count || 0} courses</span>
-                        {rider.prix_achat && (
-                          <>
-                            <span>•</span>
-                            <span>Prix: {rider.prix_achat.toFixed(0)}</span>
-                          </>
-                        )}
-                        {rider.ratio_points_par_prix !== undefined && rider.ratio_points_par_prix > 0 && (
-                          <>
-                            <span>•</span>
-                            <span>Ratio: {rider.ratio_points_par_prix.toFixed(2)}</span>
-                          </>
-                        )}
-                      </div>
-                    }
+                    meta={`${rider.courses_count || 0} courses`}
                     onClick={() => handleRiderClick(rider)}
                     avatar={
                       <Avatar className="h-10 w-10">
