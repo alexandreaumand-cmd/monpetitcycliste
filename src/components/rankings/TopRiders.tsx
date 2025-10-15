@@ -41,7 +41,7 @@ type TopRider = {
   ratio_points_par_prix?: number;
   owners?: RiderOwner[];
   owners_all?: RiderOwner[];
-  owners_by_phase?: RiderOwnerByPhase[];
+  owners_by_phase?: Record<string, RiderOwner[]> | RiderOwnerByPhase[];
 };
 
 type RiderPointRow = {
@@ -448,12 +448,14 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                                             </TableRow>
                                           </TableHeader>
                                           <TableBody>
-                                            {rider.owners_by_phase?.map((owner, ownerIdx) => (
-                                              <TableRow key={ownerIdx}>
-                                                <TableCell className="text-xs">{owner.manager_nom}</TableCell>
-                                                <TableCell className="text-xs">P{owner.phase_index}</TableCell>
-                                              </TableRow>
-                                            ))}
+                                            {rider.owners_by_phase && Object.entries(rider.owners_by_phase).flatMap(([phaseId, owners]) => 
+                                              (owners as RiderOwner[]).map((owner, idx) => (
+                                                <TableRow key={`${phaseId}-${idx}`}>
+                                                  <TableCell className="text-xs">{owner.manager_nom}</TableCell>
+                                                  <TableCell className="text-xs">{phaseId}</TableCell>
+                                                </TableRow>
+                                              ))
+                                            )}
                                           </TableBody>
                                         </Table>
                                       </div>
@@ -523,7 +525,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                 <p className="text-sm font-medium">
                   Propriétaire(s) — Toutes phases : {selectedRider.owners_all.map(o => o.manager_nom).join(', ')}
                 </p>
-                {selectedRider.owners_by_phase && selectedRider.owners_by_phase.length > 0 && (
+                {selectedRider.owners_by_phase && Object.keys(selectedRider.owners_by_phase).length > 0 && (
                   <div className="mt-2">
                     <details className="text-xs">
                       <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
@@ -538,12 +540,14 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {selectedRider.owners_by_phase.map((owner, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell className="text-xs">{owner.manager_nom}</TableCell>
-                                <TableCell className="text-xs">P{owner.phase_index}</TableCell>
-                              </TableRow>
-                            ))}
+                            {Object.entries(selectedRider.owners_by_phase).flatMap(([phaseId, owners]) => 
+                              (owners as RiderOwner[]).map((owner, idx) => (
+                                <TableRow key={`${phaseId}-${idx}`}>
+                                  <TableCell className="text-xs">{owner.manager_nom}</TableCell>
+                                  <TableCell className="text-xs">{phaseId}</TableCell>
+                                </TableRow>
+                              ))
+                            )}
                           </TableBody>
                         </Table>
                       </div>
