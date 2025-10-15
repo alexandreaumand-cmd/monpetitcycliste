@@ -441,16 +441,25 @@ export const ResultsEntryStudioMobile = ({
           const coureurId = jerseyHolders[key];
           if (!coureurId) continue;
 
-          const managerId = riderManagerMap.get(coureurId);
+          // Récupérer le manager_id pour ce coureur spécifiquement
+          const { data: roster } = await supabase
+            .from('rosters')
+            .select('manager_id')
+            .eq('phase_id', course.phase_id)
+            .eq('coureur_id', coureurId)
+            .maybeSingle();
+
           await supabase.from('race_results').upsert({
+            course_id: course.course_id,
             coureur_id: coureurId,
             type_classement: type as any,
             etape_numero: currentStage,
             position: 1,
             statut: 'finished' as const,
             date_classement: dateClassement,
-            manager_id: managerId,
+            manager_id: roster?.manager_id || null,
             points: 0,
+            saison_id: phaseData.saison_id,
           } as any, {
             onConflict: 'course_id,coureur_id,type_classement,etape_numero',
           });
