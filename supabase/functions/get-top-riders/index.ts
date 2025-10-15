@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
 
     // Map and enrich each item
     const mappedItems = items.map((item: any) => {
-      const ownerData = ownersMap[item.rider_id] || {};
+      const ownerData = ownersMap[item.rider_id] || (phase_id ? [] : { owners_all: [], owners_by_phase: {} });
       const ratio = item.prix_initial > 0 
         ? Number((item.total_points / item.prix_initial).toFixed(2))
         : 0;
@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
         courses_count: item.race_count,
         // Add owners based on context
         ...(phase_id 
-          ? { owners: ownerData || [] }
+          ? { owners: ownerData }
           : { 
               owners_all: ownerData.owners_all || [],
               owners_by_phase: ownerData.owners_by_phase || {}
