@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { RiderPointsDetail } from "./RiderPointsDetail";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 
 interface Coureur {
   coureur_id: string;
@@ -667,7 +668,10 @@ export const MyTeamDesktop = () => {
                         ) : coureur.ratio_points_par_prix < 1 ? (
                           <TrendingDown className="h-4 w-4" />
                         ) : null}
-                        <span>{coureur.ratio_points_par_prix.toFixed(2)}</span>
+                        <span>{formatROICompact(computeRiderROI({
+                          pointsTotal: coureur.points_total,
+                          purchasePriceTotal: coureur.prix_achat
+                        }))}</span>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -700,7 +704,10 @@ export const MyTeamDesktop = () => {
                       ) : coureur.ratio_points_par_prix < 1 ? (
                         <TrendingDown className="h-3 w-3" />
                       ) : null}
-                      <span>{coureur.ratio_points_par_prix.toFixed(2)}</span>
+                      <span>{formatROICompact(computeRiderROI({
+                        pointsTotal: coureur.points_total,
+                        purchasePriceTotal: coureur.prix_achat
+                      }))}</span>
                     </div>
                   </div>
                 </div>

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { normalizeString } from "@/lib/stringUtils";
+import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 
 type TopRidersProps = {
   phaseId?: string | null;
@@ -396,7 +397,10 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                       </TableCell>
                       <TableCell className="text-right">
                         {rider.ratio_points_par_prix !== undefined 
-                          ? rider.ratio_points_par_prix.toFixed(2)
+                          ? formatROICompact(computeRiderROI({
+                              pointsTotal: rider.total_points,
+                              purchasePriceTotal: rider.prix_achat
+                            }))
                           : '—'}
                       </TableCell>
                       <TableCell>

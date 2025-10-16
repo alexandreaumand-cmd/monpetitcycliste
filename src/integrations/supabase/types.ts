@@ -5055,6 +5055,7 @@ export type Database = {
       get_top_riders_optimized: {
         Args: { p_limit?: number; p_phase_id?: string; p_saison_id?: string }
         Returns: {
+          prix_achat: number
           prix_initial: number
           race_count: number
           rider_equipe: string
@@ -5266,6 +5267,24 @@ export type Database = {
           nom: string
           phase_id: string
           types: Database["public"]["Enums"]["type_classement"][]
+        }[]
+      }
+      rider_roi_phase: {
+        Args: { p_phase_id: string }
+        Returns: {
+          rider_id: string
+          roi: number
+          total_points: number
+          total_purchase_price: number
+        }[]
+      }
+      rider_roi_season: {
+        Args: { p_saison_id: string }
+        Returns: {
+          rider_id: string
+          roi: number
+          total_points: number
+          total_purchase_price: number
         }[]
       }
       search_riders_for_results: {
