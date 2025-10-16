@@ -176,7 +176,7 @@ const StartlistDesktop = () => {
           )
         `)
         .in('phase_id', seasonPhaseIds)
-        .gte('date_debut', today)
+        .gte('date_fin', today)
         .lte('date_debut', in30Days)
         .order('date_debut', { ascending: true });
       
@@ -540,6 +540,8 @@ const StartlistDesktop = () => {
             {upcomingCourses.map((course: any) => {
               const dateDebut = new Date(course.date_debut);
               const dateFin = new Date(course.date_fin);
+              const today = new Date().toISOString().split('T')[0];
+              const isOngoing = course.date_debut <= today && course.date_fin >= today;
               const daysUntil = differenceInDays(dateDebut, new Date());
               const duration = differenceInDays(dateFin, dateDebut) + 1;
               const estimatedStages = course.type_course === 'etape' ? duration : 1;
@@ -555,6 +557,11 @@ const StartlistDesktop = () => {
                     <div className="flex justify-between items-start gap-2 mb-2">
                       <CardTitle className="text-lg line-clamp-2">{course.nom}</CardTitle>
                       <div className="flex gap-1.5 shrink-0">
+                        {isOngoing && (
+                          <Badge className="bg-red-600 text-white animate-pulse">
+                            EN COURS
+                          </Badge>
+                        )}
                         {hasStartlist(course.id) && (
                           <Badge variant="outline" className="bg-green-500/10">
                             <CheckCircle2 className="h-3 w-3 mr-1" />

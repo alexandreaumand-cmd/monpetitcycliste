@@ -68,9 +68,9 @@ export const StartlistMobile = () => {
       const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from("courses")
-        .select("id, nom, date_debut, phase_id, categorie")
+        .select("id, nom, date_debut, date_fin, phase_id, categorie")
         .in("phase_id", seasonPhaseIds)
-        .gte("date_debut", today)
+        .gte("date_fin", today)
         .order("date_debut", { ascending: true })
         .limit(50);
       if (error) throw error;
@@ -231,6 +231,8 @@ export const StartlistMobile = () => {
               const startlistInfo = startlistsInfo?.get(race.id);
               const hasStartlist = !!startlistInfo;
               const isPcsValidated = startlistInfo?.pcs_validated || false;
+              const today = new Date().toISOString().split('T')[0];
+              const isOngoing = race.date_debut <= today && race.date_fin >= today;
 
               return (
                 <MobileCard
@@ -244,6 +246,11 @@ export const StartlistMobile = () => {
                   }
                   badge={
                     <div className="flex gap-1">
+                      {isOngoing && (
+                        <Badge className="bg-red-600 text-white text-xs animate-pulse">
+                          EN COURS
+                        </Badge>
+                      )}
                       {race.categorie && (
                         <Badge variant="outline" className="text-xs">
                           {race.categorie}
