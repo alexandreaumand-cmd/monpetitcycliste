@@ -501,12 +501,23 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       }
 
       // Immediately recompute points for this course to reflect Porteur points
-      const { error: computeError } = await supabase.functions.invoke('compute-points', {
+      const { data: computeData, error: computeError } = await supabase.functions.invoke('compute-points', {
         body: { course_id: course.course_id }
       });
       
       if (computeError) {
-        console.error('Error recomputing points after save:', computeError);
+        console.error('❌ Error recomputing points after save:', computeError);
+        toast({
+          title: "⚠️ Erreur calcul de points",
+          description: "Les résultats sont sauvegardés mais les points n'ont pas été recalculés. Utilisez l'onglet 'Recalcul Points'.",
+          variant: "destructive",
+        });
+      } else {
+        console.log('✅ Points recalculés avec succès:', computeData);
+        toast({
+          title: "✅ Points calculés",
+          description: "Les points ont été mis à jour avec succès.",
+        });
       }
 
       // Save jersey holders if on stage race + stages tab
