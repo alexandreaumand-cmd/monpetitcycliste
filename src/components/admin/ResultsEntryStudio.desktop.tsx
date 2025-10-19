@@ -9,13 +9,24 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle, Loader2, Camera } from "lucide-react";
+import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle, Loader2, Camera, Trash2 } from "lucide-react";
 import { ExportResultsImage } from "./ExportResultsImage";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
 import { JerseyHoldersInput } from "@/components/admin/JerseyHoldersInput";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type CourseData = {
   course_id: string;
@@ -78,6 +89,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const [combatifWinner, setCombatifWinner] = useState<string | null>(null);
   const [isCancelled, setIsCancelled] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   const isOneDay = course.type_course === "One day";
   const classementType: ClassementType = isOneDay
@@ -631,6 +643,70 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     });
   };
 
+  const resetMutation = useMutation({
+    mutationFn: async () => {
+      const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
+      
+      // Delete race_results for this specific classification
+      const { error: resultsError } = await supabase
+        .from('race_results')
+        .delete()
+        .eq('course_id', course.course_id)
+        .eq('type_classement', classementType)
+        .eq('etape_numero', etapeNumeroValue);
+
+      if (resultsError) throw resultsError;
+
+      // Delete points_ledger for this specific classification
+      const { error: pointsError } = await supabase
+        .from('points_ledger')
+        .delete()
+        .eq('course_id', course.course_id)
+        .eq('type_classement', classementType)
+        .eq('etape_numero', etapeNumeroValue);
+
+      if (pointsError) throw pointsError;
+
+      // Update race_result_sets to mark as not cancelled
+      await supabase
+        .from('race_result_sets')
+        .update({ is_cancelled: false })
+        .eq('course_id', course.course_id)
+        .eq('type_classement', classementType)
+        .eq('etape_numero', etapeNumeroValue);
+
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["stage-completion"] });
+      queryClient.invalidateQueries({ queryKey: ["results-status"] });
+      queryClient.invalidateQueries({ queryKey: ["manager-standings"] });
+      queryClient.invalidateQueries({ queryKey: ["top-riders"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-points"] });
+      queryClient.invalidateQueries({ queryKey: ["rankings-kpis"] });
+
+      const label = activeTab === "stages" ? `Étape ${currentStage}` : classementType;
+      toast({
+        title: "✅ Réinitialisation effectuée",
+        description: `${label} - Tous les résultats et points ont été supprimés`,
+      });
+
+      // Reset local state
+      setResultRows([]);
+      setGridPrepared(false);
+      setIsDirty(false);
+      setIsCancelled(false);
+      setResetDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleRiderChange = (index: number, riderId: string | null, riderName: string | null, managerNom: string | null = null) => {
     setResultRows((prev) =>
       prev.map((row, i) =>
@@ -997,6 +1073,59 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               <Button variant="outline" onClick={onClose}>
                 Retour
               </Button>
+
+              <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="text-destructive hover:text-destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Réinitialiser
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmer la réinitialisation</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Êtes-vous sûr de vouloir supprimer tous les résultats et points de{" "}
+                      <strong>
+                        {activeTab === "stages" && !isOneDay
+                          ? `l'Étape ${currentStage}`
+                          : classementType}
+                      </strong>{" "}
+                      pour <strong>{course.course_nom}</strong> ?
+                      <br />
+                      <br />
+                      Cette action est irréversible et supprimera :
+                      <ul className="list-disc list-inside mt-2 space-y-1">
+                        <li>Tous les résultats de course (race_results)</li>
+                        <li>Tous les points attribués (points_ledger)</li>
+                        {activeTab === "stages" && !isOneDay && (
+                          <li>Les porteurs de maillots de cette étape</li>
+                        )}
+                      </ul>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => resetMutation.mutate()}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      disabled={resetMutation.isPending}
+                    >
+                      {resetMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Suppression...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Supprimer définitivement
+                        </>
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
               <Button
                 variant="outline"
