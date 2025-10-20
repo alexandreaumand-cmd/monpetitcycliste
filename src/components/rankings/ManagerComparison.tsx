@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Tooltip, ResponsiveContainer } from "recharts";
 import { ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface ManagerComparisonProps {
   phaseId?: string | null;
@@ -34,8 +35,10 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
   });
 
   // 2. Récupérer les rosters des deux managers
+  const { leagueId } = useLeague();
+  
   const { data: rostersA } = useQuery({
-    queryKey: ["roster-manager-a", managerA, phaseId, saisonId],
+    queryKey: ["roster-manager-a", managerA, phaseId, saisonId, leagueId],
     queryFn: async () => {
       if (!managerA) return null;
       
@@ -43,6 +46,10 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
         .from("rosters")
         .select("coureur_id, prix_signature, phase_id")
         .eq("manager_id", managerA);
+
+      if (leagueId) {
+        query = query.eq("league_id", leagueId);
+      }
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -80,7 +87,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
   });
 
   const { data: rostersB } = useQuery({
-    queryKey: ["roster-manager-b", managerB, phaseId, saisonId],
+    queryKey: ["roster-manager-b", managerB, phaseId, saisonId, leagueId],
     queryFn: async () => {
       if (!managerB) return null;
       
@@ -88,6 +95,10 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
         .from("rosters")
         .select("coureur_id, prix_signature, phase_id")
         .eq("manager_id", managerB);
+
+      if (leagueId) {
+        query = query.eq("league_id", leagueId);
+      }
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);

@@ -12,6 +12,8 @@ import { BonusPointsDetailDialog } from "./BonusPointsDetailDialog";
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ManagerPrestigeIcons } from "./ManagerPrestigeIcons";
+import { useLeague } from "@/contexts/LeagueContext";
+import { useLeagueStandingsBySeason, useLeagueStandingsByPhase } from "@/hooks/useLeagueStandings";
 
 type StandingsProps = {
   phaseId?: string | null;
@@ -47,6 +49,7 @@ const ManagerNameWithJersey = ({ managerId, managerName }: { managerId: string; 
 
 export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) => {
   const { selectedSeason, activePhase } = useSeasonContext();
+  const { leagueId } = useLeague();
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [selectedBonusManager, setSelectedBonusManager] = useState<{
     id: string;
@@ -54,39 +57,100 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
   } | null>(null);
   
   const { data: standings, isLoading } = useQuery({
-    queryKey: ["manager-standings", phaseId, selectedSeason?.id],
+    queryKey: ["manager-standings", phaseId, selectedSeason?.id, leagueId],
     queryFn: async () => {
-      if (phaseId) {
-        // Phase-specific standings (THIS PHASE ONLY, not cumulative)
+      if (phaseId && leagueId) {
+        // Phase-specific standings (league-specific v2)
         const { data, error } = await supabase
-          .from("v_manager_standings_by_phase")
+          .from("v_manager_standings_by_phase_v2")
           .select("*")
+          .eq("league_id", leagueId)
           .eq("phase_id", phaseId)
           .order("total_points", { ascending: false });
         
         if (error) throw error;
-        return data;
-      } else if (selectedSeason) {
-        // Season-specific standings (all phases of the season)
+        
+        // Enrichir avec les noms des managers
+        if (!data || data.length === 0) return [];
+        
+        const managerIds = data.map(d => d.manager_id);
+        const { data: managers } = await supabase
+          .from("managers")
+          .select("id, nom")
+          .in("id", managerIds);
+        
+        const managersMap = new Map(managers?.map(m => [m.id, m.nom]) || []);
+        
+        return data.map(d => ({
+          ...d,
+          manager_nom: managersMap.get(d.manager_id) || "",
+          race_points: d.total_points,
+          bonus_points: 0,
+          scoreurs_count: 0,
+          victories_count: 0
+        }));
+      } else if (selectedSeason && leagueId) {
+        // Season-specific standings (league-specific v2)
         const { data, error } = await supabase
-          .from("v_manager_standings_by_season")
+          .from("v_manager_standings_by_season_v2")
           .select("*")
-          .eq("saison_id", selectedSeason.id)
-          .order("total_points", { ascending: false});
+          .eq("league_id", leagueId)
+          .eq("season_id", selectedSeason.id)
+          .order("total_points", { ascending: false });
         
         if (error) throw error;
-        return data;
+        
+        // Enrichir avec les noms des managers
+        if (!data || data.length === 0) return [];
+        
+        const managerIds = data.map(d => d.manager_id);
+        const { data: managers } = await supabase
+          .from("managers")
+          .select("id, nom")
+          .in("id", managerIds);
+        
+        const managersMap = new Map(managers?.map(m => [m.id, m.nom]) || []);
+        
+        return data.map(d => ({
+          ...d,
+          manager_nom: managersMap.get(d.manager_id) || "",
+          race_points: d.total_points,
+          bonus_points: 0,
+          scoreurs_count: 0,
+          victories_count: 0
+        }));
       } else {
-        // Global standings (all time)
-        const { data, error } = await supabase
-          .from("v_manager_standings_total")
-          .select("*")
-          .order("total_points", { ascending: false});
-        
-        if (error) throw error;
-        return data;
+        // Fallback pour Legacy: utiliser anciennes vues
+        if (phaseId) {
+          const { data, error } = await supabase
+            .from("v_manager_standings_by_phase")
+            .select("*")
+            .eq("phase_id", phaseId)
+            .order("total_points", { ascending: false });
+          
+          if (error) throw error;
+          return data;
+        } else if (selectedSeason) {
+          const { data, error } = await supabase
+            .from("v_manager_standings_by_season")
+            .select("*")
+            .eq("saison_id", selectedSeason.id)
+            .order("total_points", { ascending: false });
+          
+          if (error) throw error;
+          return data;
+        } else {
+          const { data, error } = await supabase
+            .from("v_manager_standings_total")
+            .select("*")
+            .order("total_points", { ascending: false });
+          
+          if (error) throw error;
+          return data;
+        }
       }
     },
+    enabled: !!leagueId,
   });
 
 

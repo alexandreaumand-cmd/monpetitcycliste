@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatAmount } from "@/lib/utils";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface AuctionBidFormProps {
   auction: {
@@ -29,6 +30,7 @@ interface AuctionBidFormProps {
 export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { leagueId } = useLeague();
   const [selectedCoureur, setSelectedCoureur] = useState<any>(null);
   const [bidAmount, setBidAmount] = useState("");
   const [open, setOpen] = useState(false);
@@ -274,7 +276,8 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
             coureur_id: selectedCoureur.coureur_id,
             montant: amount,
             round_number: auction.round_number,
-            statut: 'draft'
+            statut: 'draft',
+            league_id: leagueId
           });
 
         if (error) throw error;

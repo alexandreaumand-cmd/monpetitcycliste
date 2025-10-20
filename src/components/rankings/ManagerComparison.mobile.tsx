@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trophy, Users, TrendingUp, Target } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend, ResponsiveContainer } from "recharts";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface ManagerComparisonMobileProps {
   phaseId: string | null;
@@ -21,6 +22,7 @@ interface ManagerComparisonMobileProps {
 export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparisonMobileProps) => {
   const [managerA, setManagerA] = useState<string>("");
   const [managerB, setManagerB] = useState<string>("");
+  const { leagueId } = useLeague();
 
   // Fetch managers
   const { data: managers } = useQuery({
@@ -37,7 +39,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
 
   // Fetch rosters for manager A
   const { data: rostersA } = useQuery({
-    queryKey: ["rosters-a", managerA, phaseId, saisonId],
+    queryKey: ["rosters-a", managerA, phaseId, saisonId, leagueId],
     queryFn: async () => {
       if (!managerA) return null;
 
@@ -49,6 +51,10 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
           coureurs (nom, equipe)
         `)
         .eq("manager_id", managerA);
+
+      if (leagueId) {
+        query = query.eq("league_id", leagueId);
+      }
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -73,7 +79,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
 
   // Fetch rosters for manager B
   const { data: rostersB } = useQuery({
-    queryKey: ["rosters-b", managerB, phaseId, saisonId],
+    queryKey: ["rosters-b", managerB, phaseId, saisonId, leagueId],
     queryFn: async () => {
       if (!managerB) return null;
 
@@ -85,6 +91,10 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
           coureurs (nom, equipe)
         `)
         .eq("manager_id", managerB);
+
+      if (leagueId) {
+        query = query.eq("league_id", leagueId);
+      }
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
