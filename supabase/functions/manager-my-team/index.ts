@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Calculer le classement du manager sur la phase
+    // Calculer le classement du manager sur la phase (avec bonus)
     let myRank = null;
     let managersCount = 0;
     if (phaseId && targetManagerId) {
@@ -150,14 +150,34 @@ Deno.serve(async (req) => {
         .not('manager_id', 'is', null);
 
       if (standings && standings.length > 0) {
-        // Agréger les points par manager
+        // Agréger les points de course par manager
         const managerPoints = new Map<string, number>();
         standings.forEach((row: any) => {
           const current = managerPoints.get(row.manager_id) || 0;
           managerPoints.set(row.manager_id, current + row.points);
         });
 
-        // Créer un leaderboard trié
+        // Récupérer les bonus points par manager
+        const { data: bonusData } = await supabase
+          .from('bonus_points')
+          .select('manager_id, target_manager_id, points')
+          .eq('phase_id', phaseId);
+
+        // Ajouter les bonus aux totaux
+        bonusData?.forEach((bonus: any) => {
+          // Bonus reçus (target_manager_id)
+          if (bonus.target_manager_id) {
+            const current = managerPoints.get(bonus.target_manager_id) || 0;
+            managerPoints.set(bonus.target_manager_id, current + bonus.points);
+          }
+          // Bonus coureur (manager_id, sans target)
+          else if (bonus.manager_id) {
+            const current = managerPoints.get(bonus.manager_id) || 0;
+            managerPoints.set(bonus.manager_id, current + bonus.points);
+          }
+        });
+
+        // Créer un leaderboard trié avec points totaux + bonus
         const leaderboard = Array.from(managerPoints.entries())
           .map(([managerId, points]) => ({ managerId, points }))
           .sort((a, b) => b.points - a.points);
