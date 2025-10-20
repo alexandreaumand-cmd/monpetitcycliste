@@ -747,8 +747,36 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     });
   }, [pointsByBaremeType]);
 
+  // Composant Tooltip personnalisé pour afficher les points réels
+  const CustomRadarTooltip = ({ active, payload, sourceData }: any) => {
+    if (!active || !payload || !payload.length || !sourceData) return null;
+
+    const category = payload[0].payload.category;
+    const dataPoint = sourceData.find((item: any) => item.category === category);
+    
+    if (!dataPoint) return null;
+
+    return (
+      <div className="bg-background border rounded-lg shadow-lg p-3">
+        <p className="font-semibold text-sm mb-2">{category}</p>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }}></div>
+            <span className="text-xs">{managerAName}:</span>
+            <span className="font-mono font-bold text-xs">{dataPoint.points_a} pts</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ef4444' }}></div>
+            <span className="text-xs">{managerBName}:</span>
+            <span className="font-mono font-bold text-xs">{dataPoint.points_b} pts</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Calculer les métriques globales - CORRIGÉ: ajouter bonus
-  const totalPointsA = 
+  const totalPointsA =
     (pointsA?.reduce((sum, p) => sum + (p.points || 0), 0) || 0) +
     (bonusPointsA?.reduce((sum, b) => sum + (b.points || 0), 0) || 0) +
     (managerBonusA?.reduce((sum, mb) => 
@@ -845,11 +873,17 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{managerAName}</span>
-                    <span className="font-mono font-bold text-lg">{totalPointsA}</span>
+                    <span className={cn(
+                      "font-mono font-bold text-lg",
+                      totalPointsA > totalPointsB && "text-green-600"
+                    )}>{totalPointsA}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{managerBName}</span>
-                    <span className="font-mono font-bold text-lg">{totalPointsB}</span>
+                    <span className={cn(
+                      "font-mono font-bold text-lg",
+                      totalPointsB > totalPointsA && "text-green-600"
+                    )}>{totalPointsB}</span>
                   </div>
                   <div className="pt-2 border-t flex justify-between items-center">
                     <span className="text-sm font-medium">Écart</span>
@@ -869,11 +903,17 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{managerAName}</span>
-                    <span className="font-mono font-bold text-lg">{scoreursA}</span>
+                    <span className={cn(
+                      "font-mono font-bold text-lg",
+                      scoreursA > scoreursB && "text-green-600"
+                    )}>{scoreursA}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{managerBName}</span>
-                    <span className="font-mono font-bold text-lg">{scoreursB}</span>
+                    <span className={cn(
+                      "font-mono font-bold text-lg",
+                      scoreursB > scoreursA && "text-green-600"
+                    )}>{scoreursB}</span>
                   </div>
                   <div className="pt-2 border-t flex justify-between items-center">
                     <span className="text-sm font-medium">Écart</span>
@@ -893,11 +933,17 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{managerAName}</span>
-                    <span className="font-mono font-bold text-lg">×{roiA}</span>
+                    <span className={cn(
+                      "font-mono font-bold text-lg",
+                      parseFloat(roiA) > parseFloat(roiB) && "text-green-600"
+                    )}>×{roiA}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{managerBName}</span>
-                    <span className="font-mono font-bold text-lg">×{roiB}</span>
+                    <span className={cn(
+                      "font-mono font-bold text-lg",
+                      parseFloat(roiB) > parseFloat(roiA) && "text-green-600"
+                    )}>×{roiB}</span>
                   </div>
                   <div className="pt-2 border-t flex justify-between items-center">
                     <span className="text-sm font-medium">Meilleur ROI</span>
@@ -917,11 +963,17 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{managerAName}</span>
-                    <span className="font-mono font-bold text-lg">{victoiresA}</span>
+                    <span className={cn(
+                      "font-mono font-bold text-lg",
+                      victoiresA > victoiresB && "text-green-600"
+                    )}>{victoiresA}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{managerBName}</span>
-                    <span className="font-mono font-bold text-lg">{victoiresB}</span>
+                    <span className={cn(
+                      "font-mono font-bold text-lg",
+                      victoiresB > victoiresA && "text-green-600"
+                    )}>{victoiresB}</span>
                   </div>
                   <div className="pt-2 border-t flex justify-between items-center">
                     <span className="text-sm font-medium">Écart</span>
@@ -1004,7 +1056,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
                       <Radar name={managerAName} dataKey="managerA" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
                       <Radar name={managerBName} dataKey="managerB" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} />
                       <Legend />
-                      <Tooltip />
+                      <Tooltip content={<CustomRadarTooltip sourceData={pointsByCategory} />} />
                     </RadarChart>
                   </ResponsiveContainer>
                 )}
@@ -1076,7 +1128,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
                       <Radar name={managerAName} dataKey="managerA" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
                       <Radar name={managerBName} dataKey="managerB" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} />
                       <Legend />
-                      <Tooltip />
+                      <Tooltip content={<CustomRadarTooltip sourceData={pointsByBaremeType} />} />
                     </RadarChart>
                   </ResponsiveContainer>
                 )}
