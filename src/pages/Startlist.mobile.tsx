@@ -44,6 +44,7 @@ export const StartlistMobile = () => {
   const { isAdmin } = useUserRole();
   const { phases, isLoading: isLoadingContext } = useSeasonContext();
   const [viewMode, setViewMode] = useState<"list" | "parse" | "view">("list");
+  const [tabMode, setTabMode] = useState<"30days" | "90days" | "history">("30days");
   const [selectedRaceId, setSelectedRaceId] = useState("");
   const [selectedPhaseId, setSelectedPhaseId] = useState("");
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
@@ -61,18 +62,39 @@ export const StartlistMobile = () => {
 
   // Fetch races
   const { data: races } = useQuery({
-    queryKey: ["startlist-races", seasonPhaseIds.join(',')],
+    queryKey: ["startlist-races", seasonPhaseIds.join(','), tabMode],
     queryFn: async () => {
       if (seasonPhaseIds.length === 0) return [];
       
       const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase
+      const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const in90Days = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      let query = supabase
         .from("courses")
         .select("id, nom, date_debut, date_fin, phase_id, categorie")
-        .in("phase_id", seasonPhaseIds)
-        .gte("date_fin", today)
-        .order("date_debut", { ascending: true })
-        .limit(50);
+        .in("phase_id", seasonPhaseIds);
+      
+      if (tabMode === "history") {
+        // Courses passées (date_fin < aujourd'hui)
+        query = query
+          .lt("date_fin", today)
+          .order("date_fin", { ascending: false });
+      } else if (tabMode === "30days") {
+        // Courses à venir dans les 30 jours
+        query = query
+          .gte("date_fin", today)
+          .lte("date_debut", in30Days)
+          .order("date_debut", { ascending: true });
+      } else {
+        // 90days : Courses à venir dans les 90 jours
+        query = query
+          .gte("date_fin", today)
+          .lte("date_debut", in90Days)
+          .order("date_debut", { ascending: true });
+      }
+      
+      const { data, error } = await query.limit(100);
       if (error) throw error;
       return data;
     },
@@ -219,6 +241,34 @@ export const StartlistMobile = () => {
           </Button>
         </div>
 
+        {/* 3 onglets */}
+        <div className="flex gap-2">
+          <Button
+            variant={tabMode === "30days" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTabMode("30days")}
+            className="flex-1"
+          >
+            30 jours
+          </Button>
+          <Button
+            variant={tabMode === "90days" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTabMode("90days")}
+            className="flex-1"
+          >
+            90 jours
+          </Button>
+          <Button
+            variant={tabMode === "history" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTabMode("history")}
+            className="flex-1"
+          >
+            Historique
+          </Button>
+        </div>
+
         {!races || races.length === 0 ? (
           <MobileEmptyState
             icon={<Trophy className="h-12 w-12" />}
@@ -231,6 +281,10 @@ export const StartlistMobile = () => {
               const startlistInfo = startlistsInfo?.get(race.id);
               const hasStartlist = !!startlistInfo;
               const isPcsValidated = startlistInfo?.pcs_validated || false;
+              
+              // En mode "history", n'afficher QUE les courses avec startlist
+              if (tabMode === "history" && !hasStartlist) return null;
+              
               const today = new Date().toISOString().split('T')[0];
               const isOngoing = race.date_debut <= today && race.date_fin >= today;
 

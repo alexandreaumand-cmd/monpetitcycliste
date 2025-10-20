@@ -25,11 +25,13 @@ import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { cn } from "@/lib/utils";
 import { StartlistDesktopExport } from "@/components/startlist/StartlistDesktopExport";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const StartlistDesktop = () => {
   
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'list' | 'parse' | 'view'>('list');
+  const [tabMode, setTabMode] = useState<'30days' | '90days' | 'history'>('30days');
   const [selectedRaceForParsing, setSelectedRaceForParsing] = useState<any>(null);
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
   const [selectedRaceForViewing, setSelectedRaceForViewing] = useState<any>(null);
@@ -153,14 +155,15 @@ const StartlistDesktop = () => {
 
   // Fetch upcoming courses
   const { data: upcomingCourses, isLoading: isLoadingCourses } = useQuery({
-    queryKey: ['upcoming-courses-startlist', seasonPhaseIds.join(',')],
+    queryKey: ['upcoming-courses-startlist', seasonPhaseIds.join(','), tabMode],
     queryFn: async () => {
       if (seasonPhaseIds.length === 0) return [];
       
       const today = new Date().toISOString().split('T')[0];
       const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const in90Days = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('courses')
         .select(`
           id,
@@ -175,10 +178,28 @@ const StartlistDesktop = () => {
             saisons (annee)
           )
         `)
-        .in('phase_id', seasonPhaseIds)
-        .gte('date_fin', today)
-        .lte('date_debut', in30Days)
-        .order('date_debut', { ascending: true });
+        .in('phase_id', seasonPhaseIds);
+      
+      if (tabMode === 'history') {
+        // Courses passées
+        query = query
+          .lt('date_fin', today)
+          .order('date_fin', { ascending: false });
+      } else if (tabMode === '30days') {
+        // 30 jours à venir
+        query = query
+          .gte('date_fin', today)
+          .lte('date_debut', in30Days)
+          .order('date_debut', { ascending: true });
+      } else {
+        // 90 jours à venir
+        query = query
+          .gte('date_fin', today)
+          .lte('date_debut', in90Days)
+          .order('date_debut', { ascending: true });
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       return data || [];
@@ -516,10 +537,19 @@ const StartlistDesktop = () => {
       <div className="container mx-auto py-8 space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Prochaines courses</h1>
+            <h1 className="text-3xl font-bold">Startlists</h1>
             <p className="text-muted-foreground mt-1">Cliquez sur une course pour consulter ou ajouter sa startlist</p>
           </div>
         </div>
+
+        {/* 3 onglets avec Tabs */}
+        <Tabs value={tabMode} onValueChange={(v) => setTabMode(v as '30days' | '90days' | 'history')}>
+          <TabsList className="grid w-full max-w-lg grid-cols-3">
+            <TabsTrigger value="30days">30 jours</TabsTrigger>
+            <TabsTrigger value="90days">90 jours</TabsTrigger>
+            <TabsTrigger value="history">Historique</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {isLoadingCourses ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -537,7 +567,15 @@ const StartlistDesktop = () => {
           </div>
         ) : upcomingCourses && upcomingCourses.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {upcomingCourses.map((course: any) => {
+            {upcomingCourses
+              .filter((course: any) => {
+                // En mode "history", ne montrer QUE les courses avec startlist
+                if (tabMode === 'history') {
+                  return hasStartlist(course.id);
+                }
+                return true;
+              })
+              .map((course: any) => {
               const dateDebut = new Date(course.date_debut);
               const dateFin = new Date(course.date_fin);
               const today = new Date().toISOString().split('T')[0];
