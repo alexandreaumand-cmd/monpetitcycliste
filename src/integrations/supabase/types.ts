@@ -4808,10 +4808,14 @@ export type Database = {
       }
       v_manager_standings_by_phase_v2: {
         Row: {
+          bonus_points: number | null
           league_id: string | null
           manager_id: string | null
           phase_id: string | null
+          race_points: number | null
+          scoreurs_count: number | null
           total_points: number | null
+          victories_count: number | null
         }
         Relationships: [
           {
@@ -4937,10 +4941,14 @@ export type Database = {
       }
       v_manager_standings_by_season_v2: {
         Row: {
+          bonus_points: number | null
           league_id: string | null
           manager_id: string | null
+          race_points: number | null
+          scoreurs_count: number | null
           season_id: string | null
           total_points: number | null
+          victories_count: number | null
         }
         Relationships: [
           {
