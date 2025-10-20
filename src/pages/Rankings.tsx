@@ -73,11 +73,11 @@ export default function Rankings() {
           </div>
 
           <TabsContent value="standings" className="space-y-4">
-            <RankingsKPIs phaseId={selectedPhase} />
             <ManagerStandings 
               phaseId={selectedPhase} 
               onManagerClick={handleManagerClick}
             />
+            <RankingsKPIs phaseId={selectedPhase} />
           </TabsContent>
 
           <TabsContent value="riders" className="space-y-4">
