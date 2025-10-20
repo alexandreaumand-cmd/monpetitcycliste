@@ -27,9 +27,10 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
     queryFn: async (): Promise<any[]> => {
       if (!leagueId) return [];
       
-      const { data, error } = await supabase
+      const client: any = supabase;
+      const { data, error } = await client
         .from("v_manager_breakdown")
-        .select("manager_id, manager_nom, course_id, course_nom, date_debut, date_fin, coureur_nom, points, type_classement, etape_numero, phase_id")
+        .select("*")
         .eq("manager_id", managerId)
         .eq("phase_id", phaseId || "")
         .eq("league_id", leagueId);

@@ -198,7 +198,8 @@ export const MyTeamDesktop = () => {
 
       // Fetch standings data from the same view as Rankings
       if (targetManagerId && selectedPhaseId && leagueId) {
-        const standingQuery = await supabase
+        const client: any = supabase;
+        const { data: standing } = await client
           .from('v_manager_standings_by_phase')
           .select('total_points, bonus_points')
           .eq('phase_id', selectedPhaseId)
@@ -206,8 +207,6 @@ export const MyTeamDesktop = () => {
           .eq('league_id', leagueId)
           .maybeSingle();
         
-        const standing = standingQuery.data;
-
         if (standing) {
           setKpis(prev => ({
             ...prev,
@@ -220,20 +219,26 @@ export const MyTeamDesktop = () => {
 
       // Charger le coureur bonus sélectionné (s'il existe)
       if (targetManagerId && selectedPhaseId && leagueId) {
-        const bonusQuery = await supabase
+        const client: any = supabase;
+        const { data: bonusRider } = await client
           .from('bonus_rider_selections')
-          .select('coureur_id, coureurs(nom)')
+          .select('coureur_id')
           .eq('manager_id', targetManagerId)
           .eq('phase_id', selectedPhaseId)
           .eq('league_id', leagueId)
           .maybeSingle();
-        
-        const bonusRider = bonusQuery.data;
 
         if (bonusRider) {
+          // Fetch the rider name separately
+          const { data: rider } = await client
+            .from('coureurs')
+            .select('nom')
+            .eq('id', bonusRider.coureur_id)
+            .maybeSingle();
+            
           setBonusRiderSelection({
             coureur_id: bonusRider.coureur_id,
-            coureur_nom: bonusRider.coureurs.nom
+            coureur_nom: rider?.nom || ''
           });
           setHasSelectedBonusRider(true);
         } else {
