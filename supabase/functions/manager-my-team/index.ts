@@ -139,56 +139,30 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Calculer le classement du manager sur la phase (avec bonus)
+    // Calculer le classement du manager sur la phase (depuis la vue officielle)
     let myRank = null;
     let managersCount = 0;
     if (phaseId && targetManagerId) {
+      console.log(`[manager-my-team] Computing rank for phase ${phaseId}, manager ${targetManagerId}`);
+      
       const { data: standings } = await supabase
-        .from('points_ledger')
-        .select('manager_id, points')
+        .from('v_manager_standings_by_phase')
+        .select('manager_id, total_points')
         .eq('phase_id', phaseId)
-        .not('manager_id', 'is', null);
+        .order('total_points', { ascending: false });
 
       if (standings && standings.length > 0) {
-        // Agréger les points de course par manager
-        const managerPoints = new Map<string, number>();
-        standings.forEach((row: any) => {
-          const current = managerPoints.get(row.manager_id) || 0;
-          managerPoints.set(row.manager_id, current + row.points);
-        });
-
-        // Récupérer les bonus points par manager
-        const { data: bonusData } = await supabase
-          .from('bonus_points')
-          .select('manager_id, target_manager_id, points')
-          .eq('phase_id', phaseId);
-
-        // Ajouter les bonus aux totaux
-        bonusData?.forEach((bonus: any) => {
-          // Bonus reçus (target_manager_id)
-          if (bonus.target_manager_id) {
-            const current = managerPoints.get(bonus.target_manager_id) || 0;
-            managerPoints.set(bonus.target_manager_id, current + bonus.points);
-          }
-          // Bonus coureur (manager_id, sans target)
-          else if (bonus.manager_id) {
-            const current = managerPoints.get(bonus.manager_id) || 0;
-            managerPoints.set(bonus.manager_id, current + bonus.points);
-          }
-        });
-
-        // Créer un leaderboard trié avec points totaux + bonus
-        const leaderboard = Array.from(managerPoints.entries())
-          .map(([managerId, points]) => ({ managerId, points }))
-          .sort((a, b) => b.points - a.points);
-
-        managersCount = leaderboard.length;
+        managersCount = standings.length;
         
         // Trouver la position du manager actuel
-        const position = leaderboard.findIndex(m => m.managerId === targetManagerId);
+        const position = standings.findIndex(m => m.manager_id === targetManagerId);
         if (position !== -1) {
           myRank = position + 1;
         }
+        
+        console.log(`[manager-my-team] Phase ${phaseId}: manager ${targetManagerId} rank = ${myRank}/${managersCount}`);
+      } else {
+        console.log(`[manager-my-team] No standings found for phase ${phaseId}`);
       }
     }
 
