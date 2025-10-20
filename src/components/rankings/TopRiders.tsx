@@ -572,7 +572,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
               <CardContent className="pt-6">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-primary">{riderPointsData?.total_points || 0}</div>
+                    <div className="text-3xl font-bold text-primary">{riderPointsData?.total || 0}</div>
                     <div className="text-sm text-muted-foreground">Points totaux</div>
                   </div>
                   <div className="text-center">
@@ -586,7 +586,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                   <div className="text-center">
                     <div className="text-3xl font-bold">
                       {selectedRider?.prix_achat 
-                        ? ((riderPointsData?.total_points || 0) / selectedRider.prix_achat).toFixed(2)
+                        ? ((riderPointsData?.total || 0) / selectedRider.prix_achat).toFixed(2)
                         : '0.00'}
                     </div>
                     <div className="text-sm text-muted-foreground">Ratio pts/prix</div>
