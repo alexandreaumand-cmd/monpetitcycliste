@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface AuctionPageMobileProps {
   phaseId: string;
@@ -22,6 +23,7 @@ interface AuctionPageMobileProps {
 export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { leagueId } = useLeague();
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,10 +37,10 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
 
   // Get auction context
   const { data: context, isLoading: contextLoading } = useQuery({
-    queryKey: ["auction-context", phaseId, managerId],
+    queryKey: ["auction-context", phaseId, managerId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("auction-get-context", {
-        body: { phase_id: phaseId, manager_id: managerId },
+        body: { phase_id: phaseId, manager_id: managerId, league_id: leagueId },
       });
       if (error) throw error;
       if (data?.error === "No active auction") return null;
@@ -50,13 +52,19 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
 
   // Get last closed auction if no active auction
   const { data: lastClosedAuction } = useQuery({
-    queryKey: ["last-closed-auction", phaseId],
+    queryKey: ["last-closed-auction", phaseId, leagueId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('auctions')
         .select('id, closed_at, round_number')
         .eq('phase_id', phaseId)
-        .eq('statut', 'closed')
+        .eq('statut', 'closed');
+      
+      if (leagueId) {
+        query = query.eq('league_id', leagueId);
+      }
+      
+      const { data, error } = await query
         .order('closed_at', { ascending: false })
         .limit(1)
         .maybeSingle();

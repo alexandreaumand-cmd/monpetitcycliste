@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { phase_id, manager_id: input_manager_id } = await req.json();
+    const { phase_id, manager_id: input_manager_id, league_id } = await req.json();
 
     // Get manager_id
     const { data: manager } = await supabase
@@ -57,11 +57,17 @@ Deno.serve(async (req) => {
     }
 
     // Get active auction for this phase
-    const { data: auction } = await supabase
+    let auctionQuery = supabase
       .from('auctions')
       .select('id, round_number, statut, deadline_at')
       .eq('phase_id', phase_id)
-      .eq('statut', 'open')
+      .eq('statut', 'open');
+    
+    if (league_id) {
+      auctionQuery = auctionQuery.eq('league_id', league_id);
+    }
+    
+    const { data: auction } = await auctionQuery
       .order('round_number', { ascending: false })
       .limit(1)
       .single();
@@ -99,11 +105,17 @@ Deno.serve(async (req) => {
     }
 
     // Get all bids for this manager in this auction
-    const { data: allBids } = await supabase
+    let bidsQuery = supabase
       .from('bids')
       .select('id, coureur_id, montant, statut, created_at')
       .eq('auction_id', auction.id)
       .eq('manager_id', manager_id);
+    
+    if (league_id) {
+      bidsQuery = bidsQuery.eq('league_id', league_id);
+    }
+    
+    const { data: allBids } = await bidsQuery;
 
     const my_bids = (allBids || [])
       .filter(b => b.statut === 'draft')
@@ -116,7 +128,7 @@ Deno.serve(async (req) => {
     const has_validated = submitted_bids.length > 0;
 
     // Get existing roster with rider details from coureurs_saisons
-    const { data: existingRoster } = await supabase
+    let rosterQuery = supabase
       .from('rosters')
       .select(`
         coureur_id,
@@ -124,6 +136,12 @@ Deno.serve(async (req) => {
       `)
       .eq('manager_id', manager_id)
       .eq('phase_id', phase_id);
+    
+    if (league_id) {
+      rosterQuery = rosterQuery.eq('league_id', league_id);
+    }
+    
+    const { data: existingRoster } = await rosterQuery;
 
     // Enrich roster with coureurs_saisons data
     const rosterCoureurIds = (existingRoster || []).map(r => r.coureur_id);
@@ -210,11 +228,17 @@ Deno.serve(async (req) => {
     const remaining_slots = phase.max_coureurs - roster_count - draft_count;
 
     // Check if coureurs are already taken (in rosters)
-    const { data: takenRiders } = await supabase
+    let takenQuery = supabase
       .from('rosters')
       .select('coureur_id')
       .eq('phase_id', phase_id)
       .in('coureur_id', my_bids.map(b => b.coureur_id));
+    
+    if (league_id) {
+      takenQuery = takenQuery.eq('league_id', league_id);
+    }
+    
+    const { data: takenRiders } = await takenQuery;
 
     const takenRiderIds = new Set((takenRiders || []).map(r => r.coureur_id));
     const no_taken_riders = my_bids.every(b => !takenRiderIds.has(b.coureur_id));
