@@ -366,8 +366,8 @@ export const MyTeamMobile = () => {
       <div className="space-y-2">
         <KPIRow
           items={[
-            { label: "Points totaux", value: kpis.total_points - kpis.bonus_rider_points, icon: <Trophy className="h-4 w-4" /> },
-            { label: "Bonus", value: kpis.bonus_rider_points, icon: <span className="text-sm">🎁</span>, onClick: () => setBonusDetailsOpen(true) },
+            { label: "Points totaux", value: kpis.total_points, icon: <Trophy className="h-4 w-4" /> },
+            { label: "Bonus", value: kpis.bonus_points + kpis.bonus_rider_points, icon: <span className="text-sm">🎁</span>, onClick: () => setBonusDetailsOpen(true) },
             { label: "Scoreurs", value: kpis.scorers_count, icon: <Trophy className="h-4 w-4" />, trend: kpis.scorers_count > 0 ? "up" : "neutral" },
           ]}
         />

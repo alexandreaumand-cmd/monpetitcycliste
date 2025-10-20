@@ -553,7 +553,7 @@ export const MyTeamDesktop = () => {
             <CardContent className="pt-6">
               <div className="flex flex-col items-center">
                 <TrendingUp className="h-8 w-8 text-green-600 mb-2" />
-                <div className="text-3xl font-bold">{kpis.total_points - kpis.bonus_rider_points}</div>
+                <div className="text-3xl font-bold">{kpis.total_points}</div>
                 <div className="text-sm text-muted-foreground text-center">
                   Points totaux
                 </div>
@@ -565,7 +565,7 @@ export const MyTeamDesktop = () => {
             <CardContent className="pt-6">
               <div className="flex flex-col items-center">
                 <span className="text-2xl mb-2">🎁</span>
-                <div className="text-3xl font-bold">{kpis.bonus_rider_points}</div>
+                <div className="text-3xl font-bold">{kpis.bonus_points + kpis.bonus_rider_points}</div>
                 <div className="text-sm text-muted-foreground text-center">
                   Points bonus
                 </div>
