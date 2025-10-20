@@ -9,6 +9,7 @@ interface RequestBody {
   manager_id?: string | null;
   phase_id?: string | null;
   saison_id?: string | null;
+  league_id?: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -31,9 +32,9 @@ Deno.serve(async (req) => {
       }
     );
 
-    const { manager_id, phase_id, saison_id }: RequestBody = await req.json();
+    const { manager_id, phase_id, saison_id, league_id }: RequestBody = await req.json();
 
-    console.log('get-my-team-kpis called with:', { manager_id, phase_id, saison_id });
+    console.log('get-my-team-kpis called with:', { manager_id, phase_id, saison_id, league_id });
 
     // Get current user's manager_id if not provided
     let actualManagerId = manager_id;
@@ -87,43 +88,67 @@ Deno.serve(async (req) => {
     }
 
     // KPI #1: Get total points for this manager in scope
-    const { data: myPoints, error: myPointsError } = await supabaseClient
+    let pointsQuery = supabaseClient
       .from('points_ledger')
       .select('points')
       .eq('manager_id', actualManagerId)
       .in('phase_id', phaseIds);
+    
+    if (league_id) {
+      pointsQuery = pointsQuery.eq('league_id', league_id);
+    }
+    
+    const { data: myPoints, error: myPointsError } = await pointsQuery;
 
     if (myPointsError) throw myPointsError;
 
     const race_points = myPoints?.reduce((sum, p) => sum + p.points, 0) || 0;
 
     // Ajouter les bonus manager
-    const { data: managerBonus } = await supabaseClient
+    let managerBonusQuery = supabaseClient
       .from('manager_bonus_points')
       .select('bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs')
       .eq('manager_id', actualManagerId)
       .in('phase_id', phaseIds);
+    
+    if (league_id) {
+      managerBonusQuery = managerBonusQuery.eq('league_id', league_id);
+    }
+    
+    const { data: managerBonus } = await managerBonusQuery;
 
     const managerBonusTotal = managerBonus?.reduce((sum, mb) => 
       sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) + (mb.bonus_first_win || 0) + 
       (mb.bonus_coureurs || 0) + (mb.bonus_scoreurs || 0), 0) || 0;
 
     // Ajouter les bonus coureur bonusé
-    const { data: riderBonus } = await supabaseClient
+    let riderBonusQuery = supabaseClient
       .from('bonus_points')
       .select('points')
       .eq('manager_id', actualManagerId)
       .in('phase_id', phaseIds)
       .eq('bonus_type', 'coureur_bonuse');
+    
+    if (league_id) {
+      riderBonusQuery = riderBonusQuery.eq('league_id', league_id);
+    }
+    
+    const { data: riderBonus } = await riderBonusQuery;
 
     const riderBonusTotal = riderBonus?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
 
     // Ajouter les bonus reçus d'autres managers
-    const { data: receivedBonus } = await supabaseClient
+    let receivedBonusQuery = supabaseClient
       .from('bonus_points')
       .select('points')
       .eq('target_manager_id', actualManagerId)
       .in('phase_id', phaseIds);
+    
+    if (league_id) {
+      receivedBonusQuery = receivedBonusQuery.eq('league_id', league_id);
+    }
+    
+    const { data: receivedBonus } = await receivedBonusQuery;
 
     const receivedBonusTotal = receivedBonus?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
 
@@ -131,11 +156,17 @@ Deno.serve(async (req) => {
     const total_points = race_points + managerBonusTotal + riderBonusTotal + receivedBonusTotal;
 
     // KPI #2: Get top rider for this manager in scope
-    const { data: pointsByRider, error: riderPointsError } = await supabaseClient
+    let riderPointsQuery = supabaseClient
       .from('points_ledger')
       .select('coureur_id, points')
       .eq('manager_id', actualManagerId)
       .in('phase_id', phaseIds);
+    
+    if (league_id) {
+      riderPointsQuery = riderPointsQuery.eq('league_id', league_id);
+    }
+    
+    const { data: pointsByRider, error: riderPointsError } = await riderPointsQuery;
 
     if (riderPointsError) throw riderPointsError;
 
@@ -165,11 +196,17 @@ Deno.serve(async (req) => {
     }
 
     // KPI #3: Get manager's rank in scope
-    const { data: allManagerPoints, error: leaderboardError } = await supabaseClient
+    let leaderboardQuery = supabaseClient
       .from('points_ledger')
       .select('manager_id, points')
       .in('phase_id', phaseIds)
       .not('manager_id', 'is', null);
+    
+    if (league_id) {
+      leaderboardQuery = leaderboardQuery.eq('league_id', league_id);
+    }
+    
+    const { data: allManagerPoints, error: leaderboardError } = await leaderboardQuery;
 
     if (leaderboardError) throw leaderboardError;
 

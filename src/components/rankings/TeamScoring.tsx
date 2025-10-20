@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLeague } from "@/contexts/LeagueContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ interface TeamScoringProps {
 }
 
 export const TeamScoring = ({ phaseId, saisonId }: TeamScoringProps) => {
+  const { leagueId, isLoading: leagueLoading } = useLeague();
   const [selectedManager, setSelectedManager] = useState<string>("");
   const [search, setSearch] = useState("");
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -26,19 +28,21 @@ export const TeamScoring = ({ phaseId, saisonId }: TeamScoringProps) => {
 
   // Get my team KPIs
   const { data: myKpis, isLoading: kpisLoading } = useQuery({
-    queryKey: ["my-team-kpis", phaseId, saisonId],
+    queryKey: ["my-team-kpis", phaseId, saisonId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("get-my-team-kpis", {
         body: {
           manager_id: null,
           phase_id: phaseId,
-          saison_id: saisonId
+          saison_id: saisonId,
+          league_id: leagueId
         }
       });
       
       if (error) throw error;
       return data;
     },
+    enabled: !leagueLoading && !!leagueId,
   });
 
   const { data: managers } = useQuery({
@@ -55,7 +59,7 @@ export const TeamScoring = ({ phaseId, saisonId }: TeamScoringProps) => {
   });
 
   const { data: teamData, isLoading } = useQuery({
-    queryKey: ["team-scoring", selectedManager, phaseId, saisonId, search],
+    queryKey: ["team-scoring", selectedManager, phaseId, saisonId, search, leagueId],
     queryFn: async () => {
       if (!selectedManager) return null;
       
@@ -64,14 +68,15 @@ export const TeamScoring = ({ phaseId, saisonId }: TeamScoringProps) => {
           manager_id: selectedManager,
           phase_id: phaseId,
           saison_id: saisonId,
-          search: search || null
+          search: search || null,
+          league_id: leagueId
         }
       });
       
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedManager,
+    enabled: !!selectedManager && !leagueLoading && !!leagueId,
   });
 
   const { data: riderDetails } = useQuery({

@@ -12,6 +12,7 @@ interface RequestBody {
   search?: string | null;
   limit?: number | null;
   offset?: number | null;
+  league_id?: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -36,10 +37,11 @@ Deno.serve(async (req) => {
       saison_id, 
       search, 
       limit = 50, 
-      offset = 0 
+      offset = 0,
+      league_id
     }: RequestBody = await req.json();
 
-    console.log('get-team-scoring called with:', { manager_id, phase_id, saison_id, search, limit, offset });
+    console.log('get-team-scoring called with:', { manager_id, phase_id, saison_id, search, limit, offset, league_id });
 
     if (!manager_id) {
       throw new Error('manager_id is required');
@@ -84,11 +86,17 @@ Deno.serve(async (req) => {
     }
 
     // Get roster coureurs for this manager in scope
-    const { data: rosterCoureurs, error: rosterError } = await supabaseClient
+    let rosterQuery = supabaseClient
       .from('rosters')
       .select('coureur_id')
       .eq('manager_id', manager_id)
       .in('phase_id', phaseIds);
+    
+    if (league_id) {
+      rosterQuery = rosterQuery.eq('league_id', league_id);
+    }
+    
+    const { data: rosterCoureurs, error: rosterError } = await rosterQuery;
 
     if (rosterError) throw rosterError;
 
@@ -113,6 +121,10 @@ Deno.serve(async (req) => {
       .eq('manager_id', manager_id)
       .in('phase_id', phaseIds)
       .in('coureur_id', coureurIds);
+    
+    if (league_id) {
+      pointsQuery = pointsQuery.eq('league_id', league_id);
+    }
 
     const { data: pointsData, error: pointsError } = await pointsQuery;
 

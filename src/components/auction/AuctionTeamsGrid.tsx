@@ -10,6 +10,7 @@ import { formatAmount } from "@/lib/utils";
 import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface AuctionTeamsGridProps {
   phaseId: string;
@@ -17,6 +18,7 @@ interface AuctionTeamsGridProps {
 }
 
 export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) => {
+  const { leagueId, isLoading: leagueLoading } = useLeague();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRider, setSelectedRider] = useState<{
     id: string;
@@ -26,9 +28,11 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
   } | null>(null);
 
   // Get all managers rosters
-  const { data: allManagersRosters = [], isLoading } = useQuery({
-    queryKey: ['all-managers-rosters', phaseId],
+  const { data: allManagersRosters = [], isLoading } = useQuery<any[]>({
+    queryKey: ['all-managers-rosters', phaseId, leagueId],
     queryFn: async () => {
+      if (!leagueId) return [];
+      
       // Récupérer la saison_id de la phase
       const { data: phaseInfo } = await supabase
         .from('phases')
@@ -44,6 +48,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
           managers(nom)
         `)
         .eq('phase_id', phaseId)
+        .eq('league_id', leagueId)
         .order('manager_id');
 
       if (error) throw error;
@@ -69,21 +74,26 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
       );
 
       return enrichedData;
-    }
+    },
+    enabled: !leagueLoading && !!leagueId,
   });
 
   // Get managers status (budget, slots)
-  const { data: managersStatus = [] } = useQuery({
-    queryKey: ['managers-rosters-status', phaseId],
+  const { data: managersStatus = [] } = useQuery<any[]>({
+    queryKey: ['managers-rosters-status', phaseId, leagueId],
     queryFn: async () => {
+      if (!leagueId) return [];
+      
       const { data, error } = await supabase
         .from('managers_rosters_status')
         .select('*')
-        .eq('phase_id', phaseId);
+        .eq('phase_id', phaseId)
+        .eq('league_id', leagueId);
 
       if (error) throw error;
       return data || [];
-    }
+    },
+    enabled: !leagueLoading && !!leagueId,
   });
 
   // Group rosters by manager (exclude current user)
