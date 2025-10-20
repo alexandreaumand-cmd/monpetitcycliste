@@ -270,9 +270,19 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
     if (!riderPointsData?.rows) return { wins: 0, top10: 0, totalRaces: 0 };
     
     const raceResults = riderPointsData.rows.filter(r => !r.is_bonus);
+    
+    // Les types "Porteur" ne comptent pas comme victoires
+    const porteurTypes = [
+      'Porteur Général', 
+      'Porteur Vert', 
+      'Porteur Montagne', 
+      'Porteur Jeune', 
+      'Porteur Combattif'
+    ];
+    
     const wins = raceResults.filter(r => 
-      r.position === 1 || 
-      (r.type_classement === 'Etape' && r.position === 1)
+      r.position === 1 && 
+      !porteurTypes.includes(r.type_classement)
     ).length;
     
     const uniqueCourses = new Set(raceResults.map(r => r.course_nom));
