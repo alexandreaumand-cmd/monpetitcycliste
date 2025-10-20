@@ -103,6 +103,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // STEP 1.5: Calculate total points distributed per phase
+    const phaseTotalsMap = new Map<string, number>();
+
+    for (const phase of phases) {
+      const sortedManagers = phaseStandingsCache.get(phase.id)!;
+      const totalPhasePoints = sortedManagers.reduce((sum, m) => sum + m.total_points, 0);
+      phaseTotalsMap.set(phase.id, totalPhasePoints);
+    }
+
     // STEP 2: Build consistency scores using cached standings
     const scores = [];
 
@@ -117,15 +126,22 @@ Deno.serve(async (req) => {
         
         // Get points from cache
         const phasePoints = sortedManagers.find(m => m.manager_id === manager.id)?.total_points || 0;
+        
+        // Calculate percentage relative to phase total
+        const totalPhasePoints = phaseTotalsMap.get(phase.id) || 1;
+        const percentageOfPhase = totalPhasePoints > 0 
+          ? (phasePoints / totalPhasePoints) * 100 
+          : 0;
 
         pointsByPhase.push({
           phase_id: phase.id,
           phase_index: phase.index_dans_saison,
           points: phasePoints,
+          percentage: Math.round(percentageOfPhase * 100) / 100,
           rank
         });
 
-        ranksByPhase.push(phasePoints);
+        ranksByPhase.push(percentageOfPhase);
       }
 
       if (ranksByPhase.length === 0) continue;
@@ -139,8 +155,8 @@ Deno.serve(async (req) => {
       // Consistency score: 100 - CV
       const consistencyScore = Math.max(0, Math.min(100, 100 - coefficientVariation));
 
-      const min = Math.min(...ranksByPhase);
-      const max = Math.max(...ranksByPhase);
+      const min = Math.round(Math.min(...ranksByPhase) * 100) / 100;
+      const max = Math.round(Math.max(...ranksByPhase) * 100) / 100;
 
       const getInterpretation = (score: number) => {
         if (score >= 95) return 'Excellent';
@@ -156,12 +172,12 @@ Deno.serve(async (req) => {
         consistency_score: Math.round(consistencyScore * 10) / 10,
         interpretation: getInterpretation(consistencyScore),
         stats: {
-          mean: Math.round(mean),
+          mean: Math.round(mean * 100) / 100,
           std_dev: Math.round(stdDev * 10) / 10,
           coefficient_variation: Math.round(coefficientVariation * 10) / 10,
           min,
           max,
-          range: max - min,
+          range: Math.round((max - min) * 100) / 100,
           phases_count: ranksByPhase.length
         },
         points_by_phase: pointsByPhase

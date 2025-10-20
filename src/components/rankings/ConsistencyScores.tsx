@@ -97,7 +97,7 @@ export const ConsistencyScores = ({ saisonId }: ConsistencyScoresProps) => {
               Consistency Score
             </CardTitle>
             <CardDescription>
-              Métrique de régularité des managers (plus le score est élevé, plus le manager est constant)
+              Métrique de régularité des managers basée sur leur % de points par phase (plus le score est élevé, plus le manager maintient sa part relative des points)
             </CardDescription>
           </div>
           <Select value={topN} onValueChange={setTopN}>
@@ -157,17 +157,17 @@ export const ConsistencyScores = ({ saisonId }: ConsistencyScoresProps) => {
               {/* Stats */}
               <div className="flex-1 min-w-[250px] grid grid-cols-3 gap-2 text-xs">
                 <div>
-                  <p className="text-muted-foreground">Moyenne</p>
-                  <p className="font-semibold">{score.stats.mean} pts</p>
+                  <p className="text-muted-foreground">% Moyen</p>
+                  <p className="font-semibold">{score.stats.mean}%</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Écart-type</p>
-                  <p className="font-semibold">σ = {score.stats.std_dev}</p>
+                  <p className="font-semibold">σ = {score.stats.std_dev}%</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Range</p>
                   <p className="font-semibold">
-                    {score.stats.min} - {score.stats.max}
+                    {score.stats.min}% - {score.stats.max}%
                   </p>
                 </div>
               </div>
@@ -182,7 +182,7 @@ export const ConsistencyScores = ({ saisonId }: ConsistencyScoresProps) => {
                       key={i}
                       className="flex-1 bg-primary rounded-t"
                       style={{ height: `${height}%` }}
-                      title={`Phase ${phase.phase_index}: ${phase.points} pts`}
+                      title={`Phase ${phase.phase_index}: ${phase.points} pts (${phase.percentage}%)`}
                     />
                   );
                 })}
