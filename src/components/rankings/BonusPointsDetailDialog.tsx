@@ -91,6 +91,36 @@ export const BonusPointsDetailDialog = ({
     enabled: open,
   });
 
+  // Fetch manager bonus points
+  const { data: managerBonuses } = useQuery({
+    queryKey: ["manager-bonus-points", managerId, phaseId],
+    queryFn: async () => {
+      let query = supabase
+        .from("manager_bonus_points")
+        .select(`
+          id,
+          phase_id,
+          bonus_itt,
+          bonus_ttt,
+          bonus_first_win,
+          bonus_coureurs,
+          bonus_scoreurs,
+          commentaire,
+          phases!inner(index_dans_saison)
+        `)
+        .eq("manager_id", managerId);
+      
+      if (phaseId) {
+        query = query.eq("phase_id", phaseId);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
   // Group bonuses by type
   const bonusesByType = useMemo(() => {
     if (!allBonuses) return {};
@@ -111,8 +141,18 @@ export const BonusPointsDetailDialog = ({
     }, {} as Record<string, number>);
   }, [bonusesByType]);
 
+  // Calculate manager bonus total
+  const managerBonusTotal = useMemo(() => {
+    if (!managerBonuses) return 0;
+    return managerBonuses.reduce((sum, mb) => 
+      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) + 
+      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) + 
+      (mb.bonus_scoreurs || 0), 0
+    );
+  }, [managerBonuses]);
+
   // Grand total
-  const grandTotal = Object.values(totalsByType).reduce((sum, val) => sum + val, 0);
+  const grandTotal = Object.values(totalsByType).reduce((sum, val) => sum + val, 0) + managerBonusTotal;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -132,6 +172,65 @@ export const BonusPointsDetailDialog = ({
             </div>
           ) : (
             <>
+              {/* Bonus managers */}
+              {managerBonuses && managerBonuses.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between text-lg">
+                      <span className="flex items-center gap-2">
+                        <Award className="h-4 w-4" />
+                        Bonus managers
+                      </span>
+                      <span className="text-green-600 font-mono">+{managerBonusTotal} pts</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {!phaseId && <TableHead>Phase</TableHead>}
+                          <TableHead className="text-center">ITT</TableHead>
+                          <TableHead className="text-center">TTT</TableHead>
+                          <TableHead className="text-center">1ère Victoire</TableHead>
+                          <TableHead className="text-center">Coureurs</TableHead>
+                          <TableHead className="text-center">Scoreurs</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {managerBonuses.map((mb) => {
+                          const rowTotal = (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) + 
+                                          (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) + 
+                                          (mb.bonus_scoreurs || 0);
+                          return (
+                            <TableRow key={mb.id}>
+                              {!phaseId && (
+                                <TableCell className="font-medium">
+                                  P{mb.phases?.index_dans_saison}
+                                </TableCell>
+                              )}
+                              <TableCell className="text-center">{mb.bonus_itt || 0}</TableCell>
+                              <TableCell className="text-center">{mb.bonus_ttt || 0}</TableCell>
+                              <TableCell className="text-center">{mb.bonus_first_win || 0}</TableCell>
+                              <TableCell className="text-center">{mb.bonus_coureurs || 0}</TableCell>
+                              <TableCell className="text-center">{mb.bonus_scoreurs || 0}</TableCell>
+                              <TableCell className="text-right font-mono font-medium text-green-600">
+                                +{rowTotal}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                    {managerBonuses.some(mb => mb.commentaire) && (
+                      <div className="mt-4 text-sm text-muted-foreground italic">
+                        {managerBonuses.find(mb => mb.commentaire)?.commentaire}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Bonus coureurs (+25%) */}
               {bonusesByType['coureur_bonuse']?.length > 0 && (
                 <Card>
