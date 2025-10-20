@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Star, Users, TrendingUp, Info, ArrowUpDown, Download, CheckCircle2, AlertCircle } from "lucide-react";
+import { Star, Users, TrendingUp, Info, ArrowUpDown, Download, CheckCircle2, AlertCircle, Trophy, Gift, Award, Mountain } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { normalizeString } from "@/lib/stringUtils";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 
@@ -46,10 +47,18 @@ type TopRider = {
 };
 
 type RiderPointRow = {
-  phase_label: string;
+  phase_id: string | null;
+  phase_nom: string;
+  phase_index: number;
   course_nom: string;
-  place: number | null;
+  course_categorie?: string;
+  course_date?: string;
+  type_classement: string;
+  etape_numero?: number;
+  position?: number | null;
+  commentaire?: string;
   points: number;
+  is_bonus: boolean;
 };
 
 type RiderPointsTableData = {
@@ -61,6 +70,7 @@ type RiderPointsTableData = {
   };
   rows: RiderPointRow[];
   total: number;
+  total_points: number;
 };
 
 type UpcomingRace = {
@@ -183,46 +193,78 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
 
   const hasMoreRiders = allRiders && allRiders.length > displayLimit;
 
-  // Filter and sort detail rows
-  const filteredAndSortedRows = useMemo(() => {
-    if (!riderPointsData?.rows) return [];
-
+  // Group rider points data by phase
+  const groupedByPhase = useMemo(() => {
+    if (!riderPointsData?.rows) return { phases: [], bonus: [] };
+    
     let filtered = riderPointsData.rows;
-
-    // Search filter
+    
     if (searchTerm) {
-      filtered = filtered.filter(row =>
-        row.course_nom.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(row => 
+        row.course_nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row.type_classement.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-
-    // Sort
-    const sorted = [...filtered].sort((a, b) => {
-      const aVal = a[detailsSortColumn];
-      const bVal = b[detailsSortColumn];
-
-      // Handle nulls for place
-      if (detailsSortColumn === "place") {
-        if (aVal === null && bVal === null) return 0;
-        if (aVal === null) return detailsSortDirection === "asc" ? 1 : -1;
-        if (bVal === null) return detailsSortDirection === "asc" ? -1 : 1;
+    
+    // Separate bonus points
+    const bonus = filtered.filter(row => row.is_bonus);
+    const racePoints = filtered.filter(row => !row.is_bonus);
+    
+    // Group by phase
+    const phaseMap = new Map<string, { 
+      phase_id: string;
+      phase_nom: string;
+      phase_index: number;
+      total_points: number;
+      courses: Map<string, RiderPointRow[]>;
+    }>();
+    
+    racePoints.forEach(row => {
+      const phaseKey = row.phase_id || 'unknown';
+      if (!phaseMap.has(phaseKey)) {
+        phaseMap.set(phaseKey, {
+          phase_id: row.phase_id || '',
+          phase_nom: row.phase_nom || 'Phase inconnue',
+          phase_index: row.phase_index || 0,
+          total_points: 0,
+          courses: new Map()
+        });
       }
-
-      if (typeof aVal === "number" && typeof bVal === "number") {
-        return detailsSortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      
+      const phase = phaseMap.get(phaseKey)!;
+      phase.total_points += row.points;
+      
+      const courseKey = row.course_nom;
+      if (!phase.courses.has(courseKey)) {
+        phase.courses.set(courseKey, []);
       }
-
-      if (typeof aVal === "string" && typeof bVal === "string") {
-        return detailsSortDirection === "asc" 
-          ? aVal.localeCompare(bVal)
-          : bVal.localeCompare(aVal);
-      }
-
-      return 0;
+      phase.courses.get(courseKey)!.push(row);
     });
-
-    return sorted;
-  }, [riderPointsData, searchTerm, detailsSortColumn, detailsSortDirection]);
+    
+    // Convert to array and sort by phase index
+    const phases = Array.from(phaseMap.values()).sort((a, b) => a.phase_index - b.phase_index);
+    
+    return { phases, bonus };
+  }, [riderPointsData?.rows, searchTerm]);
+  
+  // Calculate statistics
+  const riderStats = useMemo(() => {
+    if (!riderPointsData?.rows) return { wins: 0, top10: 0, totalRaces: 0 };
+    
+    const raceResults = riderPointsData.rows.filter(r => !r.is_bonus);
+    const wins = raceResults.filter(r => 
+      r.position === 1 || 
+      (r.type_classement === 'Etape' && r.position === 1)
+    ).length;
+    
+    const uniqueCourses = new Set(raceResults.map(r => r.course_nom));
+    
+    return {
+      wins,
+      top10: raceResults.filter(r => r.points > 0).length,
+      totalRaces: uniqueCourses.size
+    };
+  }, [riderPointsData?.rows]);
 
   const handleSort = (column: TopRidersSortColumn) => {
     if (sortColumn === column) {
@@ -233,24 +275,18 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
     }
   };
 
-  const handleDetailsSort = (column: keyof RiderPointRow) => {
-    if (detailsSortColumn === column) {
-      setDetailsSortDirection(detailsSortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setDetailsSortColumn(column);
-      setDetailsSortDirection(column === "points" ? "desc" : "asc");
-    }
-  };
 
   const handleExportCSV = () => {
     if (!riderPointsData) return;
 
     const csv = [
-      ['Phase', 'Course', 'Place', 'Points'],
+      ['Phase', 'Course', 'Type', 'Étape', 'Position', 'Points'],
       ...riderPointsData.rows.map(row => [
-        row.phase_label,
+        row.phase_nom,
         row.course_nom,
-        row.place?.toString() || '—',
+        row.type_classement,
+        row.etape_numero?.toString() || '',
+        row.position?.toString() || '',
         row.points.toString(),
       ])
     ].map(row => row.join(',')).join('\n');
@@ -268,8 +304,6 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
     setSelectedRider(rider);
     setDetailsOpen(true);
     setSearchTerm("");
-    setDetailsSortColumn("points");
-    setDetailsSortDirection("desc");
   };
 
   if (isLoading) {
@@ -466,11 +500,11 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
 
       {/* Rider Details Drawer */}
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-4xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Détail — {selectedRider?.rider_nom}
+              <Trophy className="h-5 w-5 text-primary" />
+              {selectedRider?.rider_nom}
             </SheetTitle>
             {selectedRider?.rider_equipe && (
               <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -532,118 +566,191 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
             ) : null}
           </SheetHeader>
 
-          <div className="mt-6 space-y-4">
-            {/* Total Points Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Total Points</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">{riderPointsData?.rider.total_points || 0}</p>
+          <div className="mt-6 space-y-6">
+            {/* Statistics Overview */}
+            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-primary">{riderPointsData?.total_points || 0}</div>
+                    <div className="text-sm text-muted-foreground">Points totaux</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold">{riderStats.totalRaces}</div>
+                    <div className="text-sm text-muted-foreground">Courses</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-yellow-600">{riderStats.wins}</div>
+                    <div className="text-sm text-muted-foreground">Victoires</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold">
+                      {selectedRider?.prix_achat 
+                        ? ((riderPointsData?.total_points || 0) / selectedRider.prix_achat).toFixed(2)
+                        : '0.00'}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Ratio pts/prix</div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            {/* Points Table */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Détail des points par course</CardTitle>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleExportCSV}
-                    disabled={!riderPointsData?.rows.length}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Exporter CSV
-                  </Button>
-                </div>
+            {/* Search and Export */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
                 <Input
                   placeholder="Rechercher une course..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="mt-2"
                 />
-              </CardHeader>
-              <CardContent>
-                {isLoadingDetails ? (
-                  <div className="space-y-2">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <Skeleton key={i} className="h-12 w-full" />
-                    ))}
-                  </div>
-                ) : filteredAndSortedRows.length > 0 ? (
-                  <div className="max-h-96 overflow-y-auto">
-                    <Table>
-                      <TableHeader className="sticky top-0 bg-background z-10">
-                        <TableRow>
-                          <TableHead 
-                            className="cursor-pointer hover:bg-muted/50"
-                            onClick={() => handleDetailsSort("phase_label")}
+              </div>
+              <Button variant="outline" size="default" onClick={handleExportCSV}>
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+            </div>
+
+            {isLoadingDetails ? (
+              <div className="space-y-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : (
+              <Accordion type="multiple" className="space-y-2">
+                {/* Phases Accordion */}
+                {groupedByPhase.phases.map((phase) => {
+                  const phasePercentage = riderPointsData?.total_points 
+                    ? (phase.total_points / riderPointsData.total_points) * 100 
+                    : 0;
+                  
+                  return (
+                    <AccordionItem 
+                      key={phase.phase_id} 
+                      value={`phase-${phase.phase_id}`}
+                      className="border rounded-lg bg-card"
+                    >
+                      <AccordionTrigger className="px-4 hover:no-underline">
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="secondary" className="text-sm">
+                              {phase.phase_nom}
+                            </Badge>
+                            <span className="text-muted-foreground text-sm">
+                              {phase.courses.size} course{phase.courses.size > 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-32 hidden md:block">
+                              <Progress value={phasePercentage} className="h-2" />
+                            </div>
+                            <Badge className="text-base px-3">
+                              {phase.total_points} pts
+                            </Badge>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 pb-4">
+                        <Accordion type="multiple" className="space-y-1">
+                          {Array.from(phase.courses.entries()).map(([courseName, results]) => {
+                            const courseTotal = results.reduce((sum, r) => sum + r.points, 0);
+                            const hasWin = results.some(r => r.position === 1);
+                            
+                            return (
+                              <AccordionItem 
+                                key={courseName} 
+                                value={`course-${courseName}`}
+                                className="border-l-2 border-muted ml-2"
+                              >
+                                <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-muted/50 rounded">
+                                  <div className="flex items-center justify-between w-full pr-4">
+                                    <div className="flex items-center gap-2">
+                                      {hasWin && <Trophy className="h-4 w-4 text-yellow-600" />}
+                                      <span className="font-medium">{courseName}</span>
+                                    </div>
+                                    <Badge variant="outline">{courseTotal} pts</Badge>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="px-3 pb-2">
+                                  <div className="space-y-1 ml-4">
+                                    {results.map((result, idx) => (
+                                      <div 
+                                        key={idx}
+                                        className="flex items-center justify-between py-2 px-3 bg-muted/30 rounded text-sm"
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          {result.type_classement === 'GC' && <Award className="h-3 w-3 text-primary" />}
+                                          {result.type_classement.includes('Porteur') && <Mountain className="h-3 w-3 text-orange-500" />}
+                                          <span className="text-muted-foreground">
+                                            {result.type_classement}
+                                            {result.etape_numero ? ` ${result.etape_numero}` : ''}
+                                          </span>
+                                          {result.position && (
+                                            <Badge variant="outline" className="text-xs">
+                                              {result.position}ème
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <span className="font-semibold">{result.points} pts</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            );
+                          })}
+                        </Accordion>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+
+                {/* Bonus Points Section */}
+                {groupedByPhase.bonus.length > 0 && (
+                  <AccordionItem 
+                    value="bonus" 
+                    className="border rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20"
+                  >
+                    <AccordionTrigger className="px-4 hover:no-underline">
+                      <div className="flex items-center justify-between w-full pr-4">
+                        <div className="flex items-center gap-3">
+                          <Gift className="h-5 w-5 text-purple-600" />
+                          <span className="font-semibold">Points Bonus</span>
+                          <span className="text-muted-foreground text-sm">
+                            {groupedByPhase.bonus.length} bonus
+                          </span>
+                        </div>
+                        <Badge className="bg-purple-600 text-base px-3">
+                          {groupedByPhase.bonus.reduce((sum, b) => sum + b.points, 0)} pts
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-4">
+                      <div className="space-y-2">
+                        {groupedByPhase.bonus.map((bonus, idx) => (
+                          <div 
+                            key={idx}
+                            className="flex items-center justify-between py-2 px-3 bg-white/50 dark:bg-black/20 rounded"
                           >
-                            <div className="flex items-center">
-                              Phase
-                              {detailsSortColumn === "phase_label" && (
-                                <ArrowUpDown className="h-4 w-4 ml-1" />
+                            <div className="flex-1">
+                              <div className="font-medium">{bonus.type_classement}</div>
+                              {bonus.commentaire && (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {bonus.commentaire}
+                                </div>
                               )}
                             </div>
-                          </TableHead>
-                          <TableHead
-                            className="cursor-pointer select-none"
-                            onClick={() => handleDetailsSort("course_nom")}
-                          >
-                            <div className="flex items-center gap-1">
-                              Course
-                              {detailsSortColumn === "course_nom" && (
-                                <ArrowUpDown className="h-4 w-4 ml-1" />
-                              )}
-                            </div>
-                          </TableHead>
-                          <TableHead 
-                            className="cursor-pointer select-none"
-                            onClick={() => handleDetailsSort("place")}
-                          >
-                            <div className="flex items-center gap-1">
-                              Place
-                              {detailsSortColumn === "place" && (
-                                <ArrowUpDown className="h-4 w-4 ml-1" />
-                              )}
-                            </div>
-                          </TableHead>
-                          <TableHead 
-                            className="text-right cursor-pointer select-none"
-                            onClick={() => handleDetailsSort("points")}
-                          >
-                            <div className="flex items-center justify-end gap-1">
-                              Points
-                              {detailsSortColumn === "points" && (
-                                <ArrowUpDown className="h-4 w-4 ml-1" />
-                              )}
-                            </div>
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredAndSortedRows.map((row, idx) => (
-                          <TableRow key={idx}>
-                            <TableCell>
-                              <Badge variant="outline">{row.phase_label}</Badge>
-                            </TableCell>
-                            <TableCell className="font-medium">{row.course_nom}</TableCell>
-                            <TableCell>{row.place !== null ? row.place : '—'}</TableCell>
-                            <TableCell className="text-right font-semibold">{row.points}</TableCell>
-                          </TableRow>
+                            <Badge variant="outline" className="font-semibold">
+                              +{bonus.points} pts
+                            </Badge>
+                          </div>
                         ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    {searchTerm ? 'Aucun résultat pour cette recherche' : 'Aucun point sur cette période'}
-                  </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
                 )}
-              </CardContent>
-            </Card>
+              </Accordion>
+            )}
 
             {/* Programme à venir */}
             <Card>

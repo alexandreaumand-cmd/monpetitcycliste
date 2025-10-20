@@ -80,12 +80,16 @@ Deno.serve(async (req) => {
         type_classement,
         etape_numero,
         phases:phase_id (
+          id,
+          nom,
           index_dans_saison,
           saison_id
         ),
         courses:course_id (
           nom,
-          date_debut
+          categorie,
+          date_debut,
+          date_fin
         )
       `)
       .eq('coureur_id', rider_id);
@@ -106,7 +110,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { data: pointsData, error: pointsError } = await query.limit(200);
+    const { data: pointsData, error: pointsError } = await query.limit(500);
 
     if (pointsError) {
       console.error('Error fetching points:', pointsError);
@@ -133,52 +137,99 @@ Deno.serve(async (req) => {
       resultsMap.set(key, result.position);
     });
 
-    // Build rows
-    const rows = pointsData?.map((point: any) => {
+    // Get bonus points
+    let bonusQuery = supabase
+      .from('bonus_points')
+      .select(`
+        points,
+        bonus_type,
+        commentaire,
+        created_at,
+        phase_id,
+        phases:phase_id (
+          id,
+          nom,
+          index_dans_saison
+        )
+      `)
+      .eq('coureur_id', rider_id);
+
+    if (phase_id) {
+      bonusQuery = bonusQuery.eq('phase_id', phase_id);
+    } else if (saison_id) {
+      const { data: phases } = await supabase
+        .from('phases')
+        .select('id')
+        .eq('saison_id', saison_id);
+      
+      if (phases && phases.length > 0) {
+        const phaseIds = phases.map(p => p.id);
+        bonusQuery = bonusQuery.in('phase_id', phaseIds);
+      }
+    }
+
+    const { data: bonusData, error: bonusError } = await bonusQuery;
+
+    if (bonusError) {
+      console.error('Error fetching bonus points:', bonusError);
+    }
+
+    // Build rows for race points
+    const raceRows = pointsData?.map((point: any) => {
       const key = `${point.course_id}_${point.type_classement}_${point.etape_numero || 'null'}`;
-      const place = resultsMap.get(key) || null;
+      const position = resultsMap.get(key) || null;
       
       return {
-        phase_label: `Phase ${point.phases?.index_dans_saison || '?'}`,
+        phase_id: point.phases?.id || null,
+        phase_nom: point.phases?.nom || 'Phase inconnue',
         phase_index: point.phases?.index_dans_saison || 0,
         course_nom: point.courses?.nom || 'Inconnu',
-        course_date: point.courses?.date_debut || null,
-        place,
+        course_categorie: point.courses?.categorie || '',
+        course_date: point.courses?.date_fin || point.courses?.date_debut || null,
+        type_classement: point.type_classement,
+        etape_numero: point.etape_numero,
+        position,
         points: point.points || 0,
+        is_bonus: false,
       };
     }) || [];
 
-    // Sort: phase ASC, course date ASC, place ASC (nulls last)
-    rows.sort((a, b) => {
+    // Build rows for bonus points
+    const bonusRows = bonusData?.map((bonus: any) => ({
+      phase_id: bonus.phases?.id || null,
+      phase_nom: bonus.phases?.nom || 'Phase inconnue',
+      phase_index: bonus.phases?.index_dans_saison || 0,
+      course_nom: 'Bonus',
+      type_classement: bonus.bonus_type || 'bonus',
+      commentaire: bonus.commentaire,
+      points: bonus.points || 0,
+      date_classement: bonus.created_at,
+      is_bonus: true,
+    })) || [];
+
+    // Combine and sort
+    const allRows = [...raceRows, ...bonusRows];
+    allRows.sort((a, b) => {
       // First by phase
       const phaseCompare = a.phase_index - b.phase_index;
       if (phaseCompare !== 0) return phaseCompare;
 
-      // Then by course date
-      if (a.course_date && b.course_date) {
-        const dateCompare = new Date(a.course_date).getTime() - new Date(b.course_date).getTime();
+      // Then by course date (only for race rows)
+      const aDate = 'course_date' in a ? a.course_date : null;
+      const bDate = 'course_date' in b ? b.course_date : null;
+      
+      if (aDate && bDate) {
+        const dateCompare = new Date(aDate).getTime() - new Date(bDate).getTime();
         if (dateCompare !== 0) return dateCompare;
       }
 
-      // Then by place (nulls last)
-      if (a.place === null && b.place === null) return 0;
-      if (a.place === null) return 1;
-      if (b.place === null) return -1;
-      return a.place - b.place;
+      return 0;
     });
 
     // Calculate total
-    const total = rows.reduce((sum, row) => sum + row.points, 0);
+    const total = allRows.reduce((sum, row) => sum + row.points, 0);
 
-    // Remove temporary sorting fields
-    const cleanRows = rows.map(({ phase_label, course_nom, place, points }) => ({
-      phase_label,
-      course_nom,
-      place,
-      points,
-    }));
-
-    console.log(`Returning ${cleanRows.length} rows for rider ${rider_id}, total: ${total}`);
+    console.log(`Returning ${allRows.length} rows for rider ${rider_id}, total: ${total}`);
 
     return new Response(JSON.stringify({
       rider: {
@@ -187,7 +238,7 @@ Deno.serve(async (req) => {
         equipe: equipe,
         total_points: total,
       },
-      rows: cleanRows,
+      rows: allRows,
       total,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
