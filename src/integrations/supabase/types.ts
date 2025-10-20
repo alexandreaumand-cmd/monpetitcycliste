@@ -5558,9 +5558,11 @@ export type Database = {
         }[]
       }
       manager_team_by_id: {
-        Args:
-          | { p_league_id?: string; p_manager_id: string; p_phase_id?: string }
-          | { p_manager_id: string; p_phase_id?: string }
+        Args: {
+          p_league_id?: string
+          p_manager_id: string
+          p_phase_id?: string
+        }
         Returns: {
           cote_initiale: number
           coureur_id: string
