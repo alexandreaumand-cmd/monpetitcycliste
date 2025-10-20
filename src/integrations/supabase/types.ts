@@ -292,7 +292,7 @@ export type Database = {
           created_at: string | null
           deadline_at: string
           id: string
-          league_id: string | null
+          league_id: string
           opens_at: string | null
           phase_id: string | null
           round_number: number
@@ -303,7 +303,7 @@ export type Database = {
           created_at?: string | null
           deadline_at: string
           id?: string
-          league_id?: string | null
+          league_id: string
           opens_at?: string | null
           phase_id?: string | null
           round_number: number
@@ -314,7 +314,7 @@ export type Database = {
           created_at?: string | null
           deadline_at?: string
           id?: string
-          league_id?: string | null
+          league_id?: string
           opens_at?: string | null
           phase_id?: string | null
           round_number?: number
@@ -459,7 +459,7 @@ export type Database = {
           coureur_id: string | null
           created_at: string | null
           id: string
-          league_id: string | null
+          league_id: string
           manager_id: string | null
           montant: number
           round_number: number
@@ -470,7 +470,7 @@ export type Database = {
           coureur_id?: string | null
           created_at?: string | null
           id?: string
-          league_id?: string | null
+          league_id: string
           manager_id?: string | null
           montant: number
           round_number: number
@@ -481,7 +481,7 @@ export type Database = {
           coureur_id?: string | null
           created_at?: string | null
           id?: string
-          league_id?: string | null
+          league_id?: string
           manager_id?: string | null
           montant?: number
           round_number?: number
@@ -627,6 +627,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_recent_points"
             referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "fk_bids_auction_league"
+            columns: ["auction_id", "league_id"]
+            isOneToOne: false
+            referencedRelation: "auctions"
+            referencedColumns: ["id", "league_id"]
           },
         ]
       }
@@ -2309,7 +2316,7 @@ export type Database = {
           created_at: string | null
           etape_numero: number | null
           id: string
-          league_id: string | null
+          league_id: string
           manager_id: string | null
           phase_id: string | null
           points: number
@@ -2321,7 +2328,7 @@ export type Database = {
           created_at?: string | null
           etape_numero?: number | null
           id?: string
-          league_id?: string | null
+          league_id: string
           manager_id?: string | null
           phase_id?: string | null
           points: number
@@ -2333,7 +2340,7 @@ export type Database = {
           created_at?: string | null
           etape_numero?: number | null
           id?: string
-          league_id?: string | null
+          league_id?: string
           manager_id?: string | null
           phase_id?: string | null
           points?: number
@@ -3086,7 +3093,7 @@ export type Database = {
         Row: {
           coureur_id: string | null
           id: string
-          league_id: string | null
+          league_id: string
           manager_id: string | null
           phase_id: string | null
           prix_signature: number
@@ -3094,7 +3101,7 @@ export type Database = {
         Insert: {
           coureur_id?: string | null
           id?: string
-          league_id?: string | null
+          league_id: string
           manager_id?: string | null
           phase_id?: string | null
           prix_signature: number
@@ -3102,7 +3109,7 @@ export type Database = {
         Update: {
           coureur_id?: string | null
           id?: string
-          league_id?: string | null
+          league_id?: string
           manager_id?: string | null
           phase_id?: string | null
           prix_signature?: number
