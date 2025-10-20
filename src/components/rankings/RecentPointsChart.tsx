@@ -11,16 +11,18 @@ import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
 interface RecentPointsChartProps {
   phaseId?: string | null;
   saisonId?: string | null;
+  viewMode?: 'phase' | 'season' | 'current';
 }
 
-export const RecentPointsChart = ({ phaseId, saisonId }: RecentPointsChartProps) => {
+export const RecentPointsChart = ({ phaseId, saisonId, viewMode }: RecentPointsChartProps) => {
+  const determinedViewMode = viewMode || (phaseId ? 'phase' : 'season');
 
   const { data: seriesData, isLoading } = useQuery({
-    queryKey: ["cumulative-points", phaseId, saisonId],
+    queryKey: ["cumulative-points", phaseId, saisonId, determinedViewMode],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("get-cumulative-points-series", {
         body: { 
-          view_mode: phaseId ? 'phase' : 'season',
+          view_mode: determinedViewMode,
           phase_id: phaseId || null,
           saison_id: saisonId || null,
           topN: 10 

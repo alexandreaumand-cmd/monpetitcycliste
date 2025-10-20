@@ -84,7 +84,11 @@ export default function Rankings() {
           </TabsContent>
 
           <TabsContent value="timeline" className="space-y-4">
-            <RecentPointsChart phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
+            <RecentPointsChart 
+              phaseId={selectedPhase} 
+              saisonId={selectedSeason?.id || null}
+              viewMode={selectedPhase ? 'phase' : 'season'}
+            />
           </TabsContent>
 
           <TabsContent value="team" className="space-y-4">

@@ -460,7 +460,11 @@ export const RankingsMobile = () => {
 
         {activeTab === "timeline" && (
           <div className="pb-4">
-            <RecentPointsChart phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
+            <RecentPointsChart 
+              phaseId={selectedPhase} 
+              saisonId={selectedSeason?.id || null}
+              viewMode={selectedPhase ? 'phase' : 'season'}
+            />
           </div>
         )}
 
