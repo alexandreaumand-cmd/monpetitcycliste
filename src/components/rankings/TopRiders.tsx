@@ -605,7 +605,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                   </div>
                   <div className="text-center">
                     <div className="text-3xl font-bold">{riderStats.totalRaces}</div>
-                    <div className="text-sm text-muted-foreground">Courses</div>
+                    <div className="text-sm text-muted-foreground">Courses avec points</div>
                   </div>
                   <div className="text-center">
                     <div className="text-3xl font-bold text-yellow-600">{riderStats.wins}</div>
