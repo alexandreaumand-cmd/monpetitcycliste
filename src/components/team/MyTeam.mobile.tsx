@@ -33,6 +33,7 @@ import {
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface Coureur {
   coureur_id: string;
@@ -62,6 +63,7 @@ interface Manager {
 
 export const MyTeamMobile = () => {
   const { phases, activePhase, selectedSeason } = useSeasonContext();
+  const { leagueId, isLoading: leagueLoading } = useLeague();
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>("points");
@@ -219,7 +221,8 @@ export const MyTeamMobile = () => {
       const { data, error } = await supabase.functions.invoke("manager-my-team", {
         body: { 
           phase_id: selectedPhaseId,
-          manager_id: selectedManagerId 
+          manager_id: selectedManagerId,
+          league_id: leagueId
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -231,12 +234,15 @@ export const MyTeamMobile = () => {
       setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, bonus_rider_points: 0, total_with_bonus: 0 });
 
       // Fetch standings data from the same view as Rankings
-      if (targetManagerId && selectedPhaseId) {
+      if (targetManagerId && selectedPhaseId && leagueId) {
         const { data: standing } = await supabase
           .from('v_manager_standings_by_phase')
           .select('total_points, bonus_points')
-          .eq('phase_id', selectedPhaseId)
-          .eq('manager_id', targetManagerId)
+          .match({ 
+            phase_id: selectedPhaseId,
+            manager_id: targetManagerId,
+            league_id: leagueId
+          })
           .maybeSingle();
 
         if (standing) {
@@ -250,12 +256,15 @@ export const MyTeamMobile = () => {
       }
 
       // Charger le coureur bonus sélectionné (s'il existe)
-      if (targetManagerId && selectedPhaseId) {
+      if (targetManagerId && selectedPhaseId && leagueId) {
         const { data: bonusRider } = await supabase
           .from('bonus_rider_selections')
           .select('coureur_id, coureurs(nom)')
-          .eq('manager_id', targetManagerId)
-          .eq('phase_id', selectedPhaseId)
+          .match({
+            manager_id: targetManagerId,
+            phase_id: selectedPhaseId,
+            league_id: leagueId
+          })
           .maybeSingle();
 
         if (bonusRider) {
@@ -295,6 +304,7 @@ export const MyTeamMobile = () => {
           manager_id: manager.id,
           phase_id: selectedPhaseId,
           coureur_id,
+          league_id: leagueId,
         });
 
       if (error) throw error;
