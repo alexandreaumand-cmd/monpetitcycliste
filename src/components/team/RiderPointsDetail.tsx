@@ -33,11 +33,12 @@ export const RiderPointsDetail = ({
   saisonId,
 }: RiderPointsDetailProps) => {
   const { data: riderPointsTable, isLoading } = useQuery({
-    queryKey: ['rider-points-table', riderId, saisonId],
+    queryKey: ['rider-points-table', riderId, phaseId, saisonId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-rider-points-table', {
         body: { 
           rider_id: riderId,
+          phase_id: phaseId,
           saison_id: saisonId
         }
       });
@@ -45,7 +46,7 @@ export const RiderPointsDetail = ({
       if (error) throw error;
       return data;
     },
-    enabled: isOpen && !!riderId && !!saisonId,
+    enabled: isOpen && !!riderId && !!phaseId,
   });
 
   const rows = riderPointsTable?.rows || [];
@@ -67,20 +68,20 @@ export const RiderPointsDetail = ({
     };
   }, [rows, riderPrice]);
 
-  const rowsByPhase = useMemo(() => {
+  const rowsByCourse = useMemo(() => {
     const grouped = rows.reduce((acc: any, row: any) => {
-      const phaseKey = row.phase_nom || 'Sans phase';
-      if (!acc[phaseKey]) {
-        acc[phaseKey] = [];
+      const courseKey = row.course_nom || 'Course inconnue';
+      if (!acc[courseKey]) {
+        acc[courseKey] = [];
       }
-      acc[phaseKey].push(row);
+      acc[courseKey].push(row);
       return acc;
     }, {});
     
-    return Object.entries(grouped).map(([phaseName, phaseRows]: [string, any]) => ({
-      phaseName,
-      rows: phaseRows,
-      totalPoints: phaseRows.reduce((sum: number, r: any) => sum + (r.points || 0), 0)
+    return Object.entries(grouped).map(([courseName, courseRows]: [string, any]) => ({
+      courseName,
+      rows: courseRows,
+      totalPoints: courseRows.reduce((sum: number, r: any) => sum + (r.points || 0), 0)
     }));
   }, [rows]);
 
@@ -144,34 +145,33 @@ export const RiderPointsDetail = ({
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
           </div>
-        ) : rowsByPhase.length > 0 ? (
+        ) : rowsByCourse.length > 0 ? (
           <div className="space-y-4">
-            <h4 className="font-semibold">Détails par phase</h4>
+            <h4 className="font-semibold">Détails par course</h4>
             <Accordion type="single" collapsible className="w-full">
-              {rowsByPhase.map((phase: any, phaseIndex: number) => (
-                <AccordionItem key={phaseIndex} value={`phase-${phaseIndex}`}>
+              {rowsByCourse.map((course: any, courseIndex: number) => (
+                <AccordionItem key={courseIndex} value={`course-${courseIndex}`}>
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center justify-between w-full pr-4">
-                      <span className="font-medium">{phase.phaseName}</span>
+                      <span className="font-medium">{course.courseName}</span>
                       <span className="text-primary font-semibold">
-                        {phase.totalPoints} pts
+                        {course.totalPoints} pts
                       </span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-2 pt-2">
-                      {phase.rows.map((row: any, rowIndex: number) => (
+                      {course.rows.map((row: any, rowIndex: number) => (
                         <div 
                           key={rowIndex}
                           className="p-3 rounded-lg border bg-card/50 text-sm"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium">{row.course_nom}</p>
+                              <p className="font-medium">{row.type_classement}</p>
                               <p className="text-xs text-muted-foreground">
-                                {row.type_classement}
-                                {row.etape_numero && ` - Étape ${row.etape_numero}`}
-                                {row.position && ` - Position ${row.position}`}
+                                {row.etape_numero && `Étape ${row.etape_numero} - `}
+                                {row.position && `Position ${row.position}`}
                               </p>
                               {row.commentaire && (
                                 <p className="text-xs text-blue-600 italic mt-1">
@@ -195,7 +195,7 @@ export const RiderPointsDetail = ({
           </div>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-8">
-            Aucun point enregistré pour cette saison
+            Aucun point enregistré pour cette phase
           </p>
         )}
       </div>
