@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AdminMaintenance } from "@/components/admin/AdminMaintenance";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerJerseys } from "@/hooks/useManagerJerseys";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface Race {
   course_id: string;
@@ -44,6 +45,7 @@ interface Phase {
 
 export const ResultsPage = () => {
   const { selectedSeason, phases, activePhase, isLoading: isLoadingContext } = useSeasonContext();
+  const { leagueId } = useLeague();
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -109,7 +111,8 @@ export const ResultsPage = () => {
       const { data: podiumsData } = await supabase.functions.invoke('results-courses-podiums', {
         body: { 
           course_ids: courseIds,
-          saison_id: selectedSeason?.id
+          saison_id: selectedSeason?.id,
+          league_id: leagueId
         }
       });
         

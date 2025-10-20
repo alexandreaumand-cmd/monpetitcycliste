@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { course_ids, saison_id } = await req.json();
+    const { course_ids, saison_id, league_id } = await req.json();
 
     if (!course_ids || !Array.isArray(course_ids) || course_ids.length === 0) {
       return new Response(JSON.stringify({ error: 'course_ids array required' }), {
@@ -57,6 +57,11 @@ Deno.serve(async (req) => {
         managers!inner(nom)
       `)
       .in('course_id', course_ids);
+    
+    // Filter by league_id if provided
+    if (league_id) {
+      allPointsQuery = allPointsQuery.eq('league_id', league_id);
+    }
     
     if (phaseIds.length > 0) {
       allPointsQuery = allPointsQuery.in('phase_id', phaseIds);
