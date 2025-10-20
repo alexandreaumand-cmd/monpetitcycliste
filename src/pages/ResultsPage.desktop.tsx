@@ -69,7 +69,7 @@ export const ResultsPage = () => {
     if (!isLoadingContext) {
       loadRaces(true);
     }
-  }, [selectedPhaseId, debouncedSearch, isLoadingContext]);
+  }, [selectedPhaseId, debouncedSearch, isLoadingContext, leagueId]);
 
 
   const loadRaces = async (reset = false) => {
