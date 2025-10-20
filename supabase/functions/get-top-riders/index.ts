@@ -60,18 +60,17 @@ Deno.serve(async (req) => {
     let ownersMap: Record<string, any> = {};
     
     if (phase_id) {
-      // Single phase context: query ALL rosters for this phase (no coureur_id filter)
+      // Single phase context: query ALL rosters for this phase with league filter
       let rosterQuery = supabase
         .from('rosters')
         .select('coureur_id, manager_id')
-        .eq('phase_id', phase_id)
-        .limit(5000);
+        .eq('phase_id', phase_id);
       
       if (league_id) {
         rosterQuery = rosterQuery.eq('league_id', league_id);
       }
       
-      const { data: rosterData, error: rosterError } = await rosterQuery;
+      const { data: rosterData, error: rosterError } = await rosterQuery.limit(5000);
 
       if (rosterError) {
         console.error('Error fetching rosters:', rosterError);
@@ -101,7 +100,7 @@ Deno.serve(async (req) => {
         }, {});
       }
     } else {
-      // Season context: fetch all phases and ALL rosters (no coureur_id filter)
+      // Season context: fetch all phases and ALL rosters with league filter
       const { data: phases, error: phasesError } = await supabase
         .from('phases')
         .select('id, saison_id, index_dans_saison')
@@ -119,17 +118,17 @@ Deno.serve(async (req) => {
         const allRosterData: any[] = [];
 
         while (hasMore) {
-          let pageQuery = supabase
+          let rosterPageQuery = supabase
             .from('rosters')
             .select('coureur_id, manager_id, phase_id')
-            .in('phase_id', phaseIds)
-            .range(offset, offset + pageSize - 1);
+            .in('phase_id', phaseIds);
           
           if (league_id) {
-            pageQuery = pageQuery.eq('league_id', league_id);
+            rosterPageQuery = rosterPageQuery.eq('league_id', league_id);
           }
           
-          const { data: page, error: rosterError } = await pageQuery;
+          const { data: page, error: rosterError } = await rosterPageQuery
+            .range(offset, offset + pageSize - 1);
 
           if (rosterError) {
             console.error('Error fetching rosters for season (page):', rosterError);
