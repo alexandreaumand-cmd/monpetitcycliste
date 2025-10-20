@@ -46,7 +46,7 @@ export const RiderPointsDetail = ({
       if (error) throw error;
       return data;
     },
-    enabled: isOpen && !!riderId && !!phaseId,
+    enabled: isOpen && !!riderId,
   });
 
   const rows = riderPointsTable?.rows || [];
