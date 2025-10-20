@@ -461,30 +461,32 @@ export const RankingsMobile = () => {
               />
             ) : (
               <>
-                {topRiders.map((rider, idx) => (
-                  <MobileCard
-                    key={rider.coureur_id}
-                    title={rider.coureur_nom}
-                    subtitle={rider.coureur_equipe || "Équipe inconnue"}
-                    meta={`${rider.courses_count || 0} courses`}
-                    onClick={() => handleRiderClick(rider)}
-                    avatar={
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-primary/10">
-                          {rider.coureur_nom.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                    }
-                    badge={
-                      <div className="flex items-center gap-1">
-                        <span className="text-2xl font-bold text-primary">
-                          {rider.total_points}
-                        </span>
-                        <span className="text-xs text-muted-foreground">pts</span>
-                      </div>
-                    }
-                  />
-                ))}
+                {topRiders.map((rider, idx) => {
+                  const rank = idx + 1;
+                  
+                  return (
+                    <MobileCard
+                      key={rider.coureur_id}
+                      title={rider.coureur_nom}
+                      subtitle={rider.coureur_equipe || "Équipe inconnue"}
+                      meta={`${rider.courses_count || 0} courses`}
+                      onClick={() => handleRiderClick(rider)}
+                      avatar={
+                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted">
+                          <span className="text-sm font-bold text-muted-foreground">#{rank}</span>
+                        </div>
+                      }
+                      badge={
+                        <div className="flex items-center gap-1">
+                          <span className="text-2xl font-bold text-primary">
+                            {rider.total_points}
+                          </span>
+                          <span className="text-xs text-muted-foreground">pts</span>
+                        </div>
+                      }
+                    />
+                  );
+                })}
                 {filteredTopRiders && filteredTopRiders.length > ridersDisplayLimit && (
                   <div className="flex flex-col gap-2 pt-2">
                     <Button
