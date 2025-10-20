@@ -50,7 +50,7 @@ export const ResultsPage = () => {
   const [debouncedSearch] = useDebounce(searchQuery, 300);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
+  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>("global");
   const [podiums, setPodiums] = useState<Record<string, ManagerPodium[]>>({});
   const [winners, setWinners] = useState<Record<string, RaceWinner>>({});
   
@@ -64,13 +64,7 @@ export const ResultsPage = () => {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (activePhase && !selectedPhaseId) {
-      setSelectedPhaseId(activePhase.id);
-    }
-  }, [activePhase]);
-
-  useEffect(() => {
-    if (selectedPhaseId && !isLoadingContext) {
+    if (!isLoadingContext) {
       loadRaces(true);
     }
   }, [selectedPhaseId, debouncedSearch, isLoadingContext]);
@@ -92,7 +86,7 @@ export const ResultsPage = () => {
           search: debouncedSearch || null,
           limit: 24,
           offset: currentOffset,
-          phase_id: selectedPhaseId,
+          phase_id: selectedPhaseId === "global" ? null : selectedPhaseId,
           saison_id: selectedSeason?.id
         }
       });
@@ -159,16 +153,20 @@ export const ResultsPage = () => {
             <h1 className="text-3xl font-bold">Résultats</h1>
             <p className="text-muted-foreground">
               {races.length} course{races.length > 1 ? 's' : ''} avec résultats
+              {selectedPhaseId === "global" ? " (toute la saison)" : ""}
             </p>
           </div>
           
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground hidden md:inline">Phase:</span>
-            <Select value={selectedPhaseId || ''} onValueChange={setSelectedPhaseId}>
-              <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder="Toutes les phases" />
+            <Select value={selectedPhaseId || 'global'} onValueChange={setSelectedPhaseId}>
+              <SelectTrigger className="w-full md:w-[250px]">
+                <SelectValue placeholder="Sélectionner une période" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="global">
+                  🌍 Global (toute la saison)
+                </SelectItem>
                 {phases.map((phase) => (
                   <SelectItem key={phase.id} value={phase.id}>
                     {getPhaseLabel(phase)}
