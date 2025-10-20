@@ -63,7 +63,8 @@ Deno.serve(async (req) => {
       const { data: rosterData, error: rosterError } = await supabase
         .from('rosters')
         .select('coureur_id, manager_id')
-        .eq('phase_id', phase_id);
+        .eq('phase_id', phase_id)
+        .limit(5000);
 
       if (rosterError) {
         console.error('Error fetching rosters:', rosterError);
@@ -104,11 +105,12 @@ Deno.serve(async (req) => {
       } else if (phases && phases.length > 0) {
         const phaseIds = phases.map(p => p.id);
         
-        // Fetch ALL rosters for these phases (no coureur_id filter)
+        // Fetch ALL rosters for these phases (no coureur_id filter, no limit)
         const { data: rosterData, error: rosterError } = await supabase
           .from('rosters')
-          .select('coureur_id, manager_id, phase_id')
-          .in('phase_id', phaseIds);
+          .select('coureur_id, manager_id, phase_id', { count: 'exact' })
+          .in('phase_id', phaseIds)
+          .limit(10000);
 
         if (rosterError) {
           console.error('Error fetching rosters for season:', rosterError);
