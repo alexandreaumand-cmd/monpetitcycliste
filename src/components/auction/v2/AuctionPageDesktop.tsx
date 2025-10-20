@@ -14,6 +14,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
+import { useLeague } from "@/contexts/LeagueContext";
+import { MemberWriteGuard } from "@/components/guards/MemberWriteGuard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +35,7 @@ interface AuctionPageDesktopProps {
 export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { leagueId } = useLeague();
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
@@ -307,28 +310,30 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
         deadline_at={context.auction?.deadline_at}
       />
 
-      {/* Tabs */}
-      <AuctionTabs
-        phaseId={phaseId}
-        managerId={managerId}
-        context={context}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        selectedTeams={selectedTeams}
-        setSelectedTeams={setSelectedTeams}
-        selectedCotes={selectedCotes}
-        setSelectedCotes={setSelectedCotes}
-        availableTeams={Array.isArray(availableTeams) ? availableTeams : []}
-        riders={ridersData?.items || []}
-        isSearching={ridersLoading}
-        myBids={[...(context.roster || []), ...(context.my_bids || [])]}
-        handleSubmitBid={handleSubmitBid}
-        handleUpdateAmount={handleUpdateAmount}
-        handleRemoveBid={handleRemoveBid}
-        handleSubmitAll={handleSubmitAll}
-        isUpdating={upsertBidMutation.isPending || removeBidMutation.isPending}
-        isSubmitting={submitAllMutation.isPending}
-      />
+      <MemberWriteGuard>
+        {/* Tabs */}
+        <AuctionTabs
+          phaseId={phaseId}
+          managerId={managerId}
+          context={context}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          selectedTeams={selectedTeams}
+          setSelectedTeams={setSelectedTeams}
+          selectedCotes={selectedCotes}
+          setSelectedCotes={setSelectedCotes}
+          availableTeams={Array.isArray(availableTeams) ? availableTeams : []}
+          riders={ridersData?.items || []}
+          isSearching={ridersLoading}
+          myBids={[...(context.roster || []), ...(context.my_bids || [])]}
+          handleSubmitBid={handleSubmitBid}
+          handleUpdateAmount={handleUpdateAmount}
+          handleRemoveBid={handleRemoveBid}
+          handleSubmitAll={handleSubmitAll}
+          isUpdating={upsertBidMutation.isPending || removeBidMutation.isPending}
+          isSubmitting={submitAllMutation.isPending}
+        />
+      </MemberWriteGuard>
 
       {/* Submit confirmation dialog */}
       <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>

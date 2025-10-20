@@ -13,6 +13,8 @@ import { RoundHistorySelector } from "./RoundHistorySelector";
 import { BidFormWithHelp } from "./BidFormWithHelp";
 import { BidHistory } from "./BidHistory";
 import { AuctionTeamsGrid } from "./AuctionTeamsGrid";
+import { useLeague } from "@/contexts/LeagueContext";
+import { MemberWriteGuard } from "@/components/guards/MemberWriteGuard";
 
 interface AuctionPageProps {
   phaseId: string;
@@ -22,23 +24,31 @@ interface AuctionPageProps {
 export const AuctionPage = ({ phaseId, managerId }: AuctionPageProps) => {
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { leagueId } = useLeague();
 
   // Get open auction (if exists)
   const { data: openAuction } = useQuery({
-    queryKey: ['open-auction', phaseId],
+    queryKey: ['open-auction', phaseId, leagueId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('auctions')
         .select('id, round_number, deadline_at, phase_id')
         .eq('phase_id', phaseId)
-        .eq('statut', 'open')
+        .eq('statut', 'open');
+      
+      if (leagueId) {
+        query = query.eq('league_id', leagueId);
+      }
+
+      const { data, error } = await query
         .order('round_number', { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !!leagueId,
   });
 
   // Get manager phase status
@@ -162,12 +172,14 @@ export const AuctionPage = ({ phaseId, managerId }: AuctionPageProps) => {
 
         {/* Bloc "Préparer mes enchères" - only if open auction */}
         {openAuction && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">
-              Préparer mes enchères — Round {openAuction.round_number}
-            </h2>
-            <BidFormWithHelp auction={openAuction} managerId={managerId} />
-          </div>
+          <MemberWriteGuard>
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">
+                Préparer mes enchères — Round {openAuction.round_number}
+              </h2>
+              <BidFormWithHelp auction={openAuction} managerId={managerId} />
+            </div>
+          </MemberWriteGuard>
         )}
 
         {/* Dernier round - Résultats */}
