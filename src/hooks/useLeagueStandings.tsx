@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLeague } from "@/contexts/LeagueContext";
 
 /**
  * Hook pour récupérer le classement d'une ligue par saison
  */
 export function useLeagueStandingsBySeason(leagueId: string | null, seasonId: string | null) {
+  const { isLoading: leagueLoading } = useLeague();
+  
   return useQuery({
     queryKey: ['league-standings-season', leagueId, seasonId],
     queryFn: async () => {
@@ -20,7 +23,7 @@ export function useLeagueStandingsBySeason(leagueId: string | null, seasonId: st
       if (error) throw error;
       return data || [];
     },
-    enabled: !!leagueId && !!seasonId,
+    enabled: !leagueLoading && !!leagueId && !!seasonId,
   });
 }
 
@@ -28,6 +31,8 @@ export function useLeagueStandingsBySeason(leagueId: string | null, seasonId: st
  * Hook pour récupérer le classement d'une ligue par phase
  */
 export function useLeagueStandingsByPhase(leagueId: string | null, phaseId: string | null) {
+  const { isLoading: leagueLoading } = useLeague();
+  
   return useQuery({
     queryKey: ['league-standings-phase', leagueId, phaseId],
     queryFn: async () => {
@@ -43,6 +48,6 @@ export function useLeagueStandingsByPhase(leagueId: string | null, phaseId: stri
       if (error) throw error;
       return data || [];
     },
-    enabled: !!leagueId && !!phaseId,
+    enabled: !leagueLoading && !!leagueId && !!phaseId,
   });
 }
