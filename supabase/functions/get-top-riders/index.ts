@@ -105,20 +105,38 @@ Deno.serve(async (req) => {
       } else if (phases && phases.length > 0) {
         const phaseIds = phases.map(p => p.id);
         
-        // Fetch ALL rosters for these phases (no coureur_id filter, no limit)
-        const { data: rosterData, error: rosterError } = await supabase
-          .from('rosters')
-          .select('coureur_id, manager_id, phase_id', { count: 'exact' })
-          .in('phase_id', phaseIds)
-          .limit(10000);
+        // Fetch ALL rosters for these phases using pagination to bypass default limits
+        const pageSize = 1000;
+        let offset = 0;
+        let hasMore = true;
+        const allRosterData: any[] = [];
 
-        if (rosterError) {
-          console.error('Error fetching rosters for season:', rosterError);
-        } else if (rosterData && rosterData.length > 0) {
-          console.log(`Found ${rosterData.length} roster entries for season`);
+        while (hasMore) {
+          const { data: page, error: rosterError } = await supabase
+            .from('rosters')
+            .select('coureur_id, manager_id, phase_id')
+            .in('phase_id', phaseIds)
+            .range(offset, offset + pageSize - 1);
+
+          if (rosterError) {
+            console.error('Error fetching rosters for season (page):', rosterError);
+            break;
+          }
+
+          if (page && page.length > 0) {
+            allRosterData.push(...page);
+            offset += pageSize;
+            hasMore = page.length === pageSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        if (allRosterData && allRosterData.length > 0) {
+          console.log(`Found ${allRosterData.length} roster entries for season`);
           
           // Extract unique manager IDs and fetch managers separately
-          const managerIds = [...new Set(rosterData.map(r => r.manager_id).filter(Boolean))];
+          const managerIds = [...new Set(allRosterData.map(r => r.manager_id).filter(Boolean))];
           const { data: managers } = await supabase
             .from('managers')
             .select('id, nom')
@@ -127,7 +145,7 @@ Deno.serve(async (req) => {
           const managersMap = Object.fromEntries((managers || []).map(m => [m.id, m.nom]));
           
           // Build ownersMap with owners_all and owners_by_phase
-          ownersMap = rosterData.reduce((acc: any, r: any) => {
+          ownersMap = allRosterData.reduce((acc: any, r: any) => {
             if (!acc[r.coureur_id]) {
               acc[r.coureur_id] = {
                 owners_all: [],
