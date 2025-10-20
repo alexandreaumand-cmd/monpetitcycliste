@@ -73,6 +73,7 @@ export default function Rankings() {
           </div>
 
           <TabsContent value="standings" className="space-y-4">
+            <RankingsKPIs phaseId={selectedPhase} />
             <ManagerStandings 
               phaseId={selectedPhase} 
               onManagerClick={handleManagerClick}
@@ -108,11 +109,6 @@ export default function Rankings() {
           </TabsContent>
         </Tabs>
 
-        {/* KPIs Section */}
-        <section aria-labelledby="kpi-section-title" className="mt-8">
-          <h2 id="kpi-section-title" className="sr-only">Aperçu des points</h2>
-          <RankingsKPIs phaseId={selectedPhase} />
-        </section>
 
         {/* Manager Details Drawer */}
         <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
