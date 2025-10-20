@@ -101,23 +101,26 @@ Deno.serve(async (req) => {
 
     console.log(`Successfully fetched ${pointsData?.length || 0} point entries for rider ${rider_id}`);
 
-    // Fetch phases separately
-    const phaseIds = [...new Set(pointsData?.map(p => p.phase_id).filter(Boolean) || [])];
-    const { data: phasesData } = await supabase
-      .from('phases')
-      .select('id, nom, index_dans_saison, saison_id')
-      .in('id', phaseIds);
-    
-    const phasesMap = new Map(phasesData?.map(p => [p.id, p]) || []);
-
-    // Fetch courses separately
+    // Fetch courses separately (including phase_id)
     const courseIds = [...new Set(pointsData?.map(p => p.course_id).filter(Boolean) || [])];
     const { data: coursesData } = await supabase
       .from('courses')
-      .select('id, nom, categorie, date_debut, date_fin')
+      .select('id, nom, categorie, date_debut, date_fin, phase_id')
       .in('id', courseIds);
     
     const coursesMap = new Map(coursesData?.map(c => [c.id, c]) || []);
+
+    // Fetch phases separately - consolidate phase IDs from points and courses
+    const phaseIdsFromPoints = [...new Set(pointsData?.map(p => p.phase_id).filter(Boolean) || [])];
+    const phaseIdsFromCourses = [...new Set(coursesData?.map(c => c.phase_id).filter(Boolean) || [])];
+    const allPhaseIds = [...new Set([...phaseIdsFromPoints, ...phaseIdsFromCourses])];
+    
+    const { data: phasesData } = await supabase
+      .from('phases')
+      .select('id, index_dans_saison, saison_id')
+      .in('id', allPhaseIds);
+    
+    const phasesMap = new Map(phasesData?.map(p => [p.id, p]) || []);
 
     // Get race_results to find positions
     const { data: resultsData, error: resultsError } = await supabase
@@ -167,13 +170,17 @@ Deno.serve(async (req) => {
     const raceRows = pointsData?.map((point: any) => {
       const key = `${point.course_id}_${point.type_classement}_${point.etape_numero || 'null'}`;
       const position = resultsMap.get(key) || null;
-      const phase = phasesMap.get(point.phase_id);
       const course = coursesMap.get(point.course_id);
       
+      // Determine effective phase_id from point or course
+      const effectivePhaseId = point.phase_id || course?.phase_id || null;
+      const phase = effectivePhaseId ? phasesMap.get(effectivePhaseId) : undefined;
+      const phaseIndex = phase?.index_dans_saison || 0;
+      
       return {
-        phase_id: point.phase_id || null,
-        phase_nom: phase?.nom || 'Phase inconnue',
-        phase_index: phase?.index_dans_saison || 0,
+        phase_id: effectivePhaseId,
+        phase_nom: phaseIndex > 0 ? `Phase ${phaseIndex}` : 'Phase inconnue',
+        phase_index: phaseIndex,
         course_nom: course?.nom || 'Inconnu',
         course_categorie: course?.categorie || '',
         course_date: course?.date_fin || course?.date_debut || null,
@@ -187,12 +194,13 @@ Deno.serve(async (req) => {
 
     // Build rows for bonus points using the phasesMap
     const bonusRows = bonusData?.map((bonus: any) => {
-      const phase = phasesMap.get(bonus.phase_id);
+      const phase = bonus.phase_id ? phasesMap.get(bonus.phase_id) : undefined;
+      const phaseIndex = phase?.index_dans_saison || 0;
       
       return {
         phase_id: bonus.phase_id || null,
-        phase_nom: phase?.nom || 'Phase inconnue',
-        phase_index: phase?.index_dans_saison || 0,
+        phase_nom: phaseIndex > 0 ? `Phase ${phaseIndex}` : 'Phase inconnue',
+        phase_index: phaseIndex,
         course_nom: 'Bonus',
         type_classement: bonus.bonus_type || 'bonus',
         commentaire: bonus.commentaire,
