@@ -148,6 +148,23 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
     enabled: !!selectedRider && detailsOpen,
   });
 
+  const { data: phaseMeta } = useQuery({
+    queryKey: ["phase-meta", phaseId],
+    queryFn: async () => {
+      if (!phaseId) return null;
+      const { data, error } = await supabase
+        .from("phases")
+        .select("index_dans_saison")
+        .eq("id", phaseId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!phaseId,
+  });
+  
+  const phaseLabelFromDb = phaseMeta ? `Phase ${phaseMeta.index_dans_saison}` : undefined;
+
   // Sort riders list
   const sortedRiders = useMemo(() => {
     if (!riders) return [];
@@ -224,7 +241,8 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
       if (!phaseMap.has(phaseKey)) {
         phaseMap.set(phaseKey, {
           phase_id: row.phase_id || '',
-          phase_nom: row.phase_nom || 'Phase inconnue',
+          phase_nom: row.phase_nom 
+            || (row.phase_index ? `Phase ${row.phase_index}` : (phaseLabelFromDb || 'Phase inconnue')),
           phase_index: row.phase_index || 0,
           total_points: 0,
           courses: new Map()
@@ -245,7 +263,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
     const phases = Array.from(phaseMap.values()).sort((a, b) => a.phase_index - b.phase_index);
     
     return { phases, bonus };
-  }, [riderPointsData?.rows, searchTerm]);
+  }, [riderPointsData?.rows, searchTerm, phaseLabelFromDb]);
   
   // Calculate statistics
   const riderStats = useMemo(() => {
@@ -282,7 +300,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
     const csv = [
       ['Phase', 'Course', 'Type', 'Étape', 'Position', 'Points'],
       ...riderPointsData.rows.map(row => [
-        row.phase_nom,
+        row.phase_nom || (row.phase_index ? `Phase ${row.phase_index}` : (phaseLabelFromDb || 'Phase inconnue')),
         row.course_nom,
         row.type_classement,
         row.etape_numero?.toString() || '',
@@ -620,9 +638,13 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
               <Accordion type="multiple" className="space-y-2">
                 {/* Phases Accordion */}
                 {groupedByPhase.phases.map((phase) => {
-                  const phasePercentage = riderPointsData?.total_points 
-                    ? (phase.total_points / riderPointsData.total_points) * 100 
+                  const phasePercentage = riderPointsData?.total 
+                    ? (phase.total_points / riderPointsData.total) * 100 
                     : 0;
+                  
+                  const displayPhaseName = phase.phase_nom && phase.phase_nom !== 'Phase inconnue'
+                    ? phase.phase_nom
+                    : (phase.phase_index ? `Phase ${phase.phase_index}` : (phaseLabelFromDb || 'Phase inconnue'));
                   
                   return (
                     <AccordionItem 
@@ -634,7 +656,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                         <div className="flex items-center justify-between w-full pr-4">
                           <div className="flex items-center gap-3">
                             <Badge variant="secondary" className="text-sm">
-                              {phase.phase_nom}
+                              {displayPhaseName}
                             </Badge>
                             <span className="text-muted-foreground text-sm">
                               {phase.courses.size} course{phase.courses.size > 1 ? 's' : ''}
