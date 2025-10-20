@@ -188,22 +188,68 @@ export const ExportResultsImage = ({
     
     // Vérifier si l'API Clipboard est disponible
     if (!navigator.clipboard || !navigator.clipboard.write) {
-      toast.info("Copie non supportée. Faites un appui long sur l'image pour la copier.");
+      toast.info("Faites un appui long sur l'image pour la copier, ou utilisez 'Télécharger'.");
+      return;
+    }
+    
+    // Vérifier si ClipboardItem est disponible
+    if (!window.ClipboardItem) {
+      toast.info("Copie non supportée sur ce navigateur. Utilisez le bouton 'Télécharger'.");
       return;
     }
     
     try {
       const response = await fetch(generatedImageUrl);
       const blob = await response.blob();
-      // Créer un blob JPEG explicite (toJpeg génère du JPEG, pas du PNG)
-      const jpegBlob = new Blob([blob], { type: 'image/jpeg' });
+      
+      // Convertir JPEG en PNG pour meilleure compatibilité clipboard
+      const img = new Image();
+      img.src = URL.createObjectURL(blob);
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        throw new Error('Canvas context unavailable');
+      }
+      
+      ctx.drawImage(img, 0, 0);
+      
+      const pngBlob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error('Failed to create blob'));
+          },
+          'image/png'
+        );
+      });
+      
       await navigator.clipboard.write([
-        new ClipboardItem({ 'image/jpeg': jpegBlob })
+        new ClipboardItem({ 'image/png': pngBlob })
       ]);
+      
+      // Nettoyer
+      URL.revokeObjectURL(img.src);
+      
       toast.success("Image copiée dans le presse-papiers !");
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error copying image:', error);
-      toast.error("Échec de la copie. Essayez de télécharger l'image.");
+      
+      if (error.name === 'NotAllowedError') {
+        toast.error("Permission refusée. Autorisez l'accès au presse-papiers dans votre navigateur.");
+      } else if (error.name === 'NotSupportedError') {
+        toast.info("Copie non supportée sur ce navigateur. Utilisez le bouton 'Télécharger'.");
+      } else {
+        toast.error("Échec de la copie. Utilisez 'Télécharger' à la place.");
+      }
     }
   };
 
