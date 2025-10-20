@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, ChevronDown, ChevronRight } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Download, ChevronDown, ChevronRight, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
@@ -19,7 +20,7 @@ interface CourseLeaderboardProps {
 }
 
 export const CourseLeaderboard = ({ phaseId, saisonId }: CourseLeaderboardProps) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [searchCourse, setSearchCourse] = useState("");
   const [selectedCourse, setSelectedCourse] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string>("tous");
@@ -40,13 +41,13 @@ export const CourseLeaderboard = ({ phaseId, saisonId }: CourseLeaderboardProps)
 
   // Get courses list
   const { data: coursesList, isLoading: coursesLoading } = useQuery({
-    queryKey: ["list-courses-with-results", saisonId, phaseId, selectedCategory, searchCourse],
+    queryKey: ["list-courses-with-results", saisonId, phaseId, selectedFilters, searchCourse],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("list-courses-with-results", {
         body: {
           saison_id: saisonId,
           phase_id: phaseId,
-          category: selectedCategory === "all" ? null : selectedCategory,
+          filters: selectedFilters.length > 0 ? selectedFilters : null,
           search: searchCourse || null,
           limit: 100,
           offset: 0
@@ -153,20 +154,92 @@ export const CourseLeaderboard = ({ phaseId, saisonId }: CourseLeaderboardProps)
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Catégorie</label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Toutes" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes</SelectItem>
-                  {filterOptions?.categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
+              <label className="text-sm font-medium">Type de course (multi-sélection)</label>
+              <div className="border rounded-md p-3 space-y-3 max-h-80 overflow-y-auto bg-background">
+                {/* Catégories UCI */}
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">Catégories UCI</p>
+                  {['2.1', '1.1', '2.Pro', '1.Pro'].map(cat => (
+                    <div key={cat} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`filter-${cat}`}
+                        checked={selectedFilters.includes(cat)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedFilters([...selectedFilters, cat]);
+                          } else {
+                            setSelectedFilters(selectedFilters.filter(f => f !== cat));
+                          }
+                        }}
+                      />
+                      <label htmlFor={`filter-${cat}`} className="text-sm cursor-pointer">
+                        {cat}
+                      </label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+
+                {/* World Tour */}
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">World Tour</p>
+                  {[
+                    { value: 'GT', label: 'Grands Tours (GT)' },
+                    { value: 'Monument', label: 'Monuments' },
+                    { value: 'WT_Tours', label: 'Tours WT' },
+                    { value: 'WT_Classiques', label: 'Classiques WT' }
+                  ].map(item => (
+                    <div key={item.value} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`filter-${item.value}`}
+                        checked={selectedFilters.includes(item.value)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedFilters([...selectedFilters, item.value]);
+                          } else {
+                            setSelectedFilters(selectedFilters.filter(f => f !== item.value));
+                          }
+                        }}
+                      />
+                      <label htmlFor={`filter-${item.value}`} className="text-sm cursor-pointer">
+                        {item.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Bouton reset */}
+                {selectedFilters.length > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={() => setSelectedFilters([])}
+                  >
+                    Réinitialiser les filtres
+                  </Button>
+                )}
+              </div>
+
+              {/* Active filters badges */}
+              {selectedFilters.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {selectedFilters.map(filter => (
+                    <Badge key={filter} variant="secondary" className="gap-1">
+                      {filter === 'GT' ? 'Grands Tours' : 
+                       filter === 'Monument' ? 'Monuments' :
+                       filter === 'WT_Tours' ? 'Tours WT' :
+                       filter === 'WT_Classiques' ? 'Classiques WT' :
+                       filter}
+                      <button 
+                        onClick={() => setSelectedFilters(selectedFilters.filter(f => f !== filter))}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

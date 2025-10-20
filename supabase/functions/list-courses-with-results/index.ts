@@ -8,7 +8,7 @@ const corsHeaders = {
 interface RequestBody {
   saison_id?: string | null;
   phase_id?: string | null;
-  category?: string | null;
+  filters?: string[] | null;
   search?: string | null;
   limit?: number | null;
   offset?: number | null;
@@ -33,13 +33,13 @@ Deno.serve(async (req) => {
     const { 
       saison_id, 
       phase_id, 
-      category, 
+      filters, 
       search, 
       limit = 50, 
       offset = 0 
     }: RequestBody = await req.json();
 
-    console.log('Listing courses with filters:', { saison_id, phase_id, category, search });
+    console.log('Listing courses with filters:', { saison_id, phase_id, filters, search });
 
     // Get courses that have results in points_ledger
     const { data: coursesWithPoints, error: pointsError } = await supabaseClient
@@ -80,8 +80,39 @@ Deno.serve(async (req) => {
       query = query.in('phase_id', phaseIds);
     }
 
-    if (category) {
-      query = query.eq('categorie', category);
+    // Apply multi-criteria filters
+    if (filters && filters.length > 0) {
+      // Separate UCI categories from WT filters
+      const uciCategories = filters.filter(f => 
+        ['2.1', '1.1', '2.Pro', '1.Pro'].includes(f)
+      );
+      const wtFilters = filters.filter(f => 
+        ['GT', 'Monument', 'WT_Tours', 'WT_Classiques'].includes(f)
+      );
+
+      // Build OR conditions
+      const conditions: string[] = [];
+
+      // UCI categories (exact match on categorie)
+      if (uciCategories.length > 0) {
+        conditions.push(`categorie.in.(${uciCategories.join(',')})`);
+      }
+
+      // WT filters (use wt_tier with ILIKE for Tours/Classiques patterns)
+      wtFilters.forEach(wt => {
+        if (wt === 'GT' || wt === 'Monument') {
+          conditions.push(`wt_tier.eq.${wt}`);
+        } else if (wt === 'WT_Tours') {
+          conditions.push(`wt_tier.ilike.WT_Tours_%`);
+        } else if (wt === 'WT_Classiques') {
+          conditions.push(`wt_tier.ilike.WT_Classiques_%`);
+        }
+      });
+
+      // Apply with .or()
+      if (conditions.length > 0) {
+        query = query.or(conditions.join(','));
+      }
     }
 
     if (search) {
