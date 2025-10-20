@@ -680,9 +680,9 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                                       >
                                         <div className="flex items-center gap-2">
                                           {result.type_classement === 'GC' && <Award className="h-3 w-3 text-primary" />}
-                                          {result.type_classement.includes('Porteur') && <Mountain className="h-3 w-3 text-orange-500" />}
+                                          {result.type_classement?.includes('Porteur') && <Mountain className="h-3 w-3 text-orange-500" />}
                                           <span className="text-muted-foreground">
-                                            {result.type_classement}
+                                            {result.type_classement || 'N/A'}
                                             {result.etape_numero ? ` ${result.etape_numero}` : ''}
                                           </span>
                                           {result.position && (
