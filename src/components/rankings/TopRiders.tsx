@@ -429,14 +429,14 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                                   {owner.manager_nom}
                                 </Badge>
                               ))}
-                              {rider.owners_all.length > 3 && (
+                              {rider.owners_by_phase && Object.keys(rider.owners_by_phase).length > 0 && (
                                 <Popover>
                                   <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
                                     <Badge 
                                       variant="secondary" 
                                       className="text-xs cursor-pointer hover:bg-secondary/80"
                                     >
-                                      +{rider.owners_all.length - 3}
+                                      {rider.owners_all.length > 3 ? `+${rider.owners_all.length - 3}` : 'Hist.'}
                                       <Info className="h-3 w-3 ml-1" />
                                     </Badge>
                                   </PopoverTrigger>
@@ -452,14 +452,22 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                                             </TableRow>
                                           </TableHeader>
                                           <TableBody>
-                                            {rider.owners_by_phase && Object.entries(rider.owners_by_phase).flatMap(([phaseId, owners]) => 
-                                              (owners as RiderOwner[]).map((owner, idx) => (
-                                                <TableRow key={`${phaseId}-${idx}`}>
-                                                  <TableCell className="text-xs">{owner.manager_nom}</TableCell>
-                                                  <TableCell className="text-xs">{phaseId}</TableCell>
-                                                </TableRow>
-                                              ))
-                                            )}
+                                            {Object.entries(rider.owners_by_phase)
+                                              .sort(([a], [b]) => {
+                                                const numA = parseInt(a.replace('P', ''));
+                                                const numB = parseInt(b.replace('P', ''));
+                                                return numA - numB;
+                                              })
+                                              .flatMap(([phaseKey, owners]) => 
+                                                (owners as RiderOwner[]).map((owner, idx) => (
+                                                  <TableRow key={`${phaseKey}-${idx}`}>
+                                                    <TableCell className="text-xs">{owner.manager_nom}</TableCell>
+                                                    <TableCell className="text-xs">
+                                                      <Badge variant="outline" className="text-xs">{phaseKey}</Badge>
+                                                    </TableCell>
+                                                  </TableRow>
+                                                ))
+                                              )}
                                           </TableBody>
                                         </Table>
                                       </div>
@@ -530,33 +538,39 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                   Propriétaire(s) — Toutes phases : {selectedRider.owners_all.map(o => o.manager_nom).join(', ')}
                 </p>
                 {selectedRider.owners_by_phase && Object.keys(selectedRider.owners_by_phase).length > 0 && (
-                  <div className="mt-2">
-                    <details className="text-xs">
-                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                        Voir détail par phase
-                      </summary>
-                      <div className="mt-2 max-h-32 overflow-y-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="text-xs">Manager</TableHead>
-                              <TableHead className="text-xs">Phase</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {Object.entries(selectedRider.owners_by_phase).flatMap(([phaseId, owners]) => 
+                  <Card className="mt-2">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">Historique des managers par phase</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">Manager</TableHead>
+                            <TableHead className="text-xs">Phase</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {Object.entries(selectedRider.owners_by_phase)
+                            .sort(([a], [b]) => {
+                              const numA = parseInt(a.replace('P', ''));
+                              const numB = parseInt(b.replace('P', ''));
+                              return numA - numB;
+                            })
+                            .flatMap(([phaseKey, owners]) => 
                               (owners as RiderOwner[]).map((owner, idx) => (
-                                <TableRow key={`${phaseId}-${idx}`}>
+                                <TableRow key={`${phaseKey}-${idx}`}>
                                   <TableCell className="text-xs">{owner.manager_nom}</TableCell>
-                                  <TableCell className="text-xs">{phaseId}</TableCell>
+                                  <TableCell className="text-xs">
+                                    <Badge variant="outline" className="text-xs">{phaseKey}</Badge>
+                                  </TableCell>
                                 </TableRow>
                               ))
                             )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </details>
-                  </div>
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
                 )}
               </div>
             ) : null}
