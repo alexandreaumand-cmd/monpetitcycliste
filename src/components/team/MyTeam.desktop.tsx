@@ -193,6 +193,25 @@ export const MyTeamDesktop = () => {
       setCoureurs(data.coureurs || []);
       setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, bonus_rider_points: 0, total_with_bonus: 0, wins_count: 0, my_rank: null, managers_count: 0 });
 
+      // Fetch standings data from the same view as Rankings
+      if (targetManagerId && selectedPhaseId) {
+        const { data: standing } = await supabase
+          .from('v_manager_standings_by_phase')
+          .select('total_points, bonus_points')
+          .eq('phase_id', selectedPhaseId)
+          .eq('manager_id', targetManagerId)
+          .maybeSingle();
+
+        if (standing) {
+          setKpis(prev => ({
+            ...prev,
+            total_points: Number(standing.total_points) || 0,
+            bonus_points: Number(standing.bonus_points) || 0,
+            total_with_bonus: Number(standing.total_points) || 0,
+          }));
+        }
+      }
+
       // Charger le coureur bonus sélectionné (s'il existe)
       if (targetManagerId && selectedPhaseId) {
         const { data: bonusRider } = await supabase
@@ -565,7 +584,7 @@ export const MyTeamDesktop = () => {
             <CardContent className="pt-6">
               <div className="flex flex-col items-center">
                 <span className="text-2xl mb-2">🎁</span>
-                <div className="text-3xl font-bold">{kpis.bonus_points + kpis.bonus_rider_points}</div>
+                <div className="text-3xl font-bold">{kpis.bonus_points}</div>
                 <div className="text-sm text-muted-foreground text-center">
                   Points bonus
                 </div>

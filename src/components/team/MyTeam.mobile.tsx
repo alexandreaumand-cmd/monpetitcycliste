@@ -230,6 +230,25 @@ export const MyTeamMobile = () => {
       setCoureurs(data.coureurs || []);
       setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, bonus_rider_points: 0, total_with_bonus: 0 });
 
+      // Fetch standings data from the same view as Rankings
+      if (targetManagerId && selectedPhaseId) {
+        const { data: standing } = await supabase
+          .from('v_manager_standings_by_phase')
+          .select('total_points, bonus_points')
+          .eq('phase_id', selectedPhaseId)
+          .eq('manager_id', targetManagerId)
+          .maybeSingle();
+
+        if (standing) {
+          setKpis(prev => ({
+            ...prev,
+            total_points: Number(standing.total_points) || 0,
+            bonus_points: Number(standing.bonus_points) || 0,
+            total_with_bonus: Number(standing.total_points) || 0,
+          }));
+        }
+      }
+
       // Charger le coureur bonus sélectionné (s'il existe)
       if (targetManagerId && selectedPhaseId) {
         const { data: bonusRider } = await supabase
@@ -367,7 +386,7 @@ export const MyTeamMobile = () => {
         <KPIRow
           items={[
             { label: "Points totaux", value: kpis.total_points, icon: <Trophy className="h-4 w-4" /> },
-            { label: "Bonus", value: kpis.bonus_points + kpis.bonus_rider_points, icon: <span className="text-sm">🎁</span>, onClick: () => setBonusDetailsOpen(true) },
+            { label: "Bonus", value: kpis.bonus_points, icon: <span className="text-sm">🎁</span>, onClick: () => setBonusDetailsOpen(true) },
             { label: "Scoreurs", value: kpis.scorers_count, icon: <Trophy className="h-4 w-4" />, trend: kpis.scorers_count > 0 ? "up" : "neutral" },
           ]}
         />
