@@ -152,10 +152,6 @@ export const ResultsPageMobile = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold">Résultats</h1>
-              <p className="text-xs text-muted-foreground">
-                {races.length} course{races.length > 1 ? 's' : ''}
-                {selectedPhaseId === "global" ? " (saison)" : ""}
-              </p>
             </div>
           </div>
 
