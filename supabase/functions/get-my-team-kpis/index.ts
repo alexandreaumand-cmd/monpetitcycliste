@@ -95,7 +95,40 @@ Deno.serve(async (req) => {
 
     if (myPointsError) throw myPointsError;
 
-    const total_points = myPoints?.reduce((sum, p) => sum + p.points, 0) || 0;
+    const race_points = myPoints?.reduce((sum, p) => sum + p.points, 0) || 0;
+
+    // Ajouter les bonus manager
+    const { data: managerBonus } = await supabaseClient
+      .from('manager_bonus_points')
+      .select('bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs')
+      .eq('manager_id', actualManagerId)
+      .in('phase_id', phaseIds);
+
+    const managerBonusTotal = managerBonus?.reduce((sum, mb) => 
+      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) + (mb.bonus_first_win || 0) + 
+      (mb.bonus_coureurs || 0) + (mb.bonus_scoreurs || 0), 0) || 0;
+
+    // Ajouter les bonus coureur bonusé
+    const { data: riderBonus } = await supabaseClient
+      .from('bonus_points')
+      .select('points')
+      .eq('manager_id', actualManagerId)
+      .in('phase_id', phaseIds)
+      .eq('bonus_type', 'coureur_bonuse');
+
+    const riderBonusTotal = riderBonus?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
+
+    // Ajouter les bonus reçus d'autres managers
+    const { data: receivedBonus } = await supabaseClient
+      .from('bonus_points')
+      .select('points')
+      .eq('target_manager_id', actualManagerId)
+      .in('phase_id', phaseIds);
+
+    const receivedBonusTotal = receivedBonus?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
+
+    // TOTAL aligné avec v_manager_standings
+    const total_points = race_points + managerBonusTotal + riderBonusTotal + receivedBonusTotal;
 
     // KPI #2: Get top rider for this manager in scope
     const { data: pointsByRider, error: riderPointsError } = await supabaseClient

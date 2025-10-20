@@ -85,30 +85,46 @@ Deno.serve(async (req) => {
       phaseId = activePhase?.id;
     }
 
-    // Récupérer les points bonus du manager depuis la table bonus_points
+    // Récupérer UNIQUEMENT les bonus qui NE SONT PAS déjà dans totalPoints
     let bonusPoints = 0;
     let bonusRiderPoints = 0;
     if (phaseId && targetManagerId) {
-      // 1. Bonus REÇUS (target_manager_id = manager)
+      // 1. Bonus REÇUS d'autres managers (target_manager_id = manager)
       const { data: receivedBonus } = await supabase
         .from('bonus_points')
         .select('points')
         .eq('target_manager_id', targetManagerId)
         .eq('phase_id', phaseId);
       
-      // 2. Bonus de COUREUR BONUS (manager_id = manager, target_manager_id IS NULL, type = coureur_bonuse)
+      // 2. Bonus du MANAGER (ITT, TTT, First Win, Coureurs, Scoreurs)
+      const { data: managerBonus } = await supabase
+        .from('manager_bonus_points')
+        .select('bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs')
+        .eq('manager_id', targetManagerId)
+        .eq('phase_id', phaseId)
+        .maybeSingle();
+      
+      // 3. Bonus COUREUR BONUSÉ (pour affichage séparé dans les KPIs)
+      //    Ces points sont déjà inclus dans totalPoints (via RPC manager_team_by_id)
       const { data: riderBonus } = await supabase
         .from('bonus_points')
         .select('points')
         .eq('manager_id', targetManagerId)
-        .is('target_manager_id', null)
-        .eq('bonus_type', 'coureur_bonuse')
-        .eq('phase_id', phaseId);
+        .eq('phase_id', phaseId)
+        .eq('bonus_type', 'coureur_bonuse');
       
       // Calculer les totaux
       const receivedBonusTotal = receivedBonus?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
+      const managerBonusTotal = managerBonus 
+        ? (managerBonus.bonus_itt || 0) + 
+          (managerBonus.bonus_ttt || 0) + 
+          (managerBonus.bonus_first_win || 0) + 
+          (managerBonus.bonus_coureurs || 0) + 
+          (managerBonus.bonus_scoreurs || 0)
+        : 0;
+      
       bonusRiderPoints = riderBonus?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
-      bonusPoints = receivedBonusTotal + bonusRiderPoints;
+      bonusPoints = receivedBonusTotal + managerBonusTotal; // NE PAS inclure bonusRiderPoints ici
     }
 
     // Compter les courses gagnées (1ère position CG ou Etape)
