@@ -54,7 +54,7 @@ export const BonusPointsDetailDialog = ({
           bonus_type,
           coureur_id,
           phase_id,
-          coureurs!inner(id, nom),
+          coureurs(id, nom),
           phases!inner(index_dans_saison, saison_id)
         `)
         .or(`manager_id.eq.${managerId},target_manager_id.eq.${managerId}`)
