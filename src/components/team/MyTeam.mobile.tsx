@@ -240,13 +240,14 @@ export const MyTeamMobile = () => {
       setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, bonus_rider_points: 0, total_with_bonus: 0 });
 
       // Fetch standings data from the same view as Rankings
-      if (targetManagerId && selectedPhaseId) {
+      if (targetManagerId && selectedPhaseId && leagueId) {
         const { data: standing } = await supabase
-          .from('v_manager_standings_by_phase')
+          .from('v_manager_standings_by_phase_v2')
           .select('total_points, bonus_points')
           .match({ 
             phase_id: selectedPhaseId,
-            manager_id: targetManagerId
+            manager_id: targetManagerId,
+            league_id: leagueId
           })
           .maybeSingle();
 

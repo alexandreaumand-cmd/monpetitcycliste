@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
       console.log(`[manager-my-team] Computing rank for phase ${phaseId}, manager ${targetManagerId}`);
       
       let standingsQuery = supabase
-        .from('v_manager_standings_by_phase')
+        .from('v_manager_standings_by_phase_v2')
         .select('manager_id, total_points')
         .eq('phase_id', phaseId);
       

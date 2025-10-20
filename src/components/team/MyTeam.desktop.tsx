@@ -203,13 +203,14 @@ export const MyTeamDesktop = () => {
       setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, bonus_rider_points: 0, total_with_bonus: 0, wins_count: 0, my_rank: null, managers_count: 0 });
 
       // Fetch standings data from the same view as Rankings
-      if (targetManagerId && selectedPhaseId) {
+      if (targetManagerId && selectedPhaseId && leagueId) {
         const client: any = supabase;
         const { data: standing } = await client
-          .from('v_manager_standings_by_phase')
+          .from('v_manager_standings_by_phase_v2')
           .select('total_points, bonus_points')
           .eq('phase_id', selectedPhaseId)
           .eq('manager_id', targetManagerId)
+          .eq('league_id', leagueId)
           .maybeSingle();
         
         if (standing) {
@@ -282,7 +283,7 @@ export const MyTeamDesktop = () => {
           manager_id: manager.id,
           phase_id: selectedPhaseId,
           coureur_id,
-          league_id: leagueId || 'f7921741-29f4-4296-9aca-a03c1f3615b0',
+          league_id: leagueId,
         });
 
       if (error) throw error;
