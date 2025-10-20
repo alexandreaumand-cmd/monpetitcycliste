@@ -63,17 +63,23 @@ export const RecentPointsChart = ({ phaseId, saisonId }: RecentPointsChartProps)
   
   // Build ChartConfig avec des couleurs stables par manager
   const chartConfig: ChartConfig = managers.reduce((config, manager) => {
+    // Palette optimisée pour contraste maximum entre couleurs adjacentes
     const colors = [
-      "hsl(220, 70%, 50%)",  // blue
-      "hsl(142, 71%, 45%)",  // green  
-      "hsl(38, 92%, 50%)",   // amber
-      "hsl(0, 72%, 51%)",    // red
-      "hsl(258, 90%, 66%)",  // purple
-      "hsl(330, 81%, 60%)",  // pink
-      "hsl(280, 70%, 50%)",  // violet
-      "hsl(160, 70%, 50%)",  // teal
-      "hsl(25, 95%, 53%)",   // orange
-      "hsl(340, 82%, 52%)"   // rose
+      "hsl(210, 100%, 50%)",   // Bleu vif
+      "hsl(0, 85%, 55%)",      // Rouge vif
+      "hsl(120, 85%, 35%)",    // Vert foncé
+      "hsl(280, 90%, 55%)",    // Violet
+      "hsl(35, 100%, 50%)",    // Orange
+      "hsl(340, 90%, 50%)",    // Rose fuchsia
+      "hsl(180, 80%, 40%)",    // Cyan
+      "hsl(50, 100%, 45%)",    // Jaune moutarde
+      "hsl(160, 70%, 45%)",    // Vert émeraude
+      "hsl(25, 95%, 55%)",     // Orange brûlé
+      "hsl(190, 85%, 45%)",    // Bleu turquoise
+      "hsl(300, 75%, 50%)",    // Magenta
+      "hsl(90, 70%, 40%)",     // Vert lime
+      "hsl(15, 85%, 55%)",     // Rouge orangé
+      "hsl(240, 80%, 60%)",    // Bleu indigo
     ];
     const colorIndex = getColorIndex(manager) % colors.length;
     config[manager] = {

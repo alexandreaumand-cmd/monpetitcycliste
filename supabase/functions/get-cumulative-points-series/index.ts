@@ -57,24 +57,18 @@ Deno.serve(async (req) => {
         startDate.setDate(startDate.getDate() - 30);
       }
     } else if (view_mode === 'season' && saison_id) {
-      // Get ALL phases to calculate cumulative from the beginning
-      const { data: allPhases } = await supabaseClient
+      // Get ONLY phases from the selected season
+      const { data: seasonPhases } = await supabaseClient
         .from('phases')
-        .select('saison_id, date_debut, date_fin')
-        .order('date_debut', { ascending: true });
-      
-      // Get target season phases to determine end date
-      const { data: targetSeasonPhases } = await supabaseClient
-        .from('phases')
-        .select('date_debut, date_fin')
+        .select('id, date_debut, date_fin')
         .eq('saison_id', saison_id)
         .order('date_debut', { ascending: true });
       
-      if (allPhases && allPhases.length > 0 && targetSeasonPhases && targetSeasonPhases.length > 0) {
-        // Start from the first phase ever (for cumulative calculation)
-        startDate = new Date(allPhases[0].date_debut);
-        // End at the last phase of the selected season
-        endDate = new Date(targetSeasonPhases[targetSeasonPhases.length - 1].date_fin);
+      if (seasonPhases && seasonPhases.length > 0) {
+        // Start from the FIRST phase of THIS season
+        startDate = new Date(seasonPhases[0].date_debut);
+        // End at the LAST phase of THIS season
+        endDate = new Date(seasonPhases[seasonPhases.length - 1].date_fin);
       } else {
         startDate = new Date();
         startDate.setDate(startDate.getDate() - 30);
@@ -115,8 +109,19 @@ Deno.serve(async (req) => {
     if (targetPhaseId) {
       query = query.eq('phase_id', targetPhaseId);
     }
-    // For 'season' mode, we don't filter by phase_id
-    // We get all points and filter by date range later
+    
+    // For 'season' mode, filter by phase_ids of the selected season
+    if (view_mode === 'season' && saison_id) {
+      const { data: seasonPhases } = await supabaseClient
+        .from('phases')
+        .select('id')
+        .eq('saison_id', saison_id);
+      
+      if (seasonPhases && seasonPhases.length > 0) {
+        const phaseIds = seasonPhases.map(p => p.id);
+        query = query.in('phase_id', phaseIds);
+      }
+    }
 
     const { data: pointsData, error: pointsError } = await query;
 
