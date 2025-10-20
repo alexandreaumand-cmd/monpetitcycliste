@@ -4939,53 +4939,10 @@ export type Database = {
         Row: {
           league_id: string | null
           manager_id: string | null
-          phase_id: string | null
           season_id: string | null
           total_points: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "courses_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["phase_id"]
-          },
-          {
-            foreignKeyName: "courses_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "coureurs_disponibilite_enrichie"
-            referencedColumns: ["phase_id"]
-          },
-          {
-            foreignKeyName: "courses_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "manager_phase_status"
-            referencedColumns: ["phase_id"]
-          },
-          {
-            foreignKeyName: "courses_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "managers_rosters_status"
-            referencedColumns: ["phase_id"]
-          },
-          {
-            foreignKeyName: "courses_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "phases"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "courses_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "v_manager_standings_by_phase"
-            referencedColumns: ["phase_id"]
-          },
           {
             foreignKeyName: "phases_saison_id_fkey"
             columns: ["season_id"]
