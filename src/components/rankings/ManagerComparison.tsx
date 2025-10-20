@@ -651,26 +651,54 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     });
   }, [pointsA, pointsB, courses]);
 
-  // Données pour le graphique Radar - Catégories
+  // Données pour le graphique Radar - Catégories (normalisé base 100)
   const radarData = useMemo(() => {
     if (!pointsByCategory) return [];
 
-    return pointsByCategory.map(cat => ({
-      category: cat.category,
-      managerA: cat.points_a,
-      managerB: cat.points_b,
-    }));
+    return pointsByCategory.map(cat => {
+      const maxPoints = Math.max(cat.points_a, cat.points_b);
+      
+      // Si aucun manager n'a de points, on retourne 0
+      if (maxPoints === 0) {
+        return {
+          category: cat.category,
+          managerA: 0,
+          managerB: 0,
+        };
+      }
+
+      // Normaliser sur base 100
+      return {
+        category: cat.category,
+        managerA: (cat.points_a / maxPoints) * 100,
+        managerB: (cat.points_b / maxPoints) * 100,
+      };
+    });
   }, [pointsByCategory]);
 
-  // Données pour le graphique Radar - Type de barème
+  // Données pour le graphique Radar - Type de barème (normalisé base 100)
   const radarDataBareme = useMemo(() => {
     if (!pointsByBaremeType) return [];
 
-    return pointsByBaremeType.map(item => ({
-      category: item.category,
-      managerA: item.points_a,
-      managerB: item.points_b,
-    }));
+    return pointsByBaremeType.map(item => {
+      const maxPoints = Math.max(item.points_a, item.points_b);
+      
+      // Si aucun manager n'a de points, on retourne 0
+      if (maxPoints === 0) {
+        return {
+          category: item.category,
+          managerA: 0,
+          managerB: 0,
+        };
+      }
+
+      // Normaliser sur base 100
+      return {
+        category: item.category,
+        managerA: (item.points_a / maxPoints) * 100,
+        managerB: (item.points_b / maxPoints) * 100,
+      };
+    });
   }, [pointsByBaremeType]);
 
   // Calculer les métriques globales - CORRIGÉ: ajouter bonus
