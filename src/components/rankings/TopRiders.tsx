@@ -424,57 +424,11 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                         ) : (
                           rider.owners_all && rider.owners_all.length > 0 ? (
                             <div className="flex flex-wrap gap-1 items-center">
-                              {rider.owners_all.slice(0, 3).map((owner) => (
+                              {rider.owners_all.map((owner) => (
                                 <Badge key={owner.manager_id} variant="outline" className="text-xs">
                                   {owner.manager_nom}
                                 </Badge>
                               ))}
-                              {rider.owners_by_phase && Object.keys(rider.owners_by_phase).length > 0 && (
-                                <Popover>
-                                  <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                    <Badge 
-                                      variant="secondary" 
-                                      className="text-xs cursor-pointer hover:bg-secondary/80"
-                                    >
-                                      {rider.owners_all.length > 3 ? `+${rider.owners_all.length - 3}` : 'Hist.'}
-                                      <Info className="h-3 w-3 ml-1" />
-                                    </Badge>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-80" onClick={(e) => e.stopPropagation()}>
-                                    <div className="space-y-2">
-                                      <h4 className="font-semibold text-sm">Propriétaires par phase</h4>
-                                      <div className="max-h-48 overflow-y-auto">
-                                        <Table>
-                                          <TableHeader>
-                                            <TableRow>
-                                              <TableHead className="text-xs">Manager</TableHead>
-                                              <TableHead className="text-xs">Phase</TableHead>
-                                            </TableRow>
-                                          </TableHeader>
-                                          <TableBody>
-                                            {Object.entries(rider.owners_by_phase)
-                                              .sort(([a], [b]) => {
-                                                const numA = parseInt(a.replace('P', ''));
-                                                const numB = parseInt(b.replace('P', ''));
-                                                return numA - numB;
-                                              })
-                                              .flatMap(([phaseKey, owners]) => 
-                                                (owners as RiderOwner[]).map((owner, idx) => (
-                                                  <TableRow key={`${phaseKey}-${idx}`}>
-                                                    <TableCell className="text-xs">{owner.manager_nom}</TableCell>
-                                                    <TableCell className="text-xs">
-                                                      <Badge variant="outline" className="text-xs">{phaseKey}</Badge>
-                                                    </TableCell>
-                                                  </TableRow>
-                                                ))
-                                              )}
-                                          </TableBody>
-                                        </Table>
-                                      </div>
-                                    </div>
-                                  </PopoverContent>
-                                </Popover>
-                              )}
                             </div>
                           ) : (
                             <span className="text-muted-foreground text-sm">—</span>
@@ -562,7 +516,9 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                                 <TableRow key={`${phaseKey}-${idx}`}>
                                   <TableCell className="text-xs">{owner.manager_nom}</TableCell>
                                   <TableCell className="text-xs">
-                                    <Badge variant="outline" className="text-xs">{phaseKey}</Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      {phaseKey.replace(/^P(\d+)$/, 'Phase $1')}
+                                    </Badge>
                                   </TableCell>
                                 </TableRow>
                               ))
