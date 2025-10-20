@@ -62,22 +62,32 @@ Deno.serve(async (req) => {
       // Single phase context: query rosters for this specific phase
       const { data: rosterData, error: rosterError } = await supabase
         .from('rosters')
-        .select('coureur_id, manager_id, managers(id, nom)')
+        .select('coureur_id, manager_id')
         .eq('phase_id', phase_id)
         .in('coureur_id', riderIds);
 
       if (rosterError) {
         console.error('Error fetching rosters:', rosterError);
-      } else if (rosterData) {
+      } else if (rosterData && rosterData.length > 0) {
         console.log(`Found ${rosterData.length} roster entries for phase`);
+        
+        // Extract unique manager IDs and fetch managers separately
+        const managerIds = [...new Set(rosterData.map(r => r.manager_id).filter(Boolean))];
+        const { data: managers } = await supabase
+          .from('managers')
+          .select('id, nom')
+          .in('id', managerIds);
+        
+        const managersMap = Object.fromEntries((managers || []).map(m => [m.id, m.nom]));
+        
         ownersMap = rosterData.reduce((acc: any, r: any) => {
           if (!acc[r.coureur_id]) {
             acc[r.coureur_id] = [];
           }
-          if (r.managers) {
+          if (r.manager_id && managersMap[r.manager_id]) {
             acc[r.coureur_id].push({
               manager_id: r.manager_id,
-              manager_nom: r.managers.nom
+              manager_nom: managersMap[r.manager_id]
             });
           }
           return acc;
@@ -95,16 +105,27 @@ Deno.serve(async (req) => {
       } else if (phases && phases.length > 0) {
         const phaseIds = phases.map(p => p.id);
         
+        // Fetch rosters WITHOUT managers join
         const { data: rosterData, error: rosterError } = await supabase
           .from('rosters')
-          .select('coureur_id, manager_id, phase_id, managers(id, nom)')
+          .select('coureur_id, manager_id, phase_id')
           .in('phase_id', phaseIds)
           .in('coureur_id', riderIds);
 
         if (rosterError) {
           console.error('Error fetching rosters for season:', rosterError);
-        } else if (rosterData) {
+        } else if (rosterData && rosterData.length > 0) {
           console.log(`Found ${rosterData.length} roster entries for season`);
+          
+          // Extract unique manager IDs and fetch managers separately
+          const managerIds = [...new Set(rosterData.map(r => r.manager_id).filter(Boolean))];
+          const { data: managers } = await supabase
+            .from('managers')
+            .select('id, nom')
+            .in('id', managerIds);
+          
+          const managersMap = Object.fromEntries((managers || []).map(m => [m.id, m.nom]));
+          
           // Build ownersMap with owners_all and owners_by_phase
           ownersMap = rosterData.reduce((acc: any, r: any) => {
             if (!acc[r.coureur_id]) {
@@ -113,15 +134,18 @@ Deno.serve(async (req) => {
                 owners_by_phase: {}
               };
             }
-            if (r.managers) {
+            
+            if (r.manager_id && managersMap[r.manager_id]) {
               const owner = {
                 manager_id: r.manager_id,
-                manager_nom: r.managers.nom
+                manager_nom: managersMap[r.manager_id]
               };
+              
               // Add to owners_all if not already present
               if (!acc[r.coureur_id].owners_all.some((o: any) => o.manager_id === r.manager_id)) {
                 acc[r.coureur_id].owners_all.push(owner);
               }
+              
               // Add to owners_by_phase with phase index
               const phaseInfo = phases.find(p => p.id === r.phase_id);
               const phaseKey = phaseInfo ? `P${phaseInfo.index_dans_saison}` : r.phase_id;
@@ -133,6 +157,14 @@ Deno.serve(async (req) => {
             }
             return acc;
           }, {});
+          
+          // Debug logging for specific riders
+          if (ownersMap['tadej_pogacar']) {
+            console.log('POGACAR owners:', JSON.stringify(ownersMap['tadej_pogacar']));
+          }
+          if (ownersMap['jonas_vingegaard']) {
+            console.log('VINGEGAARD owners:', JSON.stringify(ownersMap['jonas_vingegaard']));
+          }
         }
       }
     }
