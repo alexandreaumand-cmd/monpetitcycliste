@@ -117,7 +117,8 @@ export const AuctionManager = () => {
           phase_id: activePhase.id,
           round_number: nextRoundNumber,
           deadline_at: deadlineAt.toISOString(),
-          statut: 'open'
+          statut: 'open',
+          league_id: activePhase.id // Utiliser phase_id comme league_id pour Legacy
         });
 
       if (error) throw error;
@@ -153,7 +154,8 @@ export const AuctionManager = () => {
           phase_id: selectedPhase,
           round_number: parseInt(roundNumber),
           deadline_at: deadlineAt.toISOString(),
-          statut: 'open'
+          statut: 'open',
+          league_id: selectedPhase // Utiliser phase_id comme league_id pour Legacy
         });
 
       if (error) throw error;
