@@ -59,12 +59,11 @@ Deno.serve(async (req) => {
     let ownersMap: Record<string, any> = {};
     
     if (phase_id) {
-      // Single phase context: query rosters for this specific phase
+      // Single phase context: query ALL rosters for this phase (no coureur_id filter)
       const { data: rosterData, error: rosterError } = await supabase
         .from('rosters')
         .select('coureur_id, manager_id')
-        .eq('phase_id', phase_id)
-        .in('coureur_id', riderIds);
+        .eq('phase_id', phase_id);
 
       if (rosterError) {
         console.error('Error fetching rosters:', rosterError);
@@ -94,7 +93,7 @@ Deno.serve(async (req) => {
         }, {});
       }
     } else {
-      // Season context: fetch all phases and build owners_all + owners_by_phase
+      // Season context: fetch all phases and ALL rosters (no coureur_id filter)
       const { data: phases, error: phasesError } = await supabase
         .from('phases')
         .select('id, saison_id, index_dans_saison')
@@ -105,12 +104,11 @@ Deno.serve(async (req) => {
       } else if (phases && phases.length > 0) {
         const phaseIds = phases.map(p => p.id);
         
-        // Fetch rosters WITHOUT managers join
+        // Fetch ALL rosters for these phases (no coureur_id filter)
         const { data: rosterData, error: rosterError } = await supabase
           .from('rosters')
           .select('coureur_id, manager_id, phase_id')
-          .in('phase_id', phaseIds)
-          .in('coureur_id', riderIds);
+          .in('phase_id', phaseIds);
 
         if (rosterError) {
           console.error('Error fetching rosters for season:', rosterError);
