@@ -54,41 +54,15 @@ Deno.serve(async (req) => {
       const allManagersPoints: Array<{ manager_id: string; total_points: number }> = [];
 
       for (const mgr of managers) {
-        // Get race points
-        const { data: racePts } = await supabase
-          .from('points_ledger')
-          .select('points')
-          .eq('phase_id', phase.id)
-          .eq('manager_id', mgr.id);
-
-        const raceTotalMgr = racePts?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
-
-        // Get manager bonus
-        const { data: mgrBonus } = await supabase
-          .from('manager_bonus_points')
-          .select('bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs')
+        // Use the view that correctly handles race points + all bonuses
+        const { data: standings } = await supabase
+          .from('v_manager_standings_by_phase')
+          .select('total_points')
           .eq('phase_id', phase.id)
           .eq('manager_id', mgr.id)
-          .single();
+          .maybeSingle();
 
-        const bonusTotalMgr = mgrBonus
-          ? (mgrBonus.bonus_itt || 0) +
-            (mgrBonus.bonus_ttt || 0) +
-            (mgrBonus.bonus_first_win || 0) +
-            (mgrBonus.bonus_coureurs || 0) +
-            (mgrBonus.bonus_scoreurs || 0)
-          : 0;
-
-        // Get rider bonus
-        const { data: riderBonusMgr } = await supabase
-          .from('bonus_points')
-          .select('points')
-          .eq('phase_id', phase.id)
-          .or(`manager_id.eq.${mgr.id},target_manager_id.eq.${mgr.id}`);
-
-        const riderBonusTotalMgr = riderBonusMgr?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
-
-        const totalMgr = raceTotalMgr + bonusTotalMgr + riderBonusTotalMgr;
+        const totalMgr = standings?.total_points || 0;
 
         allManagersPoints.push({
           manager_id: mgr.id,
