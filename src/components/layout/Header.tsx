@@ -9,6 +9,7 @@ import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NotificationCenter } from "./NotificationCenter";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
+import { LeagueSwitcher } from "@/components/leagues/LeagueSwitcher";
 
 interface HeaderProps {
   manager: any;
@@ -150,6 +151,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
+            <LeagueSwitcher />
             <NotificationCenter />
             <Button variant="outline" size="sm" onClick={onSignOut} className="hidden sm:flex">
               <LogOut className="mr-2 h-4 w-4" />
