@@ -545,72 +545,61 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     enabled: !!managerB,
   });
 
-  // Calculs : coureurs communs et exclusifs
-  const coureursCommuns = useMemo(() => {
-    if (!rostersA || !rostersB || !pointsA || !pointsB || !coureurs) return [];
+  // Calculer les points par type de barème
+  const pointsByBaremeType = useMemo(() => {
+    if (!pointsA || !pointsB || !courses) return null;
 
-    const coureursAIds = new Set(rostersA.map(r => r.coureur_id));
-    const coureursBIds = new Set(rostersB.map(r => r.coureur_id));
+    const baremes = [
+      { 
+        key: "CLASS_1_2", 
+        label: "Class 1 & 2.1", 
+        filterCourse: (c: any) => {
+          const cat = c.categorie?.toLowerCase() || "";
+          return cat.includes("1.1") || cat.includes("2.1");
+        }
+      },
+      { 
+        key: "CLASS_PRO", 
+        label: "Class 1.Pro & 2.Pro", 
+        filterCourse: (c: any) => {
+          const cat = c.categorie?.toLowerCase() || "";
+          return cat.includes("1.pro") || cat.includes("2.pro");
+        }
+      },
+      { 
+        key: "WT", 
+        label: "World Tour (WT)", 
+        filterCourse: (c: any) => {
+          const cat = c.categorie?.toLowerCase() || "";
+          return cat.includes("wt") || cat.includes("world tour");
+        }
+      },
+    ];
 
-    const commonIds = Array.from(coureursAIds).filter(id => coureursBIds.has(id));
+    const coursesMap = new Map(courses.map(c => [c.id, c]));
 
-    return commonIds.map(coureurId => {
-      const coureur = coureurs.find(c => c.id === coureurId);
-      const ptsA = pointsA.filter(p => p.coureur_id === coureurId).reduce((sum, p) => sum + (p.points || 0), 0);
-      const ptsB = pointsB.filter(p => p.coureur_id === coureurId).reduce((sum, p) => sum + (p.points || 0), 0);
+    return baremes.map(bareme => {
+      let ptsA = 0;
+      let ptsB = 0;
+
+      ptsA = pointsA.filter(p => {
+        const course = coursesMap.get(p.course_id);
+        return course && bareme.filterCourse(course);
+      }).reduce((sum, p) => sum + (p.points || 0), 0);
+
+      ptsB = pointsB.filter(p => {
+        const course = coursesMap.get(p.course_id);
+        return course && bareme.filterCourse(course);
+      }).reduce((sum, p) => sum + (p.points || 0), 0);
 
       return {
-        coureur_id: coureurId,
-        nom: coureur?.nom || coureurId,
-        equipe: coureur?.equipe || "",
+        category: bareme.label,
         points_a: ptsA,
         points_b: ptsB,
         delta: ptsA - ptsB,
       };
-    }).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
-  }, [rostersA, rostersB, pointsA, pointsB, coureurs]);
-
-  const coureursExclusifA = useMemo(() => {
-    if (!rostersA || !rostersB || !pointsA || !coureurs) return [];
-
-    const coureursAIds = new Set(rostersA.map(r => r.coureur_id));
-    const coureursBIds = new Set(rostersB.map(r => r.coureur_id));
-
-    const exclusifAIds = Array.from(coureursAIds).filter(id => !coureursBIds.has(id));
-
-    return exclusifAIds.map(coureurId => {
-      const coureur = coureurs.find(c => c.id === coureurId);
-      const pts = pointsA.filter(p => p.coureur_id === coureurId).reduce((sum, p) => sum + (p.points || 0), 0);
-
-      return {
-        coureur_id: coureurId,
-        nom: coureur?.nom || coureurId,
-        equipe: coureur?.equipe || "",
-        points: pts,
-      };
-    }).sort((a, b) => b.points - a.points);
-  }, [rostersA, rostersB, pointsA, coureurs]);
-
-  const coureursExclusifB = useMemo(() => {
-    if (!rostersA || !rostersB || !pointsB || !coureurs) return [];
-
-    const coureursAIds = new Set(rostersA.map(r => r.coureur_id));
-    const coureursBIds = new Set(rostersB.map(r => r.coureur_id));
-
-    const exclusifBIds = Array.from(coureursBIds).filter(id => !coureursAIds.has(id));
-
-    return exclusifBIds.map(coureurId => {
-      const coureur = coureurs.find(c => c.id === coureurId);
-      const pts = pointsB.filter(p => p.coureur_id === coureurId).reduce((sum, p) => sum + (p.points || 0), 0);
-
-      return {
-        coureur_id: coureurId,
-        nom: coureur?.nom || coureurId,
-        equipe: coureur?.equipe || "",
-        points: pts,
-      };
-    }).sort((a, b) => b.points - a.points);
-  }, [rostersA, rostersB, pointsB, coureurs]);
+    });
+  }, [pointsA, pointsB, courses]);
 
   // Calculer les points par catégorie
   const pointsByCategory = useMemo(() => {
@@ -662,7 +651,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     });
   }, [pointsA, pointsB, courses]);
 
-  // Données pour le graphique Radar
+  // Données pour le graphique Radar - Catégories
   const radarData = useMemo(() => {
     if (!pointsByCategory) return [];
 
@@ -672,6 +661,17 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       managerB: cat.points_b,
     }));
   }, [pointsByCategory]);
+
+  // Données pour le graphique Radar - Type de barème
+  const radarDataBareme = useMemo(() => {
+    if (!pointsByBaremeType) return [];
+
+    return pointsByBaremeType.map(item => ({
+      category: item.category,
+      managerA: item.points_a,
+      managerB: item.points_b,
+    }));
+  }, [pointsByBaremeType]);
 
   // Calculer les métriques globales - CORRIGÉ: ajouter bonus
   const totalPointsA = 
@@ -860,95 +860,9 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
             </Card>
           </div>
 
-          {/* Grid de comparaison des coureurs */}
-          <div className="grid grid-cols-3 gap-4">
-            {/* Coureurs communs */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  Coureurs en commun ({coureursCommuns.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {coureursCommuns.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Aucun coureur en commun</p>
-                ) : (
-                  <div className="space-y-3">
-                    {coureursCommuns.map(c => (
-                      <div key={c.coureur_id} className="border-b pb-2 last:border-0">
-                        <div className="font-medium text-sm">{c.nom}</div>
-                        <div className="text-xs text-muted-foreground mb-1">{c.equipe}</div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className={cn(c.points_a > c.points_b && "font-bold text-primary")}>
-                            A: {c.points_a}
-                          </span>
-                          <span className={cn(c.points_b > c.points_a && "font-bold text-primary")}>
-                            B: {c.points_b}
-                          </span>
-                          <Badge variant={c.delta > 0 ? "default" : c.delta < 0 ? "destructive" : "outline"} className="text-xs">
-                            {c.delta > 0 ? <ArrowUp className="w-3 h-3" /> : c.delta < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                            {Math.abs(c.delta)}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Coureurs exclusifs Manager A */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  Exclusif à {managerAName} ({coureursExclusifA.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {coureursExclusifA.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Aucun coureur exclusif</p>
-                ) : (
-                  <div className="space-y-3">
-                    {coureursExclusifA.slice(0, 10).map(c => (
-                      <div key={c.coureur_id} className="border-b pb-2 last:border-0">
-                        <div className="font-medium text-sm">{c.nom}</div>
-                        <div className="text-xs text-muted-foreground">{c.equipe}</div>
-                        <div className="text-xs font-mono mt-1">{c.points} pts</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Coureurs exclusifs Manager B */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  Exclusif à {managerBName} ({coureursExclusifB.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {coureursExclusifB.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Aucun coureur exclusif</p>
-                ) : (
-                  <div className="space-y-3">
-                    {coureursExclusifB.slice(0, 10).map(c => (
-                      <div key={c.coureur_id} className="border-b pb-2 last:border-0">
-                        <div className="font-medium text-sm">{c.nom}</div>
-                        <div className="text-xs text-muted-foreground">{c.equipe}</div>
-                        <div className="text-xs font-mono mt-1">{c.points} pts</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Statistiques de comparaison */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Tableau de points par catégorie */}
+            {/* Points par catégorie - Tableau */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Points par catégorie</CardTitle>
@@ -999,10 +913,10 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
               </CardContent>
             </Card>
 
-            {/* Graphique Radar */}
+            {/* Graphique Radar - Catégories */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Graphique Radar</CardTitle>
+                <CardTitle className="text-base">Radar - Catégories</CardTitle>
               </CardHeader>
               <CardContent>
                 {radarData.length === 0 ? (
@@ -1013,8 +927,80 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
                       <PolarGrid />
                       <PolarAngleAxis dataKey="category" tick={{ fontSize: 11 }} />
                       <PolarRadiusAxis />
-                  <Radar name={managerAName} dataKey="managerA" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
-                  <Radar name={managerBName} dataKey="managerB" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} />
+                      <Radar name={managerAName} dataKey="managerA" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+                      <Radar name={managerBName} dataKey="managerB" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} />
+                      <Legend />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Points par type de barème - Tableau */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Points par type de barème</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!pointsByBaremeType ? (
+                  <Skeleton className="h-40" />
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Barème</TableHead>
+                        <TableHead className="text-right">{managerAName}</TableHead>
+                        <TableHead className="text-right">{managerBName}</TableHead>
+                        <TableHead className="text-right">Écart</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pointsByBaremeType.map((item, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="font-medium text-sm">{item.category}</TableCell>
+                          <TableCell className={cn(
+                            "text-right font-mono text-sm",
+                            item.points_a > item.points_b && "font-bold text-primary"
+                          )}>
+                            {item.points_a}
+                          </TableCell>
+                          <TableCell className={cn(
+                            "text-right font-mono text-sm",
+                            item.points_b > item.points_a && "font-bold text-primary"
+                          )}>
+                            {item.points_b}
+                          </TableCell>
+                          <TableCell className={cn(
+                            "text-right font-mono text-sm",
+                            item.delta > 0 ? "text-green-600" : item.delta < 0 ? "text-destructive" : "text-muted-foreground"
+                          )}>
+                            {item.delta > 0 ? `+${item.delta}` : item.delta}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Graphique Radar - Type de barème */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Radar - Type de barème</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {radarDataBareme.length === 0 ? (
+                  <Skeleton className="h-40" />
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <RadarChart data={radarDataBareme}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="category" tick={{ fontSize: 10 }} />
+                      <PolarRadiusAxis />
+                      <Radar name={managerAName} dataKey="managerA" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+                      <Radar name={managerBName} dataKey="managerB" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} />
                       <Legend />
                       <Tooltip />
                     </RadarChart>
