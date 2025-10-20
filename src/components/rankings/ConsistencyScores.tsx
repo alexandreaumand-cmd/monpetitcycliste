@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { TrendingUp, Activity } from "lucide-react";
 import { useState } from "react";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface ConsistencyScoresProps {
   saisonId: string;
@@ -44,16 +45,18 @@ const getGaugeColor = (score: number) => {
 
 export const ConsistencyScores = ({ saisonId }: ConsistencyScoresProps) => {
   const [topN, setTopN] = useState<string>('all');
+  const { leagueId, isLoading: leagueLoading } = useLeague();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['consistency-scores', saisonId],
+    queryKey: ['consistency-scores', saisonId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-consistency-scores', {
-        body: { saison_id: saisonId }
+        body: { saison_id: saisonId, league_id: leagueId }
       });
       if (error) throw error;
       return data;
     },
+    enabled: !leagueLoading && !!leagueId,
     staleTime: 1000 * 60 * 5,
   });
 

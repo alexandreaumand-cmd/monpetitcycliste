@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
 import { TrendingDown, TrendingUp } from "lucide-react";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface PointsDistributionProps {
   saisonId: string;
@@ -38,16 +39,19 @@ interface DistributionData {
 }
 
 export function PointsDistribution({ saisonId }: PointsDistributionProps) {
+  const { leagueId, isLoading: leagueLoading } = useLeague();
+  
   const { data, isLoading } = useQuery({
-    queryKey: ["points-distribution", saisonId],
+    queryKey: ["points-distribution", saisonId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("get-points-distribution", {
-        body: { saison_id: saisonId },
+        body: { saison_id: saisonId, league_id: leagueId },
       });
 
       if (error) throw error;
       return data as DistributionData;
     },
+    enabled: !leagueLoading && !!leagueId,
   });
 
   if (isLoading) {

@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { phase_id = null, manager_id = null } = await req.json();
+    const { phase_id = null, manager_id = null, league_id = null } = await req.json();
 
     // Obtenir l'ID du manager (soit fourni, soit celui connecté)
     let targetManagerId = manager_id;
@@ -90,28 +90,36 @@ Deno.serve(async (req) => {
     let bonusRiderPoints = 0;
     if (phaseId && targetManagerId) {
       // 1. Bonus REÇUS d'autres managers (target_manager_id = manager)
-      const { data: receivedBonus } = await supabase
+      let receivedBonusQuery = supabase
         .from('bonus_points')
         .select('points')
         .eq('target_manager_id', targetManagerId)
         .eq('phase_id', phaseId);
       
+      if (league_id) receivedBonusQuery = receivedBonusQuery.eq('league_id', league_id);
+      const { data: receivedBonus } = await receivedBonusQuery;
+      
       // 2. Bonus du MANAGER (ITT, TTT, First Win, Coureurs, Scoreurs)
-      const { data: managerBonus } = await supabase
+      let managerBonusQuery = supabase
         .from('manager_bonus_points')
         .select('bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs')
         .eq('manager_id', targetManagerId)
-        .eq('phase_id', phaseId)
-        .maybeSingle();
+        .eq('phase_id', phaseId);
+      
+      if (league_id) managerBonusQuery = managerBonusQuery.eq('league_id', league_id);
+      const { data: managerBonus } = await managerBonusQuery.maybeSingle();
       
       // 3. Bonus COUREUR BONUSÉ (pour affichage séparé dans les KPIs)
       //    Ces points sont déjà inclus dans totalPoints (via RPC manager_team_by_id)
-      const { data: riderBonus } = await supabase
+      let riderBonusQuery = supabase
         .from('bonus_points')
         .select('points')
         .eq('manager_id', targetManagerId)
         .eq('phase_id', phaseId)
         .eq('bonus_type', 'coureur_bonuse');
+      
+      if (league_id) riderBonusQuery = riderBonusQuery.eq('league_id', league_id);
+      const { data: riderBonus } = await riderBonusQuery;
       
       // Calculer les totaux
       const receivedBonusTotal = receivedBonus?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
@@ -161,11 +169,13 @@ Deno.serve(async (req) => {
     if (phaseId && targetManagerId) {
       console.log(`[manager-my-team] Computing rank for phase ${phaseId}, manager ${targetManagerId}`);
       
-      const { data: standings } = await supabase
+      let standingsQuery = supabase
         .from('v_manager_standings_by_phase')
         .select('manager_id, total_points')
-        .eq('phase_id', phaseId)
-        .order('total_points', { ascending: false });
+        .eq('phase_id', phaseId);
+      
+      if (league_id) standingsQuery = standingsQuery.eq('league_id', league_id);
+      const { data: standings } = await standingsQuery.order('total_points', { ascending: false });
 
       if (standings && standings.length > 0) {
         managersCount = standings.length;

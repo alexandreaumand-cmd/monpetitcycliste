@@ -3,13 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Clover, TrendingUp, Zap, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface LuckRankingProps {
   saisonId: string;
 }
 
 export const LuckRanking = ({ saisonId }: LuckRankingProps) => {
-  const { data, isLoading } = useLuckRanking(saisonId);
+  const { leagueId } = useLeague();
+  const { data, isLoading } = useLuckRanking(saisonId, leagueId);
 
   if (isLoading) {
     return (

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { X } from "lucide-react";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface CourseLeaderboardProps {
   phaseId: string | null;
@@ -16,16 +17,18 @@ interface CourseLeaderboardProps {
 
 export const CourseLeaderboard = ({ phaseId, saisonId }: CourseLeaderboardProps) => {
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  const { leagueId, isLoading: leagueLoading } = useLeague();
 
   // Fetch aggregated leaderboard
   const { data: aggregatedLeaderboard, isLoading } = useQuery({
-    queryKey: ["aggregated-leaderboard", saisonId, phaseId, selectedFilters],
+    queryKey: ["aggregated-leaderboard", saisonId, phaseId, selectedFilters, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("get-aggregated-leaderboard", {
         body: {
           saison_id: saisonId,
           phase_id: phaseId,
-          filters: selectedFilters.length > 0 ? selectedFilters : null
+          filters: selectedFilters.length > 0 ? selectedFilters : null,
+          league_id: leagueId
         }
       });
       if (error) throw error;
@@ -40,7 +43,7 @@ export const CourseLeaderboard = ({ phaseId, saisonId }: CourseLeaderboardProps)
         }>;
       };
     },
-    enabled: selectedFilters.length > 0
+    enabled: selectedFilters.length > 0 && !leagueLoading && !!leagueId
   });
 
   return (

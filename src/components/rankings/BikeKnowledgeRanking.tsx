@@ -2,13 +2,15 @@ import { useKnowledgeRanking } from "@/hooks/useKnowledgeRanking";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Brain, TrendingUp, Award, Target } from "lucide-react";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface BikeKnowledgeRankingProps {
   saisonId: string;
 }
 
 export const BikeKnowledgeRanking = ({ saisonId }: BikeKnowledgeRankingProps) => {
-  const { data, isLoading } = useKnowledgeRanking(saisonId);
+  const { leagueId } = useLeague();
+  const { data, isLoading } = useKnowledgeRanking(saisonId, leagueId);
 
   if (isLoading) {
     return (

@@ -8,6 +8,7 @@ import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLeague } from "@/contexts/LeagueContext";
 import {
   Select,
   SelectContent,
@@ -67,6 +68,7 @@ interface Manager {
 export const MyTeamDesktop = () => {
   const { toast } = useToast();
   const { phases, activePhase, selectedSeason } = useSeasonContext();
+  const { leagueId } = useLeague();
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>('points');
@@ -182,7 +184,8 @@ export const MyTeamDesktop = () => {
       const { data, error } = await supabase.functions.invoke('manager-my-team', {
         body: { 
           phase_id: selectedPhaseId,
-          manager_id: selectedManagerId 
+          manager_id: selectedManagerId,
+          league_id: leagueId
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`
@@ -194,13 +197,16 @@ export const MyTeamDesktop = () => {
       setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, bonus_rider_points: 0, total_with_bonus: 0, wins_count: 0, my_rank: null, managers_count: 0 });
 
       // Fetch standings data from the same view as Rankings
-      if (targetManagerId && selectedPhaseId) {
-        const { data: standing } = await supabase
+      if (targetManagerId && selectedPhaseId && leagueId) {
+        const standingQuery = await supabase
           .from('v_manager_standings_by_phase')
           .select('total_points, bonus_points')
           .eq('phase_id', selectedPhaseId)
           .eq('manager_id', targetManagerId)
+          .eq('league_id', leagueId)
           .maybeSingle();
+        
+        const standing = standingQuery.data;
 
         if (standing) {
           setKpis(prev => ({
@@ -213,13 +219,16 @@ export const MyTeamDesktop = () => {
       }
 
       // Charger le coureur bonus sélectionné (s'il existe)
-      if (targetManagerId && selectedPhaseId) {
-        const { data: bonusRider } = await supabase
+      if (targetManagerId && selectedPhaseId && leagueId) {
+        const bonusQuery = await supabase
           .from('bonus_rider_selections')
           .select('coureur_id, coureurs(nom)')
           .eq('manager_id', targetManagerId)
           .eq('phase_id', selectedPhaseId)
+          .eq('league_id', leagueId)
           .maybeSingle();
+        
+        const bonusRider = bonusQuery.data;
 
         if (bonusRider) {
           setBonusRiderSelection({

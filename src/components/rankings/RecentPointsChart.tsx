@@ -7,6 +7,7 @@ import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartConfig } from "@/components/ui/chart";
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface RecentPointsChartProps {
   phaseId?: string | null;
@@ -16,22 +17,25 @@ interface RecentPointsChartProps {
 
 export const RecentPointsChart = ({ phaseId, saisonId, viewMode }: RecentPointsChartProps) => {
   const determinedViewMode = viewMode || (phaseId ? 'phase' : 'season');
+  const { leagueId, isLoading: leagueLoading } = useLeague();
 
   const { data: seriesData, isLoading } = useQuery({
-    queryKey: ["cumulative-points", phaseId, saisonId, determinedViewMode],
+    queryKey: ["cumulative-points", phaseId, saisonId, determinedViewMode, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("get-cumulative-points-series", {
         body: { 
           view_mode: determinedViewMode,
           phase_id: phaseId || null,
           saison_id: saisonId || null,
-          topN: 10 
+          topN: 10,
+          league_id: leagueId
         }
       });
       
       if (error) throw error;
       return data;
     },
+    enabled: !leagueLoading && !!leagueId,
   });
 
   // Filter out Unknown managers and transform data for recharts

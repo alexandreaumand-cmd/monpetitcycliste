@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
 import { TrendingUp, TrendingDown, Minus, Eye } from "lucide-react";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface ManagerPredictionsProps {
   saisonId: string;
@@ -46,17 +47,19 @@ interface PredictionsData {
 
 export function ManagerPredictions({ saisonId }: ManagerPredictionsProps) {
   const [selectedManager, setSelectedManager] = useState<ManagerPrediction | null>(null);
+  const { leagueId, isLoading: leagueLoading } = useLeague();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["manager-predictions", saisonId],
+    queryKey: ["manager-predictions", saisonId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("get-predictions", {
-        body: { saison_id: saisonId },
+        body: { saison_id: saisonId, league_id: leagueId },
       });
 
       if (error) throw error;
       return data as PredictionsData;
     },
+    enabled: !leagueLoading && !!leagueId,
   });
 
   if (isLoading) {

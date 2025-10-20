@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Trophy } from "lucide-react";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface PerformanceHeatmapProps {
   saisonId: string;
@@ -31,16 +32,18 @@ const getInterpretationForPercentile = (percentile: number) => {
 export const PerformanceHeatmap = ({ saisonId }: PerformanceHeatmapProps) => {
   const [sortBy, setSortBy] = useState<'points' | 'name'>('points');
   const [topN, setTopN] = useState<string>('all');
+  const { leagueId, isLoading: leagueLoading } = useLeague();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['performance-matrix', saisonId],
+    queryKey: ['performance-matrix', saisonId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-performance-matrix', {
-        body: { saison_id: saisonId }
+        body: { saison_id: saisonId, league_id: leagueId }
       });
       if (error) throw error;
       return data;
     },
+    enabled: !leagueLoading && !!leagueId,
     staleTime: 1000 * 60 * 5,
   });
 

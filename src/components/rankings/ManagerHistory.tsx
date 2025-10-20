@@ -11,6 +11,7 @@ import { Download, TrendingUp, TrendingDown, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 import { ManagerNameWithJersey } from "./ManagerNameWithJersey";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface ManagerHistoryProps {
   phaseId?: string | null;
@@ -20,6 +21,7 @@ interface ManagerHistoryProps {
 export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [selectedRound, setSelectedRound] = useState<string | null>(null);
+  const { leagueId, isLoading: leagueLoading } = useLeague();
 
   // Récupérer tous les managers
   const { data: managers } = useQuery({
@@ -53,7 +55,7 @@ export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
 
   // Récupérer tous les bids avec informations enrichies
   const { data: bids, isLoading: bidsLoading } = useQuery({
-    queryKey: ["manager-bids-history", phaseId, phaseIds, selectedManager, selectedRound],
+    queryKey: ["manager-bids-history", phaseId, phaseIds, selectedManager, selectedRound, leagueId],
     queryFn: async () => {
       let query = supabase
         .from("bids")
@@ -79,6 +81,11 @@ export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
         query = query.in("auctions.phase_id", phaseIds);
       }
 
+      // Filtrer par league_id
+      if (leagueId) {
+        query = query.eq("league_id", leagueId);
+      }
+
       // Filtrer par manager
       if (selectedManager && selectedManager !== "all") {
         query = query.eq("manager_id", selectedManager);
@@ -93,6 +100,7 @@ export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
       if (error) throw error;
       return data;
     },
+    enabled: !leagueLoading && !!leagueId,
   });
 
   // Récupérer les annonces pour identifier les gagnants
@@ -134,6 +142,10 @@ export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
         query = query.eq("phase_id", phaseId);
       } else if (phaseIds && phaseIds.length > 0) {
         query = query.in("phase_id", phaseIds);
+      }
+      
+      if (leagueId) {
+        query = query.eq("league_id", leagueId);
       }
 
       const { data, error } = await query;

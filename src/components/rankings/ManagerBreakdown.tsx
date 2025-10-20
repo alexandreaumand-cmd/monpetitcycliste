@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useLeague } from "@/contexts/LeagueContext";
 import {
   Accordion,
   AccordionContent,
@@ -19,26 +20,28 @@ type ManagerBreakdownProps = {
 };
 
 export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) => {
+  const { leagueId, isLoading: leagueLoading } = useLeague();
+  
   const { data: breakdown, isLoading } = useQuery({
-    queryKey: ["manager-breakdown", managerId, phaseId],
-    queryFn: async () => {
-      let query = supabase
+    queryKey: ["manager-breakdown", managerId, phaseId, leagueId] as const,
+    queryFn: async (): Promise<any[]> => {
+      if (!leagueId) return [];
+      
+      const { data, error } = await supabase
         .from("v_manager_breakdown")
-        .select("*")
-        .eq("manager_id", managerId);
+        .select("manager_id, manager_nom, course_id, course_nom, date_debut, date_fin, coureur_nom, points, type_classement, etape_numero, phase_id")
+        .eq("manager_id", managerId)
+        .eq("phase_id", phaseId || "")
+        .eq("league_id", leagueId);
       
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      }
-      
-      const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data || [];
     },
+    enabled: !leagueLoading && !!leagueId,
   });
 
   // Grouper les points par course
-  const groupedByCourse = breakdown?.reduce((acc, item) => {
+  const groupedByCourse = breakdown?.reduce((acc: any, item: any) => {
     const courseId = item.course_id;
     if (!acc[courseId]) {
       acc[courseId] = {
@@ -52,13 +55,13 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
     return acc;
   }, {} as Record<string, any>);
 
-  const courses = Object.values(groupedByCourse || {}).sort((a, b) => {
+  const courses = Object.values(groupedByCourse || {}).sort((a: any, b: any) => {
     const dateA = new Date(a.date_debut || a.date_fin || 0);
     const dateB = new Date(b.date_debut || b.date_fin || 0);
     return dateB.getTime() - dateA.getTime();
   });
 
-  const totalPoints = breakdown?.reduce((sum, item) => sum + item.points, 0) || 0;
+  const totalPoints = breakdown?.reduce((sum: number, item: any) => sum + item.points, 0) || 0;
 
   if (isLoading) {
     return (
@@ -98,7 +101,7 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
           </div>
         ) : (
           <Accordion type="multiple" className="space-y-2">
-            {courses.map((course, courseIdx) => {
+            {courses.map((course: any, courseIdx: number) => {
               const courseTotal = course.points.reduce((sum: number, p: any) => sum + p.points, 0);
               
               return (
