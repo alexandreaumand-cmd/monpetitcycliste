@@ -27,15 +27,16 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { saison_id, phase_id, limit = 5000 } = await req.json();
+    const { saison_id, phase_id, league_id, limit = 5000 } = await req.json();
 
-    console.log('Fetching top riders with filters:', { saison_id, phase_id, limit });
+    console.log('Fetching top riders with filters:', { saison_id, phase_id, league_id, limit });
 
     // Call the optimized PostgreSQL RPC function
     const { data: items, error } = await supabase
       .rpc('get_top_riders_optimized', {
         p_saison_id: saison_id,
         p_phase_id: phase_id,
+        p_league_id: league_id,
         p_limit: limit
       });
 
@@ -60,11 +61,17 @@ Deno.serve(async (req) => {
     
     if (phase_id) {
       // Single phase context: query ALL rosters for this phase (no coureur_id filter)
-      const { data: rosterData, error: rosterError } = await supabase
+      let rosterQuery = supabase
         .from('rosters')
         .select('coureur_id, manager_id')
         .eq('phase_id', phase_id)
         .limit(5000);
+      
+      if (league_id) {
+        rosterQuery = rosterQuery.eq('league_id', league_id);
+      }
+      
+      const { data: rosterData, error: rosterError } = await rosterQuery;
 
       if (rosterError) {
         console.error('Error fetching rosters:', rosterError);
@@ -112,11 +119,17 @@ Deno.serve(async (req) => {
         const allRosterData: any[] = [];
 
         while (hasMore) {
-          const { data: page, error: rosterError } = await supabase
+          let pageQuery = supabase
             .from('rosters')
             .select('coureur_id, manager_id, phase_id')
             .in('phase_id', phaseIds)
             .range(offset, offset + pageSize - 1);
+          
+          if (league_id) {
+            pageQuery = pageQuery.eq('league_id', league_id);
+          }
+          
+          const { data: page, error: rosterError } = await pageQuery;
 
           if (rosterError) {
             console.error('Error fetching rosters for season (page):', rosterError);

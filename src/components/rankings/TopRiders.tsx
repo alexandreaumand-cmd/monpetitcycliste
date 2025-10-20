@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLeague } from "@/contexts/LeagueContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -85,6 +86,7 @@ type UpcomingRace = {
 type TopRidersSortColumn = "total_points" | "prix_achat" | "ratio_points_par_prix";
 
 export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => {
+  const { leagueId, isLoading: isLeagueLoading } = useLeague();
   const [selectedRider, setSelectedRider] = useState<TopRider | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -97,12 +99,13 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
   const [displayLimit, setDisplayLimit] = useState(20);
 
   const { data: allRiders, isLoading } = useQuery({
-    queryKey: ["top-riders", phaseId, saisonId],
+    queryKey: ["top-riders", phaseId, saisonId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-top-riders', {
         body: {
           phase_id: phaseId,
           saison_id: saisonId,
+          league_id: leagueId,
           limit: 5000,
         },
       });
@@ -110,6 +113,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
       if (error) throw error;
       return data?.items as TopRider[] || [];
     },
+    enabled: !isLeagueLoading && !!leagueId,
   });
 
   const riders = allRiders?.slice(0, displayLimit);

@@ -7,6 +7,7 @@ import { BonusListTable } from "./BonusListTable";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import { useLeague } from "@/contexts/LeagueContext";
 
 type FormStep = 'select-type' | 'enter-data';
 
@@ -17,6 +18,7 @@ interface BonusEntryDialogProps {
 }
 
 export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDialogProps) => {
+  const { leagueId } = useLeague();
   const [step, setStep] = useState<FormStep>('select-type');
   const [selectedBonus, setSelectedBonus] = useState<BonusType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -128,15 +130,16 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
 
       const { error } = await supabase
         .from('bonus_points')
-        .insert({
+        .insert([{
           phase_id: phaseId,
           bonus_type: selectedBonus.type,
           coureur_id: data.coureur_id,
           manager_id: data.manager_id,
           points: data.points,
           commentaire: data.commentaire || null,
-          created_by: managerData?.id
-        });
+          created_by: managerData?.id,
+          league_id: leagueId!
+        }]);
 
       if (error) throw error;
 
@@ -180,14 +183,15 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
 
       const { error } = await supabase
         .from('bonus_points')
-        .insert({
+        .insert([{
           phase_id: phaseId,
           bonus_type: selectedBonus.type,
           target_manager_id: data.target_manager_id,
           points: data.points,
           commentaire: data.commentaire || null,
-          created_by: managerData?.id
-        });
+          created_by: managerData?.id,
+          league_id: leagueId!
+        }]);
 
       if (error) throw error;
 

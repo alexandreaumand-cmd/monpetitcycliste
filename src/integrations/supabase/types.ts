@@ -5499,7 +5499,12 @@ export type Database = {
         }[]
       }
       get_top_riders_optimized: {
-        Args: { p_limit?: number; p_phase_id?: string; p_saison_id?: string }
+        Args: {
+          p_league_id?: string
+          p_limit?: number
+          p_phase_id?: string
+          p_saison_id?: string
+        }
         Returns: {
           prix_achat: number
           prix_initial: number
