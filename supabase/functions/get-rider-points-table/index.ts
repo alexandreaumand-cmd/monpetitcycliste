@@ -70,28 +70,10 @@ Deno.serve(async (req) => {
       equipe = seasonData?.equipe || 'N/A';
     }
 
-    // Build query for points with joins
+    // Build query for points WITHOUT joins (to avoid SQL alias issues)
     let query = supabase
       .from('points_ledger')
-      .select(`
-        points,
-        phase_id,
-        course_id,
-        type_classement,
-        etape_numero,
-        phases:phase_id (
-          id,
-          nom,
-          index_dans_saison,
-          saison_id
-        ),
-        courses:course_id (
-          nom,
-          categorie,
-          date_debut,
-          date_fin
-        )
-      `)
+      .select('points, phase_id, course_id, type_classement, etape_numero')
       .eq('coureur_id', rider_id);
 
     // Apply filters
@@ -119,9 +101,25 @@ Deno.serve(async (req) => {
 
     console.log(`Successfully fetched ${pointsData?.length || 0} point entries for rider ${rider_id}`);
 
-    // Get race_results to find positions
-    const courseIds = [...new Set(pointsData?.map(p => p.course_id) || [])];
+    // Fetch phases separately
+    const phaseIds = [...new Set(pointsData?.map(p => p.phase_id).filter(Boolean) || [])];
+    const { data: phasesData } = await supabase
+      .from('phases')
+      .select('id, nom, index_dans_saison, saison_id')
+      .in('id', phaseIds);
     
+    const phasesMap = new Map(phasesData?.map(p => [p.id, p]) || []);
+
+    // Fetch courses separately
+    const courseIds = [...new Set(pointsData?.map(p => p.course_id).filter(Boolean) || [])];
+    const { data: coursesData } = await supabase
+      .from('courses')
+      .select('id, nom, categorie, date_debut, date_fin')
+      .in('id', courseIds);
+    
+    const coursesMap = new Map(coursesData?.map(c => [c.id, c]) || []);
+
+    // Get race_results to find positions
     const { data: resultsData, error: resultsError } = await supabase
       .from('race_results')
       .select('course_id, type_classement, etape_numero, position')
@@ -139,21 +137,10 @@ Deno.serve(async (req) => {
       resultsMap.set(key, result.position);
     });
 
-    // Get bonus points
+    // Get bonus points WITHOUT joins
     let bonusQuery = supabase
       .from('bonus_points')
-      .select(`
-        points,
-        bonus_type,
-        commentaire,
-        created_at,
-        phase_id,
-        phases:phase_id (
-          id,
-          nom,
-          index_dans_saison
-        )
-      `)
+      .select('points, bonus_type, commentaire, created_at, phase_id')
       .eq('coureur_id', rider_id);
 
     if (phase_id) {
@@ -176,18 +163,20 @@ Deno.serve(async (req) => {
       console.error('Error fetching bonus points:', bonusError);
     }
 
-    // Build rows for race points
+    // Build rows for race points using the Maps
     const raceRows = pointsData?.map((point: any) => {
       const key = `${point.course_id}_${point.type_classement}_${point.etape_numero || 'null'}`;
       const position = resultsMap.get(key) || null;
+      const phase = phasesMap.get(point.phase_id);
+      const course = coursesMap.get(point.course_id);
       
       return {
-        phase_id: point.phases?.id || null,
-        phase_nom: point.phases?.nom || 'Phase inconnue',
-        phase_index: point.phases?.index_dans_saison || 0,
-        course_nom: point.courses?.nom || 'Inconnu',
-        course_categorie: point.courses?.categorie || '',
-        course_date: point.courses?.date_fin || point.courses?.date_debut || null,
+        phase_id: point.phase_id || null,
+        phase_nom: phase?.nom || 'Phase inconnue',
+        phase_index: phase?.index_dans_saison || 0,
+        course_nom: course?.nom || 'Inconnu',
+        course_categorie: course?.categorie || '',
+        course_date: course?.date_fin || course?.date_debut || null,
         type_classement: point.type_classement,
         etape_numero: point.etape_numero,
         position,
@@ -196,18 +185,22 @@ Deno.serve(async (req) => {
       };
     }) || [];
 
-    // Build rows for bonus points
-    const bonusRows = bonusData?.map((bonus: any) => ({
-      phase_id: bonus.phases?.id || null,
-      phase_nom: bonus.phases?.nom || 'Phase inconnue',
-      phase_index: bonus.phases?.index_dans_saison || 0,
-      course_nom: 'Bonus',
-      type_classement: bonus.bonus_type || 'bonus',
-      commentaire: bonus.commentaire,
-      points: bonus.points || 0,
-      date_classement: bonus.created_at,
-      is_bonus: true,
-    })) || [];
+    // Build rows for bonus points using the phasesMap
+    const bonusRows = bonusData?.map((bonus: any) => {
+      const phase = phasesMap.get(bonus.phase_id);
+      
+      return {
+        phase_id: bonus.phase_id || null,
+        phase_nom: phase?.nom || 'Phase inconnue',
+        phase_index: phase?.index_dans_saison || 0,
+        course_nom: 'Bonus',
+        type_classement: bonus.bonus_type || 'bonus',
+        commentaire: bonus.commentaire,
+        points: bonus.points || 0,
+        date_classement: bonus.created_at,
+        is_bonus: true,
+      };
+    }) || [];
 
     // Combine and sort
     const allRows = [...raceRows, ...bonusRows];
