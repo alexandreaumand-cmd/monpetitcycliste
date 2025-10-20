@@ -68,7 +68,7 @@ interface Manager {
 export const MyTeamDesktop = () => {
   const { toast } = useToast();
   const { phases, activePhase, selectedSeason } = useSeasonContext();
-  const { leagueId } = useLeague();
+  const { leagueId, isLoading: leagueLoading } = useLeague();
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>('points');
@@ -117,10 +117,10 @@ export const MyTeamDesktop = () => {
   }, [activePhase]);
 
   useEffect(() => {
-    if (selectedPhaseId) {
+    if (selectedPhaseId && !leagueLoading && leagueId) {
       loadTeam();
     }
-  }, [selectedPhaseId, selectedManagerId]);
+  }, [selectedPhaseId, selectedManagerId, leagueId, leagueLoading]);
 
   const loadCurrentUser = async () => {
     try {
@@ -156,6 +156,12 @@ export const MyTeamDesktop = () => {
 
 
   const loadTeam = async () => {
+    if (!leagueId) {
+      setCoureurs([]);
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     try {
       // Récupérer la session pour obtenir le token
@@ -197,14 +203,13 @@ export const MyTeamDesktop = () => {
       setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, bonus_rider_points: 0, total_with_bonus: 0, wins_count: 0, my_rank: null, managers_count: 0 });
 
       // Fetch standings data from the same view as Rankings
-      if (targetManagerId && selectedPhaseId && leagueId) {
+      if (targetManagerId && selectedPhaseId) {
         const client: any = supabase;
         const { data: standing } = await client
           .from('v_manager_standings_by_phase')
           .select('total_points, bonus_points')
           .eq('phase_id', selectedPhaseId)
           .eq('manager_id', targetManagerId)
-          .eq('league_id', leagueId)
           .maybeSingle();
         
         if (standing) {
@@ -218,14 +223,13 @@ export const MyTeamDesktop = () => {
       }
 
       // Charger le coureur bonus sélectionné (s'il existe)
-      if (targetManagerId && selectedPhaseId && leagueId) {
+      if (targetManagerId && selectedPhaseId) {
         const client: any = supabase;
         const { data: bonusRider } = await client
           .from('bonus_rider_selections')
           .select('coureur_id')
           .eq('manager_id', targetManagerId)
           .eq('phase_id', selectedPhaseId)
-          .eq('league_id', leagueId)
           .maybeSingle();
 
         if (bonusRider) {

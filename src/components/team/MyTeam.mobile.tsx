@@ -110,10 +110,10 @@ export const MyTeamMobile = () => {
   }, [activePhase]);
 
   useEffect(() => {
-    if (selectedPhaseId) {
+    if (selectedPhaseId && !leagueLoading && leagueId) {
       loadTeamWithKpis();
     }
-  }, [selectedPhaseId, selectedManagerId]);
+  }, [selectedPhaseId, selectedManagerId, leagueId, leagueLoading]);
 
 
   const loadCurrentUser = async () => {
@@ -206,6 +206,12 @@ export const MyTeamMobile = () => {
   ];
 
   const loadTeamWithKpis = async () => {
+    if (!leagueId) {
+      setCoureurs([]);
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -234,14 +240,13 @@ export const MyTeamMobile = () => {
       setKpis(data.kpis || { scorers_count: 0, total_points: 0, bonus_points: 0, bonus_rider_points: 0, total_with_bonus: 0 });
 
       // Fetch standings data from the same view as Rankings
-      if (targetManagerId && selectedPhaseId && leagueId) {
+      if (targetManagerId && selectedPhaseId) {
         const { data: standing } = await supabase
           .from('v_manager_standings_by_phase')
           .select('total_points, bonus_points')
           .match({ 
             phase_id: selectedPhaseId,
-            manager_id: targetManagerId,
-            league_id: leagueId
+            manager_id: targetManagerId
           })
           .maybeSingle();
 
@@ -256,14 +261,13 @@ export const MyTeamMobile = () => {
       }
 
       // Charger le coureur bonus sélectionné (s'il existe)
-      if (targetManagerId && selectedPhaseId && leagueId) {
+      if (targetManagerId && selectedPhaseId) {
         const { data: bonusRider } = await supabase
           .from('bonus_rider_selections')
           .select('coureur_id, coureurs(nom)')
           .match({
             manager_id: targetManagerId,
-            phase_id: selectedPhaseId,
-            league_id: leagueId
+            phase_id: selectedPhaseId
           })
           .maybeSingle();
 
