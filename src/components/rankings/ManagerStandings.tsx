@@ -61,7 +61,11 @@ const enrichWithManagerNames = async (data: any[]) => {
   
   return data.map(d => ({
     ...d,
-    manager_nom: managersMap.get(d.manager_id) || d.manager_nom || "",
+    manager_nom: managersMap.get(d.manager_id) || "",
+    race_points: d.total_points,
+    bonus_points: 0,
+    scoreurs_count: 0,
+    victories_count: 0
   }));
 };
 

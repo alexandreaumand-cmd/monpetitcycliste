@@ -645,7 +645,6 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
-          league_id: string
           manager_id: string | null
           phase_id: string
           points: number
@@ -659,7 +658,6 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
-          league_id: string
           manager_id?: string | null
           phase_id: string
           points: number
@@ -673,7 +671,6 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
-          league_id?: string
           manager_id?: string | null
           phase_id?: string
           points?: number
@@ -4948,22 +4945,22 @@ export type Database = {
           league_id: string | null
           manager_id: string | null
           race_points: number | null
-          saison_id: string | null
           scoreurs_count: number | null
+          season_id: string | null
           total_points: number | null
           victories_count: number | null
         }
         Relationships: [
           {
             foreignKeyName: "phases_saison_id_fkey"
-            columns: ["saison_id"]
+            columns: ["season_id"]
             isOneToOne: false
             referencedRelation: "saisons"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "phases_saison_id_fkey"
-            columns: ["saison_id"]
+            columns: ["season_id"]
             isOneToOne: false
             referencedRelation: "v_manager_standings_by_season"
             referencedColumns: ["saison_id"]
