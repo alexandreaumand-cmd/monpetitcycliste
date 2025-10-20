@@ -278,6 +278,7 @@ export const MyTeamDesktop = () => {
           manager_id: manager.id,
           phase_id: selectedPhaseId,
           coureur_id,
+          league_id: leagueId || 'f7921741-29f4-4296-9aca-a03c1f3615b0',
         });
 
       if (error) throw error;

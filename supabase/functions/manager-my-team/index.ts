@@ -60,10 +60,11 @@ Deno.serve(async (req) => {
       targetManagerId = manager.id;
     }
 
-    // Utiliser la RPC qui accepte manager_id
+    // Utiliser la RPC qui accepte manager_id et league_id
     const { data: coureurs, error } = await supabase.rpc('manager_team_by_id', {
       p_manager_id: targetManagerId,
-      p_phase_id: phase_id
+      p_phase_id: phase_id,
+      p_league_id: league_id
     });
 
     if (error) throw error;

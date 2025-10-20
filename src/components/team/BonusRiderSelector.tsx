@@ -15,6 +15,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface BonusRiderSelectorProps {
   coureur_id: string;
@@ -37,6 +38,7 @@ export const BonusRiderSelector = ({
 }: BonusRiderSelectorProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { leagueId } = useLeague();
 
   const selectBonusRider = useMutation({
     mutationFn: async () => {
@@ -49,8 +51,11 @@ export const BonusRiderSelector = ({
       const { data: existing } = await supabase
         .from('bonus_rider_selections')
         .select('id')
-        .eq('manager_id', manager_id)
-        .eq('phase_id', phase_id)
+        .match({
+          manager_id,
+          phase_id,
+          league_id: leagueId || 'f7921741-29f4-4296-9aca-a03c1f3615b0'
+        })
         .maybeSingle();
 
       if (existing) {
@@ -64,6 +69,7 @@ export const BonusRiderSelector = ({
           manager_id,
           phase_id,
           coureur_id,
+          league_id: leagueId || 'f7921741-29f4-4296-9aca-a03c1f3615b0',
         });
 
       if (error) throw error;
