@@ -117,6 +117,8 @@ Deno.serve(async (req) => {
       throw pointsError;
     }
 
+    console.log(`Successfully fetched ${pointsData?.length || 0} point entries for rider ${rider_id}`);
+
     // Get race_results to find positions
     const courseIds = [...new Set(pointsData?.map(p => p.course_id) || [])];
     
