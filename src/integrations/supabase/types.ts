@@ -271,6 +271,21 @@ export type Database = {
           },
         ]
       }
+      app_migrations: {
+        Row: {
+          executed_at: string
+          name: string
+        }
+        Insert: {
+          executed_at?: string
+          name: string
+        }
+        Update: {
+          executed_at?: string
+          name?: string
+        }
+        Relationships: []
+      }
       auctions: {
         Row: {
           closed_at: string | null
