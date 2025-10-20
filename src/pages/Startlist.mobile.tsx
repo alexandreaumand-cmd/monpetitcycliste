@@ -270,11 +270,17 @@ export const StartlistMobile = () => {
         </div>
 
         {!races || races.length === 0 ? (
-          <MobileEmptyState
-            icon={<Trophy className="h-12 w-12" />}
-            title="Aucune course"
-            description="Les courses apparaîtront ici"
-          />
+        <MobileEmptyState
+          icon={<Trophy className="h-12 w-12" />}
+          title="Aucune course"
+          description={
+            tabMode === 'history' 
+              ? "Aucune course passée avec startlist" 
+              : tabMode === '30days'
+              ? "Aucune course prévue dans les 30 prochains jours"
+              : "Aucune course prévue dans les 90 prochains jours"
+          }
+        />
         ) : (
           <div className="space-y-3">
             {races.map((race) => {

@@ -663,7 +663,13 @@ const StartlistDesktop = () => {
           <Card>
             <CardContent className="py-12 text-center">
               <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Aucune course prévue dans les 30 prochains jours</p>
+              <p className="text-muted-foreground">
+                {tabMode === 'history' 
+                  ? "Aucune course passée avec startlist" 
+                  : tabMode === '30days'
+                  ? "Aucune course prévue dans les 30 prochains jours"
+                  : "Aucune course prévue dans les 90 prochains jours"}
+              </p>
             </CardContent>
           </Card>
         )}
