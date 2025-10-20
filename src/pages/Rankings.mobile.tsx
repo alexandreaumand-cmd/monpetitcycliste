@@ -26,7 +26,7 @@ import { ManagerPrestigeIcons } from "@/components/rankings/ManagerPrestigeIcons
 type TabView = "standings" | "riders" | "timeline" | "comparison" | "teams" | "courses";
 
 export const RankingsMobile = () => {
-  const { selectedSeason, phases } = useSeasonContext();
+  const { selectedSeason, phases, activePhase } = useSeasonContext();
   const [activeTab, setActiveTab] = useState<TabView>("standings");
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
@@ -76,88 +76,30 @@ export const RankingsMobile = () => {
     },
   });
 
-  // Fetch previous standings for evolution
-  const { data: previousStandings } = useQuery({
-    queryKey: ["previous-manager-standings-mobile", selectedPhase],
+  // Fetch previous global standings for evolution calculation (global view only)
+  const { data: previousGlobalStandings } = useQuery({
+    queryKey: ["previous-global-standings-mobile", selectedSeason?.id, activePhase?.id],
     queryFn: async () => {
-      if (!selectedPhase) {
-        const { data: activePhase } = await supabase
-          .from("phases")
-          .select("id, index_dans_saison, saison_id")
-          .eq("statut", "active")
-          .order("index_dans_saison", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        
-        if (!activePhase || activePhase.index_dans_saison === 1) return null;
-        
-        const { data: completedPhases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", activePhase.saison_id)
-          .eq("statut", "completed")
-          .lt("index_dans_saison", activePhase.index_dans_saison);
-        
-        if (!completedPhases || completedPhases.length === 0) return null;
-        
-        const phaseIds = completedPhases.map(p => p.id);
-        
-        const { data: pointsData } = await supabase
-          .from("points_ledger")
-          .select("manager_id, points")
-          .in("phase_id", phaseIds);
-        
-        if (!pointsData) return null;
-        
-        const managerPoints = new Map<string, number>();
-        pointsData.forEach(row => {
-          const current = managerPoints.get(row.manager_id) || 0;
-          managerPoints.set(row.manager_id, current + (row.points || 0));
-        });
-        
-        const sorted = Array.from(managerPoints.entries())
-          .sort((a, b) => b[1] - a[1]);
-        
-        const rankMap = new Map<string, number>();
-        sorted.forEach(([managerId], idx) => {
-          rankMap.set(managerId, idx + 1);
-        });
-        
-        return rankMap;
-      } else {
-        const { data: currentPhase } = await supabase
-          .from("phases")
-          .select("index_dans_saison, saison_id")
-          .eq("id", selectedPhase)
-          .single();
+      if (selectedPhase || !activePhase) return null;
 
-        if (!currentPhase || currentPhase.index_dans_saison <= 1) return null;
+      const { data, error } = await supabase.rpc('get_previous_standings', {
+        p_saison_id: selectedSeason?.id || null,
+        p_reference_phase_id: activePhase.id
+      });
 
-        const { data: prevPhase } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", currentPhase.saison_id)
-          .eq("index_dans_saison", currentPhase.index_dans_saison - 1)
-          .single();
-
-        if (!prevPhase) return null;
-
-        const { data, error } = await supabase
-          .from("v_manager_standings_by_phase")
-          .select("*")
-          .eq("phase_id", prevPhase.id)
-          .order("total_points", { ascending: false });
-
-        if (error) return null;
-
-        const rankMap = new Map();
-        data?.forEach((standing, idx) => {
-          rankMap.set(standing.manager_id, idx + 1);
-        });
-
-        return rankMap;
+      if (error) {
+        console.error('Error fetching previous standings:', error);
+        return null;
       }
+
+      // Convert to Map<manager_id, rank>
+      const rankMap = new Map<string, number>();
+      data?.forEach((row: any) => {
+        rankMap.set(row.manager_id, row.previous_rank);
+      });
+      return rankMap;
     },
+    enabled: !selectedPhase && !!activePhase,
   });
 
   // Fetch top riders using edge function
@@ -345,36 +287,40 @@ export const RankingsMobile = () => {
                 const totalPoints = standings.reduce((sum, s) => sum + s.total_points, 0) || 1;
                 const percentage = ((standing.total_points / totalPoints) * 100).toFixed(1);
                 
+                // Calculate evolution - ONLY for global view
                 let evolution: number | null = null;
                 let isNew = false;
                 
-                if (previousStandings) {
-                  const previousRank = previousStandings.get(standing.manager_id);
+                if (!selectedPhase && previousGlobalStandings) {
+                  const previousRank = previousGlobalStandings.get(standing.manager_id);
                   if (previousRank) {
-                    evolution = previousRank - rank;
+                    evolution = previousRank - rank; // Positive = gained places
                   } else {
                     isNew = true;
                   }
                 }
 
-                const evolutionBadge = isNew ? (
-                  <Badge variant="outline" className="text-xs">NEW</Badge>
-                ) : evolution !== null && evolution !== 0 ? (
-                  <div className={`flex items-center gap-1 text-xs font-semibold ${
-                    evolution > 0 ? "text-green-600" : "text-red-600"
-                  }`}>
-                    {evolution > 0 ? (
-                      <>
-                        <TrendingUp className="h-3.5 w-3.5" />
-                        <span>+{evolution}</span>
-                      </>
-                    ) : (
-                      <>
-                        <TrendingUp className="h-3.5 w-3.5 rotate-180" />
-                        <span>{Math.abs(evolution)}</span>
-                      </>
-                    )}
-                  </div>
+                // Only show evolution badge in global view
+                const evolutionBadge = !selectedPhase && previousGlobalStandings ? (
+                  isNew ? (
+                    <Badge variant="outline" className="text-xs">NEW</Badge>
+                  ) : evolution !== null && evolution !== 0 ? (
+                    <div className={`flex items-center gap-1 text-xs font-semibold ${
+                      evolution > 0 ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {evolution > 0 ? (
+                        <>
+                          <TrendingUp className="h-3.5 w-3.5" />
+                          <span>+{evolution}</span>
+                        </>
+                      ) : (
+                        <>
+                          <TrendingUp className="h-3.5 w-3.5 rotate-180" />
+                          <span>{Math.abs(evolution)}</span>
+                        </>
+                      )}
+                    </div>
+                  ) : null
                 ) : null;
 
                 const getRankLabel = (r: number) => {
