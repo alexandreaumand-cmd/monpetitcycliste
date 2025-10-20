@@ -545,33 +545,79 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     enabled: !!managerB,
   });
 
-  // Calculer les points par type de barème
+  // Calculer les points par type de barème (9 catégories détaillées)
   const pointsByBaremeType = useMemo(() => {
     if (!pointsA || !pointsB || !courses) return null;
 
     const baremes = [
       { 
-        key: "CLASS_1_2", 
-        label: "Class 1 & 2.1", 
+        key: "1.1", 
+        label: "1.1", 
         filterCourse: (c: any) => {
-          const cat = c.categorie?.toLowerCase() || "";
-          return cat.includes("1.1") || cat.includes("2.1");
+          const cat = c.categorie || "";
+          return cat.startsWith("1.1");
         }
       },
       { 
-        key: "CLASS_PRO", 
-        label: "Class 1.Pro & 2.Pro", 
+        key: "2.1", 
+        label: "2.1", 
         filterCourse: (c: any) => {
-          const cat = c.categorie?.toLowerCase() || "";
-          return cat.includes("1.pro") || cat.includes("2.pro");
+          const cat = c.categorie || "";
+          return cat.startsWith("2.1");
         }
       },
       { 
-        key: "WT", 
-        label: "World Tour (WT)", 
+        key: "1.PRO", 
+        label: "1.pro", 
         filterCourse: (c: any) => {
-          const cat = c.categorie?.toLowerCase() || "";
-          return cat.includes("wt") || cat.includes("world tour");
+          const cat = (c.categorie || "").toLowerCase();
+          return cat.startsWith("1.pro");
+        }
+      },
+      { 
+        key: "2.PRO", 
+        label: "2.pro", 
+        filterCourse: (c: any) => {
+          const cat = (c.categorie || "").toLowerCase();
+          return cat.startsWith("2.pro");
+        }
+      },
+      { 
+        key: "TOURS_WT", 
+        label: "Tours WT", 
+        filterCourse: (c: any) => {
+          const cat = c.categorie || "";
+          return cat.startsWith("Tours WT");
+        }
+      },
+      { 
+        key: "CLASSIQUES_WT", 
+        label: "Classiques WT", 
+        filterCourse: (c: any) => {
+          const cat = c.categorie || "";
+          return cat.startsWith("Classiques WT");
+        }
+      },
+      { 
+        key: "GT", 
+        label: "GT", 
+        filterCourse: (c: any) => {
+          return c.categorie === "WT GT";
+        }
+      },
+      { 
+        key: "MONUMENTS", 
+        label: "Monuments", 
+        filterCourse: (c: any) => {
+          return c.categorie === "WT Monument";
+        }
+      },
+      { 
+        key: "CHAMPIONNATS", 
+        label: "Championnats", 
+        filterCourse: (c: any) => {
+          const cat = c.categorie || "";
+          return cat.startsWith("CN") || cat.startsWith("WC") || cat.startsWith("EC");
         }
       },
     ];
