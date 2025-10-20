@@ -1,31 +1,15 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { MobileBottomSheet } from "@/components/mobile";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, TrendingUp, TrendingDown, X, CheckCircle2, AlertCircle, Calendar } from "lucide-react";
-
-interface PointDetail {
-  course_nom: string;
-  type_classement: string;
-  etape_numero: number | null;
-  points: number;
-  date_classement: string;
-  commentaire?: string;
-}
-
-interface UpcomingRace {
-  race_id: string;
-  race_nom: string;
-  categorie: string;
-  date_debut: string;
-  date_fin: string;
-  is_confirmed: boolean;
-}
+import { TrendingUp, TrendingDown } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface RiderPointsDetailProps {
   isOpen: boolean;
@@ -35,7 +19,7 @@ interface RiderPointsDetailProps {
   riderTeam: string;
   riderPrice: number;
   phaseId: string;
-  managerId?: string;
+  saisonId?: string;
 }
 
 export const RiderPointsDetail = ({
@@ -46,214 +30,175 @@ export const RiderPointsDetail = ({
   riderTeam,
   riderPrice,
   phaseId,
-  managerId
+  saisonId,
 }: RiderPointsDetailProps) => {
-  const { data, isLoading } = useQuery({
-    queryKey: ['rider-points-detail', riderId, phaseId, managerId],
+  const { data: riderPointsTable, isLoading } = useQuery({
+    queryKey: ['rider-points-table', riderId, saisonId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('rider-points-detail', {
+      const { data, error } = await supabase.functions.invoke('get-rider-points-table', {
         body: { 
-          coureur_id: riderId, 
-          phase_id: phaseId,
-          manager_id: managerId 
+          rider_id: riderId,
+          saison_id: saisonId
         }
       });
-
+      
       if (error) throw error;
       return data;
     },
-    enabled: isOpen && !!riderId && !!phaseId
+    enabled: isOpen && !!riderId && !!saisonId,
   });
 
-  const { data: upcomingRaces, isLoading: isLoadingUpcoming } = useQuery({
-    queryKey: ['rider-upcoming-races', riderId],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('get-rider-upcoming-races', {
-        body: { rider_id: riderId }
-      });
+  const rows = riderPointsTable?.rows || [];
+  
+  const riderStats = useMemo(() => {
+    const totalPoints = rows.reduce((sum: number, row: any) => sum + (row.points || 0), 0);
+    const uniqueRaces = new Set(rows.map((row: any) => row.course_id)).size;
+    const wins = rows.filter((row: any) => 
+      row.position === 1 && 
+      !row.type_classement?.startsWith('Porteur')
+    ).length;
+    const ratio = riderPrice > 0 ? (totalPoints / riderPrice).toFixed(2) : '0.00';
+    
+    return {
+      totalPoints,
+      totalRaces: uniqueRaces,
+      wins,
+      ratio: parseFloat(ratio)
+    };
+  }, [rows, riderPrice]);
 
-      if (error) throw error;
-      return data?.races as UpcomingRace[] || [];
-    },
-    enabled: isOpen && !!riderId
-  });
-
-  const pointsDetail: PointDetail[] = data?.history || [];
-  const totalPoints = data?.total_points || 0;
-  const ratio = riderPrice > 0 ? totalPoints / riderPrice : 0;
+  const rowsByPhase = useMemo(() => {
+    const grouped = rows.reduce((acc: any, row: any) => {
+      const phaseKey = row.phase_nom || 'Sans phase';
+      if (!acc[phaseKey]) {
+        acc[phaseKey] = [];
+      }
+      acc[phaseKey].push(row);
+      return acc;
+    }, {});
+    
+    return Object.entries(grouped).map(([phaseName, phaseRows]: [string, any]) => ({
+      phaseName,
+      rows: phaseRows,
+      totalPoints: phaseRows.reduce((sum: number, r: any) => sum + (r.points || 0), 0)
+    }));
+  }, [rows]);
 
   const getRatioColor = (ratio: number) => {
-    if (ratio >= 2) return "text-green-600";
-    if (ratio >= 1) return "text-blue-600";
-    if (ratio >= 0.5) return "text-orange-600";
-    return "text-red-600";
+    if (ratio >= 1.5) return "text-green-600";
+    if (ratio >= 1.0) return "text-blue-600";
+    if (ratio >= 0.8) return "text-orange-500";
+    return "text-red-500";
   };
 
   return (
-    <Drawer open={isOpen} onOpenChange={onClose}>
-      <DrawerContent className="max-h-[90vh]">
-        <DrawerHeader className="border-b">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <DrawerTitle className="text-2xl">{riderName}</DrawerTitle>
-              <DrawerDescription>
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="text-sm text-muted-foreground">{riderTeam}</span>
-                  <span className="text-sm">Prix: {riderPrice.toFixed(0)}</span>
+    <MobileBottomSheet
+      open={isOpen}
+      onOpenChange={onClose}
+      title={riderName}
+      description={`${riderTeam} - Prix: ${riderPrice}`}
+    >
+      <div className="space-y-6">
+        {/* Statistics Overview */}
+        {isLoading ? (
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center p-4 rounded-lg border bg-card">
+              <div className="text-3xl font-bold text-primary">{riderStats.totalPoints}</div>
+              <div className="text-sm text-muted-foreground">Points totaux</div>
+            </div>
+            <div className="text-center p-4 rounded-lg border bg-card">
+              <div className="text-3xl font-bold">{riderStats.totalRaces}</div>
+              <div className="text-sm text-muted-foreground">Courses avec points</div>
+            </div>
+            <div className="text-center p-4 rounded-lg border bg-card">
+              <div className="text-3xl font-bold text-yellow-600">{riderStats.wins}</div>
+              <div className="text-sm text-muted-foreground">Victoires</div>
+            </div>
+            <div className="text-center p-4 rounded-lg border bg-card">
+              <div className="flex items-center justify-center gap-2">
+                <div className={`text-3xl font-bold ${getRatioColor(riderStats.ratio)}`}>
+                  {riderStats.ratio}
                 </div>
-              </DrawerDescription>
-            </div>
-            <DrawerClose asChild>
-              <Button variant="ghost" size="icon">
-                <X className="h-4 w-4" />
-              </Button>
-            </DrawerClose>
-          </div>
-
-          <div className="flex items-center gap-6 mt-4 pt-4 border-t">
-            <div className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-primary" />
-              <div>
-                <div className="text-2xl font-bold">{totalPoints}</div>
-                <div className="text-xs text-muted-foreground">Points totaux</div>
+                {riderStats.ratio >= 1.5 ? (
+                  <TrendingUp className="h-5 w-5 text-green-500" />
+                ) : riderStats.ratio < 0.8 ? (
+                  <TrendingDown className="h-5 w-5 text-red-500" />
+                ) : null}
               </div>
-            </div>
-            <div className={`flex items-center gap-2 ${getRatioColor(ratio)}`}>
-              {ratio > 1 ? (
-                <TrendingUp className="h-5 w-5" />
-              ) : ratio < 1 ? (
-                <TrendingDown className="h-5 w-5" />
-              ) : null}
-              <div>
-                <div className="text-2xl font-bold">{ratio.toFixed(2)}</div>
-                <div className="text-xs text-muted-foreground">Ratio</div>
-              </div>
+              <div className="text-sm text-muted-foreground">Ratio pts/prix</div>
             </div>
           </div>
-        </DrawerHeader>
+        )}
 
-        <div className="overflow-y-auto p-6">
-          <h3 className="font-semibold mb-4">Historique des points</h3>
-          
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))}
-            </div>
-          ) : pointsDetail.length === 0 ? (
-            <div className="text-center py-12">
-              <Trophy className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">Aucun point marqué</p>
-            </div>
-          ) : (
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Course / Bonus</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Détails</TableHead>
-                    <TableHead className="text-right">Points</TableHead>
-                    <TableHead>Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pointsDetail.map((detail, idx) => {
-                    const isBonus = detail.course_nom === 'Bonus' || detail.type_classement.includes('Bonus');
-                    
-                    return (
-                      <TableRow key={idx} className={isBonus ? 'bg-amber-50/50 dark:bg-amber-950/10' : ''}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {isBonus && <span>🎁</span>}
-                            {detail.course_nom}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={isBonus ? "default" : "outline"}
-                            className={isBonus ? "bg-amber-500 hover:bg-amber-600" : ""}
-                          >
-                            {detail.type_classement}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {isBonus && detail.commentaire 
-                            ? detail.commentaire 
-                            : (detail.etape_numero ? `Étape ${detail.etape_numero}` : '—')}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          <div className="flex items-center justify-end gap-1">
-                            <Trophy className="h-3 w-3 text-primary" />
-                            {detail.points}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {new Date(detail.date_classement).toLocaleDateString('fr-FR')}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </Card>
-          )}
-
-          {/* Programme à venir */}
-          <div className="mt-6">
-            <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Programme à venir
-            </h3>
-            
-            {isLoadingUpcoming ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
-                ))}
-              </div>
-            ) : upcomingRaces && upcomingRaces.length > 0 ? (
-              <div className="space-y-2">
-                {upcomingRaces.map((race) => (
-                  <Card key={race.race_id}>
-                    <div className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <p className="font-medium">{race.race_nom}</p>
-                            {race.is_confirmed ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                            ) : (
-                              <AlertCircle className="h-4 w-4 text-orange-500 flex-shrink-0" />
-                            )}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {race.categorie}
-                            </Badge>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(race.date_debut).toLocaleDateString('fr-FR')}
-                              {race.date_debut !== race.date_fin && 
-                                ` - ${new Date(race.date_fin).toLocaleDateString('fr-FR')}`
-                              }
-                            </p>
+        {/* Points History by Phase */}
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ) : rowsByPhase.length > 0 ? (
+          <div className="space-y-4">
+            <h4 className="font-semibold">Détails par phase</h4>
+            <Accordion type="single" collapsible className="w-full">
+              {rowsByPhase.map((phase: any, phaseIndex: number) => (
+                <AccordionItem key={phaseIndex} value={`phase-${phaseIndex}`}>
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <span className="font-medium">{phase.phaseName}</span>
+                      <span className="text-primary font-semibold">
+                        {phase.totalPoints} pts
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-2 pt-2">
+                      {phase.rows.map((row: any, rowIndex: number) => (
+                        <div 
+                          key={rowIndex}
+                          className="p-3 rounded-lg border bg-card/50 text-sm"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium">{row.course_nom}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {row.type_classement}
+                                {row.etape_numero && ` - Étape ${row.etape_numero}`}
+                                {row.position && ` - Position ${row.position}`}
+                              </p>
+                              {row.commentaire && (
+                                <p className="text-xs text-blue-600 italic mt-1">
+                                  {row.commentaire}
+                                </p>
+                              )}
+                            </div>
+                            <div className={`font-bold whitespace-nowrap ${
+                              row.commentaire ? 'text-blue-600' : 'text-primary'
+                            }`}>
+                              {row.points} pts
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Aucune course programmée</p>
-              </div>
-            )}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </div>
-        </div>
-      </DrawerContent>
-    </Drawer>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            Aucun point enregistré pour cette saison
+          </p>
+        )}
+      </div>
+    </MobileBottomSheet>
   );
 };

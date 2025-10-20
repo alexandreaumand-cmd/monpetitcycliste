@@ -524,7 +524,6 @@ export const MyTeamMobile = () => {
         riderTeam={selectedRider?.equipe || ''}
         riderPrice={selectedRider?.prix || 0}
         phaseId={selectedPhaseId || ''}
-        managerId={selectedManagerId || currentUserId || undefined}
       />
     </div>
   );

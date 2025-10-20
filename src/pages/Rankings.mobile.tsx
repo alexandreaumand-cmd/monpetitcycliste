@@ -559,6 +559,7 @@ export const RankingsMobile = () => {
         riderTeam={selectedRider?.equipe || ''}
         riderPrice={selectedRider?.prix || 0}
         phaseId={selectedPhase || ''}
+        saisonId={selectedSeason?.id}
       />
     </div>
   );
