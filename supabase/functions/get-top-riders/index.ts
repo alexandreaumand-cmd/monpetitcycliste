@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
       // Season context: fetch all phases and build owners_all + owners_by_phase
       const { data: phases, error: phasesError } = await supabase
         .from('phases')
-        .select('id, saison_id')
+        .select('id, saison_id, index_dans_saison')
         .eq('saison_id', saison_id);
 
       if (phasesError) {
@@ -122,11 +122,14 @@ Deno.serve(async (req) => {
               if (!acc[r.coureur_id].owners_all.some((o: any) => o.manager_id === r.manager_id)) {
                 acc[r.coureur_id].owners_all.push(owner);
               }
-              // Add to owners_by_phase
-              if (!acc[r.coureur_id].owners_by_phase[r.phase_id]) {
-                acc[r.coureur_id].owners_by_phase[r.phase_id] = [];
+              // Add to owners_by_phase with phase index
+              const phaseInfo = phases.find(p => p.id === r.phase_id);
+              const phaseKey = phaseInfo ? `P${phaseInfo.index_dans_saison}` : r.phase_id;
+              
+              if (!acc[r.coureur_id].owners_by_phase[phaseKey]) {
+                acc[r.coureur_id].owners_by_phase[phaseKey] = [];
               }
-              acc[r.coureur_id].owners_by_phase[r.phase_id].push(owner);
+              acc[r.coureur_id].owners_by_phase[phaseKey].push(owner);
             }
             return acc;
           }, {});
