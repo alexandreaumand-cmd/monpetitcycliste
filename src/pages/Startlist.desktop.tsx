@@ -31,7 +31,7 @@ const StartlistDesktop = () => {
   
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'list' | 'parse' | 'view'>('list');
-  const [tabMode, setTabMode] = useState<'30days' | '90days' | 'history'>('30days');
+  const [tabMode, setTabMode] = useState<'30days' | '90days' | 'history' | 'upcoming-year'>('30days');
   const [selectedRaceForParsing, setSelectedRaceForParsing] = useState<any>(null);
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
   const [selectedRaceForViewing, setSelectedRaceForViewing] = useState<any>(null);
@@ -191,11 +191,16 @@ const StartlistDesktop = () => {
           .gte('date_fin', today)
           .lte('date_debut', in30Days)
           .order('date_debut', { ascending: true });
-      } else {
+      } else if (tabMode === '90days') {
         // 90 jours à venir
         query = query
           .gte('date_fin', today)
           .lte('date_debut', in90Days)
+          .order('date_debut', { ascending: true });
+      } else if (tabMode === 'upcoming-year') {
+        // Toutes les courses à venir de la saison
+        query = query
+          .gte('date_fin', today)
           .order('date_debut', { ascending: true });
       }
       
@@ -542,12 +547,13 @@ const StartlistDesktop = () => {
           </div>
         </div>
 
-        {/* 3 onglets avec Tabs */}
-        <Tabs value={tabMode} onValueChange={(v) => setTabMode(v as '30days' | '90days' | 'history')}>
-          <TabsList className="grid w-full max-w-lg grid-cols-3">
+        {/* 4 onglets avec Tabs */}
+        <Tabs value={tabMode} onValueChange={(v) => setTabMode(v as '30days' | '90days' | 'history' | 'upcoming-year')}>
+          <TabsList className="grid w-full max-w-2xl grid-cols-4">
+            <TabsTrigger value="history">Historique</TabsTrigger>
             <TabsTrigger value="30days">30 jours</TabsTrigger>
             <TabsTrigger value="90days">90 jours</TabsTrigger>
-            <TabsTrigger value="history">Historique</TabsTrigger>
+            <TabsTrigger value="upcoming-year">Année à venir</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -668,7 +674,9 @@ const StartlistDesktop = () => {
                   ? "Aucune course passée avec startlist" 
                   : tabMode === '30days'
                   ? "Aucune course prévue dans les 30 prochains jours"
-                  : "Aucune course prévue dans les 90 prochains jours"}
+                  : tabMode === '90days'
+                  ? "Aucune course prévue dans les 90 prochains jours"
+                  : "Aucune course à venir cette année"}
               </p>
             </CardContent>
           </Card>

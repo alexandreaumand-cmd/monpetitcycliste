@@ -44,7 +44,7 @@ export const StartlistMobile = () => {
   const { isAdmin } = useUserRole();
   const { phases, isLoading: isLoadingContext } = useSeasonContext();
   const [viewMode, setViewMode] = useState<"list" | "parse" | "view">("list");
-  const [tabMode, setTabMode] = useState<"30days" | "90days" | "history">("30days");
+  const [tabMode, setTabMode] = useState<"30days" | "90days" | "history" | "upcoming-year">("30days");
   const [selectedRaceId, setSelectedRaceId] = useState("");
   const [selectedPhaseId, setSelectedPhaseId] = useState("");
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
@@ -86,11 +86,16 @@ export const StartlistMobile = () => {
           .gte("date_fin", today)
           .lte("date_debut", in30Days)
           .order("date_debut", { ascending: true });
-      } else {
+      } else if (tabMode === "90days") {
         // 90days : Courses à venir dans les 90 jours
         query = query
           .gte("date_fin", today)
           .lte("date_debut", in90Days)
+          .order("date_debut", { ascending: true });
+      } else if (tabMode === "upcoming-year") {
+        // Toutes les courses à venir de la saison
+        query = query
+          .gte("date_fin", today)
           .order("date_debut", { ascending: true });
       }
       
@@ -241,13 +246,21 @@ export const StartlistMobile = () => {
           </Button>
         </div>
 
-        {/* 3 onglets */}
-        <div className="flex gap-2">
+        {/* 4 onglets */}
+        <div className="flex gap-2 overflow-x-auto">
+          <Button
+            variant={tabMode === "history" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTabMode("history")}
+            className="flex-1 whitespace-nowrap"
+          >
+            Historique
+          </Button>
           <Button
             variant={tabMode === "30days" ? "default" : "outline"}
             size="sm"
             onClick={() => setTabMode("30days")}
-            className="flex-1"
+            className="flex-1 whitespace-nowrap"
           >
             30 jours
           </Button>
@@ -255,17 +268,17 @@ export const StartlistMobile = () => {
             variant={tabMode === "90days" ? "default" : "outline"}
             size="sm"
             onClick={() => setTabMode("90days")}
-            className="flex-1"
+            className="flex-1 whitespace-nowrap"
           >
             90 jours
           </Button>
           <Button
-            variant={tabMode === "history" ? "default" : "outline"}
+            variant={tabMode === "upcoming-year" ? "default" : "outline"}
             size="sm"
-            onClick={() => setTabMode("history")}
-            className="flex-1"
+            onClick={() => setTabMode("upcoming-year")}
+            className="flex-1 whitespace-nowrap"
           >
-            Historique
+            Année
           </Button>
         </div>
 
@@ -278,7 +291,9 @@ export const StartlistMobile = () => {
               ? "Aucune course passée avec startlist" 
               : tabMode === '30days'
               ? "Aucune course prévue dans les 30 prochains jours"
-              : "Aucune course prévue dans les 90 prochains jours"
+              : tabMode === '90days'
+              ? "Aucune course prévue dans les 90 prochains jours"
+              : "Aucune course à venir cette année"
           }
         />
         ) : (
