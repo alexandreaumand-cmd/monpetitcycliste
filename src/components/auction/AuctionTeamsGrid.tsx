@@ -17,6 +17,22 @@ interface AuctionTeamsGridProps {
   managerId: string;
 }
 
+type RosterData = {
+  id: string;
+  manager_id: string;
+  coureur_id: string;
+  prix_signature: number;
+  coureurs: { id: string; nom: string; equipe?: string };
+  managers: { nom: string } | null;
+};
+
+type ManagerStatus = {
+  manager_id: string;
+  budget_restant: number;
+  slots_restants: number;
+  max_coureurs: number;
+};
+
 export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) => {
   const { leagueId, isLoading: leagueLoading } = useLeague();
   const [searchTerm, setSearchTerm] = useState("");
@@ -28,22 +44,25 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
   } | null>(null);
 
   // Get all managers rosters
-  const { data: allManagersRosters = [], isLoading } = useQuery<any[]>({
-    queryKey: ['all-managers-rosters', phaseId, leagueId],
-    queryFn: async () => {
+  const rostersQuery = useQuery({
+    queryKey: ['all-managers-rosters', phaseId, leagueId] as const,
+    queryFn: async (): Promise<RosterData[]> => {
       if (!leagueId) return [];
       
       // Récupérer la saison_id de la phase
-      const { data: phaseInfo } = await supabase
+      const phaseResult = await supabase
         .from('phases')
         .select('saison_id')
         .eq('id', phaseId)
-        .single();
+        .maybeSingle();
 
-      const { data, error } = await supabase
+      const rostersResult = await supabase
         .from('rosters')
         .select(`
-          *,
+          id,
+          manager_id,
+          coureur_id,
+          prix_signature,
           coureurs!inner(id, nom),
           managers(nom)
         `)
@@ -51,24 +70,28 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
         .eq('league_id', leagueId)
         .order('manager_id');
 
-      if (error) throw error;
+      if (rostersResult.error) throw rostersResult.error;
 
       // Enrichir avec l'équipe de la saison
-      const enrichedData = await Promise.all(
-        (data || []).map(async (roster) => {
-          const { data: seasonData } = await supabase
+      const enrichedData: RosterData[] = await Promise.all(
+        (rostersResult.data || []).map(async (roster: any) => {
+          const seasonResult = await supabase
             .from('coureurs_saisons')
             .select('equipe')
             .eq('coureur_id', roster.coureur_id)
-            .eq('saison_id', phaseInfo?.saison_id || '')
+            .eq('saison_id', phaseResult.data?.saison_id || '')
             .maybeSingle();
 
           return {
-            ...roster,
+            id: roster.id,
+            manager_id: roster.manager_id,
+            coureur_id: roster.coureur_id,
+            prix_signature: roster.prix_signature,
             coureurs: {
               ...roster.coureurs,
-              equipe: seasonData?.equipe || 'N/A'
-            }
+              equipe: seasonResult.data?.equipe || 'N/A'
+            },
+            managers: roster.managers
           };
         })
       );
@@ -79,30 +102,37 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
   });
 
   // Get managers status (budget, slots)
-  const { data: managersStatus = [] } = useQuery<any[]>({
-    queryKey: ['managers-rosters-status', phaseId, leagueId],
+  const statusQuery = useQuery({
+    queryKey: ['managers-rosters-status', phaseId, leagueId] as const,
     queryFn: async () => {
-      if (!leagueId) return [];
+      if (!leagueId) return [] as ManagerStatus[];
       
-      const { data, error } = await supabase
+      const result = await supabase
         .from('managers_rosters_status')
-        .select('*')
-        .eq('phase_id', phaseId)
-        .eq('league_id', leagueId);
+        .select('manager_id, budget_restant, slots_restants, max_coureurs');
 
-      if (error) throw error;
-      return data || [];
+      if (result.error) throw result.error;
+      
+      const filtered = (result.data || []).filter(
+        (item: any) => item.phase_id === phaseId && item.league_id === leagueId
+      );
+      
+      return filtered as ManagerStatus[];
     },
     enabled: !leagueLoading && !!leagueId,
   });
 
+  const allManagersRosters = rostersQuery.data || [];
+  const managersStatus = statusQuery.data || [];
+  const isLoading = rostersQuery.isLoading;
+
   // Group rosters by manager (exclude current user)
   const rostersByManager = allManagersRosters
-    .filter((r: any) => r.manager_id !== managerId)
-    .reduce((acc: any, roster: any) => {
+    .filter((r) => r.manager_id !== managerId)
+    .reduce((acc: any, roster) => {
       const mgrId = roster.manager_id;
       if (!acc[mgrId]) {
-        const status = managersStatus.find((s: any) => s.manager_id === mgrId);
+        const status = managersStatus.find((s) => s.manager_id === mgrId);
         acc[mgrId] = {
           managerName: roster.managers?.nom || 'Inconnu',
           rosters: [],
