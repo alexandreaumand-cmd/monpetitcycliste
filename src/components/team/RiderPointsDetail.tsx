@@ -53,7 +53,7 @@ export const RiderPointsDetail = ({
   
   const riderStats = useMemo(() => {
     const totalPoints = rows.reduce((sum: number, row: any) => sum + (row.points || 0), 0);
-    const uniqueRaces = new Set(rows.map((row: any) => row.course_id)).size;
+    const uniqueRaces = new Set(rows.map((row: any) => row.course_nom)).size;
     const wins = rows.filter((row: any) => 
       row.position === 1 && 
       !row.type_classement?.startsWith('Porteur')
