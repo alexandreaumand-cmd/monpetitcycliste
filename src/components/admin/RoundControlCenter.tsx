@@ -31,10 +31,23 @@ export const RoundControlCenter = () => {
     }
   });
 
-  // Auto-select first phase
+  // Auto-select active phase from most recent season
   useEffect(() => {
     if (phases && phases.length > 0 && !selectedPhaseId) {
-      setSelectedPhaseId(phases[0].id);
+      // Find active phase from most recent season
+      const activePhase = phases
+        .filter(p => p.statut === 'active')
+        .sort((a, b) => {
+          // Sort by season year descending
+          const yearA = a.saisons?.annee || 0;
+          const yearB = b.saisons?.annee || 0;
+          if (yearB !== yearA) return yearB - yearA;
+          // If same year, sort by phase index descending
+          return b.index_dans_saison - a.index_dans_saison;
+        })[0];
+      
+      // Use active phase if found, otherwise fallback to first phase
+      setSelectedPhaseId(activePhase?.id || phases[0].id);
     }
   }, [phases, selectedPhaseId]);
 
