@@ -73,7 +73,7 @@ const Dashboard = () => {
         <AnnouncementBanner />
         <MobileLayout
           manager={manager}
-          isAdmin={isSuperAdmin}
+          isAdmin={isAnyAdmin}
           onSignOut={handleSignOut}
         >
           <Routes>
@@ -96,7 +96,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       <AnnouncementBanner />
-      <Header manager={manager} isAdmin={isSuperAdmin} onSignOut={handleSignOut} />
+      <Header manager={manager} isAdmin={isAnyAdmin} onSignOut={handleSignOut} />
       
       <main className="container mx-auto px-4 py-8">
         <Routes>
