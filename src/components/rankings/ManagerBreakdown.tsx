@@ -28,12 +28,17 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
       if (!leagueId) return [];
       
       const client: any = supabase;
-      const { data, error } = await client
+      let query = client
         .from("v_manager_breakdown")
         .select("*")
         .eq("manager_id", managerId)
-        .eq("phase_id", phaseId || "")
         .eq("league_id", leagueId);
+      
+      if (phaseId) {
+        query = query.eq("phase_id", phaseId);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       return data || [];
