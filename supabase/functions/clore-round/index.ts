@@ -16,8 +16,26 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { auction_id } = await req.json();
-    console.log('Closing round for auction:', auction_id);
+    const { auction_id, league_id } = await req.json();
+    console.log('Closing round for auction:', auction_id, 'league:', league_id);
+
+    // Verify user is admin of this league
+    const authHeader = req.headers.get('Authorization')!;
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user } } = await supabase.auth.getUser(token);
+
+    if (!user) {
+      throw new Error('Non authentifié');
+    }
+
+    // Check if user is league admin
+    const { data: isLeagueAdmin } = await supabase.rpc('is_league_admin', {
+      l_id: league_id
+    });
+
+    if (!isLeagueAdmin) {
+      throw new Error('Accès refusé: réservé aux administrateurs de la ligue');
+    }
 
     // Get auction details
     const { data: auction, error: auctionError } = await supabase

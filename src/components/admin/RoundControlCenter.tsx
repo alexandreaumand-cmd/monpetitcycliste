@@ -10,9 +10,11 @@ import { ManagersSupervision } from "./rounds/ManagersSupervision";
 import { AnnouncementsLive } from "./rounds/AnnouncementsLive";
 import { PhaseSelector } from "./rounds/PhaseSelector";
 import { Card, CardContent } from "@/components/ui/card";
+import { useLeague } from "@/contexts/LeagueContext";
 
 export const RoundControlCenter = () => {
   const queryClient = useQueryClient();
+  const { leagueId } = useLeague();
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>("");
   const [currentAnnouncementText, setCurrentAnnouncementText] = useState("");
 
@@ -38,16 +40,24 @@ export const RoundControlCenter = () => {
 
   // Fetch current auction for selected phase
   const { data: currentAuction, isLoading: loadingAuction } = useQuery({
-    queryKey: ['current-auction', selectedPhaseId],
+    queryKey: ['current-auction', selectedPhaseId, leagueId],
     queryFn: async () => {
       if (!selectedPhaseId) return null;
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('auctions')
         .select('*')
-        .eq('phase_id', selectedPhaseId)
+        .eq('phase_id', selectedPhaseId);
+      
+      if (leagueId) {
+        query = query.eq('league_id', leagueId);
+      }
+      
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
+      
       if (error) throw error;
       return data;
     },
@@ -123,7 +133,8 @@ export const RoundControlCenter = () => {
       const { data, error } = await supabase.functions.invoke('ouvrir-nouveau-round', {
         body: { 
           phase_id: selectedPhaseId, 
-          deadline_at: deadlineAt 
+          deadline_at: deadlineAt,
+          league_id: leagueId 
         }
       });
       if (error) throw error;
@@ -145,7 +156,10 @@ export const RoundControlCenter = () => {
   const closeRoundMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('clore-round', {
-        body: { auction_id: currentAuction?.id }
+        body: { 
+          auction_id: currentAuction?.id,
+          league_id: leagueId 
+        }
       });
       if (error) throw error;
       return data;

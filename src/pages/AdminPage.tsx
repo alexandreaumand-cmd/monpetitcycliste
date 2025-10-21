@@ -1,6 +1,4 @@
 import { Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { CourseManagementTabs } from "@/components/admin/CourseManagementTabs";
 import { GameManagementTabs } from "@/components/admin/GameManagementTabs";
 import { ConfigurationTabs } from "@/components/admin/ConfigurationTabs";
@@ -8,17 +6,23 @@ import { MaintenanceTabs } from "@/components/admin/MaintenanceTabs";
 import { LeaguesAdminPage } from "@/pages/admin/LeaguesAdminPage";
 import { LeagueDetailPage } from "@/pages/admin/LeagueDetailPage";
 import { cn } from "@/lib/utils";
+import { useUserRole } from "@/hooks/useUserRole";
 
-  const adminTabs = [
-    { label: '🏁 Courses', path: 'courses' },
-    { label: '🎮 Enchères', path: 'encheres' },
-    { label: '🏆 Ligues', path: 'leagues' },
-    { label: '⚙️ Configuration', path: 'config' },
-    { label: '🔧 Maintenance', path: 'maintenance' },
-  ];
+const allTabs = [
+  { label: '🏁 Courses', path: 'courses', superAdminOnly: true },
+  { label: '🎮 Enchères', path: 'encheres', superAdminOnly: false },
+  { label: '🏆 Ligues', path: 'leagues', superAdminOnly: false },
+  { label: '⚙️ Configuration', path: 'config', superAdminOnly: true },
+  { label: '🔧 Maintenance', path: 'maintenance', superAdminOnly: true },
+];
 
 export const AdminPage = () => {
   const location = useLocation();
+  const { isSuperAdmin, isLeagueAdminOnly } = useUserRole();
+  
+  const visibleTabs = isSuperAdmin 
+    ? allTabs 
+    : allTabs.filter(tab => !tab.superAdminOnly);
   
   const isActive = (path: string) => {
     return location.pathname.includes(`/dashboard/admin/${path}`);
@@ -27,7 +31,7 @@ export const AdminPage = () => {
   return (
     <div className="space-y-4 sm:space-y-6 px-3 sm:px-0">
       <div className="flex items-center gap-2 overflow-x-auto pb-2 px-2 sm:px-0 hide-scrollbar">
-        {adminTabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <Link
             key={tab.path}
             to={`/dashboard/admin/${tab.path}`}
@@ -45,14 +49,34 @@ export const AdminPage = () => {
       </div>
 
       <Routes>
-        <Route index element={<Navigate to="/dashboard/admin/courses" replace />} />
+        <Route 
+          index 
+          element={
+            <Navigate 
+              to={isSuperAdmin ? "/dashboard/admin/courses" : "/dashboard/admin/leagues"} 
+              replace 
+            />
+          } 
+        />
         
-        <Route path="courses" element={<CourseManagementTabs />} />
+        {isSuperAdmin && (
+          <>
+            <Route path="courses" element={<CourseManagementTabs />} />
+            <Route path="config" element={<ConfigurationTabs />} />
+            <Route path="maintenance" element={<MaintenanceTabs />} />
+          </>
+        )}
+        
         <Route path="encheres" element={<GameManagementTabs />} />
         <Route path="leagues" element={<LeaguesAdminPage />} />
         <Route path="leagues/:id" element={<LeagueDetailPage />} />
-        <Route path="config" element={<ConfigurationTabs />} />
-        <Route path="maintenance" element={<MaintenanceTabs />} />
+        
+        {isLeagueAdminOnly && (
+          <Route 
+            path="*" 
+            element={<Navigate to="/dashboard/admin/leagues" replace />} 
+          />
+        )}
       </Routes>
     </div>
   );

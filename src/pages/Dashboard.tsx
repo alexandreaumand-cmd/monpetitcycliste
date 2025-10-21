@@ -20,7 +20,8 @@ const Dashboard = () => {
   const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [manager, setManager] = useState<any>(null);
-  const { isSuperAdmin, loading: roleLoading } = useUserRole();
+  const { isSuperAdmin, isLeagueAdminOnly, loading: roleLoading } = useUserRole();
+  const isAnyAdmin = isSuperAdmin || isLeagueAdminOnly;
 
   useEffect(() => {
     checkUser();
@@ -84,7 +85,7 @@ const Dashboard = () => {
             <Route path="classement" element={<Rankings />} />
             <Route path="statistiques" element={<Statistics />} />
             <Route path="startlist" element={<Startlist />} />
-            {isSuperAdmin && <Route path="admin/*" element={<AdminPage />} />}
+            {isAnyAdmin && <Route path="admin/*" element={<AdminPage />} />}
           </Routes>
         </MobileLayout>
       </>
@@ -107,7 +108,7 @@ const Dashboard = () => {
           <Route path="classement" element={<Rankings />} />
           <Route path="statistiques" element={<Statistics />} />
           <Route path="startlist" element={<Startlist />} />
-          {isSuperAdmin && <Route path="admin/*" element={<AdminPage />} />}
+          {isAnyAdmin && <Route path="admin/*" element={<AdminPage />} />}
         </Routes>
       </main>
     </div>

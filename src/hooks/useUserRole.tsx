@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const useUserRole = () => {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isLeagueAdminOnly, setIsLeagueAdminOnly] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false); // Kept for backward compatibility
   const [loading, setLoading] = useState(true);
 
@@ -16,6 +17,7 @@ export const useUserRole = () => {
       
       if (!session) {
         setIsSuperAdmin(false);
+        setIsLeagueAdminOnly(false);
         setIsAdmin(false);
         setLoading(false);
         return;
@@ -27,20 +29,37 @@ export const useUserRole = () => {
       if (error) {
         console.error("Error checking superadmin role:", error);
         setIsSuperAdmin(false);
+        setIsLeagueAdminOnly(false);
         setIsAdmin(false);
       } else {
-        setIsSuperAdmin(data || false);
-        // For backward compatibility, isAdmin = isSuperAdmin
-        setIsAdmin(data || false);
+        const isSuperAdminValue = data || false;
+        setIsSuperAdmin(isSuperAdminValue);
+        
+        // If not superadmin, check if user is league admin
+        if (!isSuperAdminValue) {
+          const { data: memberships } = await supabase
+            .from('league_members')
+            .select('role_in_league')
+            .eq('user_id', session.user.id)
+            .in('role_in_league', ['owner', 'admin']);
+          
+          const hasLeagueAdminRole = (memberships?.length || 0) > 0;
+          setIsLeagueAdminOnly(hasLeagueAdminRole);
+          setIsAdmin(hasLeagueAdminRole); // For backward compatibility
+        } else {
+          setIsLeagueAdminOnly(false);
+          setIsAdmin(true); // For backward compatibility
+        }
       }
     } catch (error) {
       console.error("Error checking role:", error);
       setIsSuperAdmin(false);
+      setIsLeagueAdminOnly(false);
       setIsAdmin(false);
     } finally {
       setLoading(false);
     }
   };
 
-  return { isSuperAdmin, isAdmin, loading, refetch: checkRole };
+  return { isSuperAdmin, isLeagueAdminOnly, isAdmin, loading, refetch: checkRole };
 };
