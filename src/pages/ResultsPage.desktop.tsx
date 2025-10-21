@@ -108,17 +108,25 @@ export const ResultsPage = () => {
       // Load podiums and winners for the courses
       if (loadedRaces.length > 0) {
         const courseIds = loadedRaces.map((r: Race) => r.course_id);
-      const { data: podiumsData } = await supabase.functions.invoke('results-courses-podiums', {
-        body: { 
-          course_ids: courseIds,
-          saison_id: selectedSeason?.id,
-          league_id: leagueId
-        }
-      });
         
-        if (podiumsData) {
-          setPodiums(prev => reset ? (podiumsData.podiums || {}) : { ...prev, ...(podiumsData.podiums || {}) });
-          setWinners(prev => reset ? (podiumsData.winners || {}) : { ...prev, ...(podiumsData.winners || {}) });
+        try {
+          const { data: podiumsData, error } = await supabase.functions.invoke('results-courses-podiums', {
+            body: { 
+              course_ids: courseIds,
+              saison_id: selectedSeason?.id,
+              league_id: leagueId
+            }
+          });
+          
+          if (error) throw error;
+          
+          if (podiumsData) {
+            setPodiums(prev => reset ? (podiumsData.podiums || {}) : { ...prev, ...(podiumsData.podiums || {}) });
+            setWinners(prev => reset ? (podiumsData.winners || {}) : { ...prev, ...(podiumsData.winners || {}) });
+          }
+        } catch (podiumError) {
+          console.error('Failed to load podiums/winners:', podiumError);
+          // Continue showing races even if podiums fail
         }
       }
     } catch (error) {

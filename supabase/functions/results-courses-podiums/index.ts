@@ -47,29 +47,54 @@ Deno.serve(async (req) => {
       phaseIds = phases?.map(p => p.id) || [];
     }
 
-    // Get all points with manager names in a single query
+    // Get manager IDs for the league
+    let managerIds: string[] | null = null;
+    if (league_id && phaseIds.length > 0) {
+      const { data: rostersData, error: rostersError } = await supabase
+        .from('rosters')
+        .select('manager_id')
+        .eq('league_id', league_id)
+        .in('phase_id', phaseIds);
+      
+      if (rostersError) throw rostersError;
+      managerIds = [...new Set(rostersData?.map(r => r.manager_id) || [])];
+      
+      // If no managers found, return empty
+      if (managerIds.length === 0) {
+        return new Response(JSON.stringify({ podiums: {}, winners: {} }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // Get all points filtered by managers
     let allPointsQuery = supabase
       .from('points_ledger')
-      .select(`
-        course_id,
-        manager_id,
-        points,
-        managers!inner(nom)
-      `)
+      .select('course_id, manager_id, points')
       .in('course_id', course_ids);
     
-    // Filter by league_id if provided
-    if (league_id) {
-      allPointsQuery = allPointsQuery.eq('league_id', league_id);
+    if (managerIds) {
+      allPointsQuery = allPointsQuery.in('manager_id', managerIds);
     }
     
     if (phaseIds.length > 0) {
       allPointsQuery = allPointsQuery.in('phase_id', phaseIds);
     }
 
-    const { data: allPoints, error } = await allPointsQuery;
+    const { data: allPoints, error: pointsError } = await allPointsQuery;
 
-    if (error) throw error;
+    if (pointsError) throw pointsError;
+
+    // Get manager names separately
+    const uniqueManagerIds = [...new Set(allPoints?.map(p => p.manager_id) || [])];
+    const { data: managersData, error: managersError } = await supabase
+      .from('managers')
+      .select('id, nom')
+      .in('id', uniqueManagerIds);
+
+    if (managersError) throw managersError;
+
+    const managersMap = new Map(managersData?.map(m => [m.id, m.nom]) || []);
 
     // Aggregate points by course and manager
     const aggregated: Record<string, Record<string, { manager_nom: string; points: number }>> = {};
@@ -77,7 +102,7 @@ Deno.serve(async (req) => {
     allPoints?.forEach((row: any) => {
       const courseId = row.course_id;
       const managerId = row.manager_id;
-      const managerNom = row.managers?.nom || 'Unknown';
+      const managerNom = managersMap.get(managerId) || 'Unknown';
       const points = row.points || 0;
 
       if (!aggregated[courseId]) {
