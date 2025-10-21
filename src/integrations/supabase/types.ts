@@ -1801,6 +1801,7 @@ export type Database = {
           award_type: Database["public"]["Enums"]["fun_award_type"]
           created_at: string | null
           id: string
+          league_id: string | null
           manager_id: string
           phase_id: string | null
           updated_at: string | null
@@ -1810,6 +1811,7 @@ export type Database = {
           award_type: Database["public"]["Enums"]["fun_award_type"]
           created_at?: string | null
           id?: string
+          league_id?: string | null
           manager_id: string
           phase_id?: string | null
           updated_at?: string | null
@@ -1819,6 +1821,7 @@ export type Database = {
           award_type?: Database["public"]["Enums"]["fun_award_type"]
           created_at?: string | null
           id?: string
+          league_id?: string | null
           manager_id?: string
           phase_id?: string | null
           updated_at?: string | null
@@ -1879,6 +1882,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_recent_points"
             referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "manager_fun_awards_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "manager_fun_awards_manager_id_fkey"

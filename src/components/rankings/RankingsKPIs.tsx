@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useLeague } from "@/contexts/LeagueContext";
 import { toast } from "sonner";
 
 type RankingsKPIsProps = {
@@ -16,6 +17,7 @@ type AwardType = 'funniest' | 'grumpiest' | 'luckiest';
 
 export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
   const { isSuperAdmin } = useUserRole();
+  const { leagueId } = useLeague();
   const queryClient = useQueryClient();
 
   // Fetch all managers
@@ -34,8 +36,10 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
 
   // Fetch fun awards
   const { data: awards, isLoading } = useQuery({
-    queryKey: ["fun-awards", phaseId],
+    queryKey: ["fun-awards", phaseId, leagueId],
     queryFn: async () => {
+      if (!leagueId) return {};
+
       let query = supabase
         .from("manager_fun_awards")
         .select(`
@@ -43,7 +47,8 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
           award_type,
           manager_id,
           managers!manager_fun_awards_manager_id_fkey(nom)
-        `);
+        `)
+        .eq("league_id", leagueId);
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -67,6 +72,8 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
   // Update award mutation
   const updateAward = useMutation({
     mutationFn: async ({ awardType, managerId }: { awardType: AwardType; managerId: string | null }) => {
+      if (!leagueId) throw new Error("No league selected");
+
       // Get current user's manager ID
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -84,7 +91,8 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
         let deleteQuery = supabase
           .from("manager_fun_awards")
           .delete()
-          .eq("award_type", awardType);
+          .eq("award_type", awardType)
+          .eq("league_id", leagueId);
         
         if (phaseId) {
           deleteQuery = deleteQuery.eq("phase_id", phaseId);
@@ -99,19 +107,20 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
         const { error } = await supabase
           .from("manager_fun_awards")
           .upsert({
+            league_id: leagueId,
             phase_id: phaseId || null,
             award_type: awardType,
             manager_id: managerId,
             assigned_by: manager.id,
           }, {
-            onConflict: 'phase_id,award_type',
+            onConflict: 'league_id,phase_id,award_type',
           });
         
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["fun-awards", phaseId] });
+      queryClient.invalidateQueries({ queryKey: ["fun-awards", phaseId, leagueId] });
       toast.success("Attribution mise à jour");
     },
     onError: () => {
