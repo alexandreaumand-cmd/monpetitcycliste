@@ -286,7 +286,9 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const finishedResults = filteredResults
     .filter(r => {
       if (r.statut !== 'finished' || r.row_position === null) return false;
-      const points = r.points_officiels !== null ? r.points_officiels : r.points_theoriques;
+      const points = (r.points_officiels !== null && r.points_officiels > 0) 
+        ? r.points_officiels 
+        : r.points_theoriques;
       return points > 0;
     });
   
