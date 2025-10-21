@@ -15,7 +15,7 @@ type RankingsKPIsProps = {
 type AwardType = 'funniest' | 'grumpiest' | 'luckiest';
 
 export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
-  const { isAdmin } = useUserRole();
+  const { isSuperAdmin } = useUserRole();
   const queryClient = useQueryClient();
 
   // Fetch all managers
@@ -168,7 +168,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                   <h3 className="font-semibold">{kpi.label}</h3>
                 </div>
                 
-                {isAdmin ? (
+                {isSuperAdmin ? (
                   <Popover>
                     <PopoverTrigger asChild>
                       <p className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors">

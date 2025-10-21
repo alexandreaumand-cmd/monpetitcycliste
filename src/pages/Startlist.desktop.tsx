@@ -390,10 +390,10 @@ const StartlistDesktop = () => {
   };
 
   const selectedRace = races.find(r => r.id === selectedRaceId);
-  const { isAdmin, loading: isLoadingRole } = useUserRole();
+  const { isSuperAdmin, loading: isLoadingRole } = useUserRole();
   
   // Check if user can modify: admin OR creator of the startlist
-  const canModify = isAdmin || (currentUser?.id && startlistMeta?.created_by_manager_id && currentUser.id === startlistMeta.created_by_manager_id);
+  const canModify = isSuperAdmin || (currentUser?.id && startlistMeta?.created_by_manager_id && currentUser.id === startlistMeta.created_by_manager_id);
 
   const handleExportImage = async () => {
     if (!exportRef.current) return;
@@ -460,8 +460,8 @@ const StartlistDesktop = () => {
               <Camera className="h-3 w-3 mr-1" />
               Exporter la SL
             </Button>
-            {isAdmin && (
-              <RouteImageUploader 
+            {isSuperAdmin && (
+              <RouteImageUploader
                 startlistId={selectedStartlistId!}
                 currentImageUrl={startlistViewData.route_image_url}
                 onUploadComplete={() => queryClient.invalidateQueries({ queryKey: ['startlist-view', selectedStartlistId] })}
@@ -472,7 +472,7 @@ const StartlistDesktop = () => {
                 Modifier la SL
               </Button>
             )}
-            {isAdmin && !startlistViewData?.pcs_validated && (
+            {isSuperAdmin && !startlistViewData?.pcs_validated && (
               <Button 
                 onClick={handlePcsValidation} 
                 variant="default" 
@@ -483,7 +483,7 @@ const StartlistDesktop = () => {
                 Valider PCS
               </Button>
             )}
-            {isAdmin && startlistViewData?.pcs_validated && (
+            {isSuperAdmin && startlistViewData?.pcs_validated && (
               <Button 
                 onClick={handlePcsValidation} 
                 variant="outline"
@@ -494,7 +494,7 @@ const StartlistDesktop = () => {
                 PCS OK (retirer)
               </Button>
             )}
-            {isAdmin && startlistViewData.managers.length > 0 && (
+            {isSuperAdmin && startlistViewData.managers.length > 0 && (
               <Button 
                 variant="outline" 
                 size="sm"
@@ -792,7 +792,7 @@ const StartlistDesktop = () => {
             </span>
           </div>
 
-          {isAdmin && (
+          {isSuperAdmin && (
             <div className="flex items-center space-x-2">
               <Switch
                 id="diagnostics"

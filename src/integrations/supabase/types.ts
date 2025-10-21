@@ -5605,6 +5605,10 @@ export type Database = {
         Args: { l_id: string }
         Returns: boolean
       }
+      is_superadmin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       manager_coureur_points_detail: {
         Args: { p_coureur_id: string; p_phase_id?: string }
         Returns: {

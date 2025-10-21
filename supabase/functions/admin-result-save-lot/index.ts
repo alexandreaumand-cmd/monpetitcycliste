@@ -31,10 +31,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check admin access
-    const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin');
-    if (adminError || !isAdmin) {
-      return new Response(JSON.stringify({ error: 'Access denied: admin only' }), {
+    // Check superadmin access
+    const { data: isSuperAdmin, error: adminError } = await supabase.rpc('is_superadmin');
+    if (adminError || !isSuperAdmin) {
+      return new Response(JSON.stringify({ error: 'Access denied: superadmin only' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

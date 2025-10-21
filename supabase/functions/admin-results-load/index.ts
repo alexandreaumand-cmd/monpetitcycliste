@@ -22,10 +22,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check admin role
-    const { data: isAdmin } = await supabase.rpc('is_admin');
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Accès refusé: réservé aux administrateurs' }), {
+    // Check superadmin role
+    const { data: isSuperAdmin } = await supabase.rpc('is_superadmin');
+    if (!isSuperAdmin) {
+      return new Response(JSON.stringify({ error: 'Accès refusé: réservé aux superadministrateurs' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

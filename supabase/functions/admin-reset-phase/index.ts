@@ -27,10 +27,10 @@ serve(async (req) => {
       })
     }
 
-    // Vérifier que l'utilisateur est admin
-    const { data: isAdmin } = await supabaseClient.rpc('is_admin')
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Accès refusé: admin requis' }), {
+    // Vérifier que l'utilisateur est superadmin
+    const { data: isSuperAdmin } = await supabaseClient.rpc('is_superadmin')
+    if (!isSuperAdmin) {
+      return new Response(JSON.stringify({ error: 'Accès refusé: superadmin requis' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })

@@ -10,19 +10,19 @@ const STORAGE_KEY = "admin_maintenance_last_run";
 const COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export const AdminMaintenance = () => {
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isSuperAdmin, loading: roleLoading } = useUserRole();
   const [isRunning, setIsRunning] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [missingCourses, setMissingCourses] = useState<Array<{ course_id: string; course_nom: string; missing_count: number }>>([]);
 
   useEffect(() => {
-    if (!isAdmin || roleLoading) return;
+    if (!isSuperAdmin || roleLoading) return;
 
     const shouldRun = checkShouldRun();
     if (shouldRun) {
       runMaintenance();
     }
-  }, [isAdmin, roleLoading]);
+  }, [isSuperAdmin, roleLoading]);
 
   const checkShouldRun = (): boolean => {
     const lastRun = localStorage.getItem(STORAGE_KEY);
@@ -105,7 +105,7 @@ export const AdminMaintenance = () => {
     }
   };
 
-  if (!isAdmin || roleLoading) return null;
+  if (!isSuperAdmin || roleLoading) return null;
 
   if (isRunning) {
     return (

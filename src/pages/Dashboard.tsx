@@ -20,7 +20,7 @@ const Dashboard = () => {
   const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [manager, setManager] = useState<any>(null);
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isSuperAdmin, loading: roleLoading } = useUserRole();
 
   useEffect(() => {
     checkUser();
@@ -72,7 +72,7 @@ const Dashboard = () => {
         <AnnouncementBanner />
         <MobileLayout
           manager={manager}
-          isAdmin={isAdmin}
+          isAdmin={isSuperAdmin}
           onSignOut={handleSignOut}
         >
           <Routes>
@@ -84,7 +84,7 @@ const Dashboard = () => {
             <Route path="classement" element={<Rankings />} />
             <Route path="statistiques" element={<Statistics />} />
             <Route path="startlist" element={<Startlist />} />
-            {isAdmin && <Route path="admin/*" element={<AdminPage />} />}
+            {isSuperAdmin && <Route path="admin/*" element={<AdminPage />} />}
           </Routes>
         </MobileLayout>
       </>
@@ -95,7 +95,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
       <AnnouncementBanner />
-      <Header manager={manager} isAdmin={isAdmin} onSignOut={handleSignOut} />
+      <Header manager={manager} isAdmin={isSuperAdmin} onSignOut={handleSignOut} />
       
       <main className="container mx-auto px-4 py-8">
         <Routes>
@@ -107,7 +107,7 @@ const Dashboard = () => {
           <Route path="classement" element={<Rankings />} />
           <Route path="statistiques" element={<Statistics />} />
           <Route path="startlist" element={<Startlist />} />
-          {isAdmin && <Route path="admin/*" element={<AdminPage />} />}
+          {isSuperAdmin && <Route path="admin/*" element={<AdminPage />} />}
         </Routes>
       </main>
     </div>
