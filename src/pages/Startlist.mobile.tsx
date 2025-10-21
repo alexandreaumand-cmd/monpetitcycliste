@@ -38,11 +38,13 @@ import { ManagerStars } from "@/components/startlist/ManagerStars";
 import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { StartlistDesktopExport } from "@/components/startlist/StartlistDesktopExport";
+import { useLeague } from "@/contexts/LeagueContext";
 
 export const StartlistMobile = () => {
   const queryClient = useQueryClient();
   const { isAdmin } = useUserRole();
   const { phases, isLoading: isLoadingContext } = useSeasonContext();
+  const { leagueId } = useLeague();
   const [viewMode, setViewMode] = useState<"list" | "parse" | "view">("list");
   const [tabMode, setTabMode] = useState<"30days" | "90days" | "history" | "upcoming-year">("30days");
   const [selectedRaceId, setSelectedRaceId] = useState("");
@@ -130,12 +132,15 @@ export const StartlistMobile = () => {
 
   // Fetch startlist view data
   const { data: startlistViewData, isLoading: viewLoading } = useQuery({
-    queryKey: ["startlist-view-mobile", selectedStartlistId],
+    queryKey: ["startlist-view-mobile", selectedStartlistId, leagueId],
     queryFn: async () => {
       if (!selectedStartlistId) return null;
       
       const { data, error } = await supabase.functions.invoke("startlist-manager-view", {
-        body: { startlist_id: selectedStartlistId },
+        body: { 
+          startlist_id: selectedStartlistId,
+          league_id: leagueId
+        },
       });
       
       if (error) throw error;

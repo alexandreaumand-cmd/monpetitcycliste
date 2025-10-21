@@ -26,10 +26,12 @@ import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { cn } from "@/lib/utils";
 import { StartlistDesktopExport } from "@/components/startlist/StartlistDesktopExport";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLeague } from "@/contexts/LeagueContext";
 
 const StartlistDesktop = () => {
   
   const queryClient = useQueryClient();
+  const { leagueId } = useLeague();
   const [viewMode, setViewMode] = useState<'list' | 'parse' | 'view'>('list');
   const [tabMode, setTabMode] = useState<'30days' | '90days' | 'history' | 'upcoming-year'>('30days');
   const [selectedRaceForParsing, setSelectedRaceForParsing] = useState<any>(null);
@@ -228,11 +230,14 @@ const StartlistDesktop = () => {
 
   // Fetch startlist view data when in view mode
   const { data: startlistViewData, isLoading: isLoadingStartlistView } = useQuery({
-    queryKey: ['startlist-view', selectedStartlistId],
+    queryKey: ['startlist-view', selectedStartlistId, leagueId],
     enabled: !!selectedStartlistId && viewMode === 'view',
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('startlist-manager-view', {
-        body: { startlist_id: selectedStartlistId }
+        body: { 
+          startlist_id: selectedStartlistId,
+          league_id: leagueId
+        }
       });
       
       if (error) throw error;

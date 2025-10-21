@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { startlist_id } = await req.json();
+    const { startlist_id, league_id } = await req.json();
 
     console.log('Fetching manager view for startlist:', startlist_id);
 
@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
     }));
 
     // Get rosters for this phase with season sponsors
-    const { data: rosters, error: rostersError } = await supabase
+    let rostersQuery = supabase
       .from('rosters')
       .select(`
         manager_id,
@@ -112,6 +112,13 @@ Deno.serve(async (req) => {
         )
       `)
       .eq('phase_id', phaseId);
+    
+    // Filter by league_id if provided
+    if (league_id) {
+      rostersQuery = rostersQuery.eq('league_id', league_id);
+    }
+    
+    const { data: rosters, error: rostersError } = await rostersQuery;
 
     if (rostersError) throw rostersError;
 
@@ -137,10 +144,16 @@ Deno.serve(async (req) => {
     const pointsCoureurIds = enrichedEntries.map(e => e.coureur_id).filter(Boolean);
     
     // Get all points for coureurs in startlist with course info
-    const { data: allPoints } = await supabase
+    let pointsQuery = supabase
       .from('points_ledger')
       .select('coureur_id, points, course_id')
       .in('coureur_id', pointsCoureurIds);
+    
+    if (league_id) {
+      pointsQuery = pointsQuery.eq('league_id', league_id);
+    }
+    
+    const { data: allPoints } = await pointsQuery;
 
     // Get course dates
     const courseIds = [...new Set(allPoints?.map(p => p.course_id) || [])];
@@ -181,16 +194,28 @@ Deno.serve(async (req) => {
     }
 
     // Get phase standings
-    const { data: phaseStandings } = await supabase
-      .from('v_manager_standings_by_phase')
+    let phaseStandingsQuery = supabase
+      .from('v_manager_standings_by_phase_v2')
       .select('*')
-      .eq('phase_id', phaseId)
+      .eq('phase_id', phaseId);
+    
+    if (league_id) {
+      phaseStandingsQuery = phaseStandingsQuery.eq('league_id', league_id);
+    }
+    
+    const { data: phaseStandings } = await phaseStandingsQuery
       .order('total_points', { ascending: false });
 
     // Get total standings
-    const { data: totalStandings } = await supabase
-      .from('v_manager_standings_total')
-      .select('*')
+    let totalStandingsQuery = supabase
+      .from('v_manager_standings_total_v2')
+      .select('*');
+    
+    if (league_id) {
+      totalStandingsQuery = totalStandingsQuery.eq('league_id', league_id);
+    }
+    
+    const { data: totalStandings } = await totalStandingsQuery
       .order('total_points', { ascending: false });
 
     // Get scoring rules for this race category
