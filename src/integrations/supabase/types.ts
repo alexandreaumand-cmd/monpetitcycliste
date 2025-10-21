@@ -1353,6 +1353,77 @@ export type Database = {
           },
         ]
       }
+      league_invite_uses: {
+        Row: {
+          id: number
+          league_id: string
+          token: string
+          used_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: number
+          league_id: string
+          token: string
+          used_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: number
+          league_id?: string
+          token?: string
+          used_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      league_invites: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_revoked: boolean
+          league_id: string
+          max_uses: number | null
+          note: string | null
+          token: string
+          uses_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_revoked?: boolean
+          league_id: string
+          max_uses?: number | null
+          note?: string | null
+          token: string
+          uses_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_revoked?: boolean
+          league_id?: string
+          max_uses?: number | null
+          note?: string | null
+          token?: string
+          uses_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_invites_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       league_members: {
         Row: {
           id: string

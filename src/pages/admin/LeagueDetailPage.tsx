@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { LeagueAdminGuard } from "@/components/guards/LeagueAdminGuard";
+import { LeagueInvitesManager } from "@/components/admin/LeagueInvitesManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -193,6 +194,9 @@ export function LeagueDetailPage() {
 
         {/* League Settings */}
         <LeagueSettingsCard league={league} onSaved={loadLeagueData} />
+
+        {/* Invitations */}
+        <LeagueInvitesManager leagueId={leagueId} />
 
         {/* Members Management */}
         <Card>
