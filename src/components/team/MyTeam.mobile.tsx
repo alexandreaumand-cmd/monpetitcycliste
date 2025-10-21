@@ -288,14 +288,15 @@ export const MyTeamMobile = () => {
 
       // Charger le coureur bonus sélectionné (s'il existe)
       if (targetManagerId && selectedPhaseId) {
-        const { data: bonusRider } = await supabase
-          .from('bonus_rider_selections')
-          .select('coureur_id, coureurs(nom)')
-          .match({
-            manager_id: targetManagerId,
-            phase_id: selectedPhaseId
-          })
-          .maybeSingle();
+      const { data: bonusRider } = await supabase
+        .from('bonus_rider_selections')
+        .select('coureur_id, coureurs(nom)')
+        .match({
+          manager_id: targetManagerId,
+          phase_id: selectedPhaseId,
+          league_id: leagueId
+        })
+        .maybeSingle();
 
         if (bonusRider) {
           setBonusRiderSelection({

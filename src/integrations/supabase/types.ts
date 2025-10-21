@@ -722,6 +722,7 @@ export type Database = {
         Row: {
           coureur_id: string
           id: string
+          league_id: string
           manager_id: string
           phase_id: string
           selected_at: string | null
@@ -729,6 +730,7 @@ export type Database = {
         Insert: {
           coureur_id: string
           id?: string
+          league_id: string
           manager_id: string
           phase_id: string
           selected_at?: string | null
@@ -736,6 +738,7 @@ export type Database = {
         Update: {
           coureur_id?: string
           id?: string
+          league_id?: string
           manager_id?: string
           phase_id?: string
           selected_at?: string | null
@@ -851,6 +854,13 @@ export type Database = {
             columns: ["phase_id"]
             isOneToOne: false
             referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_bonus_rider_selections_league"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
             referencedColumns: ["id"]
           },
         ]

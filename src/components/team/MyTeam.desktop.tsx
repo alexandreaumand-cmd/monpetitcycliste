@@ -251,12 +251,13 @@ export const MyTeamDesktop = () => {
       // Charger le coureur bonus sélectionné (s'il existe)
       if (targetManagerId && selectedPhaseId) {
         const client: any = supabase;
-        const { data: bonusRider } = await client
-          .from('bonus_rider_selections')
-          .select('coureur_id')
-          .eq('manager_id', targetManagerId)
-          .eq('phase_id', selectedPhaseId)
-          .maybeSingle();
+      const { data: bonusRider } = await client
+        .from('bonus_rider_selections')
+        .select('coureur_id')
+        .eq('manager_id', targetManagerId)
+        .eq('phase_id', selectedPhaseId)
+        .eq('league_id', leagueId)
+        .maybeSingle();
 
         if (bonusRider) {
           // Fetch the rider name separately
