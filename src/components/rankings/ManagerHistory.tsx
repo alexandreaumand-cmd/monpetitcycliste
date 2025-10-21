@@ -127,41 +127,56 @@ export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
 
   // Récupérer les points des coureurs
   const { data: pointsData } = useQuery({
-    queryKey: ["rider-points-for-bids", phaseId, phaseIds, bids],
+    queryKey: ["rider-points-for-bids", phaseId, phaseIds, bids, leagueId],
     queryFn: async () => {
-      if (!bids || bids.length === 0) return new Map();
+      if (!bids || bids.length === 0 || !leagueId) return new Map();
 
       const coureurIds = [...new Set(bids.map(b => b.coureur_id))];
+      const targetPhaseIds = phaseId ? [phaseId] : (phaseIds && phaseIds.length > 0 ? phaseIds : []);
       
-      let query = supabase
+      if (targetPhaseIds.length === 0) return new Map();
+
+      // Get points from points_ledger (global)
+      const { data: pointsLedger, error: pointsError } = await supabase
         .from("points_ledger")
-        .select("coureur_id, manager_id, phase_id, points")
-        .in("coureur_id", coureurIds);
+        .select("coureur_id, phase_id, points")
+        .in("coureur_id", coureurIds)
+        .in("phase_id", targetPhaseIds);
 
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      } else if (phaseIds && phaseIds.length > 0) {
-        query = query.in("phase_id", phaseIds);
-      }
-      
-      if (leagueId) {
-        query = query.eq("league_id", leagueId);
-      }
+      if (pointsError) throw pointsError;
 
-      const { data, error } = await query;
-      if (error) throw error;
+      // Get rosters to map coureur_id -> manager_id for this league
+      const { data: rostersData, error: rostersError } = await supabase
+        .from("rosters")
+        .select("coureur_id, manager_id, phase_id")
+        .in("coureur_id", coureurIds)
+        .in("phase_id", targetPhaseIds)
+        .eq("league_id", leagueId);
 
-      // Agréger les points par coureur et manager
+      if (rostersError) throw rostersError;
+
+      // Create mapping coureur+phase -> manager_id
+      const coureurToManager = new Map<string, string>();
+      rostersData?.forEach(r => {
+        const key = `${r.coureur_id}_${r.phase_id}`;
+        coureurToManager.set(key, r.manager_id);
+      });
+
+      // Aggregate points by coureur + manager
       const aggregated = new Map<string, number>();
-      data?.forEach(row => {
-        const key = `${row.coureur_id}_${row.manager_id}`;
+      pointsLedger?.forEach(row => {
+        const managerKey = `${row.coureur_id}_${row.phase_id}`;
+        const managerId = coureurToManager.get(managerKey);
+        if (!managerId) return; // Skip if rider not owned in this league
+        
+        const key = `${row.coureur_id}_${managerId}`;
         const current = aggregated.get(key) || 0;
         aggregated.set(key, current + (row.points || 0));
       });
 
       return aggregated;
     },
-    enabled: !!bids && bids.length > 0,
+    enabled: !!bids && bids.length > 0 && !!leagueId,
   });
 
   // Enrichir les bids avec les données

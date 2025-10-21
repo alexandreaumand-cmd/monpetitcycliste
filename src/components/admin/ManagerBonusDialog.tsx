@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLeague } from "@/contexts/LeagueContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,32 +28,42 @@ interface BonusEntry {
 }
 
 export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonusDialogProps) => {
+  const { leagueId } = useLeague();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [bonuses, setBonuses] = useState<Map<string, BonusEntry>>(new Map());
 
   // Fetch managers with their current points and bonuses
   const { data: managers, isLoading } = useQuery({
-    queryKey: ['managers-bonus', phaseId],
+    queryKey: ['managers-bonus', phaseId, leagueId],
     queryFn: async () => {
-      // Get managers standings for this phase with manager info
+      // Get managers standings for this phase
       const { data: standings, error: standingsError } = await supabase
         .from('v_manager_standings_by_phase_v2')
-        .select(`
-          manager_id, 
-          race_points, 
-          bonus_points,
-          managers!inner(nom)
-        `)
-        .eq('phase_id', phaseId);
+        .select('manager_id, race_points, bonus_points, league_id')
+        .eq('phase_id', phaseId)
+        .eq('league_id', leagueId);
 
       if (standingsError) throw standingsError;
+      if (!standings) return [];
+
+      // Get manager names
+      const managerIds = standings.map(s => s.manager_id);
+      const { data: managersData, error: managersError } = await supabase
+        .from('managers')
+        .select('id, nom')
+        .in('id', managerIds);
+
+      if (managersError) throw managersError;
+
+      const managerMap = new Map(managersData?.map(m => [m.id, m.nom]) || []);
 
       // Get existing bonus details
       const { data: bonusData, error: bonusError } = await supabase
         .from('manager_bonus_points')
         .select('manager_id, bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs, commentaire')
-        .eq('phase_id', phaseId);
+        .eq('phase_id', phaseId)
+        .eq('league_id', leagueId);
 
       if (bonusError) throw bonusError;
 
@@ -60,13 +71,13 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
 
       return standings
         ?.sort((a, b) => {
-          const nomA = Array.isArray(a.managers) ? a.managers[0]?.nom : a.managers?.nom;
-          const nomB = Array.isArray(b.managers) ? b.managers[0]?.nom : b.managers?.nom;
-          return (nomA || '').localeCompare(nomB || '');
+          const nomA = managerMap.get(a.manager_id) || '';
+          const nomB = managerMap.get(b.manager_id) || '';
+          return nomA.localeCompare(nomB);
         })
         .map(s => {
           const existingBonus = bonusMap.get(s.manager_id);
-          const managerNom = Array.isArray(s.managers) ? s.managers[0]?.nom : s.managers?.nom;
+          const managerNom = managerMap.get(s.manager_id) || 'Unknown';
           return {
             manager_id: s.manager_id,
             manager_nom: managerNom || 'Unknown',
