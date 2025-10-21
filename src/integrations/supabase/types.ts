@@ -4762,6 +4762,7 @@ export type Database = {
           date_debut: string | null
           date_fin: string | null
           etape_numero: number | null
+          league_id: string | null
           manager_id: string | null
           manager_nom: string | null
           phase_id: string | null
@@ -4769,6 +4770,13 @@ export type Database = {
           type_classement: Database["public"]["Enums"]["type_classement"] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "points_ledger_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "points_ledger_manager_id_fkey"
             columns: ["manager_id"]
