@@ -592,8 +592,8 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                       {displayedResults.map((row) => {
                         const isFinished = row.statut === 'finished' && row.row_position !== null;
                         const statutBadge = getStatutBadge(row.statut);
-                        const hasOfficialPoints = row.points_officiels !== null;
-                        const points = hasOfficialPoints ? row.points_officiels : row.points_theoriques;
+                        // Toujours afficher les points théoriques (barème de la course)
+                        const points = row.points_theoriques;
                         
                         return (
                           <TableRow
