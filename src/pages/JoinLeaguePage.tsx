@@ -27,18 +27,28 @@ export function JoinLeaguePage() {
         });
 
         if (error || !data?.ok) {
+          const status = (error as any)?.status;
+          const serverMsg = (data as any)?.error || (error as any)?.message;
+
+          // If not authenticated, redirect to auth then come back here
+          if (status === 401) {
+            const next = encodeURIComponent(`/join?token=${token}`);
+            navigate(`/auth?next=${next}`);
+            return;
+          }
+
+          const mapped = serverMsg === 'Invalid token'
+            ? "Ce lien d'invitation n'existe pas."
+            : serverMsg === 'Invite revoked'
+            ? "Cette invitation a été révoquée."
+            : serverMsg === 'Invite expired'
+            ? "Cette invitation a expiré."
+            : serverMsg === 'Invite limit reached'
+            ? "Cette invitation a atteint sa limite d'utilisations."
+            : "Impossible de rejoindre la ligue.";
+
           setStatus("error");
-          setMessage(
-            error?.message === "Invalid token"
-              ? "Ce lien d'invitation n'existe pas."
-              : error?.message === "Invite revoked"
-              ? "Cette invitation a été révoquée."
-              : error?.message === "Invite expired"
-              ? "Cette invitation a expiré."
-              : error?.message === "Invite limit reached"
-              ? "Cette invitation a atteint sa limite d'utilisations."
-              : "Impossible de rejoindre la ligue."
-          );
+          setMessage(mapped);
           return;
         }
 

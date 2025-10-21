@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
+    console.log('leagues-list-invites: authenticated user', user.id);
     // Accept league_id from either query string or body
     const url = new URL(req.url);
     let league_id = url.searchParams.get('league_id');
@@ -46,6 +46,7 @@ Deno.serve(async (req) => {
     }
 
     // RLS will automatically filter to only show invites user can see
+    console.log('leagues-list-invites: fetching invites for league', league_id);
     const { data, error } = await supabase
       .from('league_invites')
       .select('*')

@@ -37,14 +37,21 @@ export function LeagueInvitesManager({ leagueId }: { leagueId: string }) {
 
   async function loadInvites() {
     setLoading(true);
+
+    if (!leagueId) {
+      toast.error("Aucune ligue sélectionnée");
+      setLoading(false);
+      return;
+    }
     
     const { data, error } = await supabase.functions.invoke('leagues-list-invites', {
       body: { league_id: leagueId },
     });
 
     if (error || data?.error) {
+      const msg = (data as any)?.error || (error as any)?.message || "Erreur lors du chargement des invitations";
       console.error('Error loading invites:', error || data?.error);
-      toast.error(data?.error || "Erreur lors du chargement des invitations");
+      toast.error(msg);
       setLoading(false);
       return;
     }

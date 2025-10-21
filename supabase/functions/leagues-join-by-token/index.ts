@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
+    console.log('leagues-join-by-token: authenticated user', user.id);
     // Service client to bypass RLS for invite lookup and member insert
     const serviceClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log('leagues-join-by-token: processing token', String(token).slice(0, 8) + '…');
     // Find the invite using service client (bypasses RLS)
     const { data: invite, error: inviteError } = await serviceClient
       .from('league_invites')
