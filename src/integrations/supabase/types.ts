@@ -4496,12 +4496,20 @@ export type Database = {
         }[]
       }
       results_course_table: {
-        Args: {
-          p_course_id: string
-          p_etape_numero?: number
-          p_manager_id?: string
-          p_type_classement: Database["public"]["Enums"]["type_classement"]
-        }
+        Args:
+          | {
+              p_course_id: string
+              p_etape_numero?: number
+              p_league_id?: string
+              p_manager_id?: string
+              p_type_classement: Database["public"]["Enums"]["type_classement"]
+            }
+          | {
+              p_course_id: string
+              p_etape_numero?: number
+              p_manager_id?: string
+              p_type_classement: Database["public"]["Enums"]["type_classement"]
+            }
         Returns: {
           coureur_id: string
           coureur_nom: string

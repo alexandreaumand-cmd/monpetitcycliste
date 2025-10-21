@@ -15,193 +15,221 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      req.headers.get('Authorization')?.replace('Bearer ', '') || ''
-    );
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { course_ids, saison_id, league_id } = await req.json();
+    const { course_ids, saison_id = null, league_id = null } = await req.json();
 
     if (!course_ids || !Array.isArray(course_ids) || course_ids.length === 0) {
-      return new Response(JSON.stringify({ error: 'course_ids array required' }), {
+      return new Response(JSON.stringify({ error: 'course_ids array is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Get phases for the season to filter points correctly
+    // 1. Get phase IDs for the season
     let phaseIds: string[] = [];
     if (saison_id) {
-      const { data: phases, error: phasesError } = await supabase
+      const { data: phasesData, error: phasesError } = await supabase
         .from('phases')
         .select('id')
         .eq('saison_id', saison_id);
       
       if (phasesError) throw phasesError;
-      phaseIds = phases?.map(p => p.id) || [];
+      phaseIds = phasesData?.map(p => p.id) || [];
+      
+      if (phaseIds.length === 0) {
+        console.log('No phases found for saison_id:', saison_id);
+        return new Response(JSON.stringify({ podiums: {}, winners: {} }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else {
+      // Get phases from courses
+      const { data: coursesData, error: coursesError } = await supabase
+        .from('courses')
+        .select('phase_id')
+        .in('id', course_ids);
+      
+      if (coursesError) throw coursesError;
+      phaseIds = [...new Set(coursesData?.map(c => c.phase_id).filter(Boolean) || [])];
     }
 
-    // Get manager IDs for the league
-    let managerIds: string[] | null = null;
+    console.log('Processing podiums:', { course_ids_count: course_ids.length, phaseIds_count: phaseIds.length, league_id });
+
+    // 2. Load rosters for the league and phases to build manager mapping
+    let managerMap = new Map<string, string>(); // key: `${phase_id}:${coureur_id}` -> manager_id
+    
     if (league_id && phaseIds.length > 0) {
       const { data: rostersData, error: rostersError } = await supabase
         .from('rosters')
-        .select('manager_id')
+        .select('manager_id, coureur_id, phase_id')
         .eq('league_id', league_id)
         .in('phase_id', phaseIds);
       
       if (rostersError) throw rostersError;
-      managerIds = [...new Set(rostersData?.map(r => r.manager_id) || [])];
       
-      // If no managers found, return empty
-      if (managerIds.length === 0) {
+      console.log('Rosters loaded:', rostersData?.length || 0);
+      
+      rostersData?.forEach(r => {
+        const key = `${r.phase_id}:${r.coureur_id}`;
+        managerMap.set(key, r.manager_id);
+      });
+      
+      if (managerMap.size === 0) {
+        console.log('No rosters found for league_id:', league_id);
         return new Response(JSON.stringify({ podiums: {}, winners: {} }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
     }
 
-    // Get all points filtered by managers
-    let allPointsQuery = supabase
+    // 3. Load points_ledger for courses and phases
+    let pointsQuery = supabase
       .from('points_ledger')
-      .select('course_id, manager_id, points')
+      .select('course_id, coureur_id, phase_id, points')
       .in('course_id', course_ids);
     
-    if (managerIds) {
-      allPointsQuery = allPointsQuery.in('manager_id', managerIds);
-    }
-    
     if (phaseIds.length > 0) {
-      allPointsQuery = allPointsQuery.in('phase_id', phaseIds);
+      pointsQuery = pointsQuery.in('phase_id', phaseIds);
     }
 
-    const { data: allPoints, error: pointsError } = await allPointsQuery;
-
+    const { data: allPoints, error: pointsError } = await pointsQuery;
     if (pointsError) throw pointsError;
 
-    // Get manager names separately
-    const uniqueManagerIds = [...new Set(allPoints?.map(p => p.manager_id) || [])];
+    console.log('Points ledger loaded:', allPoints?.length || 0);
+
+    // 4. Aggregate points by course and manager (in-memory)
+    const aggregated: Record<string, Record<string, number>> = {}; // { course_id: { manager_id: total_points } }
+    
+    allPoints?.forEach(pl => {
+      const key = `${pl.phase_id}:${pl.coureur_id}`;
+      const managerId = managerMap.get(key);
+      
+      if (!managerId) {
+        // Rider not in this league, skip
+        return;
+      }
+      
+      if (!aggregated[pl.course_id]) {
+        aggregated[pl.course_id] = {};
+      }
+      
+      aggregated[pl.course_id][managerId] = (aggregated[pl.course_id][managerId] || 0) + (pl.points || 0);
+    });
+
+    // 5. Get manager names
+    const uniqueManagerIds = new Set<string>();
+    Object.values(aggregated).forEach(managers => {
+      Object.keys(managers).forEach(mid => uniqueManagerIds.add(mid));
+    });
+
     const { data: managersData, error: managersError } = await supabase
       .from('managers')
       .select('id, nom')
-      .in('id', uniqueManagerIds);
+      .in('id', Array.from(uniqueManagerIds));
 
     if (managersError) throw managersError;
 
-    const managersMap = new Map(managersData?.map(m => [m.id, m.nom]) || []);
+    const managersNamesMap = new Map(managersData?.map(m => [m.id, m.nom]) || []);
 
-    // Aggregate points by course and manager
-    const aggregated: Record<string, Record<string, { manager_nom: string; points: number }>> = {};
+    console.log('Managers loaded:', managersNamesMap.size);
 
-    allPoints?.forEach((row: any) => {
-      const courseId = row.course_id;
-      const managerId = row.manager_id;
-      const managerNom = managersMap.get(managerId) || 'Unknown';
-      const points = row.points || 0;
-
-      if (!aggregated[courseId]) {
-        aggregated[courseId] = {};
-      }
-      if (!aggregated[courseId][managerId]) {
-        aggregated[courseId][managerId] = { manager_nom: managerNom, points: 0 };
-      }
-      aggregated[courseId][managerId].points += points;
-    });
-
-    // Convert to array format and sort
+    // 6. Build podiums (top 3 per course)
     const podiumResult: Record<string, Array<{ manager_id: string; manager_nom: string; points: number; rank: number }>> = {};
-
-    Object.keys(aggregated).forEach(courseId => {
-      const managers = Object.entries(aggregated[courseId])
-        .sort((a, b) => b[1].points - a[1].points)
-        .slice(0, 3)
-        .map(([managerId, data], idx) => ({
-          manager_id: managerId,
-          manager_nom: data.manager_nom,
-          points: data.points,
-          rank: idx + 1
-        }));
-      podiumResult[courseId] = managers;
-    });
-
-    // Get course dates for season filtering
-    const { data: coursesData, error: coursesError } = await supabase
-      .from('courses')
-      .select('id, date_debut, date_fin, phase_id')
-      .in('id', course_ids);
-
-    if (coursesError) throw coursesError;
-
-    // Filter courses by season phases if provided
-    const relevantCourses = saison_id && phaseIds.length > 0
-      ? coursesData?.filter(c => c.phase_id && phaseIds.includes(c.phase_id))
-      : coursesData;
-
-    const relevantCourseIds = relevantCourses?.map(c => c.id) || [];
-
-    // Get winners (top rider in General or Etape classification) - season-aware
-    const { data: winnersData, error: winnersError } = await supabase
-      .from('race_results')
-      .select(`
-        course_id,
-        type_classement,
-        position,
-        coureur_id,
-        date_classement,
-        etape_numero,
-        coureurs!inner(nom)
-      `)
-      .in('course_id', relevantCourseIds)
-      .eq('position', 1)
-      .in('type_classement', ['General', 'Etape']);
-
-    if (winnersError) throw winnersError;
-
-    // Process winners: prefer General, fallback to highest Etape within course dates
-    const winnersResult: Record<string, { coureur_nom: string }> = {};
     
-    winnersData?.forEach((row: any) => {
-      const courseId = row.course_id;
-      const classType = row.type_classement;
-      const coureurNom = row.coureurs?.nom;
-      const dateClassement = row.date_classement;
-      const etapeNumero = row.etape_numero;
-
-      if (!coureurNom) return;
-
-      const course = relevantCourses?.find(c => c.id === courseId);
-      if (!course) return;
-
-      // Check if result is within course dates
-      const isWithinDates = (!course.date_debut || dateClassement >= course.date_debut) &&
-                           (!course.date_fin || dateClassement <= course.date_fin);
+    Object.entries(aggregated).forEach(([courseId, managers]) => {
+      const sorted = Object.entries(managers)
+        .map(([managerId, points]) => ({
+          manager_id: managerId,
+          manager_nom: managersNamesMap.get(managerId) || 'Unknown',
+          points,
+        }))
+        .sort((a, b) => b.points - a.points)
+        .slice(0, 3)
+        .map((entry, idx) => ({ ...entry, rank: idx + 1 }));
       
-      if (!isWithinDates) return;
-
-      // Prefer General, or highest stage number for Etape
-      if (!winnersResult[courseId]) {
-        winnersResult[courseId] = { coureur_nom: coureurNom };
-      } else if (classType === 'General') {
-        winnersResult[courseId] = { coureur_nom: coureurNom };
-      } else if (classType === 'Etape' && winnersResult[courseId].coureur_nom !== coureurNom) {
-        // Only update if current is also Etape (don't override General)
-        const currentWinner = winnersData.find((w: any) => 
-          w.course_id === courseId && w.coureurs?.nom === winnersResult[courseId].coureur_nom
-        );
-        if (currentWinner?.type_classement === 'Etape' && 
-            etapeNumero > currentWinner.etape_numero) {
-          winnersResult[courseId] = { coureur_nom: coureurNom };
-        }
+      if (sorted.length > 0) {
+        podiumResult[courseId] = sorted;
       }
     });
 
-    return new Response(JSON.stringify({ podiums: podiumResult, winners: winnersResult }), {
+    // 7. Calculate winners (existing logic)
+    const winnerResult: Record<string, { coureur_id: string; coureur_nom: string; type_classement: string; etape_numero: number | null } | null> = {};
+
+    const { data: coursesInfo, error: coursesInfoError } = await supabase
+      .from('courses')
+      .select('id, nom, date_debut, date_fin')
+      .in('id', course_ids);
+    
+    if (coursesInfoError) throw coursesInfoError;
+
+    for (const courseInfo of coursesInfo || []) {
+      const courseId = courseInfo.id;
+
+      // Priority 1: General classification
+      let winnerQuery = supabase
+        .from('race_results')
+        .select('coureur_id, coureurs!inner(nom), type_classement, etape_numero')
+        .eq('course_id', courseId)
+        .eq('type_classement', 'General')
+        .eq('position', 1)
+        .eq('statut', 'finished');
+
+      if (courseInfo.date_debut && courseInfo.date_fin) {
+        winnerQuery = winnerQuery
+          .gte('date_classement', courseInfo.date_debut)
+          .lte('date_classement', courseInfo.date_fin);
+      }
+
+      const { data: generalWinner, error: generalError } = await winnerQuery.maybeSingle();
+      
+      if (generalError && generalError.code !== 'PGRST116') throw generalError;
+
+      if (generalWinner) {
+        winnerResult[courseId] = {
+          coureur_id: generalWinner.coureur_id,
+          coureur_nom: (generalWinner.coureurs as any)?.nom || 'Unknown',
+          type_classement: 'General',
+          etape_numero: null,
+        };
+        continue;
+      }
+
+      // Priority 2: Highest stage (Etape)
+      let stageQuery = supabase
+        .from('race_results')
+        .select('coureur_id, coureurs!inner(nom), type_classement, etape_numero')
+        .eq('course_id', courseId)
+        .eq('type_classement', 'Etape')
+        .eq('position', 1)
+        .eq('statut', 'finished')
+        .not('etape_numero', 'is', null);
+
+      if (courseInfo.date_debut && courseInfo.date_fin) {
+        stageQuery = stageQuery
+          .gte('date_classement', courseInfo.date_debut)
+          .lte('date_classement', courseInfo.date_fin);
+      }
+
+      const { data: stageWinners, error: stageError } = await stageQuery.order('etape_numero', { ascending: false });
+      
+      if (stageError) throw stageError;
+
+      if (stageWinners && stageWinners.length > 0) {
+        const bestStage = stageWinners[0];
+        winnerResult[courseId] = {
+          coureur_id: bestStage.coureur_id,
+          coureur_nom: (bestStage.coureurs as any)?.nom || 'Unknown',
+          type_classement: 'Etape',
+          etape_numero: bestStage.etape_numero,
+        };
+        continue;
+      }
+
+      winnerResult[courseId] = null;
+    }
+
+    console.log('Podiums calculated:', Object.keys(podiumResult).length, 'Winners:', Object.keys(winnerResult).length);
+
+    return new Response(JSON.stringify({ podiums: podiumResult, winners: winnerResult }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
