@@ -15,6 +15,7 @@ import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { StageJerseyBonuses } from "./StageJerseyBonuses";
+import { useLeague } from "@/contexts/LeagueContext";
 
 // Jersey holders compact bar component
 const JerseyHoldersBar = ({ courseId, etapeNumero }: { courseId: string | null; etapeNumero: number | null }) => {
@@ -119,6 +120,7 @@ interface CourseResultsDrawerProps {
 }
 
 export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResultsDrawerProps) => {
+  const { leagueId } = useLeague();
   const [meta, setMeta] = useState<CourseMeta | null>(null);
   const [results, setResults] = useState<ResultRow[]>([]);
   const [selectedType, setSelectedType] = useState<string>("");
@@ -134,14 +136,15 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
 
   // Fetch leaderboard for the course - always consolidated (all stages, all classifications)
   const { data: leaderboard, isLoading: leaderboardLoading } = useQuery({
-    queryKey: ["course-leaderboard-drawer", courseId],
+    queryKey: ["course-leaderboard-drawer", courseId, leagueId],
     queryFn: async () => {
       if (!courseId) return null;
       const { data, error } = await supabase.functions.invoke("course-leaderboard", {
         body: {
           course_id: courseId,
           type_classement: null,  // Always aggregate all classification types
-          etape_numero: null      // Always aggregate all stages
+          etape_numero: null,     // Always aggregate all stages
+          league_id: leagueId
         }
       });
       if (error) throw error;
@@ -220,7 +223,8 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
         body: {
           course_id: courseId,
           type_classement: selectedType,
-          etape_numero: selectedType === 'Etape' ? selectedEtape : null
+          etape_numero: selectedType === 'Etape' ? selectedEtape : null,
+          league_id: leagueId
         }
       });
 
@@ -241,7 +245,10 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('rider-course-total', {
-        body: { course_id: courseId }
+        body: { 
+          course_id: courseId,
+          league_id: leagueId
+        }
       });
 
       if (error) throw error;

@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
-    const { course_id } = await req.json();
+    const { course_id, league_id } = await req.json();
 
     if (!course_id) {
       return new Response(
@@ -21,7 +21,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Getting rider totals for course:', course_id);
+    // Fallback to Legacy League if no league_id provided
+    const targetLeagueId = league_id || 'f7921741-29f4-4296-9aca-a03c1f3615b0';
+
+    console.log('Getting rider totals for course:', course_id, 'league:', targetLeagueId);
 
     // Get course info to find phase_id
     const { data: course, error: courseError } = await supabaseClient
@@ -83,13 +86,14 @@ Deno.serve(async (req) => {
 
     const riderMap = new Map(riders.map(r => [r.id, r]));
 
-    // Get manager ownership for riders in this phase
+    // Get manager ownership for riders in this phase - filtered by league
     const managerMap = new Map<string, string>();
     if (course.phase_id && riderIds.length > 0) {
       const { data: rostersData, error: rostersError } = await supabaseClient
         .from('rosters')
         .select('coureur_id, manager_id, managers(nom)')
         .eq('phase_id', course.phase_id)
+        .eq('league_id', targetLeagueId)
         .in('coureur_id', riderIds);
 
       if (rostersError) throw rostersError;

@@ -9,6 +9,7 @@ interface RequestBody {
   course_id: string;
   type_classement?: 'Etape' | 'General' | 'Points' | 'Montagne' | 'Jeune' | null;
   etape_numero?: number | null;
+  league_id?: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -22,13 +23,16 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { course_id, type_classement, etape_numero }: RequestBody = await req.json();
+    const { course_id, type_classement, etape_numero, league_id }: RequestBody = await req.json();
 
     if (!course_id) {
       throw new Error('course_id is required');
     }
 
-    console.log('Getting leaderboard for course:', course_id, { type_classement, etape_numero });
+    // Fallback to Legacy League if no league_id provided
+    const targetLeagueId = league_id || 'f7921741-29f4-4296-9aca-a03c1f3615b0';
+
+    console.log('Getting leaderboard for course:', course_id, { type_classement, etape_numero, targetLeagueId });
 
     // Get course info with phase_id
     const { data: course, error: courseError } = await supabaseClient
@@ -39,12 +43,13 @@ Deno.serve(async (req) => {
 
     if (courseError) throw courseError;
 
-    // Build points query - filter by phase_id to ensure season-specific data
+    // Build points query - filter by phase_id and league_id
     let pointsQuery = supabaseClient
       .from('points_ledger')
       .select('manager_id, coureur_id, points, type_classement, etape_numero')
       .eq('course_id', course_id)
       .eq('phase_id', course.phase_id)
+      .eq('league_id', targetLeagueId)
       .not('manager_id', 'is', null);
 
     if (type_classement) {
