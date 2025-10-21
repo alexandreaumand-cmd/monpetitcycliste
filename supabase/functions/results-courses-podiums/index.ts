@@ -55,7 +55,8 @@ Deno.serve(async (req) => {
     console.log('Processing podiums:', { course_ids_count: course_ids.length, phaseIds_count: phaseIds.length, league_id });
 
     // 2. Load rosters for the league and phases to build manager mapping
-    let managerMap = new Map<string, string>(); // key: `${phase_id}:${coureur_id}` -> manager_id
+    // Map<coureur+phase, Set<manager_id>> - allows multiple managers per rider
+    let managersByCoureur = new Map<string, Set<string>>(); 
     
     if (league_id && phaseIds.length > 0) {
       const { data: rostersData, error: rostersError } = await supabase
@@ -70,10 +71,13 @@ Deno.serve(async (req) => {
       
       rostersData?.forEach(r => {
         const key = `${r.phase_id}:${r.coureur_id}`;
-        managerMap.set(key, r.manager_id);
+        if (!managersByCoureur.has(key)) {
+          managersByCoureur.set(key, new Set());
+        }
+        managersByCoureur.get(key)!.add(r.manager_id);
       });
       
-      if (managerMap.size === 0) {
+      if (managersByCoureur.size === 0) {
         console.log('No rosters found for league_id:', league_id);
         return new Response(JSON.stringify({ podiums: {}, winners: {} }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -101,9 +105,9 @@ Deno.serve(async (req) => {
     
     allPoints?.forEach(pl => {
       const key = `${pl.phase_id}:${pl.coureur_id}`;
-      const managerId = managerMap.get(key);
+      const managerIds = managersByCoureur.get(key);
       
-      if (!managerId) {
+      if (!managerIds || managerIds.size === 0) {
         // Rider not in this league, skip
         return;
       }
@@ -112,7 +116,10 @@ Deno.serve(async (req) => {
         aggregated[pl.course_id] = {};
       }
       
-      aggregated[pl.course_id][managerId] = (aggregated[pl.course_id][managerId] || 0) + (pl.points || 0);
+      // Attribute points to all managers who own this rider
+      managerIds.forEach(managerId => {
+        aggregated[pl.course_id][managerId] = (aggregated[pl.course_id][managerId] || 0) + (pl.points || 0);
+      });
     });
 
     // 5. Get manager names
