@@ -20,17 +20,31 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
   const { leagueId } = useLeague();
   const queryClient = useQueryClient();
 
-  // Fetch all managers
+  // Fetch managers from current league
   const { data: managers } = useQuery({
-    queryKey: ["managers"],
+    queryKey: ["league-managers", leagueId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!leagueId) return [];
+
+      // First get user_ids from league_members
+      const { data: members, error: membersError } = await supabase
+        .from("league_members")
+        .select("user_id")
+        .eq("league_id", leagueId);
+      
+      if (membersError) throw membersError;
+      if (!members || members.length === 0) return [];
+
+      // Then get managers for those user_ids
+      const userIds = members.map(m => m.user_id);
+      const { data: managersData, error: managersError } = await supabase
         .from("managers")
         .select("id, nom")
+        .in("user_id", userIds)
         .order("nom");
       
-      if (error) throw error;
-      return data;
+      if (managersError) throw managersError;
+      return managersData || [];
     },
   });
 
