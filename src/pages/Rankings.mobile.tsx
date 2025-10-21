@@ -22,11 +22,13 @@ import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
 import { RecentPointsChart } from "@/components/rankings/RecentPointsChart";
 import { ManagerComparisonMobile } from "@/components/rankings/ManagerComparison.mobile";
 import { ManagerPrestigeIcons } from "@/components/rankings/ManagerPrestigeIcons";
+import { useLeague } from "@/contexts/LeagueContext";
 
 type TabView = "standings" | "riders" | "timeline" | "comparison" | "teams" | "courses";
 
 export const RankingsMobile = () => {
   const { selectedSeason, phases, activePhase } = useSeasonContext();
+  const { leagueId } = useLeague();
   const [activeTab, setActiveTab] = useState<TabView>("standings");
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
@@ -44,26 +46,30 @@ export const RankingsMobile = () => {
 
   // Fetch standings
   const { data: standings, isLoading: standingsLoading } = useQuery({
-    queryKey: ["manager-standings-mobile", selectedPhase, selectedSeason?.id],
+    queryKey: ["manager-standings-mobile", selectedPhase, selectedSeason?.id, leagueId],
     queryFn: async () => {
+      if (!leagueId) return [];
+      
       if (selectedPhase) {
         const { data, error } = await supabase
-          .from("v_manager_standings_by_phase")
+          .from("v_manager_standings_by_phase_v2")
           .select("*")
           .eq("phase_id", selectedPhase)
+          .eq("league_id", leagueId)
           .order("total_points", { ascending: false });
         
         if (error) throw error;
-        return data;
+        return data || [];
       } else if (selectedSeason) {
         const { data, error } = await supabase
-          .from("v_manager_standings_by_season")
+          .from("v_manager_standings_by_season_v2")
           .select("*")
-          .eq("saison_id", selectedSeason.id)
+          .eq("season_id", selectedSeason.id)
+          .eq("league_id", leagueId)
           .order("total_points", { ascending: false });
         
         if (error) throw error;
-        return data;
+        return data || [];
       } else {
         const { data, error } = await supabase
           .from("v_manager_standings_total")
@@ -71,7 +77,7 @@ export const RankingsMobile = () => {
           .order("total_points", { ascending: false });
         
         if (error) throw error;
-        return data;
+        return data || [];
       }
     },
   });

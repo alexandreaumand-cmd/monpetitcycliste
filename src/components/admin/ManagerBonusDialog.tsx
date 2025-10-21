@@ -35,12 +35,16 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
   const { data: managers, isLoading } = useQuery({
     queryKey: ['managers-bonus', phaseId],
     queryFn: async () => {
-      // Get managers standings for this phase
+      // Get managers standings for this phase with manager info
       const { data: standings, error: standingsError } = await supabase
-        .from('v_manager_standings_by_phase')
-        .select('manager_id, manager_nom, course_points, bonus_points')
-        .eq('phase_id', phaseId)
-        .order('manager_nom');
+        .from('v_manager_standings_by_phase_v2')
+        .select(`
+          manager_id, 
+          race_points, 
+          bonus_points,
+          managers!inner(nom)
+        `)
+        .eq('phase_id', phaseId);
 
       if (standingsError) throw standingsError;
 
@@ -54,20 +58,27 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
 
       const bonusMap = new Map(bonusData?.map(b => [b.manager_id, b]) || []);
 
-      return standings?.map(s => {
-        const existingBonus = bonusMap.get(s.manager_id);
-        return {
-          manager_id: s.manager_id,
-          manager_nom: s.manager_nom,
-          course_points: s.course_points || 0,
-          bonus_itt: existingBonus?.bonus_itt || 0,
-          bonus_ttt: existingBonus?.bonus_ttt || 0,
-          bonus_first_win: existingBonus?.bonus_first_win || 0,
-          bonus_coureur: existingBonus?.bonus_coureurs || 0,
-          bonus_scoreurs: existingBonus?.bonus_scoreurs || 0,
-          commentaire: existingBonus?.commentaire || ''
-        };
-      }) || [];
+      return standings
+        ?.sort((a, b) => {
+          const nomA = Array.isArray(a.managers) ? a.managers[0]?.nom : a.managers?.nom;
+          const nomB = Array.isArray(b.managers) ? b.managers[0]?.nom : b.managers?.nom;
+          return (nomA || '').localeCompare(nomB || '');
+        })
+        .map(s => {
+          const existingBonus = bonusMap.get(s.manager_id);
+          const managerNom = Array.isArray(s.managers) ? s.managers[0]?.nom : s.managers?.nom;
+          return {
+            manager_id: s.manager_id,
+            manager_nom: managerNom || 'Unknown',
+            course_points: s.race_points || 0,
+            bonus_itt: existingBonus?.bonus_itt || 0,
+            bonus_ttt: existingBonus?.bonus_ttt || 0,
+            bonus_first_win: existingBonus?.bonus_first_win || 0,
+            bonus_coureur: existingBonus?.bonus_coureurs || 0,
+            bonus_scoreurs: existingBonus?.bonus_scoreurs || 0,
+            commentaire: existingBonus?.commentaire || ''
+          };
+        }) || [];
     },
     enabled: open
   });
