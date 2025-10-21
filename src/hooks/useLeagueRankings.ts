@@ -8,10 +8,10 @@ type RowSeason = {
   saison_id: string; 
   manager_id: string; 
   total_points: number;
-  race_points?: number;
-  bonus_points?: number;
-  scoreurs_count?: number;
-  victories_count?: number;
+  race_points: number;
+  bonus_points: number;
+  scoreurs_count: number;
+  victories_count: number;
   manager_nom?: string;
 };
 
