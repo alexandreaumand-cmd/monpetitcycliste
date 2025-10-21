@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { saison_id } = await req.json();
+    const { saison_id, league_id } = await req.json();
 
     console.log('Fetching performance matrix for saison:', saison_id);
 
@@ -56,10 +56,11 @@ Deno.serve(async (req) => {
       for (const mgr of managers) {
         // Use the view that correctly handles race points + all bonuses
         const { data: standings } = await supabase
-          .from('v_manager_standings_by_phase')
+          .from('v_manager_standings_by_phase_v2')
           .select('total_points')
           .eq('phase_id', phase.id)
           .eq('manager_id', mgr.id)
+          .eq('league_id', league_id)
           .maybeSingle();
 
         const totalMgr = standings?.total_points || 0;

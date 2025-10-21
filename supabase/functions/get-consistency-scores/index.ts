@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { saison_id } = await req.json();
+    const { saison_id, league_id } = await req.json();
 
     console.log('Calculating consistency scores for saison:', saison_id);
 
@@ -59,7 +59,8 @@ Deno.serve(async (req) => {
           .from('points_ledger')
           .select('points')
           .eq('phase_id', phase.id)
-          .eq('manager_id', mgr.id);
+          .eq('manager_id', mgr.id)
+          .eq('league_id', league_id);
 
         const raceTotalMgr = racePts?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
 
@@ -69,6 +70,7 @@ Deno.serve(async (req) => {
           .select('bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs')
           .eq('phase_id', phase.id)
           .eq('manager_id', mgr.id)
+          .eq('league_id', league_id)
           .single();
 
         const bonusTotalMgr = mgrBonus
@@ -84,6 +86,7 @@ Deno.serve(async (req) => {
           .from('bonus_points')
           .select('points')
           .eq('phase_id', phase.id)
+          .eq('league_id', league_id)
           .or(`manager_id.eq.${mgr.id},target_manager_id.eq.${mgr.id}`);
 
         const riderBonusTotalMgr = riderBonusMgr?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;

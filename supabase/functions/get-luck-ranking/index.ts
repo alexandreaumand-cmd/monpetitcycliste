@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { saison_id } = await req.json();
+    const { saison_id, league_id } = await req.json();
 
     console.log('Calculating luck ranking for saison:', saison_id);
 
@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
       .from('points_ledger')
       .select('points, manager_id')
       .in('phase_id', phaseIds)
+      .eq('league_id', league_id)
       .not('manager_id', 'is', null);
 
     const totalLeaguePoints = (allPoints || []).reduce((sum, p) => sum + p.points, 0);
@@ -50,7 +51,8 @@ Deno.serve(async (req) => {
           .from('rosters')
           .select('coureur_id, prix_signature')
           .in('phase_id', phaseIds)
-          .eq('manager_id', manager.id);
+          .eq('manager_id', manager.id)
+          .eq('league_id', league_id);
 
         if (!roster || roster.length === 0) {
           return {
@@ -71,7 +73,8 @@ Deno.serve(async (req) => {
           .from('points_ledger')
           .select('points, course_id')
           .in('phase_id', phaseIds)
-          .eq('manager_id', manager.id);
+          .eq('manager_id', manager.id)
+          .eq('league_id', league_id);
 
         const actualPoints = (points || []).reduce((sum, p) => sum + p.points, 0);
 

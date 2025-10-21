@@ -83,12 +83,11 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
-    const url = new URL(req.url);
-    const saisonId = url.searchParams.get('saison_id');
+    const { saison_id: saisonId, league_id } = await req.json();
 
-    if (!saisonId) {
+    if (!saisonId || !league_id) {
       return new Response(
-        JSON.stringify({ error: 'saison_id is required' }),
+        JSON.stringify({ error: 'saison_id and league_id are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -126,19 +125,22 @@ Deno.serve(async (req) => {
         .from('points_ledger')
         .select('manager_id, points')
         .eq('phase_id', phase.id)
+        .eq('league_id', league_id)
         .not('manager_id', 'is', null);
 
       // Bonus managers
       const { data: managerBonus } = await supabase
         .from('manager_bonus_points')
         .select('manager_id, bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs')
-        .eq('phase_id', phase.id);
+        .eq('phase_id', phase.id)
+        .eq('league_id', league_id);
 
       // Bonus coureurs
       const { data: riderBonus } = await supabase
         .from('bonus_points')
         .select('manager_id, target_manager_id, points')
-        .eq('phase_id', phase.id);
+        .eq('phase_id', phase.id)
+        .eq('league_id', league_id);
 
       // Calculer les totaux par manager
       const managerTotals = new Map<string, { manager_id: string; points: number }>();

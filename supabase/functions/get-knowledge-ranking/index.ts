@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { saison_id } = await req.json();
+    const { saison_id, league_id } = await req.json();
 
     console.log('Calculating knowledge ranking for saison:', saison_id);
 
@@ -40,7 +40,8 @@ Deno.serve(async (req) => {
           .from('rosters')
           .select('coureur_id, prix_signature')
           .in('phase_id', phaseIds)
-          .eq('manager_id', manager.id);
+          .eq('manager_id', manager.id)
+          .eq('league_id', league_id);
 
         if (!roster || roster.length === 0) {
           return {
@@ -62,6 +63,7 @@ Deno.serve(async (req) => {
           .select('coureur_id, points, course_id')
           .in('phase_id', phaseIds)
           .eq('manager_id', manager.id)
+          .eq('league_id', league_id)
           .in('coureur_id', coureurIds);
 
         // Get course categories for WT percentage
