@@ -5,11 +5,14 @@ import { CourseManagementTabs } from "@/components/admin/CourseManagementTabs";
 import { GameManagementTabs } from "@/components/admin/GameManagementTabs";
 import { ConfigurationTabs } from "@/components/admin/ConfigurationTabs";
 import { MaintenanceTabs } from "@/components/admin/MaintenanceTabs";
+import { LeaguesAdminPage } from "@/pages/admin/LeaguesAdminPage";
+import { LeagueDetailPage } from "@/pages/admin/LeagueDetailPage";
 import { cn } from "@/lib/utils";
 
   const adminTabs = [
     { label: '🏁 Courses', path: 'courses' },
     { label: '🎮 Enchères', path: 'encheres' },
+    { label: '🏆 Ligues', path: 'leagues' },
     { label: '⚙️ Configuration', path: 'config' },
     { label: '🔧 Maintenance', path: 'maintenance' },
   ];
@@ -46,6 +49,8 @@ export const AdminPage = () => {
         
         <Route path="courses" element={<CourseManagementTabs />} />
         <Route path="encheres" element={<GameManagementTabs />} />
+        <Route path="leagues" element={<LeaguesAdminPage />} />
+        <Route path="leagues/:id" element={<LeagueDetailPage />} />
         <Route path="config" element={<ConfigurationTabs />} />
         <Route path="maintenance" element={<MaintenanceTabs />} />
       </Routes>
