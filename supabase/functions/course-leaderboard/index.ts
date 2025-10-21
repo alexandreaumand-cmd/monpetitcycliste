@@ -43,14 +43,12 @@ Deno.serve(async (req) => {
 
     if (courseError) throw courseError;
 
-    // Build points query - filter by phase_id and league_id
+    // Build points query - global points (no league filter)
     let pointsQuery = supabaseClient
       .from('points_ledger')
-      .select('manager_id, coureur_id, points, type_classement, etape_numero')
+      .select('coureur_id, points, type_classement, etape_numero')
       .eq('course_id', course_id)
-      .eq('phase_id', course.phase_id)
-      .eq('league_id', targetLeagueId)
-      .not('manager_id', 'is', null);
+      .eq('phase_id', course.phase_id);
 
     if (type_classement) {
       pointsQuery = pointsQuery.eq('type_classement', type_classement);
@@ -60,8 +58,22 @@ Deno.serve(async (req) => {
     }
 
     const { data: pointsData, error: pointsError } = await pointsQuery;
-
     if (pointsError) throw pointsError;
+
+    // Get rosters for this phase and league
+    const { data: rostersData, error: rostersError } = await supabaseClient
+      .from('rosters')
+      .select('coureur_id, manager_id')
+      .eq('phase_id', course.phase_id)
+      .eq('league_id', targetLeagueId);
+
+    if (rostersError) throw rostersError;
+
+    // Create map coureur_id -> manager_id
+    const coureurToManager = new Map<string, string>();
+    for (const roster of rostersData || []) {
+      coureurToManager.set(roster.coureur_id, roster.manager_id);
+    }
 
     // Aggregate by manager
     const managerPoints = new Map<string, number>();
@@ -73,15 +85,18 @@ Deno.serve(async (req) => {
     }>>();
 
     for (const point of pointsData || []) {
+      const manager_id = coureurToManager.get(point.coureur_id);
+      if (!manager_id) continue; // Skip riders not owned in this league
+
       // Manager totals
-      const current = managerPoints.get(point.manager_id) || 0;
-      managerPoints.set(point.manager_id, current + point.points);
+      const current = managerPoints.get(manager_id) || 0;
+      managerPoints.set(manager_id, current + point.points);
 
       // Contributors - keep detail for each classification
-      if (!contributorsByManager.has(point.manager_id)) {
-        contributorsByManager.set(point.manager_id, []);
+      if (!contributorsByManager.has(manager_id)) {
+        contributorsByManager.set(manager_id, []);
       }
-      contributorsByManager.get(point.manager_id)!.push({
+      contributorsByManager.get(manager_id)!.push({
         coureur_id: point.coureur_id,
         type_classement: point.type_classement,
         etape_numero: point.etape_numero,

@@ -9,6 +9,7 @@ interface RequestBody {
   course_id: string;
   type_classement?: 'Etape' | 'General' | 'Points' | 'Montagne' | 'Jeune' | null;
   etape_numero?: number | null;
+  league_id?: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -27,7 +28,7 @@ Deno.serve(async (req) => {
       }
     );
 
-    const { course_id, type_classement, etape_numero }: RequestBody = await req.json();
+    const { course_id, type_classement, etape_numero, league_id }: RequestBody = await req.json();
 
     if (!course_id) {
       throw new Error('course_id is required');
@@ -35,20 +36,21 @@ Deno.serve(async (req) => {
 
     console.log('Exporting leaderboard CSV for course:', course_id);
 
-    // Get course info
+    // Get course details to retrieve phase_id
     const { data: course, error: courseError } = await supabaseClient
       .from('courses')
-      .select('nom')
+      .select('phase_id, nom')
       .eq('id', course_id)
       .single();
 
     if (courseError) throw courseError;
 
-    // Build points query
+    // Fetch global points for this course
     let pointsQuery = supabaseClient
       .from('points_ledger')
-      .select('manager_id, coureur_id, points')
-      .eq('course_id', course_id);
+      .select('coureur_id, points')
+      .eq('course_id', course_id)
+      .eq('phase_id', course.phase_id);
 
     if (type_classement) {
       pointsQuery = pointsQuery.eq('type_classement', type_classement);
@@ -58,14 +60,33 @@ Deno.serve(async (req) => {
     }
 
     const { data: pointsData, error: pointsError } = await pointsQuery;
-
     if (pointsError) throw pointsError;
+
+    // Retrieve target league (default to Legacy League)
+    const targetLeagueId = league_id || 'f7921741-29f4-4296-9aca-a03c1f3615b0';
+
+    // Get rosters for this phase and league
+    const { data: rostersData, error: rostersError } = await supabaseClient
+      .from('rosters')
+      .select('coureur_id, manager_id')
+      .eq('phase_id', course.phase_id)
+      .eq('league_id', targetLeagueId);
+
+    if (rostersError) throw rostersError;
+
+    // Create map coureur_id -> manager_id
+    const coureurToManager = new Map<string, string>();
+    for (const roster of rostersData || []) {
+      coureurToManager.set(roster.coureur_id, roster.manager_id);
+    }
 
     // Aggregate by manager
     const managerPoints = new Map<string, number>();
     for (const point of pointsData || []) {
-      const current = managerPoints.get(point.manager_id) || 0;
-      managerPoints.set(point.manager_id, current + point.points);
+      const manager_id = coureurToManager.get(point.coureur_id);
+      if (!manager_id) continue;
+      const current = managerPoints.get(manager_id) || 0;
+      managerPoints.set(manager_id, current + point.points);
     }
 
     // Get manager names
