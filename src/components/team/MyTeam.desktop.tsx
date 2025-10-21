@@ -106,9 +106,14 @@ export const MyTeamDesktop = () => {
   // Desktop version
 
   useEffect(() => {
-    loadManagers();
     loadCurrentUser();
   }, []);
+
+  useEffect(() => {
+    if (leagueId) {
+      loadManagers();
+    }
+  }, [leagueId]);
 
   useEffect(() => {
     if (activePhase) {
@@ -142,10 +147,30 @@ export const MyTeamDesktop = () => {
   };
 
   const loadManagers = async () => {
+    if (!leagueId) {
+      setManagers([]);
+      return;
+    }
+    
     try {
+      // Récupérer les user_ids des membres de la ligue
+      const { data: leagueMembers } = await supabase
+        .from('league_members')
+        .select('user_id')
+        .eq('league_id', leagueId);
+      
+      if (!leagueMembers || leagueMembers.length === 0) {
+        setManagers([]);
+        return;
+      }
+      
+      const userIds = leagueMembers.map(m => m.user_id);
+      
+      // Récupérer les managers correspondants
       const { data: managersData } = await supabase
         .from('managers')
-        .select('id, nom')
+        .select('id, nom, user_id')
+        .in('user_id', userIds)
         .order('nom', { ascending: true });
       
       setManagers(managersData || []);
