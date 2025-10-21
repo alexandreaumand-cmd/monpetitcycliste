@@ -17,7 +17,7 @@ export function useLeagueStandingsBySeason(leagueId: string | null, seasonId: st
         .from('v_manager_standings_by_season_v2')
         .select('*')
         .eq('league_id', leagueId)
-        .eq('season_id', seasonId)
+        .eq('saison_id', seasonId)
         .order('total_points', { ascending: false });
 
       if (error) throw error;

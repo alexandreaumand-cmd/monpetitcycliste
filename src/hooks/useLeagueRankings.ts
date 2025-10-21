@@ -5,9 +5,13 @@ import { ensureLeagueId } from "@/lib/leagues/ensureLeagueId";
 
 type RowSeason = { 
   league_id: string; 
-  season_id: string; 
+  saison_id: string; 
   manager_id: string; 
   total_points: number;
+  race_points?: number;
+  bonus_points?: number;
+  scoreurs_count?: number;
+  victories_count?: number;
   manager_nom?: string;
 };
 
@@ -34,7 +38,7 @@ export function useSeasonRankings(seasonId: string) {
         .from("v_manager_standings_by_season_v2")
         .select("*")
         .eq("league_id", id)
-        .eq("season_id", seasonId)
+        .eq("saison_id", seasonId)
         .order("total_points", { ascending: false });
       
       if (error) throw error;

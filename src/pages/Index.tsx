@@ -60,13 +60,28 @@ const Index = () => {
   const { data: topManagers } = useQuery({
     queryKey: ['home-top-managers'],
     queryFn: async () => {
+      const legacyLeagueId = 'f7921741-29f4-4296-9aca-a03c1f3615b0';
       const { data, error } = await supabase
         .from('v_manager_standings_total')
         .select('*')
+        .eq('league_id', legacyLeagueId)
         .order('total_points', { ascending: false })
         .limit(5);
       if (error) throw error;
-      return data || [];
+      
+      // Enrich with manager names
+      const managerIds = [...new Set(data?.map(d => d.manager_id) || [])];
+      const { data: managersData } = await supabase
+        .from('managers')
+        .select('id, nom')
+        .in('id', managerIds);
+      
+      const managersMap = new Map(managersData?.map(m => [m.id, m.nom]) || []);
+      
+      return data?.map(d => ({
+        ...d,
+        manager_nom: managersMap.get(d.manager_id) || 'Unknown'
+      })) || [];
     }
   });
 

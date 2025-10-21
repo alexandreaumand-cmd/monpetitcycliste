@@ -146,7 +146,6 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     let query = supabase
       .from("points_ledger")
       .select("coureur_id, points, type_classement, course_id, phase_id")
-      .eq("manager_id", managerA)
       .in("coureur_id", coureurIds);
 
       if (phaseId) {
@@ -181,7 +180,6 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     let query = supabase
       .from("points_ledger")
       .select("coureur_id, points, type_classement, course_id, phase_id")
-      .eq("manager_id", managerB)
       .in("coureur_id", coureurIds);
 
       if (phaseId) {

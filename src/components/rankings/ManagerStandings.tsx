@@ -96,7 +96,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
           .from("v_manager_standings_by_season_v2")
           .select("*")
           .eq("league_id", leagueId)
-          .eq("season_id", selectedSeason.id)
+          .eq("saison_id", selectedSeason.id)
           .order("total_points", { ascending: false });
         
         if (error) throw error;
