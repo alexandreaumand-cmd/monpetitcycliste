@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { course_id, type_classement, etape_numero } = await req.json();
+    const { course_id, type_classement, etape_numero, league_id = null } = await req.json();
 
     if (!course_id || !type_classement) {
       return new Response(JSON.stringify({ error: 'course_id and type_classement are required' }), {
@@ -49,7 +49,8 @@ Deno.serve(async (req) => {
       p_course_id: course_id,
       p_type_classement: type_classement,
       p_etape_numero: etape_numero || null,
-      p_manager_id: managerId
+      p_manager_id: managerId,
+      p_league_id: league_id || null
     });
 
     if (error) throw error;
