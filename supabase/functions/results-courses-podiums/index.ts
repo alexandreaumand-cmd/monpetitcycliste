@@ -24,8 +24,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 1. Get phase IDs for the season
-    let phaseIds: string[] = [];
+    // 1. Load course -> phase_id mapping (critical for correct aggregation)
+    const { data: coursesData, error: coursesError } = await supabase
+      .from('courses')
+      .select('id, phase_id')
+      .in('id', course_ids);
+    
+    if (coursesError) throw coursesError;
+    
+    const coursePhaseMap = new Map<string, string>();
+    const phaseIds: string[] = [];
+    
+    coursesData?.forEach(c => {
+      if (c.phase_id) {
+        coursePhaseMap.set(c.id, c.phase_id);
+        if (!phaseIds.includes(c.phase_id)) {
+          phaseIds.push(c.phase_id);
+        }
+      }
+    });
+    
+    // If saison_id provided, also include all phases from that season
     if (saison_id) {
       const { data: phasesData, error: phasesError } = await supabase
         .from('phases')
@@ -33,26 +52,15 @@ Deno.serve(async (req) => {
         .eq('saison_id', saison_id);
       
       if (phasesError) throw phasesError;
-      phaseIds = phasesData?.map(p => p.id) || [];
       
-      if (phaseIds.length === 0) {
-        console.log('No phases found for saison_id:', saison_id);
-        return new Response(JSON.stringify({ podiums: {}, winners: {} }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    } else {
-      // Get phases from courses
-      const { data: coursesData, error: coursesError } = await supabase
-        .from('courses')
-        .select('phase_id')
-        .in('id', course_ids);
-      
-      if (coursesError) throw coursesError;
-      phaseIds = [...new Set(coursesData?.map(c => c.phase_id).filter(Boolean) || [])];
+      phasesData?.forEach(p => {
+        if (!phaseIds.includes(p.id)) {
+          phaseIds.push(p.id);
+        }
+      });
     }
 
-    console.log('Processing podiums:', { course_ids_count: course_ids.length, phaseIds_count: phaseIds.length, league_id });
+    console.log('Processing podiums:', { course_ids_count: course_ids.length, phaseIds_count: phaseIds.length, coursePhaseMap_size: coursePhaseMap.size, league_id });
 
     // 2. Load rosters for the league and phases to build manager mapping
     // Map<coureur+phase, Set<manager_id>> - allows multiple managers per rider
@@ -85,30 +93,33 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3. Load points_ledger for courses and phases
-    let pointsQuery = supabase
+    // 3. Load points_ledger for courses (NO phase_id filter to include all points)
+    const { data: allPoints, error: pointsError } = await supabase
       .from('points_ledger')
-      .select('course_id, coureur_id, phase_id, points')
+      .select('course_id, coureur_id, points')
       .in('course_id', course_ids);
     
-    if (phaseIds.length > 0) {
-      pointsQuery = pointsQuery.in('phase_id', phaseIds);
-    }
-
-    const { data: allPoints, error: pointsError } = await pointsQuery;
     if (pointsError) throw pointsError;
 
     console.log('Points ledger loaded:', allPoints?.length || 0);
 
-    // 4. Aggregate points by course and manager (in-memory)
+    // 4. Aggregate points by course and manager using course's phase_id
     const aggregated: Record<string, Record<string, number>> = {}; // { course_id: { manager_id: total_points } }
     
     allPoints?.forEach(pl => {
-      const key = `${pl.phase_id}:${pl.coureur_id}`;
+      // CRITICAL FIX: Use the course's phase_id, not pl.phase_id (which can be NULL)
+      const coursePhaseId = coursePhaseMap.get(pl.course_id);
+      
+      if (!coursePhaseId) {
+        // Course not in our mapping, skip
+        return;
+      }
+      
+      const key = `${coursePhaseId}:${pl.coureur_id}`;
       const managerIds = managersByCoureur.get(key);
       
       if (!managerIds || managerIds.size === 0) {
-        // Rider not in this league, skip
+        // Rider not in this league/phase, skip
         return;
       }
       
