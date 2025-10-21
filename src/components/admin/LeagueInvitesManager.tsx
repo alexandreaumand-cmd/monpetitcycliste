@@ -42,9 +42,9 @@ export function LeagueInvitesManager({ leagueId }: { leagueId: string }) {
       body: { league_id: leagueId },
     });
 
-    if (error) {
-      console.error('Error loading invites:', error);
-      toast.error("Erreur lors du chargement des invitations");
+    if (error || data?.error) {
+      console.error('Error loading invites:', error || data?.error);
+      toast.error(data?.error || "Erreur lors du chargement des invitations");
       setLoading(false);
       return;
     }
@@ -71,14 +71,15 @@ export function LeagueInvitesManager({ leagueId }: { leagueId: string }) {
 
     setCreating(false);
 
-    if (error) {
-      console.error('Error creating invite:', error);
-      toast.error("Erreur lors de la création");
+    if (error || data?.error) {
+      console.error('Error creating invite:', error || data?.error);
+      toast.error(data?.error || "Erreur lors de la création");
       return;
     }
 
-    if (data?.url) {
-      await navigator.clipboard.writeText(data.url);
+    if (data?.token) {
+      const inviteUrl = `${window.location.origin}/join?token=${data.token}`;
+      await navigator.clipboard.writeText(inviteUrl);
       toast.success("Lien copié dans le presse-papiers !");
     }
 
@@ -91,13 +92,13 @@ export function LeagueInvitesManager({ leagueId }: { leagueId: string }) {
   async function revokeInvite(token: string) {
     if (!confirm("Voulez-vous vraiment révoquer cette invitation ?")) return;
 
-    const { error } = await supabase.functions.invoke('leagues-revoke-invite', {
+    const { data, error } = await supabase.functions.invoke('leagues-revoke-invite', {
       body: { league_id: leagueId, token },
     });
 
-    if (error) {
-      console.error('Error revoking invite:', error);
-      toast.error("Erreur lors de la révocation");
+    if (error || data?.error) {
+      console.error('Error revoking invite:', error || data?.error);
+      toast.error(data?.error || "Erreur lors de la révocation");
       return;
     }
 

@@ -11,19 +11,26 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
+    // Auth client to verify user identity
+    const authedClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await authedClient.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Service client to bypass RLS for invite lookup and member insert
+    const serviceClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
     const { token } = await req.json();
 
@@ -34,8 +41,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Find the invite (no league_id filter needed yet)
-    const { data: invite, error: inviteError } = await supabase
+    // Find the invite using service client (bypasses RLS)
+    const { data: invite, error: inviteError } = await serviceClient
       .from('league_invites')
       .select('*')
       .eq('token', token)
@@ -73,20 +80,19 @@ Deno.serve(async (req) => {
 
     const leagueId = invite.league_id;
 
-    // Set the token in session for the trigger (optional, if RPC exists)
+    // Optional: Set the token in session for the trigger (if RPC exists)
     try {
-      await supabase.rpc('set_config', {
+      await authedClient.rpc('set_config', {
         parameter: 'app.invite_token',
         value: token,
         is_local: true,
       });
     } catch (e) {
-      // If set_config RPC doesn't exist, log but continue
       console.log('set_config RPC not available, trigger may not track usage');
     }
 
-    // Add user to league (upsert to avoid duplicates)
-    const { error: memberError } = await supabase
+    // Add user to league using service client (bypasses RLS)
+    const { error: memberError } = await serviceClient
       .from('league_members')
       .upsert(
         {

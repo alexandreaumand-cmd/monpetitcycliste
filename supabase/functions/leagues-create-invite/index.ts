@@ -75,10 +75,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const baseUrl = Deno.env.get('VITE_SUPABASE_URL')?.replace('/supabase', '') || 'http://localhost:5173';
-    const inviteUrl = `${baseUrl}/join?token=${token}`;
-
-    return new Response(JSON.stringify({ invite: data, url: inviteUrl }), {
+    // Return only the invite and token; the UI will construct the full URL
+    return new Response(JSON.stringify({ invite: data, token }), {
       status: 201,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
