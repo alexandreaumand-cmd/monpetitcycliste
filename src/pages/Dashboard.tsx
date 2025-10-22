@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
-import { Header } from "@/components/layout/Header";
 import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { MobileLayout } from "@/components/mobile/MobileLayout";
+import { AppSidebar } from "@/components/layout/AppSidebar";
+import { TopBar } from "@/components/layout/TopBar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AuctionsList } from "@/components/auction/AuctionsList";
 import { MyTeam } from "@/components/team/MyTeam";
@@ -92,26 +94,30 @@ const Dashboard = () => {
     );
   }
 
-  // Desktop layout
+  // Desktop layout with sidebar
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
-      <AnnouncementBanner />
-      <Header manager={manager} isAdmin={isAnyAdmin} onSignOut={handleSignOut} />
-      
-      <main className="container mx-auto px-4 py-8">
-        <Routes>
-          <Route index element={<Navigate to="/dashboard/classement" replace />} />
-          <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
-          <Route path="mon-equipe" element={<MyTeam />} />
-          <Route path="courses" element={<UpcomingCourses />} />
-          <Route path="resultats" element={<ResultsPage />} />
-          <Route path="classement" element={<Rankings />} />
-          <Route path="statistiques" element={<Statistics />} />
-          <Route path="startlist" element={<Startlist />} />
-          {isAnyAdmin && <Route path="admin/*" element={<AdminPage />} />}
-        </Routes>
-      </main>
-    </div>
+    <SidebarProvider defaultOpen={true}>
+      <div className="flex min-h-screen w-full">
+        <AppSidebar manager={manager} isAdmin={isAnyAdmin} />
+        <SidebarInset className="flex-1 flex flex-col">
+          <AnnouncementBanner />
+          <TopBar onSignOut={handleSignOut} />
+          <main className="flex-1 container mx-auto px-4 py-8">
+            <Routes>
+              <Route index element={<Navigate to="/dashboard/classement" replace />} />
+              <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
+              <Route path="mon-equipe" element={<MyTeam />} />
+              <Route path="courses" element={<UpcomingCourses />} />
+              <Route path="resultats" element={<ResultsPage />} />
+              <Route path="classement" element={<Rankings />} />
+              <Route path="statistiques" element={<Statistics />} />
+              <Route path="startlist" element={<Startlist />} />
+              {isAnyAdmin && <Route path="admin/*" element={<AdminPage />} />}
+            </Routes>
+          </main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 };
 
