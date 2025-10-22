@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
           .eq('phase_id', phase.id)
           .eq('manager_id', mgr.id)
           .eq('league_id', league_id)
-          .single();
+          .maybeSingle();
 
         const bonusTotalMgr = mgrBonus
           ? (mgrBonus.bonus_itt || 0) +
