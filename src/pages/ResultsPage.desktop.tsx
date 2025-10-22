@@ -72,31 +72,6 @@ export const ResultsPage = () => {
   }, [selectedPhaseId, debouncedSearch, isLoadingContext, leagueId]);
 
 
-  const fetchLeaderboardTop3 = async (courseId: string): Promise<ManagerPodium[] | null> => {
-    try {
-      const { data, error } = await supabase.functions.invoke('course-leaderboard', {
-        body: { 
-          course_id: courseId, 
-          type_classement: null, 
-          etape_numero: null, 
-          league_id: leagueId 
-        }
-      });
-      
-      if (error || !data?.leaderboard) return null;
-      
-      return data.leaderboard.slice(0, 3).map((m: any, i: number) => ({
-        manager_id: m.manager_id,
-        manager_nom: m.manager_nom,
-        points: m.points,
-        rank: i + 1,
-      }));
-    } catch (err) {
-      console.error('Failed to fetch leaderboard for course:', courseId, err);
-      return null;
-    }
-  };
-
   const loadRaces = async (reset = false) => {
     if (reset) {
       setLoading(true);
@@ -130,58 +105,41 @@ export const ResultsPage = () => {
       
       setHasMore(data.has_more || false);
 
-      // Load podiums and winners for the courses
+      // Load podiums and winners in parallel
       if (loadedRaces.length > 0) {
         const courseIds = loadedRaces.map((r: Race) => r.course_id);
         
         try {
-          const { data: podiumsData, error } = await supabase.functions.invoke('results-courses-podiums', {
-            body: { 
-              course_ids: courseIds,
-              saison_id: selectedSeason?.id,
-              league_id: leagueId
-            }
-          });
-          
-          if (error) throw error;
-          
-          if (podiumsData) {
-            setPodiums(prev => reset ? (podiumsData.podiums || {}) : { ...prev, ...(podiumsData.podiums || {}) });
-            setWinners(prev => reset ? (podiumsData.winners || {}) : { ...prev, ...(podiumsData.winners || {}) });
-            
-            // Fallback: Load missing podiums via course-leaderboard
-            const needsFallback = loadedRaces.filter(r => 
-              !podiumsData.podiums?.[r.course_id] || podiumsData.podiums[r.course_id].length < 3
-            );
-            
-            if (needsFallback.length > 0) {
-              console.log(`Fallback: loading ${needsFallback.length} incomplete podiums`);
-              
-              const patch: Record<string, ManagerPodium[]> = {};
-              
-              // Process in batches of 3 to avoid overwhelming the backend
-              for (let i = 0; i < needsFallback.length; i += 3) {
-                const batch = needsFallback.slice(i, i + 3);
-                const batchResults = await Promise.all(
-                  batch.map(race => fetchLeaderboardTop3(race.course_id))
-                );
-                
-                batchResults.forEach((top3, idx) => {
-                  if (top3 && top3.length > 0) {
-                    patch[batch[idx].course_id] = top3;
-                  }
-                });
+          const [winnersResp, podiumsResp] = await Promise.all([
+            supabase.functions.invoke('results-courses-podiums', {
+              body: { 
+                course_ids: courseIds,
+                saison_id: selectedSeason?.id,
+                league_id: leagueId
               }
-              
-              if (Object.keys(patch).length > 0) {
-                console.log(`Fallback completed: patched ${Object.keys(patch).length} podiums`);
-                setPodiums(prev => ({ ...prev, ...patch }));
+            }),
+            supabase.functions.invoke('courses-leaderboard-podiums', {
+              body: { 
+                course_ids: courseIds,
+                league_id: leagueId
               }
-            }
+            })
+          ]);
+          
+          if (winnersResp.error) {
+            console.error('Error loading winners:', winnersResp.error);
+          } else if (winnersResp.data) {
+            setWinners(prev => reset ? (winnersResp.data.winners || {}) : { ...prev, ...(winnersResp.data.winners || {}) });
           }
-        } catch (podiumError) {
-          console.error('Failed to load podiums/winners:', podiumError);
-          // Continue showing races even if podiums fail
+          
+          if (podiumsResp.error) {
+            console.error('Error loading podiums:', podiumsResp.error);
+          } else if (podiumsResp.data) {
+            setPodiums(prev => reset ? (podiumsResp.data.podiums || {}) : { ...prev, ...(podiumsResp.data.podiums || {}) });
+            console.log(`Loaded podiums for ${Object.keys(podiumsResp.data.podiums || {}).length} courses`);
+          }
+        } catch (error) {
+          console.error('Failed to load podiums/winners:', error);
         }
       }
     } catch (error) {
