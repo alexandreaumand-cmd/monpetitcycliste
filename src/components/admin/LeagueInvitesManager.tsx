@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Copy, Ban } from "lucide-react";
+import { Copy, Ban, ExternalLink } from "lucide-react";
 
 type Invite = {
   id: string;
@@ -85,7 +85,7 @@ export function LeagueInvitesManager({ leagueId }: { leagueId: string }) {
     }
 
     if (data?.token) {
-      const inviteUrl = `${window.location.origin}/join?token=${data.token}`;
+      const inviteUrl = `${window.location.origin}/invite?token=${data.token}`;
       await navigator.clipboard.writeText(inviteUrl);
       toast.success("Lien copié dans le presse-papiers !");
     }
@@ -115,9 +115,15 @@ export function LeagueInvitesManager({ leagueId }: { leagueId: string }) {
 
   async function copyLink(token: string) {
     const baseUrl = window.location.origin;
-    const url = `${baseUrl}/join?token=${token}`;
+    const url = `${baseUrl}/invite?token=${token}`;
     await navigator.clipboard.writeText(url);
     toast.success("Lien copié !");
+  }
+
+  function testLink(token: string) {
+    const baseUrl = window.location.origin;
+    const url = `${baseUrl}/invite?token=${token}`;
+    window.open(url, '_blank');
   }
 
   if (loading) {
@@ -210,8 +216,17 @@ export function LeagueInvitesManager({ leagueId }: { leagueId: string }) {
                         size="sm"
                         variant="outline"
                         onClick={() => copyLink(invite.token)}
+                        title="Copier le lien"
                       >
                         <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => testLink(invite.token)}
+                        title="Tester le lien"
+                      >
+                        <ExternalLink className="h-4 w-4" />
                       </Button>
                       <Button
                         size="sm"

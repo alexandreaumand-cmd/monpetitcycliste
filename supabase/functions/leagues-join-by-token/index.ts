@@ -81,6 +81,32 @@ Deno.serve(async (req) => {
 
     const leagueId = invite.league_id;
 
+    // Ensure manager profile exists
+    const { data: existingManager } = await serviceClient
+      .from('managers')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!existingManager) {
+      console.log('Creating manager profile for user', user.id);
+      const { error: managerError } = await serviceClient
+        .from('managers')
+        .insert({
+          user_id: user.id,
+          nom: user.email?.split('@')[0] || 'Manager',
+          email: user.email,
+        });
+
+      if (managerError) {
+        console.error('Error creating manager:', managerError);
+        return new Response(JSON.stringify({ error: 'Failed to create manager profile' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Optional: Set the token in session for the trigger (if RPC exists)
     try {
       await authedClient.rpc('set_config', {
@@ -112,7 +138,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ ok: true, league_id: leagueId }), {
+    // Get league info
+    const { data: league } = await serviceClient
+      .from('leagues')
+      .select('name, visibility, settings')
+      .eq('id', leagueId)
+      .single();
+
+    return new Response(JSON.stringify({ 
+      ok: true, 
+      league_id: leagueId,
+      league_name: league?.name,
+      league_visibility: league?.visibility,
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

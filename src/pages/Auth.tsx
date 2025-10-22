@@ -21,6 +21,12 @@ const Auth = () => {
   
   const searchParams = new URLSearchParams(window.location.search);
   const nextUrl = searchParams.get('next') || '/dashboard/classement';
+  const defaultTab = searchParams.get('tab') as 'signin' | 'signup' | null;
+  
+  // Extract token from next URL if it's a join link
+  const inviteToken = nextUrl.includes('/join?token=') 
+    ? nextUrl.split('token=')[1]?.split('&')[0] 
+    : null;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -29,14 +35,33 @@ const Auth = () => {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
+        // If coming from invite, handle join process
+        if (inviteToken) {
+          try {
+            const { data, error } = await supabase.functions.invoke('leagues-join-by-token', {
+              body: { token: inviteToken },
+            });
+
+            if (!error && data?.ok) {
+              toast({
+                title: "Bienvenue dans la ligue !",
+                description: "Vous avez rejoint la ligue avec succès.",
+              });
+              navigate(`/?leagueId=${data.league_id}`);
+              return;
+            }
+          } catch (err) {
+            console.error('Auto-join error:', err);
+          }
+        }
         navigate(nextUrl);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, nextUrl]);
+  }, [navigate, nextUrl, inviteToken]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,9 +90,13 @@ const Auth = () => {
 
         if (managerError) throw managerError;
 
+        const message = inviteToken 
+          ? "Compte créé ! Vous rejoignez maintenant la ligue..."
+          : "Inscription réussie ! Vous pouvez maintenant vous connecter.";
+        
         toast({
           title: "Inscription réussie !",
-          description: "Vous pouvez maintenant vous connecter.",
+          description: message,
         });
       }
     } catch (error: any) {
@@ -110,12 +139,20 @@ const Auth = () => {
           <div className="flex justify-center">
             <img src={logo} alt="Mon Petit Cycliste" className="h-32 w-32 object-contain" />
           </div>
-          <CardDescription>
-            Connectez-vous pour gérer votre équipe
-          </CardDescription>
+          {inviteToken ? (
+            <CardDescription className="text-primary font-medium">
+              🎉 Vous êtes invité à rejoindre une ligue !
+              <br />
+              <span className="text-sm text-muted-foreground">Créez un compte ou connectez-vous pour continuer</span>
+            </CardDescription>
+          ) : (
+            <CardDescription>
+              Connectez-vous pour gérer votre équipe
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
+          <Tabs defaultValue={defaultTab || (inviteToken ? "signup" : "signin")} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Connexion</TabsTrigger>
               <TabsTrigger value="signup">Inscription</TabsTrigger>
