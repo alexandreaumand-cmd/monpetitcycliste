@@ -41,7 +41,7 @@ export default function Rankings() {
   return (
     <PageContainer>
       {/* Main Content */}
-      <Tabs defaultValue="standings" className="space-y-6">
+      <Tabs defaultValue="standings" className="space-y-3">
           <div className="flex items-center justify-between gap-4">
             <TabsList className="grid w-full grid-cols-6 max-w-5xl">
               <TabsTrigger value="standings">Managers</TabsTrigger>

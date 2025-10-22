@@ -12,15 +12,15 @@ export const ConfigurationTabs = () => {
         <TabsTrigger value="data">💾 Données</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="seasons" className="space-y-6">
+      <TabsContent value="seasons" className="space-y-4">
         <SeasonManager />
       </TabsContent>
 
-      <TabsContent value="managers" className="space-y-6">
+      <TabsContent value="managers" className="space-y-4">
         <SponsorJerseyManager />
       </TabsContent>
 
-      <TabsContent value="data" className="space-y-6">
+      <TabsContent value="data" className="space-y-4">
         <DataManagementTabs />
       </TabsContent>
     </Tabs>
