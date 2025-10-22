@@ -166,13 +166,13 @@ export const ResultsPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Admin Maintenance Component */}
       <AdminMaintenance />
       
       {/* Header with search */}
-      <div className="sticky top-0 z-10 bg-background pb-4 border-b">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
+      <div className="sticky top-0 z-10 bg-background pb-3 border-b">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-3">
           <div>
             <h1 className="text-3xl font-bold">Résultats</h1>
           </div>

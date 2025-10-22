@@ -1,12 +1,12 @@
 export const UI_CONSTANTS = {
   // Containers
   maxWidth: 'max-w-7xl',
-  mainPadding: 'px-4 py-6 md:px-6 md:py-8',
+  mainPadding: 'px-4 py-3 md:px-6 md:py-4',
   
   // Spacing
-  sectionGap: 'space-y-6',
-  cardGap: 'gap-4',
-  headerGap: 'gap-4',
+  sectionGap: 'space-y-4',
+  cardGap: 'gap-3',
+  headerGap: 'gap-3',
   
   // Typography
   pageTitle: 'text-3xl font-bold tracking-tight',

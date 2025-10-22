@@ -20,8 +20,8 @@ export function PageHeader({
   className 
 }: PageHeaderProps) {
   return (
-    <div className={cn("space-y-4", className)}>
-      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+    <div className={cn("space-y-3", className)}>
+      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3">
         <div className="flex items-center gap-3">
           {Icon && <Icon className="h-8 w-8 text-primary" />}
           <div>
@@ -31,7 +31,7 @@ export function PageHeader({
         </div>
         {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
       </div>
-      {filters && <div className="flex flex-col md:flex-row gap-4">{filters}</div>}
+      {filters && <div className="flex flex-col md:flex-row gap-3">{filters}</div>}
     </div>
   );
 }

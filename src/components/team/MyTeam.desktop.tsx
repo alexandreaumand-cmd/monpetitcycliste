@@ -392,9 +392,9 @@ export const MyTeamDesktop = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Mobile layout */}
-      <div className="flex flex-col gap-4 md:hidden">
+      <div className="flex flex-col gap-3 md:hidden">
         <div>
           <h1 className="text-3xl font-bold">
             {selectedManagerId && selectedManagerId !== currentUserId
