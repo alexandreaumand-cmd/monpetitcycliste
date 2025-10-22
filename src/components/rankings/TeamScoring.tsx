@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ManagerSelect } from "@/components/shared/ManagerSelect";
 
 interface TeamScoringProps {
   phaseId: string | null;
@@ -45,18 +46,6 @@ export const TeamScoring = ({ phaseId, saisonId }: TeamScoringProps) => {
     enabled: !leagueLoading && !!leagueId,
   });
 
-  const { data: managers } = useQuery({
-    queryKey: ["managers-list"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("managers")
-        .select("id, nom")
-        .order("nom");
-      
-      if (error) throw error;
-      return data;
-    },
-  });
 
   const { data: teamData, isLoading } = useQuery({
     queryKey: ["team-scoring", selectedManager, phaseId, saisonId, search, leagueId],
@@ -199,18 +188,12 @@ export const TeamScoring = ({ phaseId, saisonId }: TeamScoringProps) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Manager</label>
-              <Select value={selectedManager} onValueChange={setSelectedManager}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un manager" />
-                </SelectTrigger>
-                <SelectContent>
-                  {managers?.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.nom}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ManagerSelect
+                value={selectedManager}
+                onValueChange={setSelectedManager}
+                placeholder="Sélectionner un manager"
+                leagueId={leagueId}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Rechercher un coureur</label>
