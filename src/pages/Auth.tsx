@@ -20,7 +20,7 @@ const Auth = () => {
   const [sponsor, setSponsor] = useState("");
   
   const searchParams = new URLSearchParams(window.location.search);
-  const nextUrl = searchParams.get('next') || '/dashboard/classement';
+  const nextUrl = searchParams.get('next') || '/dashboard/home';
   const defaultTab = searchParams.get('tab') as 'signin' | 'signup' | null;
   
   // Extract token from next URL if it's a join link

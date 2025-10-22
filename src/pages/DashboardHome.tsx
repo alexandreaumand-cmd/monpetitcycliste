@@ -21,14 +21,6 @@ export default function DashboardHome() {
   return (
     <PageContainer>
       <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Accueil</h1>
-          <p className="text-muted-foreground mt-1">
-            Vue d'ensemble de vos compétitions
-          </p>
-        </div>
-
         {/* Quick Actions */}
         <QuickActions />
 
