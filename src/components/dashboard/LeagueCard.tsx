@@ -1,11 +1,15 @@
-import { Users, Trophy, TrendingUp, Crown } from "lucide-react";
+import { Users, Trophy, TrendingUp, Crown, Calendar, Zap } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLeagueMemberCount } from "@/hooks/useLeagueMemberCount";
 import { useMyLeagueStats } from "@/hooks/useMyLeagueStats";
+import { LeagueStatusBadge } from "@/components/leagues/LeagueStatusBadge";
 import type { LeagueWithRole } from "@/lib/leagues/types";
+import { LEAGUE_TEMPLATES } from "@/lib/leagues/templates";
 
 interface LeagueCardProps {
   league: LeagueWithRole;
@@ -15,6 +19,26 @@ interface LeagueCardProps {
 export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
   const { data: memberCount, isLoading: loadingMembers } = useLeagueMemberCount(league.id);
   const { data: stats, isLoading: loadingStats } = useMyLeagueStats(league.id);
+
+  // Fetch season info
+  const { data: seasonInfo } = useQuery({
+    queryKey: ['league-season', league.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('league_scopes')
+        .select(`
+          season_id,
+          saisons:season_id (
+            annee
+          )
+        `)
+        .eq('league_id', league.id)
+        .single();
+      
+      if (error) throw error;
+      return data?.saisons as { annee: number } | null;
+    },
+  });
 
   const getRoleBadge = (role: string) => {
     switch (role) {
@@ -28,15 +52,36 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
   };
 
   const roleBadge = getRoleBadge(league.role);
+  const gameMode = LEAGUE_TEMPLATES.find(t => t.id === league.game_mode);
 
   return (
     <Card className="hover:shadow-lg transition-all duration-200">
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg">{league.name}</CardTitle>
-          <Badge variant={roleBadge.variant} className="shrink-0">
-            {roleBadge.icon} {roleBadge.label}
-          </Badge>
+          <div className="flex-1">
+            <CardTitle className="text-lg mb-2">{league.name}</CardTitle>
+            <div className="flex flex-wrap gap-2">
+              <LeagueStatusBadge status={league.status} />
+              <Badge variant={roleBadge.variant}>
+                {roleBadge.icon} {roleBadge.label}
+              </Badge>
+              {seasonInfo && (
+                <Badge variant="outline" className="gap-1">
+                  <Calendar className="h-3 w-3" />
+                  Saison {seasonInfo.annee}
+                </Badge>
+              )}
+              {gameMode && (
+                <Badge variant="secondary" className="gap-1">
+                  <Zap className="h-3 w-3" />
+                  {gameMode.name}
+                </Badge>
+              )}
+              {league.bonuses_enabled && (
+                <Badge variant="outline">Bonus ✓</Badge>
+              )}
+            </div>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -46,7 +91,12 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
           {loadingMembers ? (
             <Skeleton className="h-4 w-20" />
           ) : (
-            <span>{memberCount} joueur{memberCount !== 1 ? 's' : ''}</span>
+            <span>
+              {league.current_player_count}/{league.max_players} joueurs
+              {league.status === 'pending' && league.current_player_count < league.max_players && (
+                <span className="text-xs ml-1">(en attente de {league.max_players - league.current_player_count})</span>
+              )}
+            </span>
           )}
         </div>
 

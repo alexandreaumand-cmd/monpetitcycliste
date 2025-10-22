@@ -1180,7 +1180,7 @@ export type Database = {
           id: string
           league_id: string
           phases: string[] | null
-          season_id: string | null
+          season_id: string
         }
         Insert: {
           by_phase?: boolean
@@ -1189,7 +1189,7 @@ export type Database = {
           id?: string
           league_id: string
           phases?: string[] | null
-          season_id?: string | null
+          season_id: string
         }
         Update: {
           by_phase?: boolean
@@ -1198,13 +1198,13 @@ export type Database = {
           id?: string
           league_id?: string
           phases?: string[] | null
-          season_id?: string | null
+          season_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "league_scopes_league_id_fkey"
             columns: ["league_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "leagues"
             referencedColumns: ["id"]
           },
@@ -1219,27 +1219,48 @@ export type Database = {
       }
       leagues: {
         Row: {
+          archived_at: string | null
+          bonuses_enabled: boolean
           created_at: string
+          current_player_count: number
+          game_mode: string
           id: string
+          max_players: number
           name: string
           owner_manager_id: string
           settings: Json
+          started_at: string | null
+          status: string
           visibility: string
         }
         Insert: {
+          archived_at?: string | null
+          bonuses_enabled?: boolean
           created_at?: string
+          current_player_count?: number
+          game_mode?: string
           id?: string
+          max_players?: number
           name: string
           owner_manager_id: string
           settings?: Json
+          started_at?: string | null
+          status?: string
           visibility?: string
         }
         Update: {
+          archived_at?: string | null
+          bonuses_enabled?: boolean
           created_at?: string
+          current_player_count?: number
+          game_mode?: string
           id?: string
+          max_players?: number
           name?: string
           owner_manager_id?: string
           settings?: Json
+          started_at?: string | null
+          status?: string
           visibility?: string
         }
         Relationships: [

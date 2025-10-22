@@ -1,3 +1,6 @@
+export type GameMode = 'full_season' | 'short_gt' | 'short_wt' | 'short_classics';
+export type LeagueStatus = 'pending' | 'active' | 'completed' | 'cancelled';
+
 export type League = {
   id: string;
   name: string;
@@ -5,6 +8,13 @@ export type League = {
   owner_manager_id: string;
   settings: Record<string, any>;
   created_at: string;
+  max_players: number;
+  current_player_count: number;
+  game_mode: GameMode;
+  bonuses_enabled: boolean;
+  status: LeagueStatus;
+  started_at: string | null;
+  archived_at: string | null;
 };
 
 export type LeagueMember = {

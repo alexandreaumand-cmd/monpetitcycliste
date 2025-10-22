@@ -1,38 +1,21 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useLeague } from "@/contexts/LeagueContext";
-import { useUserLeagues } from "@/hooks/useUserLeagues";
 import { toast } from "sonner";
+import { useUserLeagues } from "@/hooks/useUserLeagues";
+import { useLeague } from "@/contexts/LeagueContext";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
-const formSchema = z.object({
-  name: z.string().min(3, "Le nom doit contenir au moins 3 caractères"),
-  visibility: z.enum(["public", "private"]),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { LeagueTemplateSelector } from "./LeagueTemplateSelector";
+import { LeagueSettingsForm } from "./LeagueSettingsForm";
+import { type GameMode, calculateLeagueSettings, getLeagueScopeConfig } from "@/lib/leagues/templates";
+import { ArrowLeft } from "lucide-react";
 
 type CreateLeagueDialogProps = {
   open: boolean;
@@ -40,132 +23,161 @@ type CreateLeagueDialogProps = {
 };
 
 export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogProps) {
-  const { setLeagueId } = useLeague();
   const { refetch } = useUserLeagues();
-  const [isLoading, setIsLoading] = useState(false);
+  const { setLeagueId } = useLeague();
+  const [isCreating, setIsCreating] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
+  
+  // Form state
+  const [selectedMode, setSelectedMode] = useState<GameMode | null>(null);
+  const [name, setName] = useState("");
+  const [visibility, setVisibility] = useState<'public' | 'private'>('private');
+  const [playerCount, setPlayerCount] = useState(4);
+  const [seasonId, setSeasonId] = useState("");
+  const [bonusesEnabled, setBonusesEnabled] = useState(true);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      visibility: "private",
+  // Fetch available seasons
+  const { data: seasons = [] } = useQuery({
+    queryKey: ['seasons'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('saisons')
+        .select('id, annee')
+        .order('annee', { ascending: false });
+      
+      if (error) throw error;
+      return data;
     },
   });
 
-  const onSubmit = async (values: FormValues) => {
-    try {
-      setIsLoading(true);
+  // Auto-select latest season when seasons load
+  if (seasons.length > 0 && !seasonId) {
+    setSeasonId(seasons[0].id);
+  }
 
-      const { data, error } = await supabase.functions.invoke('leagues-create', {
+  const handleClose = () => {
+    setStep(1);
+    setSelectedMode(null);
+    setName("");
+    setVisibility('private');
+    setPlayerCount(4);
+    setSeasonId("");
+    setBonusesEnabled(true);
+    onOpenChange(false);
+  };
+
+  const handleNext = () => {
+    if (selectedMode) {
+      setStep(2);
+    }
+  };
+
+  const handleBack = () => {
+    setStep(1);
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedMode || !name || !seasonId) return;
+
+    setIsCreating(true);
+    try {
+      const settings = calculateLeagueSettings(selectedMode, playerCount);
+      const scopeConfig = getLeagueScopeConfig(selectedMode, seasonId);
+
+      const { data, error } = await supabase.functions.invoke("leagues-create", {
         body: {
-          name: values.name,
-          visibility: values.visibility,
-          settings: {},
+          name,
+          visibility,
+          gameMode: selectedMode,
+          maxPlayers: playerCount,
+          bonusesEnabled,
+          budget: settings.budget,
+          maxRiders: settings.maxRiders,
+          scopeConfig,
         },
       });
 
       if (error) throw error;
 
-      if (data?.league) {
-        toast.success("Ligue créée avec succès !");
-        
-        // Refresh leagues list
-        await refetch();
-        
-        // Switch to new league
+      toast.success("Ligue créée avec succès !");
+      await refetch();
+      
+      if (data?.league?.id) {
         setLeagueId(data.league.id);
-        
-        // Close dialog and reset form
-        onOpenChange(false);
-        form.reset();
       }
+      
+      handleClose();
     } catch (error: any) {
-      console.error('Error creating league:', error);
+      console.error("Error creating league:", error);
       toast.error(error.message || "Erreur lors de la création de la ligue");
     } finally {
-      setIsLoading(false);
+      setIsCreating(false);
     }
   };
 
+  const canProceed = step === 1 ? selectedMode !== null : name.trim() !== "" && seasonId !== "";
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Créer une nouvelle ligue</DialogTitle>
+          <DialogTitle>
+            {step === 1 ? "Choisir un mode de jeu" : "Configuration de la ligue"}
+          </DialogTitle>
           <DialogDescription>
-            Créez votre propre ligue et invitez vos amis à vous rejoindre.
+            {step === 1 
+              ? "Sélectionnez le type de ligue que vous souhaitez créer"
+              : "Personnalisez les paramètres de votre ligue"
+            }
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nom de la ligue</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ma Super Ligue" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Choisissez un nom unique pour votre ligue
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <div className="py-4">
+          {step === 1 ? (
+            <LeagueTemplateSelector
+              selectedMode={selectedMode}
+              onSelect={setSelectedMode}
             />
-
-            <FormField
-              control={form.control}
-              name="visibility"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Visibilité</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="flex flex-col space-y-1"
-                    >
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="private" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          <span className="font-medium">Privée</span> - Seuls les membres invités peuvent rejoindre
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="public" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          <span className="font-medium">Publique</span> - Tout le monde peut rejoindre
-                        </FormLabel>
-                      </FormItem>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          ) : (
+            <LeagueSettingsForm
+              name={name}
+              onNameChange={setName}
+              visibility={visibility}
+              onVisibilityChange={setVisibility}
+              gameMode={selectedMode!}
+              playerCount={playerCount}
+              onPlayerCountChange={setPlayerCount}
+              seasonId={seasonId}
+              onSeasonChange={setSeasonId}
+              bonusesEnabled={bonusesEnabled}
+              onBonusesChange={setBonusesEnabled}
+              seasons={seasons}
             />
+          )}
+        </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isLoading}
-              >
-                Annuler
+        <div className="flex justify-between">
+          {step === 2 && (
+            <Button variant="outline" onClick={handleBack} disabled={isCreating}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour
+            </Button>
+          )}
+          <div className="flex gap-2 ml-auto">
+            <Button variant="outline" onClick={handleClose} disabled={isCreating}>
+              Annuler
+            </Button>
+            {step === 1 ? (
+              <Button onClick={handleNext} disabled={!canProceed}>
+                Suivant
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Création..." : "Créer la ligue"}
+            ) : (
+              <Button onClick={handleSubmit} disabled={!canProceed || isCreating}>
+                {isCreating ? "Création..." : "Créer la ligue"}
               </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            )}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

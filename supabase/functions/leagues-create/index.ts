@@ -46,18 +46,49 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { name, visibility, settings } = await req.json();
+    const {
+      name,
+      visibility,
+      gameMode,
+      maxPlayers,
+      bonusesEnabled,
+      budget,
+      maxRiders,
+      scopeConfig,
+    } = await req.json();
 
-    if (!name || !visibility) {
+    // Validate inputs
+    if (!name || name.length < 3) {
       return new Response(
-        JSON.stringify({ error: 'name and visibility are required' }),
+        JSON.stringify({ error: 'League name must be at least 3 characters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (!['public', 'private'].includes(visibility)) {
       return new Response(
-        JSON.stringify({ error: 'visibility must be public or private' }),
+        JSON.stringify({ error: 'Invalid visibility' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!['full_season', 'short_gt', 'short_wt', 'short_classics'].includes(gameMode)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid game mode' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (![4, 6, 8, 10].includes(maxPlayers)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid player count' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!scopeConfig?.seasonId) {
+      return new Response(
+        JSON.stringify({ error: 'Season ID is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -68,8 +99,16 @@ Deno.serve(async (req) => {
       .insert({
         name,
         visibility,
-        settings: settings || {},
         owner_manager_id: manager.id,
+        game_mode: gameMode,
+        max_players: maxPlayers,
+        current_player_count: 0,
+        bonuses_enabled: bonusesEnabled,
+        status: 'pending',
+        settings: {
+          budget,
+          max_riders: maxRiders,
+        },
       })
       .select()
       .single();
@@ -79,6 +118,28 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: leagueError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create league scope
+    const { error: scopeError } = await supabase
+      .from('league_scopes')
+      .insert({
+        league_id: league.id,
+        season_id: scopeConfig.seasonId,
+        by_phase: scopeConfig.byPhase,
+        gt_only: scopeConfig.gtOnly,
+        phases: scopeConfig.phases,
+        competitions: scopeConfig.competitions,
+      });
+
+    if (scopeError) {
+      console.error('Error creating league scope:', scopeError);
+      // Rollback league creation
+      await supabase.from('leagues').delete().eq('id', league.id);
+      return new Response(
+        JSON.stringify({ error: 'Failed to create league scope' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -93,7 +154,8 @@ Deno.serve(async (req) => {
 
     if (memberError) {
       console.error('Error adding league member:', memberError);
-      // Try to cleanup the league
+      // Rollback
+      await supabase.from('league_scopes').delete().eq('league_id', league.id);
       await supabase.from('leagues').delete().eq('id', league.id);
       return new Response(
         JSON.stringify({ error: 'Failed to add owner as member' }),
