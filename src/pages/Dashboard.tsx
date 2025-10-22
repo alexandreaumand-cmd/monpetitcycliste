@@ -92,7 +92,7 @@ const Dashboard = () => {
             <Route path="statistiques" element={<Statistics />} />
             <Route path="startlist" element={<Startlist />} />
             <Route path="compte" element={<AccountPage />} />
-            <Route path="leagues/:leagueId/admin" element={<LeagueDetailPage />} />
+            <Route path="leagues/:id/admin" element={<LeagueDetailPage />} />
             {isAnyAdmin && <Route path="admin/*" element={<AdminPage />} />}
           </Routes>
         </MobileLayout>
@@ -124,7 +124,7 @@ const Dashboard = () => {
               <Route path="statistiques" element={<Statistics />} />
               <Route path="startlist" element={<Startlist />} />
               <Route path="compte" element={<AccountPage />} />
-              <Route path="leagues/:leagueId/admin" element={<LeagueDetailPage />} />
+              <Route path="leagues/:id/admin" element={<LeagueDetailPage />} />
               {isAnyAdmin && <Route path="admin/*" element={<AdminPage />} />}
             </Routes>
           </main>
