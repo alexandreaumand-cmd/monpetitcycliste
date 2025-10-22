@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt, Star } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt, Star, ArrowUp, ArrowDown } from "lucide-react";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -59,6 +59,7 @@ interface TeamKPIs {
 
 
 type SortBy = 'points' | 'ratio' | 'prix' | 'cote';
+type SortDirection = 'asc' | 'desc';
 
 interface Manager {
   id: string;
@@ -72,6 +73,7 @@ export const MyTeamDesktop = () => {
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>('points');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [kpis, setKpis] = useState<TeamKPIs>({
     scorers_count: 0,
     total_points: 0,
@@ -343,19 +345,34 @@ export const MyTeamDesktop = () => {
     });
   };
 
+  const handleSort = (column: SortBy) => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortBy(column);
+      setSortDirection('desc');
+    }
+  };
+
   const sortedCoureurs = [...coureurs].sort((a, b) => {
+    let comparison = 0;
     switch (sortBy) {
       case 'points':
-        return b.points_total - a.points_total;
+        comparison = b.points_total - a.points_total;
+        break;
       case 'ratio':
-        return b.ratio_points_par_prix - a.ratio_points_par_prix;
+        comparison = b.ratio_points_par_prix - a.ratio_points_par_prix;
+        break;
       case 'prix':
-        return b.prix_achat - a.prix_achat;
+        comparison = b.prix_achat - a.prix_achat;
+        break;
       case 'cote':
-        return b.cote_initiale - a.cote_initiale;
+        comparison = b.cote_initiale - a.cote_initiale;
+        break;
       default:
-        return 0;
+        comparison = 0;
     }
+    return sortDirection === 'desc' ? comparison : -comparison;
   });
 
   const getRatioColor = (ratio: number) => {
@@ -392,7 +409,7 @@ export const MyTeamDesktop = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Mobile layout */}
       <div className="flex flex-col gap-3 md:hidden">
         <div>
@@ -475,7 +492,8 @@ export const MyTeamDesktop = () => {
       </div>
 
       {/* Desktop layout */}
-      <div className="hidden md:flex justify-between items-center">
+      <div className="hidden md:block space-y-4">
+        {/* Header with jersey and title */}
         <div className="flex items-center gap-3">
           {managerSponsor?.jersey_image_url && (
             <img 
@@ -496,8 +514,9 @@ export const MyTeamDesktop = () => {
           </div>
         </div>
         
+        {/* Selectors row */}
         <div className="flex items-center gap-4">
-          {/* Manager selector - desktop */}
+          {/* Manager selector */}
           {managers.length > 0 && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Manager:</span>
@@ -517,7 +536,7 @@ export const MyTeamDesktop = () => {
             </div>
           )}
           
-          {/* Phase selector - desktop */}
+          {/* Phase selector */}
           {phases.length > 0 && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Phase:</span>
@@ -535,42 +554,11 @@ export const MyTeamDesktop = () => {
               </Select>
             </div>
           )}
-          
-          {/* Sort buttons - desktop */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Trier par:</span>
-            <Button
-              variant={sortBy === 'points' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSortBy('points')}
-            >
-              <Trophy className="h-4 w-4 mr-2" />
-              Points
-            </Button>
-            <Button
-              variant={sortBy === 'ratio' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSortBy('ratio')}
-            >
-              <ArrowUpDown className="h-4 w-4 mr-2" />
-              Ratio
-            </Button>
-            <Button
-              variant={sortBy === 'prix' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSortBy('prix')}
-            >
-              Prix
-            </Button>
-            <Button
-              variant={sortBy === 'cote' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSortBy('cote')}
-            >
-              Cote initiale
-            </Button>
-            
-            {/* Bouton Choisir coureur bonus */}
+        </div>
+        
+        {/* Bonus rider section */}
+        {(!hasSelectedBonusRider && !selectedManagerId) || bonusRiderSelection ? (
+          <div className="flex items-center gap-3">
             {!hasSelectedBonusRider && !selectedManagerId && (
               <Button
                 variant="outline"
@@ -583,7 +571,6 @@ export const MyTeamDesktop = () => {
               </Button>
             )}
             
-            {/* Coureur bonus sélectionné */}
             {bonusRiderSelection && (
               <Badge variant="default" className="bg-amber-500 gap-1 px-3 py-1.5">
                 <Star className="h-3.5 w-3.5 fill-white" />
@@ -591,7 +578,7 @@ export const MyTeamDesktop = () => {
               </Badge>
             )}
           </div>
-        </div>
+        ) : null}
       </div>
 
       {/* Bannière KPI */}
@@ -690,10 +677,50 @@ export const MyTeamDesktop = () => {
                 <TableRow>
                   <TableHead>Coureur</TableHead>
                   <TableHead>Équipe</TableHead>
-                  <TableHead className="text-right">Prix d'achat</TableHead>
-                  <TableHead className="text-right">Cote initiale</TableHead>
-                  <TableHead className="text-right">Points totaux</TableHead>
-                  <TableHead className="text-right">Ratio</TableHead>
+                  <TableHead 
+                    className="text-right cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('prix')}
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Prix d'achat
+                      {sortBy === 'prix' && (
+                        sortDirection === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="text-right cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('cote')}
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Cote initiale
+                      {sortBy === 'cote' && (
+                        sortDirection === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="text-right cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('points')}
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Points totaux
+                      {sortBy === 'points' && (
+                        sortDirection === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="text-right cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('ratio')}
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Ratio
+                      {sortBy === 'ratio' && (
+                        sortDirection === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
