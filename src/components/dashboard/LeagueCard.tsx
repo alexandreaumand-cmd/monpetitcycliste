@@ -1,4 +1,5 @@
-import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, Settings } from "lucide-react";
+import { useState } from "react";
+import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +11,7 @@ import { useMyLeagueStats } from "@/hooks/useMyLeagueStats";
 import { LeagueStatusBadge } from "@/components/leagues/LeagueStatusBadge";
 import type { LeagueWithRole } from "@/lib/leagues/types";
 import { LEAGUE_TEMPLATES } from "@/lib/leagues/templates";
-import { useNavigate } from "react-router-dom";
+import { LeagueInvitesBottomSheet } from "@/components/leagues/LeagueInvitesBottomSheet";
 
 interface LeagueCardProps {
   league: LeagueWithRole;
@@ -18,7 +19,7 @@ interface LeagueCardProps {
 }
 
 export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
-  const navigate = useNavigate();
+  const [invitesSheetOpen, setInvitesSheetOpen] = useState(false);
   const { data: memberCount, isLoading: loadingMembers } = useLeagueMemberCount(league.id);
   const { data: stats, isLoading: loadingStats } = useMyLeagueStats(league.id);
   
@@ -173,14 +174,22 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
             Voir le détail
           </Button>
           {isAdmin && (
-            <Button 
-              onClick={() => navigate(`/dashboard/leagues/${league.id}/admin`)}
-              variant="secondary"
-              size="icon"
-              title="Gérer la ligue"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
+            <>
+              <Button 
+                onClick={() => setInvitesSheetOpen(true)}
+                variant="secondary"
+                size="icon"
+                title="Gérer les invitations"
+              >
+                <UserPlus className="h-4 w-4" />
+              </Button>
+              <LeagueInvitesBottomSheet
+                open={invitesSheetOpen}
+                onOpenChange={setInvitesSheetOpen}
+                leagueId={league.id}
+                leagueName={league.name}
+              />
+            </>
           )}
         </div>
       </CardContent>
