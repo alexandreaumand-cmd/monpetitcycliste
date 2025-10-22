@@ -10,6 +10,7 @@ import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, 
 import { ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLeague } from "@/contexts/LeagueContext";
+import { ManagerSelect } from "@/components/shared/ManagerSelect";
 
 interface ManagerComparisonProps {
   phaseId?: string | null;
@@ -19,23 +20,27 @@ interface ManagerComparisonProps {
 export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps) {
   const [managerA, setManagerA] = useState<string | null>(null);
   const [managerB, setManagerB] = useState<string | null>(null);
+  const { leagueId } = useLeague();
 
-  // 1. Récupérer la liste de tous les managers
-  const { data: managers } = useQuery({
-    queryKey: ["managers-list"],
+  // Récupérer les noms des managers sélectionnés
+  const { data: selectedManagers } = useQuery({
+    queryKey: ["selected-managers", managerA, managerB],
     queryFn: async () => {
+      const ids = [managerA, managerB].filter(Boolean) as string[];
+      if (ids.length === 0) return [];
+      
       const { data, error } = await supabase
         .from("managers")
         .select("id, nom")
-        .order("nom");
+        .in("id", ids);
       
       if (error) throw error;
       return data;
     },
+    enabled: !!(managerA || managerB),
   });
 
-  // 2. Récupérer les rosters des deux managers
-  const { leagueId } = useLeague();
+  // Récupérer les rosters des deux managers
   
   const { data: rostersA } = useQuery({
     queryKey: ["roster-manager-a", managerA, phaseId, saisonId, leagueId],
@@ -813,8 +818,8 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
   const victoiresA = victoriesA?.length || 0;
   const victoiresB = victoriesB?.length || 0;
 
-  const managerAName = managers?.find(m => m.id === managerA)?.nom || "Manager A";
-  const managerBName = managers?.find(m => m.id === managerB)?.nom || "Manager B";
+  const managerAName = selectedManagers?.find(m => m.id === managerA)?.nom || "Manager A";
+  const managerBName = selectedManagers?.find(m => m.id === managerB)?.nom || "Manager B";
 
   const scopeLabel = phaseId ? "Phase" : saisonId ? "Saison" : "Global";
 
@@ -832,29 +837,21 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Manager A</label>
-              <Select value={managerA || undefined} onValueChange={setManagerA}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un manager" />
-                </SelectTrigger>
-                <SelectContent>
-                  {managers?.map(m => (
-                    <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ManagerSelect 
+                value={managerA || undefined} 
+                onValueChange={setManagerA}
+                placeholder="Sélectionner un manager"
+                leagueId={leagueId}
+              />
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Manager B</label>
-              <Select value={managerB || undefined} onValueChange={setManagerB}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un manager" />
-                </SelectTrigger>
-                <SelectContent>
-                  {managers?.map(m => (
-                    <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ManagerSelect 
+                value={managerB || undefined} 
+                onValueChange={setManagerB}
+                placeholder="Sélectionner un manager"
+                leagueId={leagueId}
+              />
             </div>
           </div>
         </CardContent>

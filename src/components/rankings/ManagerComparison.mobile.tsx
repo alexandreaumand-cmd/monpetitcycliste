@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trophy, Users, TrendingUp, Target } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend, ResponsiveContainer } from "recharts";
 import { useLeague } from "@/contexts/LeagueContext";
+import { ManagerSelect } from "@/components/shared/ManagerSelect";
 
 interface ManagerComparisonMobileProps {
   phaseId: string | null;
@@ -24,17 +25,22 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
   const [managerB, setManagerB] = useState<string>("");
   const { leagueId } = useLeague();
 
-  // Fetch managers
-  const { data: managers } = useQuery({
-    queryKey: ["managers"],
+  // Récupérer les noms des managers sélectionnés
+  const { data: selectedManagers } = useQuery({
+    queryKey: ["selected-managers", managerA, managerB],
     queryFn: async () => {
+      const ids = [managerA, managerB].filter(Boolean);
+      if (ids.length === 0) return [];
+      
       const { data, error } = await supabase
         .from("managers")
         .select("id, nom")
-        .order("nom");
+        .in("id", ids);
+      
       if (error) throw error;
       return data;
     },
+    enabled: !!(managerA || managerB),
   });
 
   // Fetch rosters for manager A
@@ -677,8 +683,8 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
       .slice(0, 10);
   }, [rostersB, pointsB, coureurs]);
 
-  const managerAName = managers?.find(m => m.id === managerA)?.nom || "Manager A";
-  const managerBName = managers?.find(m => m.id === managerB)?.nom || "Manager B";
+  const managerAName = selectedManagers?.find(m => m.id === managerA)?.nom || "Manager A";
+  const managerBName = selectedManagers?.find(m => m.id === managerB)?.nom || "Manager B";
 
   if (!managerA || !managerB) {
     return (
@@ -688,36 +694,24 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
             <Label htmlFor="manager-a" className="text-xs text-muted-foreground mb-2 block">
               Manager A
             </Label>
-            <Select value={managerA} onValueChange={setManagerA}>
-              <SelectTrigger id="manager-a">
-                <SelectValue placeholder="Sélectionner un manager" />
-              </SelectTrigger>
-              <SelectContent>
-                {managers?.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.nom}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ManagerSelect 
+              value={managerA} 
+              onValueChange={setManagerA}
+              placeholder="Sélectionner un manager"
+              leagueId={leagueId}
+            />
           </div>
 
           <div>
             <Label htmlFor="manager-b" className="text-xs text-muted-foreground mb-2 block">
               Manager B
             </Label>
-            <Select value={managerB} onValueChange={setManagerB}>
-              <SelectTrigger id="manager-b">
-                <SelectValue placeholder="Sélectionner un manager" />
-              </SelectTrigger>
-              <SelectContent>
-                {managers?.filter(m => m.id !== managerA).map((m) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.nom}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ManagerSelect 
+              value={managerB} 
+              onValueChange={setManagerB}
+              placeholder="Sélectionner un manager"
+              leagueId={leagueId}
+            />
           </div>
         </div>
 
@@ -807,36 +801,24 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
           <Label htmlFor="manager-a-selected" className="text-xs text-muted-foreground mb-2 block">
             Manager A
           </Label>
-          <Select value={managerA} onValueChange={setManagerA}>
-            <SelectTrigger id="manager-a-selected">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {managers?.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.nom}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ManagerSelect 
+            value={managerA} 
+            onValueChange={setManagerA}
+            placeholder="Manager A"
+            leagueId={leagueId}
+          />
         </div>
 
         <div>
           <Label htmlFor="manager-b-selected" className="text-xs text-muted-foreground mb-2 block">
             Manager B
           </Label>
-          <Select value={managerB} onValueChange={setManagerB}>
-            <SelectTrigger id="manager-b-selected">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {managers?.filter(m => m.id !== managerA).map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.nom}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ManagerSelect 
+            value={managerB} 
+            onValueChange={setManagerB}
+            placeholder="Manager B"
+            leagueId={leagueId}
+          />
         </div>
       </div>
 
