@@ -22,6 +22,14 @@ export function JoinLeaguePage() {
       }
 
       try {
+        // Check if user is authenticated first
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          const next = encodeURIComponent(`/join?token=${token}`);
+          navigate(`/auth?next=${next}`);
+          return;
+        }
+
         const { data, error } = await supabase.functions.invoke('leagues-join-by-token', {
           body: { token },
         });
@@ -31,7 +39,7 @@ export function JoinLeaguePage() {
           const serverMsg = (data as any)?.error || (error as any)?.message;
 
           // If not authenticated, redirect to auth then come back here
-          if (status === 401) {
+          if (status === 401 || status === 403) {
             const next = encodeURIComponent(`/join?token=${token}`);
             navigate(`/auth?next=${next}`);
             return;
