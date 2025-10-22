@@ -131,13 +131,25 @@ Deno.serve(async (req) => {
     const managerPhasePoints = new Map<string, Array<{ phase_index: number; points: number }>>();
 
     for (const phase of completedPhases) {
-      // Points de course
-      const { data: racePoints } = await supabase
-        .from('points_ledger')
-        .select('manager_id, points')
+      // Get all rosters for this phase in this league
+      const { data: rosters } = await supabase
+        .from('rosters')
+        .select('manager_id, coureur_id')
         .eq('phase_id', phase.id)
-        .eq('league_id', league_id)
-        .not('manager_id', 'is', null);
+        .eq('league_id', league_id);
+
+      // Get all race points for riders in these rosters
+      const allCoureurIds = [...new Set(rosters?.map(r => r.coureur_id) || [])];
+      
+      let racePointsData: { coureur_id: string; points: number }[] = [];
+      if (allCoureurIds.length > 0) {
+        const { data: racePoints } = await supabase
+          .from('points_ledger')
+          .select('coureur_id, points')
+          .eq('phase_id', phase.id)
+          .in('coureur_id', allCoureurIds);
+        racePointsData = racePoints || [];
+      }
 
       // Bonus managers
       const { data: managerBonus } = await supabase
@@ -158,11 +170,11 @@ Deno.serve(async (req) => {
       // Initialiser avec 0
       managers?.forEach(m => phaseTotals.set(m.id, 0));
 
-      // Ajouter les points
-      racePoints?.forEach(rp => {
-        if (rp.manager_id) {
-          phaseTotals.set(rp.manager_id, (phaseTotals.get(rp.manager_id) || 0) + (rp.points || 0));
-        }
+      // Map race points to managers via rosters
+      rosters?.forEach(roster => {
+        const riderPoints = racePointsData.filter(rp => rp.coureur_id === roster.coureur_id);
+        const totalRiderPoints = riderPoints.reduce((sum, rp) => sum + (rp.points || 0), 0);
+        phaseTotals.set(roster.manager_id, (phaseTotals.get(roster.manager_id) || 0) + totalRiderPoints);
       });
 
       managerBonus?.forEach(mb => {

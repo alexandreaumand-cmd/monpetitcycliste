@@ -67,15 +67,27 @@ Deno.serve(async (req) => {
       const allManagersPoints: Array<{ manager_id: string; total_points: number }> = [];
 
       for (const mgr of managers) {
-        // Get race points
-        const { data: racePts } = await supabase
-          .from('points_ledger')
-          .select('points')
+        // Get manager's roster for this phase
+        const { data: roster } = await supabase
+          .from('rosters')
+          .select('coureur_id')
           .eq('phase_id', phase.id)
           .eq('manager_id', mgr.id)
           .eq('league_id', league_id);
 
-        const raceTotalMgr = racePts?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
+        const coureurIds = roster?.map(r => r.coureur_id) || [];
+
+        // Get race points for manager's riders
+        let raceTotalMgr = 0;
+        if (coureurIds.length > 0) {
+          const { data: racePts } = await supabase
+            .from('points_ledger')
+            .select('points')
+            .eq('phase_id', phase.id)
+            .in('coureur_id', coureurIds);
+
+          raceTotalMgr = racePts?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
+        }
 
         // Get manager bonus
         const { data: mgrBonus } = await supabase
