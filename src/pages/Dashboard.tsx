@@ -108,7 +108,7 @@ const Dashboard = () => {
             manager={manager}
             isAdmin={isAnyAdmin}
           />
-          <main className="flex-1 container mx-auto px-4 py-8">
+          <main className="flex-1 container mx-auto px-4 pt-0 pb-8">
             <Routes>
               <Route index element={<Navigate to="/dashboard/classement" replace />} />
               <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
