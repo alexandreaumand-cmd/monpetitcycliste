@@ -18,6 +18,7 @@ import Startlist from "./Startlist";
 import Statistics from "./Statistics";
 import AccountPage from "./AccountPage";
 import DashboardHome from "./DashboardHome";
+import { LeagueDetailPage } from "./admin/LeagueDetailPage";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -91,6 +92,7 @@ const Dashboard = () => {
             <Route path="statistiques" element={<Statistics />} />
             <Route path="startlist" element={<Startlist />} />
             <Route path="compte" element={<AccountPage />} />
+            <Route path="leagues/:leagueId/admin" element={<LeagueDetailPage />} />
             {isAnyAdmin && <Route path="admin/*" element={<AdminPage />} />}
           </Routes>
         </MobileLayout>
@@ -122,6 +124,7 @@ const Dashboard = () => {
               <Route path="statistiques" element={<Statistics />} />
               <Route path="startlist" element={<Startlist />} />
               <Route path="compte" element={<AccountPage />} />
+              <Route path="leagues/:leagueId/admin" element={<LeagueDetailPage />} />
               {isAnyAdmin && <Route path="admin/*" element={<AdminPage />} />}
             </Routes>
           </main>

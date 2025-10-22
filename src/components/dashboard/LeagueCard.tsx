@@ -1,4 +1,4 @@
-import { Users, Trophy, TrendingUp, Crown, Calendar, Zap } from "lucide-react";
+import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, Settings } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { useMyLeagueStats } from "@/hooks/useMyLeagueStats";
 import { LeagueStatusBadge } from "@/components/leagues/LeagueStatusBadge";
 import type { LeagueWithRole } from "@/lib/leagues/types";
 import { LEAGUE_TEMPLATES } from "@/lib/leagues/templates";
+import { useNavigate } from "react-router-dom";
 
 interface LeagueCardProps {
   league: LeagueWithRole;
@@ -17,8 +18,11 @@ interface LeagueCardProps {
 }
 
 export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
+  const navigate = useNavigate();
   const { data: memberCount, isLoading: loadingMembers } = useLeagueMemberCount(league.id);
   const { data: stats, isLoading: loadingStats } = useMyLeagueStats(league.id);
+  
+  const isAdmin = league.role === 'owner' || league.role === 'admin';
 
   // Fetch season info
   const { data: seasonInfo } = useQuery({
@@ -163,10 +167,22 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
           <p className="text-sm text-muted-foreground text-center py-4">Aucune donnée disponible</p>
         )}
 
-        {/* Action button */}
-        <Button onClick={onViewDetails} variant="outline" className="w-full">
-          Voir le détail
-        </Button>
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          <Button onClick={onViewDetails} variant="outline" className="flex-1">
+            Voir le détail
+          </Button>
+          {isAdmin && (
+            <Button 
+              onClick={() => navigate(`/dashboard/leagues/${league.id}/admin`)}
+              variant="secondary"
+              size="icon"
+              title="Gérer la ligue"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
