@@ -24,7 +24,14 @@ export function useUserLeagues() {
             visibility,
             owner_manager_id,
             settings,
-            created_at
+            created_at,
+            max_players,
+            current_player_count,
+            game_mode,
+            bonuses_enabled,
+            status,
+            started_at,
+            archived_at
           )
         `)
         .eq('user_id', user.id);

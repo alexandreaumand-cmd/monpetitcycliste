@@ -31,7 +31,7 @@ const statusConfig = {
 };
 
 export function LeagueStatusBadge({ status, className }: LeagueStatusBadgeProps) {
-  const config = statusConfig[status];
+  const config = statusConfig[status] || statusConfig.pending;
   const Icon = config.icon;
 
   return (
