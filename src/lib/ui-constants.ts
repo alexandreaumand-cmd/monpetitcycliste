@@ -4,7 +4,7 @@ export const UI_CONSTANTS = {
   mainPadding: 'px-4 py-3 md:px-6 md:py-4',
   
   // Spacing
-  sectionGap: 'space-y-4',
+  sectionGap: 'space-y-3',
   cardGap: 'gap-3',
   headerGap: 'gap-3',
   
