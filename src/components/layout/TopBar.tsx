@@ -20,18 +20,7 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
       <div className="flex h-14 items-center gap-4 px-4">
         <SidebarTrigger />
         
-        {/* Manager Dropdown on the left */}
-        {manager && (
-          <ManagerDropdown 
-            manager={manager}
-            isAdmin={isAdmin}
-            onSignOut={onSignOut}
-          />
-        )}
-        
-        <div className="flex-1" />
-        
-        {/* League and Season selectors on the right */}
+        {/* League and Season selectors on the left */}
         <div className="flex items-center gap-3">
           {/* League Switcher */}
           <LeagueSwitcher />
@@ -52,6 +41,19 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
               ))}
             </SelectContent>
           </Select>
+        </div>
+        
+        <div className="flex-1" />
+        
+        {/* Manager, Notifications and Logout on the right */}
+        <div className="flex items-center gap-3">
+          {manager && (
+            <ManagerDropdown 
+              manager={manager}
+              isAdmin={isAdmin}
+              onSignOut={onSignOut}
+            />
+          )}
           
           <NotificationCenter />
           <Button
