@@ -10,9 +10,15 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MobileBottomSheet } from "@/components/mobile/MobileBottomSheet";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Copy, Share2, ExternalLink, Trash2, ChevronDown, Plus, Link as LinkIcon } from "lucide-react";
-import { format } from "date-fns";
+import { Copy, Share2, ExternalLink, Trash2, MoreVertical, Sparkles, Users, Calendar } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Invite {
   id: string;
@@ -44,12 +50,6 @@ export function LeagueInvitesBottomSheet({
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  
-  // Form state
-  const [expiresAt, setExpiresAt] = useState("");
-  const [maxUses, setMaxUses] = useState("");
-  const [note, setNote] = useState("");
 
   const loadInvites = async () => {
     try {
@@ -83,9 +83,9 @@ export function LeagueInvitesBottomSheet({
       const { data, error } = await supabase.functions.invoke("leagues-create-invite", {
         body: {
           league_id: leagueId,
-          expires_at: expiresAt || null,
-          max_uses: maxUses ? parseInt(maxUses) : null,
-          note: note || null,
+          expires_at: null,
+          max_uses: null,
+          note: null,
         },
       });
 
@@ -95,15 +95,9 @@ export function LeagueInvitesBottomSheet({
       await navigator.clipboard.writeText(inviteUrl);
       
       toast({
-        title: "✅ Invitation créée",
-        description: "Le lien a été copié dans le presse-papier",
+        title: "✅ Lien copié !",
+        description: "Partagez-le avec vos amis pour qu'ils rejoignent la ligue",
       });
-
-      // Reset form
-      setExpiresAt("");
-      setMaxUses("");
-      setNote("");
-      setShowAdvanced(false);
       
       // Reload invites
       await loadInvites();
@@ -176,161 +170,131 @@ export function LeagueInvitesBottomSheet({
     return { label: "Active", variant: "default" as const };
   };
 
+  const activeInvites = invites.filter(i => getInviteStatus(i).label === "Active");
+
   const content = (
-    <div className="space-y-6">
-      {/* Section création rapide */}
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Créer une invitation</h3>
-          <p className="text-sm text-muted-foreground">
-            Générez un lien pour inviter de nouveaux joueurs
-          </p>
+    <div className="space-y-8">
+      {/* Empty state / CTA */}
+      {invites.length === 0 && !loading && (
+        <div className="text-center py-12 space-y-6">
+          <div className="flex justify-center">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400/20 to-orange-500/20 flex items-center justify-center">
+              <Sparkles className="h-10 w-10 text-yellow-600" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-xl font-semibold">Invitez vos amis !</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto">
+              Créez votre premier lien d'invitation en un clic et partagez-le
+            </p>
+          </div>
         </div>
+      )}
 
-        <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between" size="sm">
-              Options avancées
-              <ChevronDown className={`h-4 w-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-3 mt-3">
-            <div>
-              <Label htmlFor="expires-at">Date d'expiration</Label>
-              <Input
-                id="expires-at"
-                type="datetime-local"
-                value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="max-uses">Nombre max d'utilisations</Label>
-              <Input
-                id="max-uses"
-                type="number"
-                min="1"
-                placeholder="Illimité"
-                value={maxUses}
-                onChange={(e) => setMaxUses(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="note">Note (interne)</Label>
-              <Textarea
-                id="note"
-                placeholder="Ex: Invitation pour les amis du club..."
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={2}
-              />
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-
+      {/* Main CTA Button */}
+      <div className="flex justify-center">
         <Button 
           onClick={createInvite} 
           disabled={creating}
-          className="w-full"
           size="lg"
+          className="h-14 px-8 text-base bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transition-all"
         >
-          <Plus className="h-4 w-4 mr-2" />
-          {creating ? "Création..." : "Créer et copier le lien"}
+          <Sparkles className="h-5 w-5 mr-2" />
+          {creating ? "Création..." : "Créer un lien d'invitation"}
         </Button>
       </div>
 
-      {/* Liste des invitations */}
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold">Invitations existantes</h3>
-        
-        {loading ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Chargement...</p>
-        ) : invites.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            Aucune invitation créée
-          </p>
-        ) : (
-          <div className="space-y-2 max-h-[400px] overflow-y-auto">
-            {invites.map((invite) => {
-              const status = getInviteStatus(invite);
-              const isActive = status.label === "Active";
+      {/* Active invitations list */}
+      {activeInvites.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Invitations actives ({activeInvites.length})
+            </h3>
+          </div>
+          
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            {activeInvites.map((invite) => {
+              const peopleCount = invite.uses_count;
+              const timeAgo = formatDistanceToNow(new Date(invite.created_at), { 
+                addSuffix: true, 
+                locale: fr 
+              });
               
               return (
                 <div
                   key={invite.id}
-                  className="border rounded-lg p-4 space-y-3"
+                  className="border-l-4 border-green-500 bg-card rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant={status.variant}>{status.label}</Badge>
-                        {invite.max_uses && (
-                          <span className="text-xs text-muted-foreground">
-                            {invite.uses_count}/{invite.max_uses} utilisations
-                          </span>
-                        )}
-                        {!invite.max_uses && invite.uses_count > 0 && (
-                          <span className="text-xs text-muted-foreground">
-                            {invite.uses_count} utilisations
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs font-mono text-muted-foreground truncate">
-                        {invite.token}
-                      </p>
-                      {invite.note && (
-                        <p className="text-xs text-muted-foreground mt-1">{invite.note}</p>
-                      )}
-                      {invite.expires_at && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Expire le {format(new Date(invite.expires_at), "d MMM yyyy 'à' HH:mm", { locale: fr })}
-                        </p>
-                      )}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      <span className="font-medium">
+                        {peopleCount === 0 ? "Aucun membre" : peopleCount === 1 ? "1 personne a rejoint" : `${peopleCount} personnes ont rejoint`}
+                      </span>
                     </div>
                   </div>
 
-                  {isActive && (
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => copyLink(invite.token)}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                      >
-                        <Copy className="h-3 w-3 mr-1" />
-                        Copier
-                      </Button>
-                      <Button
-                        onClick={() => shareOnWhatsApp(invite.token)}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                      >
-                        <Share2 className="h-3 w-3 mr-1" />
-                        WhatsApp
-                      </Button>
-                      <Button
-                        onClick={() => testLink(invite.token)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        onClick={() => revokeInvite(invite.token)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <Button
+                      onClick={() => copyLink(invite.token)}
+                      variant="outline"
+                      size="sm"
+                      className="h-10"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copier
+                    </Button>
+                    <Button
+                      onClick={() => shareOnWhatsApp(invite.token)}
+                      variant="outline"
+                      size="sm"
+                      className="h-10"
+                    >
+                      <Share2 className="h-4 w-4 mr-2" />
+                      WhatsApp
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>Créée {timeAgo}</span>
                     </div>
-                  )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => testLink(invite.token)}>
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Tester le lien
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => revokeInvite(invite.token)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Révoquer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Loading state */}
+      {loading && (
+        <div className="text-center py-8">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent" />
+        </div>
+      )}
     </div>
   );
 
