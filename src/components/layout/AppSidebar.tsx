@@ -1,4 +1,4 @@
-import { BarChart3, Users, Calendar, ListChecks, LineChart, Trophy, Settings } from "lucide-react";
+import { BarChart3, Users, Calendar, ListChecks, LineChart, Trophy, Settings, Home } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -20,6 +20,7 @@ interface AppSidebarProps {
 }
 
 const navItems = [
+  { label: 'Accueil', href: '/dashboard/home', icon: Home },
   { label: 'Classement', href: '/dashboard/classement', icon: BarChart3 },
   { label: 'Équipes', href: '/dashboard/mon-equipe', icon: Users },
   { label: 'Résultats', href: '/dashboard/resultats', icon: BarChart3 },

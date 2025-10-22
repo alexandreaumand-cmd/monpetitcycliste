@@ -17,6 +17,7 @@ import { AdminPage } from "./AdminPage";
 import Startlist from "./Startlist";
 import Statistics from "./Statistics";
 import AccountPage from "./AccountPage";
+import DashboardHome from "./DashboardHome";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -80,7 +81,8 @@ const Dashboard = () => {
           onSignOut={handleSignOut}
         >
           <Routes>
-            <Route index element={<Navigate to="/dashboard/classement" replace />} />
+            <Route index element={<Navigate to="/dashboard/home" replace />} />
+            <Route path="home" element={<DashboardHome />} />
             <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
             <Route path="mon-equipe" element={<MyTeam />} />
             <Route path="courses" element={<UpcomingCourses />} />
@@ -110,7 +112,8 @@ const Dashboard = () => {
           />
           <main className="flex-1 container mx-auto px-4 pt-0 pb-8">
             <Routes>
-              <Route index element={<Navigate to="/dashboard/classement" replace />} />
+              <Route index element={<Navigate to="/dashboard/home" replace />} />
+              <Route path="home" element={<DashboardHome />} />
               <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
               <Route path="mon-equipe" element={<MyTeam />} />
               <Route path="courses" element={<UpcomingCourses />} />
