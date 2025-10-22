@@ -13,6 +13,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import logoImg from "@/assets/logo.png";
 
 interface AppSidebarProps {
   isAdmin: boolean;
@@ -37,8 +38,8 @@ export function AppSidebar({ isAdmin }: AppSidebarProps) {
       <SidebarHeader className="border-b">
         <div className="flex items-center gap-2 px-2 py-4">
           <img 
-            src="/src/assets/logo.png" 
-            alt="Logo" 
+            src={logoImg} 
+            alt="Logo Mon Petit Cycliste" 
             className={`transition-all ${isCollapsed ? 'h-8 w-8' : 'h-10 w-10'}`}
           />
           {!isCollapsed && (
