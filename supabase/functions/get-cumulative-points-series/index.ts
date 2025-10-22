@@ -172,6 +172,25 @@ Deno.serve(async (req) => {
 
     if (pointsError) throw pointsError;
 
+    // Determine actual date range from course dates (not phase dates)
+    let actualStartDate: Date | null = null;
+    let actualEndDate: Date | null = null;
+
+    pointsData?.forEach((row: any) => {
+      const courseDate = row.courses?.date_fin || row.courses?.date_debut;
+      if (courseDate) {
+        const date = new Date(courseDate);
+        if (!actualStartDate || date < actualStartDate) actualStartDate = date;
+        if (!actualEndDate || date > actualEndDate) actualEndDate = date;
+      }
+    });
+
+    // Use actual course dates for the graph range
+    if (actualStartDate) startDate = actualStartDate;
+    if (actualEndDate) endDate = actualEndDate;
+
+    console.log(`Actual date range from courses: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+
     // Aggregate points by manager and date using rosters map
     const pointsByManagerAndDate = new Map<string, Map<string, { points: number }>>();
     const managerIds = new Set<string>();
@@ -184,9 +203,8 @@ Deno.serve(async (req) => {
       if (!courseDate) return;
       
       const date = new Date(courseDate).toISOString().split('T')[0];
-      const dateObj = new Date(date);
       
-      if (dateObj < startDate || dateObj > endDate) return;
+      // NO DATE FILTERING - accept all courses from the selected phase(s)
       
       // Get manager via rosters map
       const key = `${row.phase_id}:${row.coureur_id}`;
@@ -288,9 +306,8 @@ Deno.serve(async (req) => {
       if (!phaseEndDate) return;
       
       const date = new Date(phaseEndDate).toISOString().split('T')[0];
-      const dateObj = new Date(date);
       
-      if (dateObj < startDate || dateObj > endDate) return;
+      // NO DATE FILTERING for bonus points either
       
       const managerId = row.manager_id;
       const totalBonus = (row.bonus_itt || 0) + (row.bonus_ttt || 0) + 
@@ -315,9 +332,8 @@ Deno.serve(async (req) => {
       if (!phaseEndDate) return;
       
       const date = new Date(phaseEndDate).toISOString().split('T')[0];
-      const dateObj = new Date(date);
       
-      if (dateObj < startDate || dateObj > endDate) return;
+      // NO DATE FILTERING for bonus points either
       
       const managerId = row.target_manager_id || row.manager_id;
       if (!managerId) return;
