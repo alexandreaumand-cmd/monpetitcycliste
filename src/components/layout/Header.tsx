@@ -10,6 +10,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { NotificationCenter } from "./NotificationCenter";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { LeagueSwitcher } from "@/components/leagues/LeagueSwitcher";
+import { ManagerInfoDropdown } from "./ManagerInfoDropdown";
 
 interface HeaderProps {
   manager: any;
@@ -62,38 +63,42 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
     return location.pathname.startsWith(href);
   };
 
+  const handleSeasonChange = (seasonId: string) => {
+    const season = seasons.find(s => s.id === seasonId) || null;
+    console.log("[Header] Changement saison:", seasonId, "→", season?.annee);
+    setSelectedSeason(season);
+  };
+
   return (
     <header className="sticky top-0 z-50 bg-card/90 backdrop-blur-sm border-b">
+      {/* Top Bar */}
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-14">
-          {/* Logo/Title */}
-          <Link to="/dashboard" className="flex items-center gap-3">
-            <img src={logo} alt="Mon Petit Cycliste" className="h-10 w-10 object-contain" />
+        <div className="flex items-center justify-between h-12 border-b border-border/50">
+          {/* Left: Logo + Manager Info */}
+          <div className="flex items-center gap-2">
+            <Link to="/dashboard" className="flex items-center gap-2">
+              <img src={logo} alt="Mon Petit Cycliste" className="h-8 w-8 object-contain" />
+              <span className="hidden lg:inline text-sm font-semibold text-foreground">Mon Petit Cycliste</span>
+            </Link>
             {manager && (
-              <div className="flex flex-col">
-                <p className="text-xs text-muted-foreground hidden sm:block">
-                  {manager.nom} {displaySponsor && `• ${displaySponsor}`}
-                  {selectedSeason?.annee && ` • ${selectedSeason.annee}`}
-                  {isAdmin && <span className="ml-1 text-secondary font-semibold"> • Admin</span>}
-                </p>
-              </div>
+              <ManagerInfoDropdown 
+                manager={manager}
+                displaySponsor={displaySponsor}
+                selectedYear={selectedSeason?.annee}
+                isAdmin={isAdmin}
+              />
             )}
-          </Link>
+          </div>
 
-          {/* Season Selector - Both versions rendered, controlled by CSS breakpoints */}
-          {!seasonsLoading && seasons.length > 0 && (() => {
-            const handleSeasonChange = (seasonId: string) => {
-              const season = seasons.find(s => s.id === seasonId) || null;
-              console.log("[Header] Changement saison:", seasonId, "→", season?.annee);
-              setSelectedSeason(season);
-            };
-
-            return (
+          {/* Right: Season + League + Notifications + Logout */}
+          <div className="flex items-center gap-2">
+            {/* Season Selector */}
+            {!seasonsLoading && seasons.length > 0 && (
               <>
                 {/* Mobile: Native select */}
                 <select
                   aria-label="Choisir l'année"
-                  className="md:hidden w-[100px] h-8 ml-2 text-xs rounded-md border border-input bg-background text-foreground px-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="md:hidden w-[90px] h-8 text-xs rounded-md border border-input bg-background text-foreground px-2 focus:outline-none focus:ring-2 focus:ring-ring"
                   value={selectedSeason?.id || ""}
                   onChange={(e) => handleSeasonChange(e.target.value)}
                 >
@@ -110,7 +115,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                   value={selectedSeason?.id || ""}
                   onValueChange={handleSeasonChange}
                 >
-                  <SelectTrigger className="hidden md:flex w-[100px] h-9 ml-4">
+                  <SelectTrigger className="hidden md:flex w-[100px] h-8">
                     <SelectValue placeholder="Année" />
                   </SelectTrigger>
                   <SelectContent className="z-50 bg-popover">
@@ -122,11 +127,29 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                   </SelectContent>
                 </Select>
               </>
-            );
-          })()}
+            )}
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1">
+            <LeagueSwitcher />
+            <NotificationCenter />
+            
+            <Button variant="ghost" size="sm" onClick={onSignOut} className="hidden sm:flex gap-2 h-8">
+              <LogOut className="h-4 w-4" />
+              <span className="hidden lg:inline">Déconnexion</span>
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onSignOut}
+              className="sm:hidden h-8 w-8 p-0"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Navigation Bar */}
+        <div className="hidden md:flex items-center justify-center h-12">
+          <nav className="flex items-center gap-1">
             {allDesktopLinks.map((link) => {
               const Icon = link.icon;
               const active = isActive(link.href);
@@ -148,34 +171,19 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
               );
             })}
           </nav>
+        </div>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-2">
-            <LeagueSwitcher />
-            <NotificationCenter />
-            <Button variant="outline" size="sm" onClick={onSignOut} className="hidden sm:flex">
-              <LogOut className="mr-2 h-4 w-4" />
-              Déconnexion
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={onSignOut}
-              className="sm:hidden"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-            
-            {/* Mobile Menu Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden"
-            >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
-          </div>
+        {/* Mobile Menu Button */}
+        <div className="md:hidden flex items-center justify-center h-10 border-t border-border/50">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="gap-2"
+          >
+            {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            <span className="text-sm">Menu</span>
+          </Button>
         </div>
 
         {/* Mobile Navigation */}
