@@ -170,23 +170,74 @@ Deno.serve(async (req) => {
     // -------------------------
     // STEP 5: Fetch race_results pour obtenir les dates de classement
     // -------------------------
-    const uniqueCourseIds = Array.from(new Set(pointsData?.map(p => p.course_id) || []));
-    
-    const { data: raceDates, error: raceDatesError } = await supabaseClient
-      .from('race_results')
-      .select('course_id, type_classement, etape_numero, coureur_id, date_classement')
-      .in('course_id', uniqueCourseIds);
+    // Extraire les clés uniques composites (course:type:etape:coureur)
+    const uniqueKeys = new Set<string>();
+    pointsData?.forEach(row => {
+      const key = `${row.course_id}:${row.type_classement}:${row.etape_numero || 'null'}:${row.coureur_id}`;
+      uniqueKeys.add(key);
+    });
 
-    if (raceDatesError) throw raceDatesError;
+    console.log(`Need to fetch ${uniqueKeys.size} race_results entries for dateIndex`);
+
+    // Construire les filtres composites
+    interface CompositeFilter {
+      course_id: string;
+      type_classement: string;
+      etape_numero: number | null;
+      coureur_id: string;
+    }
+    
+    const filters: CompositeFilter[] = [];
+    uniqueKeys.forEach(key => {
+      const [courseId, typeClassement, etapeNumero, coureurId] = key.split(':');
+      filters.push({
+        course_id: courseId,
+        type_classement: typeClassement,
+        etape_numero: etapeNumero === 'null' ? null : parseInt(etapeNumero),
+        coureur_id: coureurId
+      });
+    });
+
+    // Récupérer les race_results par batch (max 1000 par requête)
+    const raceDates: any[] = [];
+    const batchSize = 1000;
+    
+    for (let i = 0; i < filters.length; i += batchSize) {
+      const batch = filters.slice(i, i + batchSize);
+      
+      // Construire le filtre OR pour la clé composite
+      const orFilter = batch.map(f => {
+        const etapeFilter = f.etape_numero !== null 
+          ? `etape_numero.eq.${f.etape_numero}`
+          : 'etape_numero.is.null';
+        return `and(course_id.eq.${f.course_id},type_classement.eq.${f.type_classement},${etapeFilter},coureur_id.eq.${f.coureur_id})`;
+      }).join(',');
+      
+      const { data, error } = await supabaseClient
+        .from('race_results')
+        .select('course_id, type_classement, etape_numero, coureur_id, date_classement')
+        .or(orFilter);
+      
+      if (error) {
+        console.error(`Error fetching race_results batch ${i / batchSize + 1}:`, error);
+        throw error;
+      }
+      
+      if (data) {
+        raceDates.push(...data);
+      }
+      
+      console.log(`Fetched batch ${i / batchSize + 1}/${Math.ceil(filters.length / batchSize)}: ${data?.length || 0} entries`);
+    }
 
     // Créer un index pour lookup rapide: course_id:type:etape:coureur → date_classement
     const dateIndex = new Map<string, string>();
-    raceDates?.forEach(rr => {
+    raceDates.forEach(rr => {
       const key = `${rr.course_id}:${rr.type_classement}:${rr.etape_numero || 'null'}:${rr.coureur_id}`;
       dateIndex.set(key, rr.date_classement);
     });
 
-    console.log(`Built date index with ${dateIndex.size} entries`);
+    console.log(`Built date index with ${dateIndex.size} entries from ${raceDates.length} race_results`);
 
     // Determine actual date range from classification dates
     let actualStartDate: Date | null = null;
