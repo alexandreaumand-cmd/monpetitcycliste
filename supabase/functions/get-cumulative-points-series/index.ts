@@ -140,16 +140,11 @@ Deno.serve(async (req) => {
     console.log(`Built coureur→manager map with ${coureurToManager.size} entries`);
 
     // -------------------------
-    // STEP 4: Fetch points data from points_ledger with race_results for date_classement
+    // STEP 4: Fetch points data from points_ledger (sans jointure)
     // -------------------------
     let query = supabaseClient
       .from('points_ledger')
-      .select(`
-        coureur_id,
-        phase_id,
-        points,
-        race_results!inner(date_classement)
-      `);
+      .select('coureur_id, phase_id, points, course_id, type_classement, etape_numero');
 
     if (targetPhaseId) {
       query = query.eq('phase_id', targetPhaseId);
@@ -172,17 +167,35 @@ Deno.serve(async (req) => {
 
     if (pointsError) throw pointsError;
 
+    // -------------------------
+    // STEP 5: Fetch race_results pour obtenir les dates de classement
+    // -------------------------
+    const uniqueCourseIds = Array.from(new Set(pointsData?.map(p => p.course_id) || []));
+    
+    const { data: raceDates, error: raceDatesError } = await supabaseClient
+      .from('race_results')
+      .select('course_id, type_classement, etape_numero, coureur_id, date_classement')
+      .in('course_id', uniqueCourseIds);
+
+    if (raceDatesError) throw raceDatesError;
+
+    // Créer un index pour lookup rapide: course_id:type:etape:coureur → date_classement
+    const dateIndex = new Map<string, string>();
+    raceDates?.forEach(rr => {
+      const key = `${rr.course_id}:${rr.type_classement}:${rr.etape_numero || 'null'}:${rr.coureur_id}`;
+      dateIndex.set(key, rr.date_classement);
+    });
+
+    console.log(`Built date index with ${dateIndex.size} entries`);
+
     // Determine actual date range from classification dates
     let actualStartDate: Date | null = null;
     let actualEndDate: Date | null = null;
 
-    pointsData?.forEach((row: any) => {
-      const classementDate = row.race_results?.date_classement;
-      if (classementDate) {
-        const date = new Date(classementDate);
-        if (!actualStartDate || date < actualStartDate) actualStartDate = date;
-        if (!actualEndDate || date > actualEndDate) actualEndDate = date;
-      }
+    Array.from(dateIndex.values()).forEach((dateStr: string) => {
+      const date = new Date(dateStr);
+      if (!actualStartDate || date < actualStartDate) actualStartDate = date;
+      if (!actualEndDate || date > actualEndDate) actualEndDate = date;
     });
 
     // Use actual course dates for the graph range
@@ -191,7 +204,7 @@ Deno.serve(async (req) => {
 
     console.log(`Actual date range from courses: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
 
-    // Aggregate points by manager and date using rosters map
+    // Aggregate points by manager and date using rosters map and dateIndex
     const pointsByManagerAndDate = new Map<string, Map<string, { points: number }>>();
     const managerIds = new Set<string>();
 
@@ -199,16 +212,20 @@ Deno.serve(async (req) => {
     let pointsSkipped = 0;
 
     pointsData?.forEach((row: any) => {
-      const classementDate = row.race_results?.date_classement;
-      if (!classementDate) return;
+      // Récupérer la date depuis l'index
+      const key = `${row.course_id}:${row.type_classement}:${row.etape_numero || 'null'}:${row.coureur_id}`;
+      const classementDate = dateIndex.get(key);
+      
+      if (!classementDate) {
+        pointsSkipped++;
+        return;
+      }
       
       const date = new Date(classementDate).toISOString().split('T')[0];
       
-      // NO DATE FILTERING - accept all courses from the selected phase(s)
-      
       // Get manager via rosters map
-      const key = `${row.phase_id}:${row.coureur_id}`;
-      const managerId = coureurToManager.get(key);
+      const rosterKey = `${row.phase_id}:${row.coureur_id}`;
+      const managerId = coureurToManager.get(rosterKey);
       
       if (!managerId) {
         pointsSkipped++;
