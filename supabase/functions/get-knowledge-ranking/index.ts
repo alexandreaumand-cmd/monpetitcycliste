@@ -70,13 +70,11 @@ Deno.serve(async (req) => {
 
         const coureurIds = roster.map(r => r.coureur_id);
 
-        // Get points for these riders
+        // Get points for these riders (NO filter by manager_id or league_id!)
         const { data: points } = await supabase
           .from('points_ledger')
           .select('coureur_id, points, course_id')
           .in('phase_id', phaseIds)
-          .eq('manager_id', manager.id)
-          .eq('league_id', league_id)
           .in('coureur_id', coureurIds);
 
         // Get course categories for WT percentage

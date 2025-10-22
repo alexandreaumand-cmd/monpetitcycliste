@@ -48,10 +48,8 @@ Deno.serve(async (req) => {
     // Get league average for expected performance
     const { data: allPoints } = await supabase
       .from('points_ledger')
-      .select('points, manager_id')
-      .in('phase_id', phaseIds)
-      .eq('league_id', league_id)
-      .not('manager_id', 'is', null);
+      .select('points')
+      .in('phase_id', phaseIds);
 
     const totalLeaguePoints = (allPoints || []).reduce((sum, p) => sum + p.points, 0);
     const avgLeaguePoints = managers.length > 0 ? totalLeaguePoints / managers.length : 0;
@@ -81,13 +79,14 @@ Deno.serve(async (req) => {
           };
         }
 
-        // Get points
+        const coureurIds = roster.map(r => r.coureur_id);
+
+        // Get points for these riders (NO filter by manager_id or league_id!)
         const { data: points } = await supabase
           .from('points_ledger')
           .select('points, course_id')
           .in('phase_id', phaseIds)
-          .eq('manager_id', manager.id)
-          .eq('league_id', league_id);
+          .in('coureur_id', coureurIds);
 
         const actualPoints = (points || []).reduce((sum, p) => sum + p.points, 0);
 

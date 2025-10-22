@@ -73,52 +73,29 @@ Deno.serve(async (req) => {
 
     if (phasesError) throw phasesError;
 
-    // Fetch managers based on league type
-    let managers: Array<{ id: string; nom: string; user_id: string }> | null = null;
-    if (isLegacy) {
-      // For Legacy: get managers from rosters
-      const phaseIds = phases.map(p => p.id);
-      const { data: rosterManagers, error: rostersError } = await supabase
-        .from('rosters')
-        .select('manager_id')
-        .eq('league_id', league_id)
-        .in('phase_id', phaseIds);
+    // Fetch managers via league_members (works for both Legacy and private leagues)
+    let managers: Array<{ id: string; nom: string; user_id: string }> | null;
+    
+    const { data: leagueManagers, error: leagueMembersError } = await supabase
+      .from('league_members')
+      .select('user_id')
+      .eq('league_id', league_id);
 
-      if (rostersError) throw rostersError;
+    if (leagueMembersError) throw leagueMembersError;
 
-      const managerIds = [...new Set(rosterManagers?.map(r => r.manager_id) || [])];
-      
+    const userIds = leagueManagers?.map(lm => lm.user_id) || [];
+
+    if (userIds.length === 0) {
+      managers = [];
+    } else {
       const { data: managersData, error: managersError } = await supabase
         .from('managers')
         .select('id, nom, user_id')
-        .in('id', managerIds)
+        .in('user_id', userIds)
         .order('nom');
 
       if (managersError) throw managersError;
       managers = managersData;
-    } else {
-      // For private leagues: get managers from league_members
-      const { data: leagueManagers, error: leagueMembersError } = await supabase
-        .from('league_members')
-        .select('user_id')
-        .eq('league_id', league_id);
-
-      if (leagueMembersError) throw leagueMembersError;
-
-      const userIds = leagueManagers?.map(lm => lm.user_id) || [];
-      
-      if (userIds.length === 0) {
-        managers = [];
-      } else {
-        const { data: managersData, error: managersError } = await supabase
-          .from('managers')
-          .select('id, nom, user_id')
-          .in('user_id', userIds)
-          .order('nom');
-
-        if (managersError) throw managersError;
-        managers = managersData;
-      }
     }
 
     console.log(`[get-performance-matrix] Found ${managers?.length || 0} managers`);
