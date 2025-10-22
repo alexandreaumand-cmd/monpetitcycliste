@@ -59,7 +59,7 @@ export function LeagueInvitesBottomSheet({
       });
 
       if (error) throw error;
-      setInvites(data || []);
+      setInvites(data?.invites || []);
     } catch (error: any) {
       toast({
         title: "Erreur",
