@@ -107,11 +107,24 @@ Deno.serve(async (req) => {
 
     console.log(`[get-predictions] ${completedPhases.length} completed phases out of ${totalPhases}`);
 
-    // Récupérer tous les managers
-    const { data: managers, error: managersError } = await supabase
+    // Fetch managers filtered by league
+    let managersQuery = supabase
       .from('managers')
-      .select('id, nom');
+      .select('id, nom, user_id');
 
+    if (league_id) {
+      const { data: leagueManagers, error: leagueMembersError } = await supabase
+        .from('league_members')
+        .select('user_id')
+        .eq('league_id', league_id);
+
+      if (leagueMembersError) throw leagueMembersError;
+
+      const userIds = leagueManagers?.map(lm => lm.user_id) || [];
+      managersQuery = managersQuery.in('user_id', userIds);
+    }
+
+    const { data: managers, error: managersError } = await managersQuery;
     if (managersError) throw managersError;
 
     // Calculer les points par phase pour chaque manager (utiliser le même calcul que get-points-distribution)
