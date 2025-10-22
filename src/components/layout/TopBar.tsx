@@ -31,8 +31,11 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
         
         <div className="flex-1" />
         
-        {/* Season and League selectors on the right */}
+        {/* League and Season selectors on the right */}
         <div className="flex items-center gap-3">
+          {/* League Switcher */}
+          <LeagueSwitcher />
+          
           {/* Season Selector */}
           <Select value={selectedSeason?.id} onValueChange={(value) => {
             const season = seasons.find(s => s.id === value);
@@ -49,9 +52,6 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
               ))}
             </SelectContent>
           </Select>
-          
-          {/* League Switcher */}
-          <LeagueSwitcher />
           
           <NotificationCenter />
           <Button
