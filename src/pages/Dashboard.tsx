@@ -98,10 +98,14 @@ const Dashboard = () => {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full">
-        <AppSidebar manager={manager} isAdmin={isAnyAdmin} />
+        <AppSidebar isAdmin={isAnyAdmin} />
         <SidebarInset className="flex-1 flex flex-col">
           <AnnouncementBanner />
-          <TopBar onSignOut={handleSignOut} />
+          <TopBar 
+            onSignOut={handleSignOut}
+            manager={manager}
+            isAdmin={isAnyAdmin}
+          />
           <main className="flex-1 container mx-auto px-4 py-8">
             <Routes>
               <Route index element={<Navigate to="/dashboard/classement" replace />} />

@@ -10,17 +10,11 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarHeader,
-  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LeagueSwitcher } from "@/components/leagues/LeagueSwitcher";
-import { useSeasonContext } from "@/contexts/SeasonContext";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AppSidebarProps {
-  manager: any;
   isAdmin: boolean;
 }
 
@@ -34,10 +28,9 @@ const navItems = [
   { label: 'Enchères', href: '/dashboard/encheres', icon: Trophy },
 ];
 
-export function AppSidebar({ manager, isAdmin }: AppSidebarProps) {
+export function AppSidebar({ isAdmin }: AppSidebarProps) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
-  const { seasons, selectedSeason, setSelectedSeason } = useSeasonContext();
 
   return (
     <Sidebar collapsible="icon">
@@ -55,52 +48,6 @@ export function AppSidebar({ manager, isAdmin }: AppSidebarProps) {
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Manager Info & Context */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Contexte</SidebarGroupLabel>
-          <SidebarGroupContent className="space-y-3 px-2">
-            {!isCollapsed && manager && (
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm truncate">{manager.nom_manager}</p>
-                  {isAdmin && (
-                    <Badge variant="secondary" className="text-xs">Admin</Badge>
-                  )}
-                </div>
-                {manager.sponsor && (
-                  <p className="text-xs text-muted-foreground truncate">{manager.sponsor}</p>
-                )}
-              </div>
-            )}
-
-            {/* Season Selector */}
-            {!isCollapsed && (
-              <Select value={selectedSeason?.id} onValueChange={(value) => {
-                const season = seasons.find(s => s.id === value);
-                if (season) setSelectedSeason(season);
-              }}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Sélectionner une saison" />
-                </SelectTrigger>
-                <SelectContent>
-                  {seasons.map((season) => (
-                    <SelectItem key={season.id} value={season.id}>
-                      {season.annee}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {/* League Switcher */}
-            {!isCollapsed && (
-              <div className="mt-2">
-                <LeagueSwitcher />
-              </div>
-            )}
-          </SidebarGroupContent>
-        </SidebarGroup>
-
         {/* Navigation */}
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
@@ -161,14 +108,6 @@ export function AppSidebar({ manager, isAdmin }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter className="border-t">
-        <div className="p-2 text-xs text-muted-foreground text-center">
-          {!isCollapsed && selectedSeason && (
-            <p>Saison {selectedSeason.annee}</p>
-          )}
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }
