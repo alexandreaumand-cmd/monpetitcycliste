@@ -71,10 +71,22 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Missing authorization header');
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
     );
+
+    if (authError || !user) {
+      throw new Error('Unauthorized');
+    }
 
     const { saison_id: saisonId, league_id } = await req.json();
 
@@ -85,7 +97,34 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[get-predictions] Fetching predictions for saison: ${saisonId}`);
+    console.log(`[get-predictions] Fetching predictions for saison: ${saisonId}, league: ${league_id}`);
+
+    // Check if this is the Legacy League
+    const { data: leagueData } = await supabase
+      .from('leagues')
+      .select('name')
+      .eq('id', league_id)
+      .single();
+
+    const isLegacy = leagueData?.name?.toLowerCase().includes('legacy') || false;
+    console.log(`[get-predictions] isLegacy: ${isLegacy}`);
+
+    // Access control for non-Legacy leagues
+    if (!isLegacy) {
+      const { data: membership } = await supabase
+        .from('league_members')
+        .select('user_id')
+        .eq('league_id', league_id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!membership) {
+        return new Response(
+          JSON.stringify({ error: 'Access denied: you are not a member of this league' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // Récupérer toutes les phases de la saison
     const { data: phases, error: phasesError } = await supabase
@@ -107,12 +146,31 @@ Deno.serve(async (req) => {
 
     console.log(`[get-predictions] ${completedPhases.length} completed phases out of ${totalPhases}`);
 
-    // Fetch managers filtered by league
-    let managersQuery = supabase
-      .from('managers')
-      .select('id, nom, user_id');
+    // Fetch managers based on league type
+    let managers: Array<{ id: string; nom: string; user_id: string }> | null = null;
+    if (isLegacy) {
+      // For Legacy: get managers from rosters
+      const phaseIds = phases.map(p => p.id);
+      const { data: rosterManagers, error: rostersError } = await supabase
+        .from('rosters')
+        .select('manager_id')
+        .eq('league_id', league_id)
+        .in('phase_id', phaseIds);
 
-    if (league_id) {
+      if (rostersError) throw rostersError;
+
+      const managerIds = [...new Set(rosterManagers?.map(r => r.manager_id) || [])];
+      
+      const { data: managersData, error: managersError } = await supabase
+        .from('managers')
+        .select('id, nom, user_id')
+        .in('id', managerIds)
+        .order('nom');
+
+      if (managersError) throw managersError;
+      managers = managersData;
+    } else {
+      // For private leagues: get managers from league_members
       const { data: leagueManagers, error: leagueMembersError } = await supabase
         .from('league_members')
         .select('user_id')
@@ -121,11 +179,22 @@ Deno.serve(async (req) => {
       if (leagueMembersError) throw leagueMembersError;
 
       const userIds = leagueManagers?.map(lm => lm.user_id) || [];
-      managersQuery = managersQuery.in('user_id', userIds);
+      
+      if (userIds.length === 0) {
+        managers = [];
+      } else {
+        const { data: managersData, error: managersError } = await supabase
+          .from('managers')
+          .select('id, nom, user_id')
+          .in('user_id', userIds)
+          .order('nom');
+
+        if (managersError) throw managersError;
+        managers = managersData;
+      }
     }
 
-    const { data: managers, error: managersError } = await managersQuery;
-    if (managersError) throw managersError;
+    console.log(`[get-predictions] Found ${managers?.length || 0} managers`);
 
     // Calculer les points par phase pour chaque manager (utiliser le même calcul que get-points-distribution)
     const managerPhasePoints = new Map<string, Array<{ phase_index: number; points: number }>>();
