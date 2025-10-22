@@ -4344,24 +4344,18 @@ export type Database = {
         }
         Returns: Json
       }
-      admin_result_status: {
-        Args: { p_course_id: string }
-        Returns: Json
-      }
+      admin_result_status: { Args: { p_course_id: string }; Returns: Json }
       admin_results_reset_all: {
         Args: { p_confirm_phrase: string }
         Returns: Json
       }
-      admin_results_reset_preview: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      admin_results_reset_preview: { Args: never; Returns: Json }
       course_points_summary: {
         Args: { p_course_id: string; p_manager_id?: string }
         Returns: Json
       }
       find_courses_missing_porteur_points: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           course_id: string
           course_nom: string
@@ -4369,7 +4363,7 @@ export type Database = {
         }[]
       }
       get_my_roles: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: Database["public"]["Enums"]["app_role"][]
       }
       get_previous_standings: {
@@ -4403,22 +4397,10 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_league_admin: {
-        Args: { l_id: string }
-        Returns: boolean
-      }
-      is_league_member: {
-        Args: { l_id: string }
-        Returns: boolean
-      }
-      is_superadmin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      is_admin: { Args: never; Returns: boolean }
+      is_league_admin: { Args: { l_id: string }; Returns: boolean }
+      is_league_member: { Args: { l_id: string }; Returns: boolean }
+      is_superadmin: { Args: never; Returns: boolean }
       manager_coureur_points_detail: {
         Args: { p_coureur_id: string; p_phase_id?: string }
         Returns: {
@@ -4458,14 +4440,8 @@ export type Database = {
           ratio_points_par_prix: number
         }[]
       }
-      migrate_tour_down_under_to_2025: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      normalize_text: {
-        Args: { txt: string }
-        Returns: string
-      }
+      migrate_tour_down_under_to_2025: { Args: never; Returns: Json }
+      normalize_text: { Args: { txt: string }; Returns: string }
       results_course_meta: {
         Args: { p_course_id: string }
         Returns: {
@@ -4505,35 +4481,50 @@ export type Database = {
           statut: Database["public"]["Enums"]["result_statut"]
         }[]
       }
-      results_course_table: {
-        Args:
-          | {
+      results_course_table:
+        | {
+            Args: {
+              p_course_id: string
+              p_etape_numero?: number
+              p_manager_id?: string
+              p_type_classement: Database["public"]["Enums"]["type_classement"]
+            }
+            Returns: {
+              coureur_id: string
+              coureur_nom: string
+              equipe: string
+              is_my_rider: boolean
+              manager_id: string
+              manager_nom: string
+              points_officiels: number
+              points_theoriques: number
+              race_result_id: string
+              row_position: number
+              statut: Database["public"]["Enums"]["result_statut"]
+            }[]
+          }
+        | {
+            Args: {
               p_course_id: string
               p_etape_numero?: number
               p_league_id?: string
               p_manager_id?: string
               p_type_classement: Database["public"]["Enums"]["type_classement"]
             }
-          | {
-              p_course_id: string
-              p_etape_numero?: number
-              p_manager_id?: string
-              p_type_classement: Database["public"]["Enums"]["type_classement"]
-            }
-        Returns: {
-          coureur_id: string
-          coureur_nom: string
-          equipe: string
-          is_my_rider: boolean
-          manager_id: string
-          manager_nom: string
-          points_officiels: number
-          points_theoriques: number
-          race_result_id: string
-          row_position: number
-          statut: Database["public"]["Enums"]["result_statut"]
-        }[]
-      }
+            Returns: {
+              coureur_id: string
+              coureur_nom: string
+              equipe: string
+              is_my_rider: boolean
+              manager_id: string
+              manager_nom: string
+              points_officiels: number
+              points_theoriques: number
+              race_result_id: string
+              row_position: number
+              statut: Database["public"]["Enums"]["result_statut"]
+            }[]
+          }
       results_course_top: {
         Args: {
           p_course_id: string
@@ -4557,32 +4548,54 @@ export type Database = {
           statut: Database["public"]["Enums"]["result_statut"]
         }[]
       }
-      results_courses_with_entries: {
-        Args:
-          | {
+      results_courses_with_entries:
+        | {
+            Args: {
               p_limit?: number
               p_offset?: number
               p_phase_id?: string
               p_saison_id?: string
               p_search?: string
             }
-          | {
+            Returns: {
+              categorie: string
+              course_id: string
+              date_debut: string
+              date_fin: string
+              last_result_at: string
+              nom: string
+              types: string[]
+            }[]
+          }
+        | {
+            Args: { p_limit?: number; p_offset?: number; p_search?: string }
+            Returns: {
+              categorie: string
+              course_id: string
+              date_debut: string
+              date_fin: string
+              last_result_at: string
+              nom: string
+              types: string[]
+            }[]
+          }
+        | {
+            Args: {
               p_limit?: number
               p_offset?: number
               p_phase_id?: string
               p_search?: string
             }
-          | { p_limit?: number; p_offset?: number; p_search?: string }
-        Returns: {
-          categorie: string
-          course_id: string
-          date_debut: string
-          date_fin: string
-          last_result_at: string
-          nom: string
-          types: string[]
-        }[]
-      }
+            Returns: {
+              categorie: string
+              course_id: string
+              date_debut: string
+              date_fin: string
+              last_result_at: string
+              nom: string
+              types: string[]
+            }[]
+          }
       results_latest_feed: {
         Args: { p_limit?: number }
         Returns: {
@@ -4665,14 +4678,7 @@ export type Database = {
           total_count: number
         }[]
       }
-      unaccent: {
-        Args: { "": string }
-        Returns: string
-      }
-      unaccent_init: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
+      unaccent: { Args: { "": string }; Returns: string }
       verify_course_save: {
         Args: { p_course_id: string }
         Returns: {
