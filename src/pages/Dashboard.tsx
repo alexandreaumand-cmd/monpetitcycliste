@@ -16,6 +16,7 @@ import Rankings from "./Rankings";
 import { AdminPage } from "./AdminPage";
 import Startlist from "./Startlist";
 import Statistics from "./Statistics";
+import AccountPage from "./AccountPage";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -87,6 +88,7 @@ const Dashboard = () => {
             <Route path="classement" element={<Rankings />} />
             <Route path="statistiques" element={<Statistics />} />
             <Route path="startlist" element={<Startlist />} />
+            <Route path="compte" element={<AccountPage />} />
             {isAnyAdmin && <Route path="admin/*" element={<AdminPage />} />}
           </Routes>
         </MobileLayout>
@@ -116,6 +118,7 @@ const Dashboard = () => {
               <Route path="classement" element={<Rankings />} />
               <Route path="statistiques" element={<Statistics />} />
               <Route path="startlist" element={<Startlist />} />
+              <Route path="compte" element={<AccountPage />} />
               {isAnyAdmin && <Route path="admin/*" element={<AdminPage />} />}
             </Routes>
           </main>

@@ -4,8 +4,8 @@ import { NotificationCenter } from "./NotificationCenter";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LeagueSwitcher } from "@/components/leagues/LeagueSwitcher";
 import { useSeasonContext } from "@/contexts/SeasonContext";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ManagerDropdown } from "./ManagerDropdown";
 
 interface TopBarProps {
   onSignOut: () => void;
@@ -20,19 +20,19 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
       <div className="flex h-14 items-center gap-4 px-4">
         <SidebarTrigger />
         
-        {/* Contexte Section */}
-        <div className="flex items-center gap-4">
-          {/* Manager Info */}
-          {manager && (
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-sm">{manager.nom_manager}</span>
-              {manager.sponsor && (
-                <span className="text-xs text-muted-foreground">({manager.sponsor})</span>
-              )}
-              {isAdmin && <Badge variant="secondary" className="text-xs">Admin</Badge>}
-            </div>
-          )}
-          
+        {/* Manager Dropdown on the left */}
+        {manager && (
+          <ManagerDropdown 
+            manager={manager}
+            isAdmin={isAdmin}
+            onSignOut={onSignOut}
+          />
+        )}
+        
+        <div className="flex-1" />
+        
+        {/* Season and League selectors on the right */}
+        <div className="flex items-center gap-3">
           {/* Season Selector */}
           <Select value={selectedSeason?.id} onValueChange={(value) => {
             const season = seasons.find(s => s.id === value);
@@ -52,11 +52,7 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
           
           {/* League Switcher */}
           <LeagueSwitcher />
-        </div>
-        
-        <div className="flex-1" />
-        
-        <div className="flex items-center gap-2">
+          
           <NotificationCenter />
           <Button
             variant="ghost"

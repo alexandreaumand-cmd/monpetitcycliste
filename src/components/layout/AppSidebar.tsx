@@ -42,7 +42,7 @@ export function AppSidebar({ isAdmin }: AppSidebarProps) {
             className={`transition-all ${isCollapsed ? 'h-8 w-8' : 'h-10 w-10'}`}
           />
           {!isCollapsed && (
-            <span className="font-bold text-lg">Fantasy Cycling</span>
+            <span className="font-bold text-lg">Mon Petit Cycliste</span>
           )}
         </div>
       </SidebarHeader>
