@@ -20,12 +20,13 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: userError } = await authedClient.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      console.error('Auth error:', userError);
+      return new Response(JSON.stringify({ error: 'Unauthorized', details: userError?.message }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    console.log('leagues-join-by-token: authenticated user', user.id);
+    console.log('[JOIN] Authenticated user:', user.id, 'email:', user.email);
     // Service client to bypass RLS for invite lookup and member insert
     const serviceClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -41,7 +42,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('leagues-join-by-token: processing token', String(token).slice(0, 8) + '…');
+    console.log('[JOIN] Processing token:', String(token).slice(0, 8) + '…');
     // Find the invite using service client (bypasses RLS)
     const { data: invite, error: inviteError } = await serviceClient
       .from('league_invites')
@@ -50,12 +51,14 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (inviteError || !invite) {
-      console.error('Invite not found:', inviteError);
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+      console.error('[JOIN] Invite lookup error:', inviteError);
+      return new Response(JSON.stringify({ error: 'Invalid token', details: inviteError?.message }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('[JOIN] Found invite for league:', invite.league_id);
 
     // Check invite validity
     if (invite.is_revoked) {
@@ -89,7 +92,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!existingManager) {
-      console.log('Creating manager profile for user', user.id);
+      console.log('[JOIN] Creating manager profile for user', user.id);
       const { error: managerError } = await serviceClient
         .from('managers')
         .insert({
@@ -99,12 +102,15 @@ Deno.serve(async (req) => {
         });
 
       if (managerError) {
-        console.error('Error creating manager:', managerError);
-        return new Response(JSON.stringify({ error: 'Failed to create manager profile' }), {
+        console.error('[JOIN] Error creating manager:', managerError);
+        return new Response(JSON.stringify({ error: 'Failed to create manager profile', details: managerError.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      console.log('[JOIN] Manager profile created successfully');
+    } else {
+      console.log('[JOIN] Manager profile already exists:', existingManager.id);
     }
 
     // Optional: Set the token in session for the trigger (if RPC exists)
@@ -119,6 +125,7 @@ Deno.serve(async (req) => {
     }
 
     // Add user to league using service client (bypasses RLS)
+    console.log('[JOIN] Adding user to league:', leagueId);
     const { error: memberError } = await serviceClient
       .from('league_members')
       .upsert(
@@ -131,12 +138,14 @@ Deno.serve(async (req) => {
       );
 
     if (memberError) {
-      console.error('Error adding member:', memberError);
-      return new Response(JSON.stringify({ error: memberError.message }), {
+      console.error('[JOIN] Error adding member:', memberError);
+      return new Response(JSON.stringify({ error: memberError.message, details: memberError.details }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('[JOIN] User successfully added to league');
 
     // Get league info
     const { data: league } = await serviceClient

@@ -37,24 +37,50 @@ const Auth = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
-        // If coming from invite, handle join process
+        // If coming from invite, handle join process with delay to ensure JWT is valid
         if (inviteToken) {
-          try {
-            const { data, error } = await supabase.functions.invoke('leagues-join-by-token', {
-              body: { token: inviteToken },
-            });
-
-            if (!error && data?.ok) {
-              toast({
-                title: "Bienvenue dans la ligue !",
-                description: "Vous avez rejoint la ligue avec succès.",
+          setTimeout(async () => {
+            try {
+              console.log('Attempting to join league with token:', inviteToken.slice(0, 8) + '...');
+              
+              const { data, error } = await supabase.functions.invoke('leagues-join-by-token', {
+                body: { token: inviteToken },
               });
-              navigate(`/?leagueId=${data.league_id}`);
-              return;
+
+              if (error) {
+                console.error('Join league error:', error);
+                toast({
+                  title: "Erreur",
+                  description: "Impossible de rejoindre la ligue automatiquement. Redirection...",
+                  variant: "destructive",
+                });
+                navigate(`/invite?token=${inviteToken}`);
+                return;
+              }
+
+              if (data?.ok) {
+                toast({
+                  title: "Bienvenue !",
+                  description: `Vous avez rejoint la ligue "${data.league_name}"`,
+                });
+                navigate(`/?leagueId=${data.league_id}`);
+                return;
+              } else {
+                console.error('Join league failed:', data);
+                navigate(`/invite?token=${inviteToken}`);
+                return;
+              }
+            } catch (err) {
+              console.error('Auto-join exception:', err);
+              toast({
+                title: "Erreur",
+                description: "Une erreur est survenue. Veuillez réessayer.",
+                variant: "destructive",
+              });
+              navigate(`/invite?token=${inviteToken}`);
             }
-          } catch (err) {
-            console.error('Auto-join error:', err);
-          }
+          }, 1500); // Delay to ensure JWT is fully valid
+          return;
         }
         navigate(nextUrl);
       }
