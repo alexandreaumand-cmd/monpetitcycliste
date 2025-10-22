@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
     console.log(`Built coureur→manager map with ${coureurToManager.size} entries`);
 
     // -------------------------
-    // STEP 4: Fetch points data from points_ledger
+    // STEP 4: Fetch points data from points_ledger with race_results for date_classement
     // -------------------------
     let query = supabaseClient
       .from('points_ledger')
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
         coureur_id,
         phase_id,
         points,
-        courses!inner(date_fin, date_debut)
+        race_results!inner(date_classement)
       `);
 
     if (targetPhaseId) {
@@ -172,14 +172,14 @@ Deno.serve(async (req) => {
 
     if (pointsError) throw pointsError;
 
-    // Determine actual date range from course dates (not phase dates)
+    // Determine actual date range from classification dates
     let actualStartDate: Date | null = null;
     let actualEndDate: Date | null = null;
 
     pointsData?.forEach((row: any) => {
-      const courseDate = row.courses?.date_fin || row.courses?.date_debut;
-      if (courseDate) {
-        const date = new Date(courseDate);
+      const classementDate = row.race_results?.date_classement;
+      if (classementDate) {
+        const date = new Date(classementDate);
         if (!actualStartDate || date < actualStartDate) actualStartDate = date;
         if (!actualEndDate || date > actualEndDate) actualEndDate = date;
       }
@@ -199,10 +199,10 @@ Deno.serve(async (req) => {
     let pointsSkipped = 0;
 
     pointsData?.forEach((row: any) => {
-      const courseDate = row.courses?.date_fin || row.courses?.date_debut;
-      if (!courseDate) return;
+      const classementDate = row.race_results?.date_classement;
+      if (!classementDate) return;
       
-      const date = new Date(courseDate).toISOString().split('T')[0];
+      const date = new Date(classementDate).toISOString().split('T')[0];
       
       // NO DATE FILTERING - accept all courses from the selected phase(s)
       
