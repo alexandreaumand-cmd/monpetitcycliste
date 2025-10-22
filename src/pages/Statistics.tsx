@@ -9,6 +9,8 @@ import { PointsDistribution } from "@/components/rankings/PointsDistribution";
 import { ManagerPredictions } from "@/components/rankings/ManagerPredictions";
 import { BikeKnowledgeRanking } from "@/components/rankings/BikeKnowledgeRanking";
 import { LuckRanking } from "@/components/rankings/LuckRanking";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 const Statistics = () => {
   const { selectedSeason, setSelectedSeason, seasons, isLoading } = useSeasonContext();
@@ -33,38 +35,34 @@ const Statistics = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <BarChart3 className="h-8 w-8" />
-            Statistiques avancées
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Analyses approfondies des performances et de la régularité des managers
-          </p>
-        </div>
-        {seasons.length > 0 && (
-          <Select
-            value={selectedSeason.id}
-            onValueChange={(value) => {
-              const season = seasons.find(s => s.id === value);
-              setSelectedSeason(season || null);
-            }}
-          >
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Saison" />
-            </SelectTrigger>
-            <SelectContent>
-              {seasons.map((season) => (
-                <SelectItem key={season.id} value={season.id}>
-                  {season.annee}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
+    <PageContainer>
+      <PageHeader
+        icon={BarChart3}
+        title="Statistiques avancées"
+        subtitle="Analyses approfondies des performances et de la régularité des managers"
+        actions={
+          seasons.length > 0 && (
+            <Select
+              value={selectedSeason.id}
+              onValueChange={(value) => {
+                const season = seasons.find(s => s.id === value);
+                setSelectedSeason(season || null);
+              }}
+            >
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Saison" />
+              </SelectTrigger>
+              <SelectContent>
+                {seasons.map((season) => (
+                  <SelectItem key={season.id} value={season.id}>
+                    {season.annee}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )
+        }
+      />
 
       <Tabs defaultValue="heatmap" className="w-full">
         <TabsList className="grid w-full max-w-4xl grid-cols-6">
@@ -100,7 +98,7 @@ const Statistics = () => {
           <LuckRanking saisonId={selectedSeason.id} />
         </TabsContent>
       </Tabs>
-    </div>
+    </PageContainer>
   );
 };
 

@@ -12,6 +12,9 @@ import { format, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { UI_CONSTANTS } from "@/lib/ui-constants";
 
 interface CourseData {
   course_id: string;
@@ -107,25 +110,21 @@ export const UpcomingCourses = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Toutes les courses de la saison
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <PageContainer>
+      <PageHeader
+        icon={Calendar}
+        title="Toutes les courses de la saison"
+        filters={
+          <>
             <Input
               placeholder="Rechercher une course..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              className={UI_CONSTANTS.filterWidth}
             />
             
             <Select value={phaseFilter} onValueChange={setPhaseFilter}>
-              <SelectTrigger>
+              <SelectTrigger className={UI_CONSTANTS.filterWidth}>
                 <SelectValue placeholder="Toutes les phases" />
               </SelectTrigger>
               <SelectContent>
@@ -137,9 +136,9 @@ export const UpcomingCourses = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        </CardContent>
-      </Card>
+          </>
+        }
+      />
 
       {/* Courses List */}
       {!filteredCourses || filteredCourses.length === 0 ? (
@@ -152,7 +151,7 @@ export const UpcomingCourses = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className={`grid ${UI_CONSTANTS.gridCols} ${UI_CONSTANTS.gridGap}`}>
           {filteredCourses.map(course => {
             const daysUntil = differenceInDays(new Date(course.date_debut), new Date());
             const daysLabel = daysUntil === 0 ? "Aujourd'hui" : `J-${daysUntil}`;
@@ -162,7 +161,7 @@ export const UpcomingCourses = () => {
               : "Course d'un jour";
 
             return (
-              <Card key={course.course_id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelectedCourse(course)}>
+              <Card key={course.course_id} className={`${UI_CONSTANTS.cardHover} cursor-pointer`} onClick={() => setSelectedCourse(course)}>
                 <CardHeader>
                   <div className="space-y-2">
                     <CardTitle className="text-lg">{course.nom}</CardTitle>
@@ -235,6 +234,6 @@ export const UpcomingCourses = () => {
         open={!!selectedCourse}
         onOpenChange={(open) => !open && setSelectedCourse(null)}
       />
-    </div>
+    </PageContainer>
   );
 };

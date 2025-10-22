@@ -17,6 +17,7 @@ import { ManagerComparison } from "@/components/rankings/ManagerComparison";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { RankingsMobile } from "./Rankings.mobile";
+import { PageContainer } from "@/components/layout/PageContainer";
 
 export default function Rankings() {
   const isMobile = useIsMobile();
@@ -38,10 +39,9 @@ export default function Rankings() {
   // Desktop version
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Main Content */}
-        <Tabs defaultValue="standings" className="space-y-6">
+    <PageContainer>
+      {/* Main Content */}
+      <Tabs defaultValue="standings" className="space-y-6">
           <div className="flex items-center justify-between gap-4">
             <TabsList className="grid w-full grid-cols-6 max-w-5xl">
               <TabsTrigger value="standings">Managers</TabsTrigger>
@@ -116,7 +116,6 @@ export default function Rankings() {
             </div>
           </SheetContent>
         </Sheet>
-      </div>
-    </div>
+    </PageContainer>
   );
 }
