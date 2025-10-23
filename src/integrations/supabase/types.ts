@@ -4383,6 +4383,12 @@ export type Database = {
           missing_count: number
         }[]
       }
+      get_league_course_ids: {
+        Args: { p_league_id: string }
+        Returns: {
+          course_id: string
+        }[]
+      }
       get_my_roles: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"][]
@@ -4638,27 +4644,43 @@ export type Database = {
           type_classement: Database["public"]["Enums"]["type_classement"]
         }[]
       }
-      results_recent_races: {
-        Args: {
-          p_limit?: number
-          p_manager_id?: string
-          p_phase_id?: string
-          p_saison_id?: string
-          p_search?: string
-        }
-        Returns: {
-          categorie: string
-          course_id: string
-          date_debut: string
-          date_fin: string
-          has_points: boolean
-          last_result_at: string
-          my_points: number
-          nom: string
-          phase_id: string
-          types: Database["public"]["Enums"]["type_classement"][]
-        }[]
-      }
+      results_recent_races:
+        | {
+            Args: {
+              p_league_id?: string
+              p_limit?: number
+              p_phase_id?: string
+              p_saison_id?: string
+            }
+            Returns: {
+              course_id: string
+              course_nom: string
+              date_fin: string
+              top10: Json
+              total_points: number
+            }[]
+          }
+        | {
+            Args: {
+              p_limit?: number
+              p_manager_id?: string
+              p_phase_id?: string
+              p_saison_id?: string
+              p_search?: string
+            }
+            Returns: {
+              categorie: string
+              course_id: string
+              date_debut: string
+              date_fin: string
+              has_points: boolean
+              last_result_at: string
+              my_points: number
+              nom: string
+              phase_id: string
+              types: Database["public"]["Enums"]["type_classement"][]
+            }[]
+          }
       rider_roi_phase: {
         Args: { p_phase_id: string }
         Returns: {
