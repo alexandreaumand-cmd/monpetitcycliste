@@ -3,7 +3,7 @@ import { useLeague } from "@/contexts/LeagueContext";
 import { useUserLeagues } from "@/hooks/useUserLeagues";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { LeagueCard } from "@/components/dashboard/LeagueCard";
-import { RecentRacesWidget } from "@/components/dashboard/RecentRacesWidget";
+import { RecentResultsWidget } from "@/components/dashboard/RecentResultsWidget";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Users, LogOut } from "lucide-react";
@@ -78,9 +78,9 @@ export default function DashboardHome({ onSignOut }: DashboardHomeProps) {
           )}
         </div>
 
-        {/* Recent Races Widget */}
+        {/* Recent Results Widget */}
         <div className="max-w-2xl">
-          <RecentRacesWidget />
+          <RecentResultsWidget />
         </div>
       </div>
     </div>
