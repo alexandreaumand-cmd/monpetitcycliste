@@ -161,6 +161,8 @@ const StartlistDesktop = () => {
     queryFn: async () => {
       if (!leagueId) return [];
       
+      console.log('[Startlist] Loading courses for league:', leagueId);
+      
       const today = new Date().toISOString().split('T')[0];
       const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const in90Days = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -168,10 +170,15 @@ const StartlistDesktop = () => {
       // Call edge function to get league courses
       const { data: leagueCourses, error: edgeFnError } = await supabase.functions.invoke(
         'get-league-courses',
-        { body: { league_id: leagueId } }
+        { body: { league_id: leagueId, season_id: null } }
       );
       
-      if (edgeFnError) throw edgeFnError;
+      if (edgeFnError) {
+        console.error('[Startlist] Error loading courses:', edgeFnError);
+        throw edgeFnError;
+      }
+
+      console.log('[Startlist] Loaded courses:', leagueCourses?.courses?.length);
       const courses = leagueCourses?.courses || [];
       
       // Filter by tab mode

@@ -47,16 +47,23 @@ export const UpcomingCoursesMobile = () => {
   const { data: courses, isLoading } = useQuery({
     queryKey: ['league-courses', leagueId, selectedSeason?.id],
     queryFn: async () => {
-      if (!leagueId || !selectedSeason) return [];
+      if (!leagueId) return [];
+      
+      console.log('[UpcomingCourses Mobile] Loading courses for league:', leagueId, 'season:', selectedSeason?.id);
       
       const { data, error } = await supabase.functions.invoke('get-league-courses', {
         body: {
           league_id: leagueId,
-          season_id: selectedSeason.id
+          season_id: selectedSeason?.id || null
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('[UpcomingCourses Mobile] Error loading courses:', error);
+        throw error;
+      }
+
+      console.log('[UpcomingCourses Mobile] Loaded courses:', data?.courses?.length);
 
       // Check cancelled status for each course
       const coursesWithStatus = await Promise.all(
@@ -77,7 +84,7 @@ export const UpcomingCoursesMobile = () => {
 
       return coursesWithStatus;
     },
-    enabled: !!leagueId && !!selectedSeason && !isLoadingContext,
+    enabled: !!leagueId && !isLoadingContext,
   });
 
   const filteredCourses = courses?.filter(course => {
