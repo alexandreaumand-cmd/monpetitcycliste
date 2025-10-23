@@ -155,63 +155,46 @@ const StartlistDesktop = () => {
 
   const seasonPhaseIds = phases?.map(p => p.id) || [];
 
-  // Fetch upcoming courses
+  // Fetch upcoming courses filtered by league scope
   const { data: upcomingCourses, isLoading: isLoadingCourses } = useQuery({
-    queryKey: ['upcoming-courses-startlist', seasonPhaseIds.join(','), tabMode],
+    queryKey: ['upcoming-courses-startlist', leagueId, tabMode],
     queryFn: async () => {
-      if (seasonPhaseIds.length === 0) return [];
+      if (!leagueId) return [];
       
       const today = new Date().toISOString().split('T')[0];
       const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const in90Days = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
-      let query = supabase
-        .from('courses')
-        .select(`
-          id,
-          nom,
-          date_debut,
-          date_fin,
-          categorie,
-          type_course,
-          phase_id,
-          phases (
-            index_dans_saison,
-            saisons (annee)
-          )
-        `)
-        .in('phase_id', seasonPhaseIds);
+      // Call edge function to get league courses
+      const { data: leagueCourses, error: edgeFnError } = await supabase.functions.invoke(
+        'get-league-courses',
+        { body: { league_id: leagueId } }
+      );
       
+      if (edgeFnError) throw edgeFnError;
+      const courses = leagueCourses?.courses || [];
+      
+      // Filter by tab mode
+      let filtered = courses;
       if (tabMode === 'history') {
-        // Courses passées
-        query = query
-          .lt('date_fin', today)
-          .order('date_fin', { ascending: false });
+        filtered = courses.filter((c: any) => c.date_fin < today)
+          .sort((a: any, b: any) => b.date_fin.localeCompare(a.date_fin));
       } else if (tabMode === '30days') {
-        // 30 jours à venir
-        query = query
-          .gte('date_fin', today)
-          .lte('date_debut', in30Days)
-          .order('date_debut', { ascending: true });
+        filtered = courses.filter((c: any) => 
+          c.date_fin >= today && c.date_debut <= in30Days
+        ).sort((a: any, b: any) => a.date_debut.localeCompare(b.date_debut));
       } else if (tabMode === '90days') {
-        // 90 jours à venir
-        query = query
-          .gte('date_fin', today)
-          .lte('date_debut', in90Days)
-          .order('date_debut', { ascending: true });
+        filtered = courses.filter((c: any) => 
+          c.date_fin >= today && c.date_debut <= in90Days
+        ).sort((a: any, b: any) => a.date_debut.localeCompare(b.date_debut));
       } else if (tabMode === 'upcoming-year') {
-        // Toutes les courses à venir de la saison
-        query = query
-          .gte('date_fin', today)
-          .order('date_debut', { ascending: true });
+        filtered = courses.filter((c: any) => c.date_fin >= today)
+          .sort((a: any, b: any) => a.date_debut.localeCompare(b.date_debut));
       }
       
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      return data || [];
+      return filtered;
     },
-    enabled: !isLoadingContext && seasonPhaseIds.length > 0
+    enabled: !!leagueId
   });
 
   // Check if startlist exists for a race
