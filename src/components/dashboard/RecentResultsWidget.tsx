@@ -90,7 +90,7 @@ function RaceCard({ race }: { race: RaceWithResults }) {
   const handleStageChange = async (value: string) => {
     const stageNum = parseInt(value);
     setSelectedStage(stageNum);
-    const key = `Stage-${stageNum}`;
+    const key = `General-${stageNum}`;
     if (!loadedClassifications[key]) {
       await loadClassification('General', stageNum);
     }
@@ -98,7 +98,7 @@ function RaceCard({ race }: { race: RaceWithResults }) {
 
   const getCurrentKey = () => {
     if (activeTab === 'stages') {
-      return `Stage-${selectedStage}`;
+      return `General-${selectedStage}`;
     }
     return selectedClassificationType;
   };
