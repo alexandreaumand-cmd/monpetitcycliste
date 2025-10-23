@@ -125,8 +125,23 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error('Error opening new round:', error);
+    
+    // Check for unique constraint violation (duplicate round number)
+    const code = (error as any)?.code;
+    const msg = (error as any)?.message || (error instanceof Error ? error.message : 'Unknown error');
+    
+    if (code === '23505') {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Un round avec ce numéro existe déjà pour cette phase dans cette ligue',
+          code 
+        }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: msg }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
