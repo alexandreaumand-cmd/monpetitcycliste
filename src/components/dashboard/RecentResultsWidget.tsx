@@ -34,7 +34,7 @@ type ClassificationResult = {
 function RaceCard({ race }: { race: RaceWithResults }) {
   const [activeTab, setActiveTab] = useState<'general' | 'stages'>('general');
   const [selectedClassificationType, setSelectedClassificationType] = useState<string>('General');
-  const [selectedStage, setSelectedStage] = useState<number>(1);
+  const [selectedStage, setSelectedStage] = useState<number>(race.etapes_disponibles?.[0] ?? 1);
   const [loadedClassifications, setLoadedClassifications] = useState<ClassificationResult>({
     General: race.top10
   });
@@ -76,8 +76,14 @@ function RaceCard({ race }: { race: RaceWithResults }) {
     }
   };
 
-  const handleTabChange = (tab: 'general' | 'stages') => {
+  const handleTabChange = async (tab: 'general' | 'stages') => {
     setActiveTab(tab);
+    if (tab === 'stages') {
+      const key = `Etape-${selectedStage}`;
+      if (!loadedClassifications[key]) {
+        await loadClassification('Etape', selectedStage);
+      }
+    }
   };
 
   const handleClassificationChange = async (value: string) => {
@@ -90,15 +96,15 @@ function RaceCard({ race }: { race: RaceWithResults }) {
   const handleStageChange = async (value: string) => {
     const stageNum = parseInt(value);
     setSelectedStage(stageNum);
-    const key = `General-${stageNum}`;
+    const key = `Etape-${stageNum}`;
     if (!loadedClassifications[key]) {
-      await loadClassification('General', stageNum);
+      await loadClassification('Etape', stageNum);
     }
   };
 
   const getCurrentKey = () => {
     if (activeTab === 'stages') {
-      return `General-${selectedStage}`;
+      return `Etape-${selectedStage}`;
     }
     return selectedClassificationType;
   };
@@ -148,8 +154,8 @@ function RaceCard({ race }: { race: RaceWithResults }) {
                     {availableTypes.includes('Montagne') && (
                       <SelectItem value="Montagne">⛰️ Pois (Montagne)</SelectItem>
                     )}
-                    {availableTypes.includes('Jeunes') && (
-                      <SelectItem value="Jeunes">👶 Jeunes</SelectItem>
+                    {availableTypes.includes('Jeune') && (
+                      <SelectItem value="Jeune">👶 Jeunes</SelectItem>
                     )}
                   </SelectContent>
                 </Select>
