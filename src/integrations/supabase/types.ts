@@ -1181,6 +1181,7 @@ export type Database = {
           league_id: string
           phases: string[] | null
           season_id: string
+          wt_only: boolean
         }
         Insert: {
           by_phase?: boolean
@@ -1190,6 +1191,7 @@ export type Database = {
           league_id: string
           phases?: string[] | null
           season_id: string
+          wt_only?: boolean
         }
         Update: {
           by_phase?: boolean
@@ -1199,6 +1201,7 @@ export type Database = {
           league_id?: string
           phases?: string[] | null
           season_id?: string
+          wt_only?: boolean
         }
         Relationships: [
           {

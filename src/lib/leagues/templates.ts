@@ -10,6 +10,7 @@ export type LeagueTemplate = {
   scopeConfig: {
     byPhase: boolean;
     gtOnly: boolean;
+    wtOnly: boolean;
     phases: string[];
     competitions: string[];
   };
@@ -26,6 +27,7 @@ export const LEAGUE_TEMPLATES: LeagueTemplate[] = [
     scopeConfig: {
       byPhase: true,
       gtOnly: false,
+      wtOnly: false,
       phases: [],
       competitions: [],
     },
@@ -40,6 +42,7 @@ export const LEAGUE_TEMPLATES: LeagueTemplate[] = [
     scopeConfig: {
       byPhase: false,
       gtOnly: true,
+      wtOnly: false,
       phases: [],
       competitions: ['Tour de France', 'Giro d\'Italia', 'Vuelta a España'],
     },
@@ -54,6 +57,7 @@ export const LEAGUE_TEMPLATES: LeagueTemplate[] = [
     scopeConfig: {
       byPhase: false,
       gtOnly: false,
+      wtOnly: true,
       phases: [],
       competitions: [],
     },
@@ -68,6 +72,7 @@ export const LEAGUE_TEMPLATES: LeagueTemplate[] = [
     scopeConfig: {
       byPhase: false,
       gtOnly: false,
+      wtOnly: false,
       phases: [],
       competitions: [
         'Milano-Sanremo',
@@ -113,6 +118,7 @@ export function getLeagueScopeConfig(mode: GameMode, seasonId: string) {
     seasonId,
     byPhase: template.scopeConfig.byPhase,
     gtOnly: template.scopeConfig.gtOnly,
+    wtOnly: template.scopeConfig.wtOnly,
     phases: template.scopeConfig.phases,
     competitions: template.scopeConfig.competitions,
   };

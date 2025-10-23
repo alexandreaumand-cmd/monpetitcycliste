@@ -129,6 +129,7 @@ Deno.serve(async (req) => {
         season_id: scopeConfig.seasonId,
         by_phase: scopeConfig.byPhase,
         gt_only: scopeConfig.gtOnly,
+        wt_only: scopeConfig.wtOnly,
         phases: scopeConfig.phases,
         competitions: scopeConfig.competitions,
       });

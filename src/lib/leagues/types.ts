@@ -31,6 +31,7 @@ export type LeagueScope = {
   season_id: string | null;
   by_phase: boolean;
   gt_only: boolean;
+  wt_only: boolean;
   phases: string[];
   competitions: string[];
 };
