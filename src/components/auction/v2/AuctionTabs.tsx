@@ -23,9 +23,6 @@ interface AuctionTabsProps {
   // Riders and bids
   riders: any[];
   isSearching: boolean;
-  hasMoreRiders?: boolean;
-  onLoadMoreRiders?: () => void;
-  isLoadingMore?: boolean;
   myBids: any[];
   // Handlers
   handleSubmitBid: (amount: number, riderId: string) => void;
@@ -49,9 +46,6 @@ export const AuctionTabs = ({
   availableTeams,
   riders,
   isSearching,
-  hasMoreRiders,
-  onLoadMoreRiders,
-  isLoadingMore,
   myBids,
   handleSubmitBid,
   handleUpdateAmount,
@@ -114,9 +108,6 @@ export const AuctionTabs = ({
                     riders={riders}
                     onAddRider={() => {}}
                     isLoading={isSearching}
-                    hasMore={hasMoreRiders}
-                    onLoadMore={onLoadMoreRiders}
-                    isLoadingMore={isLoadingMore}
                     renderActionButton={(rider) => (
                       <BidAmountPopover
                         trigger={
