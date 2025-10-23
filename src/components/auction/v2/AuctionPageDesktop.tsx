@@ -119,6 +119,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
     queryKey: [
       "auction-search-riders",
       phaseId,
+      leagueId,
       debouncedSearch,
       selectedTeams,
       selectedCotes,
@@ -144,6 +145,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
       const { data, error } = await supabase.functions.invoke("auction-search-riders", {
         body: {
           phase_id: phaseId,
+          league_id: leagueId,
           q: debouncedSearch || null,
           teams: selectedTeams.length > 0 ? selectedTeams : null,
           cote_min,

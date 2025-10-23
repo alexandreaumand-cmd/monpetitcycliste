@@ -58,7 +58,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['coureurs-search-infinite-bid-form', debouncedSearchTerm, auction.phase_id],
+    queryKey: ['coureurs-search-infinite-bid-form', debouncedSearchTerm, auction.phase_id, leagueId],
     queryFn: async ({ pageParam = 0 }) => {
       if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) {
         return { items: [], pagination: { limit: 100, offset: 0, has_more: false } };
@@ -67,6 +67,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
       const { data, error } = await supabase.functions.invoke('auction-search-riders', {
         body: {
           phase_id: auction.phase_id,
+          league_id: leagueId,
           q: debouncedSearchTerm,
           available_only: false, // We want ALL riders
           limit: 100,

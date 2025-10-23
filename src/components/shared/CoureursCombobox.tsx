@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useLeague } from "@/contexts/LeagueContext";
 
 type Coureur = {
   coureur_id: string;
@@ -45,6 +46,7 @@ export const CoureursCombobox = ({
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
+  const { leagueId } = useLeague();
 
   // Fetch selected coureur by ID
   const { data: selectedCoureurData } = useQuery({
@@ -73,7 +75,7 @@ export const CoureursCombobox = ({
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['coureurs-search-infinite', phaseId, debouncedSearchTerm, showTakenRiders, showManager],
+    queryKey: ['coureurs-search-infinite', phaseId, leagueId, debouncedSearchTerm, showTakenRiders, showManager],
     queryFn: async ({ pageParam = 0 }) => {
       if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) {
         return { items: [], pagination: { limit: 100, offset: 0, has_more: false } };
@@ -82,6 +84,7 @@ export const CoureursCombobox = ({
       const { data, error } = await supabase.functions.invoke('auction-search-riders', {
         body: {
           phase_id: phaseId,
+          league_id: leagueId,
           q: debouncedSearchTerm,
           available_only: !showTakenRiders,
           limit: 100,

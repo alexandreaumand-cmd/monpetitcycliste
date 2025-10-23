@@ -114,6 +114,7 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
     queryKey: [
       "auction-search-riders",
       phaseId,
+      leagueId,
       debouncedSearch,
       selectedTeams,
       selectedCotes,
@@ -139,6 +140,7 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
       const { data, error } = await supabase.functions.invoke("auction-search-riders", {
         body: {
           phase_id: phaseId,
+          league_id: leagueId,
           q: debouncedSearch || null,
           teams: selectedTeams.length > 0 ? selectedTeams : null,
           cote_min,
