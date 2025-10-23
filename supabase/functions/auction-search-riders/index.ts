@@ -34,10 +34,6 @@ Deno.serve(async (req) => {
 
     console.log('[auction-search-riders] Request:', { phase_id, league_id, q, available_only, limit, offset });
 
-    // Normalize search query: remove accents, lowercase
-    const normalizeText = (text: string) => 
-      text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-
     // Step 1: Get phase's saison_id
     const { data: phase, error: phaseError } = await supabase
       .from('phases')
@@ -49,58 +45,48 @@ Deno.serve(async (req) => {
       throw new Error('Phase not found');
     }
 
-    // Step 2: Build base query on coureurs + coureurs_saisons
+    // Step 2: Build base query on coureurs_saisons
     let query = supabase
-      .from('coureurs')
-      .select(`
-        id,
-        nom,
-        coureurs_saisons!inner(
-          equipe,
-          prix_initial,
-          saison_id
-        )
-      `)
-      .eq('coureurs_saisons.saison_id', phase.saison_id);
+      .from('coureurs_saisons')
+      .select('coureur_id, equipe, prix_initial, coureurs!inner(id, nom)')
+      .eq('saison_id', phase.saison_id);
 
-    // Search by name (accent-insensitive)
+    // Search by name
     if (q && q.trim().length >= 2) {
-      const normalizedSearch = normalizeText(q.trim());
-      // Use ilike on normalized nom
-      query = query.ilike('nom', `%${q.trim()}%`);
+      query = query.ilike('coureurs.nom', `%${q.trim()}%`);
     }
 
     // Filter by teams
     if (teams && Array.isArray(teams) && teams.length > 0) {
-      query = query.in('coureurs_saisons.equipe', teams);
+      query = query.in('equipe', teams);
     }
 
     // Filter by cote (prix_initial)
     if (cote_min !== null) {
-      query = query.gte('coureurs_saisons.prix_initial', cote_min);
+      query = query.gte('prix_initial', cote_min);
     }
     if (cote_max !== null) {
-      query = query.lte('coureurs_saisons.prix_initial', cote_max);
+      query = query.lte('prix_initial', cote_max);
     }
 
     // Exclude already selected riders
     if (exclude_rider_ids && Array.isArray(exclude_rider_ids) && exclude_rider_ids.length > 0) {
-      query = query.not('id', 'in', `(${exclude_rider_ids.join(',')})`);
+      query = query.not('coureur_id', 'in', `(${exclude_rider_ids.join(',')})`);
     }
 
     // Pagination
     query = query
-      .order('nom', { ascending: true })
+      .order('coureurs.nom', { ascending: true })
       .range(offset, offset + limit - 1);
 
-    const { data: riders, error } = await query;
+    const { data: coureursSaisons, error } = await query;
 
     if (error) {
       console.error('[auction-search-riders] Error fetching riders:', error);
       throw error;
     }
 
-    if (!riders || riders.length === 0) {
+    if (!coureursSaisons || coureursSaisons.length === 0) {
       console.log('[auction-search-riders] No riders found');
       return new Response(
         JSON.stringify({
@@ -111,12 +97,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[auction-search-riders] Found ${riders.length} riders`);
+    console.log(`[auction-search-riders] Found ${coureursSaisons.length} riders`);
 
     // Step 3: Calculate is_taken per league
-    const riderIds = riders.map(r => r.id);
+    const riderIds = coureursSaisons.map((cs: any) => cs.coureur_id);
     
-    let takenRiders = [];
+    let takenRiders: any[] = [];
     if (league_id) {
       // League-specific availability
       const { data: takenData, error: takenError } = await supabase
@@ -152,7 +138,7 @@ Deno.serve(async (req) => {
 
     // Build taken map
     const takenMap = new Map();
-    takenRiders.forEach(r => {
+    takenRiders.forEach((r: any) => {
       takenMap.set(r.coureur_id, {
         is_taken: true,
         taken_by_manager_nom: r.managers?.nom || null
@@ -160,13 +146,13 @@ Deno.serve(async (req) => {
     });
 
     // Step 4: Enrich riders with is_taken status
-    const items = riders.map(r => {
-      const taken = takenMap.get(r.id) || { is_taken: false, taken_by_manager_nom: null };
+    const items = coureursSaisons.map((cs: any) => {
+      const taken = takenMap.get(cs.coureur_id) || { is_taken: false, taken_by_manager_nom: null };
       return {
-        rider_id: r.id,
-        rider_nom: r.nom,
-        rider_team: r.coureurs_saisons[0]?.equipe || null,
-        cote: r.coureurs_saisons[0]?.prix_initial || 10,
+        rider_id: cs.coureur_id,
+        rider_nom: cs.coureurs.nom,
+        rider_team: cs.equipe,
+        cote: cs.prix_initial,
         is_taken: taken.is_taken,
         taken_by_manager_nom: taken.taken_by_manager_nom,
       };
@@ -174,12 +160,12 @@ Deno.serve(async (req) => {
 
     // Step 5: Filter by available_only after calculating league-specific is_taken
     const filteredItems = available_only 
-      ? items.filter(i => !i.is_taken)
+      ? items.filter((i: any) => !i.is_taken)
       : items;
 
     console.log(`[auction-search-riders] Returning ${filteredItems.length} items (available_only: ${available_only})`);
 
-    const has_more = riders.length === limit;
+    const has_more = coureursSaisons.length === limit;
 
     return new Response(
       JSON.stringify({
