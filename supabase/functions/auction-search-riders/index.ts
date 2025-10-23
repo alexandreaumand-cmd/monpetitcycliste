@@ -18,9 +18,10 @@ Deno.serve(async (req) => {
       teams = null,
       cote_min = null,
       cote_max = null,
-      limit = 50,
+      limit = 100,
       offset = 0,
       exclude_rider_ids = null,
+      available_only = true,
     } = await req.json();
 
     if (!phase_id) {
@@ -30,16 +31,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Normalize search query: remove accents, lowercase
+    const normalizeText = (text: string) => 
+      text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
     // Build query
     let query = supabase
       .from('coureurs_disponibilite')
-      .select('coureur_id, coureur_nom, coureur_equipe, prix_initial, is_taken')
-      .eq('phase_id', phase_id)
-      .eq('is_taken', false); // Only show available riders
+      .select('coureur_id, coureur_nom, coureur_equipe, prix_initial, is_taken, taken_by_manager_nom')
+      .eq('phase_id', phase_id);
 
-    // Search by name (fuzzy)
+    // Filter by availability
+    if (available_only) {
+      query = query.eq('is_taken', false);
+    }
+
+    // Search by name (accent-insensitive, fuzzy)
     if (q && q.trim().length >= 2) {
-      query = query.ilike('search_text', `%${q.trim().toLowerCase()}%`);
+      const normalizedSearch = normalizeText(q.trim());
+      query = query.ilike('search_text', `%${normalizedSearch}%`);
     }
 
     // Filter by teams
@@ -74,6 +84,8 @@ Deno.serve(async (req) => {
       rider_nom: r.coureur_nom,
       rider_team: r.coureur_equipe,
       cote: r.prix_initial,
+      is_taken: r.is_taken,
+      taken_by_manager_nom: r.taken_by_manager_nom,
     }));
 
     const has_more = items.length === limit;

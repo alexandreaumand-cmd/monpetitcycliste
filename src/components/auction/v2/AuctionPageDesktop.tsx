@@ -149,7 +149,8 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
           cote_min,
           cote_max,
           exclude_rider_ids: context?.my_bids?.map((b: any) => b.coureur_id) || [],
-          limit: 50,
+          available_only: true,
+          limit: 100,
         },
       });
       if (error) throw error;

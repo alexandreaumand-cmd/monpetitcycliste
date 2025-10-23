@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,30 +50,56 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
     return normalizedValue.includes(normalizedSearch) ? 1 : 0;
   };
 
-  const { data: coureurs, isLoading: loadingCoureurs } = useQuery({
-    queryKey: ['coureurs-disponibilite', debouncedSearchTerm, auction.phase_id],
-    queryFn: async () => {
-      let query = supabase
-        .from('coureurs_disponibilite')
-        .select('*')
-        .eq('phase_id', auction.phase_id);
-      
-      if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
-        const normalizedSearch = normalizeString(debouncedSearchTerm);
-        query = query.ilike('search_text', `%${normalizedSearch}%`);
+  // Use edge function with pagination
+  const {
+    data: coureursPages,
+    isLoading: loadingCoureurs,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['coureurs-search-infinite-bid-form', debouncedSearchTerm, auction.phase_id],
+    queryFn: async ({ pageParam = 0 }) => {
+      if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) {
+        return { items: [], pagination: { limit: 100, offset: 0, has_more: false } };
       }
-      
-      // Pas de filtre sur is_taken - on veut TOUS les coureurs
-      // Tri : disponibles en premier, puis par nom
-      const { data, error } = await query
-        .order('is_taken', { ascending: true })
-        .order('coureur_nom', { ascending: true })
-        .limit(50);
-      
+
+      const { data, error } = await supabase.functions.invoke('auction-search-riders', {
+        body: {
+          phase_id: auction.phase_id,
+          q: debouncedSearchTerm,
+          available_only: false, // We want ALL riders
+          limit: 100,
+          offset: pageParam,
+          exclude_rider_ids: null,
+        },
+      });
+
       if (error) throw error;
       return data;
-    }
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.pagination.has_more) {
+        return allPages.length * 100;
+      }
+      return undefined;
+    },
+    enabled: debouncedSearchTerm.length >= 2,
   });
+
+  // Flatten all pages into a single array
+  const coureurs = coureursPages?.pages.flatMap(page => 
+    page.items.map((item: any) => ({
+      coureur_id: item.rider_id,
+      coureur_nom: item.rider_nom,
+      coureur_equipe: item.rider_team,
+      prix_initial: item.cote,
+      is_taken: item.is_taken,
+      taken_by_manager_nom: item.taken_by_manager_nom,
+      search_text: normalizeString(item.rider_nom),
+    }))
+  ) || [];
 
   const { data: draftBids = [], isLoading: loadingDraftBids } = useQuery({
     queryKey: ['draft-bids', auction.id, managerId],
@@ -682,9 +708,29 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
                         </CommandGroup>
                       </CommandList>
                     </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
+                {/* Load more button */}
+                {hasNextPage && (
+                  <div className="p-2 flex justify-center border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fetchNextPage()}
+                      disabled={isFetchingNextPage}
+                    >
+                      {isFetchingNextPage ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Chargement...
+                        </>
+                      ) : (
+                        "Charger plus"
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
 
               {selectedCoureur && (
                 <>

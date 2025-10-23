@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useDebounce } from "use-debounce";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { normalizeString } from "@/lib/stringUtils";
 
 type Coureur = {
   coureur_id: string;
@@ -66,82 +65,63 @@ export const CoureursCombobox = ({
     enabled: !!value && open,
   });
 
-  // Fetch coureurs by search term
-  const { data: coureurs = [], isLoading } = useQuery({
-    queryKey: ['coureurs-search', phaseId, debouncedSearchTerm, showManager],
-    queryFn: async () => {
-      if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) return [];
-      
-      const normalizedSearch = normalizeString(debouncedSearchTerm);
-      
-      // If showManager is true, we need to join with rosters and managers
-      if (showManager) {
-        const { data, error } = await supabase
-          .from('coureurs_disponibilite')
-          .select('*')
-          .eq('phase_id', phaseId)
-          .ilike('search_text', `%${normalizedSearch}%`)
-          .order('is_taken', { ascending: true })
-          .order('coureur_nom', { ascending: true })
-          .limit(50);
-        
-        if (error) throw error;
-        
-        // Enrich with manager_id from rosters
-        const enrichedData = await Promise.all((data || []).map(async (coureur) => {
-          if (coureur.is_taken && coureur.coureur_id) {
-            const { data: roster } = await supabase
-              .from('rosters')
-              .select('manager_id')
-              .eq('phase_id', phaseId)
-              .eq('coureur_id', coureur.coureur_id)
-              .single();
-            
-            return {
-              ...coureur,
-              // Add compatibility fields
-              id: coureur.coureur_id,
-              nom: coureur.coureur_nom,
-              equipe: coureur.coureur_equipe,
-              manager_id: roster?.manager_id || null,
-              manager_nom: coureur.taken_by_manager_nom,
-            };
-          }
-          return {
-            ...coureur,
-            id: coureur.coureur_id,
-            nom: coureur.coureur_nom,
-            equipe: coureur.coureur_equipe,
-            manager_id: null,
-            manager_nom: null,
-          };
-        }));
-        
-        return enrichedData;
+  // Fetch coureurs using edge function with pagination
+  const {
+    data: coureursPages,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['coureurs-search-infinite', phaseId, debouncedSearchTerm, showTakenRiders, showManager],
+    queryFn: async ({ pageParam = 0 }) => {
+      if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) {
+        return { items: [], pagination: { limit: 100, offset: 0, has_more: false } };
       }
-      
-      // Original query without manager info
-      const { data, error } = await supabase
-        .from('coureurs_disponibilite')
-        .select('*')
-        .eq('phase_id', phaseId)
-        .ilike('search_text', `%${normalizedSearch}%`)
-        .order('is_taken', { ascending: true })
-        .order('coureur_nom', { ascending: true })
-        .limit(50);
-      
+
+      const { data, error } = await supabase.functions.invoke('auction-search-riders', {
+        body: {
+          phase_id: phaseId,
+          q: debouncedSearchTerm,
+          available_only: !showTakenRiders,
+          limit: 100,
+          offset: pageParam,
+          exclude_rider_ids: null,
+        },
+      });
+
       if (error) throw error;
-      return (data || []).map(c => ({
-        ...c,
-        id: c.coureur_id,
-        nom: c.coureur_nom,
-        equipe: c.coureur_equipe,
-      }));
+      return data;
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.pagination.has_more) {
+        return allPages.length * 100;
+      }
+      return undefined;
     },
     enabled: debouncedSearchTerm.length >= 2,
   });
 
-  const selectedCoureur = selectedCoureurData || coureurs.find((c) => c.coureur_id === value);
+  // Flatten all pages into a single array
+  const coureurs = coureursPages?.pages.flatMap(page => 
+    page.items.map((item: any) => ({
+      coureur_id: item.rider_id,
+      coureur_nom: item.rider_nom,
+      coureur_equipe: item.rider_team,
+      is_taken: item.is_taken,
+      taken_by_manager_nom: item.taken_by_manager_nom,
+      id: item.rider_id,
+      nom: item.rider_nom,
+      equipe: item.rider_team,
+      manager_nom: item.taken_by_manager_nom,
+    }))
+  ) || [];
+
+  // Enrich with manager_id if showManager is true
+  const enrichedCoureurs = showManager ? coureurs : coureurs;
+
+  const selectedCoureur = selectedCoureurData || enrichedCoureurs.find((c) => c.coureur_id === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -176,12 +156,12 @@ export const CoureursCombobox = ({
                 ? "Tapez au moins 2 lettres pour rechercher"
                 : "Aucun coureur trouvé"}
             </CommandEmpty>
-            {coureurs.length > 0 && (
+            {enrichedCoureurs.length > 0 && (
               <CommandGroup>
                 <div className="px-2 py-1 text-xs text-muted-foreground">
-                  {coureurs.length} coureur{coureurs.length > 1 ? 's' : ''} trouvé{coureurs.length > 1 ? 's' : ''}
+                  {enrichedCoureurs.length} coureur{enrichedCoureurs.length > 1 ? 's' : ''} trouvé{enrichedCoureurs.length > 1 ? 's' : ''}
                 </div>
-                {coureurs.map((coureur) => {
+                {enrichedCoureurs.map((coureur) => {
                   // Skip taken riders if showTakenRiders is false
                   if (!showTakenRiders && coureur.is_taken) return null;
                   
@@ -218,6 +198,25 @@ export const CoureursCombobox = ({
                     </CommandItem>
                   );
                 })}
+                {hasNextPage && (
+                  <div className="p-2 flex justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fetchNextPage()}
+                      disabled={isFetchingNextPage}
+                    >
+                      {isFetchingNextPage ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Chargement...
+                        </>
+                      ) : (
+                        "Charger plus"
+                      )}
+                    </Button>
+                  </div>
+                )}
               </CommandGroup>
             )}
           </CommandList>
