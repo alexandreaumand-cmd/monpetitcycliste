@@ -10,6 +10,7 @@ import { fr } from "date-fns/locale";
 import { normalizeCourseType } from "@/lib/courseType";
 import { MobileCard, ChipGroup, MobileEmptyState } from "@/components/mobile";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface CourseData {
   course_id: string;
@@ -39,42 +40,44 @@ export const UpcomingCoursesMobile = () => {
   const [phaseFilter, setPhaseFilter] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<CourseData | null>(null);
   const { selectedSeason, phases, isLoading: isLoadingContext } = useSeasonContext();
+  const { leagueId } = useLeague();
 
   const seasonPhaseIds = phases?.map(p => p.id) || [];
 
   const { data: courses, isLoading } = useQuery({
-    queryKey: ['all-courses', selectedSeason?.id, seasonPhaseIds.join(',')],
+    queryKey: ['league-courses', leagueId, selectedSeason?.id],
     queryFn: async () => {
-      if (!selectedSeason || seasonPhaseIds.length === 0) return [];
+      if (!leagueId || !selectedSeason) return [];
       
-      const { data: coursesData, error } = await supabase
-        .from('v_course_points_theoriques')
-        .select('*')
-        .in('phase_id', seasonPhaseIds)
-        .order('date_debut', { ascending: false });
+      const { data, error } = await supabase.functions.invoke('get-league-courses', {
+        body: {
+          league_id: leagueId,
+          season_id: selectedSeason.id
+        }
+      });
       
       if (error) throw error;
 
       // Check cancelled status for each course
       const coursesWithStatus = await Promise.all(
-        (coursesData || []).map(async (course) => {
-      const { count } = await supabase
-        .from('race_result_sets')
-        .select('*', { count: 'exact', head: true })
-        .eq('course_id', course.course_id)
-        .eq('type_classement', 'General')
-        .eq('is_cancelled', true);
+        (data.courses || []).map(async (course: any) => {
+          const { count } = await supabase
+            .from('race_result_sets')
+            .select('*', { count: 'exact', head: true })
+            .eq('course_id', course.course_id)
+            .eq('type_classement', 'General')
+            .eq('is_cancelled', true);
       
-      return {
-        ...course,
-        is_cancelled: (count ?? 0) > 0
-      } as CourseData;
+          return {
+            ...course,
+            is_cancelled: (count ?? 0) > 0
+          } as CourseData;
         })
       );
 
       return coursesWithStatus;
     },
-    enabled: !!selectedSeason && !isLoadingContext && seasonPhaseIds.length > 0,
+    enabled: !!leagueId && !!selectedSeason && !isLoadingContext,
   });
 
   const filteredCourses = courses?.filter(course => {

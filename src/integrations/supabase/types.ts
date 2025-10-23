@@ -4389,6 +4389,31 @@ export type Database = {
           course_id: string
         }[]
       }
+      get_league_courses_with_points: {
+        Args: { p_league_id: string; p_season_id?: string }
+        Returns: {
+          categorie: string
+          categorie_for_points: string
+          course_id: string
+          date_debut: string
+          date_fin: string
+          is_uwt: boolean
+          nb_etapes_estimees: number
+          nb_jours: number
+          nom: string
+          phase_id: string
+          phase_index: number
+          points_etapes: number
+          points_etapes_unitaire: number
+          points_gc: number
+          points_jeune: number
+          points_mont: number
+          points_pts: number
+          points_total: number
+          type_course: string
+          wt_tier: Database["public"]["Enums"]["wt_tier_type"]
+        }[]
+      }
       get_my_roles: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"][]
@@ -4662,6 +4687,28 @@ export type Database = {
           }
         | {
             Args: {
+              p_limit?: number
+              p_manager_id?: string
+              p_phase_id?: string
+              p_saison_id?: string
+              p_search?: string
+            }
+            Returns: {
+              categorie: string
+              course_id: string
+              date_debut: string
+              date_fin: string
+              has_points: boolean
+              last_result_at: string
+              my_points: number
+              nom: string
+              phase_id: string
+              types: Database["public"]["Enums"]["type_classement"][]
+            }[]
+          }
+        | {
+            Args: {
+              p_league_id?: string
               p_limit?: number
               p_manager_id?: string
               p_phase_id?: string

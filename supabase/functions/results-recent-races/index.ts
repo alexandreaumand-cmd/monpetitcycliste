@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { saison_id = null, phase_id, search, limit = 12 } = await req.json();
+    const { saison_id = null, phase_id, search, limit = 12, league_id = null } = await req.json();
 
     // Get the manager ID for the current user
     const { data: manager } = await supabase
@@ -43,7 +43,8 @@ Deno.serve(async (req) => {
       p_phase_id: phase_id || null,
       p_search: search || null,
       p_limit: limit,
-      p_manager_id: managerId
+      p_manager_id: managerId,
+      p_league_id: league_id
     });
 
     if (error) throw error;
