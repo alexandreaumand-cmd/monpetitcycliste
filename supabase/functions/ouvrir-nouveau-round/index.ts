@@ -60,10 +60,34 @@ Deno.serve(async (req) => {
     }
 
     if (!isLeagueAdmin) {
-      return new Response(
-        JSON.stringify({ error: 'Accès refusé: réservé aux administrateurs de la ligue' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      // Fallback: direct check on league_members in case RPC fails or returns false unexpectedly
+      const { data: membership, error: membershipError } = await supabase
+        .from('league_members')
+        .select('role_in_league')
+        .eq('league_id', league_id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      console.log('Direct role check result:', {
+        role: membership?.role_in_league,
+        membershipError,
+        userId: user.id,
+        leagueId: league_id,
+      });
+
+      if (membershipError) {
+        console.error('Membership check error:', membershipError);
+      }
+
+      const role = membership?.role_in_league as string | undefined;
+      if (!role || !['owner', 'admin'].includes(role)) {
+        return new Response(
+          JSON.stringify({ error: 'Accès refusé: réservé aux administrateurs de la ligue' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('Fallback admin check passed via league_members for user:', user.id);
     }
 
     // Get last auction for this phase and league (use maybeSingle to handle no results)
