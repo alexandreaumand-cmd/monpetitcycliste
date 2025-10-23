@@ -98,6 +98,7 @@ const StartlistDesktop = () => {
         body: { 
           race_id: selectedRaceId || null,
           phase_id: selectedPhaseId,
+          league_id: leagueId,
           text: textContent,
           with_diagnostics: showDiagnostics,
           startlisteur_note: startlisteurNote.trim() || null

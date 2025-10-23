@@ -223,6 +223,7 @@ export const StartlistMobile = () => {
         body: {
           race_id: selectedRaceId || null,
           phase_id: selectedPhaseId,
+          league_id: leagueId,
           text: textContent,
         },
       });

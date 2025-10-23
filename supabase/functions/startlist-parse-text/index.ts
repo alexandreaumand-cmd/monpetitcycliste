@@ -90,11 +90,18 @@ serve(async (req) => {
       }
     );
 
-    const { race_id, phase_id, text, with_diagnostics, startlisteur_note } = await req.json();
+    const { race_id, phase_id, text, with_diagnostics, startlisteur_note, league_id } = await req.json();
 
     if (!text) {
       return new Response(
         JSON.stringify({ error: 'Le texte est requis' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!league_id) {
+      return new Response(
+        JSON.stringify({ error: 'league_id est requis' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -156,7 +163,8 @@ serve(async (req) => {
     const { data: rostersData } = await supabase
       .from('rosters')
       .select('coureur_id, manager_id, coureurs(id, nom, equipe), managers(id, nom)')
-      .eq('phase_id', phaseId);
+      .eq('phase_id', phaseId)
+      .eq('league_id', league_id);
 
     if (!rostersData) {
       throw new Error('Impossible de charger les rosters');
