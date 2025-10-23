@@ -42,6 +42,18 @@ Deno.serve(async (req) => {
 
     console.log(`Fetching manager statuses for auction ${auction_id}, phase ${phase_id}`);
 
+    // Récupérer le league_id depuis l'auction
+    const { data: auction, error: auctionError } = await supabaseClient
+      .from('auctions')
+      .select('league_id')
+      .eq('id', auction_id)
+      .single();
+
+    if (auctionError) {
+      console.error('Error fetching auction:', auctionError);
+      throw auctionError;
+    }
+
     // Récupérer les informations de la phase (budget et max_coureurs)
     const { data: phase, error: phaseError } = await supabaseClient
       .from('phases')
@@ -54,10 +66,23 @@ Deno.serve(async (req) => {
       throw phaseError;
     }
 
-    // Récupérer tous les managers
+    // Récupérer uniquement les managers membres de cette ligue
+    const { data: leagueMembers, error: membersError } = await supabaseClient
+      .from('league_members')
+      .select('user_id')
+      .eq('league_id', auction.league_id);
+
+    if (membersError) {
+      console.error('Error fetching league members:', membersError);
+      throw membersError;
+    }
+
+    const userIds = leagueMembers.map(m => m.user_id);
+
     const { data: managers, error: managersError } = await supabaseClient
       .from('managers')
-      .select('id, nom')
+      .select('id, nom, user_id')
+      .in('user_id', userIds)
       .order('nom');
 
     if (managersError) {
