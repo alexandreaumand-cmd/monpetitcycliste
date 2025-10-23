@@ -1,14 +1,19 @@
 import { useNavigate } from "react-router-dom";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useUserLeagues } from "@/hooks/useUserLeagues";
-import { PageContainer } from "@/components/layout/PageContainer";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { LeagueCard } from "@/components/dashboard/LeagueCard";
 import { RecentRacesWidget } from "@/components/dashboard/RecentRacesWidget";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, LogOut } from "lucide-react";
+import logo from "@/assets/logo.png";
 
-export default function DashboardHome() {
+interface DashboardHomeProps {
+  onSignOut: () => void;
+}
+
+export default function DashboardHome({ onSignOut }: DashboardHomeProps) {
   const navigate = useNavigate();
   const { setLeagueId } = useLeague();
   const { leagues, isLoading } = useUserLeagues();
@@ -19,8 +24,23 @@ export default function DashboardHome() {
   };
 
   return (
-    <PageContainer>
-      <div className="space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+      {/* Header minimal */}
+      <header className="sticky top-0 z-50 bg-card/90 backdrop-blur-sm border-b">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="Mon Petit Cycliste" className="h-10 w-10" />
+            <h1 className="text-xl font-bold">Mon Petit Cycliste</h1>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onSignOut}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Déconnexion
+          </Button>
+        </div>
+      </header>
+
+      {/* Contenu */}
+      <div className="container mx-auto px-4 py-8 space-y-6">
         {/* Quick Actions */}
         <QuickActions />
 
@@ -38,7 +58,7 @@ export default function DashboardHome() {
               ))}
             </div>
           ) : leagues.length === 0 ? (
-            <div className="text-center py-12 border-2 border-dashed rounded-lg">
+            <div className="text-center py-12 border-2 border-dashed rounded-lg bg-card">
               <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
               <h3 className="text-lg font-semibold mb-2">Aucune ligue</h3>
               <p className="text-muted-foreground mb-4">
@@ -63,6 +83,6 @@ export default function DashboardHome() {
           <RecentRacesWidget />
         </div>
       </div>
-    </PageContainer>
+    </div>
   );
 }

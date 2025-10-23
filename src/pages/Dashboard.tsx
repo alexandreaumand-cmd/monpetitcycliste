@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Routes, Route, Navigate } from "react-router-dom";
+import { useNavigate, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import { AuctionsList } from "@/components/auction/AuctionsList";
 import { MyTeam } from "@/components/team/MyTeam";
 import { UpcomingCourses } from "@/components/courses/UpcomingCourses";
@@ -22,11 +23,14 @@ import { LeagueDetailPage } from "./admin/LeagueDetailPage";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [manager, setManager] = useState<any>(null);
   const { isSuperAdmin, isLeagueAdminOnly, loading: roleLoading } = useUserRole();
   const isAnyAdmin = isSuperAdmin || isLeagueAdminOnly;
+  
+  const isHomePage = location.pathname === '/dashboard/home' || location.pathname === '/dashboard';
 
   useEffect(() => {
     checkUser();
@@ -83,7 +87,7 @@ const Dashboard = () => {
         >
           <Routes>
             <Route index element={<Navigate to="/dashboard/home" replace />} />
-            <Route path="home" element={<DashboardHome />} />
+            <Route path="home" element={<DashboardHome onSignOut={handleSignOut} />} />
             <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
             <Route path="mon-equipe" element={<MyTeam />} />
             <Route path="courses" element={<UpcomingCourses />} />
@@ -104,18 +108,23 @@ const Dashboard = () => {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full">
-        <AppSidebar isAdmin={isAnyAdmin} />
+        {!isHomePage && <AppSidebar isAdmin={isAnyAdmin} />}
         <SidebarInset className="flex-1 flex flex-col">
           <AnnouncementBanner />
-          <TopBar 
-            onSignOut={handleSignOut}
-            manager={manager}
-            isAdmin={isAnyAdmin}
-          />
-          <main className="flex-1 container mx-auto px-4 pt-0 pb-8">
+          {!isHomePage && (
+            <TopBar 
+              onSignOut={handleSignOut}
+              manager={manager}
+              isAdmin={isAnyAdmin}
+            />
+          )}
+          <main className={cn(
+            "flex-1 container mx-auto px-4 pb-8",
+            isHomePage ? "pt-0" : "pt-0"
+          )}>
             <Routes>
               <Route index element={<Navigate to="/dashboard/home" replace />} />
-              <Route path="home" element={<DashboardHome />} />
+              <Route path="home" element={<DashboardHome onSignOut={handleSignOut} />} />
               <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
               <Route path="mon-equipe" element={<MyTeam />} />
               <Route path="courses" element={<UpcomingCourses />} />

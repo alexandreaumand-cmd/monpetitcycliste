@@ -1,37 +1,56 @@
 import { Badge } from "@/components/ui/badge";
 import type { LeagueStatus } from "@/lib/leagues/types";
-import { Clock, Play, Trophy, Ban } from "lucide-react";
+import { Clock, Play, Trophy, Ban, CheckCircle } from "lucide-react";
 
 type LeagueStatusBadgeProps = {
   status: LeagueStatus;
+  currentPlayerCount: number;
+  maxPlayers: number;
   className?: string;
 };
 
-const statusConfig = {
-  pending: {
-    label: 'En attente',
-    icon: Clock,
-    variant: 'secondary' as const,
-  },
-  active: {
-    label: 'En cours',
-    icon: Play,
-    variant: 'default' as const,
-  },
-  completed: {
-    label: 'Terminée',
-    icon: Trophy,
-    variant: 'outline' as const,
-  },
-  cancelled: {
-    label: 'Annulée',
-    icon: Ban,
-    variant: 'destructive' as const,
-  },
-};
+export function LeagueStatusBadge({ status, currentPlayerCount, maxPlayers, className }: LeagueStatusBadgeProps) {
+  const getDisplayStatus = () => {
+    if (status === 'pending') {
+      if (currentPlayerCount < maxPlayers) {
+        return {
+          label: 'En attente de joueurs',
+          icon: Clock,
+          variant: 'secondary' as const,
+        };
+      } else {
+        return {
+          label: 'Prêt à lancer',
+          icon: CheckCircle,
+          variant: 'default' as const,
+        };
+      }
+    }
+    
+    if (status === 'active') {
+      return {
+        label: 'En cours',
+        icon: Play,
+        variant: 'default' as const,
+      };
+    }
+    
+    if (status === 'completed') {
+      return {
+        label: 'Terminée',
+        icon: Trophy,
+        variant: 'outline' as const,
+      };
+    }
+    
+    return {
+      label: 'Annulée',
+      icon: Ban,
+      variant: 'destructive' as const,
+    };
+  };
 
-export function LeagueStatusBadge({ status, className }: LeagueStatusBadgeProps) {
-  const config = statusConfig[status] || statusConfig.pending;
+  const config = getDisplayStatus();
   const Icon = config.icon;
 
   return (
