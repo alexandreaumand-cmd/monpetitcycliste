@@ -16,6 +16,19 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Client service role pour bypasser RLS
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
+    );
+
+    // Client anon pour vérifier l'authentification utilisateur
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -27,11 +40,15 @@ Deno.serve(async (req) => {
     );
 
     const authHeader = req.headers.get('Authorization');
-    if (authHeader) {
-      supabaseClient.auth.setSession({
-        access_token: authHeader.replace('Bearer ', ''),
-        refresh_token: '',
-      });
+    if (!authHeader) {
+      throw new Error('Authorization header required');
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+    
+    if (userError || !user) {
+      throw new Error('Unauthorized');
     }
 
     const { auction_id, phase_id } = await req.json();
@@ -42,8 +59,8 @@ Deno.serve(async (req) => {
 
     console.log(`Fetching manager statuses for auction ${auction_id}, phase ${phase_id}`);
 
-    // Récupérer le league_id depuis l'auction
-    const { data: auction, error: auctionError } = await supabaseClient
+    // Récupérer le league_id depuis l'auction (via admin pour bypasser RLS)
+    const { data: auction, error: auctionError } = await supabaseAdmin
       .from('auctions')
       .select('league_id')
       .eq('id', auction_id)
@@ -54,8 +71,29 @@ Deno.serve(async (req) => {
       throw auctionError;
     }
 
+    console.log(`Auction league_id: ${auction.league_id}`);
+
+    // Vérifier que l'utilisateur est membre de cette ligue
+    const { data: userMembership, error: membershipError } = await supabaseAdmin
+      .from('league_members')
+      .select('id')
+      .eq('league_id', auction.league_id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (membershipError || !userMembership) {
+      console.error('User is not a member of this league');
+      return new Response(
+        JSON.stringify({ error: 'Access denied - not a member of this league' }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Récupérer les informations de la phase (budget et max_coureurs)
-    const { data: phase, error: phaseError } = await supabaseClient
+    const { data: phase, error: phaseError } = await supabaseAdmin
       .from('phases')
       .select('budget, max_coureurs')
       .eq('id', phase_id)
@@ -67,7 +105,7 @@ Deno.serve(async (req) => {
     }
 
     // Récupérer uniquement les managers membres de cette ligue
-    const { data: leagueMembers, error: membersError } = await supabaseClient
+    const { data: leagueMembers, error: membersError } = await supabaseAdmin
       .from('league_members')
       .select('user_id')
       .eq('league_id', auction.league_id);
@@ -77,9 +115,22 @@ Deno.serve(async (req) => {
       throw membersError;
     }
 
+    console.log(`Found ${leagueMembers?.length || 0} league members`);
+
+    // Si aucun membre, retourner un tableau vide
+    if (!leagueMembers || leagueMembers.length === 0) {
+      console.log('No members found for this league');
+      return new Response(
+        JSON.stringify({ managers: [] }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     const userIds = leagueMembers.map(m => m.user_id);
 
-    const { data: managers, error: managersError } = await supabaseClient
+    const { data: managers, error: managersError } = await supabaseAdmin
       .from('managers')
       .select('id, nom, user_id')
       .in('user_id', userIds)
@@ -90,26 +141,30 @@ Deno.serve(async (req) => {
       throw managersError;
     }
 
+    console.log(`Found ${managers?.length || 0} managers for league ${auction.league_id}`);
+
     // Pour chaque manager, calculer son statut
     const managerStatuses: ManagerStatus[] = await Promise.all(
       managers.map(async (manager) => {
-        // Compter les coureurs dans le roster
-        const { count: rosterCount, error: rosterError } = await supabaseClient
+        // Compter les coureurs dans le roster (filtré par league_id)
+        const { count: rosterCount, error: rosterError } = await supabaseAdmin
           .from('rosters')
           .select('*', { count: 'exact', head: true })
           .eq('manager_id', manager.id)
-          .eq('phase_id', phase_id);
+          .eq('phase_id', phase_id)
+          .eq('league_id', auction.league_id);
 
         if (rosterError) {
           console.error(`Error counting roster for manager ${manager.nom}:`, rosterError);
         }
 
-        // Calculer le budget dépensé (rosters)
-        const { data: rosterData, error: rosterBudgetError } = await supabaseClient
+        // Calculer le budget dépensé (rosters filtré par league_id)
+        const { data: rosterData, error: rosterBudgetError } = await supabaseAdmin
           .from('rosters')
           .select('prix_signature')
           .eq('manager_id', manager.id)
-          .eq('phase_id', phase_id);
+          .eq('phase_id', phase_id)
+          .eq('league_id', auction.league_id);
 
         if (rosterBudgetError) {
           console.error(`Error fetching roster budget for manager ${manager.nom}:`, rosterBudgetError);
@@ -117,8 +172,8 @@ Deno.serve(async (req) => {
 
         const budgetSpent = rosterData?.reduce((sum, r) => sum + Number(r.prix_signature || 0), 0) || 0;
 
-        // Compter les enchères
-        const { data: bids, error: bidsError } = await supabaseClient
+        // Compter les enchères (déjà filtré par auction_id qui appartient à la ligue)
+        const { data: bids, error: bidsError } = await supabaseAdmin
           .from('bids')
           .select('statut, montant')
           .eq('manager_id', manager.id)
