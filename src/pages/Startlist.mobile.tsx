@@ -86,7 +86,8 @@ export const StartlistMobile = () => {
       }
 
       console.log('[Startlist Mobile] Loaded courses:', leagueCourses?.courses?.length);
-      const courses = leagueCourses?.courses || [];
+      const raw = leagueCourses?.courses || [];
+      const courses = raw.map((c: any) => ({ ...c, id: c.course_id }));
       
       // Filter by tab mode
       let filtered = courses;
