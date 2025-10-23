@@ -42,6 +42,23 @@ Deno.serve(async (req) => {
 
     const manager_id = input_manager_id || manager.id;
 
+    // Get league settings if league_id is provided
+    let leagueBudget = null;
+    let leagueMaxRiders = null;
+
+    if (league_id) {
+      const { data: league } = await supabase
+        .from('leagues')
+        .select('settings')
+        .eq('id', league_id)
+        .single();
+      
+      if (league?.settings) {
+        leagueBudget = league.settings.budget;
+        leagueMaxRiders = league.settings.max_riders;
+      }
+    }
+
     // Get phase info with saison_id
     const { data: phase } = await supabase
       .from('phases')
@@ -55,6 +72,10 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Use league-specific settings if available, otherwise use phase defaults
+    const budget = leagueBudget ?? phase.budget;
+    const max_coureurs = leagueMaxRiders ?? phase.max_coureurs;
 
     // Get active auction for this phase
     let auctionQuery = supabase
@@ -77,16 +98,16 @@ Deno.serve(async (req) => {
         error: 'No active auction',
         phase_id,
         manager_id,
-        starting_budget: phase.budget,
+        starting_budget: budget,
         currency: '€',
-        rules: { min_bid: 1, step: 1, max_bids: phase.max_coureurs },
+        rules: { min_bid: 1, step: 1, max_bids: max_coureurs },
         my_bids: [],
         submitted_bids: [],
         totals: { 
           draft_sum: 0, 
           draft_count: 0, 
-          remaining_budget: phase.budget, 
-          remaining_slots: phase.max_coureurs,
+          remaining_budget: budget, 
+          remaining_slots: max_coureurs,
           roster_count: 0,
           budget_spent: 0
         },
@@ -224,8 +245,8 @@ Deno.serve(async (req) => {
     // Calculate totals (including existing roster)
     const draft_sum = my_bids.reduce((sum, b) => sum + b.amount, 0);
     const draft_count = my_bids.length;
-    const remaining_budget = phase.budget - budget_spent - draft_sum;
-    const remaining_slots = phase.max_coureurs - roster_count - draft_count;
+    const remaining_budget = budget - budget_spent - draft_sum;
+    const remaining_slots = max_coureurs - roster_count - draft_count;
 
     // Check if coureurs are already taken (in rosters)
     let takenQuery = supabase
@@ -254,7 +275,7 @@ Deno.serve(async (req) => {
     });
 
     // Validation status
-    const has_exact_slots = (roster_count + draft_count) === phase.max_coureurs;
+    const has_exact_slots = (roster_count + draft_count) === max_coureurs;
     const budget_fully_used = Math.abs(remaining_budget) < 1;
     const can_submit = has_exact_slots && budget_fully_used && all_above_min && no_duplicates && no_taken_riders;
 
@@ -269,9 +290,9 @@ Deno.serve(async (req) => {
           statut: auction.statut,
           deadline_at: auction.deadline_at
         },
-        starting_budget: phase.budget,
+        starting_budget: budget,
         currency: '€',
-        rules: { min_bid: 1, step: 1, max_bids: phase.max_coureurs },
+        rules: { min_bid: 1, step: 1, max_bids: max_coureurs },
         roster: enriched_roster,
         my_bids: enriched_my_bids,
         submitted_bids: enriched_submitted_bids,
