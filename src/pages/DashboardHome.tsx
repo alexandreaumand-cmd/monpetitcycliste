@@ -79,7 +79,7 @@ export default function DashboardHome({ onSignOut }: DashboardHomeProps) {
         </div>
 
         {/* Recent Results Widget */}
-        <div className="max-w-2xl">
+        <div className="w-full">
           <RecentResultsWidget />
         </div>
       </div>

@@ -43,9 +43,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // For each race, get top 10 from general classification
+    // For each race, get metadata and top 10 from general classification
     const racesWithTop10 = await Promise.all(
       recentCourses.map(async (course) => {
+        // Get course metadata
+        const { data: metaData, error: metaError } = await supabase.rpc('results_course_meta_v2', {
+          p_course_id: course.course_id
+        });
+
+        const meta = metaData && metaData.length > 0 ? metaData[0] : null;
+
+        // Get top 10 for General classification
         const { data: top10, error: topError } = await supabase.rpc('results_course_top', {
           p_course_id: course.course_id,
           p_type_classement: 'General',
@@ -55,18 +63,28 @@ Deno.serve(async (req) => {
 
         if (topError) {
           console.error(`Error fetching top 10 for ${course.course_id}:`, topError);
-          return {
-            ...course,
-            top10: []
-          };
         }
+
+        if (metaError) {
+          console.error(`Error fetching metadata for ${course.course_id}:`, metaError);
+        }
+
+        // Format top10 results
+        const formattedTop10 = (top10 || []).map((r: any) => ({
+          position: r.row_position || r.position || 0,
+          coureur_nom: r.coureur_nom || '',
+          coureur_equipe: r.equipe || '',
+          points: r.points || 0
+        }));
 
         return {
           course_id: course.course_id,
           course_nom: course.course_nom,
           date_fin: course.date_fin,
           total_points: course.total_points,
-          top10: top10 || []
+          top10: formattedTop10,
+          types_disponibles: meta?.types_disponibles || [],
+          etapes_disponibles: meta?.etapes_disponibles || []
         };
       })
     );
