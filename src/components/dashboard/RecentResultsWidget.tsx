@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Calendar, Trophy, Medal } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar, Trophy, Medal, Filter, Flag } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -31,7 +32,9 @@ type ClassificationResult = {
 };
 
 function RaceCard({ race }: { race: RaceWithResults }) {
-  const [activeTab, setActiveTab] = useState<string>('General');
+  const [activeTab, setActiveTab] = useState<'general' | 'stages'>('general');
+  const [selectedClassificationType, setSelectedClassificationType] = useState<string>('General');
+  const [selectedStage, setSelectedStage] = useState<number>(1);
   const [loadedClassifications, setLoadedClassifications] = useState<ClassificationResult>({
     General: race.top10
   });
@@ -73,14 +76,34 @@ function RaceCard({ race }: { race: RaceWithResults }) {
     }
   };
 
-  const handleTabChange = async (value: string) => {
-    setActiveTab(value);
+  const handleTabChange = (tab: 'general' | 'stages') => {
+    setActiveTab(tab);
+  };
+
+  const handleClassificationChange = async (value: string) => {
+    setSelectedClassificationType(value);
     if (!loadedClassifications[value]) {
       await loadClassification(value);
     }
   };
 
-  const currentResults = loadedClassifications[activeTab] || [];
+  const handleStageChange = async (value: string) => {
+    const stageNum = parseInt(value);
+    setSelectedStage(stageNum);
+    const key = `Stage-${stageNum}`;
+    if (!loadedClassifications[key]) {
+      await loadClassification('General', stageNum);
+    }
+  };
+
+  const getCurrentKey = () => {
+    if (activeTab === 'stages') {
+      return `Stage-${selectedStage}`;
+    }
+    return selectedClassificationType;
+  };
+
+  const currentResults = loadedClassifications[getCurrentKey()] || [];
   const hasMultipleStages = (race.etapes_disponibles?.length ?? 0) > 0;
   const availableTypes = (race.types_disponibles || []).filter(t => t !== 'General');
 
@@ -99,13 +122,38 @@ function RaceCard({ race }: { race: RaceWithResults }) {
         {availableTypes.length > 0 || hasMultipleStages ? (
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-3">
-              <TabsTrigger value="General">GC</TabsTrigger>
-              {availableTypes.includes('Points') && (
-                <TabsTrigger value="Points">Points</TabsTrigger>
+              <TabsTrigger value="general">
+                <Filter className="h-3 w-3 mr-1" />
+                Général
+              </TabsTrigger>
+              {hasMultipleStages && (
+                <TabsTrigger value="stages">
+                  <Flag className="h-3 w-3 mr-1" />
+                  Étapes
+                </TabsTrigger>
               )}
             </TabsList>
             
-            <TabsContent value={activeTab} className="mt-0">
+            <TabsContent value="general" className="mt-0">
+              <div className="mb-3">
+                <Select value={selectedClassificationType} onValueChange={handleClassificationChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Type de classement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="General">🏆 Classement Général</SelectItem>
+                    {availableTypes.includes('Points') && (
+                      <SelectItem value="Points">🟢 Points</SelectItem>
+                    )}
+                    {availableTypes.includes('Montagne') && (
+                      <SelectItem value="Montagne">⛰️ Pois (Montagne)</SelectItem>
+                    )}
+                    {availableTypes.includes('Jeunes') && (
+                      <SelectItem value="Jeunes">👶 Jeunes</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
               {isLoadingTab ? (
                 <div className="space-y-2">
                   {[1, 2, 3, 4, 5].map((i) => (
@@ -116,6 +164,34 @@ function RaceCard({ race }: { race: RaceWithResults }) {
                 <RidersList riders={currentResults} />
               )}
             </TabsContent>
+
+            {hasMultipleStages && (
+              <TabsContent value="stages" className="mt-0">
+                <div className="mb-3">
+                  <Select value={selectedStage.toString()} onValueChange={handleStageChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Sélectionner une étape" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {race.etapes_disponibles.map((etape) => (
+                        <SelectItem key={etape} value={etape.toString()}>
+                          🚩 Étape {etape}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {isLoadingTab ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                  </div>
+                ) : (
+                  <RidersList riders={currentResults} />
+                )}
+              </TabsContent>
+            )}
           </Tabs>
         ) : (
           <RidersList riders={currentResults} />
