@@ -57,37 +57,44 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
 
   return (
     <Card className="hover:shadow-lg transition-all duration-200">
-      <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1">
-            <CardTitle className="text-lg mb-2">{league.name}</CardTitle>
-            <div className="flex flex-wrap gap-2">
-              <LeagueStatusBadge 
-                status={league.status} 
-                currentPlayerCount={league.current_player_count}
-                maxPlayers={league.max_players}
-              />
-              {gameMode && (
-                <Badge variant="secondary" className="gap-1">
-                  <Zap className="h-3 w-3" />
-                  {gameMode.name}
-                </Badge>
+      <CardHeader className="space-y-3">
+        {/* Ligne 1 : Nom + Statut + Visibilité */}
+        <div className="flex items-start justify-between gap-3 pb-3 border-b border-border">
+          <CardTitle className="text-lg">{league.name}</CardTitle>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <LeagueStatusBadge 
+              status={league.status} 
+              currentPlayerCount={league.current_player_count}
+              maxPlayers={league.max_players}
+            />
+            <Badge variant="outline" className="gap-1">
+              {league.visibility === 'private' ? (
+                <>
+                  <Lock className="h-3 w-3" />
+                  Privée
+                </>
+              ) : (
+                <>
+                  <Globe className="h-3 w-3" />
+                  Publique
+                </>
               )}
-              <Badge variant="outline" className="gap-1">
-                {league.visibility === 'private' ? (
-                  <>
-                    <Lock className="h-3 w-3" />
-                    Privée
-                  </>
-                ) : (
-                  <>
-                    <Globe className="h-3 w-3" />
-                    Publique
-                  </>
-                )}
-              </Badge>
-            </div>
+            </Badge>
           </div>
+        </div>
+
+        {/* Ligne 2 : Joueurs + Type de ligue */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="secondary" className="gap-1">
+            <Users className="h-3 w-3" />
+            {league.current_player_count}/{league.max_players} joueurs
+          </Badge>
+          {gameMode && (
+            <Badge variant="secondary" className="gap-1">
+              <Zap className="h-3 w-3" />
+              {gameMode.name}
+            </Badge>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
