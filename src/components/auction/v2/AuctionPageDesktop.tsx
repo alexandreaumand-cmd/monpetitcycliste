@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AuctionHeader } from "./AuctionHeader";
 import { AuctionSearchFilters } from "./AuctionSearchFilters";
@@ -114,8 +114,14 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
     },
   });
 
-  // Search riders
-  const { data: ridersData, isLoading: ridersLoading } = useQuery({
+  // Search riders with infinite scroll
+  const {
+    data: ridersData,
+    isLoading: ridersLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: [
       "auction-search-riders",
       phaseId,
@@ -124,7 +130,7 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
       selectedCotes,
       context?.my_bids?.map((b: any) => b.coureur_id) || [],
     ],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
       // Convert selectedCotes to min/max ranges
       let cote_min: number | null = null;
       let cote_max: number | null = null;
@@ -149,14 +155,25 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
           cote_min,
           cote_max,
           exclude_rider_ids: context?.my_bids?.map((b: any) => b.coureur_id) || [],
-          limit: 50,
+          limit: 100,
+          offset: pageParam,
         },
       });
       if (error) throw error;
       return data;
     },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      if (!lastPage.pagination.has_more) return undefined;
+      return allPages.length * 100;
+    },
     enabled: !!context,
   });
+
+  // Flatten all pages into single riders array
+  const allRiders = useMemo(() => {
+    return ridersData?.pages.flatMap(page => page.items) || [];
+  }, [ridersData]);
 
   // Mutations
   const upsertBidMutation = useMutation({
@@ -329,8 +346,11 @@ export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopPro
           selectedCotes={selectedCotes}
           setSelectedCotes={setSelectedCotes}
           availableTeams={Array.isArray(availableTeams) ? availableTeams : []}
-          riders={ridersData?.items || []}
+          riders={allRiders}
           isSearching={ridersLoading}
+          hasMoreRiders={hasNextPage}
+          onLoadMoreRiders={fetchNextPage}
+          isLoadingMore={isFetchingNextPage}
           myBids={[...(context.roster || []), ...(context.my_bids || [])]}
           handleSubmitBid={handleSubmitBid}
           handleUpdateAmount={handleUpdateAmount}

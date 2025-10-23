@@ -22,10 +22,21 @@ interface RiderResultsListProps {
   riders: Rider[];
   onAddRider: (rider: Rider) => void;
   isLoading?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
   renderActionButton?: (rider: Rider) => React.ReactNode;
 }
 
-export function RiderResultsList({ riders, onAddRider, isLoading, renderActionButton }: RiderResultsListProps) {
+export function RiderResultsList({ 
+  riders, 
+  onAddRider, 
+  isLoading, 
+  hasMore, 
+  onLoadMore, 
+  isLoadingMore,
+  renderActionButton 
+}: RiderResultsListProps) {
   const isMobile = useIsMobile();
   const [sortColumn, setSortColumn] = useState<'nom' | 'cote' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -135,6 +146,27 @@ export function RiderResultsList({ riders, onAddRider, isLoading, renderActionBu
           ))}
         </TableBody>
       </Table>
+      
+      {/* Load more button */}
+      {hasMore && onLoadMore && (
+        <div className="p-4 text-center border-t">
+          <Button
+            variant="outline"
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+            className="w-full"
+          >
+            {isLoadingMore ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
+                Chargement...
+              </>
+            ) : (
+              "Charger plus de coureurs"
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
