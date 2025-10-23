@@ -188,6 +188,8 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                 onOpenChange={setInvitesSheetOpen}
                 leagueId={league.id}
                 leagueName={league.name}
+                maxPlayers={league.max_players}
+                currentPlayerCount={league.current_player_count}
               />
             </>
           )}
