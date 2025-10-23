@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, Trophy, Medal } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 type RiderResult = {
   position: number;
@@ -41,6 +42,65 @@ export function RecentResultsWidget() {
     return null;
   };
 
+  const getPodiumStyles = (position: number) => {
+    if (position === 1) {
+      return "bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 border-l-4 border-yellow-400";
+    }
+    if (position === 2) {
+      return "bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/20 dark:to-gray-700/20 border-l-4 border-gray-400";
+    }
+    if (position === 3) {
+      return "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-l-4 border-amber-600";
+    }
+    return "";
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-primary" />
+            Derniers résultats
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-3">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <div className="space-y-2">
+                  {[1, 2, 3, 4, 5].map((j) => (
+                    <Skeleton key={j} className="h-12 w-full" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!racesWithResults || racesWithResults.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-primary" />
+            Derniers résultats
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground text-center py-8">
+            Aucun résultat récent
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -50,76 +110,73 @@ export function RecentResultsWidget() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <div className="space-y-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="space-y-3">
-                <Skeleton className="h-5 w-3/4" />
-                <div className="space-y-2">
-                  {[1, 2, 3, 4, 5].map((j) => (
-                    <Skeleton key={j} className="h-8 w-full" />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : !racesWithResults || racesWithResults.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            Aucun résultat récent
-          </p>
-        ) : (
-          <div className="space-y-6">
-            {racesWithResults.map((race) => (
-              <div key={race.course_id} className="border-l-2 border-primary pl-4 space-y-3">
-                {/* Race header */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {racesWithResults.map((race) => (
+            <Card key={race.course_id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
                 <div className="space-y-1">
-                  <h4 className="font-semibold text-sm">{race.course_nom}</h4>
+                  <h4 className="font-bold text-base leading-tight">{race.course_nom}</h4>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Calendar className="h-3 w-3" />
                     {race.date_fin ? format(new Date(race.date_fin), 'dd MMMM yyyy', { locale: fr }) : 'Date inconnue'}
                   </div>
                 </div>
-
-                {/* Top 10 */}
+              </CardHeader>
+              <CardContent className="pt-0">
                 {race.top10.length > 0 ? (
-                  <div className="bg-muted/30 rounded-lg p-3 space-y-1.5">
+                  <div className="space-y-1.5">
                     {race.top10.map((rider) => (
                       <div
                         key={`${race.course_id}-${rider.position}`}
-                        className="flex items-center justify-between text-xs hover:bg-muted/50 rounded px-2 py-1.5 transition-colors"
+                        className={cn(
+                          "flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors",
+                          rider.position <= 3 
+                            ? getPodiumStyles(rider.position)
+                            : "hover:bg-muted/30"
+                        )}
                       >
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="flex items-center gap-2.5 flex-1 min-w-0">
                           <div className="flex items-center justify-center w-5 flex-shrink-0">
                             {getMedalIcon(rider.position) || (
-                              <span className="text-muted-foreground font-medium">
+                              <span className="text-muted-foreground font-medium text-sm">
                                 {rider.position}
                               </span>
                             )}
                           </div>
-                          <span className="font-medium truncate">
-                            {rider.coureur_nom}
-                          </span>
-                          {rider.coureur_equipe && (
-                            <span className="text-muted-foreground truncate hidden sm:inline text-xs">
-                              ({rider.coureur_equipe})
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <span className={cn(
+                              "truncate",
+                              rider.position <= 3 ? "font-semibold text-sm" : "font-medium text-xs"
+                            )}>
+                              {rider.coureur_nom}
                             </span>
-                          )}
+                            {rider.coureur_equipe && rider.position <= 3 && (
+                              <span className="text-xs text-muted-foreground truncate">
+                                {rider.coureur_equipe}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <span className="font-semibold text-primary flex-shrink-0 ml-2">
-                          {rider.points} pts
+                        <span className={cn(
+                          "flex-shrink-0 ml-2 tabular-nums",
+                          rider.position <= 3 
+                            ? "font-bold text-sm text-primary" 
+                            : "font-semibold text-xs text-muted-foreground"
+                        )}>
+                          {rider.points}
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic">
+                  <p className="text-xs text-muted-foreground italic text-center py-4">
                     Pas encore de résultats
                   </p>
                 )}
-              </div>
-            ))}
-          </div>
-        )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

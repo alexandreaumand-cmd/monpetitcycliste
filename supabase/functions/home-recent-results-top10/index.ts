@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
       recentCourses.map(async (course) => {
         const { data: top10, error: topError } = await supabase.rpc('results_course_top', {
           p_course_id: course.course_id,
-          p_type_classement: 'gc',
+          p_type_classement: 'General',
           p_etape_numero: null,
           p_limit: 10
         });
