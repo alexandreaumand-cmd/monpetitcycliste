@@ -81,8 +81,8 @@ function RaceCard({ race }: { race: RaceWithResults }) {
   };
 
   const currentResults = loadedClassifications[activeTab] || [];
-  const hasMultipleStages = race.etapes_disponibles.length > 0;
-  const availableTypes = race.types_disponibles.filter(t => t !== 'General');
+  const hasMultipleStages = (race.etapes_disponibles?.length ?? 0) > 0;
+  const availableTypes = (race.types_disponibles || []).filter(t => t !== 'General');
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
