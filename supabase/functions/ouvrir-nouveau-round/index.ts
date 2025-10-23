@@ -11,41 +11,70 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Create client with user's auth token to preserve auth.uid()
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Non authentifié' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      }
     );
 
     const { phase_id, deadline_at, league_id } = await req.json();
     console.log('Opening new round for phase:', phase_id, 'league:', league_id);
 
-    // Verify user is admin of this league
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user } } = await supabase.auth.getUser(token);
-
-    if (!user) {
-      throw new Error('Non authentifié');
+    // Verify user authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Non authentifié' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
+    console.log('User authenticated:', user.id);
+
     // Check if user is league admin
-    const { data: isLeagueAdmin } = await supabase.rpc('is_league_admin', {
+    const { data: isLeagueAdmin, error: rpcError } = await supabase.rpc('is_league_admin', {
       l_id: league_id
     });
 
-    if (!isLeagueAdmin) {
-      throw new Error('Accès refusé: réservé aux administrateurs de la ligue');
+    console.log('League admin check result:', { isLeagueAdmin, rpcError, userId: user.id, leagueId: league_id });
+
+    if (rpcError) {
+      console.error('RPC error:', rpcError);
+      throw new Error('Erreur lors de la vérification des permissions');
     }
 
-    // Get last auction for this phase and league
-    const { data: lastAuction } = await supabase
+    if (!isLeagueAdmin) {
+      return new Response(
+        JSON.stringify({ error: 'Accès refusé: réservé aux administrateurs de la ligue' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get last auction for this phase and league (use maybeSingle to handle no results)
+    const { data: lastAuction, error: auctionError } = await supabase
       .from('auctions')
       .select('round_number')
       .eq('phase_id', phase_id)
       .eq('league_id', league_id)
       .order('round_number', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     const newRoundNumber = lastAuction ? lastAuction.round_number + 1 : 1;
 
