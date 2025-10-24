@@ -36,7 +36,27 @@ serve(async (req) => {
       })
     }
 
-    const { phase_id, confirmation_phrase } = await req.json()
+    const { phase_id, confirmation_phrase, league_id } = await req.json()
+
+    // Valider league_id
+    if (!league_id) {
+      return new Response(JSON.stringify({ error: 'league_id requis' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Vérifier que l'utilisateur est admin de cette ligue
+    const { data: isLeagueAdmin } = await supabaseClient.rpc('is_league_admin', {
+      l_id: league_id
+    })
+
+    if (!isLeagueAdmin) {
+      return new Response(JSON.stringify({ error: 'Accès refusé: admin de ligue requis' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     // Vérifier que la phrase de confirmation commence par "RESET PHASE"
     if (!confirmation_phrase || !confirmation_phrase.startsWith('RESET PHASE')) {
@@ -53,6 +73,7 @@ serve(async (req) => {
       .from('rosters')
       .delete({ count: 'exact' })
       .eq('phase_id', phase_id)
+      .eq('league_id', league_id)
 
     console.log(`✅ Deleted ${rostersDeleted} rosters`)
 
@@ -83,6 +104,7 @@ serve(async (req) => {
         .from('bids')
         .delete({ count: 'exact' })
         .in('auction_id', auctionIds)
+        .eq('league_id', league_id)
       bidsDeleted = count || 0
       console.log(`✅ Deleted ${bidsDeleted} bids`)
     }
@@ -92,6 +114,7 @@ serve(async (req) => {
       .from('auctions')
       .delete({ count: 'exact' })
       .eq('phase_id', phase_id)
+      .eq('league_id', league_id)
 
     console.log(`✅ Deleted ${auctionsDeleted} auctions`)
 

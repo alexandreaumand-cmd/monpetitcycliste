@@ -17,6 +17,11 @@ Deno.serve(async (req) => {
     );
 
     const { auction_id, league_id } = await req.json();
+    
+    if (!league_id) {
+      throw new Error('league_id est requis');
+    }
+    
     console.log('Closing round for auction:', auction_id, 'league:', league_id);
 
     // Verify user is admin of this league
@@ -115,6 +120,7 @@ Deno.serve(async (req) => {
           manager_id: winner.manager_id,
           coureur_id,
           prix_signature: maxAmount,
+          league_id: league_id,
         });
 
         // Update bids

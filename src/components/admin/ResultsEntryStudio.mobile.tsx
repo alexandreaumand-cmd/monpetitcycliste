@@ -531,7 +531,7 @@ export const ResultsEntryStudioMobile = ({
       }
 
       if (pointsToInsert.length > 0) {
-        await supabase.from('points_ledger').insert(pointsToInsert);
+        await leagueClient.from('points_ledger').insert(pointsToInsert);
       }
     },
     onSuccess: (data: any) => {

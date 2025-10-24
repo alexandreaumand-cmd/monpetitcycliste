@@ -29,7 +29,21 @@ Deno.serve(async (req) => {
       throw new Error('Accès refusé: réservé aux superadministrateurs');
     }
 
-    const { phase_id, confirm_phrase } = await req.json();
+    const { phase_id, confirm_phrase, league_id } = await req.json();
+
+    // Validate league_id
+    if (!league_id) {
+      throw new Error('league_id requis');
+    }
+
+    // Check league admin access
+    const { data: isLeagueAdmin, error: adminCheckError } = await supabaseClient.rpc('is_league_admin', {
+      l_id: league_id
+    });
+
+    if (adminCheckError || !isLeagueAdmin) {
+      throw new Error('Accès refusé: admin de ligue requis');
+    }
 
     // Verify confirmation phrase
     if (confirm_phrase !== 'RESET ENCHERES') {
@@ -40,7 +54,8 @@ Deno.serve(async (req) => {
     const { data: auctions, error: auctionsError } = await supabaseClient
       .from('auctions')
       .select('id')
-      .eq('phase_id', phase_id);
+      .eq('phase_id', phase_id)
+      .eq('league_id', league_id);
 
     if (auctionsError) throw auctionsError;
 
@@ -62,7 +77,8 @@ Deno.serve(async (req) => {
     const { error: deleteBidsError } = await supabaseClient
       .from('bids')
       .delete()
-      .in('auction_id', auctionIds);
+      .in('auction_id', auctionIds)
+      .eq('league_id', league_id);
 
     if (deleteBidsError) throw deleteBidsError;
 
@@ -70,7 +86,8 @@ Deno.serve(async (req) => {
     const { error: deleteAuctionsError, count: deletedAuctions } = await supabaseClient
       .from('auctions')
       .delete({ count: 'exact' })
-      .eq('phase_id', phase_id);
+      .eq('phase_id', phase_id)
+      .eq('league_id', league_id);
 
     if (deleteAuctionsError) throw deleteAuctionsError;
 
