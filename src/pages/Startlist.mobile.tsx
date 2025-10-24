@@ -14,8 +14,6 @@ import {
   MobileStickyBottom,
 } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -45,14 +43,9 @@ export const StartlistMobile = () => {
   const { isAdmin } = useUserRole();
   const { phases, isLoading: isLoadingContext } = useSeasonContext();
   const { leagueId } = useLeague();
-  const [viewMode, setViewMode] = useState<"list" | "parse" | "view">("list");
+  const [viewMode, setViewMode] = useState<"list" | "view">("list");
   const [tabMode, setTabMode] = useState<"30days" | "90days" | "history" | "upcoming-year">("30days");
-  const [selectedRaceId, setSelectedRaceId] = useState("");
-  const [selectedPhaseId, setSelectedPhaseId] = useState("");
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
-  const [textContent, setTextContent] = useState("");
-  const [parseResult, setParseResult] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showUnmatched, setShowUnmatched] = useState(false);
   const [imageModalOpen, setImageModalOpen] = useState(false);
@@ -206,37 +199,6 @@ export const StartlistMobile = () => {
     }
   };
 
-  const handleParse = async () => {
-    if (!textContent.trim()) {
-      toast.error("Veuillez coller le texte de la startlist");
-      return;
-    }
-
-    if (!selectedPhaseId) {
-      toast.error("Veuillez sélectionner une phase");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("startlist-parse-text", {
-        body: {
-          race_id: selectedRaceId || null,
-          phase_id: selectedPhaseId,
-          league_id: leagueId,
-          text: textContent,
-        },
-      });
-
-      if (error) throw error;
-      setParseResult(data);
-      toast.success("Parsing terminé !");
-    } catch (error: any) {
-      toast.error("Erreur : " + error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleSelectRace = (raceId: string, startlistId: string) => {
     setSelectedStartlistId(startlistId);
@@ -250,10 +212,6 @@ export const StartlistMobile = () => {
       <div className="p-4 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold">Startlists</h2>
-          <Button size="sm" onClick={() => setViewMode("parse")}>
-            <FileText className="h-4 w-4 mr-2" />
-            Parser
-          </Button>
         </div>
 
         {/* 4 onglets */}
@@ -365,103 +323,6 @@ export const StartlistMobile = () => {
     );
   }
 
-  // PARSE MODE
-  if (viewMode === "parse") {
-    return (
-      <div className="p-4 space-y-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Button variant="ghost" size="sm" onClick={() => setViewMode("list")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour
-          </Button>
-          <h2 className="text-lg font-bold flex-1">Parser une startlist</h2>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">Course (optionnel)</label>
-            <Select value={selectedRaceId} onValueChange={setSelectedRaceId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choisir une course..." />
-              </SelectTrigger>
-              <SelectContent>
-                {races?.map((race) => (
-                  <SelectItem key={race.id} value={race.id}>
-                    {race.nom}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-2 block">Phase *</label>
-            <Select value={selectedPhaseId} onValueChange={setSelectedPhaseId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner une phase..." />
-              </SelectTrigger>
-              <SelectContent>
-                {phases?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    Phase {p.index_dans_saison} ({new Date(p.date_debut).toLocaleDateString('fr-FR', { month: 'short' })} - {new Date(p.date_fin).toLocaleDateString('fr-FR', { month: 'short' })})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Coller le texte de la startlist
-            </label>
-            <Textarea
-              value={textContent}
-              onChange={(e) => setTextContent(e.target.value)}
-              placeholder="0. MBH NESPOLI Lorenzo 0:00"
-              className="min-h-[200px] font-mono text-sm"
-            />
-          </div>
-
-          <Button onClick={handleParse} disabled={isLoading} className="w-full touch-target">
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Identification...
-              </>
-            ) : (
-              <>
-                <FileText className="h-4 w-4 mr-2" />
-                Identifier les coureurs
-              </>
-            )}
-          </Button>
-
-          {parseResult && (
-            <div className="space-y-4">
-              <KPIRow
-                items={[
-                  { label: "Lignes", value: parseResult.counts.parsed },
-                  { label: "Match DB", value: parseResult.counts.matched_db, trend: "up" },
-                  { label: "Dans roster", value: parseResult.counts.on_roster, trend: "up" },
-                ]}
-              />
-              
-              {parseResult.counts.unmatched > 0 && (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setShowUnmatched(true)}
-                >
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  Voir les {parseResult.counts.unmatched} non trouvés
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   // VIEW MODE
   if (viewMode === "view") {
@@ -782,24 +643,6 @@ export const StartlistMobile = () => {
               className="w-full h-auto rounded-lg"
             />
           )}
-        </MobileBottomSheet>
-
-        {/* Unmatched sheet */}
-        <MobileBottomSheet
-          open={showUnmatched}
-          onOpenChange={setShowUnmatched}
-          title="Coureurs non trouvés"
-          description="Ces coureurs n'ont pas été identifiés dans la base"
-        >
-          <div className="space-y-2">
-            {parseResult?.entries
-              ?.filter((e: any) => !e.coureur_id)
-              .map((entry: any, idx: number) => (
-                <div key={idx} className="p-3 rounded-lg bg-muted/50 text-sm">
-                  {entry.source_name}
-                </div>
-              ))}
-          </div>
         </MobileBottomSheet>
       </div>
     );
