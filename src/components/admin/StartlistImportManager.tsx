@@ -5,7 +5,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Upload, FileText } from "lucide-react";
@@ -15,15 +14,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StartlistRaceCards } from "./StartlistRaceCards";
 import { StartlistDetailView } from "./StartlistDetailView";
 
-type ViewMode = 'import' | 'list' | 'detail';
+type ViewMode = 'list' | 'import' | 'detail';
 
 export const StartlistImportManager = () => {
   const { leagueId } = useLeague();
   const { phases } = useSeasonContext();
   const queryClient = useQueryClient();
   
-  const [viewMode, setViewMode] = useState<ViewMode>('import');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
+  const [selectedRace, setSelectedRace] = useState<any>(null);
   
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>("");
   const [selectedRaceId, setSelectedRaceId] = useState<string>("");
@@ -31,7 +31,7 @@ export const StartlistImportManager = () => {
   const [startlisteurNote, setStartlisteurNote] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch courses for selected phase
+  // Fetch courses for selected phase (only in import mode)
   const { data: courses } = useQuery({
     queryKey: ['phase-courses', selectedPhaseId],
     queryFn: async () => {
@@ -46,7 +46,7 @@ export const StartlistImportManager = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!selectedPhaseId
+    enabled: !!selectedPhaseId && viewMode === 'import'
   });
 
   const handleParse = async () => {
@@ -81,10 +81,13 @@ export const StartlistImportManager = () => {
         `Startlist enregistrée : ${data.counts.matched_db} coureurs matchés sur ${data.counts.parsed}`
       );
 
-      // Reset form
+      // Retour à la liste après import réussi
+      setViewMode('list');
+      setSelectedRace(null);
+      setSelectedPhaseId("");
+      setSelectedRaceId("");
       setTextContent("");
       setStartlisteurNote("");
-      setSelectedRaceId("");
       
     } catch (error: any) {
       console.error('Parse error:', error);
@@ -123,6 +126,10 @@ export const StartlistImportManager = () => {
         `Fichier importé : ${data.counts.matched_db} coureurs matchés sur ${data.counts.parsed}`
       );
 
+      // Retour à la liste après import réussi
+      setViewMode('list');
+      setSelectedRace(null);
+      setSelectedPhaseId("");
       setSelectedRaceId("");
       
     } catch (error: any) {
@@ -134,37 +141,67 @@ export const StartlistImportManager = () => {
     }
   };
 
-  // Mode "detail" : vue détaillée d'une startlist
-  if (viewMode === 'detail' && selectedStartlistId) {
+  // Mode "list" : afficher la grille de vignettes (vue par défaut)
+  if (viewMode === 'list') {
     return (
-      <StartlistDetailView
-        startlistId={selectedStartlistId}
-        onBack={() => {
-          setViewMode('list');
-          setSelectedStartlistId(null);
-        }}
-        isSuperAdmin={true}
-      />
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold">Gestion des Startlists</h2>
+          <p className="text-muted-foreground mt-1">
+            Cliquez sur une course pour importer ou consulter sa startlist
+          </p>
+        </div>
+        
+        <StartlistRaceCards 
+          onRaceClick={(race, startlistId) => {
+            if (startlistId) {
+              // Course avec startlist → mode détail
+              setSelectedStartlistId(startlistId);
+              setViewMode('detail');
+            } else {
+              // Course sans startlist → mode import
+              setSelectedRace(race);
+              setSelectedPhaseId(race.phase_id);
+              setSelectedRaceId(race.id);
+              setViewMode('import');
+            }
+          }}
+          isSuperAdmin={true}
+        />
+      </div>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Gestion des Startlists</h2>
-        <p className="text-muted-foreground mt-1">
-          Importez et consultez les listes de départ des courses
-        </p>
-      </div>
+  // Mode "import" : afficher les formulaires
+  if (viewMode === 'import') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            onClick={() => {
+              setViewMode('list');
+              setSelectedRace(null);
+              setSelectedPhaseId("");
+              setSelectedRaceId("");
+              setTextContent("");
+              setStartlisteurNote("");
+            }}
+          >
+            ← Retour à la liste
+          </Button>
+          <div>
+            <h2 className="text-2xl font-bold">
+              Import de startlist
+              {selectedRace && ` - ${selectedRace.nom}`}
+            </h2>
+            <p className="text-muted-foreground mt-1">
+              Importez la startlist par texte ou fichier
+            </p>
+          </div>
+        </div>
 
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-        <TabsList>
-          <TabsTrigger value="import">Import</TabsTrigger>
-          <TabsTrigger value="list">Liste des startlists</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="import" className="mt-6">
-          <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
         {/* Text Import */}
         <Card>
           <CardHeader>
@@ -333,23 +370,24 @@ export const StartlistImportManager = () => {
             </div>
           </CardContent>
         </Card>
-          </div>
-        </TabsContent>
+        </div>
+      </div>
+    );
+  }
 
-        <TabsContent value="list" className="mt-6">
-          <StartlistRaceCards 
-            onRaceClick={(race, startlistId) => {
-              if (startlistId) {
-                setSelectedStartlistId(startlistId);
-                setViewMode('detail');
-              } else {
-                toast.info("Aucune startlist disponible pour cette course");
-              }
-            }}
-            isSuperAdmin={true}
-          />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
+  // Mode "detail" : afficher la vue détaillée de la startlist
+  if (viewMode === 'detail' && selectedStartlistId) {
+    return (
+      <StartlistDetailView
+        startlistId={selectedStartlistId}
+        onBack={() => {
+          setViewMode('list');
+          setSelectedStartlistId(null);
+        }}
+        isSuperAdmin={true}
+      />
+    );
+  }
+
+  return null;
 };
