@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { CheckCircle2, XCircle, AlertCircle, Trophy } from "lucide-react";
 import { format } from "date-fns";

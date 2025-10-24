@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -60,7 +61,7 @@ export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
     queryFn: async () => {
       let query = leagueClient
         .from("bids")
-        .select(\`
+        .select(`
           id,
           auction_id,
           manager_id,
@@ -72,7 +73,7 @@ export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
           coureurs!inner(nom, equipe),
           managers!inner(nom),
           auctions!inner(phase_id, deadline_at)
-        \`)
+        `)
         .order("created_at", { ascending: false });
 
       // Filtrer par phase
