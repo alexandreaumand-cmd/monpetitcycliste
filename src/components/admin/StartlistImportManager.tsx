@@ -147,6 +147,14 @@ export const StartlistImportManager = () => {
     }
   };
 
+  const handleEditStartlist = (race: any, phaseId: string, raceId: string) => {
+    setSelectedRace(race);
+    setSelectedPhaseId(phaseId);
+    setSelectedRaceId(raceId);
+    setViewMode('import');
+    setSelectedStartlistId(null);
+  };
+
   // Mode "list" : afficher la grille de vignettes (vue par défaut)
   if (viewMode === 'list') {
     return (
@@ -328,6 +336,7 @@ export const StartlistImportManager = () => {
           setViewMode('list');
           setSelectedStartlistId(null);
         }}
+        onEdit={handleEditStartlist}
         isSuperAdmin={true}
       />
     );
