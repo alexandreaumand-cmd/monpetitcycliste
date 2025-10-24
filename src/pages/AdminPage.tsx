@@ -7,6 +7,8 @@ import { LeaguesAdminPage } from "@/pages/admin/LeaguesAdminPage";
 import { LeagueDetailPage } from "@/pages/admin/LeagueDetailPage";
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ShieldAlert, Loader2 } from "lucide-react";
 
 const allTabs = [
   { label: '🏁 Courses', path: 'courses', superAdminOnly: true },
@@ -18,7 +20,32 @@ const allTabs = [
 
 export const AdminPage = () => {
   const location = useLocation();
-  const { isSuperAdmin, isLeagueAdminOnly } = useUserRole();
+  const { isSuperAdmin, isLeagueAdminOnly, loading } = useUserRole();
+
+  if (loading) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Vérification des permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isSuperAdmin && !isLeagueAdminOnly) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center p-6">
+        <Alert variant="destructive" className="max-w-md">
+          <ShieldAlert className="h-5 w-5" />
+          <AlertDescription className="ml-2">
+            <strong>Accès refusé</strong>
+            <p className="mt-1 text-sm">Cette interface est réservée aux administrateurs de ligue.</p>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
   
   const visibleTabs = isSuperAdmin 
     ? allTabs 

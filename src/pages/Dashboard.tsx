@@ -143,7 +143,13 @@ const Dashboard = () => {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full">
-        {!isHomePage && !isSuperAdminRoute && <AppSidebar isAdmin={isAnyAdmin} />}
+        {!isHomePage && !isSuperAdminRoute && (
+          <AppSidebar 
+            isAdmin={isAnyAdmin} 
+            isSuperAdmin={isSuperAdmin}
+            isLeagueAdminOnly={isLeagueAdminOnly}
+          />
+        )}
         <SidebarInset className="flex-1 flex flex-col">
           <AnnouncementBanner />
           {!isHomePage && !isSuperAdminRoute && (

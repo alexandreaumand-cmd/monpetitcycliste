@@ -1,4 +1,4 @@
-import { BarChart3, Users, Calendar, ListChecks, LineChart, Trophy, Settings, Home } from "lucide-react";
+import { BarChart3, Users, Calendar, ListChecks, LineChart, Trophy, Settings, Home, Shield } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -17,6 +17,8 @@ import logoImg from "@/assets/logo.png";
 
 interface AppSidebarProps {
   isAdmin: boolean;
+  isSuperAdmin?: boolean;
+  isLeagueAdminOnly?: boolean;
 }
 
 const navItems = [
@@ -30,7 +32,7 @@ const navItems = [
   { label: 'Enchères', href: '/dashboard/encheres', icon: Trophy },
 ];
 
-export function AppSidebar({ isAdmin }: AppSidebarProps) {
+export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = false }: AppSidebarProps) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
@@ -81,7 +83,7 @@ export function AppSidebar({ isAdmin }: AppSidebarProps) {
                   </SidebarMenuItem>
                 ))}
 
-                {isAdmin && (
+                {isLeagueAdminOnly && (
                   <SidebarMenuItem>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -93,17 +95,66 @@ export function AppSidebar({ isAdmin }: AppSidebarProps) {
                             }
                           >
                             <Settings className="h-4 w-4" />
-                            {!isCollapsed && <span>Admin</span>}
+                            {!isCollapsed && <span>Admin Ligue</span>}
                           </NavLink>
                         </SidebarMenuButton>
                       </TooltipTrigger>
                       {isCollapsed && (
                         <TooltipContent side="right">
-                          Admin
+                          Admin Ligue
                         </TooltipContent>
                       )}
                     </Tooltip>
                   </SidebarMenuItem>
+                )}
+
+                {isSuperAdmin && (
+                  <>
+                    <SidebarMenuItem>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <SidebarMenuButton asChild>
+                            <NavLink
+                              to="/dashboard/admin"
+                              className={({ isActive }) =>
+                                isActive ? "bg-accent text-accent-foreground" : ""
+                              }
+                            >
+                              <Settings className="h-4 w-4" />
+                              {!isCollapsed && <span>Admin Ligue</span>}
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </TooltipTrigger>
+                        {isCollapsed && (
+                          <TooltipContent side="right">
+                            Admin Ligue
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <SidebarMenuButton asChild>
+                            <NavLink
+                              to="/dashboard/super-admin"
+                              className={({ isActive }) =>
+                                isActive ? "bg-accent text-accent-foreground" : ""
+                              }
+                            >
+                              <Shield className="h-4 w-4" />
+                              {!isCollapsed && <span>Super Admin</span>}
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </TooltipTrigger>
+                        {isCollapsed && (
+                          <TooltipContent side="right">
+                            Super Admin
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </SidebarMenuItem>
+                  </>
                 )}
               </TooltipProvider>
             </SidebarMenu>
