@@ -24,10 +24,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { phase_id, manager_id: input_manager_id, rider_id, amount: rawAmount } = await req.json();
+    const { phase_id, manager_id: input_manager_id, rider_id, amount: rawAmount, league_id } = await req.json();
 
-    if (!phase_id || !rider_id || rawAmount === undefined) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+    if (!phase_id || !rider_id || rawAmount === undefined || !league_id) {
+      return new Response(JSON.stringify({ error: 'Missing required fields (phase_id, rider_id, amount, league_id)' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -102,6 +102,7 @@ Deno.serve(async (req) => {
       .from('rosters')
       .select('id')
       .eq('phase_id', phase_id)
+      .eq('league_id', league_id)
       .eq('coureur_id', rider_id)
       .single();
 
@@ -165,6 +166,7 @@ Deno.serve(async (req) => {
         montant: amount,
         statut: 'draft',
         round_number: auction.round_number,
+        league_id: league_id,
       }, {
         onConflict: 'auction_id,manager_id,coureur_id',
       });

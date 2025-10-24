@@ -160,7 +160,7 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
   const upsertBidMutation = useMutation({
     mutationFn: async ({ rider_id, amount }: { rider_id: string; amount: number }) => {
       const { data, error } = await supabase.functions.invoke("auction-upsert-bid", {
-        body: { phase_id: phaseId, manager_id: managerId, rider_id, amount },
+        body: { phase_id: phaseId, manager_id: managerId, rider_id, amount, league_id: leagueId },
       });
       if (error) throw error;
       return data;
@@ -204,7 +204,7 @@ export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps
   const submitAllMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("auction-submit-all-bids", {
-        body: { phase_id: phaseId, manager_id: managerId },
+        body: { phase_id: phaseId, manager_id: managerId, league_id: leagueId },
       });
       if (error) throw error;
       return data;

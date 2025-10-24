@@ -24,7 +24,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { auction_id, phase_id } = await req.json();
+    const { auction_id, phase_id, league_id } = await req.json();
+
+    if (!league_id) {
+      return new Response(JSON.stringify({ error: 'league_id is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Get manager
     const { data: manager } = await supabase
@@ -92,6 +99,7 @@ Deno.serve(async (req) => {
       .select('coureur_id, prix_signature, coureurs(id, nom, equipe)')
       .eq('phase_id', phase_id)
       .eq('manager_id', manager.id)
+      .eq('league_id', league_id)
       .in('coureur_id', annonces.filter(a => a.is_my_win).map(a => a.coureur?.id).filter(Boolean));
 
     const my_new_riders = (newRiders || []).map(r => {

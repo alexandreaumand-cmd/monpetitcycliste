@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Trophy, Users, TrendingUp, PartyPopper, ArrowLeft } from "lucide-react";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface AuctionLiveAnnouncementsProps {
   auctionId: string;
@@ -25,13 +26,14 @@ export function AuctionLiveAnnouncements({
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
   const queryClient = useQueryClient();
+  const { leagueId } = useLeague();
 
   // Fetch live status
   const { data: liveStatus, refetch } = useQuery({
-    queryKey: ['auction-live-status', auctionId, managerId],
+    queryKey: ['auction-live-status', auctionId, managerId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('auction-get-live-status', {
-        body: { auction_id: auctionId, phase_id: phaseId },
+        body: { auction_id: auctionId, phase_id: phaseId, league_id: leagueId },
       });
       if (error) throw error;
       return data;
