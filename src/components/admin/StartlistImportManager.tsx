@@ -26,7 +26,7 @@ export const StartlistImportManager = () => {
   const [selectedRace, setSelectedRace] = useState<any>(null);
   
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>("");
-  const [selectedRaceId, setSelectedRaceId] = useState<string>("");
+  const [selectedRaceId, setSelectedRaceId] = useState<string>("all");
   const [textContent, setTextContent] = useState<string>("");
   const [startlisteurNote, setStartlisteurNote] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -64,7 +64,7 @@ export const StartlistImportManager = () => {
     try {
       const { data, error } = await supabase.functions.invoke('startlist-parse-text', {
         body: { 
-          race_id: selectedRaceId || null,
+          race_id: selectedRaceId && selectedRaceId !== 'all' ? selectedRaceId : null,
           phase_id: selectedPhaseId,
           league_id: leagueId,
           text: textContent,
@@ -85,7 +85,7 @@ export const StartlistImportManager = () => {
       setViewMode('list');
       setSelectedRace(null);
       setSelectedPhaseId("");
-      setSelectedRaceId("");
+      setSelectedRaceId("all");
       setTextContent("");
       setStartlisteurNote("");
       
@@ -111,7 +111,7 @@ export const StartlistImportManager = () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('phase_id', selectedPhaseId);
-      if (selectedRaceId) formData.append('race_id', selectedRaceId);
+      if (selectedRaceId && selectedRaceId !== 'all') formData.append('race_id', selectedRaceId);
       if (leagueId) formData.append('league_id', leagueId);
 
       const { data, error } = await supabase.functions.invoke('startlist-upload-and-parse', {
@@ -130,7 +130,7 @@ export const StartlistImportManager = () => {
       setViewMode('list');
       setSelectedRace(null);
       setSelectedPhaseId("");
-      setSelectedRaceId("");
+      setSelectedRaceId("all");
       
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -183,7 +183,7 @@ export const StartlistImportManager = () => {
               setViewMode('list');
               setSelectedRace(null);
               setSelectedPhaseId("");
-              setSelectedRaceId("");
+              setSelectedRaceId("all");
               setTextContent("");
               setStartlisteurNote("");
             }}
@@ -238,7 +238,7 @@ export const StartlistImportManager = () => {
                     <SelectValue placeholder="Toutes les courses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Toutes les courses</SelectItem>
+                    <SelectItem value="all">Toutes les courses</SelectItem>
                     {courses?.map((course) => (
                       <SelectItem key={course.id} value={course.id}>
                         {course.nom} ({course.date_debut})
@@ -327,7 +327,7 @@ export const StartlistImportManager = () => {
                     <SelectValue placeholder="Toutes les courses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Toutes les courses</SelectItem>
+                    <SelectItem value="all">Toutes les courses</SelectItem>
                     {courses?.map((course) => (
                       <SelectItem key={course.id} value={course.id}>
                         {course.nom} ({course.date_debut})
