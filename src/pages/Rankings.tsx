@@ -16,12 +16,14 @@ import { ManagerHistory } from "@/components/rankings/ManagerHistory";
 import { ManagerComparison } from "@/components/rankings/ManagerComparison";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeague } from "@/contexts/LeagueContext";
 import { RankingsMobile } from "./Rankings.mobile";
 import { PageContainer } from "@/components/layout/PageContainer";
 
 export default function Rankings() {
   const isMobile = useIsMobile();
   const { selectedSeason, phases } = useSeasonContext();
+  const { leagueId } = useLeague();
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);

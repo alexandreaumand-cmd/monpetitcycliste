@@ -124,12 +124,15 @@ export const RankingsMobile = () => {
 
   // Fetch top riders using edge function
   const { data: allTopRiders, isLoading: ridersLoading } = useQuery({
-    queryKey: ["top-riders-mobile", selectedPhase, selectedSeason?.id],
+    queryKey: ["top-riders-mobile", selectedPhase, selectedSeason?.id, leagueId],
     queryFn: async () => {
+      if (!leagueId) return [];
+      
       const { data, error } = await supabase.functions.invoke('get-top-riders', {
         body: {
           phase_id: selectedPhase,
           saison_id: selectedSeason?.id || null,
+          league_id: leagueId,
           limit: 100,
         },
       });
