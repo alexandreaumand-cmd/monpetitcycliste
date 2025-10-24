@@ -29,6 +29,10 @@ Deno.serve(async (req) => {
 
     const { saison_id, phase_id, league_id, limit = 5000 } = await req.json();
 
+    if (!league_id) {
+      throw new Error('league_id is required');
+    }
+
     console.log('Fetching top riders with filters:', { saison_id, phase_id, league_id, limit });
 
     // Call the optimized PostgreSQL RPC function
@@ -61,14 +65,11 @@ Deno.serve(async (req) => {
     
     if (phase_id) {
       // Single phase context: query ALL rosters for this phase with league filter
-      let rosterQuery = supabase
+      const rosterQuery = supabase
         .from('rosters')
         .select('coureur_id, manager_id')
-        .eq('phase_id', phase_id);
-      
-      if (league_id) {
-        rosterQuery = rosterQuery.eq('league_id', league_id);
-      }
+        .eq('phase_id', phase_id)
+        .eq('league_id', league_id);
       
       const { data: rosterData, error: rosterError } = await rosterQuery.limit(5000);
 
@@ -118,14 +119,11 @@ Deno.serve(async (req) => {
         const allRosterData: any[] = [];
 
         while (hasMore) {
-          let rosterPageQuery = supabase
+          const rosterPageQuery = supabase
             .from('rosters')
             .select('coureur_id, manager_id, phase_id')
-            .in('phase_id', phaseIds);
-          
-          if (league_id) {
-            rosterPageQuery = rosterPageQuery.eq('league_id', league_id);
-          }
+            .in('phase_id', phaseIds)
+            .eq('league_id', league_id);
           
           const { data: page, error: rosterError } = await rosterPageQuery
             .range(offset, offset + pageSize - 1);

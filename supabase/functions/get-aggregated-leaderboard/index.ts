@@ -9,6 +9,7 @@ interface RequestBody {
   saison_id?: string | null;
   phase_id?: string | null;
   filters?: string[] | null;
+  league_id: string;
 }
 
 Deno.serve(async (req) => {
@@ -22,9 +23,16 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { saison_id, phase_id, filters }: RequestBody = await req.json();
+    const { saison_id, phase_id, filters, league_id }: RequestBody = await req.json();
 
-    console.log('Getting aggregated leaderboard:', { saison_id, phase_id, filters });
+    if (!league_id) {
+      return new Response(
+        JSON.stringify({ error: 'league_id is required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    console.log('Getting aggregated leaderboard:', { saison_id, phase_id, filters, league_id });
 
     // Build courses filter conditions
     const uciCategories = filters?.filter(f => !['GT', 'Monument', 'WT_Tours', 'WT_Classiques'].includes(f)) || [];
@@ -90,6 +98,7 @@ Deno.serve(async (req) => {
       .from('points_ledger')
       .select('manager_id, coureur_id, course_id, points, type_classement, etape_numero')
       .in('course_id', courseIdList)
+      .eq('league_id', league_id)
       .not('manager_id', 'is', null);
 
     const { data: pointsData, error: pointsError } = await pointsQuery;
@@ -134,7 +143,8 @@ Deno.serve(async (req) => {
         const { data: rosters } = await supabaseClient
           .from('rosters')
           .select('manager_id, coureur_id, phase_id')
-          .in('coureur_id', coureurIds);
+          .in('coureur_id', coureurIds)
+          .eq('league_id', league_id);
 
         for (const victory of victories) {
           const roster = rosters?.find(r => 
@@ -149,12 +159,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Get manager names
+    // Get manager names (filtered by league membership)
     const managerIds = Array.from(managerStats.keys());
+    const { data: leagueMembers } = await supabaseClient
+      .from('league_members')
+      .select('manager_id')
+      .eq('league_id', league_id)
+      .in('manager_id', managerIds);
+    
+    const validManagerIds = leagueMembers?.map(lm => lm.manager_id) || [];
     const { data: managers } = await supabaseClient
       .from('managers')
       .select('id, nom')
-      .in('id', managerIds);
+      .in('id', validManagerIds);
 
     const managerMap = new Map(managers?.map(m => [m.id, m.nom]) || []);
 

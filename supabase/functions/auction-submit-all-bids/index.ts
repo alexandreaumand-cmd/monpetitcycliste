@@ -24,10 +24,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { phase_id, manager_id: input_manager_id } = await req.json();
+    const { phase_id, manager_id: input_manager_id, league_id } = await req.json();
 
     if (!phase_id) {
       return new Response(JSON.stringify({ error: 'phase_id is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!league_id) {
+      return new Response(JSON.stringify({ error: 'league_id is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -100,7 +107,8 @@ Deno.serve(async (req) => {
       .from('rosters')
       .select('*', { count: 'exact', head: true })
       .eq('phase_id', phase_id)
-      .eq('manager_id', manager_id);
+      .eq('manager_id', manager_id)
+      .eq('league_id', league_id);
 
     const currentRosterCount = rosterCount || 0;
     const totalSlots = currentRosterCount + draftBids.length;
@@ -125,7 +133,8 @@ Deno.serve(async (req) => {
       .from('rosters')
       .select('prix_signature')
       .eq('phase_id', phase_id)
-      .eq('manager_id', manager_id);
+      .eq('manager_id', manager_id)
+      .eq('league_id', league_id);
     
     const rosterSpent = (rosterBids || []).reduce((sum, r) => sum + Number(r.prix_signature), 0);
     const totalSpent = rosterSpent + draftSum;
@@ -183,6 +192,7 @@ Deno.serve(async (req) => {
       .from('rosters')
       .select('coureur_id')
       .eq('phase_id', phase_id)
+      .eq('league_id', league_id)
       .in('coureur_id', coureurIds);
 
     if (existingRosters && existingRosters.length > 0) {
