@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
     });
     console.log('Phase standings count:', phaseStandings?.length, 'phase:', phaseId, 'league:', league_id);
 
-    // Get total standings
+    // Get total standings with robust error handling
     let totalStandingsQuery = supabase
       .from('v_manager_standings_total')
       .select('*');
@@ -222,8 +222,28 @@ Deno.serve(async (req) => {
       totalStandingsQuery = totalStandingsQuery.eq('league_id', league_id);
     }
     
-    const { data: totalStandings } = await totalStandingsQuery
+    let { data: totalStandings, error: totalStandingsError } = await totalStandingsQuery
       .order('total_points', { ascending: false });
+    
+    // Fallback: If error on league_id column or empty results with league filter, retry without filter
+    if ((totalStandingsError && totalStandingsError.message?.includes('league_id')) || 
+        (league_id && (!totalStandings || totalStandings.length === 0))) {
+      console.log('Total standings: retrying without league_id filter');
+      const { data: unfilteredStandings } = await supabase
+        .from('v_manager_standings_total')
+        .select('*')
+        .order('total_points', { ascending: false });
+      totalStandings = unfilteredStandings;
+    }
+    
+    // Create Map for robust total rank lookups
+    const totalRankByManager = new Map<string, number>();
+    const pointsTotalByManager = new Map<string, number>();
+    (totalStandings || []).forEach((row: any, idx: number) => {
+      totalRankByManager.set(row.manager_id, idx + 1);
+      pointsTotalByManager.set(row.manager_id, row.total_points || 0);
+    });
+    console.log('Total standings count:', totalStandings?.length, 'league:', league_id);
 
     // Get scoring rules for this race category
     const { data: scoringRules } = await supabase
@@ -265,9 +285,9 @@ Deno.serve(async (req) => {
         const phaseStanding = phaseStandings?.find(s => s.manager_id === roster.manager_id);
         const totalStanding = totalStandings?.find(s => s.manager_id === roster.manager_id);
         
-        // Calculate phase rank using Map for reliable lookup
+        // Calculate ranks using Map for reliable lookup
         const phaseRank = phaseRankByManager.get(roster.manager_id) ?? null;
-        const totalRank = totalStandings ? totalStandings.findIndex(s => s.manager_id === roster.manager_id) + 1 || null : null;
+        const totalRank = totalRankByManager.get(roster.manager_id) ?? null;
         
         // Calculate gaps with adjacent managers in phase standings
         let gap_prev_phase = null;
@@ -297,7 +317,7 @@ Deno.serve(async (req) => {
           rank_phase: phaseRank,
           rank_total: totalRank,
           points_phase: phaseStanding?.total_points || 0,
-          points_total: totalStanding?.total_points || 0,
+          points_total: pointsTotalByManager.get(roster.manager_id) || 0,
           gap_prev_phase,
           gap_next_phase,
           avg_stars: rating?.avg_stars || null,
