@@ -1,18 +1,22 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Upload, FileText } from "lucide-react";
+import { Loader2, FileText, MessageSquare, ArrowLeft } from "lucide-react";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StartlistRaceCards } from "./StartlistRaceCards";
 import { StartlistDetailView } from "./StartlistDetailView";
+import { useUserRole } from "@/hooks/useUserRole";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 type ViewMode = 'list' | 'import' | 'detail';
 
@@ -20,6 +24,7 @@ export const StartlistImportManager = () => {
   const { leagueId } = useLeague();
   const { phases } = useSeasonContext();
   const queryClient = useQueryClient();
+  const { isAdmin } = useUserRole();
   
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
@@ -29,6 +34,7 @@ export const StartlistImportManager = () => {
   const [selectedRaceId, setSelectedRaceId] = useState<string>("all");
   const [textContent, setTextContent] = useState<string>("");
   const [startlisteurNote, setStartlisteurNote] = useState<string>("");
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // Fetch courses for selected phase (only in import mode)
@@ -172,11 +178,12 @@ export const StartlistImportManager = () => {
     );
   }
 
-  // Mode "import" : afficher les formulaires
+  // Mode "import" : afficher le formulaire simplifié
   if (viewMode === 'import') {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
+      <div className="max-w-4xl mx-auto p-6">
+        {/* Header avec titre de la course */}
+        <div className="mb-6">
           <Button 
             variant="ghost" 
             onClick={() => {
@@ -186,95 +193,113 @@ export const StartlistImportManager = () => {
               setSelectedRaceId("all");
               setTextContent("");
               setStartlisteurNote("");
+              setShowDiagnostics(false);
             }}
+            className="mb-4"
           >
-            ← Retour à la liste
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour à la liste
           </Button>
-          <div>
-            <h2 className="text-2xl font-bold">
-              Import de startlist
-              {selectedRace && ` - ${selectedRace.nom}`}
-            </h2>
+          <h1 className="text-3xl font-bold">
+            {selectedRace?.nom || "Course"}
+          </h1>
+          {selectedRace?.date_debut && (
             <p className="text-muted-foreground mt-1">
-              Importez la startlist par texte ou fichier
+              {format(new Date(selectedRace.date_debut), "dd MMMM yyyy", { locale: fr })}
             </p>
-          </div>
+          )}
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-        {/* Text Import */}
+        {/* Carte d'import - Design simplifié */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Import par texte
-            </CardTitle>
-            <CardDescription>
-              Collez le texte de la startlist pour parsing automatique
-            </CardDescription>
+            <CardTitle>Coller le texte de la startlist</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="phase">Phase *</Label>
-              <Select value={selectedPhaseId} onValueChange={setSelectedPhaseId}>
-                <SelectTrigger id="phase">
-                  <SelectValue placeholder="Sélectionner une phase" />
-                </SelectTrigger>
-                <SelectContent>
-                  {phases?.map((phase) => (
-                    <SelectItem key={phase.id} value={phase.id}>
-                      Phase {phase.index_dans_saison} ({phase.date_debut} - {phase.date_fin})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedPhaseId && (
+            {/* Selects Phase et Course */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Course (optionnel) */}
               <div className="space-y-2">
-                <Label htmlFor="race">Course (optionnel)</Label>
-                <Select value={selectedRaceId} onValueChange={setSelectedRaceId}>
-                  <SelectTrigger id="race">
-                    <SelectValue placeholder="Toutes les courses" />
+                <Label htmlFor="course">Course (optionnel)</Label>
+                <Input
+                  id="course"
+                  value={selectedRace?.nom || ""}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+              
+              {/* Phase */}
+              <div className="space-y-2">
+                <Label htmlFor="phase">Phase</Label>
+                <Select value={selectedPhaseId} disabled>
+                  <SelectTrigger id="phase" className="bg-muted">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Toutes les courses</SelectItem>
-                    {courses?.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.nom} ({course.date_debut})
+                    {phases?.map((phase) => (
+                      <SelectItem key={phase.id} value={phase.id}>
+                        Phase {phase.index_dans_saison} ({phase.date_debut} - {phase.date_fin})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="note">Note du startlisteur (optionnel)</Label>
-              <Input
-                id="note"
-                value={startlisteurNote}
-                onChange={(e) => setStartlisteurNote(e.target.value)}
-                placeholder="Ex: Startlist provisoire"
-              />
             </div>
 
+            {/* Textarea pour le texte */}
             <div className="space-y-2">
-              <Label htmlFor="text">Texte de la startlist *</Label>
+              <Label htmlFor="text">
+                Texte (format: rang. CODE NOM Prénom temps)
+              </Label>
               <Textarea
                 id="text"
                 value={textContent}
                 onChange={(e) => setTextContent(e.target.value)}
-                placeholder="Collez ici le texte de la startlist..."
+                placeholder="0. MBH NESPOLI Lorenzo 0:00&#10;0. UAD LAENGEN Vegard Stake 0:00&#10;0. JAY DE MARCHI Alessandro 0:00"
                 rows={12}
                 className="font-mono text-sm"
               />
             </div>
 
+            {/* Input note du startlisteur */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                <Label htmlFor="note">Le mot du startlisteur (optionnel)</Label>
+              </div>
+              <Input
+                id="note"
+                value={startlisteurNote}
+                onChange={(e) => setStartlisteurNote(e.target.value)}
+                placeholder="Ajoutez un commentaire sur cette startlist..."
+                maxLength={500}
+              />
+              <p className="text-xs text-muted-foreground">
+                {startlisteurNote.length} / 500 caractères
+              </p>
+            </div>
+
+            {/* Switch diagnostics (admin only) */}
+            {isAdmin && (
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="diagnostics"
+                  checked={showDiagnostics}
+                  onCheckedChange={setShowDiagnostics}
+                />
+                <Label htmlFor="diagnostics">
+                  Activer les diagnostics (admin)
+                </Label>
+              </div>
+            )}
+
+            {/* Bouton d'import */}
             <Button 
-              onClick={handleParse} 
-              disabled={isLoading || !textContent.trim() || !selectedPhaseId}
+              onClick={handleParse}
+              disabled={isLoading || !textContent.trim()}
               className="w-full"
+              size="lg"
             >
               {isLoading ? (
                 <>
@@ -284,93 +309,12 @@ export const StartlistImportManager = () => {
               ) : (
                 <>
                   <FileText className="h-4 w-4 mr-2" />
-                  Parser la startlist
+                  Identifier les coureurs
                 </>
               )}
             </Button>
           </CardContent>
         </Card>
-
-        {/* File Upload */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5" />
-              Import par fichier
-            </CardTitle>
-            <CardDescription>
-              Uploadez un fichier PDF ou TXT de startlist
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="phase-file">Phase *</Label>
-              <Select value={selectedPhaseId} onValueChange={setSelectedPhaseId}>
-                <SelectTrigger id="phase-file">
-                  <SelectValue placeholder="Sélectionner une phase" />
-                </SelectTrigger>
-                <SelectContent>
-                  {phases?.map((phase) => (
-                    <SelectItem key={phase.id} value={phase.id}>
-                      Phase {phase.index_dans_saison} ({phase.date_debut} - {phase.date_fin})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedPhaseId && (
-              <div className="space-y-2">
-                <Label htmlFor="race-file">Course (optionnel)</Label>
-                <Select value={selectedRaceId} onValueChange={setSelectedRaceId}>
-                  <SelectTrigger id="race-file">
-                    <SelectValue placeholder="Toutes les courses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Toutes les courses</SelectItem>
-                    {courses?.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.nom} ({course.date_debut})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="border-2 border-dashed rounded-lg p-8 text-center">
-              <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <Label 
-                htmlFor="file-upload" 
-                className="cursor-pointer text-sm font-medium text-primary hover:underline"
-              >
-                Cliquez pour sélectionner un fichier
-              </Label>
-              <Input
-                id="file-upload"
-                type="file"
-                accept=".pdf,.txt"
-                onChange={handleFileUpload}
-                disabled={isLoading || !selectedPhaseId}
-                className="hidden"
-              />
-              <p className="text-xs text-muted-foreground mt-2">
-                PDF ou TXT uniquement
-              </p>
-            </div>
-
-            <div className="bg-muted p-4 rounded-lg space-y-2">
-              <p className="text-sm font-medium">Fonctionnalités :</p>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li>• Matching automatique avec la base de données</li>
-                <li>• Gestion des coureurs non trouvés</li>
-                <li>• Export CSV des résultats</li>
-                <li>• Validation PCS par les managers</li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-        </div>
       </div>
     );
   }
