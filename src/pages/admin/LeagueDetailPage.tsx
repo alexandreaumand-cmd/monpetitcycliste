@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { LeagueAdminGuard } from "@/components/guards/LeagueAdminGuard";
 import { LeagueInvitesManager } from "@/components/admin/LeagueInvitesManager";
+import { LeagueDeleteManager } from "@/components/admin/LeagueDeleteManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -261,6 +262,9 @@ export function LeagueDetailPage() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Delete League Section */}
+        <LeagueDeleteManager league={league} />
       </div>
     </LeagueAdminGuard>
   );

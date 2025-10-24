@@ -62,3 +62,6 @@ verify_jwt = true
 
 [functions.ouvrir-nouveau-round]
 verify_jwt = true
+
+[functions.leagues-delete-full]
+verify_jwt = true
