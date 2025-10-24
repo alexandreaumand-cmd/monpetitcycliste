@@ -6,17 +6,17 @@ export function useRosters() {
 
   return {
     getByManagerPhase: async (managerId: string, phaseId: string) => {
-      let query = supabase
+      if (!leagueId) {
+        throw new Error('leagueId requis pour accéder aux rosters');
+      }
+
+      const { data, error } = await supabase
         .from("rosters")
         .select("*")
         .eq("manager_id", managerId)
-        .eq("phase_id", phaseId);
+        .eq("phase_id", phaseId)
+        .eq("league_id", leagueId);
       
-      if (leagueId) {
-        query = query.eq("league_id", leagueId);
-      }
-      
-      const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
     },

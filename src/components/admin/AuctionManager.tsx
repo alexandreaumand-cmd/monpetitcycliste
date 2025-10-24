@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useLeague } from "@/contexts/LeagueContext";
 import { Loader2, Zap, CheckCircle2, Clock, AlertCircle, Trash2 } from "lucide-react";
 import {
   AlertDialog,
@@ -26,6 +27,7 @@ import { formatAmount } from "@/lib/utils";
 export const AuctionManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { leagueId } = useLeague();
   const [selectedPhase, setSelectedPhase] = useState("");
   const [roundNumber, setRoundNumber] = useState("1");
   const [deadlineHours, setDeadlineHours] = useState("24");
@@ -118,7 +120,7 @@ export const AuctionManager = () => {
           round_number: nextRoundNumber,
           deadline_at: deadlineAt.toISOString(),
           statut: 'open',
-          league_id: activePhase.id // Utiliser phase_id comme league_id pour Legacy
+          league_id: leagueId
         });
 
       if (error) throw error;
@@ -155,7 +157,7 @@ export const AuctionManager = () => {
           round_number: parseInt(roundNumber),
           deadline_at: deadlineAt.toISOString(),
           statut: 'open',
-          league_id: selectedPhase // Utiliser phase_id comme league_id pour Legacy
+          league_id: leagueId
         });
 
       if (error) throw error;
