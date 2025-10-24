@@ -208,7 +208,7 @@ Deno.serve(async (req) => {
 
     // Get total standings
     let totalStandingsQuery = supabase
-      .from('v_manager_standings_total_v2')
+      .from('v_manager_standings_total')
       .select('*');
     
     if (league_id) {
