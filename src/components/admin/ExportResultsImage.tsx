@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { toast } from "sonner";
 import { toJpeg } from "html-to-image";
 import { format } from "date-fns";
@@ -42,6 +42,7 @@ export const ExportResultsImage = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [exportRef, setExportRef] = useState<HTMLDivElement | null>(null);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const leagueClient = useLeagueClient();
 
   const isOneDay = course.type_course === "One day";
   const etapeNumero = !isOneDay && currentStage ? currentStage : null;
@@ -77,7 +78,7 @@ export const ExportResultsImage = ({
         : [typeClassement];
 
       // @ts-ignore - Type classement is dynamic
-      let query = supabase
+      let query = leagueClient
         .from("points_ledger")
         .select("manager_id, managers!inner(nom), points")
         .eq("course_id", course.course_id)

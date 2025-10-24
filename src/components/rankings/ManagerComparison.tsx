@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,6 +21,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
   const [managerA, setManagerA] = useState<string | null>(null);
   const [managerB, setManagerB] = useState<string | null>(null);
   const { leagueId } = useLeague();
+  const leagueClient = useLeagueClient();
 
   // Récupérer les noms des managers sélectionnés
   const { data: selectedManagers } = useQuery({
@@ -47,14 +48,10 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     queryFn: async () => {
       if (!managerA) return null;
       
-      let query = supabase
+      let query = leagueClient
         .from("rosters")
         .select("coureur_id, prix_signature, phase_id")
         .eq("manager_id", managerA);
-
-      if (leagueId) {
-        query = query.eq("league_id", leagueId);
-      }
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -96,14 +93,10 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     queryFn: async () => {
       if (!managerB) return null;
       
-      let query = supabase
+      let query = leagueClient
         .from("rosters")
         .select("coureur_id, prix_signature, phase_id")
         .eq("manager_id", managerB);
-
-      if (leagueId) {
-        query = query.eq("league_id", leagueId);
-      }
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -279,7 +272,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     queryFn: async () => {
       if (!managerA) return null;
 
-      let query = supabase
+      let query = leagueClient
         .from("manager_bonus_points")
         .select("bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs, phase_id")
         .eq("manager_id", managerA);
@@ -311,7 +304,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     queryFn: async () => {
       if (!managerB) return null;
 
-      let query = supabase
+      let query = leagueClient
         .from("manager_bonus_points")
         .select("bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs, phase_id")
         .eq("manager_id", managerB);
@@ -447,7 +440,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       if (error) throw error;
 
       // Récupérer tous les rosters du manager pour les phases concernées
-      let rostersQuery = supabase
+      let rostersQuery = leagueClient
         .from("rosters")
         .select("coureur_id, phase_id")
         .eq("manager_id", managerA);
@@ -520,7 +513,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       if (error) throw error;
 
       // Récupérer tous les rosters du manager pour les phases concernées
-      let rostersQuery = supabase
+      let rostersQuery = leagueClient
         .from("rosters")
         .select("coureur_id, phase_id")
         .eq("manager_id", managerB);

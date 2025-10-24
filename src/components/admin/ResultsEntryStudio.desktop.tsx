@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -69,6 +69,7 @@ type StudioProps = {
 
 export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const queryClient = useQueryClient();
+  const leagueClient = useLeagueClient();
   const [activeTab, setActiveTab] = useState<"stages" | "finals">("stages");
   const [currentStage, setCurrentStage] = useState(1);
   const [currentFinalClassement, setCurrentFinalClassement] = useState<ClassementType>("General");
@@ -447,7 +448,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
 
       // Update cancellation status in race_result_sets
-      await supabase
+      await leagueClient
         .from('race_result_sets')
         .update({ is_cancelled: isCancelled })
         .eq('course_id', course.course_id)
@@ -456,7 +457,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
       // If cancelled, delete all results and return
       if (isCancelled) {
-        await supabase
+        await leagueClient
           .from('race_results')
           .delete()
           .eq('course_id', course.course_id)

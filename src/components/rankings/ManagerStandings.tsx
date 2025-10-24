@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -47,27 +47,12 @@ const ManagerNameWithJersey = ({ managerId, managerName }: { managerId: string; 
   );
 };
 
-// Helper pour enrichir avec les noms de managers
-const enrichWithManagerNames = async (data: any[]) => {
-  if (!data || data.length === 0) return [];
-  
-  const managerIds = data.map(d => d.manager_id);
-  const { data: managers } = await supabase
-    .from("managers")
-    .select("id, nom")
-    .in("id", managerIds);
-  
-  const managersMap = new Map(managers?.map(m => [m.id, m.nom]) || []);
-  
-  return data.map(d => ({
-    ...d,
-    manager_nom: managersMap.get(d.manager_id) || ""
-  }));
-};
+// Note: enrichWithManagerNames removed - now handled directly by views
 
 export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) => {
   const { selectedSeason, activePhase } = useSeasonContext();
   const { leagueId, isLoading: leagueLoading } = useLeague();
+  const leagueClient = useLeagueClient();
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [selectedBonusManager, setSelectedBonusManager] = useState<{
     id: string;
@@ -81,26 +66,24 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
 
       if (phaseId) {
         // Phase-specific standings
-        const { data, error } = await supabase
+        const { data, error } = await leagueClient
           .from("v_manager_standings_by_phase_v2")
           .select("*")
-          .eq("league_id", leagueId)
           .eq("phase_id", phaseId)
           .order("total_points", { ascending: false });
         
         if (error) throw error;
-        return enrichWithManagerNames(data || []);
+        return data || [];
       } else if (selectedSeason) {
         // Season-specific standings
-        const { data, error } = await supabase
+        const { data, error } = await leagueClient
           .from("v_manager_standings_by_season_v2")
           .select("*")
-          .eq("league_id", leagueId)
           .eq("saison_id", selectedSeason.id)
           .order("total_points", { ascending: false });
         
         if (error) throw error;
-        return enrichWithManagerNames(data || []);
+        return data || [];
       }
       
       return [];

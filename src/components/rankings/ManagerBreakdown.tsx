@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,18 +21,18 @@ type ManagerBreakdownProps = {
 
 export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) => {
   const { leagueId, isLoading: leagueLoading } = useLeague();
+  const leagueClient = useLeagueClient();
   
   const { data: breakdown, isLoading } = useQuery({
     queryKey: ["manager-breakdown", managerId, phaseId, leagueId] as const,
     queryFn: async (): Promise<any[]> => {
       if (!leagueId) return [];
       
-      const client: any = supabase;
+      const client: any = leagueClient;
       let query = client
         .from("v_manager_breakdown")
         .select("*")
-        .eq("manager_id", managerId)
-        .eq("league_id", leagueId);
+        .eq("manager_id", managerId);
       
       if (phaseId) {
         query = query.eq("phase_id", phaseId);

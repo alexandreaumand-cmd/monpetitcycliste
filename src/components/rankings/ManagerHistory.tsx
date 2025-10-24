@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,6 +22,7 @@ export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [selectedRound, setSelectedRound] = useState<string | null>(null);
   const { leagueId, isLoading: leagueLoading } = useLeague();
+  const leagueClient = useLeagueClient();
 
   // Récupérer tous les managers
   const { data: managers } = useQuery({
@@ -57,9 +58,9 @@ export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
   const { data: bids, isLoading: bidsLoading } = useQuery({
     queryKey: ["manager-bids-history", phaseId, phaseIds, selectedManager, selectedRound, leagueId],
     queryFn: async () => {
-      let query = supabase
+      let query = leagueClient
         .from("bids")
-        .select(`
+        .select(\`
           id,
           auction_id,
           manager_id,
@@ -71,7 +72,7 @@ export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
           coureurs!inner(nom, equipe),
           managers!inner(nom),
           auctions!inner(phase_id, deadline_at)
-        `)
+        \`)
         .order("created_at", { ascending: false });
 
       // Filtrer par phase
@@ -79,11 +80,6 @@ export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
         query = query.eq("auctions.phase_id", phaseId);
       } else if (phaseIds && phaseIds.length > 0) {
         query = query.in("auctions.phase_id", phaseIds);
-      }
-
-      // Filtrer par league_id
-      if (leagueId) {
-        query = query.eq("league_id", leagueId);
       }
 
       // Filtrer par manager
@@ -146,12 +142,11 @@ export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
       if (pointsError) throw pointsError;
 
       // Get rosters to map coureur_id -> manager_id for this league
-      const { data: rostersData, error: rostersError } = await supabase
+      const { data: rostersData, error: rostersError } = await leagueClient
         .from("rosters")
         .select("coureur_id, manager_id, phase_id")
         .in("coureur_id", coureurIds)
-        .in("phase_id", targetPhaseIds)
-        .eq("league_id", leagueId);
+        .in("phase_id", targetPhaseIds);
 
       if (rostersError) throw rostersError;
 

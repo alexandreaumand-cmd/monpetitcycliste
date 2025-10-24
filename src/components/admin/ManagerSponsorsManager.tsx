@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ export const ManagerSponsorsManager = () => {
   const [selectedSeason, setSelectedSeason] = useState<string>("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const leagueClient = useLeagueClient();
 
   const { data: seasons, isLoading: seasonsLoading } = useQuery({
     queryKey: ['seasons'],
@@ -54,7 +55,7 @@ export const ManagerSponsorsManager = () => {
 
   const upsertSponsor = useMutation({
     mutationFn: async ({ managerId, sponsor }: { managerId: string; sponsor: string }) => {
-      const { error } = await supabase
+      const { error } = await leagueClient
         .from('manager_sponsors')
         .upsert({
           manager_id: managerId,

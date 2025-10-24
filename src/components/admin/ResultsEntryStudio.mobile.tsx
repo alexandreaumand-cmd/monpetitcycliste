@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { supabase } from "@/integrations/supabase/client";
+import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { toast } from "sonner";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
 import { X, ChevronLeft, ChevronRight, Save, Check, Info, MessageSquare, Share2 } from "lucide-react";
@@ -86,6 +86,7 @@ export const ResultsEntryStudioMobile = ({
   const [combatifWinner, setCombatifWinner] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const queryClient = useQueryClient();
+  const leagueClient = useLeagueClient();
 
   // Fetch scoring rules using normalized views (same as desktop)
   const { data: scoringRules } = useQuery({
@@ -299,7 +300,7 @@ export const ResultsEntryStudioMobile = ({
       const etapeNumeroValue = currentClassement === 'Etape' ? currentStage : null;
 
       // Update cancellation status
-      await supabase
+      await leagueClient
         .from('race_result_sets')
         .update({ is_cancelled: isCancelled })
         .eq('course_id', course.course_id)
@@ -308,7 +309,7 @@ export const ResultsEntryStudioMobile = ({
 
       // If cancelled, delete all results and return
       if (isCancelled) {
-        await supabase
+        await leagueClient
           .from('race_results')
           .delete()
           .eq('course_id', course.course_id)
@@ -372,7 +373,7 @@ export const ResultsEntryStudioMobile = ({
 
       if (validRows.length > 0) {
         for (const row of validRows) {
-          const { data: roster } = await supabase
+          const { data: roster } = await leagueClient
             .from('rosters')
             .select('manager_id')
             .eq('phase_id', course.phase_id)
@@ -402,7 +403,7 @@ export const ResultsEntryStudioMobile = ({
         });
 
         // Delete existing results before upserting to avoid position conflicts
-        let deleteResultsQuery = supabase
+        let deleteResultsQuery = leagueClient
           .from('race_results')
           .delete()
           .eq('course_id', course.course_id)
@@ -418,7 +419,7 @@ export const ResultsEntryStudioMobile = ({
 
         if (deleteError) throw deleteError;
 
-        const { error: resultsError } = await supabase
+        const { error: resultsError } = await leagueClient
           .from('race_results')
           .upsert(resultsToUpsert, {
             onConflict: 'course_id,coureur_id,type_classement,etape_numero',
@@ -442,14 +443,14 @@ export const ResultsEntryStudioMobile = ({
           if (!coureurId) continue;
 
           // Récupérer le manager_id pour ce coureur spécifiquement
-          const { data: roster } = await supabase
+          const { data: roster } = await leagueClient
             .from('rosters')
             .select('manager_id')
             .eq('phase_id', course.phase_id)
             .eq('coureur_id', coureurId)
             .maybeSingle();
 
-          await supabase.from('race_results').upsert({
+          await leagueClient.from('race_results').upsert({
             course_id: course.course_id,
             coureur_id: coureurId,
             type_classement: type as any,
@@ -469,14 +470,14 @@ export const ResultsEntryStudioMobile = ({
       // Save Combatif winner for WT GT
       if (courseIsStageRace && currentClassement === 'Combatif' && course.categorie === 'WT GT' && combatifWinner) {
         // Get manager for combatif winner
-        const { data: combatifRoster } = await supabase
+        const { data: combatifRoster } = await leagueClient
           .from('rosters')
           .select('manager_id')
           .eq('phase_id', course.phase_id)
           .eq('coureur_id', combatifWinner)
           .maybeSingle();
 
-        await supabase.from('race_results').upsert({
+        await leagueClient.from('race_results').upsert({
           course_id: course.course_id,
           coureur_id: combatifWinner,
           type_classement: 'Combatif' as any,
@@ -493,7 +494,7 @@ export const ResultsEntryStudioMobile = ({
       }
 
       // Delete and reinsert points
-      let deleteQuery = supabase
+      let deleteQuery = leagueClient
         .from('points_ledger')
         .delete()
         .eq('course_id', course.course_id)
