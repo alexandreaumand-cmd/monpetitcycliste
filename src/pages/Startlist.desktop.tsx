@@ -128,7 +128,7 @@ const StartlistDesktop = () => {
   // Fetch startlist view data when in view mode
   const { data: startlistViewData, isLoading: isLoadingStartlistView } = useQuery({
     queryKey: ['startlist-view', selectedStartlistId, leagueId],
-    enabled: !!selectedStartlistId && viewMode === 'view',
+    enabled: !!selectedStartlistId && !!leagueId && viewMode === 'view',
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('startlist-manager-view', {
         body: { 

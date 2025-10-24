@@ -205,6 +205,13 @@ Deno.serve(async (req) => {
     
     const { data: phaseStandings } = await phaseStandingsQuery
       .order('total_points', { ascending: false });
+    
+    // Create Map for robust phase rank lookups
+    const phaseRankByManager = new Map<string, number>();
+    (phaseStandings || []).forEach((row: any, idx: number) => {
+      phaseRankByManager.set(row.manager_id, idx + 1);
+    });
+    console.log('Phase standings count:', phaseStandings?.length, 'phase:', phaseId, 'league:', league_id);
 
     // Get total standings
     let totalStandingsQuery = supabase
@@ -258,8 +265,8 @@ Deno.serve(async (req) => {
         const phaseStanding = phaseStandings?.find(s => s.manager_id === roster.manager_id);
         const totalStanding = totalStandings?.find(s => s.manager_id === roster.manager_id);
         
-        // Calculate phase rank
-        const phaseRank = phaseStandings ? phaseStandings.findIndex(s => s.manager_id === roster.manager_id) + 1 || null : null;
+        // Calculate phase rank using Map for reliable lookup
+        const phaseRank = phaseRankByManager.get(roster.manager_id) ?? null;
         const totalRank = totalStandings ? totalStandings.findIndex(s => s.manager_id === roster.manager_id) + 1 || null : null;
         
         // Calculate gaps with adjacent managers in phase standings
