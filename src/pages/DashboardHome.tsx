@@ -39,11 +39,11 @@ export default function DashboardHome({ onSignOut }: DashboardHomeProps) {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => navigate('/dashboard/admin')}
+                onClick={() => navigate('/dashboard/super-admin')}
                 className="gap-2"
               >
                 <Settings className="h-4 w-4" />
-                Administration
+                Super Admin
               </Button>
             )}
             <Button variant="ghost" size="sm" onClick={onSignOut}>

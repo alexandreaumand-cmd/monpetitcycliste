@@ -20,6 +20,8 @@ import Statistics from "./Statistics";
 import AccountPage from "./AccountPage";
 import DashboardHome from "./DashboardHome";
 import { LeagueDetailPage } from "./admin/LeagueDetailPage";
+import { SuperAdminPage } from "./SuperAdminPage";
+import { SuperAdminGuard } from "@/components/guards/SuperAdminGuard";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -97,6 +99,16 @@ const Dashboard = () => {
             <Route path="startlist" element={<Startlist />} />
             <Route path="compte" element={<AccountPage />} />
             <Route path="leagues/:id/admin" element={<LeagueDetailPage />} />
+            {isSuperAdmin && (
+              <Route 
+                path="super-admin/*" 
+                element={
+                  <SuperAdminGuard>
+                    <SuperAdminPage />
+                  </SuperAdminGuard>
+                } 
+              />
+            )}
             {isAnyAdmin && <Route path="admin/*" element={<AdminPage />} />}
           </Routes>
         </MobileLayout>
@@ -131,11 +143,21 @@ const Dashboard = () => {
               <Route path="resultats" element={<ResultsPage />} />
               <Route path="classement" element={<Rankings />} />
               <Route path="statistiques" element={<Statistics />} />
-              <Route path="startlist" element={<Startlist />} />
-              <Route path="compte" element={<AccountPage />} />
-              <Route path="leagues/:id/admin" element={<LeagueDetailPage />} />
-              {isAnyAdmin && <Route path="admin/*" element={<AdminPage />} />}
-            </Routes>
+            <Route path="startlist" element={<Startlist />} />
+            <Route path="compte" element={<AccountPage />} />
+            <Route path="leagues/:id/admin" element={<LeagueDetailPage />} />
+            {isSuperAdmin && (
+              <Route 
+                path="super-admin/*" 
+                element={
+                  <SuperAdminGuard>
+                    <SuperAdminPage />
+                  </SuperAdminGuard>
+                } 
+              />
+            )}
+            {isAnyAdmin && <Route path="admin/*" element={<AdminPage />} />}
+          </Routes>
           </main>
         </SidebarInset>
       </div>
