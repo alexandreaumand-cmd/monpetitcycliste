@@ -6,7 +6,8 @@ import { LeagueCard } from "@/components/dashboard/LeagueCard";
 import { RecentResultsWidget } from "@/components/dashboard/RecentResultsWidget";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Users, LogOut } from "lucide-react";
+import { Users, LogOut, Settings } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
 import logo from "@/assets/logo.png";
 
 interface DashboardHomeProps {
@@ -17,6 +18,7 @@ export default function DashboardHome({ onSignOut }: DashboardHomeProps) {
   const navigate = useNavigate();
   const { setLeagueId } = useLeague();
   const { leagues, isLoading } = useUserLeagues();
+  const { isSuperAdmin } = useUserRole();
 
   const handleViewLeagueDetails = (leagueId: string) => {
     setLeagueId(leagueId);
@@ -32,10 +34,23 @@ export default function DashboardHome({ onSignOut }: DashboardHomeProps) {
             <img src={logo} alt="Mon Petit Cycliste" className="h-10 w-10" />
             <h1 className="text-xl font-bold">Mon Petit Cycliste</h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={onSignOut}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Déconnexion
-          </Button>
+          <div className="flex items-center gap-2">
+            {isSuperAdmin && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate('/dashboard/admin')}
+                className="gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Administration
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={onSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Déconnexion
+            </Button>
+          </div>
         </div>
       </header>
 
