@@ -33,6 +33,7 @@ const Dashboard = () => {
   const isAnyAdmin = isSuperAdmin || isLeagueAdminOnly;
   
   const isHomePage = location.pathname === '/dashboard/home' || location.pathname === '/dashboard';
+  const isSuperAdminRoute = location.pathname.includes('/dashboard/super-admin');
 
   useEffect(() => {
     checkUser();
@@ -77,6 +78,28 @@ const Dashboard = () => {
     );
   }
 
+  // SuperAdmin layout (isolé)
+  if (isSuperAdminRoute && isSuperAdmin) {
+    return (
+      <>
+        <AnnouncementBanner />
+        <SuperAdminGuard>
+          <Routes>
+            <Route 
+              path="super-admin/*" 
+              element={
+                <SuperAdminPage 
+                  manager={manager} 
+                  onSignOut={handleSignOut} 
+                />
+              } 
+            />
+          </Routes>
+        </SuperAdminGuard>
+      </>
+    );
+  }
+
   // Mobile layout
   if (isMobile) {
     return (
@@ -104,7 +127,7 @@ const Dashboard = () => {
                 path="super-admin/*" 
                 element={
                   <SuperAdminGuard>
-                    <SuperAdminPage />
+                    <SuperAdminPage manager={manager} onSignOut={handleSignOut} />
                   </SuperAdminGuard>
                 } 
               />
@@ -120,10 +143,10 @@ const Dashboard = () => {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full">
-        {!isHomePage && <AppSidebar isAdmin={isAnyAdmin} />}
+        {!isHomePage && !isSuperAdminRoute && <AppSidebar isAdmin={isAnyAdmin} />}
         <SidebarInset className="flex-1 flex flex-col">
           <AnnouncementBanner />
-          {!isHomePage && (
+          {!isHomePage && !isSuperAdminRoute && (
             <TopBar 
               onSignOut={handleSignOut}
               manager={manager}
@@ -151,7 +174,7 @@ const Dashboard = () => {
                 path="super-admin/*" 
                 element={
                   <SuperAdminGuard>
-                    <SuperAdminPage />
+                    <SuperAdminPage manager={manager} onSignOut={handleSignOut} />
                   </SuperAdminGuard>
                 } 
               />

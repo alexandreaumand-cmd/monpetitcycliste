@@ -7,6 +7,7 @@ import { LeagueDetailPage } from "@/pages/admin/LeagueDetailPage";
 import { UsersManagementPage } from "@/pages/admin/UsersManagementPage";
 import { StartlistImportManager } from "@/components/admin/StartlistImportManager";
 import { CourseManagementTabs } from "@/components/admin/CourseManagementTabs";
+import { SuperAdminHeader } from "@/components/admin/SuperAdminHeader";
 
 const superAdminNavItems = [
   { label: 'Résultats', path: 'results', icon: Trophy },
@@ -16,7 +17,12 @@ const superAdminNavItems = [
   { label: 'Utilisateurs', path: 'users', icon: Shield },
 ];
 
-export const SuperAdminPage = () => {
+interface SuperAdminPageProps {
+  manager: any;
+  onSignOut: () => void;
+}
+
+export const SuperAdminPage = ({ manager, onSignOut }: SuperAdminPageProps) => {
   const location = useLocation();
 
   const isActive = (path: string) => {
@@ -24,8 +30,13 @@ export const SuperAdminPage = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
-      {/* Sidebar Navigation */}
+    <div className="min-h-screen flex flex-col">
+      {/* Header dédié SuperAdmin */}
+      <SuperAdminHeader manager={manager} onSignOut={onSignOut} />
+      
+      {/* Layout sidebar + content */}
+      <div className="flex flex-1">
+        {/* Sidebar Navigation */}
       <aside className="w-64 border-r bg-card flex flex-col">
         <div className="p-6 border-b">
           <div className="flex items-center gap-2">
@@ -57,9 +68,9 @@ export const SuperAdminPage = () => {
         </nav>
       </aside>
 
-      {/* Content Area */}
-      <main className="flex-1 overflow-auto">
-        <div className="container mx-auto p-6">
+        {/* Content Area */}
+        <main className="flex-1 overflow-auto bg-background">
+          <div className="container mx-auto p-6">
           <Routes>
             <Route index element={<Navigate to="/dashboard/super-admin/results" replace />} />
             <Route path="results" element={<CourseManagementTabs />} />
@@ -69,8 +80,9 @@ export const SuperAdminPage = () => {
             <Route path="leagues/:id" element={<LeagueDetailPage />} />
             <Route path="users" element={<UsersManagementPage />} />
           </Routes>
-        </div>
-      </main>
+          </div>
+        </main>
+      </div>
     </div>
   );
 };
