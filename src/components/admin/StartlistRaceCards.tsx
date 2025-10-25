@@ -16,28 +16,63 @@ interface StartlistRaceCardsProps {
 }
 
 export const StartlistRaceCards = ({ onRaceClick, isSuperAdmin }: StartlistRaceCardsProps) => {
-  const { leagueId } = useLeague();
+  const { leagueId } = useLeague() || { leagueId: null };
   const [tabMode, setTabMode] = useState<'30days' | '90days' | 'history' | 'upcoming-year'>('30days');
 
   // Fetch upcoming courses filtered by league scope
   const { data: upcomingCourses, isLoading: isLoadingCourses } = useQuery({
-    queryKey: ['upcoming-courses-startlist', leagueId, tabMode],
+    queryKey: ['upcoming-courses-startlist', isSuperAdmin, leagueId, tabMode],
     queryFn: async () => {
-      if (!leagueId) return [];
-      
       const today = new Date().toISOString().split('T')[0];
       const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const in90Days = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
-      const { data: leagueCourses, error: edgeFnError } = await supabase.functions.invoke(
-        'get-league-courses',
-        { body: { league_id: leagueId, season_id: null } }
-      );
+      let courses: any[] = [];
       
-      if (edgeFnError) throw edgeFnError;
+      // SuperAdmin mode: Query all courses directly
+      if (isSuperAdmin) {
+        const { data: coursesData, error } = await supabase
+          .from('courses')
+          .select(`
+            id,
+            nom,
+            categorie,
+            type_course,
+            date_debut,
+            date_fin,
+            phase_id,
+            phases!inner(saison_id, index_dans_saison)
+          `)
+          .order('date_debut', { ascending: false });
+          
+        if (error) throw error;
+        
+        courses = (coursesData || []).map((c: any) => ({
+          course_id: c.id,
+          id: c.id,
+          nom: c.nom,
+          categorie: c.categorie,
+          type_course: c.type_course,
+          date_debut: c.date_debut,
+          date_fin: c.date_fin,
+          phase_id: c.phase_id,
+          phase_index: c.phases.index_dans_saison,
+          nb_etapes_estimees: null
+        }));
+      } else {
+        // Manager mode: Use league-scoped courses
+        if (!leagueId) return [];
+        
+        const { data: leagueCourses, error: edgeFnError } = await supabase.functions.invoke(
+          'get-league-courses',
+          { body: { league_id: leagueId, season_id: null } }
+        );
+        
+        if (edgeFnError) throw edgeFnError;
 
-      const raw = leagueCourses?.courses || [];
-      const courses = raw.map((c: any) => ({ ...c, id: c.course_id }));
+        const raw = leagueCourses?.courses || [];
+        courses = raw.map((c: any) => ({ ...c, id: c.course_id }));
+      }
       
       // Filter by tab mode
       let filtered = courses;
@@ -59,7 +94,7 @@ export const StartlistRaceCards = ({ onRaceClick, isSuperAdmin }: StartlistRaceC
       
       return filtered;
     },
-    enabled: !!leagueId
+    enabled: isSuperAdmin || !!leagueId
   });
 
   // Check if startlist exists for a race
