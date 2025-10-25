@@ -267,7 +267,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
             )}
 
             <Button onClick={onViewDetails} variant="outline" className="w-full">
-              Voir le classement
+              Voir ma ligue
             </Button>
           </>
         )}
