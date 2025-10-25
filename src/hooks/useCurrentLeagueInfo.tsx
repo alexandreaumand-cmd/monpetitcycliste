@@ -1,16 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLeague } from "@/contexts/LeagueContext";
-import { useSeasonContext } from "@/contexts/SeasonContext";
 import { supabase } from "@/integrations/supabase/client";
 import { LEAGUE_TEMPLATES } from "@/lib/leagues/templates";
 import type { GameMode } from "@/lib/leagues/types";
 
 export function useCurrentLeagueInfo() {
   const { leagueId } = useLeague();
-  const { selectedSeason } = useSeasonContext();
 
   return useQuery({
-    queryKey: ['current-league-info', leagueId, selectedSeason?.id],
+    queryKey: ['current-league-info', leagueId],
     queryFn: async () => {
       if (!leagueId) return null;
 
@@ -30,16 +28,16 @@ export function useCurrentLeagueInfo() {
         .eq('league_id', leagueId)
         .maybeSingle();
 
-      // Déterminer l'année de saison avec fallback sur SeasonContext
-      let seasonYear: number | null = selectedSeason?.annee ?? null;
-
-      if (scope?.season_id && (!selectedSeason || selectedSeason.id !== scope.season_id)) {
-        const { data: seasonRow } = await supabase
+      // Récupérer l'année de la saison si un scope existe
+      let seasonYear: number | null = null;
+      if (scope?.season_id) {
+        const { data: seasonData } = await supabase
           .from('saisons')
           .select('annee')
           .eq('id', scope.season_id)
           .maybeSingle();
-        seasonYear = seasonRow?.annee ?? seasonYear;
+        
+        seasonYear = seasonData?.annee ?? null;
       }
 
       // Trouver le template correspondant au mode de jeu
