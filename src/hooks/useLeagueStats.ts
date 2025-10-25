@@ -43,12 +43,16 @@ export function useLeagueStats(leagueId: string | null) {
       if (!manager) return null;
       
       // 3. Récupérer les standings par saison
-      const { data: seasonStandings } = await supabase
+      const { data: seasonStandings, error: standingsError } = await supabase
         .from('v_manager_standings_by_season_v2')
-        .select('*, managers!inner(nom)')
+        .select('*')
         .eq('league_id', leagueId)
         .eq('saison_id', scope.season_id)
         .order('total_points', { ascending: false });
+      
+      if (standingsError) {
+        console.error('Error fetching season standings:', standingsError);
+      }
       
       // 4. Récupérer les standings par phase si disponible
       let myPhaseRank = null;
@@ -76,18 +80,25 @@ export function useLeagueStats(leagueId: string | null) {
       let mySeasonPoints = null;
       let seasonLeader = null;
       
-      if (seasonStandings) {
+      if (seasonStandings && seasonStandings.length > 0) {
         const myIndex = seasonStandings.findIndex(s => s.manager_id === manager.id);
         if (myIndex >= 0) {
           mySeasonRank = myIndex + 1;
           mySeasonPoints = seasonStandings[myIndex].total_points;
         }
-        if (seasonStandings.length > 0 && seasonStandings[0].managers) {
-          seasonLeader = {
-            name: (seasonStandings[0].managers as any).nom,
-            points: seasonStandings[0].total_points,
-          };
-        }
+        
+        // Récupérer le nom du leader séparément
+        const leaderId = seasonStandings[0].manager_id;
+        const { data: leaderManager } = await supabase
+          .from('managers')
+          .select('nom')
+          .eq('id', leaderId)
+          .maybeSingle();
+        
+        seasonLeader = {
+          name: leaderManager?.nom || 'Leader',
+          points: seasonStandings[0].total_points,
+        };
       }
       
       return {
