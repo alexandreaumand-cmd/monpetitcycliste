@@ -68,7 +68,7 @@ export const MobileLayout = ({
       {/* Bottom navigation bar - masquée sur home */}
       {!isHomePage && <MobileBottomBar isAdmin={isAdmin} />}
 
-      {/* Side drawer with League & Season Selector */}
+      {/* Side drawer with League Selector */}
       {!isHomePage && (
         <MobileDrawer
           open={drawerOpen}
@@ -77,15 +77,6 @@ export const MobileLayout = ({
           isAdmin={isAdmin}
           onSignOut={onSignOut}
           leagueSelector={<LeagueSwitcherMobile />}
-          seasonSelector={
-            !seasonsLoading && seasons.length > 0 && selectedSeason ? (
-              <div className="px-4 py-2 border-b flex justify-center">
-                <Badge variant="secondary" className="text-sm font-medium">
-                  {selectedSeason.annee}
-                </Badge>
-              </div>
-            ) : undefined
-          }
         />
       )}
     </div>

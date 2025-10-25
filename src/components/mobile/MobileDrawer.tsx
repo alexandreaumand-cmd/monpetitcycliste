@@ -28,7 +28,6 @@ interface MobileDrawerProps {
   isAdmin: boolean;
   onSignOut: () => void;
   leagueSelector?: React.ReactNode;
-  seasonSelector?: React.ReactNode;
 }
 
 export const MobileDrawer = ({
@@ -38,7 +37,6 @@ export const MobileDrawer = ({
   isAdmin,
   onSignOut,
   leagueSelector,
-  seasonSelector,
 }: MobileDrawerProps) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -114,8 +112,6 @@ export const MobileDrawer = ({
         </SheetHeader>
 
         {leagueSelector}
-
-        {seasonSelector}
 
         <nav className="flex-1 overflow-y-auto py-4 space-y-2">
           {sections.map((section, idx) => (
