@@ -72,7 +72,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
           </div>
         </div>
 
-        {/* Ligne 2 : Joueurs + Type de ligue */}
+        {/* Ligne 2 : Joueurs + Type de ligue + Saison */}
         <div className="flex items-center gap-2 flex-wrap">
           <Badge 
             variant={league.current_player_count < league.max_players ? "outline" : "secondary"} 
@@ -88,6 +88,15 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
             >
               <Zap className="h-3 w-3" />
               {gameMode.name}
+            </Badge>
+          )}
+          {leagueSeason?.season?.annee && (
+            <Badge 
+              variant="outline" 
+              className="gap-1 bg-blue-100 dark:bg-blue-950 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200"
+            >
+              <Calendar className="h-3 w-3" />
+              Saison {leagueSeason.season.annee}
             </Badge>
           )}
         </div>
