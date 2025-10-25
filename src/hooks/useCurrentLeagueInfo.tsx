@@ -1,14 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 import { supabase } from "@/integrations/supabase/client";
 import { LEAGUE_TEMPLATES } from "@/lib/leagues/templates";
 import type { GameMode } from "@/lib/leagues/types";
 
 export function useCurrentLeagueInfo() {
   const { leagueId } = useLeague();
+  const { selectedSeason } = useSeasonContext();
 
   return useQuery({
-    queryKey: ['current-league-info', leagueId],
+    queryKey: ['current-league-info', leagueId, selectedSeason?.id],
     queryFn: async () => {
       if (!leagueId) return null;
 
@@ -21,19 +23,24 @@ export function useCurrentLeagueInfo() {
 
       if (leagueError) throw leagueError;
 
-      // Récupérer la saison associée
-      const { data: scope, error: scopeError } = await supabase
+      // Récupérer la saison associée (tolérant si absente)
+      const { data: scope } = await supabase
         .from('league_scopes')
-        .select(`
-          season_id,
-          saisons:season_id (
-            annee
-          )
-        `)
+        .select('season_id')
         .eq('league_id', leagueId)
-        .single();
+        .maybeSingle();
 
-      if (scopeError) throw scopeError;
+      // Déterminer l'année de saison avec fallback sur SeasonContext
+      let seasonYear: number | null = selectedSeason?.annee ?? null;
+
+      if (scope?.season_id && (!selectedSeason || selectedSeason.id !== scope.season_id)) {
+        const { data: seasonRow } = await supabase
+          .from('saisons')
+          .select('annee')
+          .eq('id', scope.season_id)
+          .maybeSingle();
+        seasonYear = seasonRow?.annee ?? seasonYear;
+      }
 
       // Trouver le template correspondant au mode de jeu
       const template = LEAGUE_TEMPLATES.find(t => t.id === league.game_mode);
@@ -42,10 +49,11 @@ export function useCurrentLeagueInfo() {
         leagueName: league.name,
         gameMode: league.game_mode as GameMode,
         gameModeName: template?.name || league.game_mode,
-        seasonYear: (scope.saisons as any)?.annee || null,
+        seasonYear,
       };
     },
     enabled: !!leagueId,
+    retry: 1,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }

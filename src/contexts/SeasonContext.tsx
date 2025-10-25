@@ -167,6 +167,9 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
                 queryClient.invalidateQueries({ 
                   queryKey: ['previous-global-standings'] 
                 });
+                queryClient.invalidateQueries({ 
+                  queryKey: ['current-league-info'] 
+                });
                 
                 return leagueSeason;
               }
@@ -195,6 +198,9 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
       });
       queryClient.invalidateQueries({ 
         queryKey: ['previous-global-standings'] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['current-league-info'] 
       });
     } else {
       localStorage.removeItem("selectedSeasonId");
