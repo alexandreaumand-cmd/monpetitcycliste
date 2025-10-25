@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useUserLeagues } from "@/hooks/useUserLeagues";
 import { QuickActions } from "@/components/dashboard/QuickActions";
@@ -19,10 +19,16 @@ export default function DashboardHome({ onSignOut }: DashboardHomeProps) {
   const { setLeagueId } = useLeague();
   const { leagues, isLoading } = useUserLeagues();
   const { isSuperAdmin } = useUserRole();
+  const [searchParams] = useSearchParams();
+  const currentLeagueId = searchParams.get('leagueId');
+
+  const buildNavUrl = (path: string) => {
+    return currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
+  };
 
   const handleViewLeagueDetails = (leagueId: string) => {
     setLeagueId(leagueId);
-    navigate('/dashboard/classement');
+    navigate(`/dashboard/classement?leagueId=${leagueId}`);
   };
 
   return (
@@ -39,7 +45,7 @@ export default function DashboardHome({ onSignOut }: DashboardHomeProps) {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => navigate('/dashboard/super-admin')}
+                onClick={() => navigate(buildNavUrl('/dashboard/super-admin'))}
                 className="gap-2"
               >
                 <Settings className="h-4 w-4" />
