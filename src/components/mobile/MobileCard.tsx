@@ -59,8 +59,8 @@ export const MobileCard = ({
     return (
       <Card
         className={cn(
-          "rounded-2xl p-3 shadow-sm w-full",
-          "cursor-pointer hover:bg-muted/50 active:scale-[0.98] transition-all touch-target",
+          "rounded-2xl p-3 shadow-sm w-full border border-gray-200",
+          "cursor-pointer hover:bg-yellow-50 hover:border-yellow-500 active:scale-[0.98] transition-all touch-target",
           className
         )}
         onClick={onClick}

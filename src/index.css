@@ -9,53 +9,55 @@ All colors MUST be HSL.
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --foreground: 0 0% 0%; /* Noir pur pour texte */
     
     /* Tour de France Colors */
-    --tdf-yellow: 48 100% 50%;
+    --tdf-yellow: 48 100% 50%; /* #FFD500 */
     --tdf-black: 0 0% 0%;
     --tdf-gray-light: 0 0% 96%;
     --tdf-gray-dark: 0 0% 20%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 0 0% 0%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 0 0% 0%;
 
-    /* Cycling blue primary */
-    --primary: 217 91% 40%;
-    --primary-foreground: 0 0% 100%;
-    --primary-light: 217 91% 60%;
-    --primary-dark: 217 91% 25%;
+    /* PRIMARY = JAUNE VIF (remplace bleu) */
+    --primary: 48 100% 50%; /* #FFD500 - Le jaune iconique */
+    --primary-foreground: 0 0% 0%; /* Texte NOIR sur jaune */
+    --primary-light: 48 100% 60%;
+    --primary-dark: 45 93% 47%;
 
-    /* Energetic yellow accent */
-    --secondary: 45 93% 47%;
-    --secondary-foreground: 222 47% 11%;
+    /* SECONDARY = NOIR (remplace ancien) */
+    --secondary: 0 0% 0%; /* Noir pur */
+    --secondary-foreground: 48 100% 50%; /* Texte JAUNE sur noir */
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    /* MUTED = gris TdF */
+    --muted: 0 0% 96%; /* Gris très clair */
+    --muted-foreground: 0 0% 35%; /* Gris moyen pour texte */
 
-    --accent: 45 93% 47%;
-    --accent-foreground: 222 47% 11%;
+    /* ACCENT = jaune clair pour hovers */
+    --accent: 48 100% 95%; /* Jaune très pâle */
+    --accent-foreground: 0 0% 0%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 217 91% 40%;
+    --border: 0 0% 88%; /* Gris clair neutre */
+    --input: 0 0% 88%;
+    --ring: 48 100% 50%; /* Ring jaune au focus */
 
     --radius: 0.75rem;
 
-    /* Custom gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 40%), hsl(217 91% 60%));
-    --gradient-hero: linear-gradient(135deg, hsl(217 91% 25%) 0%, hsl(217 91% 40%) 50%, hsl(217 91% 60%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(45 93% 47%), hsl(45 93% 67%));
+    /* Gradients TdF */
+    --gradient-primary: linear-gradient(135deg, hsl(48 100% 50%), hsl(48 100% 60%));
+    --gradient-hero: linear-gradient(135deg, hsl(0 0% 0%) 0%, hsl(0 0% 15%) 50%, hsl(48 100% 50%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(48 100% 50%), hsl(45 93% 67%));
     
-    /* Shadows */
-    --shadow-elegant: 0 10px 30px -10px hsl(217 91% 40% / 0.3);
-    --shadow-card: 0 4px 12px hsl(217 91% 40% / 0.08);
+    /* Shadows jaunes */
+    --shadow-elegant: 0 10px 30px -10px hsl(48 100% 50% / 0.3);
+    --shadow-card: 0 4px 12px hsl(48 100% 50% / 0.08);
     
     /* Animation */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -107,12 +109,12 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-poppins;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-bold tracking-tight;
+    @apply font-montserrat font-bold tracking-tight;
   }
 }
 
@@ -189,7 +191,7 @@ All colors MUST be HSL.
     display: none;
   }
 
-  /* Tour de France Utilities */
+  /* Tour de France Utilities EXTENDED */
   .tdf-yellow-bg {
     background-color: hsl(var(--tdf-yellow));
   }
@@ -202,7 +204,26 @@ All colors MUST be HSL.
     background-color: hsl(var(--tdf-black));
   }
 
+  .tdf-black-text {
+    color: hsl(var(--tdf-black));
+  }
+
   .hover-lift {
     @apply transition-all duration-300 hover:scale-105 hover:shadow-2xl;
+  }
+
+  /* Effet hover jaune sur cards */
+  .card-tdf-hover {
+    @apply transition-all duration-300 hover:border-yellow-500 hover:shadow-lg hover:shadow-yellow-500/20;
+  }
+
+  /* Bouton jaune avec shadow */
+  .btn-tdf {
+    @apply bg-[#FFD500] text-black font-poppins font-semibold hover:bg-yellow-400 shadow-md hover:shadow-lg transition-all;
+  }
+
+  /* Bouton noir inversé */
+  .btn-tdf-inverse {
+    @apply bg-black text-[#FFD500] font-poppins font-semibold hover:bg-gray-900 border-2 border-yellow-500 transition-all;
   }
 }

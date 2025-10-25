@@ -76,15 +76,17 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-card/90 backdrop-blur-sm border-b">
+    <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
       {/* Top Bar */}
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-12 border-b border-border/50">
+        <div className="flex items-center justify-between h-12 border-b border-yellow-500/20">
           {/* Left: Logo + Manager Info */}
-          <div className="flex items-center gap-2">
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <img src={logo} alt="Mon Petit Cycliste" className="h-8 w-8 object-contain" />
-              <span className="hidden lg:inline text-sm font-semibold text-foreground">Mon Petit Cycliste</span>
+          <div className="flex items-center gap-3">
+            <Link to="/dashboard" className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#FFD500] flex items-center justify-center">
+                <span className="font-montserrat font-black text-black text-sm">MPC</span>
+              </div>
+              <span className="hidden lg:inline font-montserrat font-bold text-white">Mon Petit Cycliste</span>
             </Link>
             {manager && (
               <ManagerInfoDropdown 
@@ -177,10 +179,10 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                   to={link.href}
                   aria-current={active ? 'page' : 'false'}
                   className={cn(
-                    "px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-2",
+                    "px-4 py-2 rounded-full font-poppins font-semibold transition-all flex items-center gap-2",
                     active 
-                      ? "bg-primary text-primary-foreground" 
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      ? "bg-[#FFD500] text-black shadow-lg shadow-yellow-500/30" 
+                      : "text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10"
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -206,7 +208,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <nav className="md:hidden py-4 border-t">
+          <nav className="md:hidden py-4 border-t border-yellow-500/20 bg-black/95">
             <div className="flex flex-col gap-2">
               {allMobileLinks.map((link) => {
                 const Icon = link.icon;
@@ -218,10 +220,10 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                     onClick={() => setMobileMenuOpen(false)}
                     aria-current={active ? 'page' : 'false'}
                     className={cn(
-                      "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-3",
+                      "px-4 py-3 rounded-xl font-poppins font-semibold transition-all flex items-center gap-3",
                       active 
-                        ? "bg-primary text-primary-foreground" 
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                        ? "bg-[#FFD500] text-black shadow-lg" 
+                        : "text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10"
                     )}
                   >
                     <Icon className="h-4 w-4" />

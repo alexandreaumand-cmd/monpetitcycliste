@@ -13,9 +13,9 @@ export const MobileStickyBottom = ({
     <div
       className={cn(
         "sticky bottom-0 left-0 right-0 z-20",
-        "bg-background/95 backdrop-blur-sm border-t",
+        "bg-black/95 backdrop-blur-sm border-t border-yellow-500/30",
         "safe-bottom p-4",
-        "shadow-lg",
+        "shadow-lg shadow-yellow-500/10",
         className
       )}
     >

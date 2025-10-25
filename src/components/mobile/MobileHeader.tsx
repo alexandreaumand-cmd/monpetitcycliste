@@ -24,12 +24,12 @@ export const MobileHeader = ({ title, navItems }: MobileHeaderProps) => {
   const location = useLocation();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 safe-top">
+    <header className="sticky top-0 z-50 w-full border-b border-yellow-500/30 bg-black/95 backdrop-blur safe-top">
       <div className="flex h-14 items-center justify-between px-4">
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="touch-target">
-              <Menu className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="text-yellow-400 hover:text-yellow-500 touch-target">
+              <Menu className="h-6 w-6" />
               <span className="sr-only">Ouvrir le menu</span>
             </Button>
           </SheetTrigger>
@@ -62,7 +62,7 @@ export const MobileHeader = ({ title, navItems }: MobileHeaderProps) => {
           </SheetContent>
         </Sheet>
 
-        <h1 className="text-lg font-bold truncate flex-1 text-center">
+        <h1 className="text-lg font-montserrat font-bold truncate flex-1 text-center text-white">
           {title}
         </h1>
 

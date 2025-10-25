@@ -30,11 +30,11 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-sm border-t safe-bottom"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-t border-yellow-500/30 safe-bottom"
       role="navigation"
       aria-label="Navigation principale"
     >
-      <div className="flex items-center justify-around px-2 py-2">
+      <div className="flex items-center justify-around px-2 py-3">
         {mainRoutes.map((route) => {
           const Icon = route.icon;
           const active = isActive(route.path);
@@ -47,13 +47,13 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
                 "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl touch-target transition-all",
                 "active:scale-95",
                 active
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted"
+                  ? "bg-[#FFD500] text-black shadow-lg shadow-yellow-500/40"
+                  : "text-gray-400 hover:text-yellow-400"
               )}
               aria-current={active ? "page" : undefined}
             >
               <Icon className="h-5 w-5" />
-              <span className="text-[10px] font-medium leading-none">
+              <span className="text-[10px] font-montserrat font-semibold leading-none">
                 {route.label}
               </span>
             </button>
