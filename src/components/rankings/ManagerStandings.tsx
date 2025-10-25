@@ -101,7 +101,8 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
 
       const { data, error } = await supabase.rpc('get_previous_standings', {
         p_saison_id: selectedSeason?.id || null,
-        p_reference_phase_id: activePhase.id
+        p_reference_phase_id: activePhase.id,
+        p_league_id: leagueId
       });
 
       if (error) {

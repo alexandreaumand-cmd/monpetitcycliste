@@ -3877,6 +3877,7 @@ export type Database = {
           bonus_points: number | null
           league_id: string | null
           manager_id: string | null
+          manager_nom: string | null
           phase_id: string | null
           race_points: number | null
           scoreurs_count: number | null
@@ -3961,6 +3962,7 @@ export type Database = {
           bonus_points: number | null
           league_id: string | null
           manager_id: string | null
+          manager_nom: string | null
           race_points: number | null
           saison_id: string | null
           scoreurs_count: number | null
@@ -4428,13 +4430,27 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"][]
       }
-      get_previous_standings: {
-        Args: { p_reference_phase_id?: string; p_saison_id?: string }
-        Returns: {
-          manager_id: string
-          previous_rank: number
-        }[]
-      }
+      get_previous_standings:
+        | {
+            Args: { p_reference_phase_id?: string; p_saison_id?: string }
+            Returns: {
+              manager_id: string
+              previous_rank: number
+            }[]
+          }
+        | {
+            Args: {
+              p_league_id?: string
+              p_reference_phase_id?: string
+              p_saison_id?: string
+            }
+            Returns: {
+              manager_id: string
+              manager_nom: string
+              rank: number
+              total_points: number
+            }[]
+          }
       get_top_riders_optimized: {
         Args: {
           p_league_id?: string
