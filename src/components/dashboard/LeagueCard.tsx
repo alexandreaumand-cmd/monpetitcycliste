@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLeagueMemberCount } from "@/hooks/useLeagueMemberCount";
-import { useLeagueStats } from "@/hooks/useLeagueStats";
+import { useMyLeagueStats } from "@/hooks/useMyLeagueStats";
 import { useLeagueMembers } from "@/hooks/useLeagueMembers";
 import { LeagueStatusBadge } from "@/components/leagues/LeagueStatusBadge";
 import type { LeagueWithRole } from "@/lib/leagues/types";
@@ -22,7 +22,7 @@ interface LeagueCardProps {
 export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
   const [invitesSheetOpen, setInvitesSheetOpen] = useState(false);
   const { data: memberCount, isLoading: loadingMembers } = useLeagueMemberCount(league.id);
-  const { data: stats, isLoading: loadingStats } = useLeagueStats(league.id);
+  const { data: stats, isLoading: loadingStats } = useMyLeagueStats(league.id);
   const { data: members = [], isLoading: loadingMembersList } = useLeagueMembers(league.id);
   
   const isAdmin = league.role === 'owner' || league.role === 'admin';

@@ -21,24 +21,19 @@ export function useCurrentLeagueInfo() {
 
       if (leagueError) throw leagueError;
 
-      // Récupérer la saison associée (tolérant si absente)
-      const { data: scope } = await supabase
+      // Récupérer la saison associée
+      const { data: scope, error: scopeError } = await supabase
         .from('league_scopes')
-        .select('season_id')
+        .select(`
+          season_id,
+          saisons:season_id (
+            annee
+          )
+        `)
         .eq('league_id', leagueId)
-        .maybeSingle();
+        .single();
 
-      // Récupérer l'année de la saison si un scope existe
-      let seasonYear: number | null = null;
-      if (scope?.season_id) {
-        const { data: seasonData } = await supabase
-          .from('saisons')
-          .select('annee')
-          .eq('id', scope.season_id)
-          .maybeSingle();
-        
-        seasonYear = seasonData?.annee ?? null;
-      }
+      if (scopeError) throw scopeError;
 
       // Trouver le template correspondant au mode de jeu
       const template = LEAGUE_TEMPLATES.find(t => t.id === league.game_mode);
@@ -47,11 +42,10 @@ export function useCurrentLeagueInfo() {
         leagueName: league.name,
         gameMode: league.game_mode as GameMode,
         gameModeName: template?.name || league.game_mode,
-        seasonYear,
+        seasonYear: (scope.saisons as any)?.annee || null,
       };
     },
     enabled: !!leagueId,
-    retry: 1,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }

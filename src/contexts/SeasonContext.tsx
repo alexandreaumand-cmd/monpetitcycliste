@@ -1,7 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useLeague } from "@/contexts/LeagueContext";
-import { useQueryClient } from "@tanstack/react-query";
 
 interface Season {
   id: string;
@@ -37,8 +35,6 @@ export const useSeasonContext = () => {
 };
 
 export const SeasonProvider = ({ children }: { children: ReactNode }) => {
-  const { leagueId, isLoading: isLeagueLoading } = useLeague();
-  const queryClient = useQueryClient();
   const [selectedSeason, setSelectedSeasonState] = useState<Season | null>(null);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [phases, setPhases] = useState<Phase[]>([]);
@@ -133,75 +129,12 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
     loadPhases();
   }, [selectedSeason]);
 
-  // Synchronize with LeagueContext: load the season associated with the active league
-  useEffect(() => {
-    const loadLeagueSeason = async () => {
-      if (!leagueId || isLeagueLoading || !seasons.length) return;
-      
-      console.log("[SeasonContext] Sync triggered:", { 
-        leagueId, 
-        isLeagueLoading, 
-        seasonsCount: seasons.length 
-      });
-      
-      try {
-        const { data: scope } = await supabase
-          .from('league_scopes')
-          .select('season_id')
-          .eq('league_id', leagueId)
-          .maybeSingle();
-        
-        if (scope?.season_id) {
-          const leagueSeason = seasons.find(s => s.id === scope.season_id);
-          if (leagueSeason) {
-            // Use functional form to avoid stale closure
-            setSelectedSeasonState(current => {
-              if (current?.id !== leagueSeason.id) {
-                console.log("[SeasonContext] Auto-selecting season for league:", leagueSeason.annee);
-                localStorage.setItem("selectedSeasonId", leagueSeason.id);
-                
-                // Invalidate caches to force reload with correct season
-                queryClient.invalidateQueries({ 
-                  queryKey: ['league-standings-season'] 
-                });
-                queryClient.invalidateQueries({ 
-                  queryKey: ['previous-global-standings'] 
-                });
-                queryClient.invalidateQueries({ 
-                  queryKey: ['current-league-info'] 
-                });
-                
-                return leagueSeason;
-              }
-              return current;
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error loading league season:", error);
-      }
-    };
-    
-    loadLeagueSeason();
-  }, [leagueId, isLeagueLoading, seasons]);
-
   // Persist season selection
   const setSelectedSeason = (season: Season | null) => {
     console.log("[SeasonContext] setSelectedSeason:", season?.id, season?.annee);
     setSelectedSeasonState(season);
     if (season) {
       localStorage.setItem("selectedSeasonId", season.id);
-      
-      // Invalidate all caches that depend on the season
-      queryClient.invalidateQueries({ 
-        queryKey: ['league-standings-season'] 
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ['previous-global-standings'] 
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ['current-league-info'] 
-      });
     } else {
       localStorage.removeItem("selectedSeasonId");
     }
