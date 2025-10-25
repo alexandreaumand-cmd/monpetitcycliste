@@ -65,3 +65,9 @@ verify_jwt = true
 
 [functions.leagues-delete-full]
 verify_jwt = true
+
+[functions.admin-leagues-list]
+verify_jwt = true
+
+[functions.admin-leagues-stats]
+verify_jwt = true
