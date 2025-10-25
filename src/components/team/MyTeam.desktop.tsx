@@ -394,9 +394,7 @@ export const MyTeamDesktop = () => {
   };
 
   const getPhaseLabel = (phase: any) => {
-    const debut = new Date(phase.date_debut).toLocaleDateString('fr-FR', { month: 'short' });
-    const fin = new Date(phase.date_fin).toLocaleDateString('fr-FR', { month: 'short' });
-    return `Phase ${phase.index_dans_saison} (${debut} - ${fin})${phase.statut === 'active' ? ' ✓' : ''}`;
+    return `Phase ${phase.index_dans_saison}${phase.statut === 'active' ? ' ✓' : ''}`;
   };
 
   if (loading) {
@@ -409,7 +407,7 @@ export const MyTeamDesktop = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Mobile layout */}
       <div className="flex flex-col gap-3 md:hidden">
         <div>
@@ -492,35 +490,21 @@ export const MyTeamDesktop = () => {
       </div>
 
       {/* Desktop layout */}
-      <div className="hidden md:block space-y-4">
-        {/* Header with jersey and title */}
+      <div className="hidden md:block">
+        {/* Compact Header */}
         <div className="flex items-center gap-3">
           {managerSponsor?.jersey_image_url && (
             <img 
               src={managerSponsor.jersey_image_url} 
               alt="Maillot" 
-              className="h-24 w-24 object-contain rounded"
+              className="h-16 w-16 object-contain flex-shrink-0"
             />
           )}
-          <div>
-            <h1 className="text-3xl font-bold">
-              {selectedManagerId && selectedManagerId !== currentUserId
-                ? managers.find(m => m.id === selectedManagerId)?.nom
-                : 'Mon équipe'}
-            </h1>
-            <p className="text-muted-foreground">
-              {coureurs.length} coureur{coureurs.length > 1 ? 's' : ''}
-            </p>
-          </div>
-        </div>
-        
-        {/* Selectors row - inline */}
-        <div className="flex gap-4">
-          {/* Manager selector */}
-          {managers.length > 0 && (
-            <div className="flex-1">
+          
+          <div className="flex gap-2 flex-1">
+            {managers.length > 0 && (
               <Select value={selectedManagerId || '__MY_TEAM__'} onValueChange={(v) => setSelectedManagerId(v === '__MY_TEAM__' ? null : v)}>
-                <SelectTrigger>
+                <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Mon équipe" />
                 </SelectTrigger>
                 <SelectContent>
@@ -532,15 +516,12 @@ export const MyTeamDesktop = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          )}
-          
-          {/* Phase selector */}
-          {phases.length > 0 && (
-            <div className="flex-1">
+            )}
+            
+            {phases.length > 0 && (
               <Select value={selectedPhaseId || ''} onValueChange={setSelectedPhaseId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner une phase" />
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Phase" />
                 </SelectTrigger>
                 <SelectContent>
                   {phases.map((phase) => (
@@ -550,22 +531,19 @@ export const MyTeamDesktop = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            )}
+          </div>
+
+          {!hasSelectedBonusRider && !selectedManagerId && (
+            <Button
+              onClick={() => setShowBonusRiderDialog(true)}
+              variant="secondary"
+              size="sm"
+            >
+              <Star className="h-4 w-4" />
+            </Button>
           )}
         </div>
-        
-        {/* Bonus rider button - plus discret */}
-        {!hasSelectedBonusRider && !selectedManagerId && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowBonusRiderDialog(true)}
-            className="gap-2 border-amber-500 text-amber-600 hover:bg-amber-50"
-          >
-            <Star className="h-4 w-4" />
-            Sélectionner coureur bonus
-          </Button>
-        )}
       </div>
 
       {/* KPIs compacts */}

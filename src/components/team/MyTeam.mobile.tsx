@@ -216,11 +216,7 @@ export const MyTeamMobile = () => {
   };
 
   const getPhaseLabel = (phase: any) => {
-    const debut = new Date(phase.date_debut).toLocaleDateString("fr-FR", { month: "short" });
-    const fin = new Date(phase.date_fin).toLocaleDateString("fr-FR", { month: "short" });
-    return `Phase ${phase.index_dans_saison} (${debut} - ${fin})${
-      phase.statut === "active" ? " ✓" : ""
-    }`;
+    return `Phase ${phase.index_dans_saison}${phase.statut === "active" ? " ✓" : ""}`;
   };
 
   const sortChips = [
@@ -364,59 +360,49 @@ export const MyTeamMobile = () => {
   }
 
   return (
-    <div className="p-4 space-y-4">
-      {/* Header with jersey */}
-      {managerSponsor?.jersey_image_url && (
-        <div className="flex items-center gap-3 pb-2 border-b">
+    <div className="p-4 space-y-3">
+      {/* Compact Header */}
+      <div className="flex items-center gap-2">
+        {managerSponsor?.jersey_image_url && (
           <img 
             src={managerSponsor.jersey_image_url} 
             alt="Maillot" 
-            className="h-10 w-10 object-contain rounded"
+            className="h-16 w-16 object-contain flex-shrink-0"
           />
-          <div>
-            <h2 className="font-bold">
-              {selectedManagerId && selectedManagerId !== currentUserId
-                ? managers.find(m => m.id === selectedManagerId)?.nom
-                : 'Mon équipe'}
-            </h2>
-          </div>
-        </div>
-      )}
-      
-      {/* Selectors inline */}
-      <div className="grid grid-cols-2 gap-2">
-        {/* Manager selector */}
-        {managers.length > 0 && (
-          <Select value={selectedManagerId || '__MY_TEAM__'} onValueChange={(v) => setSelectedManagerId(v === '__MY_TEAM__' ? null : v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Mon équipe" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__MY_TEAM__">Mon équipe</SelectItem>
-              {managers.map((manager) => (
-                <SelectItem key={manager.id} value={manager.id}>
-                  {manager.nom}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         )}
         
-        {/* Phase selector */}
-        {phases.length > 0 && (
-          <Select value={selectedPhaseId || ""} onValueChange={setSelectedPhaseId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Phase" />
-            </SelectTrigger>
-            <SelectContent>
-              {phases.map((phase) => (
-                <SelectItem key={phase.id} value={phase.id}>
-                  Phase {phase.index_dans_saison}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        <div className="flex gap-2 flex-1">
+          {managers.length > 0 && (
+            <Select value={selectedManagerId || '__MY_TEAM__'} onValueChange={(v) => setSelectedManagerId(v === '__MY_TEAM__' ? null : v)}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Mon équipe" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__MY_TEAM__">Mon équipe</SelectItem>
+                {managers.map((manager) => (
+                  <SelectItem key={manager.id} value={manager.id}>
+                    {manager.nom}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          
+          {phases.length > 0 && (
+            <Select value={selectedPhaseId || ""} onValueChange={setSelectedPhaseId}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Phase" />
+              </SelectTrigger>
+              <SelectContent>
+                {phases.map((phase) => (
+                  <SelectItem key={phase.id} value={phase.id}>
+                    {getPhaseLabel(phase)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
       </div>
 
       {/* KPIs compacts */}
@@ -431,10 +417,10 @@ export const MyTeamMobile = () => {
       {/* Bouton Choisir coureur bonus */}
       {!hasSelectedBonusRider && !selectedManagerId && (
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => setShowBonusRiderDialog(true)}
-          className="w-full gap-2 border-amber-500 text-amber-600"
+          className="w-full gap-2"
         >
           <Star className="h-4 w-4" />
           Choisir coureur bonus
