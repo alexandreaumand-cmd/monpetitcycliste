@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Camera, CheckCircle2, Star } from "lucide-react";
+import { ArrowLeft, Camera, CheckCircle2, Star, Upload } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { toPng } from "html-to-image";
@@ -18,9 +18,10 @@ interface StartlistDetailViewProps {
   startlistId: string;
   onBack: () => void;
   isSuperAdmin: boolean;
+  onImport?: () => void;
 }
 
-export const StartlistDetailView = ({ startlistId, onBack, isSuperAdmin }: StartlistDetailViewProps) => {
+export const StartlistDetailView = ({ startlistId, onBack, isSuperAdmin, onImport }: StartlistDetailViewProps) => {
   const queryClient = useQueryClient();
   const { leagueId } = useLeague();
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -164,6 +165,16 @@ export const StartlistDetailView = ({ startlistId, onBack, isSuperAdmin }: Start
               currentImageUrl={startlistViewData.route_image_url}
               onUploadComplete={() => queryClient.invalidateQueries({ queryKey: ['startlist-view', startlistId] })}
             />
+          )}
+          {isSuperAdmin && onImport && (
+            <Button 
+              onClick={onImport} 
+              variant="outline"
+              size="sm"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Importer nouvelle SL
+            </Button>
           )}
           {isSuperAdmin && !startlistViewData?.pcs_validated && (
             <Button 

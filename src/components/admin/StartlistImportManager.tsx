@@ -154,6 +154,7 @@ export const StartlistImportManager = () => {
             if (startlistId) {
               // Course avec startlist → mode détail
               setSelectedStartlistId(startlistId);
+              setSelectedRace(race);
               setViewMode('detail');
             } else {
               // Course sans startlist → mode import
@@ -380,8 +381,16 @@ export const StartlistImportManager = () => {
         onBack={() => {
           setViewMode('list');
           setSelectedStartlistId(null);
+          setSelectedRace(null);
         }}
         isSuperAdmin={true}
+        onImport={() => {
+          if (selectedRace) {
+            setSelectedPhaseId(selectedRace.phase_id);
+            setSelectedRaceId(selectedRace.id);
+            setViewMode('import');
+          }
+        }}
       />
     );
   }
