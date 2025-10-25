@@ -3891,6 +3891,7 @@ export type Database = {
           bonus_points: number | null
           league_id: string | null
           manager_id: string | null
+          manager_nom: string | null
           race_points: number | null
           saison_id: string | null
           scoreurs_count: number | null
