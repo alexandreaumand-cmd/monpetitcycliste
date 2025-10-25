@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface Season {
   id: string;
@@ -22,6 +23,7 @@ interface SeasonContextType {
   phases: Phase[];
   activePhase: Phase | null;
   isLoading: boolean;
+  isLeagueSeason: boolean;
 }
 
 const SeasonContext = createContext<SeasonContextType | undefined>(undefined);
@@ -35,11 +37,13 @@ export const useSeasonContext = () => {
 };
 
 export const SeasonProvider = ({ children }: { children: ReactNode }) => {
+  const { leagueId } = useLeague();
   const [selectedSeason, setSelectedSeasonState] = useState<Season | null>(null);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [phases, setPhases] = useState<Phase[]>([]);
   const [activePhase, setActivePhase] = useState<Phase | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLeagueSeason, setIsLeagueSeason] = useState(false);
 
   // Load seasons and set initial selection
   useEffect(() => {
@@ -93,6 +97,48 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
     loadSeasons();
   }, []);
 
+  // Load season from league when leagueId changes
+  useEffect(() => {
+    if (!leagueId) {
+      setIsLeagueSeason(false);
+      return;
+    }
+
+    const loadSeasonFromLeague = async () => {
+      try {
+        // Get season_id from league_scopes
+        const { data: scopeData, error: scopeError } = await supabase
+          .from("league_scopes")
+          .select("season_id")
+          .eq("league_id", leagueId)
+          .maybeSingle();
+
+        if (scopeError) throw scopeError;
+
+        if (scopeData?.season_id) {
+          // Get the full season data
+          const { data: seasonData, error: seasonError } = await supabase
+            .from("saisons")
+            .select("id, annee")
+            .eq("id", scopeData.season_id)
+            .single();
+
+          if (seasonError) throw seasonError;
+
+          if (seasonData) {
+            console.log("[SeasonContext] Auto-selecting season from league:", seasonData.annee);
+            setSelectedSeasonState(seasonData);
+            setIsLeagueSeason(true);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading season from league:", error);
+      }
+    };
+
+    loadSeasonFromLeague();
+  }, [leagueId]);
+
   // Load phases when season changes
   useEffect(() => {
     const loadPhases = async () => {
@@ -129,11 +175,14 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
     loadPhases();
   }, [selectedSeason]);
 
-  // Persist season selection
+  // Persist season selection (only if not from league)
   const setSelectedSeason = (season: Season | null) => {
     console.log("[SeasonContext] setSelectedSeason:", season?.id, season?.annee);
     setSelectedSeasonState(season);
-    if (season) {
+    setIsLeagueSeason(false);
+    
+    // Only persist if not a league season
+    if (season && !leagueId) {
       localStorage.setItem("selectedSeasonId", season.id);
     } else {
       localStorage.removeItem("selectedSeasonId");
@@ -149,6 +198,7 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
         phases,
         activePhase,
         isLoading,
+        isLeagueSeason,
       }}
     >
       {children}

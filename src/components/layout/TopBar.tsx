@@ -6,6 +6,7 @@ import { LeagueSwitcher } from "@/components/leagues/LeagueSwitcher";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ManagerDropdown } from "./ManagerDropdown";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface TopBarProps {
   onSignOut: () => void;
@@ -14,7 +15,9 @@ interface TopBarProps {
 }
 
 export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
-  const { seasons, selectedSeason, setSelectedSeason } = useSeasonContext();
+  const { seasons, selectedSeason, setSelectedSeason, isLeagueSeason } = useSeasonContext();
+  const { leagueId } = useLeague();
+  
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background">
       <div className="flex h-14 items-center gap-4 px-4">
@@ -25,22 +28,30 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
           {/* League Switcher */}
           <LeagueSwitcher />
           
-          {/* Season Selector */}
-          <Select value={selectedSeason?.id} onValueChange={(value) => {
-            const season = seasons.find(s => s.id === value);
-            if (season) setSelectedSeason(season);
-          }}>
-            <SelectTrigger className="h-8 w-32">
-              <SelectValue placeholder="Saison" />
-            </SelectTrigger>
-            <SelectContent>
-              {seasons.map((season) => (
-                <SelectItem key={season.id} value={season.id}>
-                  {season.annee}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Season Selector or Read-only display */}
+          {leagueId ? (
+            // Read-only season display when league is selected
+            <div className="h-8 px-3 flex items-center text-sm text-muted-foreground border rounded-md bg-muted/50">
+              Saison {selectedSeason?.annee}
+            </div>
+          ) : (
+            // Editable selector when no league
+            <Select value={selectedSeason?.id} onValueChange={(value) => {
+              const season = seasons.find(s => s.id === value);
+              if (season) setSelectedSeason(season);
+            }}>
+              <SelectTrigger className="h-8 w-32">
+                <SelectValue placeholder="Saison" />
+              </SelectTrigger>
+              <SelectContent>
+                {seasons.map((season) => (
+                  <SelectItem key={season.id} value={season.id}>
+                    {season.annee}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         
         <div className="flex-1" />

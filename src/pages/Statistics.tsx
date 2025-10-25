@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeague } from "@/contexts/LeagueContext";
 import { BarChart3 } from "lucide-react";
 import { PerformanceHeatmap } from "@/components/rankings/PerformanceHeatmap";
 import { ConsistencyScores } from "@/components/rankings/ConsistencyScores";
@@ -14,6 +15,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 
 const Statistics = () => {
   const { selectedSeason, setSelectedSeason, seasons, isLoading } = useSeasonContext();
+  const { leagueId } = useLeague();
 
   if (isLoading) {
     return (
@@ -41,7 +43,7 @@ const Statistics = () => {
         title="Statistiques avancées"
         subtitle="Analyses approfondies des performances et de la régularité des managers"
         actions={
-          seasons.length > 0 && (
+          !leagueId && seasons.length > 0 && (
             <Select
               value={selectedSeason.id}
               onValueChange={(value) => {
