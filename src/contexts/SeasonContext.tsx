@@ -64,12 +64,18 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
         if (seasonsError) throw seasonsError;
         setSeasons(seasonsData || []);
 
-        // Load league's season
+        // If no leagueId (SuperAdmin mode), use most recent season
         if (!leagueId) {
-          console.error("[SeasonContext] No leagueId available");
+          console.log("[SeasonContext] No leagueId - SuperAdmin mode, using most recent season");
+          if (seasonsData && seasonsData.length > 0) {
+            setSelectedSeasonState(seasonsData[0]); // Most recent season (ordered desc)
+            setIsLeagueSeason(false);
+          }
+          setIsLoading(false);
           return;
         }
 
+        // Load league's season (Manager mode)
         const { data: scopeData } = await supabase
           .from("league_scopes")
           .select("season_id")
@@ -78,12 +84,14 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
 
         if (!scopeData?.season_id) {
           console.error("[SeasonContext] League has no season configured");
+          setIsLoading(false);
           return;
         }
 
         const season = seasonsData?.find(s => s.id === scopeData.season_id);
         if (!season) {
           console.error("[SeasonContext] Season not found");
+          setIsLoading(false);
           return;
         }
 
