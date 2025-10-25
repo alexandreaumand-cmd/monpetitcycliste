@@ -20,6 +20,8 @@ interface LeagueCardProps {
 }
 
 export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
+  console.log("[LeagueCard] Rendering card for:", league.name, "ID:", league.id);
+  
   const [invitesSheetOpen, setInvitesSheetOpen] = useState(false);
   const { data: memberCount, isLoading: loadingMembers } = useLeagueMemberCount(league.id);
   const { data: stats, isLoading: loadingStats } = useMyLeagueStats(league.id);
