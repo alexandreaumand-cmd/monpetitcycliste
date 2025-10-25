@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useLeagueMemberCount } from "@/hooks/useLeagueMemberCount";
 import { useMyLeagueStats } from "@/hooks/useMyLeagueStats";
 import { useLeagueMembers } from "@/hooks/useLeagueMembers";
+import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { LeagueStatusBadge } from "@/components/leagues/LeagueStatusBadge";
 import type { LeagueWithRole } from "@/lib/leagues/types";
 import { LEAGUE_TEMPLATES } from "@/lib/leagues/templates";
@@ -32,44 +33,13 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
   const isCompleted = league.status === 'completed';
   const remainingSpots = league.max_players - league.current_player_count;
 
-  // Fetch season info
-  const { data: seasonInfo } = useQuery({
-    queryKey: ['league-season', league.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('league_scopes')
-        .select(`
-          season_id,
-          saisons:season_id (
-            id,
-            annee
-          )
-        `)
-        .eq('league_id', league.id)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('[LeagueCard] Error fetching season:', error);
-        return null;
-      }
-      
-      const result = data?.saisons as { id: string; annee: number } | null;
-      console.log('[LeagueCard]', league.name, {
-        seasonInfo: result,
-        seasonId: result?.id,
-        year: result?.annee
-      });
-      
-      return result;
-    },
-  });
+  // Fetch season from leagues.season_id (single source of truth)
+  const { data: leagueSeason } = useLeagueSeason(league.id);
 
-  // CRITICAL: Pass null (not undefined) when seasonInfo is not loaded yet
-  // to prevent fallback to global season during loading
+  // Pass season to stats hook - no fallback allowed
   const { data: stats, isLoading: loadingStats } = useMyLeagueStats(
     league.id,
-    seasonInfo ? seasonInfo.id : null,
-    null
+    leagueSeason?.seasonId || null
   );
 
   const gameMode = LEAGUE_TEMPLATES.find(t => t.id === league.game_mode);
