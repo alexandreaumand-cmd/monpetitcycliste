@@ -10,8 +10,8 @@ export function useMyLeagueStats(
   const { selectedSeason, activePhase } = useSeasonContext();
   
   // Use provided parameters or fallback to context
-  const effectiveSeasonId = seasonId ?? selectedSeason?.id;
-  const effectivePhaseId = phaseId ?? activePhase?.id;
+  const effectiveSeasonId = seasonId !== undefined ? seasonId : selectedSeason?.id;
+  const effectivePhaseId = phaseId !== undefined ? phaseId : activePhase?.id;
   
   return useQuery({
     queryKey: ['my-league-stats', leagueId, effectiveSeasonId, effectivePhaseId],
