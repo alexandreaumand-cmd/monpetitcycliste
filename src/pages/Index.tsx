@@ -2,14 +2,9 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Trophy, Users, TrendingUp, Award, Calendar, Megaphone, ArrowRight, Star } from "lucide-react";
+import { Trophy, Users, TrendingUp, Award, MapPin, Calendar, Shield, Target } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
-import { format, differenceInDays } from "date-fns";
-import { fr } from "date-fns/locale";
-import logo from "@/assets/logo.png";
 import heroImage from "@/assets/hero-cycling.jpg";
 
 const Index = () => {
@@ -28,201 +23,77 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch upcoming courses
-  const { data: upcomingCourses } = useQuery({
-    queryKey: ['home-upcoming-courses'],
-    queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase
-        .from('v_course_points_theoriques')
-        .select('*')
-        .gte('date_debut', today)
-        .order('date_debut', { ascending: true })
-        .limit(6);
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
-  // Fetch recent results
-  const { data: recentResults } = useQuery({
-    queryKey: ['home-recent-results'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('v_home_recent_results')
-        .select('*');
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
-  // Fetch top managers
-  const { data: topManagers } = useQuery({
-    queryKey: ['home-top-managers'],
-    queryFn: async () => {
-      const legacyLeagueId = 'f7921741-29f4-4296-9aca-a03c1f3615b0';
-      const { data, error } = await supabase
-        .from('v_manager_standings_total')
-        .select('*')
-        .eq('league_id', legacyLeagueId)
-        .order('total_points', { ascending: false })
-        .limit(5);
-      if (error) throw error;
-      
-      // Enrich with manager names
-      const managerIds = [...new Set(data?.map(d => d.manager_id) || [])];
-      const { data: managersData } = await supabase
-        .from('managers')
-        .select('id, nom')
-        .in('id', managerIds);
-      
-      const managersMap = new Map(managersData?.map(m => [m.id, m.nom]) || []);
-      
-      return data?.map(d => ({
-        ...d,
-        manager_nom: managersMap.get(d.manager_id) || 'Unknown'
-      })) || [];
-    }
-  });
-
-  // Fetch auction status
-  const { data: auctionStatus } = useQuery({
-    queryKey: ['home-auction-status'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('next_auction_info')
-        .select('*')
-        .limit(1)
-        .single();
-      if (error && error.code !== 'PGRST116') throw error;
-      return data;
-    }
-  });
-
-  const getDaysUntil = (date: string) => {
-    const days = differenceInDays(new Date(date), new Date());
-    if (days === 0) return "Aujourd'hui";
-    if (days === 1) return "Demain";
-    return `J-${days}`;
-  };
-
-  const maxPoints = topManagers?.[0]?.total_points || 1;
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden min-h-[600px] flex items-center">
+    <div className="min-h-screen bg-white">
+      {/* Hero Section - Tour de France Style */}
+      <section className="relative overflow-hidden min-h-[700px] flex items-center tdf-black-bg">
         <div 
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute inset-0 bg-cover bg-center grayscale opacity-40"
           style={{ backgroundImage: `url(${heroImage})` }}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/80 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/20 via-black/60 to-black" />
         </div>
         
-        <div className="container relative mx-auto px-4 py-20">
-          <div className="max-w-4xl mx-auto text-center">
-            <img src={logo} alt="Mon Petit Cycliste" className="h-24 w-24 mx-auto mb-6 animate-fade-in" />
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 text-foreground animate-fade-in">
-              Mon Petit Cycliste
+        <div className="container relative z-10 mx-auto px-4 py-20">
+          <div className="max-w-4xl">
+            <h1 className="font-montserrat text-6xl md:text-8xl font-extrabold text-white mb-6 leading-tight">
+              Joue la saison, <br />
+              <span className="tdf-yellow-text">gagne la gloire.</span>
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-6 animate-fade-in">
-              Participe aux enchères, compose ton équipe et marque des points avec les résultats réels des courses.
+            <p className="font-poppins text-xl md:text-2xl text-gray-300 mb-10 max-w-3xl">
+              Mon Petit Cycliste, le jeu de fantasy cycling basé sur les vraies courses du calendrier UCI.
             </p>
-            
-            <div className="mb-8 animate-fade-in">
-              <Badge className="px-6 py-3 text-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg hover:shadow-xl transition-shadow border-2 border-amber-300">
-                <Star className="mr-2 h-5 w-5 fill-white" />
-                Fini le tableau de l&apos;enfer
-                <Star className="ml-2 h-5 w-5 fill-white" />
-              </Badge>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8 animate-fade-in">
-              {user ? (
-                <Button 
-                  size="lg" 
-                  className="gradient-primary text-white hover:opacity-90 transition-smooth shadow-elegant text-lg px-8"
-                  onClick={() => navigate('/dashboard/classement')}
-                >
-                  Accéder au Dashboard
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              ) : (
-                <Button 
-                  size="lg" 
-                  className="gradient-primary text-white hover:opacity-90 transition-smooth shadow-elegant text-lg px-8"
-                  onClick={() => navigate('/auth')}
-                >
-                  Se connecter
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              )}
+            <div className="flex flex-col sm:flex-row gap-4">
               <Button 
-                size="lg" 
-                variant="outline"
-                className="border-primary text-primary hover:bg-primary/10 transition-smooth text-lg px-8"
+                size="lg"
+                className="tdf-yellow-bg text-black hover:bg-yellow-400 font-montserrat font-bold text-lg px-8 py-6 shadow-2xl transition-all hover:scale-105"
+                onClick={() => user ? navigate('/dashboard/home') : navigate('/auth')}
               >
-                Découvrir les règles
+                🟡 {user ? 'Mon Dashboard' : 'Créer ma ligue'}
               </Button>
-            </div>
-
-            <div className="flex flex-wrap gap-4 justify-center animate-fade-in">
-              <Badge variant="secondary" className="px-4 py-2 text-base">
-                <Users className="mr-2 h-4 w-4" />
-                10 managers
-              </Badge>
-              <Badge variant="secondary" className="px-4 py-2 text-base">
-                <Trophy className="mr-2 h-4 w-4" />
-                Budget 2200 / phase
-              </Badge>
-              <Badge variant="secondary" className="px-4 py-2 text-base">
-                <Calendar className="mr-2 h-4 w-4" />
-                5 phases / an
-              </Badge>
+              <Button 
+                size="lg"
+                className="bg-transparent text-white border-2 border-white hover:bg-white/10 font-montserrat font-bold text-lg px-8 py-6"
+              >
+                Découvrir le jeu
+              </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Upcoming Courses Section */}
-      <section className="py-20 bg-muted/30">
+      {/* Comment ça marche - 3 colonnes */}
+      <section className="py-20 bg-[#F5F5F5]">
         <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold">À venir</h2>
-            <Button variant="ghost" onClick={() => navigate('/dashboard/courses')}>
-              Voir toutes les courses
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
+          <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-16">
+            Comment ça marche ?
+          </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {upcomingCourses?.map((course) => (
-              <Card key={course.course_id} className="hover:shadow-elegant transition-smooth">
-                <CardHeader>
-                  <div className="flex justify-between items-start mb-2">
-                    <CardTitle className="text-lg">{course.nom}</CardTitle>
-                    <Badge variant="outline">{getDaysUntil(course.date_debut)}</Badge>
+          <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
+            {[
+              {
+                icon: Trophy,
+                title: "Crée ta ligue ou rejoins-en une",
+                description: "Invite tes amis ou d'autres managers passionnés"
+              },
+              {
+                icon: Users,
+                title: "Compose ton équipe",
+                description: "Fais ton mercato lors des enchères et choisis tes coureurs"
+              },
+              {
+                icon: TrendingUp,
+                title: "Suis les vraies courses",
+                description: "Tes coureurs marquent des points selon leurs performances réelles"
+              }
+            ].map((step, i) => (
+              <Card key={i} className="text-center hover-lift border-none shadow-lg bg-white">
+                <CardContent className="pt-8 pb-6">
+                  <div className="w-20 h-20 rounded-full tdf-yellow-bg flex items-center justify-center mx-auto mb-6">
+                    <step.icon className="w-10 h-10 text-black" />
                   </div>
-                  <div className="flex gap-2 flex-wrap">
-                    <Badge className="bg-primary/10 text-primary">{course.categorie}</Badge>
-                    {course.type_course && (
-                      <Badge variant="secondary">{course.type_course}</Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm text-muted-foreground mb-3">
-                    {format(new Date(course.date_debut), 'd MMM', { locale: fr })} 
-                    {course.date_fin && course.date_fin !== course.date_debut && 
-                      ` → ${format(new Date(course.date_fin), 'd MMM', { locale: fr })}`
-                    }
-                  </div>
-                  {course.points_total !== null && course.points_total !== undefined && (
-                    <div className="text-sm font-medium">
-                      <Award className="inline h-4 w-4 mr-1 text-primary" />
-                      {course.points_total} points à gagner
-                    </div>
-                  )}
+                  <h3 className="font-montserrat font-bold text-xl mb-3">{step.title}</h3>
+                  <p className="font-poppins text-gray-600">{step.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -230,173 +101,264 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Recent Results Section */}
-      {recentResults && recentResults.length > 0 && (
-        <section className="py-20">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold mb-8">Résultats récents</h2>
-            
-            <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
-              {recentResults.map((result) => (
-                <Card key={result.course_id} className="min-w-[350px] snap-start">
-                  <CardHeader>
-                    <CardTitle className="text-base">{result.course_nom}</CardTitle>
-                    <div className="text-sm text-muted-foreground">
-                      {format(new Date(result.date_fin), 'd MMMM yyyy', { locale: fr })}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {Array.isArray(result.top3) && result.top3.map((performer: any, idx: number) => (
-                        <div key={idx} className="flex justify-between items-center text-sm">
-                          <span className="font-medium">
-                            {idx + 1}. {performer.coureur_nom}
-                          </span>
-                          <Badge variant="secondary">{performer.points} pts</Badge>
-                        </div>
-                      ))}
-                      <div className="pt-2 mt-2 border-t text-sm font-medium">
-                        Total: {result.total_points} points
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Auction Status Section */}
-      {auctionStatus && ['open', 'pending'].includes(auctionStatus.statut) && (
-        <section className="py-12 bg-primary/5">
-          <div className="container mx-auto px-4">
-            <Card className="border-primary/20">
-              <CardContent className="py-6">
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="flex items-center gap-4">
-                    <Megaphone className="h-8 w-8 text-primary" />
-                    <div>
-                      <h3 className="text-xl font-bold">Enchères en cours</h3>
-                      <p className="text-muted-foreground">
-                        Round {auctionStatus.round_number} — échéance le{' '}
-                        {format(new Date(auctionStatus.deadline_at), "d MMMM 'à' HH:mm", { locale: fr })}
-                      </p>
-                    </div>
-                  </div>
-                  <Button 
-                    className="gradient-primary text-white"
-                    onClick={() => navigate('/dashboard/auctions')}
-                  >
-                    Accéder aux Enchères
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-      )}
-
-      {/* Standings Section */}
-      <section className="py-20 bg-muted/30">
+      {/* Les ligues disponibles */}
+      <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold">Classement général</h2>
-            <Button variant="ghost" onClick={() => navigate('/dashboard/rankings')}>
-              Voir tous les classements
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+          <div className="text-center mb-12">
+            <h2 className="font-montserrat text-4xl md:text-5xl font-bold mb-4">Les ligues disponibles</h2>
+            <p className="font-poppins text-lg text-gray-600">
+              Chaque joueur choisit sa ligue selon son envie de jeu.
+            </p>
           </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            {[
+              {
+                type: "Ligues rapides",
+                description: "Joue sur un seul Grand Tour",
+                cta: "Tour de France",
+                icon: "🚴",
+                color: "bg-yellow-50 border-yellow-400"
+              },
+              {
+                type: "Ligues saison",
+                description: "Suis toute l'année cycliste",
+                cta: "Saison complète",
+                icon: "📅",
+                color: "bg-blue-50 border-blue-400"
+              },
+              {
+                type: "Ligues entre amis",
+                description: "Jusqu'à 10 managers",
+                cta: "Créer ma ligue",
+                icon: "👥",
+                color: "bg-green-50 border-green-400"
+              },
+              {
+                type: "Ligues publiques",
+                description: "Affronte toute la communauté",
+                cta: "Découvrir",
+                icon: "🌍",
+                color: "bg-purple-50 border-purple-400"
+              }
+            ].map((league, i) => (
+              <Card key={i} className={`hover-lift border-2 ${league.color}`}>
+                <CardHeader>
+                  <div className="text-5xl mb-3">{league.icon}</div>
+                  <CardTitle className="font-montserrat text-xl">{league.type}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="font-poppins text-gray-600 mb-4">{league.description}</p>
+                  <Button 
+                    className="w-full tdf-black-bg text-white hover:bg-gray-800 font-montserrat"
+                    onClick={() => navigate('/auth')}
+                  >
+                    {league.cta}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
-          <Card>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {topManagers?.map((manager, index) => (
-                  <div key={manager.manager_id} className="p-4 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 text-2xl font-bold text-muted-foreground">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium mb-2">{manager.manager_nom}</div>
-                        <div className="relative">
-                          <Progress 
-                            value={(manager.total_points / maxPoints) * 100} 
-                            className="h-2"
-                          />
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold">{manager.total_points}</div>
-                        <div className="text-sm text-muted-foreground">points</div>
-                      </div>
+      {/* Le système de points */}
+      <section className="py-20 bg-[#F5F5F5]">
+        <div className="container mx-auto px-4">
+          <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-4">Le système de points</h2>
+          <p className="font-poppins text-center text-gray-600 mb-12 max-w-2xl mx-auto">
+            Chaque jour de course, tes coureurs gagnent des points selon leurs résultats officiels :
+          </p>
+          
+          <Card className="max-w-3xl mx-auto shadow-2xl border-2 border-yellow-400">
+            <CardContent className="p-8">
+              <div className="space-y-4">
+                {[
+                  { action: "Victoire d'étape", points: "+100 pts", icon: "🏆" },
+                  { action: "Maillot à pois", points: "+50 pts", icon: "🔴" },
+                  { action: "Maillot jaune", points: "Bonus cumulatif", icon: "🟡" }
+                ].map((rule, i) => (
+                  <div key={i} className="flex justify-between items-center p-4 bg-white rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{rule.icon}</span>
+                      <span className="font-poppins text-lg">{rule.action}</span>
                     </div>
+                    <Badge className="tdf-yellow-bg text-black font-montserrat font-bold text-base px-4 py-2">
+                      {rule.points}
+                    </Badge>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
-        </div>
-      </section>
-
-      {/* How it works Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Comment ça marche ?</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {[
-              {
-                icon: Trophy,
-                title: "Enchéris sur 30 coureurs",
-                description: "Participe aux enchères pour constituer ton équipe avec un budget de 2200"
-              },
-              {
-                icon: Users,
-                title: "Constitue ton équipe",
-                description: "Sélectionne tes coureurs stratégiquement sans doublon d'équipe pro"
-              },
-              {
-                icon: TrendingUp,
-                title: "Score avec les résultats réels",
-                description: "Gagne des points grâce aux performances de tes coureurs en course"
-              },
-              {
-                icon: Award,
-                title: "Gagne la phase/le général",
-                description: "Domine le classement et deviens le meilleur manager de la saison"
-              }
-            ].map((step, index) => {
-              const Icon = step.icon;
-              return (
-                <Card key={index} className="text-center hover:shadow-elegant transition-smooth">
-                  <CardContent className="pt-6">
-                    <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center mx-auto mb-4">
-                      <Icon className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="font-bold mb-2">{step.title}</h3>
-                    <p className="text-sm text-muted-foreground">{step.description}</p>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          {/* Graphique podium */}
+          <div className="mt-12 flex justify-center gap-4">
+            <div className="text-center">
+              <div className="w-20 h-32 bg-gray-300 rounded-t-lg flex items-end justify-center pb-2">
+                <span className="font-montserrat font-bold text-2xl">2</span>
+              </div>
+              <p className="font-poppins text-sm mt-2">Argent</p>
+            </div>
+            <div className="text-center">
+              <div className="w-20 h-40 tdf-yellow-bg rounded-t-lg flex items-end justify-center pb-2">
+                <span className="font-montserrat font-bold text-2xl">1</span>
+              </div>
+              <p className="font-poppins text-sm mt-2">Or</p>
+            </div>
+            <div className="text-center">
+              <div className="w-20 h-24 bg-orange-400 rounded-t-lg flex items-end justify-center pb-2">
+                <span className="font-montserrat font-bold text-2xl">3</span>
+              </div>
+              <p className="font-poppins text-sm mt-2">Bronze</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t py-8 bg-muted/30">
+      {/* Témoignages / Communauté */}
+      <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-2">
-              <img src={logo} alt="Logo" className="h-8 w-8" />
-              <span className="font-semibold">© 2025 Mon Petit Cycliste</span>
+          <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-12">
+            Ce qu'ils en pensent
+          </h2>
+          
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {[
+              {
+                quote: "Une ambiance incroyable dans notre ligue entre potes !",
+                author: "Max",
+                location: "Lyon",
+                avatar: "👨"
+              },
+              {
+                quote: "On suit les étapes du Tour tous les soirs, c'est génial !",
+                author: "Julie",
+                location: "Nantes",
+                avatar: "👩"
+              }
+            ].map((testimonial, i) => (
+              <Card key={i} className="border-2 border-yellow-400 shadow-lg hover-lift">
+                <CardContent className="pt-6">
+                  <p className="font-poppins text-lg italic mb-4">"{testimonial.quote}"</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-4xl">{testimonial.avatar}</div>
+                    <div>
+                      <p className="font-montserrat font-bold">{testimonial.author}</p>
+                      <p className="text-sm text-gray-500">{testimonial.location}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pourquoi jouer à MPC */}
+      <section className="py-20 tdf-black-bg text-white">
+        <div className="container mx-auto px-4">
+          <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-16 tdf-yellow-text">
+            Pourquoi jouer à Mon Petit Cycliste
+          </h2>
+          
+          <div className="grid md:grid-cols-4 gap-8 max-w-6xl mx-auto">
+            {[
+              { icon: "🔥", text: "Basé sur les vraies courses" },
+              { icon: "🧠", text: "Stratégie et enchères" },
+              { icon: "👥", text: "Joue avec tes amis" },
+              { icon: "🏅", text: "Classements et trophées" }
+            ].map((feature, i) => (
+              <div key={i} className="text-center">
+                <div className="text-6xl mb-4">{feature.icon}</div>
+                <p className="font-poppins text-lg">{feature.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Final */}
+      <section className="py-20 bg-gradient-to-r from-yellow-400 to-yellow-500">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="font-montserrat text-4xl md:text-5xl font-extrabold text-black mb-6">
+            Rejoins la communauté de managers cyclistes
+          </h2>
+          <p className="font-poppins text-xl text-gray-900 mb-8">
+            Lance ta première ligue aujourd'hui.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button 
+              size="lg" 
+              className="tdf-black-bg text-white hover:bg-gray-900 font-montserrat font-bold text-lg px-10 py-6"
+              onClick={() => navigate('/auth')}
+            >
+              🟡 Créer ma ligue
+            </Button>
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="border-2 border-black text-black hover:bg-black/10 font-montserrat font-bold text-lg px-10 py-6 bg-transparent"
+              onClick={() => navigate('/auth')}
+            >
+              ⚫ Essayer en solo
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer Tour de France Style */}
+      <footer className="tdf-black-bg text-white py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            {/* Logo */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-12 h-12 tdf-yellow-bg rounded-full flex items-center justify-center">
+                  <span className="font-montserrat font-extrabold text-black text-xl">MPC</span>
+                </div>
+              </div>
+              <p className="font-poppins text-gray-400 text-sm">
+                Le fantasy cycling français
+              </p>
             </div>
-            <div className="flex gap-6 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground transition-colors">Règles</a>
-              <a href="#" className="hover:text-foreground transition-colors">Contact</a>
-              <a href="#" className="hover:text-foreground transition-colors">Mentions légales</a>
+            
+            {/* Liens Le jeu */}
+            <div>
+              <h4 className="font-montserrat font-bold mb-3">Le jeu</h4>
+              <ul className="space-y-2 font-poppins text-sm">
+                <li><a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">À propos</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">Règles du jeu</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">Comment jouer</a></li>
+              </ul>
             </div>
+            
+            {/* Liens Légal */}
+            <div>
+              <h4 className="font-montserrat font-bold mb-3">Légal</h4>
+              <ul className="space-y-2 font-poppins text-sm">
+                <li><a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">Mentions légales</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">CGU</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">Confidentialité</a></li>
+              </ul>
+            </div>
+            
+            {/* Liens Communauté */}
+            <div>
+              <h4 className="font-montserrat font-bold mb-3">Communauté</h4>
+              <ul className="space-y-2 font-poppins text-sm">
+                <li><a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">Contact</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">Discord</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">Instagram</a></li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="border-t border-gray-800 pt-6 text-center">
+            <p className="font-poppins text-gray-500 text-sm">
+              © 2025 Mon Petit Cycliste. Tous droits réservés.
+            </p>
           </div>
         </div>
       </footer>

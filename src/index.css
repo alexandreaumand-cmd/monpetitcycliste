@@ -10,6 +10,12 @@ All colors MUST be HSL.
   :root {
     --background: 0 0% 100%;
     --foreground: 222 47% 11%;
+    
+    /* Tour de France Colors */
+    --tdf-yellow: 48 100% 50%;
+    --tdf-black: 0 0% 0%;
+    --tdf-gray-light: 0 0% 96%;
+    --tdf-gray-dark: 0 0% 20%;
 
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
@@ -181,5 +187,22 @@ All colors MUST be HSL.
   
   .chips-scroll::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Tour de France Utilities */
+  .tdf-yellow-bg {
+    background-color: hsl(var(--tdf-yellow));
+  }
+
+  .tdf-yellow-text {
+    color: hsl(var(--tdf-yellow));
+  }
+
+  .tdf-black-bg {
+    background-color: hsl(var(--tdf-black));
+  }
+
+  .hover-lift {
+    @apply transition-all duration-300 hover:scale-105 hover:shadow-2xl;
   }
 }
