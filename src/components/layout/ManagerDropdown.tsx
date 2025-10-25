@@ -33,9 +33,9 @@ export function ManagerDropdown({ manager, isAdmin, onSignOut, avatarUrl }: Mana
               <AvatarFallback className="text-xs">{initials}</AvatarFallback>
             </Avatar>
           ) : null}
-          <span className="font-medium text-sm">{manager.nom}</span>
+          <span className="font-medium text-sm text-white">{manager.nom}</span>
           {manager.sponsor && (
-            <span className="text-xs text-muted-foreground">({manager.sponsor})</span>
+            <span className="text-xs text-gray-300">({manager.sponsor})</span>
           )}
           {isAdmin && <Badge variant="secondary" className="text-xs">Admin</Badge>}
         </Button>
