@@ -46,10 +46,21 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
           )
         `)
         .eq('league_id', league.id)
-        .single();
+        .maybeSingle();
       
-      if (error) throw error;
-      return data?.saisons as { id: string; annee: number } | null;
+      if (error) {
+        console.error('[LeagueCard] Error fetching season:', error);
+        return null;
+      }
+      
+      const result = data?.saisons as { id: string; annee: number } | null;
+      console.log('[LeagueCard]', league.name, {
+        seasonInfo: result,
+        seasonId: result?.id,
+        year: result?.annee
+      });
+      
+      return result;
     },
   });
 

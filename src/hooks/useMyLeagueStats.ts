@@ -16,6 +16,15 @@ export function useMyLeagueStats(
   return useQuery({
     queryKey: ['my-league-stats', leagueId, effectiveSeasonId, effectivePhaseId],
     queryFn: async () => {
+      console.log('[useMyLeagueStats]', {
+        leagueId,
+        seasonId,
+        effectiveSeasonId,
+        phaseId,
+        effectivePhaseId,
+        enabled: !!leagueId && (!!effectiveSeasonId || !!effectivePhaseId)
+      });
+      
       if (!leagueId) return null;
 
       // Get current user's manager
