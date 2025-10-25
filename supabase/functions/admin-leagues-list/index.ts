@@ -10,7 +10,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
+      global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } }
+    });
 
     // Verify authentication
     const authHeader = req.headers.get('Authorization')!;
@@ -26,6 +28,7 @@ Deno.serve(async (req) => {
 
     // Check superadmin role
     const { data: isSuperAdmin } = await supabaseClient.rpc('is_superadmin');
+    console.log('admin-leagues-list user', user?.id, 'isSuperAdmin', isSuperAdmin);
     if (!isSuperAdmin) {
       return new Response(JSON.stringify({ error: 'Accès refusé: réservé aux super-administrateurs' }), {
         status: 403,
