@@ -1,5 +1,5 @@
 import { BarChart3, Users, Calendar, ListChecks, LineChart, Trophy, Settings, Home, Shield } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useSearchParams } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -35,6 +35,12 @@ const navItems = [
 export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = false }: AppSidebarProps) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const [searchParams] = useSearchParams();
+  const currentLeagueId = searchParams.get('leagueId');
+
+  const buildNavUrl = (path: string) => {
+    return currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -64,7 +70,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                       <TooltipTrigger asChild>
                         <SidebarMenuButton asChild>
                           <NavLink
-                            to={item.href}
+                            to={buildNavUrl(item.href)}
                             className={({ isActive }) =>
                               isActive ? "bg-accent text-accent-foreground" : ""
                             }
@@ -89,7 +95,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                       <TooltipTrigger asChild>
                         <SidebarMenuButton asChild>
                           <NavLink
-                            to="/dashboard/admin"
+                            to={buildNavUrl("/dashboard/admin")}
                             className={({ isActive }) =>
                               isActive ? "bg-accent text-accent-foreground" : ""
                             }
@@ -115,7 +121,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                         <TooltipTrigger asChild>
                           <SidebarMenuButton asChild>
                             <NavLink
-                              to="/dashboard/admin"
+                              to={buildNavUrl("/dashboard/admin")}
                               className={({ isActive }) =>
                                 isActive ? "bg-accent text-accent-foreground" : ""
                               }
@@ -137,7 +143,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                         <TooltipTrigger asChild>
                           <SidebarMenuButton asChild>
                             <NavLink
-                              to="/dashboard/super-admin"
+                              to={buildNavUrl("/dashboard/super-admin")}
                               className={({ isActive }) =>
                                 isActive ? "bg-accent text-accent-foreground" : ""
                               }

@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Users, BarChart3, ListChecks, Medal, Calendar } from "lucide-react";
 
@@ -9,6 +9,8 @@ interface MobileBottomBarProps {
 export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const currentLeagueId = searchParams.get('leagueId');
 
   const mainRoutes = [
     { label: "Classement", path: "/dashboard/classement", icon: BarChart3 },
@@ -17,6 +19,10 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
     { label: "Résultats", path: "/dashboard/resultats", icon: Medal },
     { label: "Courses", path: "/dashboard/courses", icon: Calendar },
   ];
+
+  const buildNavUrl = (path: string) => {
+    return currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
+  };
 
   const isActive = (path: string) => {
     return location.pathname.startsWith(path);
@@ -36,7 +42,7 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
           return (
             <button
               key={route.path}
-              onClick={() => navigate(route.path)}
+              onClick={() => navigate(buildNavUrl(route.path))}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl touch-target transition-all",
                 "active:scale-95",
