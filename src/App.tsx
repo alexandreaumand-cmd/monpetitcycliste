@@ -26,8 +26,8 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <SeasonProvider>
-          <LeagueProvider>
+        <LeagueProvider>
+          <SeasonProvider>
             <TooltipProvider>
               <Toaster />
               <Sonner />
@@ -41,8 +41,8 @@ const App = () => {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </TooltipProvider>
-          </LeagueProvider>
-        </SeasonProvider>
+          </SeasonProvider>
+        </LeagueProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );
