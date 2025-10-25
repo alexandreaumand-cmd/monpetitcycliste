@@ -28,7 +28,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section - Tour de France Style */}
-      <section className="relative overflow-hidden min-h-[700px] flex items-center tdf-black-bg">
+      <section className="relative overflow-hidden min-h-[550px] md:min-h-[600px] flex items-center tdf-black-bg">
         <div
           className="absolute inset-0 bg-cover bg-center grayscale opacity-40"
           style={{ backgroundImage: `url(${heroImage})` }}
@@ -36,10 +36,10 @@ const Index = () => {
           <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/20 via-black/60 to-black" />
         </div>
 
-        <div className="container relative z-10 mx-auto px-4 py-20">
+        <div className="container relative z-10 mx-auto px-4 py-12 md:py-16">
           <div className="max-w-4xl">
-            <h1 className="font-montserrat text-6xl md:text-8xl font-extrabold text-white mb-6 leading-tight">
-              Les cols c'est pour eux, <br />
+            <h1 className="font-montserrat text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-6 leading-[1.15]">
+              Les cols c'est pour eux, <br className="hidden sm:block" />
               <span className="tdf-yellow-text">les points, c'est pour toi.</span>
             </h1>
             <p className="font-poppins text-xl md:text-2xl text-gray-300 mb-10 max-w-3xl">
