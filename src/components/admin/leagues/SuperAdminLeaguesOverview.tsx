@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Shield, TrendingUp, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type StatsResponse = {
   total_leagues: number;
@@ -26,13 +27,28 @@ type StatsResponse = {
 };
 
 export function SuperAdminLeaguesOverview() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, error } = useQuery({
     queryKey: ["admin-leagues-stats"],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("admin-leagues-stats");
-
-      if (error) throw error;
-      return data as StatsResponse;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Non authentifié');
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-leagues-stats`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erreur lors du chargement des stats');
+      }
+      
+      return response.json() as Promise<StatsResponse>;
     },
   });
 
@@ -52,6 +68,16 @@ export function SuperAdminLeaguesOverview() {
           </Card>
         ))}
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Erreur</AlertTitle>
+        <AlertDescription>{error.message}</AlertDescription>
+      </Alert>
     );
   }
 

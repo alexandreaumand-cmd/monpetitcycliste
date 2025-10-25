@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -25,7 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, AlertTriangle } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import type { League } from "@/lib/leagues/types";
 
@@ -53,7 +54,7 @@ export function SuperAdminLeaguesTable() {
 
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: [
       "admin-leagues-list",
       debouncedSearch,
@@ -63,6 +64,9 @@ export function SuperAdminLeaguesTable() {
       page,
     ],
     queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Non authentifié');
+
       const params = new URLSearchParams();
       if (debouncedSearch) params.set("search", debouncedSearch);
       if (status !== "all") params.set("status", status);
@@ -71,12 +75,22 @@ export function SuperAdminLeaguesTable() {
       params.set("page", page.toString());
       params.set("limit", limit.toString());
 
-      const { data, error } = await supabase.functions.invoke(
-        `admin-leagues-list?${params.toString()}`
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-leagues-list?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        }
       );
 
-      if (error) throw error;
-      return data as LeaguesResponse;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erreur lors du chargement des ligues');
+      }
+
+      return response.json() as Promise<LeaguesResponse>;
     },
   });
 
@@ -185,6 +199,12 @@ export function SuperAdminLeaguesTable() {
               <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
+        ) : error ? (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Erreur</AlertTitle>
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
         ) : (
           <>
             <div className="overflow-x-auto">
