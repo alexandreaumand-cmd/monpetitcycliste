@@ -104,7 +104,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               className="gap-1 border-black text-black font-poppins"
             >
               <Calendar className="h-3 w-3" />
-              Saison {leagueSeason.season.annee}
+              {leagueSeason.season.annee}
             </Badge>
           ) : null}
         </div>
@@ -149,7 +149,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
 
             <div className="flex gap-2">
               <Button onClick={onViewDetails} variant="outline" className="flex-1">
-                Voir le détail
+                Inviter des joueurs
               </Button>
               {isAdmin && (
                 <Button 

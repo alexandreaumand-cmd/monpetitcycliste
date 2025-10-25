@@ -14,7 +14,7 @@ export function LeagueStatusBadge({ status, currentPlayerCount, maxPlayers, clas
     if (status === 'pending') {
       if (currentPlayerCount < maxPlayers) {
         return {
-          label: 'En attente de joueurs',
+          label: 'En attente',
           icon: Clock,
           variant: 'secondary' as const,
         };

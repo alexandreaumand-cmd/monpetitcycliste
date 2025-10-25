@@ -55,7 +55,7 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
             )}
             {isSuperAdmin && (
               <Button 
-                variant="outline" 
+                variant="secondary" 
                 size="sm" 
                 onClick={() => navigate(buildNavUrl('/dashboard/super-admin'))}
                 className="gap-2"
