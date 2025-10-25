@@ -9,7 +9,7 @@ import { format, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { normalizeCourseType } from "@/lib/courseType";
 import { MobileCard, ChipGroup, MobileEmptyState } from "@/components/mobile";
-import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { useLeague } from "@/contexts/LeagueContext";
 
 interface CourseData {
@@ -39,22 +39,22 @@ export const UpcomingCoursesMobile = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [phaseFilter, setPhaseFilter] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<CourseData | null>(null);
-  const { selectedSeason, phases, isLoading: isLoadingContext } = useSeasonContext();
+  const { season, phases, isLoading: isLoadingContext } = useLeagueSeason();
   const { leagueId } = useLeague();
 
   const seasonPhaseIds = phases?.map(p => p.id) || [];
 
   const { data: courses, isLoading } = useQuery({
-    queryKey: ['league-courses', leagueId, selectedSeason?.id],
+    queryKey: ['league-courses', leagueId, season?.id],
     queryFn: async () => {
       if (!leagueId) return [];
       
-      console.log('[UpcomingCourses Mobile] Loading courses for league:', leagueId, 'season:', selectedSeason?.id);
+      console.log('[UpcomingCourses Mobile] Loading courses for league:', leagueId, 'season:', season?.id);
       
       const { data, error } = await supabase.functions.invoke('get-league-courses', {
         body: {
           league_id: leagueId,
-          season_id: selectedSeason?.id || null
+          season_id: season?.id || null
         }
       });
       

@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 
 import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
-import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { cn } from "@/lib/utils";
 import { StartlistDesktopExport } from "@/components/startlist/StartlistDesktopExport";
@@ -35,7 +35,7 @@ const StartlistDesktop = () => {
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
   const [selectedRaceForViewing, setSelectedRaceForViewing] = useState<any>(null);
   const [showUnmatched, setShowUnmatched] = useState(false);
-  const { phases, isLoading: isLoadingContext } = useSeasonContext();
+  const { phases, isLoading: isLoadingContext } = useLeagueSeason();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -510,8 +510,8 @@ const StartlistDesktop = () => {
 };
 
 const ManagerJerseyDisplay = ({ managerName, managerId }: { managerName: string; managerId: string }) => {
-  const { selectedSeason } = useSeasonContext();
-  const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
+  const { season } = useLeagueSeason();
+  const { data: sponsorData } = useManagerSponsor(managerId, season?.id);
   
   return (
     <div className="flex items-center gap-2">

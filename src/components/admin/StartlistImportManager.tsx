@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, FileText, MessageSquare, ArrowLeft } from "lucide-react";
-import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StartlistRaceCards } from "./StartlistRaceCards";
@@ -22,7 +22,7 @@ type ViewMode = 'list' | 'import' | 'detail';
 
 export const StartlistImportManager = () => {
   const { leagueId } = useLeague();
-  const { phases } = useSeasonContext();
+  const { phases } = useLeagueSeason();
   const queryClient = useQueryClient();
   const { isAdmin } = useUserRole();
   

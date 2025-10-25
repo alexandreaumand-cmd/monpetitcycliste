@@ -11,7 +11,7 @@ import { BonusEntryDialog } from "./bonus/BonusEntryDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
-import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 
 type Course = {
   course_id: string;
@@ -35,7 +35,7 @@ type ResultsStatus = {
 };
 
 export const RecentResults = () => {
-  const { selectedSeason, seasons, phases: allPhases } = useSeasonContext();
+  const { season, seasons, phases: allPhases } = useLeagueSeason();
   
   type ViewMode = '30days' | 'phase';
   const [viewMode, setViewMode] = useState<ViewMode>('30days');
@@ -48,16 +48,16 @@ export const RecentResults = () => {
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
 
   // Filter phases by selected season
-  const phases = allPhases?.filter(p => p.saison_id === selectedSeason?.id);
+  const phases = allPhases?.filter(p => p.saison_id === season?.id);
 
   // Fetch recent courses
   const { data: recentCourses, isLoading } = useQuery({
-    queryKey: ['recent-courses', viewMode, selectedPhase, selectedSeason?.id],
+    queryKey: ['recent-courses', viewMode, selectedPhase, season?.id],
     queryFn: async () => {
       let query = supabase
         .from('courses')
         .select('*, phases!inner(saison_id)')
-        .eq('phases.saison_id', selectedSeason?.id)
+        .eq('phases.saison_id', season?.id)
         .order('date_debut', { ascending: false });
       
       if (viewMode === '30days') {
@@ -135,7 +135,7 @@ export const RecentResults = () => {
         const { data: scoringData } = await supabase
           .from('scoring_rules_saisons')
           .select('type_classement, place')
-          .eq('saison_id', selectedSeason?.id)
+          .eq('saison_id', season?.id)
           .ilike('categorie', course.categorie)
           .order('place', { ascending: false });
         
@@ -160,7 +160,7 @@ export const RecentResults = () => {
       
       return statusMap;
     },
-    enabled: !!recentCourses?.length && !!selectedSeason?.id,
+    enabled: !!recentCourses?.length && !!season?.id,
   });
 
   const filteredCourses = recentCourses?.filter(course => {
@@ -181,7 +181,7 @@ export const RecentResults = () => {
         <div>
           <h2 className="text-2xl font-bold">Résultats récents</h2>
           <p className="text-muted-foreground">
-            Saisie des résultats • Saison {selectedSeason?.annee}
+            Saisie des résultats • Saison {season?.annee}
           </p>
         </div>
       </div>

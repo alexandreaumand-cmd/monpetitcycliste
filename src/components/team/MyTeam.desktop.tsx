@@ -24,7 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { RiderPointsDetail } from "./RiderPointsDetail";
-import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 
 interface Coureur {
@@ -68,7 +68,7 @@ interface Manager {
 
 export const MyTeamDesktop = () => {
   const { toast } = useToast();
-  const { phases, activePhase, selectedSeason } = useSeasonContext();
+  const { phases, activePhase, season } = useLeagueSeason();
   const { leagueId, isLoading: leagueLoading } = useLeague();
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +103,7 @@ export const MyTeamDesktop = () => {
   
   // Get manager sponsor for jersey display
   const displayedManagerId = selectedManagerId || currentUserId;
-  const { data: managerSponsor } = useManagerSponsor(displayedManagerId, selectedSeason?.id);
+  const { data: managerSponsor } = useManagerSponsor(displayedManagerId, season?.id);
 
   // Desktop version
 
@@ -869,7 +869,7 @@ export const MyTeamDesktop = () => {
 };
 
 const ManagerJerseyDisplay = () => {
-  const { selectedSeason } = useSeasonContext();
+  const { season } = useLeagueSeason();
   const [selectedManagerId, setSelectedManagerId] = useState<string | null>(null);
   
   // Get current user's manager_id
@@ -892,7 +892,7 @@ const ManagerJerseyDisplay = () => {
     loadCurrentManager();
   }, []);
   
-  const { data: sponsorData } = useManagerSponsor(selectedManagerId || undefined, selectedSeason?.id);
+  const { data: sponsorData } = useManagerSponsor(selectedManagerId || undefined, season?.id);
   
   if (!sponsorData?.jersey_image_url) {
     return <Shirt className="h-8 w-8 text-muted-foreground" />;

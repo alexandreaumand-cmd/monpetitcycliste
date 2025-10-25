@@ -55,11 +55,12 @@ export function useCurrentLeagueInfo() {
       try {
         const { data: scope } = await supabase
           .from('league_scopes')
-          .select('season_id, saisons(annee)')
+          .select('season_id, saisons!league_scopes_season_id_fkey(annee)')
           .eq('league_id', leagueId)
           .maybeSingle();
 
-        seasonYear = scope?.saisons?.annee || null;
+        const seasonData = scope?.saisons as unknown as { annee: number };
+        seasonYear = seasonData?.annee || null;
       } catch (err) {
         console.warn('[useCurrentLeagueInfo] Season query failed, continuing without it');
       }

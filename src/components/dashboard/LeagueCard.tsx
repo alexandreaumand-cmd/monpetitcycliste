@@ -41,7 +41,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         .from('league_scopes')
         .select(`
           season_id,
-          saisons:season_id (
+          saisons!league_scopes_season_id_fkey (
             annee
           )
         `)
@@ -49,7 +49,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         .single();
       
       if (error) throw error;
-      return data?.saisons as { annee: number } | null;
+      return data?.saisons as unknown as { annee: number } | null;
     },
   });
 

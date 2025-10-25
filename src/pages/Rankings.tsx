@@ -15,14 +15,14 @@ import { TeamScoring } from "@/components/rankings/TeamScoring";
 import { ManagerHistory } from "@/components/rankings/ManagerHistory";
 import { ManagerComparison } from "@/components/rankings/ManagerComparison";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { useLeague } from "@/contexts/LeagueContext";
 import { RankingsMobile } from "./Rankings.mobile";
 import { PageContainer } from "@/components/layout/PageContainer";
 
 export default function Rankings() {
   const isMobile = useIsMobile();
-  const { selectedSeason, phases } = useSeasonContext();
+  const { season, phases } = useLeagueSeason();
   const { leagueId } = useLeague();
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
@@ -81,28 +81,28 @@ export default function Rankings() {
           </TabsContent>
 
           <TabsContent value="riders" className="space-y-4">
-            <TopRiders phaseId={selectedPhase} saisonId={selectedSeason?.id || null} limit={20} />
+            <TopRiders phaseId={selectedPhase} saisonId={season?.id || null} limit={20} />
           </TabsContent>
 
           <TabsContent value="timeline" className="space-y-4">
             <RecentPointsChart 
               phaseId={selectedPhase} 
-              saisonId={selectedSeason?.id || null}
+              saisonId={season?.id || null}
               viewMode={selectedPhase ? 'phase' : 'season'}
             />
           </TabsContent>
 
           <TabsContent value="team" className="space-y-4">
-            <TeamScoring phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
+            <TeamScoring phaseId={selectedPhase} saisonId={season?.id || null} />
           </TabsContent>
 
 
           <TabsContent value="history" className="space-y-4">
-            <ManagerHistory phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
+            <ManagerHistory phaseId={selectedPhase} saisonId={season?.id || null} />
           </TabsContent>
 
           <TabsContent value="comparison" className="space-y-4">
-            <ManagerComparison phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
+            <ManagerComparison phaseId={selectedPhase} saisonId={season?.id || null} />
           </TabsContent>
         </Tabs>
 

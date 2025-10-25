@@ -30,7 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 import { useLeague } from "@/contexts/LeagueContext";
@@ -62,7 +62,7 @@ interface Manager {
 }
 
 export const MyTeamMobile = () => {
-  const { phases, activePhase, selectedSeason } = useSeasonContext();
+  const { phases, activePhase, season } = useLeagueSeason();
   const { leagueId, isLoading: leagueLoading } = useLeague();
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +96,7 @@ export const MyTeamMobile = () => {
   
   // Get manager sponsor for jersey display
   const displayedManagerId = selectedManagerId || currentUserId;
-  const { data: managerSponsor } = useManagerSponsor(displayedManagerId, selectedSeason?.id);
+  const { data: managerSponsor } = useManagerSponsor(displayedManagerId, season?.id);
 
   useEffect(() => {
     loadCurrentUser();
