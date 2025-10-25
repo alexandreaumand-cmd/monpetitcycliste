@@ -383,10 +383,10 @@ export const MyTeamMobile = () => {
         </div>
       )}
       
-      {/* Manager selector */}
-      {managers.length > 0 && (
-        <div>
-          <label className="text-sm font-medium mb-2 block">Manager</label>
+      {/* Selectors inline */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* Manager selector */}
+        {managers.length > 0 && (
           <Select value={selectedManagerId || '__MY_TEAM__'} onValueChange={(v) => setSelectedManagerId(v === '__MY_TEAM__' ? null : v)}>
             <SelectTrigger>
               <SelectValue placeholder="Mon équipe" />
@@ -400,38 +400,33 @@ export const MyTeamMobile = () => {
               ))}
             </SelectContent>
           </Select>
-        </div>
-      )}
-      
-      {/* Phase selector */}
-      {phases.length > 0 && (
-        <div>
-          <label className="text-sm font-medium mb-2 block">Phase</label>
+        )}
+        
+        {/* Phase selector */}
+        {phases.length > 0 && (
           <Select value={selectedPhaseId || ""} onValueChange={setSelectedPhaseId}>
             <SelectTrigger>
-              <SelectValue placeholder="Sélectionner une phase" />
+              <SelectValue placeholder="Phase" />
             </SelectTrigger>
             <SelectContent>
               {phases.map((phase) => (
                 <SelectItem key={phase.id} value={phase.id}>
-                  {getPhaseLabel(phase)}
+                  Phase {phase.index_dans_saison}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </div>
-      )}
-
-      {/* KPIs */}
-      <div className="space-y-2">
-        <KPIRow
-          items={[
-            { label: "Points totaux", value: kpis.total_points, icon: <Trophy className="h-4 w-4" /> },
-            { label: "Bonus", value: kpis.bonus_points, icon: <span className="text-sm">🎁</span>, onClick: () => setBonusDetailsOpen(true) },
-            { label: "Scoreurs", value: kpis.scorers_count, icon: <Trophy className="h-4 w-4" />, trend: kpis.scorers_count > 0 ? "up" : "neutral" },
-          ]}
-        />
+        )}
       </div>
+
+      {/* KPIs compacts */}
+      <KPIRow
+        items={[
+          { label: "Points", value: kpis.total_points, icon: <Trophy className="h-4 w-4" /> },
+          { label: "Bonus", value: kpis.bonus_points, icon: <Star className="h-4 w-4" />, onClick: () => setBonusDetailsOpen(true) },
+          { label: "Scoreurs", value: `${kpis.scorers_count}/${coureurs.length}`, icon: <TrendingUp className="h-4 w-4" /> },
+        ]}
+      />
 
       {/* Bouton Choisir coureur bonus */}
       {!hasSelectedBonusRider && !selectedManagerId && (
@@ -446,16 +441,6 @@ export const MyTeamMobile = () => {
         </Button>
       )}
 
-      {/* Coureur bonus sélectionné */}
-      {bonusRiderSelection && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
-          <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
-          <div>
-            <div className="text-xs text-amber-700 font-medium">Coureur Bonus</div>
-            <div className="text-sm font-semibold">{bonusRiderSelection.coureur_nom}</div>
-          </div>
-        </div>
-      )}
 
       {/* Sort chips */}
       <ChipGroup items={sortChips} selected={sortBy} onSelect={(v) => setSortBy(v as SortBy)} />
@@ -473,48 +458,23 @@ export const MyTeamMobile = () => {
             <MobileCard
               key={coureur.coureur_id}
               title={
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   {bonusRiderSelection?.coureur_id === coureur.coureur_id && (
-                    <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                    <Star className="h-4 w-4 text-[#FFD500] fill-[#FFD500]" />
                   )}
                   {coureur.nom}
                 </div>
               }
               subtitle={coureur.equipe}
-              meta={`Prix: ${coureur.prix_achat.toFixed(0)} • Cote: ${coureur.cote_initiale.toFixed(0)}`}
-              className={getRatioBgColor(coureur.ratio_points_par_prix)}
-              avatar={
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary/10">
-                    {coureur.nom
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .slice(0, 2)}
-                  </AvatarFallback>
-                </Avatar>
-              }
+              meta={`💰 ${coureur.prix_achat.toFixed(0)}/${coureur.cote_initiale.toFixed(0)} • Ratio: ${formatROICompact(computeRiderROI({
+                pointsTotal: coureur.points_total,
+                purchasePriceTotal: coureur.prix_achat
+              }))}`}
+              className="p-3"
               badge={
-                <div className="text-right">
-                  <div className="flex items-center gap-1 justify-end">
-                    <Trophy className="h-4 w-4 text-primary" />
-                    <span className="font-bold text-lg">{coureur.points_total}</span>
-                  </div>
-                  <div
-                    className={`flex items-center gap-1 justify-end font-semibold text-sm ${getRatioColor(
-                      coureur.ratio_points_par_prix
-                    )}`}
-                  >
-                    {coureur.ratio_points_par_prix > 1 ? (
-                      <TrendingUp className="h-3 w-3" />
-                    ) : coureur.ratio_points_par_prix < 1 ? (
-                      <TrendingDown className="h-3 w-3" />
-                    ) : null}
-                    <span>{formatROICompact(computeRiderROI({
-                      pointsTotal: coureur.points_total,
-                      purchasePriceTotal: coureur.prix_achat
-                    }))}</span>
-                  </div>
+                <div className="flex items-center gap-1">
+                  <Trophy className="h-4 w-4 text-primary" />
+                  <span className="font-bold text-lg">{coureur.points_total}</span>
                 </div>
               }
               onClick={() => openCoureurDetail(coureur)}

@@ -514,14 +514,13 @@ export const MyTeamDesktop = () => {
           </div>
         </div>
         
-        {/* Selectors row */}
-        <div className="flex items-center gap-4">
+        {/* Selectors row - inline */}
+        <div className="flex gap-4">
           {/* Manager selector */}
           {managers.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Manager:</span>
+            <div className="flex-1">
               <Select value={selectedManagerId || '__MY_TEAM__'} onValueChange={(v) => setSelectedManagerId(v === '__MY_TEAM__' ? null : v)}>
-                <SelectTrigger className="w-[220px]">
+                <SelectTrigger>
                   <SelectValue placeholder="Mon équipe" />
                 </SelectTrigger>
                 <SelectContent>
@@ -538,10 +537,9 @@ export const MyTeamDesktop = () => {
           
           {/* Phase selector */}
           {phases.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Phase:</span>
+            <div className="flex-1">
               <Select value={selectedPhaseId || ''} onValueChange={setSelectedPhaseId}>
-                <SelectTrigger className="w-[220px]">
+                <SelectTrigger>
                   <SelectValue placeholder="Sélectionner une phase" />
                 </SelectTrigger>
                 <SelectContent>
@@ -556,108 +554,59 @@ export const MyTeamDesktop = () => {
           )}
         </div>
         
-        {/* Bonus rider section */}
-        {(!hasSelectedBonusRider && !selectedManagerId) || bonusRiderSelection ? (
-          <div className="flex items-center gap-3">
-            {!hasSelectedBonusRider && !selectedManagerId && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowBonusRiderDialog(true)}
-                className="gap-2 border-amber-500 text-amber-600 hover:bg-amber-50"
-              >
-                <Star className="h-4 w-4" />
-                Choisir coureur bonus
-              </Button>
-            )}
-            
-            {bonusRiderSelection && (
-              <Badge variant="default" className="bg-amber-500 gap-1 px-3 py-1.5">
-                <Star className="h-3.5 w-3.5 fill-white" />
-                Coureur Bonus: {bonusRiderSelection.coureur_nom}
-              </Badge>
-            )}
-          </div>
-        ) : null}
+        {/* Bonus rider button - plus discret */}
+        {!hasSelectedBonusRider && !selectedManagerId && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowBonusRiderDialog(true)}
+            className="gap-2 border-amber-500 text-amber-600 hover:bg-amber-50"
+          >
+            <Star className="h-4 w-4" />
+            Sélectionner coureur bonus
+          </Button>
+        )}
       </div>
 
-      {/* Bannière KPI */}
+      {/* KPIs compacts */}
       {coureurs.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center">
-                <Trophy className="h-8 w-8 text-primary mb-2" />
-                <div className="text-3xl font-bold">{kpis.scorers_count}</div>
-                <div className="text-sm text-muted-foreground text-center">
-                  Scoreur{kpis.scorers_count > 1 ? 's' : ''} 
-                  {phases.find(p => p.id === selectedPhaseId)?.statut !== 'active' && (
-                    <span className="ml-1">
-                      (Phase {phases.find(p => p.id === selectedPhaseId)?.index_dans_saison})
-                    </span>
-                  )}
+        <Card className="border-2 border-black">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-4 gap-4">
+              {/* Total Points */}
+              <div className="text-center">
+                <Trophy className="h-5 w-5 mx-auto text-[#FFD500] mb-1" />
+                <div className="text-2xl font-bold">{kpis.total_points}</div>
+                <div className="text-xs text-muted-foreground">Total pts</div>
+              </div>
+              
+              {/* Bonus Points */}
+              <div className="text-center">
+                <Star className="h-5 w-5 mx-auto text-orange-500 mb-1" />
+                <div className="text-2xl font-bold">{kpis.bonus_points}</div>
+                <div className="text-xs text-muted-foreground">Bonus pts</div>
+              </div>
+              
+              {/* Scorers */}
+              <div className="text-center">
+                <TrendingUp className="h-5 w-5 mx-auto text-green-600 mb-1" />
+                <div className="text-2xl font-bold">{kpis.scorers_count}/{coureurs.length}</div>
+                <div className="text-xs text-muted-foreground">Scoreurs</div>
+              </div>
+              
+              {/* Rank */}
+              <div className="text-center">
+                <Trophy className="h-5 w-5 mx-auto text-blue-600 mb-1" />
+                <div className="text-2xl font-bold">
+                  {kpis.my_rank ? `#${kpis.my_rank}` : '—'}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {kpis.managers_count > 0 ? `/${kpis.managers_count}` : 'Classement'}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center">
-                <TrendingUp className="h-8 w-8 text-green-600 mb-2" />
-                <div className="text-3xl font-bold">{kpis.total_points}</div>
-                <div className="text-sm text-muted-foreground text-center">
-                  Points totaux
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center">
-                <span className="text-2xl mb-2">🎁</span>
-                <div className="text-3xl font-bold">{kpis.bonus_points}</div>
-                <div className="text-sm text-muted-foreground text-center">
-                  Points bonus
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center">
-                <Trophy className="h-8 w-8 text-yellow-500 mb-2" />
-                <div className="text-3xl font-bold">{kpis.wins_count}</div>
-                <div className="text-sm text-muted-foreground text-center">
-                  Course{kpis.wins_count > 1 ? 's' : ''} gagnée{kpis.wins_count > 1 ? 's' : ''}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center">
-                <Trophy className="h-8 w-8 text-blue-600 mb-2" />
-                <div className="text-3xl font-bold">
-                  {kpis.my_rank ? (
-                    <>
-                      {kpis.my_rank}
-                      <sup className="text-sm ml-0.5">
-                        {kpis.my_rank === 1 ? 'er' : 'e'}
-                      </sup>
-                    </>
-                  ) : '—'}
-                </div>
-                <div className="text-sm text-muted-foreground text-center">
-                  {kpis.managers_count > 0 ? `sur ${kpis.managers_count} managers` : 'Classement'}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {coureurs.length === 0 ? (
@@ -682,19 +631,8 @@ export const MyTeamDesktop = () => {
                     onClick={() => handleSort('prix')}
                   >
                     <div className="flex items-center justify-end gap-1">
-                      Prix d'achat
+                      💰 Prix/Cote
                       {sortBy === 'prix' && (
-                        sortDirection === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="text-right cursor-pointer hover:bg-muted/50 select-none"
-                    onClick={() => handleSort('cote')}
-                  >
-                    <div className="flex items-center justify-end gap-1">
-                      Cote initiale
-                      {sortBy === 'cote' && (
                         sortDirection === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />
                       )}
                     </div>
@@ -727,44 +665,38 @@ export const MyTeamDesktop = () => {
                 {sortedCoureurs.map((coureur) => (
                   <TableRow 
                     key={coureur.coureur_id}
-                    className={`cursor-pointer hover:bg-muted/50 ${getRatioBgColor(coureur.ratio_points_par_prix)}`}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() => openCoureurDetail(coureur)}
                   >
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium py-2">
                       <div className="flex items-center gap-2">
                         {bonusRiderSelection?.coureur_id === coureur.coureur_id && (
-                          <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                          <Star className="h-4 w-4 text-[#FFD500] fill-[#FFD500]" />
                         )}
                         {coureur.nom}
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground py-2">
                       {coureur.equipe}
                     </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {coureur.prix_achat.toFixed(0)}
+                    <TableCell className="text-right py-2">
+                      <span className="font-medium">{coureur.prix_achat.toFixed(0)}</span>
+                      <span className="text-muted-foreground"> / </span>
+                      <span className="text-sm">{coureur.cote_initiale.toFixed(0)}</span>
                     </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {coureur.cote_initiale.toFixed(0)}
-                    </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right py-2">
                       <div className="flex items-center justify-end gap-2">
                         <Trophy className="h-4 w-4 text-primary" />
                         <span className="font-bold text-lg">{coureur.points_total}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className={`flex items-center justify-end gap-1 font-semibold ${getRatioColor(coureur.ratio_points_par_prix)}`}>
-                        {coureur.ratio_points_par_prix > 1 ? (
-                          <TrendingUp className="h-4 w-4" />
-                        ) : coureur.ratio_points_par_prix < 1 ? (
-                          <TrendingDown className="h-4 w-4" />
-                        ) : null}
-                        <span>{formatROICompact(computeRiderROI({
+                    <TableCell className="text-right py-2">
+                      <Badge className="bg-[#FFD500] text-black border-2 border-black font-bold hover:bg-[#FFD500]">
+                        {formatROICompact(computeRiderROI({
                           pointsTotal: coureur.points_total,
                           purchasePriceTotal: coureur.prix_achat
-                        }))}</span>
-                      </div>
+                        }))}
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))}
