@@ -10,6 +10,7 @@ import { useSeasonContext } from "@/contexts/SeasonContext";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { useLeague } from "@/contexts/LeagueContext";
 import { Badge } from "@/components/ui/badge";
+import { LeagueSwitcherMobile } from "@/components/leagues/LeagueSwitcherMobile";
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -67,7 +68,7 @@ export const MobileLayout = ({
       {/* Bottom navigation bar - masquée sur home */}
       {!isHomePage && <MobileBottomBar isAdmin={isAdmin} />}
 
-      {/* Side drawer with Season Selector */}
+      {/* Side drawer with League & Season Selector */}
       {!isHomePage && (
         <MobileDrawer
           open={drawerOpen}
@@ -75,6 +76,7 @@ export const MobileLayout = ({
           manager={manager}
           isAdmin={isAdmin}
           onSignOut={onSignOut}
+          leagueSelector={<LeagueSwitcherMobile />}
           seasonSelector={
             !seasonsLoading && seasons.length > 0 ? (
               <div className="px-4 py-3 border-b">

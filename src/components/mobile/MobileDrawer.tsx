@@ -27,6 +27,7 @@ interface MobileDrawerProps {
   manager: any;
   isAdmin: boolean;
   onSignOut: () => void;
+  leagueSelector?: React.ReactNode;
   seasonSelector?: React.ReactNode;
 }
 
@@ -36,6 +37,7 @@ export const MobileDrawer = ({
   manager,
   isAdmin,
   onSignOut,
+  leagueSelector,
   seasonSelector,
 }: MobileDrawerProps) => {
   const navigate = useNavigate();
@@ -110,6 +112,8 @@ export const MobileDrawer = ({
             </div>
           </div>
         </SheetHeader>
+
+        {leagueSelector}
 
         {seasonSelector}
 
