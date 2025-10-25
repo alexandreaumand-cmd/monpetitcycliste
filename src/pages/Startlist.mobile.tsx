@@ -143,7 +143,7 @@ export const StartlistMobile = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedStartlistId && !!leagueId && viewMode === "view",
+    enabled: !!selectedStartlistId && viewMode === "view",
   });
 
   const handleShareStartlist = async () => {

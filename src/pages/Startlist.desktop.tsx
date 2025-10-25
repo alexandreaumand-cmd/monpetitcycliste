@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Users, AlertCircle, Download, FileText, Calendar, Trophy, ArrowLeft, Star, Camera, Shirt, MessageSquare } from "lucide-react";
+import { Loader2, Users, AlertCircle, Download, FileText, Calendar, Trophy, ArrowLeft, CheckCircle2, Star, Camera, Shirt, MessageSquare } from "lucide-react";
 import { toPng } from "html-to-image";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-
+import { RouteImageUploader } from "@/components/startlist/RouteImageUploader";
 import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
 import { useSeasonContext } from "@/contexts/SeasonContext";
@@ -128,7 +128,7 @@ const StartlistDesktop = () => {
   // Fetch startlist view data when in view mode
   const { data: startlistViewData, isLoading: isLoadingStartlistView } = useQuery({
     queryKey: ['startlist-view', selectedStartlistId, leagueId],
-    enabled: !!selectedStartlistId && !!leagueId && viewMode === 'view',
+    enabled: !!selectedStartlistId && viewMode === 'view',
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('startlist-manager-view', {
         body: { 
@@ -243,8 +243,33 @@ const StartlistDesktop = () => {
     setSelectedRaceForViewing(null);
   };
 
+  const handlePcsValidation = async () => {
+    if (!selectedStartlistId || !currentUser) return;
+    
+    const currentStatus = startlistViewData?.pcs_validated || false;
+    const newStatus = !currentStatus;
+    
+    try {
+      const { error } = await supabase
+        .from('startlist_imports')
+        .update({ 
+          pcs_validated: newStatus,
+          pcs_validated_at: newStatus ? new Date().toISOString() : null,
+          pcs_validated_by_manager_id: newStatus ? currentUser.id : null
+        })
+        .eq('id', selectedStartlistId);
 
-  const { isAdmin, loading: isLoadingRole } = useUserRole();
+      if (error) throw error;
+
+      toast.success(newStatus ? "Startlist validée PCS ✓" : "Validation PCS retirée");
+      queryClient.invalidateQueries({ queryKey: ['startlist-view'] });
+      queryClient.invalidateQueries({ queryKey: ['startlist-imports'] });
+    } catch (error: any) {
+      toast.error("Erreur : " + error.message);
+    }
+  };
+
+  const { isSuperAdmin, loading: isLoadingRole } = useUserRole();
 
   const handleExportImage = async () => {
     if (!exportRef.current) return;
@@ -311,7 +336,36 @@ const StartlistDesktop = () => {
               <Camera className="h-3 w-3 mr-1" />
               Exporter la SL
             </Button>
-            {isAdmin && startlistViewData.managers.length > 0 && (
+            {isSuperAdmin && (
+              <RouteImageUploader
+                startlistId={selectedStartlistId!}
+                currentImageUrl={startlistViewData.route_image_url}
+                onUploadComplete={() => queryClient.invalidateQueries({ queryKey: ['startlist-view', selectedStartlistId] })}
+              />
+            )}
+            {isSuperAdmin && !startlistViewData?.pcs_validated && (
+              <Button 
+                onClick={handlePcsValidation} 
+                variant="default" 
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1" />
+                Valider PCS
+              </Button>
+            )}
+            {isSuperAdmin && startlistViewData?.pcs_validated && (
+              <Button 
+                onClick={handlePcsValidation} 
+                variant="outline"
+                size="sm"
+                className="bg-green-600 text-white hover:bg-green-700 border-green-600"
+              >
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                PCS OK (retirer)
+              </Button>
+            )}
+            {isSuperAdmin && startlistViewData.managers.length > 0 && (
               <Button 
                 variant="outline" 
                 size="sm"
@@ -430,11 +484,13 @@ const StartlistDesktop = () => {
                         )}
                         {hasStartlist(course.id) && (
                           <Badge variant="outline" className="bg-green-500/10">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
                             Startlist
                           </Badge>
                         )}
                         {isPcsValidated(course.id) && (
                           <Badge variant="outline" className="bg-green-600 text-white">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
                             PCS OK
                           </Badge>
                         )}

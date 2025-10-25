@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Camera, CheckCircle2, Star, Pencil } from "lucide-react";
+import { ArrowLeft, Camera, CheckCircle2, Star } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { toPng } from "html-to-image";
@@ -17,11 +17,10 @@ import { useLeague } from "@/contexts/LeagueContext";
 interface StartlistDetailViewProps {
   startlistId: string;
   onBack: () => void;
-  onEdit?: (race: any, phaseId: string, raceId: string) => void;
   isSuperAdmin: boolean;
 }
 
-export const StartlistDetailView = ({ startlistId, onBack, onEdit, isSuperAdmin }: StartlistDetailViewProps) => {
+export const StartlistDetailView = ({ startlistId, onBack, isSuperAdmin }: StartlistDetailViewProps) => {
   const queryClient = useQueryClient();
   const { leagueId } = useLeague();
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -159,20 +158,6 @@ export const StartlistDetailView = ({ startlistId, onBack, onEdit, isSuperAdmin 
             <Camera className="h-3 w-3 mr-1" />
             Exporter la SL
           </Button>
-          {isSuperAdmin && onEdit && (
-            <Button 
-              onClick={() => onEdit(
-                startlistViewData.race, 
-                startlistViewData.race.phase_id,
-                startlistViewData.race.id
-              )} 
-              variant="outline" 
-              size="sm"
-            >
-              <Pencil className="h-3 w-3 mr-1" />
-              Modifier
-            </Button>
-          )}
           {isSuperAdmin && (
             <RouteImageUploader
               startlistId={startlistId}
