@@ -40,7 +40,7 @@ serve(async (req) => {
         .from('user_roles')
         .upsert({ 
           user_id,
-          role: 'admin'
+          role: 'superadmin'
         }, {
           onConflict: 'user_id,role'
         });
@@ -52,7 +52,7 @@ serve(async (req) => {
         .from('user_roles')
         .delete()
         .eq('user_id', user_id)
-        .eq('role', 'admin');
+        .eq('role', 'superadmin');
 
       if (error) throw error;
     }
