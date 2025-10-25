@@ -79,7 +79,7 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
               console.log("[SeasonContext] Auto-selecting season from league:", selectedSeason.annee);
               setSelectedSeasonState(selectedSeason);
               setIsLeagueSeason(true);
-              return; // Stop here - league season has priority
+              return; // Early return is now safe thanks to finally block
             }
           }
         }
