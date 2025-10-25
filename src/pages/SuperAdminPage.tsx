@@ -2,7 +2,7 @@ import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import { Trophy, FileText, Database, Users, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataManagementTabs } from "@/components/admin/DataManagementTabs";
-import { LeaguesAdminPage } from "@/pages/admin/LeaguesAdminPage";
+import { SuperAdminLeaguesPage } from "@/pages/admin/SuperAdminLeaguesPage";
 import { LeagueDetailPage } from "@/pages/admin/LeagueDetailPage";
 import UsersManagementPage from "@/pages/admin/UsersManagementPage";
 import { StartlistImportManager } from "@/components/admin/StartlistImportManager";
@@ -76,7 +76,7 @@ export const SuperAdminPage = ({ manager, onSignOut }: SuperAdminPageProps) => {
             <Route path="results" element={<CourseManagementTabs />} />
             <Route path="startlists" element={<StartlistImportManager />} />
             <Route path="data" element={<DataManagementTabs />} />
-            <Route path="leagues" element={<LeaguesAdminPage />} />
+            <Route path="leagues" element={<SuperAdminLeaguesPage />} />
             <Route path="leagues/:id" element={<LeagueDetailPage />} />
             <Route path="users" element={<UsersManagementPage />} />
           </Routes>
