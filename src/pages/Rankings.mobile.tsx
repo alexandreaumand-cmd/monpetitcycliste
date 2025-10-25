@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { useLeagueSeason } from "@/hooks/useLeagueSeason";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 import { normalizeString } from "@/lib/stringUtils";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { ManagerBreakdown } from "@/components/rankings/ManagerBreakdown";
@@ -27,7 +27,7 @@ import { useLeague } from "@/contexts/LeagueContext";
 type TabView = "standings" | "riders" | "timeline" | "comparison" | "teams" | "courses";
 
 export const RankingsMobile = () => {
-  const { season, phases, activePhase } = useLeagueSeason();
+  const { selectedSeason, phases, activePhase } = useSeasonContext();
   const { leagueId } = useLeague();
   const [activeTab, setActiveTab] = useState<TabView>("standings");
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export const RankingsMobile = () => {
 
   // Fetch standings
   const { data: standings, isLoading: standingsLoading } = useQuery({
-    queryKey: ["manager-standings-mobile", selectedPhase, season?.id, leagueId],
+    queryKey: ["manager-standings-mobile", selectedPhase, selectedSeason?.id, leagueId],
     queryFn: async () => {
       if (!leagueId) return [];
       
@@ -60,11 +60,11 @@ export const RankingsMobile = () => {
         
         if (error) throw error;
         return data || [];
-      } else if (season) {
+      } else if (selectedSeason) {
         const { data, error } = await supabase
           .from("v_manager_standings_by_season_v2")
           .select("*")
-          .eq("saison_id", season.id)
+          .eq("saison_id", selectedSeason.id)
           .eq("league_id", leagueId)
           .order("total_points", { ascending: false });
         
@@ -98,12 +98,12 @@ export const RankingsMobile = () => {
 
   // Fetch previous global standings for evolution calculation (global view only)
   const { data: previousGlobalStandings } = useQuery({
-    queryKey: ["previous-global-standings-mobile", season?.id, activePhase?.id],
+    queryKey: ["previous-global-standings-mobile", selectedSeason?.id, activePhase?.id],
     queryFn: async () => {
       if (selectedPhase || !activePhase) return null;
 
       const { data, error } = await supabase.rpc('get_previous_standings', {
-        p_saison_id: season?.id || null,
+        p_saison_id: selectedSeason?.id || null,
         p_reference_phase_id: activePhase.id
       });
 
@@ -124,14 +124,14 @@ export const RankingsMobile = () => {
 
   // Fetch top riders using edge function
   const { data: allTopRiders, isLoading: ridersLoading } = useQuery({
-    queryKey: ["top-riders-mobile", selectedPhase, season?.id, leagueId],
+    queryKey: ["top-riders-mobile", selectedPhase, selectedSeason?.id, leagueId],
     queryFn: async () => {
       if (!leagueId) return [];
       
       const { data, error } = await supabase.functions.invoke('get-top-riders', {
         body: {
           phase_id: selectedPhase,
-          saison_id: season?.id || null,
+          saison_id: selectedSeason?.id || null,
           league_id: leagueId,
           limit: 100,
         },
@@ -217,7 +217,7 @@ export const RankingsMobile = () => {
   };
 
   const ManagerNameWithSponsor = ({ managerId, managerName }: { managerId: string; managerName: string }) => {
-    const { data: sponsorData } = useManagerSponsor(managerId, season?.id);
+    const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
     return (
       <div className="flex flex-col">
         <span className="font-semibold">{managerName}</span>
@@ -362,7 +362,7 @@ export const RankingsMobile = () => {
                         <ManagerPrestigeIcons 
                           managerId={standing.manager_id}
                           phaseId={selectedPhase}
-                          saisonId={season?.id}
+                          saisonId={selectedSeason?.id}
                           isMobile={true}
                         />
                         {rank === 10 && <span className="text-lg">🤡</span>}
@@ -485,14 +485,14 @@ export const RankingsMobile = () => {
           <div className="pb-4">
             <RecentPointsChart 
               phaseId={selectedPhase} 
-              saisonId={season?.id || null}
+              saisonId={selectedSeason?.id || null}
               viewMode={selectedPhase ? 'phase' : 'season'}
             />
           </div>
         )}
 
         {activeTab === "comparison" && (
-          <ManagerComparisonMobile phaseId={selectedPhase} saisonId={season?.id || null} />
+          <ManagerComparisonMobile phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
         )}
 
         {activeTab === "teams" && (
@@ -534,7 +534,7 @@ export const RankingsMobile = () => {
         riderTeam={selectedRider?.equipe || ''}
         riderPrice={selectedRider?.prix || 0}
         phaseId={selectedPhase || ''}
-        saisonId={season?.id}
+        saisonId={selectedSeason?.id}
       />
     </div>
   );

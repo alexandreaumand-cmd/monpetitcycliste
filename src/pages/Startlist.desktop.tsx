@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 
 import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
-import { useLeagueSeason } from "@/hooks/useLeagueSeason";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { cn } from "@/lib/utils";
 import { StartlistDesktopExport } from "@/components/startlist/StartlistDesktopExport";
@@ -35,7 +35,7 @@ const StartlistDesktop = () => {
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
   const [selectedRaceForViewing, setSelectedRaceForViewing] = useState<any>(null);
   const [showUnmatched, setShowUnmatched] = useState(false);
-  const { phases, isLoading: isLoadingContext } = useLeagueSeason();
+  const { phases, isLoading: isLoadingContext } = useSeasonContext();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -128,7 +128,7 @@ const StartlistDesktop = () => {
   // Fetch startlist view data when in view mode
   const { data: startlistViewData, isLoading: isLoadingStartlistView } = useQuery({
     queryKey: ['startlist-view', selectedStartlistId, leagueId],
-    enabled: !!selectedStartlistId && viewMode === 'view',
+    enabled: !!selectedStartlistId && !!leagueId && viewMode === 'view',
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('startlist-manager-view', {
         body: { 
@@ -510,8 +510,8 @@ const StartlistDesktop = () => {
 };
 
 const ManagerJerseyDisplay = ({ managerName, managerId }: { managerName: string; managerId: string }) => {
-  const { season } = useLeagueSeason();
-  const { data: sponsorData } = useManagerSponsor(managerId, season?.id);
+  const { selectedSeason } = useSeasonContext();
+  const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
   
   return (
     <div className="flex items-center gap-2">

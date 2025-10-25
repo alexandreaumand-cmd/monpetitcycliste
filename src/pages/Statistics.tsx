@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useLeagueSeason } from "@/hooks/useLeagueSeason";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 import { BarChart3 } from "lucide-react";
 import { PerformanceHeatmap } from "@/components/rankings/PerformanceHeatmap";
 import { ConsistencyScores } from "@/components/rankings/ConsistencyScores";
@@ -13,7 +13,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 const Statistics = () => {
-  const { season, seasons, isLoading } = useLeagueSeason();
+  const { selectedSeason, setSelectedSeason, seasons, isLoading } = useSeasonContext();
 
   if (isLoading) {
     return (
@@ -26,7 +26,7 @@ const Statistics = () => {
     );
   }
 
-  if (!season) {
+  if (!selectedSeason) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-muted-foreground">Aucune saison sélectionnée</p>
@@ -43,9 +43,10 @@ const Statistics = () => {
         actions={
           seasons.length > 0 && (
             <Select
-              value={season.id}
+              value={selectedSeason.id}
               onValueChange={(value) => {
-                // Season selection is read-only in this model
+                const season = seasons.find(s => s.id === value);
+                setSelectedSeason(season || null);
               }}
             >
               <SelectTrigger className="w-[120px]">
@@ -74,27 +75,27 @@ const Statistics = () => {
         </TabsList>
 
         <TabsContent value="heatmap" className="mt-6">
-          <PerformanceHeatmap saisonId={season.id} />
+          <PerformanceHeatmap saisonId={selectedSeason.id} />
         </TabsContent>
 
         <TabsContent value="consistency" className="mt-6">
-          <ConsistencyScores saisonId={season.id} />
+          <ConsistencyScores saisonId={selectedSeason.id} />
         </TabsContent>
 
         <TabsContent value="distribution" className="mt-6">
-          <PointsDistribution saisonId={season.id} />
+          <PointsDistribution saisonId={selectedSeason.id} />
         </TabsContent>
 
         <TabsContent value="predictions" className="mt-6">
-          <ManagerPredictions saisonId={season.id} />
+          <ManagerPredictions saisonId={selectedSeason.id} />
         </TabsContent>
 
         <TabsContent value="knowledge" className="mt-6">
-          <BikeKnowledgeRanking saisonId={season.id} />
+          <BikeKnowledgeRanking saisonId={selectedSeason.id} />
         </TabsContent>
 
         <TabsContent value="luck" className="mt-6">
-          <LuckRanking saisonId={season.id} />
+          <LuckRanking saisonId={selectedSeason.id} />
         </TabsContent>
       </Tabs>
     </PageContainer>

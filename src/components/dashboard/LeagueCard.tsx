@@ -41,7 +41,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         .from('league_scopes')
         .select(`
           season_id,
-          saisons!league_scopes_season_id_fkey (
+          saisons:season_id (
             annee
           )
         `)
@@ -49,7 +49,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         .single();
       
       if (error) throw error;
-      return data?.saisons as unknown as { annee: number } | null;
+      return data?.saisons as { annee: number } | null;
     },
   });
 
@@ -141,14 +141,21 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               </div>
             </div>
 
-            <Button 
-              onClick={() => setInvitesSheetOpen(true)} 
-              variant="default" 
-              className="w-full gap-2"
-            >
-              <UserPlus className="h-4 w-4" />
-              Inviter des joueurs
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={onViewDetails} variant="outline" className="flex-1">
+                Voir le détail
+              </Button>
+              {isAdmin && (
+                <Button 
+                  onClick={() => setInvitesSheetOpen(true)}
+                  variant="secondary"
+                  size="icon"
+                  title="Inviter des joueurs"
+                >
+                  <UserPlus className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </>
         )}
 
@@ -259,20 +266,9 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               <p className="text-sm text-muted-foreground text-center py-4">Aucune donnée disponible</p>
             )}
 
-            {league.current_player_count < league.max_players ? (
-              <Button 
-                onClick={() => setInvitesSheetOpen(true)} 
-                variant="default" 
-                className="w-full gap-2"
-              >
-                <UserPlus className="h-4 w-4" />
-                Inviter des joueurs
-              </Button>
-            ) : (
-              <Button onClick={onViewDetails} variant="outline" className="w-full">
-                Voir ma ligue
-              </Button>
-            )}
+            <Button onClick={onViewDetails} variant="outline" className="w-full">
+              Voir le classement
+            </Button>
           </>
         )}
 

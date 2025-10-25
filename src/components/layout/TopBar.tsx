@@ -3,9 +3,7 @@ import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LeagueSwitcher } from "@/components/leagues/LeagueSwitcher";
-import { LeagueInfoBadge } from "@/components/leagues/LeagueInfoBadge";
-import { useLeague } from "@/contexts/LeagueContext";
-import { useLeagueSeason } from "@/hooks/useLeagueSeason";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ManagerDropdown } from "./ManagerDropdown";
 
@@ -16,9 +14,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
-  const { leagueId } = useLeague();
-  const { season, seasons } = useLeagueSeason();
-  
+  const { seasons, selectedSeason, setSelectedSeason } = useSeasonContext();
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background">
       <div className="flex h-14 items-center gap-4 px-4">
@@ -29,10 +25,22 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
           {/* League Switcher */}
           <LeagueSwitcher />
           
-          {/* Infos de la ligue active */}
-          {leagueId && <LeagueInfoBadge />}
-          
-          {/* Season is now derived from league - no longer user-selectable */}
+          {/* Season Selector */}
+          <Select value={selectedSeason?.id} onValueChange={(value) => {
+            const season = seasons.find(s => s.id === value);
+            if (season) setSelectedSeason(season);
+          }}>
+            <SelectTrigger className="h-8 w-32">
+              <SelectValue placeholder="Saison" />
+            </SelectTrigger>
+            <SelectContent>
+              {seasons.map((season) => (
+                <SelectItem key={season.id} value={season.id}>
+                  {season.annee}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         
         <div className="flex-1" />

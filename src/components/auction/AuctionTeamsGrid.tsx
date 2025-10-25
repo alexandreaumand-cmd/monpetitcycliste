@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { formatAmount } from "@/lib/utils";
 import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
-import { useLeagueSeason } from "@/hooks/useLeagueSeason";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
 
 interface AuctionTeamsGridProps {
@@ -192,8 +192,8 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredManagers.map(([mgrId, data]: [string, any]) => {
             const ManagerJerseyHeader = () => {
-              const { season } = useLeagueSeason();
-              const { data: sponsorData } = useManagerSponsor(mgrId, season?.id);
+              const { selectedSeason } = useSeasonContext();
+              const { data: sponsorData } = useManagerSponsor(mgrId, selectedSeason?.id);
               
               return (
                 <div className="flex items-center gap-2">

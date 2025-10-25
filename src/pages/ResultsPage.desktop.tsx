@@ -10,7 +10,7 @@ import { useDebounce } from "use-debounce";
 import { CourseResultsDrawer } from "@/components/courses/CourseResultsDrawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AdminMaintenance } from "@/components/admin/AdminMaintenance";
-import { useLeagueSeason } from "@/hooks/useLeagueSeason";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerJerseys } from "@/hooks/useManagerJerseys";
 import { useLeague } from "@/contexts/LeagueContext";
 
@@ -44,7 +44,7 @@ interface Phase {
 }
 
 export const ResultsPage = () => {
-  const { season, phases, activePhase, isLoading: isLoadingContext } = useLeagueSeason();
+  const { selectedSeason, phases, activePhase, isLoading: isLoadingContext } = useSeasonContext();
   const { leagueId } = useLeague();
   const [races, setRaces] = useState<Race[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +59,7 @@ export const ResultsPage = () => {
   const allPodiumManagerIds = Object.values(podiums)
     .flatMap(p => p.slice(0, 3).map(m => m.manager_id))
     .filter(Boolean) as string[];
-  const { data: jerseys = {} } = useManagerJerseys(allPodiumManagerIds, season?.id);
+  const { data: jerseys = {} } = useManagerJerseys(allPodiumManagerIds, selectedSeason?.id);
   
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -89,7 +89,7 @@ export const ResultsPage = () => {
           limit: 24,
           offset: currentOffset,
           phase_id: selectedPhaseId === "global" ? null : selectedPhaseId,
-          saison_id: season?.id
+          saison_id: selectedSeason?.id
         }
       });
 
@@ -114,7 +114,7 @@ export const ResultsPage = () => {
             supabase.functions.invoke('results-courses-podiums', {
               body: { 
                 course_ids: courseIds,
-                saison_id: season?.id,
+                saison_id: selectedSeason?.id,
                 league_id: leagueId
               }
             }),

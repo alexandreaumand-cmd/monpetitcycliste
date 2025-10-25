@@ -11,7 +11,7 @@ import { CoursePointsDrawer } from "./CoursePointsDrawer";
 import { format, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
-import { useLeagueSeason } from "@/hooks/useLeagueSeason";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -44,22 +44,22 @@ export const UpcomingCourses = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [phaseFilter, setPhaseFilter] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<CourseData | null>(null);
-  const { season, phases, isLoading: isLoadingContext } = useLeagueSeason();
+  const { selectedSeason, phases, isLoading: isLoadingContext } = useSeasonContext();
   const { leagueId } = useLeague();
 
   const seasonPhaseIds = phases?.map(p => p.id) || [];
 
   const { data: courses, isLoading } = useQuery({
-    queryKey: ['league-courses', leagueId, season?.id],
+    queryKey: ['league-courses', leagueId, selectedSeason?.id],
     queryFn: async () => {
       if (!leagueId) return [];
       
-      console.log('[UpcomingCourses] Loading courses for league:', leagueId, 'season:', season?.id);
+      console.log('[UpcomingCourses] Loading courses for league:', leagueId, 'season:', selectedSeason?.id);
       
       const { data, error } = await supabase.functions.invoke('get-league-courses', {
         body: {
           league_id: leagueId,
-          season_id: season?.id || null
+          season_id: selectedSeason?.id || null
         }
       });
       

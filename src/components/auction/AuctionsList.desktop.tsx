@@ -4,32 +4,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { AuctionPage } from "./AuctionPage";
 import { AuctionPageV2 } from "./v2/AuctionPageV2";
-import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 
 interface AuctionsListProps {
   managerId: string;
 }
 
 export const AuctionsList = ({ managerId }: AuctionsListProps) => {
-  const { season } = useLeagueSeason();
-  
   const { data: activePhases, isLoading } = useQuery({
-    queryKey: ['my-active-phases', season?.id],
+    queryKey: ['my-active-phases'],
     queryFn: async () => {
-      if (!season) return [];
-      
       const { data, error } = await supabase
         .from('phases')
         .select('id')
-        .eq('saison_id', season.id)
         .eq('statut', 'active')
         .order('date_debut', { ascending: false })
         .limit(1);
       
       if (error) throw error;
       return data;
-    },
-    enabled: !!season,
+    }
   });
 
   if (isLoading) {

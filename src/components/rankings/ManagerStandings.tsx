@@ -1,19 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Shirt } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useLeagueSeason } from "@/hooks/useLeagueSeason";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { BonusPointsDetailDialog } from "./BonusPointsDetailDialog";
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ManagerPrestigeIcons } from "./ManagerPrestigeIcons";
 import { useLeague } from "@/contexts/LeagueContext";
-import { useLeagueStandingsStable } from "@/hooks/useLeagueStandingsStable";
+import { useLeagueStandingsBySeason, useLeagueStandingsByPhase } from "@/hooks/useLeagueStandings";
 
 type StandingsProps = {
   phaseId?: string | null;
@@ -21,8 +22,8 @@ type StandingsProps = {
 };
 
 const ManagerNameWithJersey = ({ managerId, managerName }: { managerId: string; managerName: string }) => {
-  const { season } = useLeagueSeason();
-  const { data: sponsorData } = useManagerSponsor(managerId, season?.id);
+  const { selectedSeason } = useSeasonContext();
+  const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
   
   return (
     <div className="flex items-center gap-2">
@@ -50,30 +51,56 @@ const ManagerNameWithJersey = ({ managerId, managerName }: { managerId: string; 
 // Note: enrichWithManagerNames removed - now handled directly by views
 
 export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) => {
-  const { season, activePhase } = useLeagueSeason();
+  const { selectedSeason, activePhase } = useSeasonContext();
   const { leagueId, isLoading: leagueLoading } = useLeague();
+  const leagueClient = useLeagueClient();
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [selectedBonusManager, setSelectedBonusManager] = useState<{
     id: string;
     name: string;
   } | null>(null);
   
-  // Use stable backend function instead of direct view queries
-  const { data: standings, isLoading, isError, error } = useLeagueStandingsStable(
-    leagueId,
-    season?.id || null,
-    phaseId || null
-  );
+  const { data: standings, isLoading } = useQuery({
+    queryKey: ["manager-standings", phaseId, selectedSeason?.id, leagueId],
+    queryFn: async () => {
+      if (!leagueId) return [];
+
+      if (phaseId) {
+        // Phase-specific standings
+        const { data, error } = await leagueClient
+          .from("v_manager_standings_by_phase_v2")
+          .select("*")
+          .eq("phase_id", phaseId)
+          .order("total_points", { ascending: false });
+        
+        if (error) throw error;
+        return data || [];
+      } else if (selectedSeason) {
+        // Season-specific standings
+        const { data, error } = await leagueClient
+          .from("v_manager_standings_by_season_v2")
+          .select("*")
+          .eq("saison_id", selectedSeason.id)
+          .order("total_points", { ascending: false });
+        
+        if (error) throw error;
+        return data || [];
+      }
+      
+      return [];
+    },
+    enabled: !leagueLoading,
+  });
 
 
   // Fetch previous global standings for evolution calculation (global view only)
   const { data: previousGlobalStandings } = useQuery({
-    queryKey: ["previous-global-standings", season?.id, activePhase?.id],
+    queryKey: ["previous-global-standings", selectedSeason?.id, activePhase?.id],
     queryFn: async () => {
       if (phaseId || !activePhase) return null;
 
       const { data, error } = await supabase.rpc('get_previous_standings', {
-        p_saison_id: season?.id || null,
+        p_saison_id: selectedSeason?.id || null,
         p_reference_phase_id: activePhase.id
       });
 
@@ -103,7 +130,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
     return <span className="text-muted-foreground text-sm">#{rank}</span>;
   };
 
-  if (isLoading || leagueLoading) {
+  if (isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -116,23 +143,6 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (isError) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            Erreur de chargement
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Impossible de charger le classement. {error?.message || 'Veuillez réessayer.'}
-          </p>
         </CardContent>
       </Card>
     );
@@ -209,7 +219,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                       <ManagerPrestigeIcons 
                         managerId={standing.manager_id}
                         phaseId={phaseId}
-                        saisonId={season?.id}
+                        saisonId={selectedSeason?.id}
                       />
                       {rank === 10 && <span className="text-xl">🤡</span>}
                     </div>
@@ -319,7 +329,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
             })}
           </TableBody>
         </Table>
-        {(!standings || standings.length === 0) && (
+        {!standings || standings.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
             Aucun classement disponible
           </div>

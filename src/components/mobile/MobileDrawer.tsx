@@ -19,7 +19,7 @@ import {
   User,
 } from "lucide-react";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
-import { useLeagueSeason } from "@/hooks/useLeagueSeason";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 interface MobileDrawerProps {
   open: boolean;
@@ -40,8 +40,8 @@ export const MobileDrawer = ({
 }: MobileDrawerProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { season } = useLeagueSeason();
-  const { data: seasonSponsor } = useManagerSponsor(manager?.id, season?.id);
+  const { selectedSeason } = useSeasonContext();
+  const { data: seasonSponsor } = useManagerSponsor(manager?.id, selectedSeason?.id);
   
   const displaySponsor = seasonSponsor?.sponsor || manager?.sponsor;
 

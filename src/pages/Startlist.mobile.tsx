@@ -34,14 +34,14 @@ import {
 import { useUserRole } from "@/hooks/useUserRole";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
 import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
-import { useLeagueSeason } from "@/hooks/useLeagueSeason";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 import { StartlistDesktopExport } from "@/components/startlist/StartlistDesktopExport";
 import { useLeague } from "@/contexts/LeagueContext";
 
 export const StartlistMobile = () => {
   const queryClient = useQueryClient();
   const { isAdmin } = useUserRole();
-  const { phases, isLoading: isLoadingContext } = useLeagueSeason();
+  const { phases, isLoading: isLoadingContext } = useSeasonContext();
   const { leagueId } = useLeague();
   const [viewMode, setViewMode] = useState<"list" | "view">("list");
   const [tabMode, setTabMode] = useState<"30days" | "90days" | "history" | "upcoming-year">("30days");
@@ -143,7 +143,7 @@ export const StartlistMobile = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedStartlistId && viewMode === "view",
+    enabled: !!selectedStartlistId && !!leagueId && viewMode === "view",
   });
 
   const handleShareStartlist = async () => {

@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useLeagueSeason } from "@/hooks/useLeagueSeason";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 export function useMyLeagueStats(leagueId: string | null) {
-  const { season, activePhase } = useLeagueSeason();
+  const { selectedSeason, activePhase } = useSeasonContext();
   
   return useQuery({
-    queryKey: ['my-league-stats', leagueId, season?.id, activePhase?.id],
+    queryKey: ['my-league-stats', leagueId, selectedSeason?.id, activePhase?.id],
     queryFn: async () => {
       if (!leagueId) return null;
 
@@ -27,12 +27,12 @@ export function useMyLeagueStats(leagueId: string | null) {
       let mySeasonPoints = null;
       let seasonLeader = null;
       
-      if (season?.id) {
+      if (selectedSeason?.id) {
         const { data: seasonStandings } = await supabase
           .from('v_manager_standings_by_season_v2')
           .select('*, managers!inner(nom)')
           .eq('league_id', leagueId)
-          .eq('saison_id', season.id)
+          .eq('saison_id', selectedSeason.id)
           .order('total_points', { ascending: false });
 
         if (seasonStandings) {
@@ -79,6 +79,6 @@ export function useMyLeagueStats(leagueId: string | null) {
         seasonLeader,
       };
     },
-    enabled: !!leagueId && (!!season || !!activePhase),
+    enabled: !!leagueId && (!!selectedSeason || !!activePhase),
   });
 }
