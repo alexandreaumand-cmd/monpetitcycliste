@@ -23,6 +23,7 @@ export const StartlistImportManager = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
   const [selectedRace, setSelectedRace] = useState<any>(null);
+  const [isReimport, setIsReimport] = useState(false);
   
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>("");
   const [selectedRaceId, setSelectedRaceId] = useState<string>("all");
@@ -86,6 +87,7 @@ export const StartlistImportManager = () => {
       setSelectedRaceId("all");
       setTextContent("");
       setStartlisteurNote("");
+      setIsReimport(false);
       
     } catch (error: any) {
       console.error('Parse error:', error);
@@ -128,6 +130,7 @@ export const StartlistImportManager = () => {
       setSelectedRace(null);
       setSelectedPhaseId("");
       setSelectedRaceId("all");
+      setIsReimport(false);
       
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -184,22 +187,114 @@ export const StartlistImportManager = () => {
               setSelectedRaceId("all");
               setTextContent("");
               setStartlisteurNote("");
+              setIsReimport(false);
             }}
           >
             ← Retour à la liste
           </Button>
           <div>
             <h2 className="text-2xl font-bold">
-              Import de startlist
+              {isReimport ? 'Réimporter la startlist' : 'Import de startlist'}
               {selectedRace && ` - ${selectedRace.nom}`}
             </h2>
             <p className="text-muted-foreground mt-1">
-              Importez la startlist par texte ou fichier
+              {isReimport 
+                ? 'Collez le nouveau texte pour mettre à jour la startlist' 
+                : 'Importez la startlist par texte ou fichier'
+              }
             </p>
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        {isReimport ? (
+          // Mode réimport : une seule carte avec champs disabled
+          <Card className="max-w-2xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Import par texte
+              </CardTitle>
+              <CardDescription>
+                Mise à jour de la startlist existante
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="phase">Phase</Label>
+                <Select value={selectedPhaseId} disabled>
+                  <SelectTrigger id="phase">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {phases?.map((phase) => (
+                      <SelectItem key={phase.id} value={phase.id}>
+                        Phase {phase.index_dans_saison} ({phase.date_debut} - {phase.date_fin})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="race">Course</Label>
+                <Select value={selectedRaceId} disabled>
+                  <SelectTrigger id="race">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses?.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.nom} ({course.date_debut})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="note">Note du startlisteur (optionnel)</Label>
+                <Input
+                  id="note"
+                  value={startlisteurNote}
+                  onChange={(e) => setStartlisteurNote(e.target.value)}
+                  placeholder="Ex: Startlist mise à jour"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="text">Texte de la startlist *</Label>
+                <Textarea
+                  id="text"
+                  value={textContent}
+                  onChange={(e) => setTextContent(e.target.value)}
+                  placeholder="Collez ici le nouveau texte de la startlist..."
+                  rows={12}
+                  className="font-mono text-sm"
+                />
+              </div>
+
+              <Button 
+                onClick={handleParse} 
+                disabled={isLoading || !textContent.trim()}
+                className="w-full"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Parsing en cours...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Mettre à jour la startlist
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          // Mode initial : deux cartes (texte + fichier)
+          <div className="grid gap-6 md:grid-cols-2">
         {/* Text Import */}
         <Card>
           <CardHeader>
@@ -369,6 +464,7 @@ export const StartlistImportManager = () => {
           </CardContent>
         </Card>
         </div>
+        )}
       </div>
     );
   }
@@ -388,6 +484,7 @@ export const StartlistImportManager = () => {
           if (selectedRace) {
             setSelectedPhaseId(selectedRace.phase_id);
             setSelectedRaceId(selectedRace.id);
+            setIsReimport(true);
             setViewMode('import');
           }
         }}
