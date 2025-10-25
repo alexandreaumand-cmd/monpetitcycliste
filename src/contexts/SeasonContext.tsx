@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Season {
   id: string;
@@ -37,6 +38,7 @@ export const useSeasonContext = () => {
 
 export const SeasonProvider = ({ children }: { children: ReactNode }) => {
   const { leagueId, isLoading: isLeagueLoading } = useLeague();
+  const queryClient = useQueryClient();
   const [selectedSeason, setSelectedSeasonState] = useState<Season | null>(null);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [phases, setPhases] = useState<Phase[]>([]);
@@ -157,6 +159,15 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
               if (current?.id !== leagueSeason.id) {
                 console.log("[SeasonContext] Auto-selecting season for league:", leagueSeason.annee);
                 localStorage.setItem("selectedSeasonId", leagueSeason.id);
+                
+                // Invalidate caches to force reload with correct season
+                queryClient.invalidateQueries({ 
+                  queryKey: ['league-standings-season'] 
+                });
+                queryClient.invalidateQueries({ 
+                  queryKey: ['previous-global-standings'] 
+                });
+                
                 return leagueSeason;
               }
               return current;
@@ -177,6 +188,14 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
     setSelectedSeasonState(season);
     if (season) {
       localStorage.setItem("selectedSeasonId", season.id);
+      
+      // Invalidate all caches that depend on the season
+      queryClient.invalidateQueries({ 
+        queryKey: ['league-standings-season'] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['previous-global-standings'] 
+      });
     } else {
       localStorage.removeItem("selectedSeasonId");
     }
