@@ -12,6 +12,7 @@ serve(async (req) => {
   }
 
   try {
+    // Regular client for verification
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -28,8 +29,14 @@ serve(async (req) => {
       throw new Error('Réservé aux super-administrateurs');
     }
 
+    // Admin client for listing users
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
     // Get all users from auth.users with their manager info
-    const { data: authUsers, error: authError } = await supabaseClient.auth.admin.listUsers();
+    const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
     if (authError) throw authError;
 
     // Get all managers
