@@ -3891,6 +3891,7 @@ export type Database = {
           bonus_points: number | null
           league_id: string | null
           manager_id: string | null
+          manager_nom: string | null
           race_points: number | null
           saison_id: string | null
           scoreurs_count: number | null
@@ -3909,7 +3910,43 @@ export type Database = {
           total_points: number | null
           victories_count: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rosters_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+        ]
       }
       v_race_results_editable: {
         Row: {
