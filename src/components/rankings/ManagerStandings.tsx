@@ -67,22 +67,20 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
 
       if (phaseId) {
         // Phase-specific standings
-        const { data, error } = await supabase
+        const { data, error } = await leagueClient
           .from("v_manager_standings_by_phase_v2")
           .select("*")
           .eq("phase_id", phaseId)
-          .eq("league_id", leagueId)
           .order("total_points", { ascending: false });
         
         if (error) throw error;
         return data || [];
       } else if (selectedSeason) {
         // Season-specific standings
-        const { data, error } = await supabase
+        const { data, error } = await leagueClient
           .from("v_manager_standings_by_season_v2")
           .select("*")
           .eq("saison_id", selectedSeason.id)
-          .eq("league_id", leagueId)
           .order("total_points", { ascending: false });
         
         if (error) throw error;

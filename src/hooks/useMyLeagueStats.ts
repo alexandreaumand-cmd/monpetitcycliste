@@ -29,7 +29,7 @@ export function useMyLeagueStats(
       // Get season standings
       const { data: seasonStandings } = await supabase
         .from('v_manager_standings_by_season_v2')
-        .select('*')
+        .select('*, managers!inner(nom)')
         .eq('league_id', leagueId)
         .eq('saison_id', seasonId)
         .order('total_points', { ascending: false });
@@ -44,9 +44,9 @@ export function useMyLeagueStats(
           mySeasonRank = myIndex + 1;
           mySeasonPoints = seasonStandings[myIndex].total_points;
         }
-        if (seasonStandings.length > 0) {
+        if (seasonStandings.length > 0 && seasonStandings[0].managers) {
           seasonLeader = {
-            name: seasonStandings[0].manager_nom,
+            name: (seasonStandings[0].managers as any).nom,
             points: seasonStandings[0].total_points,
           };
         }
