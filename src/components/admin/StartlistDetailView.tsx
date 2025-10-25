@@ -43,13 +43,13 @@ export const StartlistDetailView = ({ startlistId, onBack, isSuperAdmin }: Start
 
   // Fetch startlist view data
   const { data: startlistViewData, isLoading: isLoadingStartlistView } = useQuery({
-    queryKey: ['startlist-view', startlistId, leagueId],
+    queryKey: ['startlist-view', startlistId, isSuperAdmin ? 'superadmin' : leagueId],
     enabled: !!startlistId,
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('startlist-manager-view', {
-        body: { 
+        body: {
           startlist_id: startlistId,
-          league_id: leagueId
+          league_id: isSuperAdmin ? null : leagueId
         }
       });
       
