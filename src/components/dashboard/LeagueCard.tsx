@@ -266,9 +266,20 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               <p className="text-sm text-muted-foreground text-center py-4">Aucune donnée disponible</p>
             )}
 
-            <Button onClick={onViewDetails} variant="outline" className="w-full">
-              Voir le classement
-            </Button>
+            {league.current_player_count < league.max_players ? (
+              <Button 
+                onClick={() => setInvitesSheetOpen(true)} 
+                variant="default" 
+                className="w-full gap-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                Inviter des joueurs
+              </Button>
+            ) : (
+              <Button onClick={onViewDetails} variant="outline" className="w-full">
+                Voir ma ligue
+              </Button>
+            )}
           </>
         )}
 
