@@ -16,22 +16,22 @@ export function useLeagueSeason(leagueId: string | null) {
       if (!leagueId) return null;
 
       const { data, error } = await supabase
-        .from('leagues')
-        .select('saison_id, saisons:saison_id(id, annee)')
-        .eq('id', leagueId)
-        .single();
+        .from('league_scopes')
+        .select('season_id, saisons:season_id(id, annee)')
+        .eq('league_id', leagueId)
+        .maybeSingle();
 
       if (error) {
         console.error('[useLeagueSeason] Error fetching season:', error);
         throw error;
       }
 
-      if (!data?.saison_id || !data.saisons) {
+      if (!data?.season_id || !data.saisons) {
         return null;
       }
 
       return {
-        seasonId: data.saison_id,
+        seasonId: data.season_id,
         season: data.saisons as { id: string; annee: number }
       };
     },
