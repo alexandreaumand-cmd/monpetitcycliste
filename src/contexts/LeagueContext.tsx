@@ -1,8 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { getStoredLeagueId, setStoredLeagueId } from "@/lib/leagues/storage";
-import { fetchLegacyLeagueId } from "@/lib/leagues/legacy";
 
 type LeagueContextType = {
   leagueId: string | null;
@@ -23,42 +21,17 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [leagueId, setLeagueIdState] = useState<string | null>(null);
-  const [legacyId, setLegacyId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const initLeague = async () => {
-      try {
-        setIsLoading(true);
+    const initLeague = () => {
+      setIsLoading(true);
 
-        // 1. Check URL param
-        const fromUrl = searchParams.get("leagueId");
-        if (fromUrl) {
-          setLeagueIdState(fromUrl);
-          setStoredLeagueId(fromUrl);
-          setIsLoading(false);
-          return;
-        }
-
-        // 2. Check localStorage
-        const stored = getStoredLeagueId();
-        if (stored) {
-          setLeagueIdState(stored);
-          setIsLoading(false);
-          return;
-        }
-
-        // 3. Fallback to Legacy
-        const legacy = await fetchLegacyLeagueId();
-        setLegacyId(legacy);
-        setLeagueIdState(legacy);
-        setStoredLeagueId(legacy);
-        
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Failed to initialize league:', error);
-        setIsLoading(false);
-      }
+      // Only check URL param - no localStorage, no Legacy fallback
+      const fromUrl = searchParams.get("leagueId");
+      setLeagueIdState(fromUrl);
+      
+      setIsLoading(false);
     };
 
     initLeague();
@@ -73,15 +46,14 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
 
   const setLeagueId = (id: string) => {
     setLeagueIdState(id);
-    setStoredLeagueId(id);
 
-    // Update URL param
+    // Update URL param only
     const params = new URLSearchParams(searchParams);
     params.set("leagueId", id);
     navigate({ search: params.toString() }, { replace: true });
   };
 
-  const isLegacy = leagueId === legacyId;
+  const isLegacy = leagueId === 'f7921741-29f4-4296-9aca-a03c1f3615b0';
 
   return (
     <LeagueContext.Provider value={{ leagueId, setLeagueId, isLegacy, isLoading }}>

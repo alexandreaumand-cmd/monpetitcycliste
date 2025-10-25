@@ -1205,6 +1205,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_league_scopes_season"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "saisons"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "league_scopes_league_id_fkey"
             columns: ["league_id"]
             isOneToOne: true

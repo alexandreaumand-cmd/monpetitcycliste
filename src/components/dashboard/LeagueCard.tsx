@@ -34,7 +34,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
   const remainingSpots = league.max_players - league.current_player_count;
 
   // Fetch season from league_scopes (single source of truth)
-  const { data: leagueSeason } = useLeagueSeason(league.id);
+  const { data: leagueSeason, isLoading: loadingSeason } = useLeagueSeason(league.id);
 
   // Pass season to stats hook
   const { data: stats, isLoading: loadingStats } = useMyLeagueStats(
@@ -90,7 +90,15 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               {gameMode.name}
             </Badge>
           )}
-          {leagueSeason?.season?.annee && (
+          {loadingSeason ? (
+            <Badge 
+              variant="outline" 
+              className="gap-1 bg-muted/50"
+            >
+              <Calendar className="h-3 w-3 animate-pulse" />
+              Chargement...
+            </Badge>
+          ) : leagueSeason?.season?.annee ? (
             <Badge 
               variant="outline" 
               className="gap-1 bg-blue-100 dark:bg-blue-950 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200"
@@ -98,7 +106,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               <Calendar className="h-3 w-3" />
               Saison {leagueSeason.season.annee}
             </Badge>
-          )}
+          ) : null}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
