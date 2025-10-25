@@ -4,6 +4,7 @@ import { NotificationCenter } from "./NotificationCenter";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LeagueSwitcher } from "@/components/leagues/LeagueSwitcher";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeague } from "@/contexts/LeagueContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ManagerDropdown } from "./ManagerDropdown";
 
@@ -15,6 +16,8 @@ interface TopBarProps {
 
 export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
   const { seasons, selectedSeason, setSelectedSeason } = useSeasonContext();
+  const { leagueId } = useLeague();
+  
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background">
       <div className="flex h-14 items-center gap-4 px-4">
@@ -25,22 +28,24 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
           {/* League Switcher */}
           <LeagueSwitcher />
           
-          {/* Season Selector */}
-          <Select value={selectedSeason?.id} onValueChange={(value) => {
-            const season = seasons.find(s => s.id === value);
-            if (season) setSelectedSeason(season);
-          }}>
-            <SelectTrigger className="h-8 w-32">
-              <SelectValue placeholder="Saison" />
-            </SelectTrigger>
-            <SelectContent>
-              {seasons.map((season) => (
-                <SelectItem key={season.id} value={season.id}>
-                  {season.annee}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Season Selector - masqué si dans une ligue */}
+          {!leagueId && (
+            <Select value={selectedSeason?.id} onValueChange={(value) => {
+              const season = seasons.find(s => s.id === value);
+              if (season) setSelectedSeason(season);
+            }}>
+              <SelectTrigger className="h-8 w-32">
+                <SelectValue placeholder="Saison" />
+              </SelectTrigger>
+              <SelectContent>
+                {seasons.map((season) => (
+                  <SelectItem key={season.id} value={season.id}>
+                    {season.annee}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         
         <div className="flex-1" />

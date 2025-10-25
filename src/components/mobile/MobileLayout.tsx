@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 
 import { Menu } from "lucide-react";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeague } from "@/contexts/LeagueContext";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
 
 interface MobileLayoutProps {
@@ -27,6 +28,7 @@ export const MobileLayout = ({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
   const { selectedSeason, setSelectedSeason, seasons, isLoading: seasonsLoading } = useSeasonContext();
+  const { leagueId } = useLeague();
   
   const isHomePage = location.pathname === '/dashboard/home' || location.pathname === '/dashboard';
 
@@ -73,7 +75,7 @@ export const MobileLayout = ({
           isAdmin={isAdmin}
           onSignOut={onSignOut}
           seasonSelector={
-            !seasonsLoading && seasons.length > 0 ? (
+            !leagueId && !seasonsLoading && seasons.length > 0 ? (
               <div className="px-4 py-3 border-b">
                 <label className="text-sm font-medium block mb-2">Saison</label>
                 <select
