@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
 
     // Pagination
     query = query
-      .order('coureurs.nom', { ascending: true })
+      .order('nom', { foreignTable: 'coureurs', ascending: true })
       .range(offset, offset + limit - 1);
 
     const { data: coureursSaisons, error } = await query;
