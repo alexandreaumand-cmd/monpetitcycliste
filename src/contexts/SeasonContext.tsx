@@ -136,6 +136,12 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
     const loadLeagueSeason = async () => {
       if (!leagueId || isLeagueLoading || !seasons.length) return;
       
+      console.log("[SeasonContext] Sync triggered:", { 
+        leagueId, 
+        isLeagueLoading, 
+        seasonsCount: seasons.length 
+      });
+      
       try {
         const { data: scope } = await supabase
           .from('league_scopes')
@@ -143,12 +149,18 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
           .eq('league_id', leagueId)
           .maybeSingle();
         
-        if (scope && scope.season_id) {
+        if (scope?.season_id) {
           const leagueSeason = seasons.find(s => s.id === scope.season_id);
-          if (leagueSeason && selectedSeason?.id !== leagueSeason.id) {
-            console.log("[SeasonContext] Auto-selecting season for league:", leagueSeason.annee);
-            setSelectedSeasonState(leagueSeason);
-            localStorage.setItem("selectedSeasonId", leagueSeason.id);
+          if (leagueSeason) {
+            // Use functional form to avoid stale closure
+            setSelectedSeasonState(current => {
+              if (current?.id !== leagueSeason.id) {
+                console.log("[SeasonContext] Auto-selecting season for league:", leagueSeason.annee);
+                localStorage.setItem("selectedSeasonId", leagueSeason.id);
+                return leagueSeason;
+              }
+              return current;
+            });
           }
         }
       } catch (error) {
