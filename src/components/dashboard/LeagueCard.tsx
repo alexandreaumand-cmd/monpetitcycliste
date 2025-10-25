@@ -9,8 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useLeagueMemberCount } from "@/hooks/useLeagueMemberCount";
 import { useMyLeagueStats } from "@/hooks/useMyLeagueStats";
 import { useLeagueMembers } from "@/hooks/useLeagueMembers";
-import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { LeagueStatusBadge } from "@/components/leagues/LeagueStatusBadge";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 import type { LeagueWithRole } from "@/lib/leagues/types";
 import { LEAGUE_TEMPLATES } from "@/lib/leagues/templates";
 import { LeagueInvitesBottomSheet } from "@/components/leagues/LeagueInvitesBottomSheet";
@@ -33,13 +33,13 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
   const isCompleted = league.status === 'completed';
   const remainingSpots = league.max_players - league.current_player_count;
 
-  // Fetch season from leagues.season_id (single source of truth)
-  const { data: leagueSeason } = useLeagueSeason(league.id);
+  // Use SeasonContext as single source of truth (loads from league_scopes)
+  const { selectedSeason } = useSeasonContext();
 
-  // Pass season to stats hook - no fallback allowed
+  // Pass season to stats hook
   const { data: stats, isLoading: loadingStats } = useMyLeagueStats(
     league.id,
-    leagueSeason?.seasonId || null
+    selectedSeason?.id || null
   );
 
   const gameMode = LEAGUE_TEMPLATES.find(t => t.id === league.game_mode);
@@ -90,13 +90,13 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               {gameMode.name}
             </Badge>
           )}
-          {leagueSeason?.season?.annee && (
+          {selectedSeason?.annee && (
             <Badge 
               variant="outline" 
               className="gap-1 bg-blue-100 dark:bg-blue-950 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200"
             >
               <Calendar className="h-3 w-3" />
-              Saison {leagueSeason.season.annee}
+              Saison {selectedSeason.annee}
             </Badge>
           )}
         </div>
