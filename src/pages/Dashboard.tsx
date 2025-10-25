@@ -112,7 +112,7 @@ const Dashboard = () => {
         >
           <Routes>
             <Route index element={<Navigate to="/dashboard/home" replace />} />
-            <Route path="home" element={<DashboardHome onSignOut={handleSignOut} />} />
+            <Route path="home" element={<DashboardHome onSignOut={handleSignOut} manager={manager} />} />
             <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
             <Route path="mon-equipe" element={<MyTeam />} />
             <Route path="courses" element={<UpcomingCourses />} />
@@ -165,7 +165,7 @@ const Dashboard = () => {
           )}>
             <Routes>
               <Route index element={<Navigate to="/dashboard/home" replace />} />
-              <Route path="home" element={<DashboardHome onSignOut={handleSignOut} />} />
+              <Route path="home" element={<DashboardHome onSignOut={handleSignOut} manager={manager} />} />
               <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
               <Route path="mon-equipe" element={<MyTeam />} />
               <Route path="courses" element={<UpcomingCourses />} />

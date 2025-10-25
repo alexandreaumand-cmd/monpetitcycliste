@@ -6,21 +6,24 @@ import { LeagueCard } from "@/components/dashboard/LeagueCard";
 import { RecentResultsWidget } from "@/components/dashboard/RecentResultsWidget";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Users, LogOut, Settings } from "lucide-react";
+import { Users, Settings } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
+import { ManagerDropdown } from "@/components/layout/ManagerDropdown";
 import logo from "@/assets/logo.png";
 
 interface DashboardHomeProps {
   onSignOut: () => void;
+  manager: any;
 }
 
-export default function DashboardHome({ onSignOut }: DashboardHomeProps) {
+export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps) {
   const navigate = useNavigate();
   const { setLeagueId } = useLeague();
   const { leagues, isLoading } = useUserLeagues();
-  const { isSuperAdmin } = useUserRole();
+  const { isSuperAdmin, isLeagueAdminOnly } = useUserRole();
   const [searchParams] = useSearchParams();
   const currentLeagueId = searchParams.get('leagueId');
+  const isAnyAdmin = isSuperAdmin || isLeagueAdminOnly;
 
   const buildNavUrl = (path: string) => {
     return currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
@@ -41,6 +44,13 @@ export default function DashboardHome({ onSignOut }: DashboardHomeProps) {
             <h1 className="text-xl font-bold">Mon Petit Cycliste</h1>
           </div>
           <div className="flex items-center gap-2">
+            {manager && (
+              <ManagerDropdown 
+                manager={manager}
+                isAdmin={isAnyAdmin}
+                onSignOut={onSignOut}
+              />
+            )}
             {isSuperAdmin && (
               <Button 
                 variant="outline" 
@@ -52,10 +62,6 @@ export default function DashboardHome({ onSignOut }: DashboardHomeProps) {
                 Super Admin
               </Button>
             )}
-            <Button variant="ghost" size="sm" onClick={onSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Déconnexion
-            </Button>
           </div>
         </div>
       </header>
