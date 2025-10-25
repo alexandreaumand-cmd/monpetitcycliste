@@ -209,21 +209,21 @@ function RaceCard({ race }: { race: RaceWithResults }) {
 
 function RidersList({ riders }: { riders: RiderResult[] }) {
   const getMedalIcon = (position: number) => {
-    if (position === 1) return <Medal className="h-4 w-4 text-yellow-500 fill-yellow-500" />;
-    if (position === 2) return <Medal className="h-4 w-4 text-gray-400 fill-gray-400" />;
-    if (position === 3) return <Medal className="h-4 w-4 text-amber-600 fill-amber-600" />;
+    if (position === 1) return <Medal className="h-4 w-4 text-[#FFD500] fill-[#FFD500]" />;
+    if (position === 2) return <Medal className="h-4 w-4 text-gray-500 fill-gray-500" />;
+    if (position === 3) return <Medal className="h-4 w-4 text-gray-700 fill-gray-700" />;
     return null;
   };
 
   const getPodiumStyles = (position: number) => {
     if (position === 1) {
-      return "bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 border-l-4 border-yellow-400";
+      return "bg-[#FFD500] border-l-4 border-black";
     }
     if (position === 2) {
-      return "bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/20 dark:to-gray-700/20 border-l-4 border-gray-400";
+      return "bg-gray-200 dark:bg-gray-800 border-l-4 border-gray-500";
     }
     if (position === 3) {
-      return "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-l-4 border-amber-600";
+      return "bg-gray-300 dark:bg-gray-700 border-l-4 border-gray-600";
     }
     return "";
   };
@@ -272,9 +272,11 @@ function RidersList({ riders }: { riders: RiderResult[] }) {
           </div>
           <span className={cn(
             "flex-shrink-0 ml-2 tabular-nums",
-            rider.position <= 3 
-              ? "font-bold text-sm text-primary" 
-              : "font-semibold text-xs text-muted-foreground"
+            rider.position === 1
+              ? "font-bold text-sm text-black"
+              : rider.position <= 3
+                ? "font-bold text-sm text-muted-foreground"
+                : "font-semibold text-xs text-muted-foreground"
           )}>
             {rider.points}
           </span>

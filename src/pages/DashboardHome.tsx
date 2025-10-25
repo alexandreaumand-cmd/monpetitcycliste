@@ -35,13 +35,15 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-br from-background to-yellow-50/30">
       {/* Header minimal */}
-      <header className="sticky top-0 z-50 bg-card/90 backdrop-blur-sm border-b">
+      <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="Mon Petit Cycliste" className="h-10 w-10" />
-            <h1 className="text-xl font-bold">Mon Petit Cycliste</h1>
+            <div className="w-10 h-10 rounded-full bg-[#FFD500] flex items-center justify-center">
+              <span className="font-montserrat font-black text-black text-sm">MPC</span>
+            </div>
+            <h1 className="text-xl font-montserrat font-bold text-white">Mon Petit Cycliste</h1>
           </div>
           <div className="flex items-center gap-2">
             {manager && (
@@ -74,8 +76,8 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
         {/* My Leagues Section */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            <h2 className="text-2xl font-semibold">Mes Ligues</h2>
+            <Users className="h-5 w-5 text-[#FFD500]" />
+            <h2 className="text-2xl font-montserrat font-semibold">Mes Ligues</h2>
           </div>
 
           {isLoading ? (

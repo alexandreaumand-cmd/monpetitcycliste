@@ -11,11 +11,11 @@ export function QuickActions() {
 
   return (
     <>
-      <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+      <Card className="p-6 bg-gradient-to-br from-[#FFD500] to-yellow-400 border-2 border-black shadow-lg">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-center">
           <div className="text-center md:text-left md:flex-1">
-            <h2 className="text-xl font-semibold mb-1">Nouvelle compétition</h2>
-            <p className="text-sm text-muted-foreground">Créez votre ligue ou rejoignez-en une</p>
+            <h2 className="text-xl font-montserrat font-semibold mb-1 text-black">Nouvelle compétition</h2>
+            <p className="text-sm text-gray-800 font-poppins">Créez votre ligue ou rejoignez-en une</p>
           </div>
           <div className="flex gap-3">
             <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">

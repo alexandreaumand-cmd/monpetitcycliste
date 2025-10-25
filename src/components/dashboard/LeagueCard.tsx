@@ -76,7 +76,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         <div className="flex items-center gap-2 flex-wrap">
           <Badge 
             variant={league.current_player_count < league.max_players ? "outline" : "secondary"} 
-            className={`gap-1 ${league.current_player_count < league.max_players ? "bg-yellow-100 dark:bg-yellow-950 border-yellow-300 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200" : ""}`}
+            className={`gap-1 ${league.current_player_count < league.max_players ? "bg-[#FFD500] text-black border-black font-montserrat font-bold" : "bg-black text-[#FFD500] border-yellow-500 font-montserrat font-bold"}`}
           >
             <Users className="h-3 w-3" />
             {league.current_player_count}/{league.max_players} joueurs
@@ -84,7 +84,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
           {gameMode && (
             <Badge 
               variant="outline" 
-              className="gap-1 bg-green-100 dark:bg-green-950 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200"
+              className="gap-1 border-black text-black font-poppins"
             >
               <Zap className="h-3 w-3" />
               {gameMode.name}
@@ -101,7 +101,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
           ) : leagueSeason?.season?.annee ? (
             <Badge 
               variant="outline" 
-              className="gap-1 bg-blue-100 dark:bg-blue-950 border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200"
+              className="gap-1 border-black text-black font-poppins"
             >
               <Calendar className="h-3 w-3" />
               Saison {leagueSeason.season.annee}
@@ -140,10 +140,10 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               )}
             </div>
 
-            <div className="bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 rounded-lg p-3 border border-yellow-200 dark:border-yellow-800">
+            <div className="bg-[#FFD500] rounded-lg p-3 border-2 border-black shadow-md">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Places restantes</span>
-                <span className="text-xl font-bold text-primary">{remainingSpots}</span>
+                <span className="text-sm font-montserrat font-semibold text-black">Places restantes</span>
+                <span className="text-3xl font-montserrat font-black text-black">{remainingSpots}</span>
               </div>
             </div>
 
@@ -168,12 +168,12 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         {/* PRÊT À LANCER */}
         {isReadyToLaunch && (
           <>
-            <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
-              <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-              <p className="font-semibold text-green-900 dark:text-green-100">
+            <div className="bg-[#FFD500] border-2 border-black rounded-lg p-4 text-center shadow-md">
+              <CheckCircle className="h-8 w-8 text-black mx-auto mb-2" />
+              <p className="font-montserrat font-bold text-black">
                 Tous les joueurs sont là !
               </p>
-              <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+              <p className="text-sm font-poppins text-gray-900 mt-1">
                 La ligue est prête à démarrer
               </p>
             </div>
@@ -281,13 +281,13 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         {/* TERMINÉE */}
         {isCompleted && (
           <>
-            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 rounded-lg p-4 border border-amber-200 dark:border-amber-800 text-center">
-              <Trophy className="h-8 w-8 text-amber-600 mx-auto mb-2" />
-              <p className="font-semibold text-amber-900 dark:text-amber-100">
+            <div className="bg-gradient-to-br from-black to-gray-900 rounded-lg p-4 border-2 border-[#FFD500] text-center shadow-lg">
+              <Trophy className="h-8 w-8 text-[#FFD500] mx-auto mb-2" />
+              <p className="font-montserrat font-bold text-white">
                 Ligue terminée
               </p>
               {stats?.seasonLeader && (
-                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                <p className="text-sm font-poppins text-gray-300 mt-1">
                   Vainqueur : {stats.seasonLeader.name}
                 </p>
               )}
