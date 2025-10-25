@@ -1,46 +1,61 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Users as UsersIcon, Clock, Loader2, Edit } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { UserPlus, Key, Ban, CheckCircle, Mail, Shield, Users, Activity, Copy } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 interface UserData {
   user_id: string;
   email: string;
   manager_id: string | null;
-  manager_nom: string | null;
+  manager_name: string | null;
   is_superadmin: boolean;
   league_count: number;
-  last_sign_in: string | null;
+  last_sign_in_at: string | null;
+  email_confirmed_at: string | null;
+  banned_until: string | null;
+  created_at: string;
 }
 
-export const UsersManagementPage = () => {
+type FilterStatus = 'all' | 'active' | 'unconfirmed' | 'banned' | 'superadmins';
+
+export default function UsersManagementPage() {
   const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
-  const [newRole, setNewRole] = useState<'superadmin' | 'user'>('user');
+  const [newRole, setNewRole] = useState<string>("user");
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Create user dialog state
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserManagerName, setNewUserManagerName] = useState('');
+  const [newUserRole, setNewUserRole] = useState<'user' | 'superadmin'>('user');
+  const [sendInvitation, setSendInvitation] = useState(true);
+  
+  // Reset password dialog state
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<UserData | null>(null);
+  const [resetLink, setResetLink] = useState<string | null>(null);
+  
+  // Ban confirmation dialog state
+  const [banConfirmDialogOpen, setBanConfirmDialogOpen] = useState(false);
+  const [banTargetUser, setBanTargetUser] = useState<UserData | null>(null);
+  const [banAction, setBanAction] = useState<boolean>(false);
 
-  // Fetch all users with their roles
+  // Fetch users
   const { data: users, isLoading } = useQuery({
     queryKey: ['admin-users-list'],
     queryFn: async () => {
@@ -50,9 +65,9 @@ export const UsersManagementPage = () => {
     }
   });
 
-  // Mutation to set user role
+  // Set role mutation
   const setRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: 'superadmin' | 'user' }) => {
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
       const { data, error } = await supabase.functions.invoke('admin-user-set-role', {
         body: { user_id: userId, role }
       });
@@ -60,12 +75,95 @@ export const UsersManagementPage = () => {
       return data;
     },
     onSuccess: () => {
-      toast.success("Rôle utilisateur mis à jour");
+      toast.success("Rôle mis à jour avec succès");
       queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
       setSelectedUser(null);
     },
     onError: (error: any) => {
-      toast.error("Erreur : " + error.message);
+      toast.error(`Erreur: ${error.message}`);
+    }
+  });
+
+  // Reset password mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const { data, error } = await supabase.functions.invoke('admin-user-reset-password', {
+        body: { email }
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success("Email de réinitialisation envoyé");
+      setResetLink(data.reset_link);
+    },
+    onError: (error: any) => {
+      toast.error(`Erreur: ${error.message}`);
+      setResetPasswordDialogOpen(false);
+    }
+  });
+
+  // Create user mutation
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: { email: string; manager_name: string; role: string; send_invitation: boolean }) => {
+      const { data, error } = await supabase.functions.invoke('admin-user-create', {
+        body: userData
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success("Utilisateur créé avec succès");
+      if (data.invitation_link) {
+        navigator.clipboard.writeText(data.invitation_link);
+        toast.info("Lien d'invitation copié dans le presse-papiers");
+      }
+      queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      setCreateDialogOpen(false);
+      setNewUserEmail('');
+      setNewUserManagerName('');
+      setNewUserRole('user');
+      setSendInvitation(true);
+    },
+    onError: (error: any) => {
+      toast.error(`Erreur: ${error.message}`);
+    }
+  });
+
+  // Toggle ban mutation
+  const toggleBanMutation = useMutation({
+    mutationFn: async ({ userId, ban }: { userId: string; ban: boolean }) => {
+      const { data, error } = await supabase.functions.invoke('admin-user-toggle-ban', {
+        body: { user_id: userId, ban }
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success(banAction ? "Utilisateur suspendu" : "Utilisateur réactivé");
+      queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      setBanConfirmDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast.error(`Erreur: ${error.message}`);
+      setBanConfirmDialogOpen(false);
+    }
+  });
+
+  // Resend confirmation mutation
+  const resendConfirmationMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const { data, error } = await supabase.functions.invoke('admin-user-resend-confirmation', {
+        body: { email }
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Email de confirmation renvoyé");
+    },
+    onError: (error: any) => {
+      toast.error(`Erreur: ${error.message}`);
     }
   });
 
@@ -75,152 +173,347 @@ export const UsersManagementPage = () => {
   };
 
   const handleSaveRole = () => {
-    if (!selectedUser) return;
-    setRoleMutation.mutate({
-      userId: selectedUser.user_id,
-      role: newRole
+    if (selectedUser) {
+      setRoleMutation.mutate({
+        userId: selectedUser.user_id,
+        role: newRole
+      });
+    }
+  };
+
+  const handleResetPassword = (user: UserData) => {
+    setResetPasswordUser(user);
+    setResetLink(null);
+    setResetPasswordDialogOpen(true);
+  };
+
+  const handleConfirmResetPassword = () => {
+    if (resetPasswordUser) {
+      resetPasswordMutation.mutate(resetPasswordUser.email);
+    }
+  };
+
+  const handleCreateUser = () => {
+    createUserMutation.mutate({
+      email: newUserEmail,
+      manager_name: newUserManagerName,
+      role: newUserRole,
+      send_invitation: sendInvitation
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <Skeleton className="h-8 w-64 mb-2" />
-          <Skeleton className="h-4 w-96" />
-        </div>
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map(i => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const handleToggleBan = (user: UserData, ban: boolean) => {
+    setBanTargetUser(user);
+    setBanAction(ban);
+    setBanConfirmDialogOpen(true);
+  };
+
+  const handleConfirmToggleBan = () => {
+    if (banTargetUser) {
+      toggleBanMutation.mutate({
+        userId: banTargetUser.user_id,
+        ban: banAction
+      });
+    }
+  };
+
+  const getUserStatus = (user: UserData): { label: string; variant: 'default' | 'secondary' | 'destructive' } => {
+    if (user.banned_until) {
+      return { label: 'Suspendu', variant: 'destructive' };
+    }
+    if (!user.email_confirmed_at) {
+      return { label: 'Non confirmé', variant: 'secondary' };
+    }
+    return { label: 'Actif', variant: 'default' };
+  };
+
+  const filteredUsers = users?.filter(user => {
+    // Search filter
+    const matchesSearch = !searchQuery || 
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.manager_name?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    // Status filter
+    switch (filterStatus) {
+      case 'active':
+        return user.email_confirmed_at && !user.banned_until;
+      case 'unconfirmed':
+        return !user.email_confirmed_at;
+      case 'banned':
+        return !!user.banned_until;
+      case 'superadmins':
+        return user.is_superadmin;
+      default:
+        return true;
+    }
+  });
+
+  const stats = {
+    total: users?.length || 0,
+    superAdmins: users?.filter(u => u.is_superadmin).length || 0,
+    active: users?.filter(u => u.email_confirmed_at && !u.banned_until).length || 0,
+    unconfirmed: users?.filter(u => !u.email_confirmed_at).length || 0,
+    banned: users?.filter(u => u.banned_until).length || 0,
+  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Gestion des utilisateurs</h2>
-        <p className="text-muted-foreground mt-1">
-          Gérez les rôles, permissions et accès des utilisateurs
-        </p>
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Gestion des utilisateurs</h1>
+          <p className="text-muted-foreground">Gérez les rôles, permissions et accès des utilisateurs</p>
+        </div>
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Créer un utilisateur
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Créer un nouvel utilisateur</DialogTitle>
+              <DialogDescription>
+                Créez un nouveau compte utilisateur et profil manager
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-email">Email *</Label>
+                <Input
+                  id="new-email"
+                  type="email"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  placeholder="email@exemple.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-manager-name">Nom du manager *</Label>
+                <Input
+                  id="new-manager-name"
+                  value={newUserManagerName}
+                  onChange={(e) => setNewUserManagerName(e.target.value)}
+                  placeholder="Nom du manager"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-role">Rôle</Label>
+                <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as 'user' | 'superadmin')}>
+                  <SelectTrigger id="new-role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Utilisateur</SelectItem>
+                    <SelectItem value="superadmin">Super Administrateur</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="send-invitation"
+                  checked={sendInvitation}
+                  onCheckedChange={setSendInvitation}
+                />
+                <Label htmlFor="send-invitation">Envoyer un email d'invitation</Label>
+              </div>
+              {!sendInvitation && (
+                <p className="text-sm text-muted-foreground">
+                  Un mot de passe temporaire sera généré automatiquement
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button 
+                onClick={handleCreateUser}
+                disabled={!newUserEmail || !newUserManagerName || createUserMutation.isPending}
+              >
+                {createUserMutation.isPending ? "Création..." : "Créer"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Utilisateurs</CardTitle>
-            <UsersIcon className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{users?.length || 0}</div>
+            <div className="text-2xl font-bold">{stats.total}</div>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Super Admins</CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {users?.filter(u => u.is_superadmin).length || 0}
-            </div>
+            <div className="text-2xl font-bold">{stats.superAdmins}</div>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Utilisateurs actifs</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Actifs</CardTitle>
+            <Activity className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {users?.filter(u => u.last_sign_in).length || 0}
-            </div>
+            <div className="text-2xl font-bold">{stats.active}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Non confirmés</CardTitle>
+            <Mail className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.unconfirmed}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Suspendus</CardTitle>
+            <Ban className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.banned}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Users Table */}
+      {/* Filters */}
       <Card>
         <CardHeader>
           <CardTitle>Liste des utilisateurs</CardTitle>
-          <CardDescription>
-            Gérez les rôles et permissions de tous les utilisateurs
-          </CardDescription>
+          <CardDescription>Filtrez et gérez les comptes utilisateurs</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Email</TableHead>
-                <TableHead>Manager</TableHead>
-                <TableHead>Rôle</TableHead>
-                <TableHead>Ligues</TableHead>
-                <TableHead>Dernière connexion</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users?.map((user) => (
-                <TableRow key={user.user_id}>
-                  <TableCell className="font-mono text-sm">{user.email}</TableCell>
-                  <TableCell>
-                    {user.manager_nom || <span className="text-muted-foreground">-</span>}
-                  </TableCell>
-                  <TableCell>
-                    {user.is_superadmin ? (
-                      <Badge variant="default" className="gap-1">
-                        <Shield className="h-3 w-3" />
-                        Super Admin
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">Utilisateur</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{user.league_count} ligues</Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {user.last_sign_in 
-                      ? new Date(user.last_sign_in).toLocaleDateString('fr-FR', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })
-                      : <span className="text-muted-foreground">Jamais</span>
-                    }
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditRole(user)}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Modifier
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="flex gap-4 mb-4">
+            <div className="flex-1">
+              <Input
+                placeholder="Rechercher par email ou nom..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as FilterStatus)}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="active">Actifs</SelectItem>
+                <SelectItem value="unconfirmed">Non confirmés</SelectItem>
+                <SelectItem value="banned">Suspendus</SelectItem>
+                <SelectItem value="superadmins">Super Admins</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          {users?.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              Aucun utilisateur trouvé
+          {/* Users Table */}
+          {isLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Email</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Manager</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Statut</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Rôle</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Ligues</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Dernière connexion</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {filteredUsers?.map((user) => {
+                    const status = getUserStatus(user);
+                    return (
+                      <tr key={user.user_id} className="hover:bg-muted/50">
+                        <td className="px-4 py-3 text-sm">{user.email}</td>
+                        <td className="px-4 py-3 text-sm">{user.manager_name || '-'}</td>
+                        <td className="px-4 py-3">
+                          <Badge variant={status.variant}>{status.label}</Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          {user.is_superadmin && (
+                            <Badge variant="default">
+                              <Shield className="h-3 w-3 mr-1" />
+                              Super Admin
+                            </Badge>
+                          )}
+                          {!user.is_superadmin && (
+                            <Badge variant="outline">Utilisateur</Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm">{user.league_count} ligue(s)</td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
+                          {user.last_sign_in_at 
+                            ? format(new Date(user.last_sign_in_at), 'dd MMM yyyy', { locale: fr })
+                            : 'Jamais'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditRole(user)}
+                              title="Modifier le rôle"
+                            >
+                              <Shield className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleResetPassword(user)}
+                              title="Réinitialiser le mot de passe"
+                            >
+                              <Key className="h-4 w-4" />
+                            </Button>
+                            {!user.email_confirmed_at && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => resendConfirmationMutation.mutate(user.email)}
+                                title="Renvoyer l'email de confirmation"
+                              >
+                                <Mail className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleBan(user, !user.banned_until)}
+                              title={user.banned_until ? "Réactiver" : "Suspendre"}
+                            >
+                              {user.banned_until ? (
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <Ban className="h-4 w-4 text-red-600" />
+                              )}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
@@ -230,66 +523,121 @@ export const UsersManagementPage = () => {
       <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Modifier le rôle utilisateur</DialogTitle>
+            <DialogTitle>Modifier le rôle</DialogTitle>
             <DialogDescription>
-              Changez le rôle de <strong>{selectedUser?.email}</strong>
+              Changez le rôle de {selectedUser?.email}
             </DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="role">Rôle</Label>
-              <Select value={newRole} onValueChange={(v) => setNewRole(v as 'superadmin' | 'user')}>
+              <Select value={newRole} onValueChange={setNewRole}>
                 <SelectTrigger id="role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">Utilisateur standard</SelectItem>
-                  <SelectItem value="superadmin">Super Administrateur</SelectItem>
+                  <SelectItem value="user">
+                    <div className="flex flex-col items-start">
+                      <span>Utilisateur</span>
+                      <span className="text-xs text-muted-foreground">Accès standard</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="superadmin">
+                    <div className="flex flex-col items-start">
+                      <span className="flex items-center">
+                        <Shield className="h-3 w-3 mr-1" />
+                        Super Administrateur
+                      </span>
+                      <span className="text-xs text-muted-foreground">Accès complet à toutes les fonctionnalités</span>
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="bg-muted p-3 rounded-lg text-sm">
-              <p className="font-medium mb-1">Permissions :</p>
-              {newRole === 'superadmin' ? (
-                <ul className="text-xs space-y-1 text-muted-foreground">
-                  <li>✓ Accès à l'interface super admin</li>
-                  <li>✓ Gestion des résultats et startlists</li>
-                  <li>✓ Import/export de données</li>
-                  <li>✓ Gestion globale des ligues</li>
-                  <li>✓ Gestion des utilisateurs</li>
-                </ul>
-              ) : (
-                <ul className="text-xs space-y-1 text-muted-foreground">
-                  <li>✓ Accès aux fonctionnalités standard</li>
-                  <li>✓ Peut être admin de ligue</li>
-                  <li>✗ Pas d'accès à l'interface super admin</li>
-                </ul>
-              )}
-            </div>
           </div>
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedUser(null)}>
               Annuler
             </Button>
-            <Button 
-              onClick={handleSaveRole}
-              disabled={setRoleMutation.isPending}
-            >
-              {setRoleMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Enregistrement...
-                </>
-              ) : (
-                'Enregistrer'
-              )}
+            <Button onClick={handleSaveRole} disabled={setRoleMutation.isPending}>
+              {setRoleMutation.isPending ? "Enregistrement..." : "Enregistrer"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={resetPasswordDialogOpen} onOpenChange={setResetPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Réinitialiser le mot de passe</DialogTitle>
+            <DialogDescription>
+              {!resetLink 
+                ? `Envoyer un email de réinitialisation à ${resetPasswordUser?.email} ?`
+                : "Email envoyé ! Vous pouvez copier le lien ci-dessous si nécessaire."}
+            </DialogDescription>
+          </DialogHeader>
+          {resetLink && (
+            <div className="py-4">
+              <div className="flex items-center gap-2">
+                <Input value={resetLink} readOnly className="font-mono text-xs" />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(resetLink);
+                    toast.success("Lien copié !");
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            {!resetLink ? (
+              <>
+                <Button variant="outline" onClick={() => setResetPasswordDialogOpen(false)}>
+                  Annuler
+                </Button>
+                <Button onClick={handleConfirmResetPassword} disabled={resetPasswordMutation.isPending}>
+                  {resetPasswordMutation.isPending ? "Envoi..." : "Envoyer"}
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => setResetPasswordDialogOpen(false)}>
+                Fermer
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ban Confirmation Dialog */}
+      <AlertDialog open={banConfirmDialogOpen} onOpenChange={setBanConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {banAction ? "Suspendre l'utilisateur" : "Réactiver l'utilisateur"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {banAction 
+                ? `Êtes-vous sûr de vouloir suspendre ${banTargetUser?.email} ? L'utilisateur ne pourra plus se connecter.`
+                : `Êtes-vous sûr de vouloir réactiver ${banTargetUser?.email} ? L'utilisateur pourra à nouveau se connecter.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmToggleBan}
+              className={banAction ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            >
+              {toggleBanMutation.isPending ? "Traitement..." : "Confirmer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
-};
+}

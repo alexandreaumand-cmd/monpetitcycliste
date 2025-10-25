@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { DataManagementTabs } from "@/components/admin/DataManagementTabs";
 import { LeaguesAdminPage } from "@/pages/admin/LeaguesAdminPage";
 import { LeagueDetailPage } from "@/pages/admin/LeagueDetailPage";
-import { UsersManagementPage } from "@/pages/admin/UsersManagementPage";
+import UsersManagementPage from "@/pages/admin/UsersManagementPage";
 import { StartlistImportManager } from "@/components/admin/StartlistImportManager";
 import { CourseManagementTabs } from "@/components/admin/CourseManagementTabs";
 import { SuperAdminHeader } from "@/components/admin/SuperAdminHeader";

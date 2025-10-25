@@ -56,15 +56,19 @@ serve(async (req) => {
       const manager = managers?.find(m => m.user_id === user.id);
       const isSuperAdmin = userRoles?.some(r => r.user_id === user.id && r.role === 'admin') || false;
       const leagueCount = leagueCounts?.filter(lc => lc.user_id === user.id).length || 0;
+      const userAny = user as any;
 
       return {
         user_id: user.id,
         email: user.email || '',
         manager_id: manager?.id || null,
-        manager_nom: manager?.nom || null,
+        manager_name: manager?.nom || null,
         is_superadmin: isSuperAdmin,
         league_count: leagueCount,
-        last_sign_in: user.last_sign_in_at || null,
+        last_sign_in_at: user.last_sign_in_at || null,
+        email_confirmed_at: user.email_confirmed_at || null,
+        banned_until: userAny.banned_until || null,
+        created_at: user.created_at || null,
       };
     });
 
