@@ -136,12 +136,52 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
     loadPhases();
   }, [selectedSeason]);
 
-  // Update season selection
+  // Update season selection (blocked when league is active)
   const setSelectedSeason = (season: Season | null) => {
+    if (leagueId) {
+      console.warn("[SeasonContext] Season is controlled by league; ignoring manual change");
+      return;
+    }
     console.log("[SeasonContext] setSelectedSeason:", season?.id, season?.annee);
     setSelectedSeasonState(season);
     setIsLeagueSeason(false);
   };
+
+  // Auto-resync: if league is set but season is manual, force league's season
+  useEffect(() => {
+    if (!leagueId || leagueLoading || isLeagueSeason) return;
+
+    console.log("[SeasonContext] Resync: League changed but season is manual, reloading from league");
+    
+    const resyncSeason = async () => {
+      try {
+        const { data: scopeData } = await supabase
+          .from("league_scopes")
+          .select("season_id")
+          .eq("league_id", leagueId)
+          .maybeSingle();
+
+        if (!scopeData?.season_id) {
+          console.error("[SeasonContext] Resync: League has no season configured");
+          return;
+        }
+
+        const season = seasons.find(s => s.id === scopeData.season_id);
+        if (!season) {
+          console.error("[SeasonContext] Resync: Season not found");
+          return;
+        }
+
+        console.log("[SeasonContext] Resync: Applying league season", season.annee, "for league", leagueId);
+        setSelectedSeasonState(season);
+        setIsLeagueSeason(true);
+      } catch (error) {
+        console.error("[SeasonContext] Resync error:", error);
+      }
+    };
+
+    resyncSeason();
+  }, [leagueId, leagueLoading, isLeagueSeason, seasons]);
 
   return (
     <SeasonContext.Provider
