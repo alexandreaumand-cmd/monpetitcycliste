@@ -5,7 +5,7 @@ import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X, ListChecks
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
-import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NotificationCenter } from "./NotificationCenter";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
@@ -44,8 +44,8 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
-  const { selectedSeason, setSelectedSeason, seasons, isLoading: seasonsLoading } = useSeasonContext();
-  const { data: seasonSponsor } = useManagerSponsor(manager?.id, selectedSeason?.id);
+  const { season, seasons, isLoading: seasonsLoading } = useLeagueSeason();
+  const { data: seasonSponsor } = useManagerSponsor(manager?.id, season?.id);
   
   // Fallback: sponsor de la saison > sponsor global > null
   const displaySponsor = seasonSponsor?.sponsor || manager?.sponsor;
@@ -63,10 +63,9 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
     return location.pathname.startsWith(href);
   };
 
+  // Season selector is now read-only (derived from league)
   const handleSeasonChange = (seasonId: string) => {
-    const season = seasons.find(s => s.id === seasonId) || null;
-    console.log("[Header] Changement saison:", seasonId, "→", season?.annee);
-    setSelectedSeason(season);
+    console.log("[Header] Season selector disabled - season is derived from league");
   };
 
   return (
@@ -84,7 +83,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
               <ManagerInfoDropdown 
                 manager={manager}
                 displaySponsor={displaySponsor}
-                selectedYear={selectedSeason?.annee}
+                selectedYear={season?.annee}
                 isAdmin={isAdmin}
               />
             )}
@@ -92,41 +91,11 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
 
           {/* Right: Season + League + Notifications + Logout */}
           <div className="flex items-center gap-2">
-            {/* Season Selector */}
-            {!seasonsLoading && seasons.length > 0 && (
-              <>
-                {/* Mobile: Native select */}
-                <select
-                  aria-label="Choisir l'année"
-                  className="md:hidden w-[90px] h-8 text-xs rounded-md border border-input bg-background text-foreground px-2 focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={selectedSeason?.id || ""}
-                  onChange={(e) => handleSeasonChange(e.target.value)}
-                >
-                  <option value="" disabled>Année</option>
-                  {seasons.map((season) => (
-                    <option key={season.id} value={season.id}>
-                      {season.annee}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Desktop: Radix Select */}
-                <Select
-                  value={selectedSeason?.id || ""}
-                  onValueChange={handleSeasonChange}
-                >
-                  <SelectTrigger className="hidden md:flex w-[100px] h-8">
-                    <SelectValue placeholder="Année" />
-                  </SelectTrigger>
-                  <SelectContent className="z-50 bg-popover">
-                    {seasons.map((season) => (
-                      <SelectItem key={season.id} value={season.id}>
-                        {season.annee}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
+            {/* Season badge (read-only, derived from league) */}
+            {season && (
+              <div className="h-8 px-3 flex items-center text-xs font-medium text-muted-foreground border border-border rounded-md bg-muted/50">
+                {season.annee}
+              </div>
             )}
 
             <LeagueSwitcher />

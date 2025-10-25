@@ -9,10 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Calculator, AlertCircle, Wrench } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
-import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 
 export const PointsComputeManager = () => {
-  const { selectedSeason } = useSeasonContext();
+  const { season } = useLeagueSeason();
   const { toast } = useToast();
 
   // Section "Recalcul complet d'une phase"
@@ -95,13 +95,13 @@ export const PointsComputeManager = () => {
 
   // Auto-sélection de la saison courante au chargement
   useEffect(() => {
-    if (selectedSeason && !fullRecalcSeasonId) {
-      setFullRecalcSeasonId(selectedSeason.id);
+    if (season && !fullRecalcSeasonId) {
+      setFullRecalcSeasonId(season.id);
     }
-    if (selectedSeason && !courseSeasonId) {
-      setCourseSeasonId(selectedSeason.id);
+    if (season && !courseSeasonId) {
+      setCourseSeasonId(season.id);
     }
-  }, [selectedSeason]);
+  }, [season]);
 
   // Auto-sélection de la phase active pour "Recalcul complet"
   useEffect(() => {

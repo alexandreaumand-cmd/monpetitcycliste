@@ -1,5 +1,5 @@
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
-import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface ManagerNameWithJerseyProps {
@@ -8,8 +8,8 @@ interface ManagerNameWithJerseyProps {
 }
 
 export function ManagerNameWithJersey({ managerId, managerName }: ManagerNameWithJerseyProps) {
-  const { selectedSeason } = useSeasonContext();
-  const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
+  const { season } = useLeagueSeason();
+  const { data: sponsorData } = useManagerSponsor(managerId, season?.id);
 
   return (
     <div className="flex items-center gap-2">

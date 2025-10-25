@@ -4,8 +4,8 @@ import { NotificationCenter } from "./NotificationCenter";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LeagueSwitcher } from "@/components/leagues/LeagueSwitcher";
 import { LeagueInfoBadge } from "@/components/leagues/LeagueInfoBadge";
-import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ManagerDropdown } from "./ManagerDropdown";
 
@@ -16,8 +16,8 @@ interface TopBarProps {
 }
 
 export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
-  const { seasons, selectedSeason, setSelectedSeason } = useSeasonContext();
   const { leagueId } = useLeague();
+  const { season, seasons } = useLeagueSeason();
   
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background">
@@ -32,24 +32,7 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
           {/* Infos de la ligue active */}
           {leagueId && <LeagueInfoBadge />}
           
-          {/* Season Selector - masqué si dans une ligue */}
-          {!leagueId && (
-            <Select value={selectedSeason?.id} onValueChange={(value) => {
-              const season = seasons.find(s => s.id === value);
-              if (season) setSelectedSeason(season);
-            }}>
-              <SelectTrigger className="h-8 w-32">
-                <SelectValue placeholder="Saison" />
-              </SelectTrigger>
-              <SelectContent>
-                {seasons.map((season) => (
-                  <SelectItem key={season.id} value={season.id}>
-                    {season.annee}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+          {/* Season is now derived from league - no longer user-selectable */}
         </div>
         
         <div className="flex-1" />

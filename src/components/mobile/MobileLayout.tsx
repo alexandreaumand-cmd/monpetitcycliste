@@ -6,7 +6,7 @@ import { MobileDrawer } from "./MobileDrawer";
 import { Button } from "@/components/ui/button";
 
 import { Menu } from "lucide-react";
-import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useCurrentLeagueInfo } from "@/hooks/useCurrentLeagueInfo";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
@@ -28,8 +28,8 @@ export const MobileLayout = ({
 }: MobileLayoutProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
-  const { selectedSeason, setSelectedSeason, seasons, isLoading: seasonsLoading } = useSeasonContext();
   const { leagueId } = useLeague();
+  const { season, isLoading: seasonsLoading } = useLeagueSeason();
   const { data: leagueInfo } = useCurrentLeagueInfo();
   
   const isHomePage = location.pathname === '/dashboard/home' || location.pathname === '/dashboard';
@@ -57,8 +57,8 @@ export const MobileLayout = ({
                   • {leagueInfo.gameModeName} {leagueInfo.seasonYear}
                 </span>
               ) : (
-                selectedSeason?.annee && (
-                  <span className="ml-2 text-xs text-muted-foreground">• {selectedSeason.annee}</span>
+                season?.annee && (
+                  <span className="ml-2 text-xs text-muted-foreground">• {season.annee}</span>
                 )
               )}
             </h1>
@@ -74,7 +74,7 @@ export const MobileLayout = ({
       {/* Bottom navigation bar - masquée sur home */}
       {!isHomePage && <MobileBottomBar isAdmin={isAdmin} />}
 
-      {/* Side drawer with Season Selector */}
+      {/* Side drawer - Season is now derived from league */}
       {!isHomePage && (
         <MobileDrawer
           open={drawerOpen}
@@ -82,30 +82,6 @@ export const MobileLayout = ({
           manager={manager}
           isAdmin={isAdmin}
           onSignOut={onSignOut}
-          seasonSelector={
-            !leagueId && !seasonsLoading && seasons.length > 0 ? (
-              <div className="px-4 py-3 border-b">
-                <label className="text-sm font-medium block mb-2">Saison</label>
-                <select
-                  aria-label="Choisir l'année"
-                  className="w-full h-9 rounded-md border border-input bg-background text-foreground px-3 focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={selectedSeason?.id || ""}
-                  onChange={(e) => {
-                    const season = seasons.find(s => s.id === e.target.value) || null;
-                    console.log("[MobileLayout] Saison changée:", e.target.value, "→", season?.annee);
-                    setSelectedSeason(season);
-                  }}
-                >
-                  <option value="" disabled>Choisir une année</option>
-                  {seasons.map((season) => (
-                    <option key={season.id} value={season.id}>
-                      {season.annee}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : undefined
-          }
         />
       )}
     </div>

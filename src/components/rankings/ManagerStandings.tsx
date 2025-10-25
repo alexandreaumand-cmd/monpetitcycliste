@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Shirt } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { BonusPointsDetailDialog } from "./BonusPointsDetailDialog";
 import { useState } from "react";
@@ -21,8 +21,8 @@ type StandingsProps = {
 };
 
 const ManagerNameWithJersey = ({ managerId, managerName }: { managerId: string; managerName: string }) => {
-  const { selectedSeason } = useSeasonContext();
-  const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
+  const { season } = useLeagueSeason();
+  const { data: sponsorData } = useManagerSponsor(managerId, season?.id);
   
   return (
     <div className="flex items-center gap-2">
@@ -50,7 +50,7 @@ const ManagerNameWithJersey = ({ managerId, managerName }: { managerId: string; 
 // Note: enrichWithManagerNames removed - now handled directly by views
 
 export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) => {
-  const { selectedSeason, activePhase } = useSeasonContext();
+  const { season, activePhase } = useLeagueSeason();
   const { leagueId, isLoading: leagueLoading } = useLeague();
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
   const [selectedBonusManager, setSelectedBonusManager] = useState<{
@@ -61,19 +61,19 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
   // Use stable backend function instead of direct view queries
   const { data: standings, isLoading, isError, error } = useLeagueStandingsStable(
     leagueId,
-    selectedSeason?.id || null,
+    season?.id || null,
     phaseId || null
   );
 
 
   // Fetch previous global standings for evolution calculation (global view only)
   const { data: previousGlobalStandings } = useQuery({
-    queryKey: ["previous-global-standings", selectedSeason?.id, activePhase?.id],
+    queryKey: ["previous-global-standings", season?.id, activePhase?.id],
     queryFn: async () => {
       if (phaseId || !activePhase) return null;
 
       const { data, error } = await supabase.rpc('get_previous_standings', {
-        p_saison_id: selectedSeason?.id || null,
+        p_saison_id: season?.id || null,
         p_reference_phase_id: activePhase.id
       });
 
@@ -209,7 +209,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                       <ManagerPrestigeIcons 
                         managerId={standing.manager_id}
                         phaseId={phaseId}
-                        saisonId={selectedSeason?.id}
+                        saisonId={season?.id}
                       />
                       {rank === 10 && <span className="text-xl">🤡</span>}
                     </div>
