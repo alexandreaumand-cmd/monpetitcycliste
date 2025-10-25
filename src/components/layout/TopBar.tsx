@@ -71,9 +71,9 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
             )}
             
             {selectedSeason && (
-              <Badge variant="secondary" className="gap-1.5 px-3 py-1.5">
+              <Badge variant="outline" className="gap-1.5 px-3 py-1.5 bg-white">
                 <Calendar className="h-3.5 w-3.5" />
-                <span className="text-xs font-medium">Saison {selectedSeason.annee}</span>
+                <span className="text-xs font-medium">{selectedSeason.annee}</span>
               </Badge>
             )}
           </div>
