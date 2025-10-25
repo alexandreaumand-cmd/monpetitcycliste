@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    // Regular client for verification
+    // Client utilisateur (JWT) pour vérifier l'accès superadmin et lire les tables publiques
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -23,83 +23,121 @@ serve(async (req) => {
       }
     );
 
-    // Verify superadmin
-    const { data: isSuperAdmin } = await supabaseClient.rpc('is_superadmin');
+    // Vérification superadmin via RPC
+    const { data: isSuperAdmin, error: superErr } = await supabaseClient.rpc('is_superadmin');
+    if (superErr) {
+      console.error('[admin-users-list] is_superadmin RPC error:', superErr);
+      throw new Error('Erreur de vérification des permissions');
+    }
     if (!isSuperAdmin) {
       throw new Error('Réservé aux super-administrateurs');
     }
 
-    // Admin client for listing users
+    // Vérification de la présence de la clé Service Role
+    const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    if (!SERVICE_ROLE) {
+      console.error('[admin-users-list] SERVICE_ROLE_MISSING: SUPABASE_SERVICE_ROLE_KEY non disponible');
+      return new Response(
+        JSON.stringify({ error: 'SERVICE_ROLE_MISSING: SUPABASE_SERVICE_ROLE_KEY non disponible dans l’environnement de la fonction.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // Client admin pour lister les utilisateurs (nécessite Service Role)
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      SERVICE_ROLE,
     );
 
-    // Get all users from auth.users with their manager info
-    const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-    if (authError) throw authError;
+    // Récupération paginée de tous les utilisateurs
+    const allUsers: any[] = [];
+    let page = 1;
+    const perPage = 1000; // large pour minimiser les tours
+    try {
+      while (true) {
+        const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+        if (error) throw error;
+        const users = data?.users ?? [];
+        allUsers.push(...users);
+        if (users.length < perPage) break; // dernière page
+        page += 1;
+      }
+    } catch (e: any) {
+      console.error('[admin-users-list] ADMIN_LIST_USERS_FAILED:', e?.message || e);
+      return new Response(
+        JSON.stringify({ error: `ADMIN_LIST_USERS_FAILED: ${e?.message || 'Erreur inconnue'}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
 
-    // Get all managers
+    // Récupération des managers
     const { data: managers, error: managersError } = await supabaseClient
       .from('managers')
       .select('id, user_id, nom');
-    if (managersError) throw managersError;
+    if (managersError) {
+      console.error('[admin-users-list] managers fetch error:', managersError);
+      throw managersError;
+    }
 
-    // Get user roles
+    // Récupération des rôles users (admin/superadmin stockés dans user_roles)
     const { data: userRoles, error: rolesError } = await supabaseClient
       .from('user_roles')
-      .select('user_id, role')
-      .eq('role', 'admin');
-    if (rolesError) throw rolesError;
+      .select('user_id, role');
+    if (rolesError) {
+      console.error('[admin-users-list] user_roles fetch error:', rolesError);
+      throw rolesError;
+    }
 
-    // Get league memberships count
-    const { data: leagueCounts, error: leagueError } = await supabaseClient
+    // Récupération des appartenances aux ligues (pour compter)
+    const { data: leagueMembers, error: leagueError } = await supabaseClient
       .from('league_members')
       .select('user_id, league_id');
-    if (leagueError) throw leagueError;
+    if (leagueError) {
+      console.error('[admin-users-list] league_members fetch error:', leagueError);
+      throw leagueError;
+    }
 
-    // Build user data array
-    const users = authUsers.users.map(user => {
-      const manager = managers?.find(m => m.user_id === user.id);
-      const isSuperAdmin = userRoles?.some(r => r.user_id === user.id && r.role === 'admin') || false;
-      const leagueCount = leagueCounts?.filter(lc => lc.user_id === user.id).length || 0;
-      const userAny = user as any;
+    // Construction du payload
+    const users = allUsers.map((user: any) => {
+      const manager = managers?.find((m) => m.user_id === user.id);
+      const hasSuperAdminRole = userRoles?.some((r) => r.user_id === user.id && r.role === 'superadmin') || false;
+      const leagueCount = leagueMembers?.filter((lm) => lm.user_id === user.id).length || 0;
 
       return {
         user_id: user.id,
         email: user.email || '',
         manager_id: manager?.id || null,
         manager_name: manager?.nom || null,
-        is_superadmin: isSuperAdmin,
+        is_superadmin: hasSuperAdminRole,
         league_count: leagueCount,
         last_sign_in_at: user.last_sign_in_at || null,
         email_confirmed_at: user.email_confirmed_at || null,
-        banned_until: userAny.banned_until || null,
+        banned_until: (user as any)?.banned_until || null,
         created_at: user.created_at || null,
       };
     });
 
-    // Sort by superadmin first, then by email
+    // Tri: superadmins d'abord, puis email
     users.sort((a, b) => {
       if (a.is_superadmin && !b.is_superadmin) return -1;
       if (!a.is_superadmin && b.is_superadmin) return 1;
       return a.email.localeCompare(b.email);
     });
 
+    console.log(`[admin-users-list] OK - users: ${users.length}`);
+
     return new Response(
       JSON.stringify({ users }),
-      { 
+      {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
+        status: 200,
       }
     );
   } catch (error: any) {
+    console.error('[admin-users-list] ERROR:', error?.message || error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400 
-      }
+      JSON.stringify({ error: error?.message || 'Erreur inconnue' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     );
   }
 });

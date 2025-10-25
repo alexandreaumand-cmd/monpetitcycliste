@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { UserPlus, Key, Ban, CheckCircle, Mail, Shield, Users, Activity, Copy } from "lucide-react";
 import { format } from "date-fns";
@@ -56,7 +57,7 @@ export default function UsersManagementPage() {
   const [banAction, setBanAction] = useState<boolean>(false);
 
   // Fetch users
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['admin-users-list'],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('admin-users-list');
@@ -341,6 +342,17 @@ export default function UsersManagementPage() {
         </Dialog>
       </div>
 
+      {isError && (
+        <Alert variant="destructive">
+          <AlertDescription className="flex items-center justify-between">
+            <span>Impossible de charger les utilisateurs: {(error as any)?.message || 'Erreur inconnue'}</span>
+            <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
+              {isFetching ? 'Chargement...' : 'Réessayer'}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-5">
         <Card>
@@ -349,7 +361,7 @@ export default function UsersManagementPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-2xl font-bold">{isError ? '—' : stats.total}</div>
           </CardContent>
         </Card>
         <Card>
@@ -358,7 +370,7 @@ export default function UsersManagementPage() {
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.superAdmins}</div>
+            <div className="text-2xl font-bold">{isError ? '—' : stats.superAdmins}</div>
           </CardContent>
         </Card>
         <Card>
@@ -367,7 +379,7 @@ export default function UsersManagementPage() {
             <Activity className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.active}</div>
+            <div className="text-2xl font-bold">{isError ? '—' : stats.active}</div>
           </CardContent>
         </Card>
         <Card>
@@ -376,7 +388,7 @@ export default function UsersManagementPage() {
             <Mail className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.unconfirmed}</div>
+            <div className="text-2xl font-bold">{isError ? '—' : stats.unconfirmed}</div>
           </CardContent>
         </Card>
         <Card>
@@ -385,7 +397,7 @@ export default function UsersManagementPage() {
             <Ban className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.banned}</div>
+            <div className="text-2xl font-bold">{isError ? '—' : stats.banned}</div>
           </CardContent>
         </Card>
       </div>
