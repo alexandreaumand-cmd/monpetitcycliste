@@ -17,7 +17,6 @@ import { StartlistDetailView } from "./StartlistDetailView";
 type ViewMode = 'list' | 'import' | 'detail';
 
 export const StartlistImportManager = () => {
-  const { leagueId } = useLeague();
   const { phases } = useSeasonContext();
   const queryClient = useQueryClient();
   
@@ -66,7 +65,6 @@ export const StartlistImportManager = () => {
         body: { 
           race_id: selectedRaceId && selectedRaceId !== 'all' ? selectedRaceId : null,
           phase_id: selectedPhaseId,
-          league_id: leagueId,
           text: textContent,
           with_diagnostics: false,
           startlisteur_note: startlisteurNote.trim() || null
@@ -112,7 +110,6 @@ export const StartlistImportManager = () => {
       formData.append('file', file);
       formData.append('phase_id', selectedPhaseId);
       if (selectedRaceId && selectedRaceId !== 'all') formData.append('race_id', selectedRaceId);
-      if (leagueId) formData.append('league_id', leagueId);
 
       const { data, error } = await supabase.functions.invoke('startlist-upload-and-parse', {
         body: formData
