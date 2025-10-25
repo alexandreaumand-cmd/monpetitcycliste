@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface Season {
   id: string;
@@ -35,6 +36,7 @@ export const useSeasonContext = () => {
 };
 
 export const SeasonProvider = ({ children }: { children: ReactNode }) => {
+  const { leagueId, isLoading: isLeagueLoading } = useLeague();
   const [selectedSeason, setSelectedSeasonState] = useState<Season | null>(null);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [phases, setPhases] = useState<Phase[]>([]);
@@ -128,6 +130,34 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
 
     loadPhases();
   }, [selectedSeason]);
+
+  // Synchronize with LeagueContext: load the season associated with the active league
+  useEffect(() => {
+    const loadLeagueSeason = async () => {
+      if (!leagueId || isLeagueLoading || !seasons.length) return;
+      
+      try {
+        const { data: scope } = await supabase
+          .from('league_scopes')
+          .select('season_id')
+          .eq('league_id', leagueId)
+          .maybeSingle();
+        
+        if (scope && scope.season_id) {
+          const leagueSeason = seasons.find(s => s.id === scope.season_id);
+          if (leagueSeason && selectedSeason?.id !== leagueSeason.id) {
+            console.log("[SeasonContext] Auto-selecting season for league:", leagueSeason.annee);
+            setSelectedSeasonState(leagueSeason);
+            localStorage.setItem("selectedSeasonId", leagueSeason.id);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading league season:", error);
+      }
+    };
+    
+    loadLeagueSeason();
+  }, [leagueId, isLeagueLoading, seasons]);
 
   // Persist season selection
   const setSelectedSeason = (season: Season | null) => {
