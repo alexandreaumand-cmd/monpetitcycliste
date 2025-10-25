@@ -152,70 +152,72 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
           </div>
         </Card>
 
-        {/* Section Managers */}
-        <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-4">Managers au départ</h3>
+        {/* Section Managers - Only show if managers exist */}
+        {startlistData?.managers?.length > 0 && (
+          <Card className="p-4">
+            <h3 className="text-lg font-semibold mb-4">Managers au départ</h3>
 
-          {/* Grille compacte des managers */}
-          <div className="grid grid-cols-5 gap-3">
-            {startlistData.managers.map((manager: any) => (
-              <Card key={manager.manager_id} className="p-3">
-                {/* En-tête manager */}
-                <div className="mb-2 pb-2 border-b">
-                  <div className="flex items-center gap-2 mb-1">
-                    {manager.jersey_image_url ? (
-                      <img 
-                        src={manager.jersey_image_url} 
-                        alt="Maillot" 
-                        className="w-8 h-8 object-contain flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-sm truncate mb-1">{manager.manager_nom}</h4>
-                      <ManagerStars avgStars={manager.avg_stars} votes={manager.votes} showVotes={manager.votes > 1} />
-                      {manager.sponsor && (
-                        <p className="text-xs text-muted-foreground truncate mt-1">{manager.sponsor}</p>
+            {/* Grille compacte des managers */}
+            <div className="grid grid-cols-5 gap-3">
+              {startlistData.managers.map((manager: any) => (
+                <Card key={manager.manager_id} className="p-3">
+                  {/* En-tête manager */}
+                  <div className="mb-2 pb-2 border-b">
+                    <div className="flex items-center gap-2 mb-1">
+                      {manager.jersey_image_url ? (
+                        <img 
+                          src={manager.jersey_image_url} 
+                          alt="Maillot" 
+                          className="w-8 h-8 object-contain flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
                       )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-sm truncate mb-1">{manager.manager_nom}</h4>
+                        <ManagerStars avgStars={manager.avg_stars} votes={manager.votes} showVotes={manager.votes > 1} />
+                        {manager.sponsor && (
+                          <p className="text-xs text-muted-foreground truncate mt-1">{manager.sponsor}</p>
+                        )}
+                      </div>
+                    </div>
+                  
+                    {/* Classements */}
+                    <div className="grid grid-cols-2 gap-2 text-xs mb-1">
+                      <div>
+                        <span className="font-medium">Phase:</span> #{manager.rank_phase || '-'}
+                        {manager.points_phase > 0 && (
+                          <span className="text-muted-foreground ml-1">({manager.points_phase}pts)</span>
+                        )}
+                      </div>
+                      <div>
+                        <span className="font-medium">CG:</span> #{manager.rank_total || '-'}
+                        {manager.points_total > 0 && (
+                          <span className="text-muted-foreground ml-1">({manager.points_total}pts)</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                
-                  {/* Classements */}
-                  <div className="grid grid-cols-2 gap-2 text-xs mb-1">
-                    <div>
-                      <span className="font-medium">Phase:</span> #{manager.rank_phase || '-'}
-                      {manager.points_phase > 0 && (
-                        <span className="text-muted-foreground ml-1">({manager.points_phase}pts)</span>
-                      )}
-                    </div>
-                    <div>
-                      <span className="font-medium">CG:</span> #{manager.rank_total || '-'}
-                      {manager.points_total > 0 && (
-                        <span className="text-muted-foreground ml-1">({manager.points_total}pts)</span>
-                      )}
-                    </div>
+                  
+                  {/* Liste coureurs triés par cote décroissante */}
+                  <div className="space-y-0.5">
+                    {[...manager.starters]
+                      .sort((a: any, b: any) => (b.cote || 0) - (a.cote || 0))
+                      .map((starter: any) => (
+                      <div key={starter.coureur_id} className="text-xs flex justify-between items-center gap-2">
+                          <span className="font-medium truncate flex-1 min-w-0">{starter.nom}</span>
+                        </div>
+                      ))}
                   </div>
-                </div>
-                
-                {/* Liste coureurs triés par cote décroissante */}
-                <div className="space-y-0.5">
-                  {[...manager.starters]
-                    .sort((a: any, b: any) => (b.cote || 0) - (a.cote || 0))
-                    .map((starter: any) => (
-                    <div key={starter.coureur_id} className="text-xs flex justify-between items-center gap-2">
-                        <span className="font-medium truncate flex-1 min-w-0">{starter.nom}</span>
-                      </div>
-                    ))}
-                </div>
-              </Card>
-            ))}
-          </div>
-        </Card>
+                </Card>
+              ))}
+            </div>
+          </Card>
+        )}
       </div>
     );
   }

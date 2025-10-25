@@ -99,6 +99,50 @@ Deno.serve(async (req) => {
       coureurs: coureursMap.get(e.coureur_id) || { id: e.coureur_id, nom: '', equipe: '', prix_initial: 10 }
     }));
 
+    // Get scoring rules for this race category (needed in both modes)
+    const { data: scoringRules } = await supabase
+      .from('scoring_rules_saisons')
+      .select('type_classement, place, points')
+      .eq('saison_id', saisonId)
+      .eq('categorie', race.categorie)
+      .order('type_classement')
+      .order('place');
+
+    // Check if we should include managers (only if league_id is provided)
+    const includeManagers = !!league_id;
+
+    // If no league_id (SuperAdmin mode), return generic view without managers
+    if (!includeManagers) {
+      const result = {
+        race: {
+          id: race.id,
+          nom: race.nom,
+          date_debut: race.date_debut,
+          phase_id: phaseId,
+          categorie: race.categorie
+        },
+        route_image_url: startlist.route_image_url || null,
+        startlisteur_note: startlist.startlisteur_note || null,
+        admin_rating_note: startlist.admin_rating_note || null,
+        admin_rating_author: ratingAuthorName,
+        managers: [],
+        scoring: {
+          categorie: race.categorie,
+          rules: scoringRules || []
+        },
+        totals: {
+          managers: 0,
+          starters_all: enrichedEntries.length
+        }
+      };
+
+      console.log('SuperAdmin generic view:', result.totals);
+
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // Get rosters for this phase with season sponsors
     let rostersQuery = supabase
       .from('rosters')
@@ -217,15 +261,6 @@ Deno.serve(async (req) => {
     
     const { data: totalStandings } = await totalStandingsQuery
       .order('total_points', { ascending: false });
-
-    // Get scoring rules for this race category
-    const { data: scoringRules } = await supabase
-      .from('scoring_rules_saisons')
-      .select('type_classement, place, points')
-      .eq('saison_id', saisonId)
-      .eq('categorie', race.categorie)
-      .order('type_classement')
-      .order('place');
 
     // Get ratings for managers
     const { data: ratings } = await supabase
