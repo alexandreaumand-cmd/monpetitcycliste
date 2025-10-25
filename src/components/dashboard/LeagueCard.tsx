@@ -141,21 +141,14 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <Button onClick={onViewDetails} variant="outline" className="flex-1">
-                Voir le détail
-              </Button>
-              {isAdmin && (
-                <Button 
-                  onClick={() => setInvitesSheetOpen(true)}
-                  variant="secondary"
-                  size="icon"
-                  title="Inviter des joueurs"
-                >
-                  <UserPlus className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+            <Button 
+              onClick={() => setInvitesSheetOpen(true)} 
+              variant="default" 
+              className="w-full gap-2"
+            >
+              <UserPlus className="h-4 w-4" />
+              Inviter des joueurs
+            </Button>
           </>
         )}
 
