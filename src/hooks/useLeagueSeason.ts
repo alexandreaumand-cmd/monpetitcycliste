@@ -15,24 +15,41 @@ export function useLeagueSeason(leagueId: string | null) {
     queryFn: async (): Promise<LeagueSeason | null> => {
       if (!leagueId) return null;
 
-      const { data, error } = await supabase
+      // Étape 1: Récupérer season_id depuis league_scopes
+      const { data: scopeData, error: scopeError } = await supabase
         .from('league_scopes')
-        .select('season_id, saisons:season_id(id, annee)')
+        .select('season_id')
         .eq('league_id', leagueId)
         .maybeSingle();
 
-      if (error) {
-        console.error('[useLeagueSeason] Error fetching season:', error);
-        throw error;
+      if (scopeError) {
+        console.error('[useLeagueSeason] Error fetching league_scopes:', scopeError);
+        throw scopeError;
       }
 
-      if (!data?.season_id || !data.saisons) {
+      if (!scopeData?.season_id) {
+        console.warn('[useLeagueSeason] No season_id found for league:', leagueId);
         return null;
       }
 
+      // Étape 2: Récupérer les détails de la saison
+      const { data: seasonData, error: seasonError } = await supabase
+        .from('saisons')
+        .select('id, annee')
+        .eq('id', scopeData.season_id)
+        .single();
+
+      if (seasonError) {
+        console.error('[useLeagueSeason] Error fetching season:', seasonError);
+        throw seasonError;
+      }
+
       return {
-        seasonId: data.season_id,
-        season: data.saisons as { id: string; annee: number }
+        seasonId: seasonData.id,
+        season: {
+          id: seasonData.id,
+          annee: seasonData.annee
+        }
       };
     },
     enabled: !!leagueId,
