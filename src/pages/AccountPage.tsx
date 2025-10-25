@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, User, Lock, Palette } from "lucide-react";
+import { AvatarUploader } from "@/components/account/AvatarUploader";
 
 export default function AccountPage() {
   const [loading, setLoading] = useState(true);
@@ -17,6 +17,7 @@ export default function AccountPage() {
   // Form states
   const [nomManager, setNomManager] = useState("");
   const [sponsor, setSponsor] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -42,6 +43,7 @@ export default function AccountPage() {
         setManager(managerData);
         setNomManager(managerData.nom || "");
         setSponsor(managerData.sponsor || "");
+        setAvatarUrl(managerData.avatar_url || null);
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -133,19 +135,13 @@ export default function AccountPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Avatar */}
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src="" alt={manager?.nom} />
-              <AvatarFallback className="text-lg">{userInitials}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <p className="text-sm text-muted-foreground mb-2">Photo de profil</p>
-              <Button variant="outline" size="sm" disabled>
-                Changer la photo (bientôt disponible)
-              </Button>
-            </div>
-          </div>
+          {/* Avatar Uploader */}
+          <AvatarUploader
+            currentAvatarUrl={avatarUrl || undefined}
+            managerName={manager?.nom || ""}
+            userId={user.id}
+            onAvatarChange={setAvatarUrl}
+          />
 
           {/* Email (read-only) */}
           <div className="space-y-2">

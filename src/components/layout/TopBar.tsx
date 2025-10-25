@@ -89,6 +89,7 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
               manager={manager}
               isAdmin={isAdmin}
               onSignOut={onSignOut}
+              avatarUrl={manager.avatar_url}
             />
           )}
           

@@ -10,20 +10,29 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface ManagerDropdownProps {
   manager: any;
   isAdmin: boolean;
   onSignOut: () => void;
+  avatarUrl?: string;
 }
 
-export function ManagerDropdown({ manager, isAdmin, onSignOut }: ManagerDropdownProps) {
+export function ManagerDropdown({ manager, isAdmin, onSignOut, avatarUrl }: ManagerDropdownProps) {
   const navigate = useNavigate();
+  const initials = manager.nom?.substring(0, 2).toUpperCase() || "?";
   
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="flex items-center gap-2 h-9">
+          {avatarUrl ? (
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={avatarUrl} alt={manager.nom} />
+              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            </Avatar>
+          ) : null}
           <span className="font-medium text-sm">{manager.nom}</span>
           {manager.sponsor && (
             <span className="text-xs text-muted-foreground">({manager.sponsor})</span>

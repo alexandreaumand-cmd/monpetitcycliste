@@ -92,6 +92,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                 displaySponsor={displaySponsor}
                 selectedYear={selectedSeason?.annee}
                 isAdmin={isAdmin}
+                avatarUrl={manager.avatar_url}
               />
             )}
           </div>

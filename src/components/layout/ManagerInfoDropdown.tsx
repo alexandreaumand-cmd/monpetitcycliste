@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 interface ManagerInfoDropdownProps {
@@ -15,14 +16,18 @@ interface ManagerInfoDropdownProps {
   displaySponsor?: string;
   selectedYear?: number;
   isAdmin: boolean;
+  avatarUrl?: string;
 }
 
 export const ManagerInfoDropdown = ({ 
   manager, 
   displaySponsor, 
   selectedYear,
-  isAdmin 
+  isAdmin,
+  avatarUrl
 }: ManagerInfoDropdownProps) => {
+  const initials = manager.nom?.substring(0, 2).toUpperCase() || "?";
+  
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -31,7 +36,14 @@ export const ManagerInfoDropdown = ({
           size="sm"
           className="gap-2 h-9 text-sm font-medium hover:bg-accent"
         >
-          <User className="h-4 w-4" />
+          {avatarUrl ? (
+            <Avatar className="h-5 w-5">
+              <AvatarImage src={avatarUrl} alt={manager.nom} />
+              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            </Avatar>
+          ) : (
+            <User className="h-4 w-4" />
+          )}
           <span className="hidden sm:inline">{manager.nom}</span>
           <span className="sm:hidden">Info</span>
         </Button>
