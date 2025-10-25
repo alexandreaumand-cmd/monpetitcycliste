@@ -13,7 +13,7 @@ import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ManagerPrestigeIcons } from "./ManagerPrestigeIcons";
 import { useLeague } from "@/contexts/LeagueContext";
-import { useLeagueStandingsBySeason, useLeagueStandingsByPhase } from "@/hooks/useLeagueStandings";
+import { useLeagueStandingsStable } from "@/hooks/useLeagueStandingsStable";
 
 type StandingsProps = {
   phaseId?: string | null;
@@ -58,20 +58,12 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
     name: string;
   } | null>(null);
   
-  // Use dedicated hooks that properly filter by league_id
-  const { data: standingsBySeason, isLoading: isLoadingSeason } = useLeagueStandingsBySeason(
+  // Use stable backend function instead of direct view queries
+  const { data: standings, isLoading, isError, error } = useLeagueStandingsStable(
     leagueId,
-    selectedSeason?.id || null
-  );
-
-  const { data: standingsByPhase, isLoading: isLoadingPhase } = useLeagueStandingsByPhase(
-    leagueId,
+    selectedSeason?.id || null,
     phaseId || null
   );
-
-  // Select the appropriate data based on context
-  const standings = phaseId ? standingsByPhase : standingsBySeason;
-  const isLoading = phaseId ? isLoadingPhase : isLoadingSeason;
 
 
   // Fetch previous global standings for evolution calculation (global view only)
@@ -111,7 +103,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
     return <span className="text-muted-foreground text-sm">#{rank}</span>;
   };
 
-  if (isLoading) {
+  if (isLoading || leagueLoading) {
     return (
       <Card>
         <CardHeader>
@@ -124,6 +116,23 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            Erreur de chargement
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Impossible de charger le classement. {error?.message || 'Veuillez réessayer.'}
+          </p>
         </CardContent>
       </Card>
     );
@@ -310,7 +319,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
             })}
           </TableBody>
         </Table>
-        {!standings || standings.length === 0 && (
+        {(!standings || standings.length === 0) && (
           <div className="text-center py-8 text-muted-foreground">
             Aucun classement disponible
           </div>
