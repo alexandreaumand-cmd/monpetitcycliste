@@ -37,7 +37,7 @@ export const useSeasonContext = () => {
 };
 
 export const SeasonProvider = ({ children }: { children: ReactNode }) => {
-  const { leagueId } = useLeague();
+  const { leagueId, isLoading: leagueLoading } = useLeague();
   const [selectedSeason, setSelectedSeasonState] = useState<Season | null>(null);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [phases, setPhases] = useState<Phase[]>([]);
@@ -45,10 +45,15 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLeagueSeason, setIsLeagueSeason] = useState(false);
 
-  // Load seasons and set initial selection
+  // Load seasons and set season based on league or fallback
   useEffect(() => {
+    // Wait for LeagueContext to be ready
+    if (leagueLoading) return;
+
     const loadSeasons = async () => {
       try {
+        setIsLoading(true);
+
         // Fetch all seasons
         const { data: seasonsData, error: seasonsError } = await supabase
           .from("saisons")
@@ -58,35 +63,57 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
         if (seasonsError) throw seasonsError;
         setSeasons(seasonsData || []);
 
-        // Try to get season from localStorage
-        const storedSeasonId = localStorage.getItem("selectedSeasonId");
-        let initialSeason: Season | null = null;
+        let selectedSeason: Season | null = null;
 
-        if (storedSeasonId && seasonsData) {
-          initialSeason = seasonsData.find(s => s.id === storedSeasonId) || null;
+        // If a league is selected, load its season
+        if (leagueId) {
+          const { data: scopeData } = await supabase
+            .from("league_scopes")
+            .select("season_id")
+            .eq("league_id", leagueId)
+            .maybeSingle();
+
+          if (scopeData?.season_id) {
+            selectedSeason = seasonsData?.find(s => s.id === scopeData.season_id) || null;
+            if (selectedSeason) {
+              console.log("[SeasonContext] Auto-selecting season from league:", selectedSeason.annee);
+              setSelectedSeasonState(selectedSeason);
+              setIsLeagueSeason(true);
+              return; // Stop here - league season has priority
+            }
+          }
         }
 
-        // If no stored season, try to find season with active phase
-        if (!initialSeason && seasonsData) {
+        // Fallback: no league or league has no season
+        setIsLeagueSeason(false);
+
+        // Try localStorage
+        const storedSeasonId = localStorage.getItem("selectedSeasonId");
+        if (storedSeasonId && seasonsData) {
+          selectedSeason = seasonsData.find(s => s.id === storedSeasonId) || null;
+        }
+
+        // Try season with active phase
+        if (!selectedSeason && seasonsData) {
           const { data: activePhaseData } = await supabase
             .from("phases")
-            .select("id, saison_id")
+            .select("saison_id")
             .eq("statut", "active")
             .order("date_debut", { ascending: false })
             .limit(1)
             .maybeSingle();
 
           if (activePhaseData) {
-            initialSeason = seasonsData.find(s => s.id === activePhaseData.saison_id) || null;
+            selectedSeason = seasonsData.find(s => s.id === activePhaseData.saison_id) || null;
           }
         }
 
-        // If still no season, use most recent
-        if (!initialSeason && seasonsData && seasonsData.length > 0) {
-          initialSeason = seasonsData[0];
+        // Use most recent season as last resort
+        if (!selectedSeason && seasonsData && seasonsData.length > 0) {
+          selectedSeason = seasonsData[0];
         }
 
-        setSelectedSeasonState(initialSeason);
+        setSelectedSeasonState(selectedSeason);
       } catch (error) {
         console.error("Error loading seasons:", error);
       } finally {
@@ -95,49 +122,7 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
     };
 
     loadSeasons();
-  }, []);
-
-  // Load season from league when leagueId changes
-  useEffect(() => {
-    if (!leagueId) {
-      setIsLeagueSeason(false);
-      return;
-    }
-
-    const loadSeasonFromLeague = async () => {
-      try {
-        // Get season_id from league_scopes
-        const { data: scopeData, error: scopeError } = await supabase
-          .from("league_scopes")
-          .select("season_id")
-          .eq("league_id", leagueId)
-          .maybeSingle();
-
-        if (scopeError) throw scopeError;
-
-        if (scopeData?.season_id) {
-          // Get the full season data
-          const { data: seasonData, error: seasonError } = await supabase
-            .from("saisons")
-            .select("id, annee")
-            .eq("id", scopeData.season_id)
-            .single();
-
-          if (seasonError) throw seasonError;
-
-          if (seasonData) {
-            console.log("[SeasonContext] Auto-selecting season from league:", seasonData.annee);
-            setSelectedSeasonState(seasonData);
-            setIsLeagueSeason(true);
-          }
-        }
-      } catch (error) {
-        console.error("Error loading season from league:", error);
-      }
-    };
-
-    loadSeasonFromLeague();
-  }, [leagueId]);
+  }, [leagueId, leagueLoading]);
 
   // Load phases when season changes
   useEffect(() => {
