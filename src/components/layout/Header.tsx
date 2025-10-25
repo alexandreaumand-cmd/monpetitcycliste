@@ -1,7 +1,8 @@
 import { useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X, ListChecks, LineChart } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X, ListChecks, LineChart, Lock } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
@@ -44,7 +45,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
-  const { selectedSeason, setSelectedSeason, seasons, isLoading: seasonsLoading } = useSeasonContext();
+  const { selectedSeason, setSelectedSeason, seasons, isLoading: seasonsLoading, isLeagueSeason, lockedLeagueSeason } = useSeasonContext();
   const { data: seasonSponsor } = useManagerSponsor(manager?.id, selectedSeason?.id);
   
   // Fallback: sponsor de la saison > sponsor global > null
@@ -64,6 +65,11 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   };
 
   const handleSeasonChange = (seasonId: string) => {
+    // Prevent season change when league is locked
+    if (isLeagueSeason) {
+      console.warn("[Header] Season locked by league; ignoring change");
+      return;
+    }
     const season = seasons.find(s => s.id === seasonId) || null;
     console.log("[Header] Changement saison:", seasonId, "→", season?.annee);
     setSelectedSeason(season);
@@ -92,40 +98,51 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
 
           {/* Right: Season + League + Notifications + Logout */}
           <div className="flex items-center gap-2">
-            {/* Season Selector */}
+            {/* Season Selector or Locked Badge */}
             {!seasonsLoading && seasons.length > 0 && (
               <>
-                {/* Mobile: Native select */}
-                <select
-                  aria-label="Choisir l'année"
-                  className="md:hidden w-[90px] h-8 text-xs rounded-md border border-input bg-background text-foreground px-2 focus:outline-none focus:ring-2 focus:ring-ring"
-                  value={selectedSeason?.id || ""}
-                  onChange={(e) => handleSeasonChange(e.target.value)}
-                >
-                  <option value="" disabled>Année</option>
-                  {seasons.map((season) => (
-                    <option key={season.id} value={season.id}>
-                      {season.annee}
-                    </option>
-                  ))}
-                </select>
+                {isLeagueSeason && lockedLeagueSeason ? (
+                  <Badge variant="secondary" className="gap-1 h-8 px-3">
+                    <Lock className="h-3 w-3" />
+                    <span className="text-xs">Saison {lockedLeagueSeason.annee}</span>
+                  </Badge>
+                ) : (
+                  <>
+                    {/* Mobile: Native select */}
+                    <select
+                      aria-label="Choisir l'année"
+                      className="md:hidden w-[90px] h-8 text-xs rounded-md border border-input bg-background text-foreground px-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                      value={selectedSeason?.id || ""}
+                      onChange={(e) => handleSeasonChange(e.target.value)}
+                      disabled={isLeagueSeason}
+                    >
+                      <option value="" disabled>Année</option>
+                      {seasons.map((season) => (
+                        <option key={season.id} value={season.id}>
+                          {season.annee}
+                        </option>
+                      ))}
+                    </select>
 
-                {/* Desktop: Radix Select */}
-                <Select
-                  value={selectedSeason?.id || ""}
-                  onValueChange={handleSeasonChange}
-                >
-                  <SelectTrigger className="hidden md:flex w-[100px] h-8">
-                    <SelectValue placeholder="Année" />
-                  </SelectTrigger>
-                  <SelectContent className="z-50 bg-popover">
-                    {seasons.map((season) => (
-                      <SelectItem key={season.id} value={season.id}>
-                        {season.annee}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    {/* Desktop: Radix Select */}
+                    <Select
+                      value={selectedSeason?.id || ""}
+                      onValueChange={handleSeasonChange}
+                      disabled={isLeagueSeason}
+                    >
+                      <SelectTrigger className="hidden md:flex w-[100px] h-8">
+                        <SelectValue placeholder="Année" />
+                      </SelectTrigger>
+                      <SelectContent className="z-50 bg-popover">
+                        {seasons.map((season) => (
+                          <SelectItem key={season.id} value={season.id}>
+                            {season.annee}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
               </>
             )}
 

@@ -9,9 +9,11 @@ export function useMyLeagueStats(
 ) {
   const { selectedSeason, activePhase } = useSeasonContext();
   
-  // Use provided parameters or fallback to context
-  const effectiveSeasonId = seasonId !== undefined ? seasonId : selectedSeason?.id;
-  const effectivePhaseId = phaseId !== undefined ? phaseId : activePhase?.id;
+  // CRITICAL: Distinguish undefined (fallback allowed) vs null (explicitly disabled)
+  // undefined = parameter not provided → use context
+  // null = explicitly disabled → don't query
+  const effectiveSeasonId = seasonId === undefined ? selectedSeason?.id : seasonId;
+  const effectivePhaseId = phaseId === undefined ? activePhase?.id : phaseId;
   
   return useQuery({
     queryKey: ['my-league-stats', leagueId, effectiveSeasonId, effectivePhaseId],
@@ -96,6 +98,7 @@ export function useMyLeagueStats(
         seasonLeader,
       };
     },
-    enabled: !!leagueId && (!!effectiveSeasonId || !!effectivePhaseId),
+    // Only query when we have a league AND a valid season/phase (not null)
+    enabled: !!leagueId && effectiveSeasonId !== null && effectivePhaseId !== null && (!!effectiveSeasonId || !!effectivePhaseId),
   });
 }

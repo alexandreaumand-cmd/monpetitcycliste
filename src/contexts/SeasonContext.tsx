@@ -24,6 +24,7 @@ interface SeasonContextType {
   activePhase: Phase | null;
   isLoading: boolean;
   isLeagueSeason: boolean;
+  lockedLeagueSeason: Season | null;
 }
 
 const SeasonContext = createContext<SeasonContextType | undefined>(undefined);
@@ -157,6 +158,7 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
         activePhase,
         isLoading,
         isLeagueSeason,
+        lockedLeagueSeason: isLeagueSeason ? selectedSeason : null,
       }}
     >
       {children}

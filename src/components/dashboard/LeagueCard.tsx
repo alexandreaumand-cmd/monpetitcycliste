@@ -64,9 +64,11 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
     },
   });
 
+  // CRITICAL: Pass null (not undefined) when seasonInfo is not loaded yet
+  // to prevent fallback to global season during loading
   const { data: stats, isLoading: loadingStats } = useMyLeagueStats(
     league.id,
-    seasonInfo?.id,
+    seasonInfo ? seasonInfo.id : null,
     null
   );
 
