@@ -26,7 +26,7 @@ export function useCurrentLeagueInfo() {
         .from('league_scopes')
         .select(`
           season_id,
-          saisons:season_id (
+          saisons (
             annee
           )
         `)
@@ -42,7 +42,7 @@ export function useCurrentLeagueInfo() {
         leagueName: league.name,
         gameMode: league.game_mode as GameMode,
         gameModeName: template?.name || league.game_mode,
-        seasonYear: (scope.saisons as any)?.annee || null,
+        seasonYear: scope.saisons?.annee || null,
       };
     },
     enabled: !!leagueId,
