@@ -89,7 +89,7 @@ export function SuperAdminLeagueActions({ league, onActionComplete }: SuperAdmin
             <Eye className="mr-2 h-4 w-4" />
             Voir détails
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate(`/dashboard/super-admin/leagues/${league.id}/members`)}>
+          <DropdownMenuItem onClick={() => navigate(`/dashboard/super-admin/leagues/${league.id}`)}>
             <Users className="mr-2 h-4 w-4" />
             Gérer membres
           </DropdownMenuItem>
