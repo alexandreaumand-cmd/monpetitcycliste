@@ -29,7 +29,8 @@ import { useLeague } from "@/contexts/LeagueContext";
 const StartlistDesktop = () => {
   
   const queryClient = useQueryClient();
-  const { leagueId } = useLeague();
+  const { isSuperAdmin, loading: isLoadingRole } = useUserRole();
+  const { leagueId } = !isSuperAdmin ? useLeague() : { leagueId: null };
   const [viewMode, setViewMode] = useState<'list' | 'view'>('list');
   const [tabMode, setTabMode] = useState<'30days' | '90days' | 'history' | 'upcoming-year'>('30days');
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
@@ -63,7 +64,7 @@ const StartlistDesktop = () => {
 
   // Fetch upcoming courses filtered by league scope
   const { data: upcomingCourses, isLoading: isLoadingCourses } = useQuery({
-    queryKey: ['upcoming-courses-startlist', leagueId, tabMode],
+    queryKey: ['upcoming-courses-startlist', isSuperAdmin, leagueId, tabMode],
     queryFn: async () => {
       if (!leagueId) return [];
       
@@ -108,7 +109,7 @@ const StartlistDesktop = () => {
       
       return filtered;
     },
-    enabled: !!leagueId
+    enabled: isSuperAdmin || !!leagueId
   });
 
   // Check if startlist exists for a race
@@ -127,13 +128,13 @@ const StartlistDesktop = () => {
 
   // Fetch startlist view data when in view mode
   const { data: startlistViewData, isLoading: isLoadingStartlistView } = useQuery({
-    queryKey: ['startlist-view', selectedStartlistId, leagueId],
+    queryKey: ['startlist-view', selectedStartlistId, isSuperAdmin, leagueId],
     enabled: !!selectedStartlistId && viewMode === 'view',
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('startlist-manager-view', {
         body: { 
           startlist_id: selectedStartlistId,
-          league_id: leagueId
+          league_id: isSuperAdmin ? null : leagueId
         }
       });
       
@@ -268,8 +269,6 @@ const StartlistDesktop = () => {
       toast.error("Erreur : " + error.message);
     }
   };
-
-  const { isSuperAdmin, loading: isLoadingRole } = useUserRole();
 
   const handleExportImage = async () => {
     if (!exportRef.current) return;
