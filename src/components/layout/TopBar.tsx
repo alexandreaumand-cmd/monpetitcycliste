@@ -1,4 +1,4 @@
-import { LogOut } from "lucide-react";
+import { LogOut, Trophy, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -7,6 +7,9 @@ import { useSeasonContext } from "@/contexts/SeasonContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ManagerDropdown } from "./ManagerDropdown";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useUserLeagues } from "@/hooks/useUserLeagues";
+import { LEAGUE_TEMPLATES } from "@/lib/leagues/templates";
+import { Badge } from "@/components/ui/badge";
 
 interface TopBarProps {
   onSignOut: () => void;
@@ -17,25 +20,25 @@ interface TopBarProps {
 export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
   const { seasons, selectedSeason, setSelectedSeason, isLeagueSeason } = useSeasonContext();
   const { leagueId } = useLeague();
+  const { leagues } = useUserLeagues();
+  
+  const currentLeague = leagues.find(l => l.id === leagueId);
+  const gameMode = currentLeague?.game_mode;
+  const gameModeTemplate = gameMode 
+    ? LEAGUE_TEMPLATES.find(t => t.id === gameMode) 
+    : null;
   
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background">
       <div className="flex h-14 items-center gap-4 px-4">
         <SidebarTrigger />
         
-        {/* League and Season selectors on the left */}
+        {/* League selector on the left */}
         <div className="flex items-center gap-3">
-          {/* League Switcher */}
           <LeagueSwitcher />
           
-          {/* Season Selector or Read-only display */}
-          {leagueId ? (
-            // Read-only season display when league is selected
-            <div className="h-8 px-3 flex items-center text-sm text-muted-foreground border rounded-md bg-muted/50">
-              Saison {selectedSeason?.annee}
-            </div>
-          ) : (
-            // Editable selector when no league
+          {/* Season Selector - only visible when NO league is selected */}
+          {!leagueId && (
             <Select value={selectedSeason?.id} onValueChange={(value) => {
               const season = seasons.find(s => s.id === value);
               if (season) setSelectedSeason(season);
@@ -54,6 +57,29 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
           )}
         </div>
         
+        {/* Espacement gauche */}
+        <div className="flex-1" />
+        
+        {/* Badges informatifs au centre - visible uniquement si une ligue est sélectionnée */}
+        {currentLeague && (
+          <div className="flex items-center gap-2">
+            {gameModeTemplate && (
+              <Badge variant="outline" className="gap-1.5 px-3 py-1.5">
+                <Trophy className="h-3.5 w-3.5" />
+                <span className="text-xs font-medium">{gameModeTemplate.name}</span>
+              </Badge>
+            )}
+            
+            {selectedSeason && (
+              <Badge variant="secondary" className="gap-1.5 px-3 py-1.5">
+                <Calendar className="h-3.5 w-3.5" />
+                <span className="text-xs font-medium">Saison {selectedSeason.annee}</span>
+              </Badge>
+            )}
+          </div>
+        )}
+        
+        {/* Espacement droit */}
         <div className="flex-1" />
         
         {/* Manager, Notifications and Logout on the right */}
