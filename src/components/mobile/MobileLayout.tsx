@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useCurrentLeagueInfo } from "@/hooks/useCurrentLeagueInfo";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
 
 interface MobileLayoutProps {
@@ -29,6 +30,7 @@ export const MobileLayout = ({
   const location = useLocation();
   const { selectedSeason, setSelectedSeason, seasons, isLoading: seasonsLoading } = useSeasonContext();
   const { leagueId } = useLeague();
+  const { data: leagueInfo } = useCurrentLeagueInfo();
   
   const isHomePage = location.pathname === '/dashboard/home' || location.pathname === '/dashboard';
 
@@ -50,8 +52,14 @@ export const MobileLayout = ({
 
             <h1 className="text-lg font-bold truncate flex-1 text-center">
               {title}
-              {selectedSeason?.annee && (
-                <span className="ml-2 text-xs text-muted-foreground">• {selectedSeason.annee}</span>
+              {leagueInfo ? (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  • {leagueInfo.gameModeName} {leagueInfo.seasonYear}
+                </span>
+              ) : (
+                selectedSeason?.annee && (
+                  <span className="ml-2 text-xs text-muted-foreground">• {selectedSeason.annee}</span>
+                )
               )}
             </h1>
 

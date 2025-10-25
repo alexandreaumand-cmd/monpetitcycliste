@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LeagueSwitcher } from "@/components/leagues/LeagueSwitcher";
+import { LeagueInfoBadge } from "@/components/leagues/LeagueInfoBadge";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,6 +28,9 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
         <div className="flex items-center gap-3">
           {/* League Switcher */}
           <LeagueSwitcher />
+          
+          {/* Infos de la ligue active */}
+          {leagueId && <LeagueInfoBadge />}
           
           {/* Season Selector - masqué si dans une ligue */}
           {!leagueId && (
