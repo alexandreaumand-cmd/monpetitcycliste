@@ -78,32 +78,11 @@ export const MobileLayout = ({
           onSignOut={onSignOut}
           leagueSelector={<LeagueSwitcherMobile />}
           seasonSelector={
-            !seasonsLoading && seasons.length > 0 ? (
-              <div className="px-4 py-3 border-b">
-                <label className="text-sm font-medium block mb-2">Saison</label>
-                {leagueId ? (
-                  <Badge variant="secondary" className="w-full justify-center py-2">
-                    Saison {selectedSeason?.annee || '...'}
-                  </Badge>
-                ) : (
-                  <select
-                    aria-label="Choisir l'année"
-                    className="w-full h-9 rounded-md border border-input bg-background text-foreground px-3 focus:outline-none focus:ring-2 focus:ring-ring"
-                    value={selectedSeason?.id || ""}
-                    onChange={(e) => {
-                      const season = seasons.find(s => s.id === e.target.value) || null;
-                      console.log("[MobileLayout] Saison changée:", e.target.value, "→", season?.annee);
-                      setSelectedSeason(season);
-                    }}
-                  >
-                    <option value="" disabled>Choisir une année</option>
-                    {seasons.map((season) => (
-                      <option key={season.id} value={season.id}>
-                        {season.annee}
-                      </option>
-                    ))}
-                  </select>
-                )}
+            !seasonsLoading && seasons.length > 0 && selectedSeason ? (
+              <div className="px-4 py-2 border-b flex justify-center">
+                <Badge variant="secondary" className="text-sm font-medium">
+                  {selectedSeason.annee}
+                </Badge>
               </div>
             ) : undefined
           }

@@ -117,12 +117,9 @@ export const MobileDrawer = ({
 
         {seasonSelector}
 
-        <nav className="flex-1 overflow-y-auto py-4 space-y-6">
+        <nav className="flex-1 overflow-y-auto py-4 space-y-2">
           {sections.map((section, idx) => (
             <div key={idx}>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-2">
-                {section.title}
-              </p>
               <div className="space-y-1">
                 {section.items.map((item) => {
                   const Icon = item.icon;
@@ -144,7 +141,7 @@ export const MobileDrawer = ({
                   );
                 })}
               </div>
-              {idx < sections.length - 1 && <Separator className="mt-4" />}
+              {idx < sections.length - 1 && <Separator className="my-2" />}
             </div>
           ))}
         </nav>
