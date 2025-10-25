@@ -2,11 +2,19 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 
-export function useMyLeagueStats(leagueId: string | null) {
+export function useMyLeagueStats(
+  leagueId: string | null,
+  seasonId?: string | null,
+  phaseId?: string | null
+) {
   const { selectedSeason, activePhase } = useSeasonContext();
   
+  // Use provided parameters or fallback to context
+  const effectiveSeasonId = seasonId ?? selectedSeason?.id;
+  const effectivePhaseId = phaseId ?? activePhase?.id;
+  
   return useQuery({
-    queryKey: ['my-league-stats', leagueId, selectedSeason?.id, activePhase?.id],
+    queryKey: ['my-league-stats', leagueId, effectiveSeasonId, effectivePhaseId],
     queryFn: async () => {
       if (!leagueId) return null;
 
@@ -27,12 +35,12 @@ export function useMyLeagueStats(leagueId: string | null) {
       let mySeasonPoints = null;
       let seasonLeader = null;
       
-      if (selectedSeason?.id) {
+      if (effectiveSeasonId) {
         const { data: seasonStandings } = await supabase
           .from('v_manager_standings_by_season_v2')
           .select('*, managers!inner(nom)')
           .eq('league_id', leagueId)
-          .eq('saison_id', selectedSeason.id)
+          .eq('saison_id', effectiveSeasonId)
           .order('total_points', { ascending: false });
 
         if (seasonStandings) {
@@ -54,12 +62,12 @@ export function useMyLeagueStats(leagueId: string | null) {
       let myPhaseRank = null;
       let myPhasePoints = null;
       
-      if (activePhase?.id) {
+      if (effectivePhaseId) {
         const { data: phaseStandings } = await supabase
           .from('v_manager_standings_by_phase_v2')
           .select('*')
           .eq('league_id', leagueId)
-          .eq('phase_id', activePhase.id)
+          .eq('phase_id', effectivePhaseId)
           .order('total_points', { ascending: false });
 
         if (phaseStandings) {
@@ -79,6 +87,6 @@ export function useMyLeagueStats(leagueId: string | null) {
         seasonLeader,
       };
     },
-    enabled: !!leagueId && (!!selectedSeason || !!activePhase),
+    enabled: !!leagueId && (!!effectiveSeasonId || !!effectivePhaseId),
   });
 }

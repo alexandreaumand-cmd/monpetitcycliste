@@ -20,11 +20,8 @@ interface LeagueCardProps {
 }
 
 export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
-  console.log("[LeagueCard] Rendering card for:", league.name, "ID:", league.id);
-  
   const [invitesSheetOpen, setInvitesSheetOpen] = useState(false);
   const { data: memberCount, isLoading: loadingMembers } = useLeagueMemberCount(league.id);
-  const { data: stats, isLoading: loadingStats } = useMyLeagueStats(league.id);
   const { data: members = [], isLoading: loadingMembersList } = useLeagueMembers(league.id);
   
   const isAdmin = league.role === 'owner' || league.role === 'admin';
@@ -44,6 +41,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         .select(`
           season_id,
           saisons:season_id (
+            id,
             annee
           )
         `)
@@ -51,9 +49,15 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         .single();
       
       if (error) throw error;
-      return data?.saisons as { annee: number } | null;
+      return data?.saisons as { id: string; annee: number } | null;
     },
   });
+
+  const { data: stats, isLoading: loadingStats } = useMyLeagueStats(
+    league.id,
+    seasonInfo?.id,
+    null
+  );
 
   const gameMode = LEAGUE_TEMPLATES.find(t => t.id === league.game_mode);
 

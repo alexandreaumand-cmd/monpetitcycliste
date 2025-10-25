@@ -21,8 +21,6 @@ export default function DashboardHome({ onSignOut }: DashboardHomeProps) {
   const { isSuperAdmin } = useUserRole();
 
   const handleViewLeagueDetails = (leagueId: string) => {
-    console.log("[DashboardHome] Navigating to league:", leagueId);
-    console.log("[DashboardHome] All available leagues:", leagues.map(l => ({ id: l.id, name: l.name })));
     setLeagueId(leagueId);
     navigate('/dashboard/classement');
   };
