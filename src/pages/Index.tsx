@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, TrendingUp, Award, MapPin, Calendar, Shield, Target } from "lucide-react";
+import { Trophy, Users, TrendingUp, Award, MapPin, Calendar, Shield, Target, Zap, Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/hero-cycling.jpg";
+import mpcLogo from "@/assets/mpc-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -27,6 +28,19 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Header fixe */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <img src={mpcLogo} alt="Mon Petit Cycliste" className="h-10 w-10" />
+            <span className="font-montserrat font-bold text-xl">Mon Petit Cycliste</span>
+          </div>
+          <Button onClick={() => (user ? navigate("/dashboard/home") : navigate("/auth"))}>
+            {user ? "Mon Dashboard" : "Connexion"}
+          </Button>
+        </div>
+      </header>
+
       {/* Hero Section - Tour de France Style */}
       <section className="relative overflow-hidden min-h-[550px] md:min-h-[600px] flex items-center tdf-black-bg">
         <div
@@ -65,9 +79,14 @@ const Index = () => {
       </section>
 
       {/* Comment ça marche - 3 colonnes */}
-      <section className="py-20 bg-[#F5F5F5]">
+      <section className="py-20 bg-gradient-to-br from-gray-50 via-white to-yellow-50">
         <div className="container mx-auto px-4">
-          <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-16">Comment ça marche ?</h2>
+          <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-4 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+            Comment ça marche ?
+          </h2>
+          <p className="font-poppins text-center text-gray-600 mb-16 max-w-2xl mx-auto text-lg">
+            En 3 étapes simples, lance ton aventure de manager cycliste
+          </p>
 
           <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
             {[
@@ -87,13 +106,21 @@ const Index = () => {
                 description: "Tes coureurs marquent des points selon leurs performances réelles",
               },
             ].map((step, i) => (
-              <Card key={i} className="text-center hover-lift border-none shadow-lg bg-white">
+              <Card 
+                key={i} 
+                className="group border-2 border-gray-100 hover:border-yellow-400 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl bg-white/80 backdrop-blur-sm"
+              >
                 <CardContent className="pt-8 pb-6">
-                  <div className="w-20 h-20 rounded-full tdf-yellow-bg flex items-center justify-center mx-auto mb-6">
-                    <step.icon className="w-10 h-10 text-black" />
+                  <div className="relative mb-6">
+                    <div className="absolute -top-2 -left-2 bg-yellow-400 text-black font-montserrat font-black text-sm w-8 h-8 rounded-full flex items-center justify-center shadow-md">
+                      {i + 1}
+                    </div>
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <step.icon className="w-10 h-10 text-black" />
+                    </div>
                   </div>
-                  <h3 className="font-montserrat font-bold text-xl mb-3">{step.title}</h3>
-                  <p className="font-poppins text-gray-600">{step.description}</p>
+                  <h3 className="font-montserrat font-bold text-xl mb-3 text-center">{step.title}</h3>
+                  <p className="font-poppins text-gray-600 text-center leading-relaxed">{step.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -115,40 +142,54 @@ const Index = () => {
                 type: "Ligues rapides",
                 description: "Joue sur un seul Grand Tour",
                 cta: "Tour de France",
-                icon: "🚴",
-                color: "bg-yellow-50 border-yellow-400",
+                Icon: Zap,
+                gradient: "from-yellow-50 to-yellow-100",
+                border: "border-yellow-400",
               },
               {
                 type: "Ligues saison",
                 description: "Suis toute l'année cycliste",
                 cta: "Saison complète",
-                icon: "📅",
-                color: "bg-blue-50 border-blue-400",
+                Icon: Calendar,
+                gradient: "from-gray-50 to-gray-100",
+                border: "border-gray-400",
               },
               {
                 type: "Ligues entre amis",
                 description: "Jusqu'à 10 managers",
                 cta: "Créer ma ligue",
-                icon: "👥",
-                color: "bg-green-50 border-green-400",
+                Icon: Users,
+                gradient: "from-yellow-100 to-amber-100",
+                border: "border-amber-400",
               },
               {
                 type: "Ligues publiques",
                 description: "Affronte toute la communauté",
                 cta: "Découvrir",
-                icon: "🌍",
-                color: "bg-purple-50 border-purple-400",
+                Icon: Globe,
+                gradient: "from-black to-gray-900",
+                border: "border-yellow-400",
+                textWhite: true,
               },
             ].map((league, i) => (
-              <Card key={i} className={`hover-lift border-2 ${league.color}`}>
+              <Card 
+                key={i} 
+                className={`hover:scale-105 transition-all duration-300 border-2 ${league.border} bg-gradient-to-br ${league.gradient} shadow-lg`}
+              >
                 <CardHeader>
-                  <div className="text-5xl mb-3">{league.icon}</div>
-                  <CardTitle className="font-montserrat text-xl">{league.type}</CardTitle>
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center mx-auto mb-3 shadow-md">
+                    <league.Icon className="w-8 h-8 text-black" />
+                  </div>
+                  <CardTitle className={`font-montserrat text-xl text-center ${league.textWhite ? 'text-white' : ''}`}>
+                    {league.type}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="font-poppins text-gray-600 mb-4">{league.description}</p>
+                  <p className={`font-poppins mb-4 text-center ${league.textWhite ? 'text-gray-300' : 'text-gray-600'}`}>
+                    {league.description}
+                  </p>
                   <Button
-                    className="w-full tdf-black-bg text-white hover:bg-gray-800 font-montserrat"
+                    className="w-full bg-black text-yellow-400 hover:bg-gray-900 border border-yellow-500 font-montserrat font-semibold"
                     onClick={() => navigate("/auth")}
                   >
                     {league.cta}
@@ -161,90 +202,176 @@ const Index = () => {
       </section>
 
       {/* Le système de points */}
-      <section className="py-20 bg-[#F5F5F5]">
+      <section className="py-20 bg-gradient-to-br from-gray-50 via-white to-yellow-50">
         <div className="container mx-auto px-4">
-          <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-4">Le système de points</h2>
-          <p className="font-poppins text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-            Chaque jour de course, tes coureurs gagnent des points selon leurs résultats officiels :
+          <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-4 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+            Comment gagner des points ?
+          </h2>
+          <p className="font-poppins text-center text-gray-600 mb-12 max-w-3xl mx-auto text-lg">
+            Chaque action de tes coureurs durant les vraies courses UCI génère des points. 
+            Plus tes coureurs performent, plus tu grimpes au classement !
           </p>
 
-          <Card className="max-w-3xl mx-auto shadow-2xl border-2 border-yellow-400">
-            <CardContent className="p-8">
-              <div className="space-y-4">
-                {[
-                  { action: "Victoire d'étape", points: "+100 pts", icon: "🏆" },
-                  { action: "Maillot à pois", points: "+50 pts", icon: "🔴" },
-                  { action: "Maillot jaune", points: "Bonus cumulatif", icon: "🟡" },
-                ].map((rule, i) => (
-                  <div
-                    key={i}
-                    className="flex justify-between items-center p-4 bg-white rounded-lg border border-gray-200"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-3xl">{rule.icon}</span>
-                      <span className="font-poppins text-lg">{rule.action}</span>
+          {/* Grille détaillée */}
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
+            {[
+              {
+                category: "Classements d'étape",
+                items: [
+                  { position: "1ère place", points: "100", icon: Trophy, color: "yellow" },
+                  { position: "2ème place", points: "80", icon: Award, color: "gray" },
+                  { position: "3ème place", points: "60", icon: Award, color: "orange" },
+                  { position: "Top 10", points: "20-40", icon: Target, color: "blue" },
+                ],
+              },
+              {
+                category: "Maillots distinctifs",
+                items: [
+                  { position: "Maillot jaune", points: "+30/jour", icon: Shield, color: "yellow" },
+                  { position: "Maillot vert", points: "+25/jour", icon: Shield, color: "green" },
+                  { position: "Maillot à pois", points: "+20/jour", icon: Shield, color: "red" },
+                ],
+              },
+              {
+                category: "Classements généraux",
+                items: [
+                  { position: "GC Top 3", points: "150-300", icon: MapPin, color: "yellow" },
+                  { position: "GC Top 10", points: "50-100", icon: MapPin, color: "gray" },
+                ],
+              },
+            ].map((category, idx) => (
+              <Card key={idx} className="border-2 border-yellow-400 shadow-xl bg-white">
+                <CardHeader className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-b-2 border-yellow-400">
+                  <CardTitle className="font-montserrat text-lg text-center">{category.category}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 space-y-3">
+                  {category.items.map((item, i) => (
+                    <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <item.icon className={`w-5 h-5 text-${item.color}-500`} />
+                        <span className="font-poppins text-sm">{item.position}</span>
+                      </div>
+                      <Badge className="bg-black text-yellow-400 font-montserrat font-bold">
+                        {item.points} pts
+                      </Badge>
                     </div>
-                    <Badge className="tdf-yellow-bg text-black font-montserrat font-bold text-base px-4 py-2">
-                      {rule.points}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-          {/* Graphique podium */}
-          <div className="mt-12 flex justify-center gap-4">
-            <div className="text-center">
-              <div className="w-20 h-32 bg-gray-300 rounded-t-lg flex items-end justify-center pb-2">
-                <span className="font-montserrat font-bold text-2xl">2</span>
+          {/* Podium 3D moderne */}
+          <div className="mt-12 flex justify-center items-end gap-6 max-w-md mx-auto">
+            {/* 2ème place */}
+            <div className="text-center flex-1">
+              <div className="relative">
+                <div className="w-full h-40 bg-gradient-to-b from-gray-300 to-gray-400 rounded-t-xl shadow-2xl flex flex-col items-center justify-between py-4 border-4 border-gray-500">
+                  <Award className="w-10 h-10 text-gray-700" />
+                  <span className="font-montserrat font-black text-4xl text-gray-700">2</span>
+                </div>
+                <div className="mt-3">
+                  <p className="font-montserrat font-bold text-lg">Argent</p>
+                  <Badge className="bg-gray-500 text-white mt-1">80 pts</Badge>
+                </div>
               </div>
-              <p className="font-poppins text-sm mt-2">Argent</p>
             </div>
-            <div className="text-center">
-              <div className="w-20 h-40 tdf-yellow-bg rounded-t-lg flex items-end justify-center pb-2">
-                <span className="font-montserrat font-bold text-2xl">1</span>
+
+            {/* 1ère place - plus haute */}
+            <div className="text-center flex-1">
+              <div className="relative">
+                <div className="w-full h-56 bg-gradient-to-b from-yellow-300 via-yellow-400 to-yellow-500 rounded-t-xl shadow-2xl flex flex-col items-center justify-between py-4 border-4 border-yellow-600 animate-pulse">
+                  <Trophy className="w-12 h-12 text-yellow-900" />
+                  <span className="font-montserrat font-black text-5xl text-yellow-900">1</span>
+                </div>
+                <div className="mt-3">
+                  <p className="font-montserrat font-bold text-lg">Or</p>
+                  <Badge className="bg-yellow-500 text-black mt-1 font-bold">100 pts</Badge>
+                </div>
               </div>
-              <p className="font-poppins text-sm mt-2">Or</p>
             </div>
-            <div className="text-center">
-              <div className="w-20 h-24 bg-orange-400 rounded-t-lg flex items-end justify-center pb-2">
-                <span className="font-montserrat font-bold text-2xl">3</span>
+
+            {/* 3ème place */}
+            <div className="text-center flex-1">
+              <div className="relative">
+                <div className="w-full h-32 bg-gradient-to-b from-orange-300 to-orange-500 rounded-t-xl shadow-2xl flex flex-col items-center justify-between py-4 border-4 border-orange-600">
+                  <Award className="w-8 h-8 text-orange-800" />
+                  <span className="font-montserrat font-black text-3xl text-orange-800">3</span>
+                </div>
+                <div className="mt-3">
+                  <p className="font-montserrat font-bold text-lg">Bronze</p>
+                  <Badge className="bg-orange-500 text-white mt-1">60 pts</Badge>
+                </div>
               </div>
-              <p className="font-poppins text-sm mt-2">Bronze</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Témoignages / Communauté */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-gradient-to-b from-white to-gray-50">
         <div className="container mx-auto px-4">
-          <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-12">Ce qu'ils en pensent</h2>
+          <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-4">
+            Ce qu'ils en pensent
+          </h2>
+          <p className="font-poppins text-center text-gray-600 mb-12 max-w-2xl mx-auto">
+            Des milliers de managers s'affrontent chaque saison
+          </p>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {[
               {
-                quote: "Une ambiance incroyable dans notre ligue entre potes !",
-                author: "Max",
+                quote: "Une ambiance incroyable dans notre ligue entre potes ! On se challenge tous les soirs pendant le Tour.",
+                author: "Maxime L.",
                 location: "Lyon",
-                avatar: "👨",
+                initials: "ML",
+                rating: 5,
               },
               {
-                quote: "On suit les étapes du Tour tous les soirs, c'est génial !",
-                author: "Julie",
+                quote: "Le système d'enchères apporte une vraie dimension stratégique. Parfait pour les fans de cyclisme !",
+                author: "Julie D.",
                 location: "Nantes",
-                avatar: "👩",
+                initials: "JD",
+                rating: 5,
+              },
+              {
+                quote: "Suivre les courses prend une toute nouvelle dimension quand tes coureurs jouent les premières places.",
+                author: "Thomas R.",
+                location: "Paris",
+                initials: "TR",
+                rating: 5,
               },
             ].map((testimonial, i) => (
-              <Card key={i} className="border-2 border-yellow-400 shadow-lg hover-lift">
-                <CardContent className="pt-6">
-                  <p className="font-poppins text-lg italic mb-4">"{testimonial.quote}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className="text-4xl">{testimonial.avatar}</div>
+              <Card 
+                key={i} 
+                className="border-2 border-gray-200 hover:border-yellow-400 transition-all duration-300 hover:shadow-2xl bg-white/80 backdrop-blur-sm"
+              >
+                <CardContent className="pt-6 space-y-4">
+                  {/* Rating stars */}
+                  <div className="flex gap-1 justify-center">
+                    {[...Array(testimonial.rating)].map((_, idx) => (
+                      <Award key={idx} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </div>
+
+                  {/* Quote */}
+                  <p className="font-poppins text-base italic text-gray-700 leading-relaxed">
+                    "{testimonial.quote}"
+                  </p>
+
+                  {/* Author avec avatar moderne */}
+                  <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center shadow-md">
+                      <span className="font-montserrat font-black text-black text-sm">
+                        {testimonial.initials}
+                      </span>
+                    </div>
                     <div>
-                      <p className="font-montserrat font-bold">{testimonial.author}</p>
-                      <p className="text-sm text-gray-500">{testimonial.location}</p>
+                      <p className="font-montserrat font-bold text-gray-900">{testimonial.author}</p>
+                      <p className="text-sm text-gray-500 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {testimonial.location}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -255,23 +382,62 @@ const Index = () => {
       </section>
 
       {/* Pourquoi jouer à MPC */}
-      <section className="py-20 tdf-black-bg text-white">
-        <div className="container mx-auto px-4">
-          <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-16 tdf-yellow-text">
-            Pourquoi jouer à Mon Petit Cycliste
+      <section className="py-20 bg-gradient-to-br from-black via-gray-900 to-black text-white relative overflow-hidden">
+        <div className="container mx-auto px-4 relative z-10">
+          <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-4">
+            Pourquoi jouer à{" "}
+            <span className="block text-yellow-400 mt-2">Mon Petit Cycliste</span>
           </h2>
+          <p className="font-poppins text-center text-gray-400 mb-16 max-w-2xl mx-auto text-lg">
+            Le fantasy cycling le plus immersif basé sur les vraies courses UCI
+          </p>
 
-          <div className="grid md:grid-cols-4 gap-8 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {[
-              { icon: "🔥", text: "Basé sur les vraies courses" },
-              { icon: "🧠", text: "Stratégie et enchères" },
-              { icon: "👥", text: "Joue avec tes amis" },
-              { icon: "🏅", text: "Classements et trophées" },
+              {
+                Icon: Trophy,
+                text: "Basé sur les vraies courses",
+                description: "Tous les résultats sont synchronisés avec le calendrier UCI officiel",
+                gradient: "from-yellow-400 to-yellow-500",
+              },
+              {
+                Icon: Target,
+                text: "Stratégie et enchères",
+                description: "Compose ton équipe lors des mercatos et choisis tes tactiques",
+                gradient: "from-blue-400 to-blue-500",
+              },
+              {
+                Icon: Users,
+                text: "Joue avec tes amis",
+                description: "Crée ta ligue privée et défie jusqu'à 10 managers",
+                gradient: "from-green-400 to-green-500",
+              },
+              {
+                Icon: Award,
+                text: "Classements et trophées",
+                description: "Grimpe au sommet et remporte les maillots prestigieux",
+                gradient: "from-purple-400 to-purple-500",
+              },
             ].map((feature, i) => (
-              <div key={i} className="text-center">
-                <div className="text-6xl mb-4">{feature.icon}</div>
-                <p className="font-poppins text-lg">{feature.text}</p>
-              </div>
+              <Card
+                key={i}
+                className="bg-white/10 backdrop-blur-md border-2 border-white/20 hover:border-yellow-400 transition-all duration-300 hover:scale-105 hover:bg-white/20 group"
+              >
+                <CardContent className="pt-8 pb-6 text-center space-y-4">
+                  {/* Icône avec gradient */}
+                  <div
+                    className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mx-auto shadow-2xl group-hover:scale-110 transition-transform duration-300`}
+                  >
+                    <feature.Icon className="w-9 h-9 text-white" />
+                  </div>
+
+                  {/* Titre */}
+                  <h3 className="font-montserrat font-bold text-xl text-white">{feature.text}</h3>
+
+                  {/* Description */}
+                  <p className="font-poppins text-sm text-gray-300 leading-relaxed">{feature.description}</p>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
