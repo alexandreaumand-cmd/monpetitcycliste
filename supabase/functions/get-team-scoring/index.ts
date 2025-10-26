@@ -115,18 +115,11 @@ Deno.serve(async (req) => {
     }
 
     // Get points for these coureurs in scope
-    let pointsQuery = supabaseClient
+    const { data: pointsData, error: pointsError } = await supabaseClient
       .from('points_ledger')
       .select('coureur_id, course_id, points, created_at')
-      .eq('manager_id', manager_id)
       .in('phase_id', phaseIds)
       .in('coureur_id', coureurIds);
-    
-    if (league_id) {
-      pointsQuery = pointsQuery.eq('league_id', league_id);
-    }
-
-    const { data: pointsData, error: pointsError } = await pointsQuery;
 
     if (pointsError) throw pointsError;
 
