@@ -49,7 +49,6 @@ export default function Rankings() {
               <TabsTrigger value="standings">Managers</TabsTrigger>
               <TabsTrigger value="riders">Top Coureurs</TabsTrigger>
               <TabsTrigger value="timeline">Chrono</TabsTrigger>
-              <TabsTrigger value="team">Équipes</TabsTrigger>
               <TabsTrigger value="history">Historique</TabsTrigger>
               <TabsTrigger value="comparison">Comparaison</TabsTrigger>
             </TabsList>
@@ -91,11 +90,6 @@ export default function Rankings() {
               viewMode={selectedPhase ? 'phase' : 'season'}
             />
           </TabsContent>
-
-          <TabsContent value="team" className="space-y-4">
-            <TeamScoring phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
-          </TabsContent>
-
 
           <TabsContent value="history" className="space-y-4">
             <ManagerHistory phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
