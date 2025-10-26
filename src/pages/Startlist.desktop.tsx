@@ -30,7 +30,7 @@ const StartlistDesktop = () => {
   
   const queryClient = useQueryClient();
   const { isSuperAdmin, loading: isLoadingRole } = useUserRole();
-  const { leagueId } = !isSuperAdmin ? useLeague() : { leagueId: null };
+  const { leagueId } = useLeague();
   const [viewMode, setViewMode] = useState<'list' | 'view'>('list');
   const [tabMode, setTabMode] = useState<'30days' | '90days' | 'history' | 'upcoming-year'>('30days');
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
@@ -64,7 +64,7 @@ const StartlistDesktop = () => {
 
   // Fetch upcoming courses filtered by league scope
   const { data: upcomingCourses, isLoading: isLoadingCourses } = useQuery({
-    queryKey: ['upcoming-courses-startlist', isSuperAdmin, leagueId, selectedSeason?.id, tabMode],
+    queryKey: ['upcoming-courses-startlist', leagueId, selectedSeason?.id, tabMode],
     queryFn: async () => {
       if (!leagueId) return [];
       
@@ -109,7 +109,7 @@ const StartlistDesktop = () => {
       
       return filtered;
     },
-    enabled: (isSuperAdmin || !!leagueId) && !!selectedSeason?.id
+    enabled: !!leagueId && !!selectedSeason?.id
   });
 
   // Check if startlist exists for a race
@@ -134,7 +134,7 @@ const StartlistDesktop = () => {
       const { data, error } = await supabase.functions.invoke('startlist-manager-view', {
         body: { 
           startlist_id: selectedStartlistId,
-          league_id: isSuperAdmin ? null : leagueId
+          league_id: leagueId
         }
       });
       
