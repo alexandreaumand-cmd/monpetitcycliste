@@ -35,15 +35,12 @@ export function DashboardHomeHeader({
               !isMobile && "md:h-12 md:w-12"
             )}
           />
-          {!isMobile ? (
-            <h1 className="text-xl font-montserrat font-bold text-white">
-              Mon Petit Cycliste
-            </h1>
-          ) : (
-            <h1 className="text-sm font-montserrat font-bold text-white">
-              Mon PC
-            </h1>
-          )}
+          <h1 className={cn(
+            "font-montserrat font-bold text-white",
+            isMobile ? "text-sm" : "text-xl"
+          )}>
+            Mon Petit Cycliste
+          </h1>
         </div>
 
         {/* Actions */}
