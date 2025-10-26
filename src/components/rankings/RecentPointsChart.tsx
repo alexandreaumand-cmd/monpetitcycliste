@@ -81,36 +81,28 @@ export const RecentPointsChart = ({ phaseId, saisonId, viewMode }: RecentPointsC
 
   const managers = filteredSeries.map((s: any) => s.manager_nom);
   
-  // Fonction de hash stable pour assigner les couleurs selon le nom du manager
-  const getColorIndex = (name: string) => {
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return Math.abs(hash);
-  };
+  // Palette optimisée pour contraste maximum entre couleurs adjacentes
+  const colors = [
+    "hsl(210, 100%, 50%)",   // Bleu vif
+    "hsl(0, 85%, 55%)",      // Rouge vif
+    "hsl(120, 85%, 35%)",    // Vert foncé
+    "hsl(280, 90%, 55%)",    // Violet
+    "hsl(35, 100%, 50%)",    // Orange
+    "hsl(340, 90%, 50%)",    // Rose fuchsia
+    "hsl(180, 80%, 40%)",    // Cyan
+    "hsl(50, 100%, 45%)",    // Jaune moutarde
+    "hsl(160, 70%, 45%)",    // Vert émeraude
+    "hsl(25, 95%, 55%)",     // Orange brûlé
+    "hsl(190, 85%, 45%)",    // Bleu turquoise
+    "hsl(300, 75%, 50%)",    // Magenta
+    "hsl(90, 70%, 40%)",     // Vert lime
+    "hsl(15, 85%, 55%)",     // Rouge orangé
+    "hsl(240, 80%, 60%)",    // Bleu indigo
+  ];
   
-  // Build ChartConfig avec des couleurs stables par manager
-  const chartConfig: ChartConfig = managers.reduce((config, manager) => {
-    // Palette optimisée pour contraste maximum entre couleurs adjacentes
-    const colors = [
-      "hsl(210, 100%, 50%)",   // Bleu vif
-      "hsl(0, 85%, 55%)",      // Rouge vif
-      "hsl(120, 85%, 35%)",    // Vert foncé
-      "hsl(280, 90%, 55%)",    // Violet
-      "hsl(35, 100%, 50%)",    // Orange
-      "hsl(340, 90%, 50%)",    // Rose fuchsia
-      "hsl(180, 80%, 40%)",    // Cyan
-      "hsl(50, 100%, 45%)",    // Jaune moutarde
-      "hsl(160, 70%, 45%)",    // Vert émeraude
-      "hsl(25, 95%, 55%)",     // Orange brûlé
-      "hsl(190, 85%, 45%)",    // Bleu turquoise
-      "hsl(300, 75%, 50%)",    // Magenta
-      "hsl(90, 70%, 40%)",     // Vert lime
-      "hsl(15, 85%, 55%)",     // Rouge orangé
-      "hsl(240, 80%, 60%)",    // Bleu indigo
-    ];
-    const colorIndex = getColorIndex(manager) % colors.length;
+  // Build ChartConfig avec attribution séquentielle des couleurs
+  const chartConfig: ChartConfig = managers.reduce((config, manager, index) => {
+    const colorIndex = index % colors.length;
     config[manager] = {
       label: manager,
       color: colors[colorIndex],
@@ -166,7 +158,7 @@ export const RecentPointsChart = ({ phaseId, saisonId, viewMode }: RecentPointsC
               {managers.map((manager) => (
                 <Line
                   key={manager}
-                  type="monotone"
+                  type="natural"
                   dataKey={manager}
                   stroke={chartConfig[manager]?.color || "hsl(var(--chart-1))"}
                   strokeWidth={2}
