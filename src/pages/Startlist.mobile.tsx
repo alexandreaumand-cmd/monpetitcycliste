@@ -41,7 +41,7 @@ import { useLeague } from "@/contexts/LeagueContext";
 export const StartlistMobile = () => {
   const queryClient = useQueryClient();
   const { isAdmin } = useUserRole();
-  const { phases, isLoading: isLoadingContext } = useSeasonContext();
+  const { phases, selectedSeason, isLoading: isLoadingContext } = useSeasonContext();
   const { leagueId } = useLeague();
   const [viewMode, setViewMode] = useState<"list" | "view">("list");
   const [tabMode, setTabMode] = useState<"30days" | "90days" | "history" | "upcoming-year">("30days");
@@ -57,11 +57,11 @@ export const StartlistMobile = () => {
 
   // Fetch races filtered by league scope
   const { data: races } = useQuery({
-    queryKey: ["startlist-races", leagueId, tabMode],
+    queryKey: ["startlist-races", leagueId, selectedSeason?.id, tabMode],
     queryFn: async () => {
       if (!leagueId) return [];
       
-      console.log('[Startlist Mobile] Loading courses for league:', leagueId);
+      console.log('[Startlist Mobile] Loading courses for league:', leagueId, 'season:', selectedSeason?.id);
       
       const today = new Date().toISOString().split('T')[0];
       const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -70,7 +70,7 @@ export const StartlistMobile = () => {
       // Call edge function to get league courses
       const { data: leagueCourses, error: edgeFnError } = await supabase.functions.invoke(
         'get-league-courses',
-        { body: { league_id: leagueId, season_id: null } }
+        { body: { league_id: leagueId, season_id: selectedSeason?.id } }
       );
       
       if (edgeFnError) {
@@ -102,7 +102,7 @@ export const StartlistMobile = () => {
       
       return filtered.slice(0, 100);
     },
-    enabled: !!leagueId
+    enabled: !!leagueId && !!selectedSeason?.id
   });
 
   // Fetch all startlist info in one query

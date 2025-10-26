@@ -36,7 +36,7 @@ const StartlistDesktop = () => {
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
   const [selectedRaceForViewing, setSelectedRaceForViewing] = useState<any>(null);
   const [showUnmatched, setShowUnmatched] = useState(false);
-  const { phases, isLoading: isLoadingContext } = useSeasonContext();
+  const { phases, selectedSeason, isLoading: isLoadingContext } = useSeasonContext();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -64,11 +64,11 @@ const StartlistDesktop = () => {
 
   // Fetch upcoming courses filtered by league scope
   const { data: upcomingCourses, isLoading: isLoadingCourses } = useQuery({
-    queryKey: ['upcoming-courses-startlist', isSuperAdmin, leagueId, tabMode],
+    queryKey: ['upcoming-courses-startlist', isSuperAdmin, leagueId, selectedSeason?.id, tabMode],
     queryFn: async () => {
       if (!leagueId) return [];
       
-      console.log('[Startlist] Loading courses for league:', leagueId);
+      console.log('[Startlist] Loading courses for league:', leagueId, 'season:', selectedSeason?.id);
       
       const today = new Date().toISOString().split('T')[0];
       const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -77,7 +77,7 @@ const StartlistDesktop = () => {
       // Call edge function to get league courses
       const { data: leagueCourses, error: edgeFnError } = await supabase.functions.invoke(
         'get-league-courses',
-        { body: { league_id: leagueId, season_id: null } }
+        { body: { league_id: leagueId, season_id: selectedSeason?.id } }
       );
       
       if (edgeFnError) {
@@ -109,7 +109,7 @@ const StartlistDesktop = () => {
       
       return filtered;
     },
-    enabled: isSuperAdmin || !!leagueId
+    enabled: (isSuperAdmin || !!leagueId) && !!selectedSeason?.id
   });
 
   // Check if startlist exists for a race
