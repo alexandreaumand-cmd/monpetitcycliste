@@ -158,7 +158,7 @@ export const RecentPointsChart = ({ phaseId, saisonId, viewMode }: RecentPointsC
               {managers.map((manager) => (
                 <Line
                   key={manager}
-                  type="natural"
+                  type="basis"
                   dataKey={manager}
                   stroke={chartConfig[manager]?.color || "hsl(var(--chart-1))"}
                   strokeWidth={2}
