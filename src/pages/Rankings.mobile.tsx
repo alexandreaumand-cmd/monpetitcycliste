@@ -116,7 +116,7 @@ export const RankingsMobile = () => {
       // Convert to Map<manager_id, rank>
       const rankMap = new Map<string, number>();
       data?.forEach((row: any) => {
-        rankMap.set(row.manager_id, row.previous_rank);
+        rankMap.set(row.manager_id, row.rank);
       });
       return rankMap;
     },
