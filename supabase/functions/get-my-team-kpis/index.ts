@@ -87,18 +87,41 @@ Deno.serve(async (req) => {
       });
     }
 
-    // KPI #1: Get total points for this manager in scope
-    let pointsQuery = supabaseClient
-      .from('points_ledger')
-      .select('points')
+    // Get coureur_ids for this manager's roster
+    let rostersQuery = supabaseClient
+      .from('rosters')
+      .select('coureur_id')
       .eq('manager_id', actualManagerId)
       .in('phase_id', phaseIds);
     
     if (league_id) {
-      pointsQuery = pointsQuery.eq('league_id', league_id);
+      rostersQuery = rostersQuery.eq('league_id', league_id);
     }
     
-    const { data: myPoints, error: myPointsError } = await pointsQuery;
+    const { data: rosters, error: rostersError } = await rostersQuery;
+    if (rostersError) throw rostersError;
+    
+    const coureurIds = rosters?.map(r => r.coureur_id) || [];
+    
+    if (coureurIds.length === 0) {
+      return new Response(JSON.stringify({
+        total_points: 0,
+        top_rider_id: null,
+        top_rider_nom: null,
+        top_rider_points: null,
+        my_rank: null,
+        managers_count: 0
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // KPI #1: Get total points for these coureurs in scope
+    const { data: myPoints, error: myPointsError } = await supabaseClient
+      .from('points_ledger')
+      .select('points')
+      .in('phase_id', phaseIds)
+      .in('coureur_id', coureurIds);
 
     if (myPointsError) throw myPointsError;
 
@@ -156,17 +179,11 @@ Deno.serve(async (req) => {
     const total_points = race_points + managerBonusTotal + riderBonusTotal + receivedBonusTotal;
 
     // KPI #2: Get top rider for this manager in scope
-    let riderPointsQuery = supabaseClient
+    const { data: pointsByRider, error: riderPointsError } = await supabaseClient
       .from('points_ledger')
       .select('coureur_id, points')
-      .eq('manager_id', actualManagerId)
-      .in('phase_id', phaseIds);
-    
-    if (league_id) {
-      riderPointsQuery = riderPointsQuery.eq('league_id', league_id);
-    }
-    
-    const { data: pointsByRider, error: riderPointsError } = await riderPointsQuery;
+      .in('phase_id', phaseIds)
+      .in('coureur_id', coureurIds);
 
     if (riderPointsError) throw riderPointsError;
 
@@ -195,32 +212,55 @@ Deno.serve(async (req) => {
       top_rider_nom = coureur?.nom || null;
     }
 
-    // KPI #3: Get manager's rank in scope
-    let leaderboardQuery = supabaseClient
-      .from('points_ledger')
-      .select('manager_id, points')
-      .in('phase_id', phaseIds)
-      .not('manager_id', 'is', null);
+    // KPI #3: Get manager's rank in scope using the appropriate view
+    let standingsView = '';
+    let standingsFilter: any = {};
     
-    if (league_id) {
-      leaderboardQuery = leaderboardQuery.eq('league_id', league_id);
+    if (phase_id) {
+      standingsView = 'v_manager_standings_by_phase_v2';
+      standingsFilter = { phase_id };
+    } else if (saison_id) {
+      standingsView = 'v_manager_standings_by_season_v2';
+      standingsFilter = { saison_id };
+    } else {
+      // Fallback: use all phases aggregation
+      standingsView = 'v_manager_standings_by_phase_v2';
     }
     
-    const { data: allManagerPoints, error: leaderboardError } = await leaderboardQuery;
+    let standingsQuery = supabaseClient
+      .from(standingsView)
+      .select('manager_id, total_points')
+      .order('total_points', { ascending: false });
+    
+    if (league_id) {
+      standingsQuery = standingsQuery.eq('league_id', league_id);
+    }
+    
+    if (standingsFilter.phase_id) {
+      standingsQuery = standingsQuery.eq('phase_id', standingsFilter.phase_id);
+    } else if (standingsFilter.saison_id) {
+      standingsQuery = standingsQuery.eq('saison_id', standingsFilter.saison_id);
+    }
+    
+    const { data: standings, error: standingsError } = await standingsQuery;
+    
+    if (standingsError) {
+      console.error('Error fetching standings:', standingsError);
+      // Fallback to 0
+      return new Response(JSON.stringify({
+        total_points,
+        top_rider_id,
+        top_rider_nom,
+        top_rider_points,
+        my_rank: null,
+        managers_count: 0
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    if (leaderboardError) throw leaderboardError;
-
-    const managerTotals = new Map<string, number>();
-    allManagerPoints?.forEach(p => {
-      managerTotals.set(p.manager_id, (managerTotals.get(p.manager_id) || 0) + p.points);
-    });
-
-    const leaderboard = Array.from(managerTotals.entries())
-      .map(([manager_id, points]) => ({ manager_id, points }))
-      .sort((a, b) => b.points - a.points);
-
-    const managers_count = leaderboard.length;
-    const my_rank = leaderboard.findIndex(m => m.manager_id === actualManagerId) + 1;
+    const managers_count = standings?.length || 0;
+    const my_rank = standings?.findIndex(s => s.manager_id === actualManagerId) + 1 || 0;
 
     const response = {
       total_points,

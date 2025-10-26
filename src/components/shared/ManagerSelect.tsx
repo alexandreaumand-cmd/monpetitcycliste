@@ -29,14 +29,37 @@ export const ManagerSelect = ({ value, onValueChange, placeholder = "Sélectionn
         return data as Manager[];
       }
       
-      // Filtrer par ligue si leagueId fourni
+      // Filtrer par ligue si leagueId fourni - méthode principale via league_members
       const { data: leagueMembers, error: membersError } = await supabase
         .from('league_members')
         .select('user_id')
         .eq('league_id', leagueId);
       
       if (membersError) throw membersError;
-      if (!leagueMembers || leagueMembers.length === 0) return [];
+      
+      // Si league_members est vide, fallback via rosters (pour legacy league)
+      if (!leagueMembers || leagueMembers.length === 0) {
+        console.log('No league_members found, using rosters fallback for league:', leagueId);
+        
+        const { data: rosterManagers, error: rostersError } = await supabase
+          .from('rosters')
+          .select('manager_id')
+          .eq('league_id', leagueId);
+        
+        if (rostersError) throw rostersError;
+        if (!rosterManagers || rosterManagers.length === 0) return [];
+        
+        const managerIds = Array.from(new Set(rosterManagers.map(r => r.manager_id)));
+        
+        const { data, error } = await supabase
+          .from('managers')
+          .select('id, nom')
+          .in('id', managerIds)
+          .order('nom');
+        
+        if (error) throw error;
+        return data as Manager[];
+      }
       
       const userIds = leagueMembers.map(m => m.user_id);
       
