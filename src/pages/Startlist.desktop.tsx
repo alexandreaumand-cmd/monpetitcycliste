@@ -29,7 +29,7 @@ import { useLeague } from "@/contexts/LeagueContext";
 const StartlistDesktop = () => {
   
   const queryClient = useQueryClient();
-  const { isSuperAdmin, loading: isLoadingRole } = useUserRole();
+  const { isSuperAdmin, isLeagueAdminOnly, loading: isLoadingRole } = useUserRole();
   const { leagueId } = useLeague();
   const [viewMode, setViewMode] = useState<'list' | 'view'>('list');
   const [tabMode, setTabMode] = useState<'30days' | '90days' | 'history' | 'upcoming-year'>('30days');
@@ -335,36 +335,7 @@ const StartlistDesktop = () => {
               <Camera className="h-3 w-3 mr-1" />
               Exporter la SL
             </Button>
-            {isSuperAdmin && (
-              <RouteImageUploader
-                startlistId={selectedStartlistId!}
-                currentImageUrl={startlistViewData.route_image_url}
-                onUploadComplete={() => queryClient.invalidateQueries({ queryKey: ['startlist-view', selectedStartlistId] })}
-              />
-            )}
-            {isSuperAdmin && !startlistViewData?.pcs_validated && (
-              <Button 
-                onClick={handlePcsValidation} 
-                variant="default" 
-                size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <CheckCircle2 className="h-4 w-4 mr-1" />
-                Valider PCS
-              </Button>
-            )}
-            {isSuperAdmin && startlistViewData?.pcs_validated && (
-              <Button 
-                onClick={handlePcsValidation} 
-                variant="outline"
-                size="sm"
-                className="bg-green-600 text-white hover:bg-green-700 border-green-600"
-              >
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                PCS OK (retirer)
-              </Button>
-            )}
-            {isSuperAdmin && startlistViewData.managers.length > 0 && (
+            {(isSuperAdmin || isLeagueAdminOnly) && startlistViewData.managers.length > 0 && (
               <Button 
                 variant="outline" 
                 size="sm"
