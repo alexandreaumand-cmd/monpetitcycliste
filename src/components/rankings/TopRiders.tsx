@@ -298,18 +298,6 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
     };
   }, [riderPointsData?.rows]);
 
-  // Helper pour déterminer la classe CSS du badge ratio avec gradient
-  const getRatioBadgeClass = (ratio: number | undefined): string => {
-    if (!ratio || ratio === 0) return "bg-gray-100 text-gray-600 border-gray-300";
-    
-    if (ratio >= 15) return "bg-gradient-to-r from-green-500 to-emerald-600 text-white border-green-600 font-bold";
-    if (ratio >= 10) return "bg-gradient-to-r from-green-400 to-green-500 text-white border-green-500 font-semibold";
-    if (ratio >= 7) return "bg-gradient-to-r from-lime-400 to-green-400 text-white border-lime-500";
-    if (ratio >= 5) return "bg-gradient-to-r from-yellow-400 to-lime-400 text-gray-900 border-yellow-500";
-    if (ratio >= 3) return "bg-gradient-to-r from-orange-400 to-yellow-400 text-gray-900 border-orange-500";
-    return "bg-gradient-to-r from-red-400 to-orange-400 text-white border-red-500";
-  };
-
   const handleSort = (column: TopRidersSortColumn) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -459,40 +447,18 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                         {rider.rider_equipe || '—'}
                       </TableCell>
                       <TableCell className="text-right font-bold">
-                        <div className="flex items-center justify-end gap-1">
-                          {idx < 3 && (
-                            idx === 0 ? (
-                              <Trophy className="h-5 w-5 text-yellow-500" />
-                            ) : idx === 1 ? (
-                              <Award className="h-5 w-5 text-gray-400" />
-                            ) : (
-                              <Award className="h-5 w-5 text-amber-700" />
-                            )
-                          )}
-                          {rider.total_points}
-                        </div>
+                        {rider.total_points}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {rider.prix_achat ? rider.prix_achat.toFixed(2) : '—'}
                       </TableCell>
                       <TableCell className="text-right">
-                        {rider.ratio_points_par_prix !== undefined ? (
-                          <Badge 
-                            className={`${getRatioBadgeClass(
-                              computeRiderROI({
-                                pointsTotal: rider.total_points,
-                                purchasePriceTotal: rider.prix_achat
-                              })
-                            )} border-2`}
-                          >
-                            {formatROICompact(computeRiderROI({
+                        {rider.ratio_points_par_prix !== undefined 
+                          ? formatROICompact(computeRiderROI({
                               pointsTotal: rider.total_points,
                               purchasePriceTotal: rider.prix_achat
-                            }))}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                            }))
+                          : '—'}
                       </TableCell>
                       <TableCell>
                         {phaseId ? (

@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt, Star, ArrowUp, ArrowDown } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt, Star, ArrowUp, ArrowDown, Award } from "lucide-react";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -375,6 +375,16 @@ export const MyTeamDesktop = () => {
     return sortDirection === 'desc' ? comparison : -comparison;
   });
 
+  // Calculer le top 3 des coureurs par points (FIXE, pas dynamique)
+  const top3ByPoints = useMemo(() => {
+    const sorted = [...coureurs].sort((a, b) => b.points_total - a.points_total);
+    return {
+      first: sorted[0]?.coureur_id,
+      second: sorted[1]?.coureur_id,
+      third: sorted[2]?.coureur_id
+    };
+  }, [coureurs]);
+
   const getRatioColor = (ratio: number) => {
     if (ratio > 10) return "text-green-800 dark:text-green-300";
     if (ratio >= 4 && ratio <= 10) return "text-green-600 dark:text-green-400";
@@ -391,6 +401,19 @@ export const MyTeamDesktop = () => {
     if (ratio > 0 && ratio < 2) return "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900";
     if (ratio === 0) return "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900";
     return "";
+  };
+
+  // Helper pour déterminer la classe CSS du badge ratio (couleur simple)
+  const getRatioBadgeClass = (ratio: number | undefined): string => {
+    if (!ratio || ratio === 0) return "bg-gray-100 text-gray-700 border-gray-300";
+    
+    if (ratio >= 15) return "bg-green-600 text-white border-green-700 font-bold";
+    if (ratio >= 10) return "bg-green-500 text-white border-green-600 font-semibold";
+    if (ratio >= 7) return "bg-lime-500 text-white border-lime-600";
+    if (ratio >= 5) return "bg-yellow-400 text-gray-900 border-yellow-500";
+    if (ratio >= 3) return "bg-orange-400 text-gray-900 border-orange-500";
+    
+    return "bg-red-500 text-white border-red-600";
   };
 
   const getPhaseLabel = (phase: any) => {
@@ -664,12 +687,26 @@ export const MyTeamDesktop = () => {
                     </TableCell>
                     <TableCell className="text-right py-2">
                       <div className="flex items-center justify-end gap-2">
-                        <Trophy className="h-4 w-4 text-primary" />
+                        {/* Icône top 3 FIXE basée sur les points */}
+                        {coureur.coureur_id === top3ByPoints.first && (
+                          <Trophy className="h-5 w-5 text-yellow-500" />
+                        )}
+                        {coureur.coureur_id === top3ByPoints.second && (
+                          <Award className="h-5 w-5 text-gray-400" />
+                        )}
+                        {coureur.coureur_id === top3ByPoints.third && (
+                          <Award className="h-5 w-5 text-amber-700" />
+                        )}
                         <span className="font-bold text-lg">{coureur.points_total}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-right py-2">
-                      <Badge className="bg-[#FFD500] text-black border-2 border-black font-bold hover:bg-[#FFD500]">
+                      <Badge className={`${getRatioBadgeClass(
+                        computeRiderROI({
+                          pointsTotal: coureur.points_total,
+                          purchasePriceTotal: coureur.prix_achat
+                        })
+                      )} border-2`}>
                         {formatROICompact(computeRiderROI({
                           pointsTotal: coureur.points_total,
                           purchasePriceTotal: coureur.prix_achat
