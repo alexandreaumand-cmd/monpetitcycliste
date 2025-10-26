@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X, ListChecks, LineChart, Lock } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import logo from "@/assets/logo.png";
+import mpcLogo from "@/assets/mpc-logo.png";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NotificationCenter } from "./NotificationCenter";
@@ -83,9 +83,11 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
           {/* Left: Logo + Manager Info */}
           <div className="flex items-center gap-3">
             <Link to="/dashboard" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#FFD500] flex items-center justify-center">
-                <span className="font-montserrat font-black text-black text-sm">MPC</span>
-              </div>
+              <img 
+                src={mpcLogo} 
+                alt="Logo Mon Petit Cycliste" 
+                className="h-10 w-10 md:h-12 md:w-12"
+              />
               <span className="hidden lg:inline font-montserrat font-bold text-white">Mon Petit Cycliste</span>
             </Link>
             {manager && (
