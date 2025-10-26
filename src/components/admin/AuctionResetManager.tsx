@@ -12,8 +12,22 @@ import { AlertTriangle, Trash2 } from "lucide-react";
 
 export const AuctionResetManager = () => {
   const [phaseId, setPhaseId] = useState("");
+  const [leagueId, setLeagueId] = useState("");
   const [confirmPhrase, setConfirmPhrase] = useState("");
   const { toast } = useToast();
+
+  // Fetch leagues
+  const { data: leagues } = useQuery({
+    queryKey: ['leagues-for-reset'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leagues')
+        .select('id, name')
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Fetch phases
   const { data: phases } = useQuery({
@@ -28,11 +42,27 @@ export const AuctionResetManager = () => {
     },
   });
 
+  // Count auctions for selected phase and league
+  const { data: auctionCount } = useQuery({
+    queryKey: ['auction-count', phaseId, leagueId],
+    queryFn: async () => {
+      if (!phaseId || !leagueId) return 0;
+      const { count, error } = await supabase
+        .from('auctions')
+        .select('*', { count: 'exact', head: true })
+        .eq('phase_id', phaseId)
+        .eq('league_id', leagueId);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!phaseId && !!leagueId,
+  });
+
   // Reset phase auctions mutation
   const resetPhaseAuctions = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('admin-reset-phase-auctions', {
-        body: { phase_id: phaseId, confirm_phrase: confirmPhrase },
+        body: { phase_id: phaseId, league_id: leagueId, confirm_phrase: confirmPhrase },
       });
       if (error) throw error;
       return data;
@@ -43,9 +73,15 @@ export const AuctionResetManager = () => {
         description: data.message,
       });
       setConfirmPhrase("");
+      setPhaseId("");
+      setLeagueId("");
     },
-    onError: () => {
-      toast({ title: "Erreur lors de la suppression", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ 
+        title: "Erreur lors de la suppression", 
+        description: error.message,
+        variant: "destructive" 
+      });
     },
   });
 
@@ -59,8 +95,24 @@ export const AuctionResetManager = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
+          <Label>Ligue</Label>
+          <Select value={leagueId} onValueChange={setLeagueId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionner une ligue" />
+            </SelectTrigger>
+            <SelectContent>
+              {leagues?.map((league) => (
+                <SelectItem key={league.id} value={league.id}>
+                  {league.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
           <Label>Phase</Label>
-          <Select value={phaseId} onValueChange={setPhaseId}>
+          <Select value={phaseId} onValueChange={setPhaseId} disabled={!leagueId}>
             <SelectTrigger>
               <SelectValue placeholder="Sélectionner une phase" />
             </SelectTrigger>
@@ -73,6 +125,14 @@ export const AuctionResetManager = () => {
             </SelectContent>
           </Select>
         </div>
+
+        {phaseId && leagueId && auctionCount !== undefined && (
+          <Alert>
+            <AlertDescription>
+              <strong>{auctionCount} enchère(s)</strong> trouvée(s) pour cette phase et cette ligue.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
@@ -103,11 +163,11 @@ export const AuctionResetManager = () => {
 
         <Button
           variant="destructive"
-          disabled={confirmPhrase !== 'RESET ENCHERES' || !phaseId}
+          disabled={confirmPhrase !== 'RESET ENCHERES' || !phaseId || !leagueId || resetPhaseAuctions.isPending}
           onClick={() => resetPhaseAuctions.mutate()}
         >
           <Trash2 className="mr-2 h-4 w-4" />
-          Supprimer les enchères de cette phase
+          {resetPhaseAuctions.isPending ? "Suppression..." : "Supprimer les enchères de cette phase"}
         </Button>
       </CardContent>
     </Card>
