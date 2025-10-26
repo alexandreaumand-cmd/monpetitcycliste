@@ -140,28 +140,20 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               )}
             </div>
 
-            <div className="bg-[#FFD500] rounded-lg p-3 border-2 border-black shadow-md">
+            <div className="bg-muted/50 rounded-lg p-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-montserrat font-semibold text-black">Places restantes</span>
-                <span className="text-3xl font-montserrat font-black text-black">{remainingSpots}</span>
+                <span className="text-sm font-medium text-muted-foreground">Places restantes</span>
+                <span className="text-3xl font-bold">{remainingSpots}</span>
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <Button onClick={onViewDetails} variant="outline" className="flex-1">
-                Inviter des joueurs
-              </Button>
-              {isAdmin && (
-                <Button 
-                  onClick={() => setInvitesSheetOpen(true)}
-                  variant="secondary"
-                  size="icon"
-                  title="Inviter des joueurs"
-                >
-                  <UserPlus className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+            <Button 
+              onClick={() => setInvitesSheetOpen(true)}
+              className="w-full bg-[#FFD500] text-black border-2 border-black font-montserrat font-semibold hover:bg-yellow-400 gap-2"
+            >
+              <UserPlus className="h-4 w-4" />
+              Inviter des joueurs
+            </Button>
           </>
         )}
 
@@ -306,16 +298,14 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
           </>
         )}
 
-        {isAdmin && (
-          <LeagueInvitesBottomSheet
-            open={invitesSheetOpen}
-            onOpenChange={setInvitesSheetOpen}
-            leagueId={league.id}
-            leagueName={league.name}
-            maxPlayers={league.max_players}
-            currentPlayerCount={league.current_player_count}
-          />
-        )}
+        <LeagueInvitesBottomSheet
+          open={invitesSheetOpen}
+          onOpenChange={setInvitesSheetOpen}
+          leagueId={league.id}
+          leagueName={league.name}
+          maxPlayers={league.max_players}
+          currentPlayerCount={league.current_player_count}
+        />
       </CardContent>
     </Card>
   );

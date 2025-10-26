@@ -11,7 +11,7 @@ export function QuickActions() {
 
   return (
     <>
-      <Card className="p-6 bg-gradient-to-br from-[#FFD500] to-yellow-400 border-2 border-black shadow-lg">
+      <Card className="p-6 bg-gradient-to-br from-yellow-100 to-yellow-200 border border-gray-300 shadow-lg">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-center">
           <div className="text-center md:text-left md:flex-1">
             <h2 className="text-xl font-montserrat font-semibold mb-1 text-black">Nouvelle compétition</h2>
