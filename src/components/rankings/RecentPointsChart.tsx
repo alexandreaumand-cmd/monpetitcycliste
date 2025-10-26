@@ -1,3 +1,4 @@
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,28 @@ interface RecentPointsChartProps {
   saisonId?: string | null;
   viewMode?: 'phase' | 'season' | 'current';
 }
+
+// Custom tooltip content that sorts managers by points
+const SortedChartTooltipContent = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<typeof ChartTooltipContent>
+>((props, ref) => {
+  const { payload, ...rest } = props;
+  
+  // Sort payload by value (descending)
+  const sortedPayload = React.useMemo(() => {
+    if (!payload) return payload;
+    
+    return [...payload].sort((a, b) => {
+      const aValue = typeof a.value === 'number' ? a.value : 0;
+      const bValue = typeof b.value === 'number' ? b.value : 0;
+      return bValue - aValue; // Descending order
+    });
+  }, [payload]);
+
+  return <ChartTooltipContent ref={ref} payload={sortedPayload} {...rest} />;
+});
+SortedChartTooltipContent.displayName = "SortedChartTooltipContent";
 
 export const RecentPointsChart = ({ phaseId, saisonId, viewMode }: RecentPointsChartProps) => {
   const determinedViewMode = viewMode || (phaseId ? 'phase' : 'season');
@@ -138,7 +161,7 @@ export const RecentPointsChart = ({ phaseId, saisonId, viewMode }: RecentPointsC
                 className="text-xs"
                 tick={{ fill: "hsl(var(--muted-foreground))" }}
               />
-              <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartTooltip content={<SortedChartTooltipContent />} />
               <ChartLegend content={<ChartLegendContent className="flex-wrap gap-2 text-xs" />} wrapperStyle={{ paddingTop: "20px" }} />
               {managers.map((manager) => (
                 <Line
