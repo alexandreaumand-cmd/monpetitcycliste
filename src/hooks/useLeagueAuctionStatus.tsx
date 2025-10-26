@@ -16,41 +16,23 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
     queryFn: async (): Promise<AuctionStatus | null> => {
       if (!leagueId) return null;
 
-      // Étape 1: Récupérer la saison de la ligue
-      const { data: scopeData } = await supabase
-        .from('league_scopes')
-        .select('season_id')
-        .eq('league_id', leagueId)
-        .maybeSingle();
-
-      if (!scopeData?.season_id) return null;
-
-      // Étape 2: Récupérer la phase active de cette saison
-      const { data: phaseData } = await supabase
-        .from('phases')
-        .select('id')
-        .eq('saison_id', scopeData.season_id)
-        .eq('statut', 'auction_open')
-        .maybeSingle();
-
-      if (!phaseData?.id) return null;
-
-      // Étape 3: Récupérer l'enchère ouverte pour cette ligue et phase
+      // Récupérer l'enchère ouverte pour cette ligue
       const { data: auctionData } = await supabase
         .from('auctions')
         .select('id, round_number, deadline_at, phase_id')
         .eq('league_id', leagueId)
-        .eq('phase_id', phaseData.id)
         .eq('statut', 'open')
+        .order('round_number', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (!auctionData) return null;
 
-      // Étape 4: Appeler la fonction edge pour le statut de validation
+      // Appeler la fonction edge pour le statut de validation
       const { data: validationData, error } = await supabase.functions.invoke(
         'auction-get-validation-status',
         {
-          body: { phase_id: phaseData.id }
+          body: { phase_id: auctionData.phase_id }
         }
       );
 
