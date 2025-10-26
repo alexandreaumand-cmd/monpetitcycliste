@@ -125,13 +125,25 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
   const maxPoints = standings?.[0]?.total_points || 1;
   const totalPoints = standings?.reduce((sum, s) => sum + s.total_points, 0) || 1;
 
-  const getRankIcon = (rank: number, isBottomThree: boolean) => {
-    if (rank === 1) return <span className="text-xl">🥇</span>;
-    if (rank === 2) return <span className="text-xl">🥈</span>;
-    if (rank === 3) return <span className="text-xl">🥉</span>;
-    if (isBottomThree) return <span className="text-red-500 font-bold text-sm">#{rank}</span>;
-    return <span className="text-muted-foreground text-sm">#{rank}</span>;
-  };
+const getRankIcon = (rank: number, isBottomThree: boolean) => {
+  if (rank === 1) return (
+    <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-yellow-200 to-yellow-400 rounded-full shadow-md">
+      <span className="text-2xl">🥇</span>
+    </div>
+  );
+  if (rank === 2) return (
+    <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-gray-200 to-gray-400 rounded-full shadow-md">
+      <span className="text-2xl">🥈</span>
+    </div>
+  );
+  if (rank === 3) return (
+    <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-amber-200 to-amber-500 rounded-full shadow-md">
+      <span className="text-2xl">🥉</span>
+    </div>
+  );
+  if (isBottomThree) return <span className="text-red-500 font-bold text-sm">#{rank}</span>;
+  return <span className="text-muted-foreground text-sm">#{rank}</span>;
+};
 
   if (isLoading) {
     return (
@@ -151,18 +163,18 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
     <Card>
       <CardContent className="pt-6">
         <Table>
-          <TableHeader>
-            <TableRow className="bg-black hover:bg-black border-b-2 border-[#FFD500]">
-              <TableHead className="w-16 text-[#FFD500] font-bold">Rang</TableHead>
-              <TableHead className="text-[#FFD500] font-bold">Manager</TableHead>
-              <TableHead className="text-right text-[#FFD500] font-bold">Points</TableHead>
-              <TableHead className="text-right text-[#FFD500] font-bold">Bonus</TableHead>
-              <TableHead className="text-right text-[#FFD500] font-bold">Scoreurs</TableHead>
-              <TableHead className="text-right text-[#FFD500] font-bold">Victoires</TableHead>
-              <TableHead className="text-right text-[#FFD500] font-bold">Écart</TableHead>
-              {previousGlobalStandings && <TableHead className="w-24 text-center text-[#FFD500] font-bold">Évolution</TableHead>}
-            </TableRow>
-          </TableHeader>
+        <TableHeader>
+          <TableRow className="border-b-2 border-[#FFD500]">
+            <TableHead className="w-16 font-bold">Rang</TableHead>
+            <TableHead className="font-bold">Manager</TableHead>
+            <TableHead className="text-right font-bold">Points</TableHead>
+            <TableHead className="text-right font-bold">Bonus</TableHead>
+            <TableHead className="text-right font-bold">Scoreurs</TableHead>
+            <TableHead className="text-right font-bold">Victoires</TableHead>
+            <TableHead className="text-right font-bold">Écart</TableHead>
+            {previousGlobalStandings && <TableHead className="w-24 text-center font-bold">Évolution</TableHead>}
+          </TableRow>
+        </TableHeader>
           <TableBody>
             {standings?.map((standing, idx) => {
               const rank = idx + 1;
@@ -186,15 +198,16 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
               return (
                 <TableRow 
                   key={standing.manager_id}
-                  className={cn(
-                    "cursor-pointer transition-colors duration-200 h-12",
-                    rank === 1 && "bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-950/30 border-l-4 border-yellow-500 font-bold",
-                    rank === 2 && "bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-900/30 border-l-4 border-gray-400 font-semibold",
-                    rank === 3 && "bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-950/30 border-l-4 border-amber-600 font-semibold",
-                    rank <= 3 && "shadow-sm",
-                    isBottomThree && rank > 3 && "bg-gradient-to-r from-red-50/30 to-transparent dark:from-red-950/20 border-l-4 border-red-500/50",
-                    onManagerClick && "hover:bg-yellow-50/50 dark:hover:bg-yellow-950/20"
-                  )}
+              className={cn(
+                "cursor-pointer transition-colors duration-200 h-12",
+                rank === 1 && "bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-950/30 border-l-4 border-yellow-500 font-bold",
+                rank === 2 && "bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-900/30 border-l-4 border-gray-400 font-semibold",
+                rank === 3 && "bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-950/30 border-l-4 border-amber-600 font-semibold",
+                rank <= 3 && "shadow-sm",
+                isBottomThree && "bg-gradient-to-r from-red-50/30 to-transparent dark:from-red-950/20 border-l-4 border-red-500/50",
+                onManagerClick && rank > 3 && !isBottomThree && "hover:bg-muted/30",
+                onManagerClick && (rank <= 3 || isBottomThree) && "hover:bg-yellow-50/50 dark:hover:bg-yellow-950/20"
+              )}
                   onClick={() => onManagerClick?.(standing.manager_id)}
                 >
                   <TableCell className="font-medium py-2">
@@ -217,16 +230,15 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                   <TableCell className="text-right py-2">
                     <div className="space-y-0.5">
                       <div className="flex items-baseline justify-end gap-1">
-                        <span className={cn(
-                          "font-mono",
-                          rank === 1 && "text-2xl font-extrabold text-[#D4AF37]",
-                          rank === 2 && "text-xl font-extrabold text-gray-400",
-                          rank === 3 && "text-xl font-extrabold text-[#CD7F32]",
-                          rank > 3 && "text-base font-semibold text-foreground"
-                        )}>
-                          {standing.total_points}
-                        </span>
-                        {rank > 3 && <span className="text-xs text-muted-foreground">pts</span>}
+                <span className={cn(
+                  "font-mono text-lg font-bold",
+                  rank === 1 && "text-[#D4AF37]",
+                  rank === 2 && "text-gray-400",
+                  rank === 3 && "text-[#CD7F32]",
+                  rank > 3 && "text-foreground"
+                )}>
+                  {standing.total_points}
+                </span>
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {percentage}%
@@ -253,7 +265,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Badge className="bg-[#FFD500] text-black border-2 border-black text-xs font-bold px-2 py-0.5">
+                            <Badge className="bg-[#FFF4CC] text-black border border-[#FFD500] text-xs font-semibold px-2 py-0.5">
                               {standing.bonus_points > 0 ? `+${standing.bonus_points}` : standing.bonus_points}
                             </Badge>
                           </TooltipTrigger>
