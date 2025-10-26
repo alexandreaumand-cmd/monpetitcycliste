@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus, CheckCircle, Lock, Globe } from "lucide-react";
+import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus, CheckCircle, Lock, Globe, Gavel, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { useLeagueMemberCount } from "@/hooks/useLeagueMemberCount";
 import { useMyLeagueStats } from "@/hooks/useMyLeagueStats";
 import { useLeagueMembers } from "@/hooks/useLeagueMembers";
 import { useLeagueSeason } from "@/hooks/useLeagueSeason";
+import { useLeagueAuctionStatus } from "@/hooks/useLeagueAuctionStatus";
 import { LeagueStatusBadge } from "@/components/leagues/LeagueStatusBadge";
 import type { LeagueWithRole } from "@/lib/leagues/types";
 import { LEAGUE_TEMPLATES } from "@/lib/leagues/templates";
@@ -40,6 +41,12 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
   const { data: stats, isLoading: loadingStats } = useMyLeagueStats(
     league.id,
     leagueSeason?.seasonId || null
+  );
+
+  // Fetch auction status for active leagues
+  const { data: auctionStatus, isLoading: loadingAuction } = useLeagueAuctionStatus(
+    league.id,
+    isActive // Only fetch if league is active
   );
 
   const gameMode = LEAGUE_TEMPLATES.find(t => t.id === league.game_mode);
@@ -255,6 +262,49 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-4">Aucune donnée disponible</p>
+            )}
+
+            {/* Section enchères en cours */}
+            {auctionStatus && !loadingAuction && (
+              <div className="bg-gradient-to-br from-[#FFF4CC] to-[#FFE999] border-2 border-[#FFD500] rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Gavel className="h-5 w-5 text-black" />
+                  <h3 className="font-montserrat font-bold text-black">
+                    Enchères en cours
+                  </h3>
+                </div>
+                
+                <div className="space-y-2">
+                  {/* Round number */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-poppins text-gray-900">Tour d'enchères</span>
+                    <span className="text-lg font-montserrat font-bold text-black">
+                      Round {auctionStatus.roundNumber}
+                    </span>
+                  </div>
+                  
+                  {/* Validation status */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-poppins text-gray-900 flex items-center gap-1">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Managers validés
+                    </span>
+                    <span className="text-lg font-montserrat font-bold text-black">
+                      {auctionStatus.validatedCount}/{auctionStatus.totalManagers}
+                    </span>
+                  </div>
+                  
+                  {/* Progress bar */}
+                  <div className="w-full bg-white/50 rounded-full h-2 overflow-hidden">
+                    <div 
+                      className="bg-black h-full transition-all duration-500 ease-out"
+                      style={{ 
+                        width: `${(auctionStatus.validatedCount / auctionStatus.totalManagers) * 100}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
             )}
 
             <Button onClick={onViewDetails} variant="outline" className="w-full">
