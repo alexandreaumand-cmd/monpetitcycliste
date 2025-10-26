@@ -188,16 +188,11 @@ Deno.serve(async (req) => {
     const pointsCoureurIds = enrichedEntries.map(e => e.coureur_id).filter(Boolean);
     
     // Get all points for coureurs in startlist with course info
-    let pointsQuery = supabase
+    // Points are global - no league_id filter needed (filtering done via coureur_id from startlist entries)
+    const { data: allPoints } = await supabase
       .from('points_ledger')
       .select('coureur_id, points, course_id')
       .in('coureur_id', pointsCoureurIds);
-    
-    if (league_id) {
-      pointsQuery = pointsQuery.eq('league_id', league_id);
-    }
-    
-    const { data: allPoints } = await pointsQuery;
 
     // Get course dates
     const courseIds = [...new Set(allPoints?.map(p => p.course_id) || [])];
