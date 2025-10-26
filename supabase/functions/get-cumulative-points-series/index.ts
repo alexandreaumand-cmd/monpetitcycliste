@@ -5,6 +5,35 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/**
+ * Fetch all rows from a Supabase query using pagination
+ * Bypasses the default 1000-row limit
+ */
+async function fetchAllRows<T>(
+  query: any,
+  batchSize: number = 1000
+): Promise<T[]> {
+  let allData: T[] = [];
+  let from = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await query.range(from, from + batchSize - 1);
+    
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      allData = allData.concat(data);
+      from += batchSize;
+      hasMore = data.length === batchSize;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return allData;
+}
+
 interface RequestBody {
   saison_id?: string | null;
   phase_id?: string | null;
@@ -121,14 +150,9 @@ Deno.serve(async (req) => {
       rostersQuery = rostersQuery.eq('league_id', league_id);
     }
 
-    const { data: rosters, error: rostersError } = await rostersQuery;
-    
-    if (rostersError) {
-      console.error('Error fetching rosters:', rostersError);
-      throw rostersError;
-    }
+    const rosters = await fetchAllRows<any>(rostersQuery);
 
-    console.log(`Loaded ${rosters?.length || 0} rosters for league ${league_id || 'all'}`);
+    console.log(`✅ Loaded ${rosters?.length || 0} rosters for league ${league_id || 'all'} (paginated)`);
 
     // Build coureur → manager map
     const coureurToManager = new Map<string, string>();
@@ -163,9 +187,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { data: pointsData, error: pointsError } = await query;
+    const pointsData = await fetchAllRows<any>(query);
 
-    if (pointsError) throw pointsError;
+    console.log(`✅ Loaded ${pointsData?.length || 0} points_ledger entries (paginated)`);
 
     // -------------------------
     // STEP 5: Fetch race_results pour obtenir les dates de classement
@@ -176,17 +200,14 @@ Deno.serve(async (req) => {
     console.log(`Fetching race_results for ${uniqueCourseIds.length} courses`);
 
     // Récupérer TOUS les race_results de ces courses
-    const { data: raceDates, error: raceDatesError } = await supabaseClient
+    const raceDatesQuery = supabaseClient
       .from('race_results')
       .select('course_id, type_classement, etape_numero, coureur_id, date_classement')
       .in('course_id', uniqueCourseIds);
 
-    if (raceDatesError) {
-      console.error('Error fetching race_results:', raceDatesError);
-      throw raceDatesError;
-    }
+    const raceDates = await fetchAllRows<any>(raceDatesQuery);
 
-    console.log(`Fetched ${raceDates?.length || 0} race_results entries`);
+    console.log(`✅ Fetched ${raceDates?.length || 0} race_results entries (paginated)`);
 
     // Créer un index pour lookup rapide: course_id:type:etape:coureur → date_classement
     const dateIndex = new Map<string, string>();
@@ -254,17 +275,19 @@ Deno.serve(async (req) => {
       dateMap.set(date, existing);
     });
 
-    console.log(`Points aggregated: ${pointsAggregated}, skipped (no manager): ${pointsSkipped}`);
+    console.log(`Points aggregated: ${pointsAggregated}, skipped (no manager/date): ${pointsSkipped}`);
+    console.log(`Total managers with points: ${managerIds.size}`);
+    console.log(`Total managers with points: ${managerIds.size}`);
 
     // Load manager names separately
-    const { data: managersData, error: managersError } = await supabaseClient
+    const managersQuery = supabaseClient
       .from('managers')
       .select('id, nom')
       .in('id', Array.from(managerIds));
 
-    if (managersError) {
-      console.error('Error fetching manager names:', managersError);
-    }
+    const managersData = await fetchAllRows<any>(managersQuery);
+
+    console.log(`✅ Loaded ${managersData?.length || 0} managers (paginated)`);
 
     const managerNames = new Map<string, string>();
     managersData?.forEach(m => {
@@ -297,8 +320,9 @@ Deno.serve(async (req) => {
       bonusManagerQuery = bonusManagerQuery.eq('phases.saison_id', saison_id);
     }
 
-    const { data: bonusManagerData, error: bonusManagerError } = await bonusManagerQuery;
-    if (bonusManagerError) throw bonusManagerError;
+    const bonusManagerData = await fetchAllRows<any>(bonusManagerQuery);
+
+    console.log(`✅ Loaded ${bonusManagerData?.length || 0} manager bonus entries (paginated)`);
 
     // Get rider bonus points - récupérer tous les bonus si pas de targetPhaseId (mode season)
     let bonusRiderQuery = supabaseClient
@@ -323,8 +347,9 @@ Deno.serve(async (req) => {
       bonusRiderQuery = bonusRiderQuery.eq('phases.saison_id', saison_id);
     }
 
-    const { data: bonusRiderData, error: bonusRiderError } = await bonusRiderQuery;
-    if (bonusRiderError) throw bonusRiderError;
+    const bonusRiderData = await fetchAllRows<any>(bonusRiderQuery);
+
+    console.log(`✅ Loaded ${bonusRiderData?.length || 0} rider bonus entries (paginated)`);
 
     // Add manager bonus points (aggregated at phase end date)
     bonusManagerData?.forEach((row: any) => {
