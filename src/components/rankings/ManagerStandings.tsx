@@ -261,11 +261,16 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
                       }
                     }}
                   >
-                    {rank <= 3 && standing.bonus_points !== 0 ? (
+                    {standing.bonus_points !== 0 ? (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Badge className="bg-[#FFF4CC] text-black border border-[#FFD500] text-xs font-semibold px-2 py-0.5">
+                            <Badge 
+                              className={cn(
+                                "bg-[#FFF4CC] border text-xs font-semibold px-2 py-0.5 cursor-pointer",
+                                standing.bonus_points > 0 ? "text-green-700 border-green-300" : "text-red-700 border-red-300"
+                              )}
+                            >
                               {standing.bonus_points > 0 ? `+${standing.bonus_points}` : standing.bonus_points}
                             </Badge>
                           </TooltipTrigger>
@@ -275,25 +280,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
                         </Tooltip>
                       </TooltipProvider>
                     ) : (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className={cn(
-                              "text-sm font-mono font-medium",
-                              standing.bonus_points > 0 && "text-green-600 underline decoration-dotted",
-                              standing.bonus_points < 0 && "text-red-600 underline decoration-dotted",
-                              standing.bonus_points === 0 && "text-muted-foreground"
-                            )}>
-                              {standing.bonus_points > 0 ? `+${standing.bonus_points}` : standing.bonus_points === 0 ? '0' : standing.bonus_points}
-                            </span>
-                          </TooltipTrigger>
-                          {standing.bonus_points !== 0 && (
-                            <TooltipContent>
-                              <p className="text-xs">Cliquer pour voir le détail</p>
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
+                      <span className="text-sm font-mono font-medium text-muted-foreground">0</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right py-2">
