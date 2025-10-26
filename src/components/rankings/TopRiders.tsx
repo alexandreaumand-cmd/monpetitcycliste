@@ -360,36 +360,27 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
   return (
     <>
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5" />
-            Top Coureurs
-          </CardTitle>
-          <CardDescription>
-            {phaseId ? "Meilleurs coureurs de la phase" : "Meilleurs coureurs toutes phases"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {!riders || riders.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               Aucun point pour la période sélectionnée
             </div>
           ) : (
             <>
-              <div className="space-y-3 mb-4">
+              <div className="grid md:grid-cols-[1fr_auto] gap-3 mb-4 items-center">
                 <Input
                   placeholder="Rechercher un coureur ou une équipe..."
                   value={riderSearchTerm}
                   onChange={(e) => setRiderSearchTerm(e.target.value)}
                 />
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <Switch
                     id="hide-no-managers"
                     checked={hideRidersWithoutManagers}
                     onCheckedChange={setHideRidersWithoutManagers}
                   />
-                  <Label htmlFor="hide-no-managers" className="cursor-pointer">
-                    Masquer les coureurs sans manager
+                  <Label htmlFor="hide-no-managers" className="cursor-pointer text-sm">
+                    Sans manager
                   </Label>
                 </div>
               </div>
