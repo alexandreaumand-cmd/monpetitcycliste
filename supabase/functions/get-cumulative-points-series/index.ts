@@ -10,7 +10,7 @@ const corsHeaders = {
  * Bypasses the default 1000-row limit
  */
 async function fetchAllRows<T>(
-  query: any,
+  baseQuery: any,
   batchSize: number = 1000
 ): Promise<T[]> {
   let allData: T[] = [];
@@ -18,19 +18,25 @@ async function fetchAllRows<T>(
   let hasMore = true;
 
   while (hasMore) {
-    const { data, error } = await query.range(from, from + batchSize - 1);
+    // Clone the query for each batch and apply range
+    const { data, error } = await baseQuery.range(from, from + batchSize - 1);
     
-    if (error) throw error;
+    if (error) {
+      console.error(`Error fetching batch at offset ${from}:`, error);
+      throw error;
+    }
     
     if (data && data.length > 0) {
       allData = allData.concat(data);
       from += batchSize;
-      hasMore = data.length === batchSize;
+      hasMore = data.length === batchSize; // Continue if we got a full batch
+      console.log(`Fetched batch: ${data.length} rows (total so far: ${allData.length})`);
     } else {
       hasMore = false;
     }
   }
 
+  console.log(`✅ Pagination complete: ${allData.length} total rows fetched`);
   return allData;
 }
 
