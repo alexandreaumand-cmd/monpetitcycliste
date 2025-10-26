@@ -23,13 +23,14 @@ import { RecentPointsChart } from "@/components/rankings/RecentPointsChart";
 import { ManagerComparisonMobile } from "@/components/rankings/ManagerComparison.mobile";
 import { ManagerPrestigeIcons } from "@/components/rankings/ManagerPrestigeIcons";
 import { useLeague } from "@/contexts/LeagueContext";
-import { ManagerDetailsDrawer } from "@/components/rankings/ManagerDetailsDrawer";
+import { useNavigate } from "react-router-dom";
 
 type TabView = "standings" | "riders" | "timeline" | "comparison" | "teams" | "courses";
 
 export const RankingsMobile = () => {
   const { selectedSeason, phases, activePhase } = useSeasonContext();
   const { leagueId } = useLeague();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabView>("standings");
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
@@ -44,17 +45,7 @@ export const RankingsMobile = () => {
     prix: number;
   } | null>(null);
   const [riderDetailsOpen, setRiderDetailsOpen] = useState(false);
-  const [drawerManager, setDrawerManager] = useState<{
-    managerId: string;
-    managerName: string;
-    rank: number;
-    totalPoints: number;
-    evolution: number | null;
-    isNew: boolean;
-    percentage: string;
-    scoreursCount: number;
-    victoriesCount: number;
-  } | null>(null);
+  const [expandedManagerId, setExpandedManagerId] = useState<string | null>(null);
 
   // Fetch standings
   const { data: standings, isLoading: standingsLoading } = useQuery({
@@ -214,28 +205,8 @@ export const RankingsMobile = () => {
     return `#${rank}`;
   };
 
-  const handleManagerClick = (
-    managerId: string,
-    managerName: string,
-    rank: number,
-    totalPoints: number,
-    evolution: number | null,
-    isNew: boolean,
-    percentage: string,
-    scoreursCount: number,
-    victoriesCount: number
-  ) => {
-    setDrawerManager({
-      managerId,
-      managerName,
-      rank,
-      totalPoints,
-      evolution,
-      isNew,
-      percentage,
-      scoreursCount,
-      victoriesCount,
-    });
+  const handleManagerClick = (managerId: string) => {
+    setExpandedManagerId(expandedManagerId === managerId ? null : managerId);
   };
 
   const handleRiderClick = (rider: any) => {
@@ -385,23 +356,71 @@ export const RankingsMobile = () => {
                   return `${r}e`;
                 };
 
+                const isExpanded = expandedManagerId === standing.manager_id;
+
                 return (
                   <MobileCard
                     key={standing.manager_id}
                     title={<ManagerNameWithSponsor managerId={standing.manager_id} managerName={standing.manager_nom} />}
                     avatar={<RankBadge rank={rank} />}
                     badge={<PointsBadge points={standing.total_points} rank={rank} />}
-                    onClick={() => handleManagerClick(
-                      standing.manager_id,
-                      standing.manager_nom,
-                      rank,
-                      standing.total_points,
-                      evolution,
-                      isNew,
-                      percentage,
-                      standing.scoreurs_count ?? 0,
-                      standing.victories_count ?? 0
-                    )}
+                    onClick={() => handleManagerClick(standing.manager_id)}
+                    expanded={isExpanded}
+                    expandedContent={
+                      <div className="space-y-3">
+                        {/* Prestige icons + 🤡 emoji */}
+                        <div className="flex items-center gap-2">
+                          <ManagerPrestigeIcons 
+                            managerId={standing.manager_id} 
+                            phaseId={selectedPhase}
+                            saisonId={selectedSeason?.id}
+                            isMobile
+                          />
+                          {rank === 10 && <span className="text-lg">🤡</span>}
+                        </div>
+
+                        {/* Evolution badge */}
+                        {evolutionBadge && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs">Évolution:</span>
+                            {evolutionBadge}
+                          </div>
+                        )}
+
+                        {/* Statistics grid */}
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-muted-foreground">Position</span>
+                            <span className="font-semibold">{getRankLabel(rank)}</span>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-muted-foreground">% du total</span>
+                            <span className="font-semibold">{percentage}%</span>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-muted-foreground">Scoreurs</span>
+                            <span className="font-semibold">{standing.scoreurs_count ?? 0}</span>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-muted-foreground">Victoires</span>
+                            <span className="font-semibold">{standing.victories_count ?? 0}</span>
+                          </div>
+                        </div>
+
+                        {/* Full detail button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/dashboard/rankings/${standing.manager_id}`);
+                          }}
+                        >
+                          Voir le détail complet
+                        </Button>
+                      </div>
+                    }
                   />
                 );
               })
@@ -561,21 +580,6 @@ export const RankingsMobile = () => {
         saisonId={selectedSeason?.id}
       />
 
-      <ManagerDetailsDrawer
-        open={!!drawerManager}
-        onOpenChange={(open) => !open && setDrawerManager(null)}
-        managerId={drawerManager?.managerId || ''}
-        managerName={drawerManager?.managerName || ''}
-        rank={drawerManager?.rank || 0}
-        totalPoints={drawerManager?.totalPoints || 0}
-        evolution={drawerManager?.evolution || null}
-        isNew={drawerManager?.isNew || false}
-        percentage={drawerManager?.percentage || '0'}
-        scoreursCount={drawerManager?.scoreursCount || 0}
-        victoriesCount={drawerManager?.victoriesCount || 0}
-        phaseId={selectedPhase}
-        saisonId={selectedSeason?.id}
-      />
     </div>
   );
 };
