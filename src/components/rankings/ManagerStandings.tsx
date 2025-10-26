@@ -136,11 +136,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-64" />
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
               <Skeleton key={i} className="h-12 w-full" />
@@ -153,16 +149,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5" />
-          Classement des Managers
-        </CardTitle>
-        <CardDescription>
-          {phaseId ? "Classement pour la phase sélectionnée" : "Classement général"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <Table>
           <TableHeader>
             <TableRow>
@@ -304,7 +291,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
                   {previousGlobalStandings && (
                     <TableCell className="text-center py-2">
                       {isNew ? (
-                        <Badge variant="outline" className="text-xs">NEW</Badge>
+                        <Badge className="bg-[#FFD500] text-black border-2 border-black text-xs font-bold">NEW</Badge>
                       ) : evolution !== null && evolution !== 0 ? (
                         <div className={cn(
                           "flex items-center justify-center gap-1 text-xs font-semibold",

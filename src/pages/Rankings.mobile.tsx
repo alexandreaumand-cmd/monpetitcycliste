@@ -187,12 +187,12 @@ export const RankingsMobile = () => {
   ];
 
   const tabChips = [
-    { label: "🏆 Managers", value: "standings" as TabView },
-    { label: "🚴 Top coureurs", value: "riders" as TabView },
-    { label: "📈 Chrono", value: "timeline" as TabView },
-    { label: "⚖️ Comparaison", value: "comparison" as TabView },
-    { label: "👥 Équipes", value: "teams" as TabView },
-    { label: "🏁 Courses", value: "courses" as TabView },
+    { label: "Managers", value: "standings" as TabView },
+    { label: "Coureurs", value: "riders" as TabView },
+    { label: "Chrono", value: "timeline" as TabView },
+    { label: "Comparaison", value: "comparison" as TabView },
+    { label: "Équipes", value: "teams" as TabView },
+    { label: "Courses", value: "courses" as TabView },
   ];
 
   const getRankBadge = (rank: number) => {
@@ -249,12 +249,16 @@ export const RankingsMobile = () => {
     const isPodium = rank <= 3;
     return (
       <div className="flex flex-col items-end">
-        <div className="flex items-baseline gap-1">
-          <span className={`font-bold ${isPodium ? 'text-3xl text-primary' : 'text-2xl'}`}>
+        {isPodium ? (
+          <Badge className="bg-[#FFD500] text-black border-2 border-black text-xl font-bold px-3 py-1">
             {points}
-          </span>
-          <span className="text-xs text-muted-foreground">pts</span>
-        </div>
+          </Badge>
+        ) : (
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-bold">{points}</span>
+            <span className="text-xs text-muted-foreground">pts</span>
+          </div>
+        )}
       </div>
     );
   };
@@ -262,26 +266,22 @@ export const RankingsMobile = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="p-4 pb-0">
-        <div className="mb-4">
-          <Label htmlFor="phase-select" className="text-xs text-muted-foreground mb-2 block">
-            Période
-          </Label>
-          <Select 
-            value={selectedPhase || "null"} 
-            onValueChange={(value) => setSelectedPhase(value === "null" ? null : value)}
-          >
-            <SelectTrigger id="phase-select" className="w-full">
-              <SelectValue placeholder="Sélectionner une période" />
-            </SelectTrigger>
-            <SelectContent>
-              {phaseChips.map((chip) => (
-                <SelectItem key={chip.value} value={chip.value}>
-                  {chip.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select 
+          value={selectedPhase || "null"} 
+          onValueChange={(value) => setSelectedPhase(value === "null" ? null : value)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Global" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="null">Global</SelectItem>
+            {phases?.map((phase) => (
+              <SelectItem key={phase.id} value={phase.id}>
+                Phase {phase.index_dans_saison}{phase.statut === 'active' ? ' ✓' : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-sm border-b">
@@ -327,7 +327,7 @@ export const RankingsMobile = () => {
                 // Only show evolution badge in global view
                 const evolutionBadge = !selectedPhase && previousGlobalStandings ? (
                   isNew ? (
-                    <Badge variant="outline" className="text-xs">NEW</Badge>
+                    <Badge className="bg-[#FFD500] text-black border-2 border-black text-xs font-bold">NEW</Badge>
                   ) : evolution !== null && evolution !== 0 ? (
                     <div className={`flex items-center gap-1 text-xs font-semibold ${
                       evolution > 0 ? "text-green-600" : "text-red-600"

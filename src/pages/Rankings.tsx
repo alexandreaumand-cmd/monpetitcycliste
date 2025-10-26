@@ -43,13 +43,13 @@ export default function Rankings() {
   return (
     <PageContainer>
       {/* Main Content */}
-      <Tabs defaultValue="standings" className="space-y-3">
+      <Tabs defaultValue="standings" className="space-y-2">
           <div className="flex items-center justify-between gap-4">
-            <TabsList className="grid w-full grid-cols-6 max-w-5xl">
+            <TabsList className="inline-flex w-auto gap-1">
               <TabsTrigger value="standings">Managers</TabsTrigger>
               <TabsTrigger value="riders">Top Coureurs</TabsTrigger>
-              <TabsTrigger value="timeline">Chronologie</TabsTrigger>
-              <TabsTrigger value="team">Détail par équipe</TabsTrigger>
+              <TabsTrigger value="timeline">Chrono</TabsTrigger>
+              <TabsTrigger value="team">Équipes</TabsTrigger>
               <TabsTrigger value="history">Historique</TabsTrigger>
               <TabsTrigger value="comparison">Comparaison</TabsTrigger>
             </TabsList>
@@ -58,14 +58,14 @@ export default function Rankings() {
               value={selectedPhase || "all"} 
               onValueChange={(v) => setSelectedPhase(v === "all" ? null : v)}
             >
-              <SelectTrigger className="w-56 shrink-0">
-                <SelectValue placeholder="Général (toute la saison)" />
+              <SelectTrigger className="w-40 shrink-0">
+                <SelectValue placeholder="Global" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Général (toute la saison)</SelectItem>
+                <SelectItem value="all">Global</SelectItem>
                 {phases?.map((phase) => (
                   <SelectItem key={phase.id} value={phase.id}>
-                    Phase {phase.index_dans_saison}
+                    P{phase.index_dans_saison}{phase.statut === 'active' ? ' ✓' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
