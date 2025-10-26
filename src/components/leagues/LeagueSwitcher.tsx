@@ -40,7 +40,7 @@ export function LeagueSwitcher() {
             <span className="hidden md:inline">
               {currentLeague?.name || "Sélectionner une ligue"}
             </span>
-            {isLegacy && <Badge variant="secondary" className="ml-1 hidden md:inline-flex">Legacy</Badge>}
+            {isLegacy && <Badge className="ml-1 hidden md:inline-flex bg-[#FFF4CC] text-black border border-[#FFD500] font-semibold">Actuelle</Badge>}
             <ChevronDown className="h-4 w-4 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
@@ -62,7 +62,7 @@ export function LeagueSwitcher() {
                 <div className="flex flex-col gap-1">
                   <span className="font-medium">{league.name}</span>
                   {league.id === leagueId && (
-                    <Badge variant="secondary" className="w-fit text-xs">Actuelle</Badge>
+                    <Badge className="w-fit text-xs bg-[#FFF4CC] text-black border border-[#FFD500] font-semibold">Actuelle</Badge>
                   )}
                 </div>
                 <Badge variant="outline" className="ml-2">
