@@ -88,20 +88,45 @@ serve(async (req) => {
       throw rolesError;
     }
 
-    // Récupération des appartenances aux ligues (pour compter)
+    // Récupération des appartenances aux ligues avec rôles et noms
     const { data: leagueMembers, error: leagueError } = await supabaseClient
       .from('league_members')
-      .select('user_id, league_id');
+      .select(`
+        user_id, 
+        league_id, 
+        role_in_league,
+        leagues:league_id (
+          id,
+          name
+        )
+      `);
     if (leagueError) {
       console.error('[admin-users-list] league_members fetch error:', leagueError);
       throw leagueError;
     }
 
+    // Grouper les ligues par utilisateur avec leurs rôles
+    const userLeagues = leagueMembers?.reduce((acc: any, lm: any) => {
+      if (!acc[lm.user_id]) acc[lm.user_id] = [];
+      acc[lm.user_id].push({
+        league_id: lm.league_id,
+        league_name: lm.leagues?.name || 'Ligue sans nom',
+        role: lm.role_in_league
+      });
+      return acc;
+    }, {});
+
     // Construction du payload
     const users = allUsers.map((user: any) => {
       const manager = managers?.find((m) => m.user_id === user.id);
       const hasSuperAdminRole = userRoles?.some((r) => r.user_id === user.id && r.role === 'superadmin') || false;
-      const leagueCount = leagueMembers?.filter((lm) => lm.user_id === user.id).length || 0;
+      const userLeaguesData = userLeagues?.[user.id] || [];
+      const leagueCount = userLeaguesData.length;
+      
+      // Compter les rôles d'admin de ligue
+      const leagueAdminCount = userLeaguesData.filter(
+        (l: any) => l.role === 'owner' || l.role === 'admin'
+      ).length;
 
       return {
         user_id: user.id,
@@ -110,6 +135,8 @@ serve(async (req) => {
         manager_name: manager?.nom || null,
         is_superadmin: hasSuperAdminRole,
         league_count: leagueCount,
+        league_admin_count: leagueAdminCount,
+        league_roles: userLeaguesData,
         last_sign_in_at: user.last_sign_in_at || null,
         email_confirmed_at: user.email_confirmed_at || null,
         banned_until: (user as any)?.banned_until || null,

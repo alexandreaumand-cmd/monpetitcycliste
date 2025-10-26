@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { UserPlus, Key, Ban, CheckCircle, Mail, Shield, Users, Activity, Copy } from "lucide-react";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -24,13 +25,19 @@ interface UserData {
   manager_name: string | null;
   is_superadmin: boolean;
   league_count: number;
+  league_admin_count: number;
+  league_roles: Array<{
+    league_id: string;
+    league_name: string;
+    role: 'owner' | 'admin' | 'member';
+  }>;
   last_sign_in_at: string | null;
   email_confirmed_at: string | null;
   banned_until: string | null;
   created_at: string;
 }
 
-type FilterStatus = 'all' | 'active' | 'unconfirmed' | 'banned' | 'superadmins';
+type FilterStatus = 'all' | 'active' | 'unconfirmed' | 'banned' | 'superadmins' | 'leagueadmins';
 
 export default function UsersManagementPage() {
   const queryClient = useQueryClient();
@@ -246,6 +253,8 @@ export default function UsersManagementPage() {
         return !!user.banned_until;
       case 'superadmins':
         return user.is_superadmin;
+      case 'leagueadmins':
+        return user.league_admin_count > 0;
       default:
         return true;
     }
@@ -254,6 +263,7 @@ export default function UsersManagementPage() {
   const stats = {
     total: users?.length || 0,
     superAdmins: users?.filter(u => u.is_superadmin).length || 0,
+    leagueAdmins: users?.filter(u => u.league_admin_count > 0).length || 0,
     active: users?.filter(u => u.email_confirmed_at && !u.banned_until).length || 0,
     unconfirmed: users?.filter(u => !u.email_confirmed_at).length || 0,
     banned: users?.filter(u => u.banned_until).length || 0,
@@ -354,7 +364,7 @@ export default function UsersManagementPage() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
@@ -371,6 +381,15 @@ export default function UsersManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{isError ? '—' : stats.superAdmins}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">League Admins</CardTitle>
+            <Shield className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{isError ? '—' : stats.leagueAdmins}</div>
           </CardContent>
         </Card>
         <Card>
@@ -427,6 +446,7 @@ export default function UsersManagementPage() {
                 <SelectItem value="unconfirmed">Non confirmés</SelectItem>
                 <SelectItem value="banned">Suspendus</SelectItem>
                 <SelectItem value="superadmins">Super Admins</SelectItem>
+                <SelectItem value="leagueadmins">League Admins</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -447,7 +467,7 @@ export default function UsersManagementPage() {
                     <th className="px-4 py-3 text-left text-sm font-medium">Manager</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Statut</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Rôle</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Ligues</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Ligues / Rôles</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Dernière connexion</th>
                     <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
                   </tr>
@@ -473,7 +493,41 @@ export default function UsersManagementPage() {
                             <Badge variant="outline">Utilisateur</Badge>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-sm">{user.league_count} ligue(s)</td>
+                        <td className="px-4 py-3 text-sm">
+                          <HoverCard>
+                            <HoverCardTrigger asChild>
+                              <div className="flex flex-col gap-1 cursor-pointer">
+                                <span className="text-muted-foreground">
+                                  {user.league_count} {user.league_count > 1 ? 'ligues' : 'ligue'}
+                                </span>
+                                {user.league_admin_count > 0 && (
+                                  <Badge variant="outline" className="text-xs w-fit">
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    {user.league_admin_count} admin{user.league_admin_count > 1 ? 's' : ''}
+                                  </Badge>
+                                )}
+                              </div>
+                            </HoverCardTrigger>
+                            <HoverCardContent className="w-80">
+                              <div className="space-y-2">
+                                <h4 className="text-sm font-semibold">Ligues administrées</h4>
+                                {user.league_roles
+                                  ?.filter(l => l.role === 'owner' || l.role === 'admin')
+                                  .map(league => (
+                                    <div key={league.league_id} className="flex items-center justify-between text-sm">
+                                      <span className="truncate flex-1">{league.league_name}</span>
+                                      <Badge variant={league.role === 'owner' ? 'default' : 'secondary'} className="text-xs ml-2">
+                                        {league.role === 'owner' ? 'Propriétaire' : 'Admin'}
+                                      </Badge>
+                                    </div>
+                                  ))}
+                                {user.league_admin_count === 0 && (
+                                  <p className="text-sm text-muted-foreground">Aucune ligue administrée</p>
+                                )}
+                              </div>
+                            </HoverCardContent>
+                          </HoverCard>
+                        </td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">
                           {user.last_sign_in_at 
                             ? format(new Date(user.last_sign_in_at), 'dd MMM yyyy', { locale: fr })
