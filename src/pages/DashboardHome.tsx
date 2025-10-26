@@ -5,11 +5,9 @@ import { QuickActions } from "@/components/dashboard/QuickActions";
 import { LeagueCard } from "@/components/dashboard/LeagueCard";
 import { RecentResultsWidget } from "@/components/dashboard/RecentResultsWidget";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { Users, Settings } from "lucide-react";
+import { Users } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
-import { ManagerDropdown } from "@/components/layout/ManagerDropdown";
-import mpcLogo from "@/assets/mpc-logo.png";
+import { DashboardHomeHeader } from "@/components/dashboard/DashboardHomeHeader";
 
 interface DashboardHomeProps {
   onSignOut: () => void;
@@ -36,39 +34,13 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-yellow-50/30">
-      {/* Header minimal */}
-      <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img 
-              src={mpcLogo} 
-              alt="Logo Mon Petit Cycliste" 
-              className="h-10 w-10 md:h-12 md:w-12"
-            />
-            <h1 className="text-xl font-montserrat font-bold text-white">Mon Petit Cycliste</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            {manager && (
-              <ManagerDropdown 
-                manager={manager}
-                isAdmin={isAnyAdmin}
-                onSignOut={onSignOut}
-              />
-            )}
-            {isSuperAdmin && (
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                onClick={() => navigate(buildNavUrl('/dashboard/super-admin'))}
-                className="gap-2"
-              >
-                <Settings className="h-4 w-4" />
-                Super Admin
-              </Button>
-            )}
-          </div>
-        </div>
-      </header>
+      <DashboardHomeHeader
+        manager={manager}
+        isAnyAdmin={isAnyAdmin}
+        isSuperAdmin={isSuperAdmin}
+        onSignOut={onSignOut}
+        onNavigateAdmin={() => navigate(buildNavUrl('/dashboard/super-admin'))}
+      />
 
       {/* Contenu */}
       <div className="container mx-auto px-4 py-8 space-y-6">

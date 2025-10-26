@@ -17,28 +17,38 @@ interface ManagerDropdownProps {
   isAdmin: boolean;
   onSignOut: () => void;
   avatarUrl?: string;
+  compact?: boolean;
 }
 
-export function ManagerDropdown({ manager, isAdmin, onSignOut, avatarUrl }: ManagerDropdownProps) {
+export function ManagerDropdown({ manager, isAdmin, onSignOut, avatarUrl, compact = false }: ManagerDropdownProps) {
   const navigate = useNavigate();
   const initials = manager.nom?.substring(0, 2).toUpperCase() || "?";
   
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="flex items-center gap-2 h-9">
-          {avatarUrl ? (
+        {compact ? (
+          <Button variant="ghost" size="icon" className="h-9 w-9">
             <Avatar className="h-6 w-6">
               <AvatarImage src={avatarUrl} alt={manager.nom} />
               <AvatarFallback className="text-xs">{initials}</AvatarFallback>
             </Avatar>
-          ) : null}
-          <span className="font-medium text-sm text-white">{manager.nom}</span>
-          {manager.sponsor && (
-            <span className="text-xs text-gray-300">({manager.sponsor})</span>
-          )}
-          {isAdmin && <Badge variant="secondary" className="text-xs">Admin</Badge>}
-        </Button>
+          </Button>
+        ) : (
+          <Button variant="ghost" className="flex items-center gap-2 h-9">
+            {avatarUrl ? (
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={avatarUrl} alt={manager.nom} />
+                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+              </Avatar>
+            ) : null}
+            <span className="font-medium text-sm text-white">{manager.nom}</span>
+            {manager.sponsor && (
+              <span className="text-xs text-gray-300">({manager.sponsor})</span>
+            )}
+            {isAdmin && <Badge variant="secondary" className="text-xs">Admin</Badge>}
+          </Button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56 bg-popover z-50">
         <DropdownMenuLabel>Mon Compte</DropdownMenuLabel>
