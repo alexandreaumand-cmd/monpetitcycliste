@@ -265,20 +265,10 @@ export const RankingsMobile = () => {
     );
   };
 
-  const PointsBadge = ({ points, rank }: { points: number; rank: number }) => {
-    const isPodium = rank <= 3;
+  const PointsBadge = ({ points }: { points: number }) => {
     return (
       <div className="flex flex-col items-end">
-        {isPodium ? (
-          <Badge className="bg-[#FFD500] text-black border-2 border-black text-sm font-bold px-2.5 py-0.5">
-            {points}
-          </Badge>
-        ) : (
-          <div className="flex items-baseline gap-1">
-            <span className="text-lg font-bold">{points}</span>
-            <span className="text-xs text-muted-foreground">pts</span>
-          </div>
-        )}
+        <span className="text-lg font-bold">{points}</span>
       </div>
     );
   };
@@ -381,7 +371,7 @@ export const RankingsMobile = () => {
                     key={standing.manager_id}
                     title={<ManagerNameWithSponsor managerId={standing.manager_id} managerName={standing.manager_nom} />}
                     avatar={<RankBadge rank={rank} />}
-                    badge={<PointsBadge points={standing.total_points} rank={rank} />}
+                    badge={<PointsBadge points={standing.total_points} />}
                     onClick={() => handleManagerClick(standing.manager_id)}
                     expanded={isExpanded}
                     expandedContent={
