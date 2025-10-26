@@ -234,10 +234,28 @@ export const RankingsMobile = () => {
   };
 
   const RankBadge = ({ rank }: { rank: number }) => {
-    const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : null;
+    if (rank === 1) {
+      return (
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#FFD500] border-2 border-black">
+          <span className="text-sm font-bold text-black">1er</span>
+        </div>
+      );
+    }
     
-    if (medal) {
-      return <div className="text-3xl">{medal}</div>;
+    if (rank === 2) {
+      return (
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-black border-2 border-[#FFD500]">
+          <span className="text-sm font-bold text-[#FFD500]">2e</span>
+        </div>
+      );
+    }
+    
+    if (rank === 3) {
+      return (
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white border-2 border-[#FFD500]">
+          <span className="text-sm font-bold text-black">3e</span>
+        </div>
+      );
     }
     
     return (
@@ -252,12 +270,12 @@ export const RankingsMobile = () => {
     return (
       <div className="flex flex-col items-end">
         {isPodium ? (
-          <Badge className="bg-[#FFD500] text-black border-2 border-black text-xl font-bold px-3 py-1">
+          <Badge className="bg-[#FFD500] text-black border-2 border-black text-sm font-bold px-2.5 py-0.5">
             {points}
           </Badge>
         ) : (
           <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold">{points}</span>
+            <span className="text-lg font-bold">{points}</span>
             <span className="text-xs text-muted-foreground">pts</span>
           </div>
         )}
