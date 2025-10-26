@@ -1,8 +1,5 @@
 import { Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
-import { CourseManagementTabs } from "@/components/admin/CourseManagementTabs";
 import { GameManagementTabs } from "@/components/admin/GameManagementTabs";
-import { ConfigurationTabs } from "@/components/admin/ConfigurationTabs";
-import { MaintenanceTabs } from "@/components/admin/MaintenanceTabs";
 import { LeaguesAdminPage } from "@/pages/admin/LeaguesAdminPage";
 import { LeagueDetailPage } from "@/pages/admin/LeagueDetailPage";
 import { cn } from "@/lib/utils";
@@ -11,11 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ShieldAlert, Loader2 } from "lucide-react";
 
 const allTabs = [
-  { label: '🏁 Courses', path: 'courses', superAdminOnly: true },
   { label: '🎮 Enchères', path: 'encheres', superAdminOnly: false },
   { label: '🏆 Ligues', path: 'leagues', superAdminOnly: false },
-  { label: '⚙️ Configuration', path: 'config', superAdminOnly: true },
-  { label: '🔧 Maintenance', path: 'maintenance', superAdminOnly: true },
 ];
 
 export const AdminPage = () => {
@@ -80,19 +74,11 @@ export const AdminPage = () => {
           index 
           element={
             <Navigate 
-              to={isSuperAdmin ? "/dashboard/admin/courses" : "/dashboard/admin/leagues"} 
+              to="/dashboard/admin/encheres" 
               replace 
             />
           } 
         />
-        
-        {isSuperAdmin && (
-          <>
-            <Route path="courses" element={<CourseManagementTabs />} />
-            <Route path="config" element={<ConfigurationTabs />} />
-            <Route path="maintenance" element={<MaintenanceTabs />} />
-          </>
-        )}
         
         <Route path="encheres" element={<GameManagementTabs />} />
         <Route path="leagues" element={<LeaguesAdminPage />} />
