@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Users, Settings } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ManagerDropdown } from "@/components/layout/ManagerDropdown";
-import logo from "@/assets/logo.png";
+import mpcLogo from "@/assets/mpc-logo.png";
 
 interface DashboardHomeProps {
   onSignOut: () => void;
@@ -40,9 +40,11 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
       <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#FFD500] flex items-center justify-center">
-              <span className="font-montserrat font-black text-black text-sm">MPC</span>
-            </div>
+            <img 
+              src={mpcLogo} 
+              alt="Logo Mon Petit Cycliste" 
+              className="h-10 w-10 md:h-12 md:w-12"
+            />
             <h1 className="text-xl font-montserrat font-bold text-white">Mon Petit Cycliste</h1>
           </div>
           <div className="flex items-center gap-2">

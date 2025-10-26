@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import mpcLogo from "@/assets/mpc-logo.png";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -163,7 +163,7 @@ const Auth = () => {
       <Card className="w-full max-w-md shadow-elegant">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <img src={logo} alt="Mon Petit Cycliste" className="h-32 w-32 object-contain" />
+            <img src={mpcLogo} alt="Mon Petit Cycliste" className="h-32 w-32 object-contain" />
           </div>
           {inviteToken ? (
             <CardDescription className="text-primary font-medium">
