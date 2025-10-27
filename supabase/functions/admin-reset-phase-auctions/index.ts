@@ -125,8 +125,14 @@ Deno.serve(async (req) => {
     if (auctionIds.length === 0) {
       console.log('[admin-reset-phase-auctions] No auctions found for this phase');
       return new Response(
-        JSON.stringify({ error: 'Aucune enchère trouvée pour cette phase' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          success: true,
+          phase_id,
+          league_id,
+          auctions_deleted: 0,
+          message: 'Aucune enchère trouvée pour cette phase. Rien à supprimer.',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

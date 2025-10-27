@@ -76,10 +76,14 @@ export const AuctionResetManager = () => {
       setPhaseId("");
       setLeagueId("");
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      const status = error?.context?.status;
+      const backendMsg = error?.context?.error?.message || error?.message || 'Erreur inconnue';
+      const fullMsg = status ? `[${status}] ${backendMsg}` : backendMsg;
+
       toast({ 
         title: "Erreur lors de la suppression", 
-        description: error.message,
+        description: fullMsg,
         variant: "destructive" 
       });
     },
