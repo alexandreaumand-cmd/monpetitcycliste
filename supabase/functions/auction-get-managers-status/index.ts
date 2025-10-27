@@ -92,16 +92,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Récupérer les informations de la phase (budget et max_coureurs)
-    const { data: phase, error: phaseError } = await supabaseAdmin
-      .from('phases')
-      .select('budget, max_coureurs')
-      .eq('id', phase_id)
+    // Récupérer les informations de la ligue (budget et max_coureurs)
+    const { data: league, error: leagueError } = await supabaseAdmin
+      .from('leagues')
+      .select('budget_per_manager, max_riders_per_manager')
+      .eq('id', auction.league_id)
       .single();
 
-    if (phaseError) {
-      console.error('Error fetching phase:', phaseError);
-      throw phaseError;
+    if (leagueError) {
+      console.error('Error fetching league:', leagueError);
+      throw leagueError;
     }
 
     // Récupérer uniquement les managers membres de cette ligue
@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
         let status: 'validated' | 'pending' | 'incomplete';
         if (pendingCount > 0) {
           status = 'validated';
-        } else if (slotsFilled < phase.max_coureurs) {
+        } else if (slotsFilled < league.max_riders_per_manager) {
           status = 'incomplete';
         } else {
           status = 'pending';
@@ -207,9 +207,9 @@ Deno.serve(async (req) => {
           nom: manager.nom,
           status,
           slots_filled: slotsFilled,
-          max_slots: phase.max_coureurs,
+          max_slots: league.max_riders_per_manager,
           budget_used: Math.round(budgetUsed),
-          total_budget: Number(phase.budget),
+          total_budget: Number(league.budget_per_manager),
         };
       })
     );
