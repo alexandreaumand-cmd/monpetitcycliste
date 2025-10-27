@@ -296,8 +296,8 @@ export const RoundControlCenter = () => {
               pendingBids={stats.pending_bids || 0}
               wonBids={stats.won_bids || 0}
               ties={stats.ties || 0}
-              totalManagers={managerStatuses?.length || 0}
-              validatedManagers={stats.validated_managers || 0}
+              totalManagers={stats.total_managers || (managerStatuses?.length || 0)}
+              validatedManagers={stats.validated_count || 0}
             />
           )}
 

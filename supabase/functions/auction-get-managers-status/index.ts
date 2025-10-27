@@ -92,10 +92,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Récupérer les informations de la ligue (budget et max_coureurs)
+    // Récupérer les informations de la ligue (settings)
     const { data: league, error: leagueError } = await supabaseAdmin
       .from('leagues')
-      .select('budget_per_manager, max_riders_per_manager')
+      .select('settings')
       .eq('id', auction.league_id)
       .single();
 
@@ -103,6 +103,27 @@ Deno.serve(async (req) => {
       console.error('Error fetching league:', leagueError);
       throw leagueError;
     }
+
+    // Extraire budget et max_riders depuis settings
+    const budgetPerManager = Number(league.settings?.budget ?? 2200);
+    let maxRidersPerManager = Number(league.settings?.max_riders ?? null);
+
+    // Fallback sur phases.max_coureurs si maxRidersPerManager est null
+    if (!maxRidersPerManager) {
+      const { data: phase, error: phaseError } = await supabaseAdmin
+        .from('phases')
+        .select('max_coureurs')
+        .eq('id', phase_id)
+        .single();
+      
+      if (phaseError) {
+        console.error('Error fetching phase:', phaseError);
+      }
+      
+      maxRidersPerManager = Number(phase?.max_coureurs ?? 30);
+    }
+
+    console.log(`League budget: ${budgetPerManager}, max riders: ${maxRidersPerManager}`);
 
     // Récupérer uniquement les managers membres de cette ligue
     const { data: leagueMembers, error: membersError } = await supabaseAdmin
@@ -146,25 +167,25 @@ Deno.serve(async (req) => {
     // Pour chaque manager, calculer son statut
     const managerStatuses: ManagerStatus[] = await Promise.all(
       managers.map(async (manager) => {
-        // Compter les coureurs dans le roster (filtré par league_id)
+        // Compter les coureurs dans le roster (filtré par league_id avec compatibilité historique)
         const { count: rosterCount, error: rosterError } = await supabaseAdmin
           .from('rosters')
           .select('*', { count: 'exact', head: true })
           .eq('manager_id', manager.id)
           .eq('phase_id', phase_id)
-          .eq('league_id', auction.league_id);
+          .or(`league_id.eq.${auction.league_id},league_id.is.null`);
 
         if (rosterError) {
           console.error(`Error counting roster for manager ${manager.nom}:`, rosterError);
         }
 
-        // Calculer le budget dépensé (rosters filtré par league_id)
+        // Calculer le budget dépensé (rosters filtré par league_id avec compatibilité historique)
         const { data: rosterData, error: rosterBudgetError } = await supabaseAdmin
           .from('rosters')
           .select('prix_signature')
           .eq('manager_id', manager.id)
           .eq('phase_id', phase_id)
-          .eq('league_id', auction.league_id);
+          .or(`league_id.eq.${auction.league_id},league_id.is.null`);
 
         if (rosterBudgetError) {
           console.error(`Error fetching roster budget for manager ${manager.nom}:`, rosterBudgetError);
@@ -172,13 +193,13 @@ Deno.serve(async (req) => {
 
         const budgetSpent = rosterData?.reduce((sum, r) => sum + Number(r.prix_signature || 0), 0) || 0;
 
-        // CRITICAL: Compter les enchères filtré par auction_id ET league_id
+        // CRITICAL: Compter les enchères filtré par auction_id ET league_id (avec compatibilité historique)
         const { data: bids, error: bidsError } = await supabaseAdmin
           .from('bids')
           .select('statut, montant')
           .eq('manager_id', manager.id)
           .eq('auction_id', auction_id)
-          .eq('league_id', auction.league_id);
+          .or(`league_id.eq.${auction.league_id},league_id.is.null`);
 
         if (bidsError) {
           console.error(`Error fetching bids for manager ${manager.nom}:`, bidsError);
@@ -202,11 +223,11 @@ Deno.serve(async (req) => {
         }
         // Cas 2: Roster complet ET pas d'enchères en draft
         // → N'a plus besoin de participer aux enchères
-        else if (slotsFilled >= league.max_riders_per_manager && draftCount === 0) {
+        else if (slotsFilled >= maxRidersPerManager && draftCount === 0) {
           status = 'validated';
         }
         // Cas 3: Roster incomplet
-        else if (slotsFilled < league.max_riders_per_manager) {
+        else if (slotsFilled < maxRidersPerManager) {
           status = 'incomplete';
         }
         // Cas 4: A des drafts mais n'a pas encore validé
@@ -218,9 +239,9 @@ Deno.serve(async (req) => {
           nom: manager.nom,
           status,
           slots_filled: slotsFilled,
-          max_slots: league.max_riders_per_manager,
+          max_slots: maxRidersPerManager,
           budget_used: Math.round(budgetUsed),
-          total_budget: Number(league.budget_per_manager),
+          total_budget: budgetPerManager,
         };
       })
     );
