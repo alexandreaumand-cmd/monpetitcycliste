@@ -179,8 +179,8 @@ Deno.serve(async (req) => {
         const winner = maxBids[0];
         const losers = coureurBids.filter((b) => b.id !== winner.id);
 
-        // Create roster entry
-        await supabase.from('rosters').insert({
+        // Create roster entry with error handling
+        const { error: rosterError } = await supabase.from('rosters').insert({
           phase_id: auction.phase_id,
           manager_id: winner.manager_id,
           coureur_id,
@@ -188,13 +188,60 @@ Deno.serve(async (req) => {
           league_id: league_id,
         });
 
-        // Update bids
+        if (rosterError) {
+          console.error('❌ Failed to insert roster:', {
+            coureur_id,
+            manager_id: winner.manager_id,
+            manager_nom: winner.managers.nom,
+            prix: maxAmount,
+            error: rosterError.message,
+            details: rosterError
+          });
+          
+          // If insertion fails, treat as tie (carried over to next round)
+          const carryOverIds = [winner.id];
+          const lostIds = losers.map((b) => b.id);
+
+          if (carryOverIds.length > 0) {
+            await supabase.from('bids').update({ statut: 'carried_over' }).in('id', carryOverIds);
+          }
+          if (lostIds.length > 0) {
+            await supabase.from('bids').update({ statut: 'lost' }).in('id', lostIds);
+          }
+
+          // Create tie annonce instead of win
+          annonces.push({
+            auction_id,
+            round_number: auction.round_number,
+            coureur_id,
+            type: 'egalite',
+            winning_manager_id: null,
+            winning_amount: maxAmount,
+            losers_json: [{
+              manager: winner.managers.nom,
+              montant: parseFloat(winner.montant),
+            }, ...losers.map((b) => ({
+              manager: b.managers.nom,
+              montant: parseFloat(b.montant),
+            }))],
+          });
+
+          continue; // Skip to next rider
+        }
+
+        console.log('✅ Roster created successfully:', {
+          coureur_id,
+          manager_nom: winner.managers.nom,
+          prix: maxAmount
+        });
+
+        // Update bids (only if roster insertion succeeded)
         await supabase.from('bids').update({ statut: 'won' }).eq('id', winner.id);
         if (losers.length > 0) {
           await supabase.from('bids').update({ statut: 'lost' }).in('id', losers.map((b) => b.id));
         }
 
-        // Create annonce
+        // Create annonce (only if everything succeeded)
         annonces.push({
           auction_id,
           round_number: auction.round_number,
