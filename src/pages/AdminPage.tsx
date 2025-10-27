@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, Link, useSearchParams } from "react-router-dom";
 import { GameManagementTabs } from "@/components/admin/GameManagementTabs";
 import { LeaguesAdminPage } from "@/pages/admin/LeaguesAdminPage";
 import { LeagueDetailPage } from "@/pages/admin/LeagueDetailPage";
@@ -14,7 +14,11 @@ const allTabs = [
 
 export const AdminPage = () => {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { isSuperAdmin, isLeagueAdminOnly, loading } = useUserRole();
+  
+  const leagueId = searchParams.get('leagueId');
+  const preserveLeagueParam = leagueId ? `?leagueId=${leagueId}` : '';
 
   if (loading) {
     return (
@@ -74,7 +78,7 @@ export const AdminPage = () => {
           index 
           element={
             <Navigate 
-              to="/dashboard/admin/encheres" 
+              to={`/dashboard/admin/encheres${preserveLeagueParam}`}
               replace 
             />
           } 
