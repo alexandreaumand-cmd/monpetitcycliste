@@ -10,9 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useLeague } from "@/contexts/LeagueContext";
 
 export const RoundManager = () => {
   const queryClient = useQueryClient();
+  const { leagueId } = useLeague();
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>("");
   const [newDeadline, setNewDeadline] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
@@ -111,7 +113,10 @@ export const RoundManager = () => {
   const closeRoundMutation = useMutation({
     mutationFn: async (auction_id: string) => {
       const { data, error } = await supabase.functions.invoke('clore-round', {
-        body: { auction_id }
+        body: { 
+          auction_id,
+          league_id: leagueId
+        }
       });
       if (error) throw error;
       return data;

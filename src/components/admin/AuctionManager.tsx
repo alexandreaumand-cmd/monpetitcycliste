@@ -194,7 +194,10 @@ export const AuctionManager = () => {
 
       // Then, invoke the clore-round function to process bids
       const { data, error: functionError } = await supabase.functions.invoke('clore-round', {
-        body: { auction_id: auctionId }
+        body: { 
+          auction_id: auctionId,
+          league_id: leagueId
+        }
       });
 
       if (functionError) throw functionError;
@@ -220,7 +223,10 @@ export const AuctionManager = () => {
   const reprocessRound = useMutation({
     mutationFn: async (auctionId: string) => {
       const { data, error } = await supabase.functions.invoke('clore-round', {
-        body: { auction_id: auctionId }
+        body: { 
+          auction_id: auctionId,
+          league_id: leagueId
+        }
       });
 
       if (error) throw error;
