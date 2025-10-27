@@ -3,14 +3,18 @@ import { AuctionSearchFilters } from "./AuctionSearchFilters";
 import { RiderResultsList } from "./RiderResultsList";
 import { MyBidsList } from "./MyBidsList";
 import { AuctionTeamsGrid } from "../AuctionTeamsGrid";
+import { RoundHistoryTab } from "./RoundHistoryTab";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BidAmountPopover } from "./BidAmountPopover";
 import { Plus, CheckCircle2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuctionTabsProps {
   phaseId: string;
   managerId: string;
+  leagueId: string | null;
   context: any;
   // Search filters props
   searchQuery: string;
@@ -36,6 +40,7 @@ interface AuctionTabsProps {
 export const AuctionTabs = ({
   phaseId,
   managerId,
+  leagueId,
   context,
   searchQuery,
   setSearchQuery,
@@ -54,6 +59,26 @@ export const AuctionTabs = ({
   isUpdating,
   isSubmitting,
 }: AuctionTabsProps) => {
+  // Fetch closed rounds for this phase
+  const { data: closedRounds = [] } = useQuery({
+    queryKey: ["closed-rounds", phaseId, leagueId],
+    queryFn: async () => {
+      let query = supabase
+        .from("auctions")
+        .select("round_number, closed_at, id")
+        .eq("phase_id", phaseId)
+        .eq("statut", "closed");
+
+      if (leagueId) {
+        query = query.eq("league_id", leagueId);
+      }
+
+      const { data, error } = await query.order("round_number", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   return (
     <Tabs defaultValue="bid" className="w-full">
       {/* Compact tabs bar */}
@@ -67,6 +92,18 @@ export const AuctionTabs = ({
               <Plus className="h-4 w-4 mr-2" />
               Enchérir
             </TabsTrigger>
+            
+            {/* Dynamic tabs for closed rounds */}
+            {closedRounds.map((round) => (
+              <TabsTrigger
+                key={round.round_number}
+                value={`round-${round.round_number}`}
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg"
+              >
+                Round {round.round_number}
+              </TabsTrigger>
+            ))}
+            
             <TabsTrigger 
               value="teams" 
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg"
@@ -190,6 +227,21 @@ export const AuctionTabs = ({
           </div>
         </div>
       </TabsContent>
+
+      {/* Dynamic content for closed rounds */}
+      {closedRounds.map((round) => (
+        <TabsContent key={round.round_number} value={`round-${round.round_number}`} className="mt-0">
+          <div className="container mx-auto px-4 py-6 max-w-7xl">
+            <RoundHistoryTab
+              phaseId={phaseId}
+              managerId={managerId}
+              leagueId={leagueId}
+              roundNumber={round.round_number}
+              closedAt={round.closed_at}
+            />
+          </div>
+        </TabsContent>
+      ))}
 
       <TabsContent value="teams" className="mt-0">
         <div className="container mx-auto px-4 py-6 max-w-7xl">

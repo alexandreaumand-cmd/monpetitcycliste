@@ -340,6 +340,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
         <AuctionTabs
           phaseId={phaseId}
           managerId={managerId}
+          leagueId={leagueId}
           context={context}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
