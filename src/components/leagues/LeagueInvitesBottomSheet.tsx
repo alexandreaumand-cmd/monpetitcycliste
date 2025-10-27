@@ -186,8 +186,8 @@ export function LeagueInvitesBottomSheet({
           <h3 className="font-semibold">Code d'invitation</h3>
         </div>
         <div className="bg-muted/50 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <code className="flex-1 text-lg font-mono font-semibold tracking-wider">
+          <div className="flex flex-col gap-3">
+            <code className="text-base sm:text-lg font-mono font-semibold tracking-wider break-all">
               {inviteToken || "Chargement..."}
             </code>
             <Button
@@ -195,6 +195,7 @@ export function LeagueInvitesBottomSheet({
               variant="outline"
               onClick={handleCopyCode}
               disabled={!inviteToken}
+              className="w-full sm:w-auto"
             >
               <Copy className="h-4 w-4 mr-2" />
               Copier
@@ -210,8 +211,8 @@ export function LeagueInvitesBottomSheet({
           <h3 className="font-semibold">Lien d'invitation</h3>
         </div>
         <div className="bg-muted/50 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <p className="flex-1 text-sm truncate text-muted-foreground">
+          <div className="flex flex-col gap-3">
+            <p className="text-xs sm:text-sm break-all text-muted-foreground">
               {inviteUrl || "Chargement..."}
             </p>
             <Button
@@ -219,6 +220,7 @@ export function LeagueInvitesBottomSheet({
               variant="outline"
               onClick={handleCopyLink}
               disabled={!inviteUrl}
+              className="w-full sm:w-auto"
             >
               <Copy className="h-4 w-4 mr-2" />
               Copier
