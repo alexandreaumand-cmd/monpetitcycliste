@@ -27,9 +27,13 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
     return currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
   };
 
-  const handleViewLeagueDetails = (leagueId: string) => {
+  const handleViewLeagueDetails = (leagueId: string, hasActiveAuction?: boolean) => {
     setLeagueId(leagueId);
-    navigate(`/dashboard/classement?leagueId=${leagueId}`);
+    if (hasActiveAuction) {
+      navigate(`/dashboard/encheres?leagueId=${leagueId}`);
+    } else {
+      navigate(`/dashboard/classement?leagueId=${leagueId}`);
+    }
   };
 
   return (
@@ -74,7 +78,7 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
                 <LeagueCard
                   key={league.id}
                   league={league}
-                  onViewDetails={() => handleViewLeagueDetails(league.id)}
+                  onViewDetails={(hasActiveAuction) => handleViewLeagueDetails(league.id, hasActiveAuction)}
                 />
               ))}
             </div>

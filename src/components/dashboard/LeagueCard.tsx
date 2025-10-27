@@ -18,7 +18,7 @@ import { LeagueInvitesBottomSheet } from "@/components/leagues/LeagueInvitesBott
 
 interface LeagueCardProps {
   league: LeagueWithRole;
-  onViewDetails: () => void;
+  onViewDetails: (hasActiveAuction?: boolean) => void;
 }
 
 export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
@@ -191,7 +191,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               </div>
             </div>
 
-            <Button onClick={onViewDetails} className="w-full">
+            <Button onClick={() => onViewDetails()} className="w-full">
               Lancer la ligue
             </Button>
           </>
@@ -266,7 +266,10 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
 
             {/* Section enchères en cours */}
             {auctionStatus && !loadingAuction && (
-              <div className="bg-gradient-to-br from-[#FFF4CC] to-[#FFE999] border-2 border-[#FFD500] rounded-lg p-4 space-y-3">
+              <div 
+                onClick={() => onViewDetails(true)}
+                className="bg-gradient-to-br from-[#FFF4CC] to-[#FFE999] border-2 border-[#FFD500] rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+              >
                 <div className="flex items-center gap-2">
                   <Gavel className="h-5 w-5 text-black" />
                   <h3 className="font-montserrat font-bold text-black">
@@ -307,8 +310,12 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               </div>
             )}
 
-            <Button onClick={onViewDetails} variant="outline" className="w-full">
-              Voir ma ligue
+            <Button 
+              onClick={() => onViewDetails(!!auctionStatus)} 
+              variant="outline" 
+              className="w-full"
+            >
+              {auctionStatus ? 'Aller aux enchères' : 'Voir ma ligue'}
             </Button>
           </>
         )}
@@ -335,7 +342,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               </div>
             )}
 
-            <Button onClick={onViewDetails} variant="outline" className="w-full">
+            <Button onClick={() => onViewDetails()} variant="outline" className="w-full">
               Voir les résultats
             </Button>
           </>
