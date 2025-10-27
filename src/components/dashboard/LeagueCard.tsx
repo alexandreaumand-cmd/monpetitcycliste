@@ -13,7 +13,7 @@ import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { useLeagueAuctionStatus } from "@/hooks/useLeagueAuctionStatus";
 import { LeagueStatusBadge } from "@/components/leagues/LeagueStatusBadge";
 import type { LeagueWithRole } from "@/lib/leagues/types";
-import { LEAGUE_TEMPLATES } from "@/lib/leagues/templates";
+import { getLeagueTemplates } from "@/lib/leagues/templates";
 import { LeagueInvitesBottomSheet } from "@/components/leagues/LeagueInvitesBottomSheet";
 
 interface LeagueCardProps {
@@ -49,7 +49,12 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
     isActive // Only fetch if league is active
   );
 
-  const gameMode = LEAGUE_TEMPLATES.find(t => t.id === league.game_mode);
+  const { data: templates } = useQuery({
+    queryKey: ['league-templates'],
+    queryFn: getLeagueTemplates,
+  });
+
+  const gameMode = templates?.find(t => t.id === league.game_mode);
 
   return (
     <Card className="hover:shadow-lg transition-all duration-200">

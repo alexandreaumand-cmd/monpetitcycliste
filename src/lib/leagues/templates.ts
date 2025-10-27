@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 export type GameMode = 'full_season' | 'short_gt' | 'short_wt' | 'short_classics';
 
 export type LeagueTemplate = {
@@ -7,6 +9,8 @@ export type LeagueTemplate = {
   playerCounts: number[];
   defaultBudget: number;
   defaultMaxRiders: number;
+  budgetMultiplierPerPlayer: number;
+  ridersMultiplierPerPlayer: number;
   scopeConfig: {
     byPhase: boolean;
     gtOnly: boolean;
@@ -16,7 +20,8 @@ export type LeagueTemplate = {
   };
 };
 
-export const LEAGUE_TEMPLATES: LeagueTemplate[] = [
+// Fallback templates if DB is unavailable
+export const FALLBACK_TEMPLATES: LeagueTemplate[] = [
   {
     id: 'full_season',
     name: 'Saison Complète',
@@ -24,6 +29,8 @@ export const LEAGUE_TEMPLATES: LeagueTemplate[] = [
     playerCounts: [4, 6, 8, 10],
     defaultBudget: 2200,
     defaultMaxRiders: 30,
+    budgetMultiplierPerPlayer: 0.15,
+    ridersMultiplierPerPlayer: 0.10,
     scopeConfig: {
       byPhase: true,
       gtOnly: false,
@@ -39,6 +46,8 @@ export const LEAGUE_TEMPLATES: LeagueTemplate[] = [
     playerCounts: [4, 6, 8, 10],
     defaultBudget: 1500,
     defaultMaxRiders: 22,
+    budgetMultiplierPerPlayer: 0.15,
+    ridersMultiplierPerPlayer: 0.10,
     scopeConfig: {
       byPhase: false,
       gtOnly: true,
@@ -54,6 +63,8 @@ export const LEAGUE_TEMPLATES: LeagueTemplate[] = [
     playerCounts: [4, 6, 8, 10],
     defaultBudget: 1800,
     defaultMaxRiders: 26,
+    budgetMultiplierPerPlayer: 0.15,
+    ridersMultiplierPerPlayer: 0.10,
     scopeConfig: {
       byPhase: false,
       gtOnly: false,
@@ -69,6 +80,8 @@ export const LEAGUE_TEMPLATES: LeagueTemplate[] = [
     playerCounts: [4, 6, 8, 10],
     defaultBudget: 1200,
     defaultMaxRiders: 18,
+    budgetMultiplierPerPlayer: 0.15,
+    ridersMultiplierPerPlayer: 0.10,
     scopeConfig: {
       byPhase: false,
       gtOnly: false,
@@ -88,18 +101,54 @@ export const LEAGUE_TEMPLATES: LeagueTemplate[] = [
   },
 ];
 
-export function calculateLeagueSettings(mode: GameMode, playerCount: number) {
-  const template = LEAGUE_TEMPLATES.find((t) => t.id === mode);
+export async function getLeagueTemplates(): Promise<LeagueTemplate[]> {
+  try {
+    const { data, error } = await supabase
+      .from('league_templates')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) throw error;
+
+    // Transform DB format to frontend format
+    return (data || []).map(t => ({
+      id: t.id as GameMode,
+      name: t.name,
+      description: t.description,
+      playerCounts: t.player_counts,
+      defaultBudget: t.base_budget,
+      defaultMaxRiders: t.base_max_riders,
+      budgetMultiplierPerPlayer: Number(t.budget_multiplier_per_player),
+      ridersMultiplierPerPlayer: Number(t.riders_multiplier_per_player),
+      scopeConfig: {
+        byPhase: t.by_phase,
+        gtOnly: t.gt_only,
+        wtOnly: t.wt_only,
+        phases: [],
+        competitions: t.competitions,
+      },
+    }));
+  } catch (error) {
+    console.error('Failed to load templates from DB, using fallback:', error);
+    return FALLBACK_TEMPLATES;
+  }
+}
+
+export async function calculateLeagueSettings(mode: GameMode, playerCount: number) {
+  const templates = await getLeagueTemplates();
+  const template = templates.find((t) => t.id === mode);
+  
   if (!template) {
     throw new Error(`Invalid game mode: ${mode}`);
   }
 
-  // Budget formula: base_budget * (1 + (players - 4) * 0.15)
-  const budgetMultiplier = 1 + ((playerCount - 4) * 0.15);
+  // Budget formula: base_budget * (1 + (players - 4) * multiplier)
+  const budgetMultiplier = 1 + ((playerCount - 4) * template.budgetMultiplierPerPlayer);
   const budget = Math.round(template.defaultBudget * budgetMultiplier);
 
-  // Max riders formula: base_max_riders * (1 + (players - 4) * 0.1)
-  const ridersMultiplier = 1 + ((playerCount - 4) * 0.1);
+  // Max riders formula: base_max_riders * (1 + (players - 4) * multiplier)
+  const ridersMultiplier = 1 + ((playerCount - 4) * template.ridersMultiplierPerPlayer);
   const maxRiders = Math.round(template.defaultMaxRiders * ridersMultiplier);
 
   return {
@@ -108,8 +157,10 @@ export function calculateLeagueSettings(mode: GameMode, playerCount: number) {
   };
 }
 
-export function getLeagueScopeConfig(mode: GameMode, seasonId: string) {
-  const template = LEAGUE_TEMPLATES.find((t) => t.id === mode);
+export async function getLeagueScopeConfig(mode: GameMode, seasonId: string) {
+  const templates = await getLeagueTemplates();
+  const template = templates.find((t) => t.id === mode);
+  
   if (!template) {
     throw new Error(`Invalid game mode: ${mode}`);
   }

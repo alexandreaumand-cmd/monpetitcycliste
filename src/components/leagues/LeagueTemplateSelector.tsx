@@ -1,6 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LEAGUE_TEMPLATES, type GameMode } from "@/lib/leagues/templates";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getLeagueTemplates, type GameMode } from "@/lib/leagues/templates";
 import { Check } from "lucide-react";
 
 type LeagueTemplateSelectorProps = {
@@ -9,9 +11,24 @@ type LeagueTemplateSelectorProps = {
 };
 
 export function LeagueTemplateSelector({ selectedMode, onSelect }: LeagueTemplateSelectorProps) {
+  const { data: templates, isLoading } = useQuery({
+    queryKey: ['league-templates'],
+    queryFn: getLeagueTemplates,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-32" />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {LEAGUE_TEMPLATES.map((template) => (
+      {templates?.map((template) => (
         <Card
           key={template.id}
           className={`p-4 cursor-pointer transition-all hover:border-primary ${

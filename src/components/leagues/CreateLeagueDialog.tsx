@@ -81,8 +81,8 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
 
     setIsCreating(true);
     try {
-      const settings = calculateLeagueSettings(selectedMode, playerCount);
-      const scopeConfig = getLeagueScopeConfig(selectedMode, seasonId);
+      const settings = await calculateLeagueSettings(selectedMode, playerCount);
+      const scopeConfig = await getLeagueScopeConfig(selectedMode, seasonId);
 
       const { data, error } = await supabase.functions.invoke("leagues-create", {
         body: {

@@ -1,9 +1,11 @@
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LEAGUE_TEMPLATES, type GameMode, calculateLeagueSettings } from "@/lib/leagues/templates";
+import { getLeagueTemplates, type GameMode, calculateLeagueSettings } from "@/lib/leagues/templates";
 import { Badge } from "@/components/ui/badge";
 
 type LeagueSettingsFormProps = {
@@ -35,8 +37,18 @@ export function LeagueSettingsForm({
   onBonusesChange,
   seasons,
 }: LeagueSettingsFormProps) {
-  const template = LEAGUE_TEMPLATES.find((t) => t.id === gameMode);
-  const settings = calculateLeagueSettings(gameMode, playerCount);
+  const { data: templates } = useQuery({
+    queryKey: ['league-templates'],
+    queryFn: getLeagueTemplates,
+  });
+
+  const [settings, setSettings] = useState({ budget: 0, maxRiders: 0 });
+
+  useEffect(() => {
+    calculateLeagueSettings(gameMode, playerCount).then(setSettings);
+  }, [gameMode, playerCount]);
+
+  const template = templates?.find((t) => t.id === gameMode);
 
   return (
     <div className="space-y-6">

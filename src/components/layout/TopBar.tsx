@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ManagerDropdown } from "./ManagerDropdown";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useUserLeagues } from "@/hooks/useUserLeagues";
-import { LEAGUE_TEMPLATES } from "@/lib/leagues/templates";
+import { getLeagueTemplates } from "@/lib/leagues/templates";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
 
 interface TopBarProps {
   onSignOut: () => void;
@@ -22,10 +23,15 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
   const { leagueId } = useLeague();
   const { leagues } = useUserLeagues();
   
+  const { data: templates } = useQuery({
+    queryKey: ['league-templates'],
+    queryFn: getLeagueTemplates,
+  });
+
   const currentLeague = leagues.find(l => l.id === leagueId);
   const gameMode = currentLeague?.game_mode;
   const gameModeTemplate = gameMode 
-    ? LEAGUE_TEMPLATES.find(t => t.id === gameMode) 
+    ? templates?.find(t => t.id === gameMode) 
     : null;
   
   return (

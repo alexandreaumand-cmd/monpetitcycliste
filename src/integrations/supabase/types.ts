@@ -1227,6 +1227,63 @@ export type Database = {
           },
         ]
       }
+      league_templates: {
+        Row: {
+          base_budget: number
+          base_max_riders: number
+          budget_multiplier_per_player: number
+          by_phase: boolean
+          competitions: string[] | null
+          created_at: string
+          description: string
+          gt_only: boolean
+          id: string
+          is_active: boolean
+          is_system: boolean
+          name: string
+          player_counts: number[]
+          riders_multiplier_per_player: number
+          updated_at: string
+          wt_only: boolean
+        }
+        Insert: {
+          base_budget: number
+          base_max_riders: number
+          budget_multiplier_per_player?: number
+          by_phase?: boolean
+          competitions?: string[] | null
+          created_at?: string
+          description: string
+          gt_only?: boolean
+          id: string
+          is_active?: boolean
+          is_system?: boolean
+          name: string
+          player_counts?: number[]
+          riders_multiplier_per_player?: number
+          updated_at?: string
+          wt_only?: boolean
+        }
+        Update: {
+          base_budget?: number
+          base_max_riders?: number
+          budget_multiplier_per_player?: number
+          by_phase?: boolean
+          competitions?: string[] | null
+          created_at?: string
+          description?: string
+          gt_only?: boolean
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name?: string
+          player_counts?: number[]
+          riders_multiplier_per_player?: number
+          updated_at?: string
+          wt_only?: boolean
+        }
+        Relationships: []
+      }
       leagues: {
         Row: {
           archived_at: string | null
