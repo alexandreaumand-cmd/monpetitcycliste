@@ -38,33 +38,71 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get managers with pending bids (validated)
+    // Get the league_id for this auction's phase
+    const { data: phaseData } = await supabase
+      .from('phases')
+      .select('saison_id')
+      .eq('id', phase_id)
+      .single();
+
+    let leagueId = null;
+    if (phaseData?.saison_id) {
+      const { data: auctionLeague } = await supabase
+        .from('auctions')
+        .select('league_id')
+        .eq('id', auction.id)
+        .single();
+      
+      leagueId = auctionLeague?.league_id;
+    }
+
+    // Get current league members if league_id exists
+    let currentMemberUserIds: string[] = [];
+    if (leagueId) {
+      const { data: members } = await supabase
+        .from('league_members')
+        .select('user_id')
+        .eq('league_id', leagueId);
+      
+      currentMemberUserIds = (members || []).map(m => m.user_id);
+    }
+
+    // Get managers with pending bids (validated) - filter by league members
     const { data: validatedManagers } = await supabase
       .from('bids')
       .select(`
         manager_id,
-        managers!inner(nom)
+        managers!inner(nom, user_id)
       `)
       .eq('auction_id', auction.id)
       .eq('statut', 'pending');
 
-    // Get managers with draft bids (waiting)
+    // Get managers with draft bids (waiting) - filter by league members
     const { data: waitingManagers } = await supabase
       .from('bids')
       .select(`
         manager_id,
-        managers!inner(nom)
+        managers!inner(nom, user_id)
       `)
       .eq('auction_id', auction.id)
       .eq('statut', 'draft');
 
+    // Filter managers by league membership
+    const filteredValidated = leagueId && currentMemberUserIds.length > 0
+      ? (validatedManagers || []).filter((b: any) => currentMemberUserIds.includes(b.managers.user_id))
+      : (validatedManagers || []);
+
+    const filteredWaiting = leagueId && currentMemberUserIds.length > 0
+      ? (waitingManagers || []).filter((b: any) => currentMemberUserIds.includes(b.managers.user_id))
+      : (waitingManagers || []);
+
     // Extract unique manager names
     const validatedNames = [...new Set(
-      (validatedManagers || []).map((b: any) => b.managers.nom)
+      filteredValidated.map((b: any) => b.managers.nom)
     )];
     
     const waitingNames = [...new Set(
-      (waitingManagers || []).map((b: any) => b.managers.nom)
+      filteredWaiting.map((b: any) => b.managers.nom)
     )];
 
     const totalManagers = validatedNames.length + waitingNames.length;
