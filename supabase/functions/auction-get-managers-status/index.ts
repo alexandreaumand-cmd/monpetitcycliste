@@ -195,11 +195,22 @@ Deno.serve(async (req) => {
 
         // Déterminer le statut
         let status: 'validated' | 'pending' | 'incomplete';
+        
+        // Cas 1: A soumis des enchères pour ce tour
         if (pendingCount > 0) {
           status = 'validated';
-        } else if (slotsFilled < league.max_riders_per_manager) {
+        }
+        // Cas 2: Roster complet ET pas d'enchères en draft
+        // → N'a plus besoin de participer aux enchères
+        else if (slotsFilled >= league.max_riders_per_manager && draftCount === 0) {
+          status = 'validated';
+        }
+        // Cas 3: Roster incomplet
+        else if (slotsFilled < league.max_riders_per_manager) {
           status = 'incomplete';
-        } else {
+        }
+        // Cas 4: A des drafts mais n'a pas encore validé
+        else {
           status = 'pending';
         }
 
