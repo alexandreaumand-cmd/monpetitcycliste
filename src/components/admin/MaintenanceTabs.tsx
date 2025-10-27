@@ -5,6 +5,7 @@ import { PhaseUpdateSection } from "./maintenance/PhaseUpdateSection";
 import { RepairSection } from "./maintenance/RepairSection";
 import { CleanupSection } from "./maintenance/CleanupSection";
 import { ResetSection } from "./maintenance/ResetSection";
+import { AuctionResetManager } from "./AuctionResetManager";
 import { Activity, Settings, Wrench, AlertTriangle } from "lucide-react";
 
 export const MaintenanceTabs = () => {
@@ -51,6 +52,7 @@ export const MaintenanceTabs = () => {
         </TabsContent>
 
         <TabsContent value="danger" className="space-y-6">
+          <AuctionResetManager />
           <CleanupSection />
           <ResetSection />
         </TabsContent>

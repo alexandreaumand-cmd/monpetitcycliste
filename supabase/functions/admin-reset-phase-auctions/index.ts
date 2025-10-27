@@ -36,13 +36,15 @@ Deno.serve(async (req) => {
       throw new Error('league_id requis');
     }
 
-    // Check league admin access
-    const { data: isLeagueAdmin, error: adminCheckError } = await supabaseClient.rpc('is_league_admin', {
-      l_id: league_id
-    });
+    // Check league admin access (skip if superadmin)
+    if (!isSuperAdmin) {
+      const { data: isLeagueAdmin, error: adminCheckError } = await supabaseClient.rpc('is_league_admin', {
+        l_id: league_id
+      });
 
-    if (adminCheckError || !isLeagueAdmin) {
-      throw new Error('Accès refusé: admin de ligue requis');
+      if (adminCheckError || !isLeagueAdmin) {
+        throw new Error('Accès refusé: admin de ligue requis');
+      }
     }
 
     // Verify confirmation phrase
