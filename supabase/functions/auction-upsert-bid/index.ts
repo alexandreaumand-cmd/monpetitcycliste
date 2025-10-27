@@ -97,7 +97,24 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if rider is already taken (in rosters)
+    // Check if rider is already in manager's roster for this league and phase
+    const { data: managerRoster } = await supabase
+      .from('rosters')
+      .select('id')
+      .eq('manager_id', manager_id)
+      .eq('coureur_id', rider_id)
+      .eq('league_id', league_id)
+      .eq('phase_id', phase_id)
+      .maybeSingle();
+
+    if (managerRoster) {
+      return new Response(
+        JSON.stringify({ error: 'Vous possédez déjà ce coureur dans votre roster pour cette phase.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if rider is already taken by another manager (in rosters)
     const { data: existingRoster } = await supabase
       .from('rosters')
       .select('id')
