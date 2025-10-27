@@ -8,6 +8,7 @@ import { BidAmountBottomSheet } from "./BidAmountBottomSheet";
 import { MyBidsList } from "./MyBidsList";
 import { AuctionSubmitButton } from "./AuctionSubmitButton";
 import { AuctionValidationConfirmation } from "./AuctionValidationConfirmation";
+import { MyValidatedBids } from "./MyValidatedBids";
 import { AuctionLiveAnnouncements } from "./AuctionLiveAnnouncements";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -41,6 +42,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   const [selectedRider, setSelectedRider] = useState<any>(null);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);
+  const [showMyValidatedBids, setShowMyValidatedBids] = useState(false);
   const [hideLiveAnnouncements, setHideLiveAnnouncements] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [debouncedSearch] = useDebounce(searchQuery, 250);
@@ -299,11 +301,25 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     );
   }
 
+  if (showValidationScreen && showMyValidatedBids) {
+    return (
+      <MyValidatedBids
+        phaseId={phaseId}
+        managerId={managerId}
+        leagueId={leagueId}
+        onBack={() => setShowMyValidatedBids(false)}
+      />
+    );
+  }
+
   if (showValidationScreen) {
     return (
       <AuctionValidationConfirmation
         phaseId={phaseId}
+        managerId={managerId}
+        leagueId={leagueId}
         onBack={() => setShowValidationScreen(false)}
+        onViewMyBids={() => setShowMyValidatedBids(true)}
       />
     );
   }

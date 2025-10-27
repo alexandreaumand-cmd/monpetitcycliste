@@ -9,10 +9,13 @@ import { useState, useEffect } from "react";
 
 interface AuctionValidationConfirmationProps {
   phaseId: string;
+  managerId: string;
+  leagueId: string | null;
   onBack: () => void;
+  onViewMyBids: () => void;
 }
 
-export function AuctionValidationConfirmation({ phaseId, onBack }: AuctionValidationConfirmationProps) {
+export function AuctionValidationConfirmation({ phaseId, managerId, leagueId, onBack, onViewMyBids }: AuctionValidationConfirmationProps) {
   const [timeRemaining, setTimeRemaining] = useState("");
 
   const { data: status, isLoading, refetch } = useQuery({
@@ -161,11 +164,11 @@ export function AuctionValidationConfirmation({ phaseId, onBack }: AuctionValida
               Actualiser
             </Button>
             <Button
-              onClick={onBack}
+              onClick={onViewMyBids}
               variant="secondary"
               className="flex-1"
             >
-              Retour aux enchères
+              Voir mes enchères
             </Button>
           </div>
 

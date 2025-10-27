@@ -7,6 +7,7 @@ import { RiderResultsList } from "./RiderResultsList";
 import { BidAmountPopover } from "./BidAmountPopover";
 import { MyBidsList } from "./MyBidsList";
 import { AuctionValidationConfirmation } from "./AuctionValidationConfirmation";
+import { MyValidatedBids } from "./MyValidatedBids";
 import { AuctionLiveAnnouncements } from "./AuctionLiveAnnouncements";
 import { AuctionTabs } from "./AuctionTabs";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);
+  const [showMyValidatedBids, setShowMyValidatedBids] = useState(false);
   const [hideLiveAnnouncements, setHideLiveAnnouncements] = useState(false);
   const [debouncedSearch] = useDebounce(searchQuery, 250);
 
@@ -294,11 +296,25 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     );
   }
 
+  if (showValidationScreen && showMyValidatedBids) {
+    return (
+      <MyValidatedBids
+        phaseId={phaseId}
+        managerId={managerId}
+        leagueId={leagueId}
+        onBack={() => setShowMyValidatedBids(false)}
+      />
+    );
+  }
+
   if (showValidationScreen) {
     return (
       <AuctionValidationConfirmation
         phaseId={phaseId}
+        managerId={managerId}
+        leagueId={leagueId}
         onBack={() => setShowValidationScreen(false)}
+        onViewMyBids={() => setShowMyValidatedBids(true)}
       />
     );
   }
