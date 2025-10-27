@@ -82,8 +82,9 @@ Deno.serve(async (req) => {
 
       if (error) {
         console.error('Error fetching bonuses:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
         return new Response(
-          JSON.stringify({ error: error.message }),
+          JSON.stringify({ error: message }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -150,8 +151,9 @@ Deno.serve(async (req) => {
 
       if (error) {
         console.error('Error inserting bonus:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
         return new Response(
-          JSON.stringify({ error: error.message }),
+          JSON.stringify({ error: message }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -195,8 +197,9 @@ Deno.serve(async (req) => {
 
       if (error) {
         console.error('Error deleting bonus:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
         return new Response(
-          JSON.stringify({ error: error.message }),
+          JSON.stringify({ error: message }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

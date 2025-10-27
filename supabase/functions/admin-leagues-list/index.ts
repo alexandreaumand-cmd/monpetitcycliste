@@ -82,7 +82,8 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error('Error fetching leagues:', error);
-      return new Response(JSON.stringify({ error: error.message }), {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return new Response(JSON.stringify({ error: message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

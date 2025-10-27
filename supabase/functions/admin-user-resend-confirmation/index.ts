@@ -56,10 +56,11 @@ serve(async (req) => {
         status: 200 
       }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error in admin-user-resend-confirmation:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400 
