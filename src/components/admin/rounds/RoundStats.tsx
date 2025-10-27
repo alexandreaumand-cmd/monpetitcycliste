@@ -22,28 +22,32 @@ export const RoundStats = ({
       value: `${validatedManagers}/${totalManagers}`,
       icon: CheckCircle2,
       color: "text-green-600",
-      bgColor: "bg-green-50"
+      bgColor: "bg-green-50",
+      cardBg: "bg-green-50/50"
     },
     {
       label: "En attente",
       value: pendingBids,
       icon: Clock,
       color: "text-orange-600",
-      bgColor: "bg-orange-50"
+      bgColor: "bg-orange-50",
+      cardBg: "bg-orange-50/50"
     },
     {
       label: "Gains",
       value: wonBids,
       icon: Trophy,
       color: "text-blue-600",
-      bgColor: "bg-blue-50"
+      bgColor: "bg-blue-50",
+      cardBg: "bg-blue-50/50"
     },
     {
       label: "Égalités",
       value: ties,
       icon: Users,
       color: "text-purple-600",
-      bgColor: "bg-purple-50"
+      bgColor: "bg-purple-50",
+      cardBg: "bg-purple-50/50"
     }
   ];
 
@@ -52,7 +56,7 @@ export const RoundStats = ({
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <Card key={index}>
+          <Card key={index} className={stat.cardBg}>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${stat.bgColor}`}>

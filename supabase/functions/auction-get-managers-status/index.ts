@@ -8,6 +8,8 @@ interface ManagerStatus {
   max_slots: number;
   budget_used: number;
   total_budget: number;
+  budget_remaining: number;
+  last_activity: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -168,9 +170,9 @@ Deno.serve(async (req) => {
     const managerStatuses: ManagerStatus[] = await Promise.all(
       managers.map(async (manager) => {
         // Compter les coureurs dans le roster (filtré par league_id avec compatibilité historique)
-        const { count: rosterCount, error: rosterError } = await supabaseAdmin
+        const { count: rosterCount, data: rosterWithDates, error: rosterError } = await supabaseAdmin
           .from('rosters')
-          .select('*', { count: 'exact', head: true })
+          .select('prix_signature, created_at')
           .eq('manager_id', manager.id)
           .eq('phase_id', phase_id)
           .or(`league_id.eq.${auction.league_id},league_id.is.null`);
@@ -179,24 +181,12 @@ Deno.serve(async (req) => {
           console.error(`Error counting roster for manager ${manager.nom}:`, rosterError);
         }
 
-        // Calculer le budget dépensé (rosters filtré par league_id avec compatibilité historique)
-        const { data: rosterData, error: rosterBudgetError } = await supabaseAdmin
-          .from('rosters')
-          .select('prix_signature')
-          .eq('manager_id', manager.id)
-          .eq('phase_id', phase_id)
-          .or(`league_id.eq.${auction.league_id},league_id.is.null`);
-
-        if (rosterBudgetError) {
-          console.error(`Error fetching roster budget for manager ${manager.nom}:`, rosterBudgetError);
-        }
-
-        const budgetSpent = rosterData?.reduce((sum, r) => sum + Number(r.prix_signature || 0), 0) || 0;
+        const budgetSpent = rosterWithDates?.reduce((sum, r) => sum + Number(r.prix_signature || 0), 0) || 0;
 
         // CRITICAL: Compter les enchères filtré par auction_id ET league_id (avec compatibilité historique)
         const { data: bids, error: bidsError } = await supabaseAdmin
           .from('bids')
-          .select('statut, montant')
+          .select('statut, montant, created_at')
           .eq('manager_id', manager.id)
           .eq('auction_id', auction_id)
           .or(`league_id.eq.${auction.league_id},league_id.is.null`);
@@ -213,6 +203,16 @@ Deno.serve(async (req) => {
         const totalRosterCount = rosterCount || 0;
         const slotsFilled = totalRosterCount + draftCount + pendingCount;
         const budgetUsed = budgetSpent + draftSum + pendingSum;
+
+        // Calculer la dernière activité
+        const allDates = [
+          ...(rosterWithDates?.map(r => r.created_at) || []),
+          ...(bids?.map(b => b.created_at) || [])
+        ].filter(Boolean);
+        
+        const lastActivity = allDates.length > 0 
+          ? allDates.reduce((latest, current) => current > latest ? current : latest)
+          : null;
 
         // Déterminer le statut
         let status: 'validated' | 'pending' | 'incomplete';
@@ -242,6 +242,8 @@ Deno.serve(async (req) => {
           max_slots: maxRidersPerManager,
           budget_used: Math.round(budgetUsed),
           total_budget: budgetPerManager,
+          budget_remaining: budgetPerManager - Math.round(budgetUsed),
+          last_activity: lastActivity,
         };
       })
     );

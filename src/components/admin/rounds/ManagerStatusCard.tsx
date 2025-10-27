@@ -1,6 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
 
 interface ManagerStatus {
   nom: string;
@@ -9,6 +11,8 @@ interface ManagerStatus {
   max_slots: number;
   budget_used: number;
   total_budget: number;
+  budget_remaining: number;
+  last_activity: string | null;
 }
 
 interface ManagerStatusCardProps {
@@ -63,6 +67,15 @@ export const ManagerStatusCard = ({ manager }: ManagerStatusCardProps) => {
             <span>{manager.slots_filled}/{manager.max_slots}</span>
           </div>
           <Progress value={slotsProgress} className="h-1.5" />
+        </div>
+        
+        <div className="flex justify-between text-xs text-muted-foreground pt-1">
+          <span>Budget restant: {manager.budget_remaining}€</span>
+          {manager.last_activity && (
+            <span className="text-xs">
+              il y a {formatDistanceToNow(new Date(manager.last_activity), { locale: fr })}
+            </span>
+          )}
         </div>
       </div>
     </div>

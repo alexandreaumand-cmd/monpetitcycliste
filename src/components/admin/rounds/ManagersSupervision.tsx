@@ -2,6 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ManagerStatusCard } from "./ManagerStatusCard";
 import { Badge } from "@/components/ui/badge";
 import { Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useState } from "react";
 
 interface ManagerStatus {
   nom: string;
@@ -10,6 +13,8 @@ interface ManagerStatus {
   max_slots: number;
   budget_used: number;
   total_budget: number;
+  budget_remaining: number;
+  last_activity: string | null;
 }
 
 interface ManagersSupervisionProps {
@@ -18,8 +23,18 @@ interface ManagersSupervisionProps {
 }
 
 export const ManagersSupervision = ({ managers, isLoading }: ManagersSupervisionProps) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Filter managers based on search and status
+  const filteredManagers = managers.filter(m => {
+    const matchesSearch = m.nom.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || m.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   // Sort managers: incomplete > pending > validated
-  const sortedManagers = [...managers].sort((a, b) => {
+  const sortedManagers = [...filteredManagers].sort((a, b) => {
     const priority = { incomplete: 0, pending: 1, validated: 2 };
     return priority[a.status] - priority[b.status];
   });
@@ -32,7 +47,7 @@ export const ManagersSupervision = ({ managers, isLoading }: ManagersSupervision
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="space-y-4">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -48,6 +63,31 @@ export const ManagersSupervision = ({ managers, isLoading }: ManagersSupervision
             <Badge variant="outline">{counts.validated} validés</Badge>
           </div>
         </CardTitle>
+        
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Input 
+            placeholder="Rechercher un manager..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-xs"
+          />
+          <ToggleGroup 
+            type="single" 
+            value={statusFilter} 
+            onValueChange={(value) => setStatusFilter(value || "all")}
+            className="justify-start"
+          >
+            <ToggleGroupItem value="all" aria-label="Tous">
+              Tous
+            </ToggleGroupItem>
+            <ToggleGroupItem value="pending" aria-label="En attente">
+              En attente
+            </ToggleGroupItem>
+            <ToggleGroupItem value="validated" aria-label="Validés">
+              Validés
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
