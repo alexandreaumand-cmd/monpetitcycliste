@@ -295,7 +295,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
                 value={mgrId}
                 className="border rounded-lg overflow-hidden"
               >
-                <AccordionTrigger className="hover:bg-muted/50 px-4 py-3 [&[data-state=open]]:bg-yellow-50 dark:[&[data-state=open]]:bg-yellow-950/20">
+                <AccordionTrigger className="hover:bg-muted/50 px-4 py-3 [&[data-state=open]]:bg-yellow-50 dark:[&[data-state=open]]:bg-yellow-950/20 no-underline hover:no-underline [&>svg]:ml-auto">
                   <div className="flex items-center justify-between w-full pr-4">
                     {/* Left: Manager info */}
                     <div className="flex items-center gap-3">
