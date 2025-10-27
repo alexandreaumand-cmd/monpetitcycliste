@@ -158,7 +158,7 @@ export const AuctionResetManager = () => {
           <Input
             placeholder="RESET ENCHERES"
             value={confirmPhrase}
-            onChange={(e) => setConfirmPhrase(e.target.value.trim())}
+            onChange={(e) => setConfirmPhrase(e.target.value)}
           />
           <p className="text-xs text-muted-foreground">
             Tapez exactement: <code>RESET ENCHERES</code>
