@@ -119,40 +119,6 @@ Deno.serve(async (req) => {
 
     console.log('New round created:', newAuction);
 
-    // Copy carried_over bids from previous round
-    if (lastAuction) {
-      const { data: carriedBids, error: carriedError } = await supabase
-        .from('bids')
-        .select('manager_id, coureur_id, montant, league_id')
-        .eq('league_id', league_id)
-        .eq('round_number', lastAuction.round_number)
-        .eq('statut', 'carried_over');
-
-      if (!carriedError && carriedBids && carriedBids.length > 0) {
-        // Insert carried over bids into new round as 'draft' (not 'pending')
-        // This ensures the manager sees the auction screen and can re-validate
-        const newBids = carriedBids.map(bid => ({
-          auction_id: newAuction.id,
-          round_number: newRoundNumber,
-          manager_id: bid.manager_id,
-          coureur_id: bid.coureur_id,
-          montant: bid.montant,
-          statut: 'draft',
-          league_id: bid.league_id,
-        }));
-
-        const { error: insertError } = await supabase
-          .from('bids')
-          .insert(newBids);
-
-        if (insertError) {
-          console.error('Error copying carried_over bids:', insertError);
-        } else {
-          console.log(`✅ Copied ${newBids.length} carried_over bids as DRAFT to round ${newRoundNumber}`);
-        }
-      }
-    }
-
     return new Response(
       JSON.stringify({ success: true, auction: newAuction }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
