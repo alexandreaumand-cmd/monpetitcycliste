@@ -118,18 +118,21 @@ export const AuctionCleanupTab = () => {
     },
   });
 
-  // Normalize confirmation phrase
+  // Normalize confirmation phrase (case-insensitive, accents-insensitive)
   const normalizedPhrase = ((confirmPhrase ?? '').toString())
     .normalize('NFKC')
     .replace(/\s+/g, ' ')
     .trim()
     .toUpperCase();
+  const normalizedNoAccents = normalizedPhrase
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 
   const isDeleteDisabled = 
     !leagueId || 
     !phaseId || 
     isPending || 
-    normalizedPhrase !== 'RESET ENCHERES';
+    normalizedNoAccents !== 'RESET ENCHERES';
 
   const selectedPhase = phases?.find(p => p.id === phaseId);
   const selectedLeague = leagues?.find(l => l.id === leagueId);
@@ -231,7 +234,7 @@ export const AuctionCleanupTab = () => {
               onChange={(e) => setConfirmPhrase(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Pour confirmer la suppression, tapez exactement : <code className="bg-muted px-1 rounded">RESET ENCHERES</code>
+              Pour confirmer la suppression, tapez exactement : <code className="bg-muted px-1 rounded">RESET ENCHERES</code> (accents acceptés)
             </p>
           </div>
 

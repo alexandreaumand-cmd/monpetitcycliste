@@ -43,9 +43,14 @@ Deno.serve(async (req) => {
       .trim()
       .toUpperCase();
     
-    console.log('🔍 Normalized confirmation phrase:', normalizedPhrase);
+    // Remove diacritics to accept both 'ENCHERES' and 'ENCHÈRES'
+    const normalizedNoAccents = normalizedPhrase
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
     
-    if (normalizedPhrase !== 'RESET ENCHERES') {
+    console.log('🔍 Normalized phrases:', { raw: confirm_phrase, normalizedPhrase, normalizedNoAccents });
+    
+    if (normalizedNoAccents !== 'RESET ENCHERES') {
       console.error('❌ Invalid confirmation phrase');
       return new Response(
         JSON.stringify({ error: 'Phrase de confirmation incorrecte. Veuillez taper exactement "RESET ENCHERES"' }),
