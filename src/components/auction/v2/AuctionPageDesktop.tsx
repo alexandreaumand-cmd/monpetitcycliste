@@ -42,6 +42,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
+  const [sortOrder, setSortOrder] = useState<'nom' | 'cote'>('nom');
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);
   const [showMyValidatedBids, setShowMyValidatedBids] = useState(false);
@@ -125,6 +126,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
       debouncedSearch,
       selectedTeams,
       selectedCotes,
+      sortOrder,
       context?.my_bids?.map((b: any) => b.coureur_id) || [],
     ],
     queryFn: async () => {
@@ -155,6 +157,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
           exclude_rider_ids: context?.my_bids?.map((b: any) => b.coureur_id) || [],
           available_only: true,
           limit: 100,
+          order_by: sortOrder,
         },
       });
       if (error) throw error;
@@ -358,6 +361,8 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
           handleSubmitAll={handleSubmitAll}
           isUpdating={upsertBidMutation.isPending || removeBidMutation.isPending}
           isSubmitting={submitAllMutation.isPending}
+          sortOrder={sortOrder}
+          setSortOrder={setSortOrder}
         />
       </MemberWriteGuard>
 

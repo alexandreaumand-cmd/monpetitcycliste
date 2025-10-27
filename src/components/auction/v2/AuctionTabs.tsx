@@ -35,6 +35,9 @@ interface AuctionTabsProps {
   handleSubmitAll: () => void;
   isUpdating: boolean;
   isSubmitting: boolean;
+  // Sort
+  sortOrder: 'nom' | 'cote';
+  setSortOrder: (order: 'nom' | 'cote') => void;
 }
 
 export const AuctionTabs = ({
@@ -58,6 +61,8 @@ export const AuctionTabs = ({
   handleSubmitAll,
   isUpdating,
   isSubmitting,
+  sortOrder,
+  setSortOrder,
 }: AuctionTabsProps) => {
   // Fetch closed rounds for this phase
   const { data: closedRounds = [] } = useQuery({
@@ -217,6 +222,8 @@ export const AuctionTabs = ({
                     riders={riders}
                     onAddRider={() => {}}
                     isLoading={isSearching}
+                    onSortChange={setSortOrder}
+                    currentSort={sortOrder}
                     renderActionButton={(rider) => (
                       <BidAmountPopover
                         trigger={

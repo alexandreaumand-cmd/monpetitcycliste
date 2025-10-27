@@ -20,49 +20,68 @@ interface Rider {
 
 interface RiderResultsListProps {
   riders: Rider[];
-  onAddRider: (rider: Rider) => void;
+  onAddRider?: (rider: Rider) => void;
   isLoading?: boolean;
   renderActionButton?: (rider: Rider) => React.ReactNode;
+  onSortChange?: (order: 'nom' | 'cote') => void;
+  currentSort?: 'nom' | 'cote';
 }
 
-export function RiderResultsList({ riders, onAddRider, isLoading, renderActionButton }: RiderResultsListProps) {
+export function RiderResultsList({ riders, onAddRider, isLoading, renderActionButton, onSortChange, currentSort = 'nom' }: RiderResultsListProps) {
   const isMobile = useIsMobile();
-  const [sortColumn, setSortColumn] = useState<'nom' | 'cote' | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [localSortColumn, setLocalSortColumn] = useState<'nom' | 'cote' | null>(null);
+  const [localSortDirection, setLocalSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const handleSort = (column: 'nom' | 'cote') => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    if (onSortChange) {
+      // Backend sort mode: toggle between column and default (nom)
+      if (currentSort === column) {
+        onSortChange('nom'); // Reset to default
+      } else {
+        onSortChange(column);
+      }
     } else {
-      setSortColumn(column);
-      setSortDirection('asc');
+      // Legacy local sort mode
+      if (localSortColumn === column) {
+        setLocalSortDirection(localSortDirection === 'asc' ? 'desc' : 'asc');
+      } else {
+        setLocalSortColumn(column);
+        setLocalSortDirection('asc');
+      }
     }
   };
 
   const getSortIcon = (column: 'nom' | 'cote') => {
-    if (sortColumn !== column) {
+    const activeSort = onSortChange ? currentSort : localSortColumn;
+    const activeDirection = onSortChange ? 'asc' : localSortDirection;
+    
+    if (activeSort !== column) {
       return <ArrowUpDown className="h-4 w-4 ml-1 inline opacity-50" />;
     }
-    return sortDirection === 'asc' 
+    return activeDirection === 'asc' 
       ? <ArrowUp className="h-4 w-4 ml-1 inline" />
       : <ArrowDown className="h-4 w-4 ml-1 inline" />;
   };
 
   const sortedRiders = useMemo(() => {
-    if (!sortColumn) return riders;
+    // If backend sort is enabled (onSortChange exists), skip local sorting
+    if (onSortChange) return riders;
+    
+    // Local sorting fallback
+    if (!localSortColumn) return riders;
     
     return [...riders].sort((a, b) => {
-      if (sortColumn === 'nom') {
+      if (localSortColumn === 'nom') {
         const comparison = a.rider_nom.localeCompare(b.rider_nom, 'fr');
-        return sortDirection === 'asc' ? comparison : -comparison;
-      } else if (sortColumn === 'cote') {
+        return localSortDirection === 'asc' ? comparison : -comparison;
+      } else if (localSortColumn === 'cote') {
         const coteA = a.cote ?? 999999;
         const coteB = b.cote ?? 999999;
-        return sortDirection === 'asc' ? coteA - coteB : coteB - coteA;
+        return localSortDirection === 'asc' ? coteA - coteB : coteB - coteA;
       }
       return 0;
     });
-  }, [riders, sortColumn, sortDirection]);
+  }, [riders, localSortColumn, localSortDirection, onSortChange]);
 
   if (isLoading) {
     return (
@@ -121,7 +140,7 @@ export function RiderResultsList({ riders, onAddRider, isLoading, renderActionBu
               <TableCell className="text-center py-1.5">
                 {renderActionButton ? (
                   renderActionButton(rider)
-                ) : (
+                ) : onAddRider ? (
                   <Button
                     size={isMobile ? "sm" : "default"}
                     variant="outline"
@@ -129,7 +148,7 @@ export function RiderResultsList({ riders, onAddRider, isLoading, renderActionBu
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
-                )}
+                ) : null}
               </TableCell>
             </TableRow>
           ))}

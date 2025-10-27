@@ -12,18 +12,19 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const {
-      phase_id,
-      league_id = null,
-      q = null,
-      teams = null,
-      cote_min = null,
-      cote_max = null,
-      limit = 100,
-      offset = 0,
-      exclude_rider_ids = null,
-      available_only = true,
-    } = await req.json();
+  const {
+    phase_id,
+    league_id = null,
+    q = null,
+    teams = null,
+    cote_min = null,
+    cote_max = null,
+    limit = 100,
+    offset = 0,
+    exclude_rider_ids = null,
+    available_only = true,
+    order_by = 'nom', // 'nom' | 'cote'
+  } = await req.json();
 
     if (!phase_id) {
       return new Response(JSON.stringify({ error: 'phase_id is required' }), {
@@ -32,7 +33,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('[auction-search-riders] Request:', { phase_id, league_id, q, available_only, limit, offset });
+    console.log('[auction-search-riders] Request:', { phase_id, league_id, q, available_only, limit, offset, order_by });
 
     // Step 1: Get phase's saison_id
     const { data: phase, error: phaseError } = await supabase
@@ -74,10 +75,16 @@ Deno.serve(async (req) => {
       query = query.not('coureur_id', 'in', `(${exclude_rider_ids.join(',')})`);
     }
 
-    // Pagination
-    query = query
-      .order('nom', { foreignTable: 'coureurs', ascending: true })
-      .range(offset, offset + limit - 1);
+    // Pagination and ordering
+    if (order_by === 'cote') {
+      query = query
+        .order('prix_initial', { ascending: false }) // Highest cote first
+        .range(offset, offset + limit - 1);
+    } else {
+      query = query
+        .order('nom', { foreignTable: 'coureurs', ascending: true })
+        .range(offset, offset + limit - 1);
+    }
 
     const { data: coureursSaisons, error } = await query;
 

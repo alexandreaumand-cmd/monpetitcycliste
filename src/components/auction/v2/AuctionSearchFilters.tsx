@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, X, ChevronDown } from "lucide-react";
 
 interface AuctionSearchFiltersProps {
@@ -24,6 +26,8 @@ export function AuctionSearchFilters({
   onCotesChange,
   availableTeams,
 }: AuctionSearchFiltersProps) {
+  const [teamSearchQuery, setTeamSearchQuery] = useState("");
+
   const toggleTeam = (team: string) => {
     if (selectedTeams.includes(team)) {
       onTeamsChange(selectedTeams.filter(t => t !== team));
@@ -40,12 +44,6 @@ export function AuctionSearchFilters({
     onTeamsChange([]);
   };
 
-  const getTeamDisplayText = () => {
-    if (selectedTeams.length === 0) return "Toutes les équipes";
-    if (selectedTeams.length <= 3) return selectedTeams.join(", ");
-    return `${selectedTeams.length} équipes sélectionnées`;
-  };
-
   const coteOptions = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 101]; // 101 represents 100+
   
   const toggleCote = (cote: number) => {
@@ -60,6 +58,11 @@ export function AuctionSearchFilters({
     if (cote === 101) return "100+";
     return `${cote}`;
   };
+
+  // Filter teams based on search query
+  const filteredTeams = availableTeams.filter(team =>
+    team.toLowerCase().includes(teamSearchQuery.toLowerCase())
+  );
 
   return (
     <div className="flex items-center gap-3">
@@ -102,82 +105,74 @@ export function AuctionSearchFilters({
             <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[280px] p-0" align="start">
-          <div className="max-h-[400px] overflow-y-auto">
-            {/* Select All / Clear All */}
-            <div className="flex items-center justify-between px-3 py-2 border-b">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={selectAllTeams}
-                className="h-7 text-xs"
-              >
-                Tout sélectionner
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearAllTeams}
-                className="h-7 text-xs"
-              >
-                Effacer
-              </Button>
+        <PopoverContent className="w-80 p-0 bg-white dark:bg-gray-800 z-50" align="start">
+          {/* Header with search and actions */}
+          <div className="p-3 border-b">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Équipes ({selectedTeams.length})</span>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={selectAllTeams} className="h-6 text-xs">
+                  Tout
+                </Button>
+                <Button variant="ghost" size="sm" onClick={clearAllTeams} className="h-6 text-xs">
+                  Aucun
+                </Button>
+              </div>
             </div>
-            {/* Team List */}
-            <div className="p-1">
-              {availableTeams.map((team) => (
+            <Input
+              type="text"
+              placeholder="Rechercher une équipe..."
+              value={teamSearchQuery}
+              onChange={(e) => setTeamSearchQuery(e.target.value)}
+              className="h-8 text-sm"
+            />
+          </div>
+          {/* Scrollable team list */}
+          <ScrollArea className="max-h-[400px]">
+            <div className="p-2 space-y-1">
+              {filteredTeams.map((team) => (
                 <div
                   key={team}
-                  className="flex items-center space-x-2 px-2 py-2 hover:bg-accent rounded-sm cursor-pointer"
+                  className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
                   onClick={() => toggleTeam(team)}
                 >
-                  <Checkbox
-                    checked={selectedTeams.includes(team)}
-                    onCheckedChange={() => toggleTeam(team)}
-                  />
-                  <label className="flex-1 text-sm cursor-pointer">
-                    {team}
-                  </label>
+                  <Checkbox checked={selectedTeams.includes(team)} />
+                  <span className="flex-1 text-sm">{team}</span>
                 </div>
               ))}
+              {filteredTeams.length === 0 && (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  Aucune équipe trouvée
+                </div>
+              )}
             </div>
-          </div>
+          </ScrollArea>
         </PopoverContent>
       </Popover>
 
-      {/* Price Filter - Inline badges */}
-      <div className="flex items-center gap-1.5">
-        {coteOptions.slice(0, 5).map((cote) => (
+      {/* Price Filter - All badges inline */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm text-muted-foreground whitespace-nowrap">Prix:</span>
+        {coteOptions.map((cote) => (
           <Badge
             key={cote}
             variant={selectedCotes.includes(cote) ? "default" : "outline"}
-            className="cursor-pointer hover:bg-primary/80 transition-colors text-xs px-2 py-1"
+            className="cursor-pointer hover:bg-primary/10 transition-colors"
             onClick={() => toggleCote(cote)}
           >
             {getCoteLabel(cote)}
           </Badge>
         ))}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 px-2">
-              <ChevronDown className="h-3 w-3" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-2" align="end">
-            <div className="flex flex-wrap gap-1 max-w-[200px]">
-              {coteOptions.slice(5).map((cote) => (
-                <Badge
-                  key={cote}
-                  variant={selectedCotes.includes(cote) ? "default" : "outline"}
-                  className="cursor-pointer hover:bg-primary/80 transition-colors text-xs"
-                  onClick={() => toggleCote(cote)}
-                >
-                  {getCoteLabel(cote)}
-                </Badge>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
+        {selectedCotes.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onCotesChange([])}
+            className="h-6 px-2 text-xs"
+          >
+            Effacer
+          </Button>
+        )}
       </div>
     </div>
   );

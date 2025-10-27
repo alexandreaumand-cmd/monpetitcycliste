@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Filter } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,6 +22,8 @@ export function FiltersDrawer({
   onCotesChange,
   availableTeams,
 }: FiltersDrawerProps) {
+  const [teamSearchQuery, setTeamSearchQuery] = useState("");
+
   const toggleTeam = (team: string) => {
     if (selectedTeams.includes(team)) {
       onTeamsChange(selectedTeams.filter(t => t !== team));
@@ -35,6 +39,11 @@ export function FiltersDrawer({
   const clearAllTeams = () => {
     onTeamsChange([]);
   };
+
+  // Filter teams based on search query
+  const filteredTeams = availableTeams.filter(team =>
+    team.toLowerCase().includes(teamSearchQuery.toLowerCase())
+  );
 
   const coteOptions = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 101]; // 101 represents 100+
   
@@ -122,23 +131,37 @@ export function FiltersDrawer({
                   </Button>
                 </div>
               </div>
-              <div className="border rounded-md p-2 space-y-1">
-                {availableTeams.map((team) => (
-                  <div
-                    key={team}
-                    className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
-                    onClick={() => toggleTeam(team)}
-                  >
-                    <Checkbox
-                      checked={selectedTeams.includes(team)}
-                      onCheckedChange={() => toggleTeam(team)}
-                    />
-                    <label className="flex-1 text-sm cursor-pointer">
-                      {team}
-                    </label>
-                  </div>
-                ))}
-              </div>
+              <Input
+                type="text"
+                placeholder="Rechercher une équipe..."
+                value={teamSearchQuery}
+                onChange={(e) => setTeamSearchQuery(e.target.value)}
+                className="h-9 text-sm"
+              />
+              <ScrollArea className="h-[300px]">
+                <div className="border rounded-md p-2 space-y-1">
+                  {filteredTeams.map((team) => (
+                    <div
+                      key={team}
+                      className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
+                      onClick={() => toggleTeam(team)}
+                    >
+                      <Checkbox
+                        checked={selectedTeams.includes(team)}
+                        onCheckedChange={() => toggleTeam(team)}
+                      />
+                      <label className="flex-1 text-sm cursor-pointer">
+                        {team}
+                      </label>
+                    </div>
+                  ))}
+                  {filteredTeams.length === 0 && (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      Aucune équipe trouvée
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
             </div>
 
             {/* Price Filter */}
