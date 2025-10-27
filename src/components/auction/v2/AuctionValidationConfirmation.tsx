@@ -71,8 +71,8 @@ export function AuctionValidationConfirmation({ phaseId, managerId, leagueId, on
     );
   }
 
-  const progress = (status.validated_count / status.total_managers) * 100;
-  const allValidated = status.validated_count === status.total_managers;
+  const progress = status.total_managers > 0 ? (status.validated_count / status.total_managers) * 100 : 0;
+  const allValidated = status.total_managers > 0 && status.validated_count === status.total_managers;
 
   const getEncouragingMessage = () => {
     if (allValidated) {

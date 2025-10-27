@@ -38,23 +38,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get the league_id for this auction's phase
-    const { data: phaseData } = await supabase
-      .from('phases')
-      .select('saison_id')
-      .eq('id', phase_id)
+    // Get the league_id for this auction
+    const { data: auctionLeague } = await supabase
+      .from('auctions')
+      .select('league_id')
+      .eq('id', auction.id)
       .single();
-
-    let leagueId = null;
-    if (phaseData?.saison_id) {
-      const { data: auctionLeague } = await supabase
-        .from('auctions')
-        .select('league_id')
-        .eq('id', auction.id)
-        .single();
-      
-      leagueId = auctionLeague?.league_id;
-    }
+    
+    const leagueId = auctionLeague?.league_id;
 
     // Get all league members with their roster status
     let eligibleManagerIds: string[] = [];
@@ -63,52 +54,54 @@ Deno.serve(async (req) => {
 
     if (leagueId) {
       // Step 1: Get phase details
-      const { data: phaseData } = await supabase
+      const { data: phaseRow } = await supabase
         .from('phases')
         .select('max_coureurs')
         .eq('id', phase_id)
         .single();
 
-      const maxCoureurs = phaseData?.max_coureurs || 30;
+      const maxCoureurs = phaseRow?.max_coureurs ?? 30;
 
-      // Step 2: Get all league members
-      const { data: leagueMembers } = await supabase
+      // Step 2: Get all league members' user_ids
+      const { data: members } = await supabase
         .from('league_members')
-        .select(`
-          user_id,
-          managers(id, nom)
-        `)
+        .select('user_id')
         .eq('league_id', leagueId);
 
-      if (leagueMembers && leagueMembers.length > 0) {
-        // For each member, count their rosters for this phase
-        for (const member of leagueMembers) {
-          if (!member.managers) continue;
-          
-          const manager = Array.isArray(member.managers) ? member.managers[0] : member.managers;
-          if (!manager) continue;
+      const memberUserIds = (members || []).map(m => m.user_id);
+      
+      console.log(`📋 Found ${memberUserIds.length} league members`);
 
-          const { count } = await supabase
-            .from('rosters')
-            .select('*', { count: 'exact', head: true })
-            .eq('manager_id', manager.id)
-            .eq('phase_id', phase_id)
-            .eq('league_id', leagueId);
+      // Step 3: Get all managers for these user_ids
+      const { data: managersRows } = await supabase
+        .from('managers')
+        .select('id, nom, user_id')
+        .in('user_id', memberUserIds);
 
-          const rosterCount = count || 0;
-          const slotsRestants = maxCoureurs - rosterCount;
+      console.log(`👥 Found ${managersRows?.length || 0} managers`);
 
-          // Only include managers with incomplete rosters
-          if (slotsRestants > 0) {
-            eligibleManagerIds.push(manager.id);
-            eligibleManagerNames.push(manager.nom);
-          }
+      // Step 4: For each manager, count their rosters
+      for (const m of managersRows || []) {
+        const { count } = await supabase
+          .from('rosters')
+          .select('*', { count: 'exact', head: true })
+          .eq('manager_id', m.id)
+          .eq('phase_id', phase_id)
+          .eq('league_id', leagueId);
 
-          console.log(`📊 ${manager.nom}: ${rosterCount}/${maxCoureurs} coureurs (${slotsRestants} restants)`);
+        const rosterCount = count || 0;
+        const slotsRestants = maxCoureurs - rosterCount;
+        
+        if (slotsRestants > 0) {
+          eligibleManagerIds.push(m.id);
+          eligibleManagerNames.push(m.nom);
         }
-
-        totalEligibleManagers = eligibleManagerIds.length;
+        
+        console.log(`📊 ${m.nom}: ${rosterCount}/${maxCoureurs} coureurs (${slotsRestants} restants)`);
       }
+
+      totalEligibleManagers = eligibleManagerIds.length;
+      console.log(`✅ Total eligible managers: ${totalEligibleManagers}`);
     } else {
       // Fallback for legacy mode (no league)
       const { data: incompleteRosters } = await supabase
