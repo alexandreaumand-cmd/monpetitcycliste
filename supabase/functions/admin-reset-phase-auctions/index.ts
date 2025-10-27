@@ -104,14 +104,23 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Verify confirmation phrase (trim whitespace)
-    const normalizedPhrase = (confirm_phrase || '').trim();
-    if (normalizedPhrase !== 'RESET ENCHERES') {
-      console.error('[admin-reset-phase-auctions] Invalid confirmation phrase:', confirm_phrase);
-      return new Response(
-        JSON.stringify({ error: `Phrase de confirmation incorrecte. Attendu: "RESET ENCHERES", reçu: "${confirm_phrase}"` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Verify confirmation phrase ONLY for non-superadmins
+    if (!isSuperAdmin) {
+      const normalizedPhrase = ((confirm_phrase ?? '').toString())
+        .normalize('NFKC')          // normalize unicode
+        .replace(/\s+/g, ' ')       // replace multiple whitespace with single space
+        .trim()
+        .toUpperCase();
+      
+      if (normalizedPhrase !== 'RESET ENCHERES') {
+        console.error('[admin-reset-phase-auctions] Invalid confirmation phrase for non-superadmin:', confirm_phrase);
+        return new Response(
+          JSON.stringify({ error: 'Phrase de confirmation incorrecte. Attendu: "RESET ENCHERES"' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      console.log('[admin-reset-phase-auctions] Skipping confirmation phrase check for superadmin');
     }
 
     console.log(`[admin-reset-phase-auctions] Starting reset for phase ${phase_id} in league ${league_id}`);
