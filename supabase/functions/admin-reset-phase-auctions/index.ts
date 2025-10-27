@@ -50,12 +50,22 @@ Deno.serve(async (req) => {
 
     // Parse request body
     const { phase_id, confirm_phrase, league_id } = await req.json();
+    console.log('[admin-reset-phase-auctions] Request body:', { phase_id, league_id, confirm_phrase: `"${confirm_phrase}"` });
 
     // Validate league_id
     if (!league_id) {
       console.error('[admin-reset-phase-auctions] Missing league_id');
       return new Response(
         JSON.stringify({ error: 'league_id requis' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate phase_id
+    if (!phase_id) {
+      console.error('[admin-reset-phase-auctions] Missing phase_id');
+      return new Response(
+        JSON.stringify({ error: 'phase_id requis' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -94,11 +104,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Verify confirmation phrase
-    if (confirm_phrase !== 'RESET ENCHERES') {
-      console.error('[admin-reset-phase-auctions] Invalid confirmation phrase');
+    // Verify confirmation phrase (trim whitespace)
+    const normalizedPhrase = (confirm_phrase || '').trim();
+    if (normalizedPhrase !== 'RESET ENCHERES') {
+      console.error('[admin-reset-phase-auctions] Invalid confirmation phrase:', confirm_phrase);
       return new Response(
-        JSON.stringify({ error: 'Phrase de confirmation incorrecte' }),
+        JSON.stringify({ error: `Phrase de confirmation incorrecte. Attendu: "RESET ENCHERES", reçu: "${confirm_phrase}"` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
