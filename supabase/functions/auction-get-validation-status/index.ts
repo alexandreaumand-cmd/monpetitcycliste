@@ -53,14 +53,14 @@ Deno.serve(async (req) => {
     let totalEligibleManagers = 0;
 
     if (leagueId) {
-      // Step 1: Get phase details
-      const { data: phaseRow } = await supabase
-        .from('phases')
-        .select('max_coureurs')
-        .eq('id', phase_id)
+      // Step 1: Get league configuration
+      const { data: league } = await supabase
+        .from('leagues')
+        .select('max_riders_per_manager')
+        .eq('id', leagueId)
         .single();
 
-      const maxCoureurs = phaseRow?.max_coureurs ?? 30;
+      const maxCoureurs = league?.max_riders_per_manager ?? 30;
 
       // Step 2: Get all league members' user_ids
       const { data: members } = await supabase
