@@ -52,7 +52,6 @@ export const MaintenanceTabs = () => {
         </TabsContent>
 
         <TabsContent value="danger" className="space-y-6">
-          <AuctionResetManager />
           <CleanupSection />
           <ResetSection />
         </TabsContent>
