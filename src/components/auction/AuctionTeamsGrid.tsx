@@ -185,7 +185,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
       
       const result = await supabase
         .from('managers_rosters_status')
-        .select('manager_id, budget_restant, budget_depense, slots_restants, max_coureurs');
+        .select('manager_id, budget_restant, budget_depense, slots_restants, max_coureurs, phase_id, league_id');
 
       if (result.error) throw result.error;
       
