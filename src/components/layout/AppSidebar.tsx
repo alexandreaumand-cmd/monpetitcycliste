@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import mpcLogo from "@/assets/mpc-logo.png";
+import { useLeague } from "@/contexts/LeagueContext";
+import { useUserLeagues } from "@/hooks/useUserLeagues";
 
 interface AppSidebarProps {
   isAdmin: boolean;
@@ -37,6 +39,12 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
   const isCollapsed = state === "collapsed";
   const [searchParams] = useSearchParams();
   const currentLeagueId = searchParams.get('leagueId');
+  const { leagueId } = useLeague();
+  const { roles } = useUserLeagues();
+
+  // Vérifier si l'utilisateur est admin/owner de la ligue sélectionnée
+  const isAdminOfCurrentLeague = leagueId && roles[leagueId] && 
+    ['owner', 'admin'].includes(roles[leagueId]);
 
   const buildNavUrl = (path: string) => {
     return currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
@@ -89,7 +97,8 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                   </SidebarMenuItem>
                 ))}
 
-                {isLeagueAdminOnly && (
+                {/* Admin Ligue - UNIQUEMENT pour les admins de ligue (pas les super admins) */}
+                {isAdminOfCurrentLeague && !isSuperAdmin && (
                   <SidebarMenuItem>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -114,53 +123,30 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                   </SidebarMenuItem>
                 )}
 
+                {/* Super Admin - UNIQUEMENT pour les super admins */}
                 {isSuperAdmin && (
-                  <>
-                    <SidebarMenuItem>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <SidebarMenuButton asChild>
-                            <NavLink
-                              to={buildNavUrl("/dashboard/admin")}
-                              className={({ isActive }) =>
-                                isActive ? "bg-accent text-accent-foreground" : ""
-                              }
-                            >
-                              <Settings className="h-4 w-4" />
-                              {!isCollapsed && <span>Admin Ligue</span>}
-                            </NavLink>
-                          </SidebarMenuButton>
-                        </TooltipTrigger>
-                        {isCollapsed && (
-                          <TooltipContent side="right">
-                            Admin Ligue
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <SidebarMenuButton asChild>
-                            <NavLink
-                              to={buildNavUrl("/dashboard/super-admin")}
-                              className={({ isActive }) =>
-                                isActive ? "bg-accent text-accent-foreground" : ""
-                              }
-                            >
-                              <Shield className="h-4 w-4" />
-                              {!isCollapsed && <span>Super Admin</span>}
-                            </NavLink>
-                          </SidebarMenuButton>
-                        </TooltipTrigger>
-                        {isCollapsed && (
-                          <TooltipContent side="right">
-                            Super Admin
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </SidebarMenuItem>
-                  </>
+                  <SidebarMenuItem>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <SidebarMenuButton asChild>
+                          <NavLink
+                            to={buildNavUrl("/dashboard/super-admin")}
+                            className={({ isActive }) =>
+                              isActive ? "bg-accent text-accent-foreground" : ""
+                            }
+                          >
+                            <Shield className="h-4 w-4" />
+                            {!isCollapsed && <span>Super Admin</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </TooltipTrigger>
+                      {isCollapsed && (
+                        <TooltipContent side="right">
+                          Super Admin
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </SidebarMenuItem>
                 )}
               </TooltipProvider>
             </SidebarMenu>
