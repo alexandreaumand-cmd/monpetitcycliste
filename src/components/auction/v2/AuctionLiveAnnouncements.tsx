@@ -155,78 +155,97 @@ export function AuctionLiveAnnouncements({
                       En attente des annonces...
                     </p>
                   ) : (
-                    [...liveAnnonces].reverse().map((annonce, idx) => (
-                      <div
-                        key={annonce.id}
-                        className={`p-4 rounded-lg border animate-fade-in ${
-                          annonce.is_my_win
-                            ? 'bg-primary/10 border-primary'
-                            : 'bg-card'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              {annonce.type === 'gain' ? (
-                                <Trophy className="h-4 w-4 text-primary" />
-                              ) : (
-                                <Users className="h-4 w-4 text-yellow-500" />
-                              )}
-                              <span className="font-semibold">
-                                {annonce.coureur?.nom}
-                              </span>
-                              <Badge variant="outline" className="text-xs">
-                                {annonce.coureur?.equipe}
-                              </Badge>
-                              {idx === 0 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Nouveau !
-                                </Badge>
-                              )}
-                            </div>
+                    (() => {
+                      const reversedAnnonces = [...liveAnnonces].reverse();
+                      const shouldShowTop10Message = totalAnnonces > 10;
+                      const top10Position = totalAnnonces - 10;
 
-                            {annonce.type === 'gain' ? (
-                              <div>
-                                <p className="text-sm">
-                                  {annonce.is_my_win ? (
-                                    <span className="font-semibold text-primary">
-                                      🎉 Gagné par toi pour {annonce.winning_amount}€
-                                      {(!annonce.losers || annonce.losers.length === 0) && (
-                                        <Badge variant="outline" className="ml-2 text-xs">
-                                          Seul enchérisseur
-                                        </Badge>
-                                      )}
-                                    </span>
-                                  ) : (
-                                    <span>
-                                      Gagné par <strong>{annonce.winning_manager?.nom}</strong> pour {annonce.winning_amount}€
-                                    </span>
-                                  )}
-                                </p>
-                                {annonce.losers && annonce.losers.length > 0 && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    {annonce.is_my_win ? (
-                                      <>✅ Tu bats : {annonce.losers.map((l: any) => `${l.manager} (${l.montant}€)`).join(', ')}</>
-                                    ) : (
-                                      <>Autres enchères : {annonce.losers.map((l: any) => `${l.manager} (${l.montant}€)`).join(', ')}</>
-                                    )}
-                                  </p>
-                                )}
-                              </div>
-                            ) : (
-                              <div>
-                                <p className="text-sm">
-                                  🟨 Égalité à {annonce.winning_amount}€
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {annonce.losers?.map((l: any) => l.manager).join(', ')} - On retente au prochain round !
-                                </p>
+                      return reversedAnnonces.map((annonce, idx) => {
+                        const showTop10Before = shouldShowTop10Message && idx === top10Position;
+
+                        return (
+                          <div key={`wrapper-${annonce.id}`}>
+                            {/* Message Top 10 */}
+                            {showTop10Before && (
+                              <div className="p-6 rounded-lg bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500 text-center animate-fade-in mb-4">
+                                <p className="font-bold text-xl">🏆 On arrive au top 10 ! 🏆</p>
                               </div>
                             )}
+
+                            {/* Annonce normale */}
+                            <div
+                              className={`p-4 rounded-lg border animate-fade-in ${
+                                annonce.is_my_win
+                                  ? 'bg-primary/10 border-primary'
+                                  : 'bg-card'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    {annonce.type === 'gain' ? (
+                                      <Trophy className="h-4 w-4 text-primary" />
+                                    ) : (
+                                      <Users className="h-4 w-4 text-yellow-500" />
+                                    )}
+                                    <span className="font-semibold">
+                                      {annonce.coureur?.nom}
+                                    </span>
+                                    <Badge variant="outline" className="text-xs">
+                                      {annonce.coureur?.equipe}
+                                    </Badge>
+                                    {idx === 0 && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        Nouveau !
+                                      </Badge>
+                                    )}
+                                  </div>
+
+                                  {annonce.type === 'gain' ? (
+                                    <div>
+                                      <p className="text-sm">
+                                        {annonce.is_my_win ? (
+                                          <span className="font-semibold text-primary">
+                                            🎉 Gagné par toi pour {annonce.winning_amount}€
+                                            {(!annonce.losers || annonce.losers.length === 0) && (
+                                              <Badge variant="outline" className="ml-2 text-xs">
+                                                Seul enchérisseur
+                                              </Badge>
+                                            )}
+                                          </span>
+                                        ) : (
+                                          <span>
+                                            Gagné par <strong>{annonce.winning_manager?.nom}</strong> pour {annonce.winning_amount}€
+                                          </span>
+                                        )}
+                                      </p>
+                                      {annonce.losers && annonce.losers.length > 0 && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          {annonce.is_my_win ? (
+                                            <>✅ Tu bats : {annonce.losers.map((l: any) => `${l.manager} (${l.montant}€)`).join(', ')}</>
+                                          ) : (
+                                            <>Autres enchères : {annonce.losers.map((l: any) => `${l.manager} (${l.montant}€)`).join(', ')}</>
+                                          )}
+                                        </p>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div>
+                                      <p className="text-sm">
+                                        🟨 Égalité à {annonce.winning_amount}€
+                                      </p>
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        {annonce.losers?.map((l: any) => l.manager).join(', ')} - On retente au prochain round !
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    ))
+                        );
+                      });
+                    })()
                   )}
                 </div>
               </ScrollArea>

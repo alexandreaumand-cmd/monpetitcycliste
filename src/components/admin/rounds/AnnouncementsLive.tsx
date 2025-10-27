@@ -124,26 +124,43 @@ export const AnnouncementsLive = ({
             </h4>
             <ScrollArea className="h-[200px]">
               <div className="space-y-2 pr-4">
-                {published.map((annonce) => (
-                  <div 
-                    key={annonce.id} 
-                    className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium">{annonce.coureur_nom}</p>
-                      {annonce.type === 'gain' && annonce.manager_nom && (
-                        <p className="text-xs text-muted-foreground">
-                          {annonce.manager_nom}
-                          {annonce.winning_amount && ` - ${formatAmount(annonce.winning_amount)}`}
-                        </p>
-                      )}
-                      {annonce.type === 'egalite' && (
-                        <p className="text-xs text-orange-600">Égalité</p>
-                      )}
-                    </div>
-                    <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  </div>
-                ))}
+                {(() => {
+                  const totalCount = announcements.length;
+                  const shouldShowTop10 = totalCount > 10;
+                  const top10Position = totalCount - 10;
+
+                  return published.map((annonce, idx) => {
+                    const showTop10Before = shouldShowTop10 && idx === top10Position;
+
+                    return (
+                      <div key={`wrapper-${annonce.id}`}>
+                        {/* Message Top 10 */}
+                        {showTop10Before && (
+                          <div className="p-3 rounded bg-gradient-to-r from-yellow-500/30 to-orange-500/30 border border-yellow-500 text-center mb-2">
+                            <p className="font-bold text-sm">🏆 Top 10 ! 🏆</p>
+                          </div>
+                        )}
+
+                        {/* Item de timeline */}
+                        <div className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
+                          <div className="flex-1">
+                            <p className="font-medium">{annonce.coureur_nom}</p>
+                            {annonce.type === 'gain' && annonce.manager_nom && (
+                              <p className="text-xs text-muted-foreground">
+                                {annonce.manager_nom}
+                                {annonce.winning_amount && ` - ${formatAmount(annonce.winning_amount)}`}
+                              </p>
+                            )}
+                            {annonce.type === 'egalite' && (
+                              <p className="text-xs text-orange-600">Égalité</p>
+                            )}
+                          </div>
+                          <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </ScrollArea>
           </div>
