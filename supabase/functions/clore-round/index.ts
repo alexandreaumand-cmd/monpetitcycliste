@@ -264,6 +264,21 @@ Deno.serve(async (req) => {
       await supabase.from('annonces').insert(sortedAnnonces);
     }
 
+    // CRITICAL: Update any remaining "pending" bids to "closed" to prevent them from appearing as validated in next round
+    const { data: remainingBids, error: remainingError } = await supabase
+      .from('bids')
+      .update({ statut: 'closed' })
+      .eq('auction_id', auction_id)
+      .eq('league_id', league_id)
+      .eq('statut', 'pending')
+      .select('id');
+
+    if (remainingError) {
+      console.error('Error updating remaining bids:', remainingError);
+    } else {
+      console.log(`Updated ${remainingBids?.length || 0} remaining pending bids to closed`);
+    }
+
     console.log(`Round closed, ${annonces.length} annonces created`);
 
     return new Response(
