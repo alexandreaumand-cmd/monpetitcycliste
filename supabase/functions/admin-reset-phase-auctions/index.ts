@@ -23,10 +23,12 @@ Deno.serve(async (req) => {
       throw new Error('Non authentifié');
     }
 
-    // Check superadmin access
+    // Check superadmin OR league admin access
     const { data: isSuperAdmin, error: adminError } = await supabaseClient.rpc('is_superadmin');
-    if (adminError || !isSuperAdmin) {
-      throw new Error('Accès refusé: réservé aux superadministrateurs');
+    
+    if (adminError) {
+      console.error('Error checking superadmin status:', adminError);
+      // Continue to check league admin instead of failing immediately
     }
 
     const { phase_id, confirm_phrase, league_id } = await req.json();
@@ -43,7 +45,7 @@ Deno.serve(async (req) => {
       });
 
       if (adminCheckError || !isLeagueAdmin) {
-        throw new Error('Accès refusé: admin de ligue requis');
+        throw new Error('Accès refusé: vous devez être superadmin ou admin de cette ligue');
       }
     }
 
