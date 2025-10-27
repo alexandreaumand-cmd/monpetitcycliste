@@ -56,6 +56,23 @@ Deno.serve(async (req) => {
 
     const manager_id = input_manager_id || manager.id;
 
+    // Get league settings if league_id is provided
+    let leagueBudget = null;
+    let leagueMaxRiders = null;
+
+    if (league_id) {
+      const { data: league } = await supabase
+        .from('leagues')
+        .select('settings')
+        .eq('id', league_id)
+        .single();
+      
+      if (league?.settings) {
+        leagueBudget = league.settings.budget;
+        leagueMaxRiders = league.settings.max_riders;
+      }
+    }
+
     // Get active auction
     const { data: auction } = await supabase
       .from('auctions')
@@ -73,10 +90,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get phase info
+    // Get phase info with saison_id
     const { data: phase } = await supabase
       .from('phases')
-      .select('budget, max_coureurs')
+      .select('budget, max_coureurs, saison_id')
       .eq('id', phase_id)
       .single();
 
@@ -86,6 +103,13 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Use league-specific settings if available, otherwise use phase defaults
+    const budget = leagueBudget ?? phase.budget;
+    const max_coureurs = leagueMaxRiders ?? phase.max_coureurs;
+
+    console.log(`[auction-submit] Using budget: ${budget}, max_coureurs: ${max_coureurs} (league: ${league_id ? 'YES' : 'NO'})`);
+
 
     // Get draft bids
     const { data: draftBids } = await supabase
@@ -116,10 +140,10 @@ Deno.serve(async (req) => {
     // VALIDATION STRICTE
     
     // 1. Check exact slot count (roster + new bids)
-    if (totalSlots !== phase.max_coureurs) {
+    if (totalSlots !== max_coureurs) {
       return new Response(
         JSON.stringify({ 
-          error: `Effectif incorrect : tu dois avoir exactement ${phase.max_coureurs} coureurs. Actuellement: ${currentRosterCount} en roster + ${draftBids.length} enchères = ${totalSlots} coureurs` 
+          error: `Effectif incorrect : tu dois avoir exactement ${max_coureurs} coureurs. Actuellement: ${currentRosterCount} en roster + ${draftBids.length} enchères = ${totalSlots} coureurs` 
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -139,11 +163,11 @@ Deno.serve(async (req) => {
     const rosterSpent = (rosterBids || []).reduce((sum, r) => sum + Number(r.prix_signature), 0);
     const totalSpent = rosterSpent + draftSum;
     
-    if (Math.abs(totalSpent - phase.budget) > 0) {
-      const diff = totalSpent - phase.budget;
+    if (Math.abs(totalSpent - budget) > 0) {
+      const diff = totalSpent - budget;
       const message = diff > 0 
-        ? `Budget dépassé de ${diff}. Total: ${totalSpent} (roster: ${rosterSpent} + enchères: ${draftSum}). Budget: ${phase.budget}`
-        : `Budget sous-utilisé de ${Math.abs(diff)}. Total: ${totalSpent} (roster: ${rosterSpent} + enchères: ${draftSum}). Budget: ${phase.budget}`;
+        ? `Budget dépassé de ${diff}. Total: ${totalSpent} (roster: ${rosterSpent} + enchères: ${draftSum}). Budget: ${budget}`
+        : `Budget sous-utilisé de ${Math.abs(diff)}. Total: ${totalSpent} (roster: ${rosterSpent} + enchères: ${draftSum}). Budget: ${budget}`;
       return new Response(
         JSON.stringify({ error: message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
