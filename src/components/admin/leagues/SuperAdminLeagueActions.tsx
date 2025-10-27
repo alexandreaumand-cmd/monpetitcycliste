@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Eye, Users, Archive, ArchiveRestore, Trash2 } from "lucide-react";
+import { MoreVertical, Eye, Users, Archive, ArchiveRestore, Trash2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import type { League } from "@/lib/leagues/types";
 
@@ -32,6 +32,8 @@ export function SuperAdminLeagueActions({ league, onActionComplete }: SuperAdmin
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const handleArchiveToggle = async () => {
     try {
@@ -53,6 +55,30 @@ export function SuperAdminLeagueActions({ league, onActionComplete }: SuperAdmin
     } catch (error) {
       console.error("Error toggling archive:", error);
       toast.error("Erreur lors de la modification");
+    }
+  };
+
+  const handleResetToPending = async () => {
+    setIsResetting(true);
+    try {
+      const { error } = await supabase
+        .from("leagues")
+        .update({ 
+          status: "pending",
+          started_at: null
+        })
+        .eq("id", league.id);
+
+      if (error) throw error;
+
+      toast.success("Ligue repassée en attente");
+      setShowResetDialog(false);
+      onActionComplete();
+    } catch (error) {
+      console.error("Error resetting league:", error);
+      toast.error("Erreur lors de la réinitialisation");
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -107,6 +133,12 @@ export function SuperAdminLeagueActions({ league, onActionComplete }: SuperAdmin
               </>
             )}
           </DropdownMenuItem>
+          {league.status === "active" && (
+            <DropdownMenuItem onClick={() => setShowResetDialog(true)}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Repasser en attente
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => setShowDeleteDialog(true)}
@@ -117,6 +149,32 @@ export function SuperAdminLeagueActions({ league, onActionComplete }: SuperAdmin
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Repasser la ligue en attente ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La ligue "{league.name}" sera repassée en statut "en attente" :
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Le statut deviendra "pending"</li>
+                <li>La date de démarrage sera réinitialisée</li>
+                <li>Les membres actuels resteront inscrits</li>
+                <li>De nouveaux joueurs pourront rejoindre</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isResetting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetToPending}
+              disabled={isResetting}
+            >
+              {isResetting ? "Réinitialisation..." : "Repasser en attente"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
