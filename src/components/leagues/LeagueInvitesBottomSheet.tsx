@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MobileBottomSheet } from "@/components/mobile/MobileBottomSheet";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Copy, Link, Users } from "lucide-react";
+import { Copy, Link, Users, Share2 } from "lucide-react";
 import { useLeagueMembers } from "@/hooks/useLeagueMembers";
 import { toast } from "sonner";
 
@@ -103,7 +103,7 @@ export function LeagueInvitesBottomSheet({
         await loadInvites();
       }
       
-      const url = `${window.location.origin}/invite?token=${token}`;
+      const url = `${window.location.origin}/i/${token}`;
       setInviteToken(token);
       setInviteUrl(url);
       return { token, url };
@@ -123,19 +123,46 @@ export function LeagueInvitesBottomSheet({
   };
 
   const handleCopyLink = async () => {
+    if (!inviteUrl) return;
+    
+    const inviteText = `🚴 Rejoins ma ligue "${leagueName}" sur Mon Petit Cycliste !\n\n${inviteUrl}\n\nUtilise ce lien pour nous rejoindre.`;
+    
     try {
-      await navigator.clipboard.writeText(inviteUrl);
-      toast.success("Lien copié !");
+      await navigator.clipboard.writeText(inviteText);
+      toast.success("Invitation copiée !");
     } catch (error) {
-      toast.error("Impossible de copier le lien");
+      toast.error("Impossible de copier l'invitation");
     }
   };
 
   const handleShareWhatsApp = () => {
-    const message = encodeURIComponent(
-      `Rejoins la ligue "${leagueName}" sur Fantasy Cycling !\n\n${inviteUrl}\n\nPlaces restantes : ${remainingSpots}`
-    );
-    window.open(`https://wa.me/?text=${message}`, '_blank');
+    if (!inviteUrl) return;
+    
+    const message = `🚴 Rejoins ma ligue "${leagueName}" sur Mon Petit Cycliste !\n\n${inviteUrl}\n\nUtilise ce lien pour nous rejoindre.`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const handleNativeShare = async () => {
+    if (!inviteUrl) return;
+    
+    const shareData = {
+      title: "Invitation Mon Petit Cycliste",
+      text: `Rejoins ma ligue "${leagueName}" !`,
+      url: inviteUrl,
+    };
+    
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        // Partage annulé ou erreur
+        console.log('Partage annulé');
+      }
+    } else {
+      // Fallback : copier le texte
+      handleCopyLink();
+    }
   };
 
   const content = (
@@ -210,21 +237,36 @@ export function LeagueInvitesBottomSheet({
           <Link className="h-5 w-5 text-primary" />
           <h3 className="font-semibold">Lien d'invitation</h3>
         </div>
-        <div className="bg-muted/50 rounded-lg p-4">
-          <div className="flex flex-col gap-3">
-            <p className="text-xs sm:text-sm break-all text-muted-foreground">
-              {inviteUrl || "Chargement..."}
-            </p>
+        <div className="flex flex-col gap-2">
+          {/* Affichage du lien court plus élégant */}
+          <div className="p-3 bg-muted rounded-md border">
+            <code className="text-sm break-all font-mono">
+              {inviteUrl ? inviteUrl.replace(window.location.origin, '') : "Chargement..."}
+            </code>
+          </div>
+          
+          <div className="flex gap-2">
             <Button
-              size="sm"
               variant="outline"
+              size="sm"
               onClick={handleCopyLink}
               disabled={!inviteUrl}
-              className="w-full sm:w-auto"
+              className="flex-1"
             >
               <Copy className="h-4 w-4 mr-2" />
-              Copier
+              Copier l'invitation
             </Button>
+            
+            {navigator.share && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNativeShare}
+                disabled={!inviteUrl}
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
       </div>
