@@ -116,12 +116,12 @@ export const AuctionCleanupTab = () => {
       refetchCount();
     },
     onError: (error: any) => {
-      const status = error?.status || '';
-      const message = error?.message || 'Erreur inconnue';
+      const status = error?.context?.status ?? error?.status ?? '';
+      const serverMsg = error?.context?.body?.error ?? error?.message ?? 'Erreur inconnue';
       
       toast({
         title: "❌ Erreur",
-        description: status ? `[${status}] ${message}` : message,
+        description: status ? `[${status}] ${serverMsg}` : serverMsg,
         variant: "destructive",
       });
     },
