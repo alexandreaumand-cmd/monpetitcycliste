@@ -88,12 +88,12 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     enabled: context === null, // Only fetch if no active auction
   });
 
-  // Auto-show validation screen if manager has already validated and auction is still open
+  // Auto-show validation screen if manager has already validated and has no active drafts
   useEffect(() => {
-    if (context?.validation_status?.has_validated && context?.auction_id) {
+    if (context?.validation_status?.has_validated && context?.auction_id && (context?.my_bids?.length ?? 0) === 0) {
       setShowValidationScreen(true);
     }
-  }, [context?.validation_status?.has_validated, context?.auction_id]);
+  }, [context?.validation_status?.has_validated, context?.auction_id, context?.my_bids?.length]);
 
   // Reset hideLiveAnnouncements when a new open auction appears
   useEffect(() => {

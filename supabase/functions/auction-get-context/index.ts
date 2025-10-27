@@ -146,8 +146,6 @@ Deno.serve(async (req) => {
       .filter(b => b.statut === 'pending')
       .map(b => ({ bid_id: b.id, coureur_id: b.coureur_id, amount: b.montant }));
 
-    const has_validated = submitted_bids.length > 0;
-
     // Get existing roster with rider details from coureurs_saisons
     let rosterQuery = supabase
       .from('rosters')
@@ -278,6 +276,22 @@ Deno.serve(async (req) => {
     const has_exact_slots = (roster_count + draft_count) === max_coureurs;
     const budget_fully_used = Math.abs(remaining_budget) < 1;
     const can_submit = has_exact_slots && budget_fully_used && all_above_min && no_duplicates && no_taken_riders;
+
+    // Calculate submitted totals
+    const submitted_sum = submitted_bids.reduce((sum, b) => sum + b.amount, 0);
+    const submitted_count = submitted_bids.length;
+
+    // Check if submitted bids are all above minimum
+    const submitted_all_above_min = submitted_bids.every(b => {
+      const coureur = coureursMap.get(b.coureur_id);
+      return coureur ? b.amount >= coureur.prix_initial : false;
+    });
+
+    // has_validated should only be true if the submitted set is complete and valid
+    const has_validated = submitted_count > 0
+      && (roster_count + submitted_count) === max_coureurs
+      && Math.abs(budget - budget_spent - submitted_sum) < 1
+      && submitted_all_above_min;
 
     return new Response(
       JSON.stringify({
