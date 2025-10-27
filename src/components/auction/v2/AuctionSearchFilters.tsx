@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Search, X, ChevronDown } from "lucide-react";
 
 interface AuctionSearchFiltersProps {
@@ -128,25 +128,23 @@ export function AuctionSearchFilters({
             />
           </div>
           {/* Scrollable team list */}
-          <ScrollArea className="max-h-[400px]">
-            <div className="p-2 space-y-1">
-              {filteredTeams.map((team) => (
-                <div
-                  key={team}
-                  className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
-                  onClick={() => toggleTeam(team)}
-                >
-                  <Checkbox checked={selectedTeams.includes(team)} />
-                  <span className="flex-1 text-sm">{team}</span>
-                </div>
-              ))}
-              {filteredTeams.length === 0 && (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  Aucune équipe trouvée
-                </div>
-              )}
-            </div>
-          </ScrollArea>
+          <div className="max-h-[500px] overflow-y-auto p-2 space-y-1">
+            {filteredTeams.map((team) => (
+              <div
+                key={team}
+                className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
+                onClick={() => toggleTeam(team)}
+              >
+                <Checkbox checked={selectedTeams.includes(team)} />
+                <span className="flex-1 text-sm">{team}</span>
+              </div>
+            ))}
+            {filteredTeams.length === 0 && (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                Aucune équipe trouvée
+              </div>
+            )}
+          </div>
         </PopoverContent>
       </Popover>
 

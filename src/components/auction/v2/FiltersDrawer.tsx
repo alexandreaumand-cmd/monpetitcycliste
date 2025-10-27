@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Filter } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 interface FiltersDrawerProps {
   selectedTeams: string[];
@@ -104,7 +104,7 @@ export function FiltersDrawer({
           </div>
         </SheetHeader>
 
-        <ScrollArea className="h-full py-4">
+        <div className="h-full overflow-y-auto py-4">
           <div className="space-y-4 px-1 pb-24">
             {/* Team Filter */}
             <div className="space-y-2">
@@ -138,30 +138,28 @@ export function FiltersDrawer({
                 onChange={(e) => setTeamSearchQuery(e.target.value)}
                 className="h-9 text-sm"
               />
-              <ScrollArea className="h-[300px]">
-                <div className="border rounded-md p-2 space-y-1">
-                  {filteredTeams.map((team) => (
-                    <div
-                      key={team}
-                      className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
-                      onClick={() => toggleTeam(team)}
-                    >
-                      <Checkbox
-                        checked={selectedTeams.includes(team)}
-                        onCheckedChange={() => toggleTeam(team)}
-                      />
-                      <label className="flex-1 text-sm cursor-pointer">
-                        {team}
-                      </label>
-                    </div>
-                  ))}
-                  {filteredTeams.length === 0 && (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      Aucune équipe trouvée
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
+              <div className="border rounded-md p-2 space-y-1 max-h-[400px] overflow-y-auto">
+                {filteredTeams.map((team) => (
+                  <div
+                    key={team}
+                    className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
+                    onClick={() => toggleTeam(team)}
+                  >
+                    <Checkbox
+                      checked={selectedTeams.includes(team)}
+                      onCheckedChange={() => toggleTeam(team)}
+                    />
+                    <label className="flex-1 text-sm cursor-pointer">
+                      {team}
+                    </label>
+                  </div>
+                ))}
+                {filteredTeams.length === 0 && (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    Aucune équipe trouvée
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Price Filter */}
@@ -183,7 +181,7 @@ export function FiltersDrawer({
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Filter Button */}
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t">
