@@ -40,10 +40,10 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
   const [searchParams] = useSearchParams();
   const currentLeagueId = searchParams.get('leagueId');
   const { leagueId } = useLeague();
-  const { roles } = useUserLeagues();
+  const { roles, isLoading: rolesLoading } = useUserLeagues();
 
   // Vérifier si l'utilisateur est admin/owner de la ligue sélectionnée
-  const isAdminOfCurrentLeague = leagueId && roles[leagueId] && 
+  const isAdminOfCurrentLeague = !rolesLoading && leagueId && roles[leagueId] && 
     ['owner', 'admin'].includes(roles[leagueId]);
 
   const buildNavUrl = (path: string) => {
