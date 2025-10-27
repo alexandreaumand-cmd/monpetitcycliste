@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MobileBottomSheet } from "@/components/mobile/MobileBottomSheet";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Share2, Users } from "lucide-react";
+import { Copy, Link, Users } from "lucide-react";
 import { useLeagueMembers } from "@/hooks/useLeagueMembers";
+import { toast } from "sonner";
 
 interface Invite {
   id: string;
@@ -37,11 +38,11 @@ export function LeagueInvitesBottomSheet({
   currentPlayerCount
 }: LeagueInvitesBottomSheetProps) {
   const isMobile = useIsMobile();
-  const { toast } = useToast();
   
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sharing, setSharing] = useState(false);
+  const [inviteToken, setInviteToken] = useState<string>("");
+  const [inviteUrl, setInviteUrl] = useState<string>("");
 
   // Load members
   const { data: members = [], isLoading: loadingMembers } = useLeagueMembers(leagueId);
@@ -65,6 +66,7 @@ export function LeagueInvitesBottomSheet({
   useEffect(() => {
     if (open) {
       loadInvites();
+      getOrCreateToken();
     }
   }, [open, leagueId]);
 
@@ -82,11 +84,8 @@ export function LeagueInvitesBottomSheet({
   const activeInvites = invites.filter(i => getInviteStatus(i).label === "Active");
   const remainingSpots = maxPlayers - currentPlayerCount;
 
-  const handleShareWhatsApp = async () => {
+  const getOrCreateToken = async () => {
     try {
-      setSharing(true);
-
-      // Get or create invite token
       let token = activeInvites[0]?.token;
       
       if (!token) {
@@ -104,20 +103,39 @@ export function LeagueInvitesBottomSheet({
         await loadInvites();
       }
       
-      const inviteUrl = `${window.location.origin}/invite?token=${token}`;
-      const message = encodeURIComponent(
-        `Rejoins la ligue "${leagueName}" sur Fantasy Cycling !\n\n${inviteUrl}\n\nPlaces restantes : ${remainingSpots}`
-      );
-      window.open(`https://wa.me/?text=${message}`, '_blank');
+      const url = `${window.location.origin}/invite?token=${token}`;
+      setInviteToken(token);
+      setInviteUrl(url);
+      return { token, url };
     } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message || "Impossible de partager l'invitation",
-        variant: "destructive",
-      });
-    } finally {
-      setSharing(false);
+      toast.error("Impossible de créer l'invitation");
+      return { token: "", url: "" };
     }
+  };
+
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteToken);
+      toast.success("Code copié !");
+    } catch (error) {
+      toast.error("Impossible de copier le code");
+    }
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      toast.success("Lien copié !");
+    } catch (error) {
+      toast.error("Impossible de copier le lien");
+    }
+  };
+
+  const handleShareWhatsApp = () => {
+    const message = encodeURIComponent(
+      `Rejoins la ligue "${leagueName}" sur Fantasy Cycling !\n\n${inviteUrl}\n\nPlaces restantes : ${remainingSpots}`
+    );
+    window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
   const content = (
@@ -161,15 +179,65 @@ export function LeagueInvitesBottomSheet({
         </p>
       </div>
 
+      {/* Section: Code d'invitation */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Copy className="h-5 w-5 text-primary" />
+          <h3 className="font-semibold">Code d'invitation</h3>
+        </div>
+        <div className="bg-muted/50 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-lg font-mono font-semibold tracking-wider">
+              {inviteToken || "Chargement..."}
+            </code>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCopyCode}
+              disabled={!inviteToken}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Copier
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Section: Lien d'invitation */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Link className="h-5 w-5 text-primary" />
+          <h3 className="font-semibold">Lien d'invitation</h3>
+        </div>
+        <div className="bg-muted/50 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <p className="flex-1 text-sm truncate text-muted-foreground">
+              {inviteUrl || "Chargement..."}
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCopyLink}
+              disabled={!inviteUrl}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Copier
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* Section: Partage WhatsApp */}
       <Button 
         onClick={handleShareWhatsApp}
-        disabled={sharing}
+        disabled={!inviteUrl}
         size="lg"
-        className="w-full h-14 text-base bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white shadow-lg"
+        className="w-full h-14 text-base bg-[#25D366] hover:bg-[#20BD5A] text-white shadow-lg"
       >
-        <Share2 className="h-5 w-5 mr-2" />
-        {sharing ? "Chargement..." : "Partager via WhatsApp"}
+        <svg className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+        </svg>
+        Partager via WhatsApp
       </Button>
     </div>
   );
