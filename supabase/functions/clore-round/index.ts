@@ -124,11 +124,12 @@ Deno.serve(async (req) => {
       .update({ statut: 'closed', closed_at: new Date().toISOString() })
       .eq('id', auction_id);
 
-    // Get all pending bids grouped by coureur
+    // CRITICAL: Get all pending bids for this auction AND league
     const { data: bids, error: bidsError } = await supabase
       .from('bids')
       .select('*, coureurs(*), managers(*)')
       .eq('auction_id', auction_id)
+      .eq('league_id', league_id)
       .eq('statut', 'pending');
 
     if (bidsError) throw bidsError;

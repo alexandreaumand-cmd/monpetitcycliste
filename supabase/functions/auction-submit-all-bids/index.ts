@@ -111,12 +111,13 @@ Deno.serve(async (req) => {
     console.log(`[auction-submit] Using budget: ${budget}, max_coureurs: ${max_coureurs} (league: ${league_id ? 'YES' : 'NO'})`);
 
 
-    // Get draft bids
+    // CRITICAL: Get draft bids filtered by league_id
     const { data: draftBids } = await supabase
       .from('bids')
       .select('id, coureur_id, montant')
       .eq('auction_id', auction.id)
       .eq('manager_id', manager_id)
+      .eq('league_id', league_id)
       .eq('statut', 'draft');
 
     if (!draftBids || draftBids.length === 0) {

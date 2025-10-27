@@ -172,12 +172,13 @@ Deno.serve(async (req) => {
 
         const budgetSpent = rosterData?.reduce((sum, r) => sum + Number(r.prix_signature || 0), 0) || 0;
 
-        // Compter les enchères (déjà filtré par auction_id qui appartient à la ligue)
+        // CRITICAL: Compter les enchères filtré par auction_id ET league_id
         const { data: bids, error: bidsError } = await supabaseAdmin
           .from('bids')
           .select('statut, montant')
           .eq('manager_id', manager.id)
-          .eq('auction_id', auction_id);
+          .eq('auction_id', auction_id)
+          .eq('league_id', auction.league_id);
 
         if (bidsError) {
           console.error(`Error fetching bids for manager ${manager.nom}:`, bidsError);

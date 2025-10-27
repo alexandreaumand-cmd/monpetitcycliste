@@ -130,12 +130,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get current draft bids to check budget
+    // CRITICAL: Get current draft bids filtered by league_id
     const { data: currentBids } = await supabase
       .from('bids')
       .select('id, coureur_id, montant')
       .eq('auction_id', auction.id)
       .eq('manager_id', manager_id)
+      .eq('league_id', league_id)
       .eq('statut', 'draft');
 
     // Calculate total if we add/update this bid
@@ -190,12 +191,13 @@ Deno.serve(async (req) => {
 
     if (upsertError) throw upsertError;
 
-    // Return refreshed context (call auction-get-context logic inline to avoid extra roundtrip)
+    // CRITICAL: Return refreshed context filtered by league_id
     const { data: allBids } = await supabase
       .from('bids')
       .select('id, coureur_id, montant, statut')
       .eq('auction_id', auction.id)
-      .eq('manager_id', manager_id);
+      .eq('manager_id', manager_id)
+      .eq('league_id', league_id);
 
     const my_bids = (allBids || [])
       .filter(b => b.statut === 'draft')

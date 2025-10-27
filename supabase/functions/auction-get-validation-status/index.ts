@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Get managers with pending bids (validated) - filter by eligible managers only
+    // CRITICAL: Get managers with pending bids filtered by league_id
     const { data: validatedManagers } = await supabase
       .from('bids')
       .select(`
@@ -125,6 +125,7 @@ Deno.serve(async (req) => {
         managers!inner(nom)
       `)
       .eq('auction_id', auction.id)
+      .eq('league_id', leagueId)
       .eq('statut', 'pending')
       .in('manager_id', eligibleManagerIds);
 

@@ -47,10 +47,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check bid exists and is draft
+    // CRITICAL: Check bid exists, is draft, AND verify league isolation
     const { data: bid } = await supabase
       .from('bids')
-      .select('id, statut, manager_id, auction_id')
+      .select('id, statut, manager_id, auction_id, league_id')
       .eq('id', bid_id)
       .single();
 
@@ -90,12 +90,13 @@ Deno.serve(async (req) => {
       .eq('id', bid.auction_id)
       .single();
 
-    // Return refreshed totals
+    // CRITICAL: Return refreshed totals filtered by league_id
     const { data: remainingBids } = await supabase
       .from('bids')
       .select('montant')
       .eq('auction_id', bid.auction_id)
       .eq('manager_id', manager.id)
+      .eq('league_id', bid.league_id)
       .eq('statut', 'draft');
 
     const { data: phase } = await supabase
