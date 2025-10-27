@@ -30,12 +30,12 @@ import {
 interface AuctionPageDesktopProps {
   phaseId: string;
   managerId: string;
+  leagueId: string | null;
 }
 
-export function AuctionPageDesktop({ phaseId, managerId }: AuctionPageDesktopProps) {
+export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPageDesktopProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { leagueId } = useLeague();
 
   // State
   const [searchQuery, setSearchQuery] = useState("");

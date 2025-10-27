@@ -4,12 +4,14 @@ import { Loader2, Trophy } from "lucide-react";
 import { AuctionPage } from "./AuctionPage";
 import { AuctionPageV2 } from "./v2/AuctionPageV2";
 import { MobileEmptyState } from "@/components/mobile";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface AuctionsListProps {
   managerId: string;
 }
 
 export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
+  const { leagueId } = useLeague();
   const { data: activePhases, isLoading } = useQuery({
     queryKey: ['my-active-phases'],
     queryFn: async () => {
@@ -44,5 +46,5 @@ export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
   }
 
   // Always use V2
-  return <AuctionPageV2 phaseId={activePhases[0].id} managerId={managerId} />;
+  return <AuctionPageV2 phaseId={activePhases[0].id} managerId={managerId} leagueId={leagueId} />;
 };

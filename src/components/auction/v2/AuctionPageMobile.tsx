@@ -18,12 +18,12 @@ import { useLeague } from "@/contexts/LeagueContext";
 interface AuctionPageMobileProps {
   phaseId: string;
   managerId: string;
+  leagueId: string | null;
 }
 
-export function AuctionPageMobile({ phaseId, managerId }: AuctionPageMobileProps) {
+export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageMobileProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { leagueId } = useLeague();
 
   // State
   const [searchQuery, setSearchQuery] = useState("");

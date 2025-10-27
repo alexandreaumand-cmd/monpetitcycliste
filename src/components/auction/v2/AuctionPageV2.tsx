@@ -5,14 +5,15 @@ import { AuctionPageDesktop } from "./AuctionPageDesktop";
 interface AuctionPageV2Props {
   phaseId: string;
   managerId: string;
+  leagueId: string | null;
 }
 
-export function AuctionPageV2({ phaseId, managerId }: AuctionPageV2Props) {
+export function AuctionPageV2({ phaseId, managerId, leagueId }: AuctionPageV2Props) {
   const isMobile = useIsMobile();
 
   return isMobile ? (
-    <AuctionPageMobile phaseId={phaseId} managerId={managerId} />
+    <AuctionPageMobile phaseId={phaseId} managerId={managerId} leagueId={leagueId} />
   ) : (
-    <AuctionPageDesktop phaseId={phaseId} managerId={managerId} />
+    <AuctionPageDesktop phaseId={phaseId} managerId={managerId} leagueId={leagueId} />
   );
 }
