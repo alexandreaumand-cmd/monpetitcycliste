@@ -82,7 +82,7 @@ export const AuctionTabs = ({
   return (
     <Tabs defaultValue="bid" className="w-full">
       {/* Enhanced tabs bar */}
-      <div className="sticky top-0 z-10 border-b-2 border-yellow-400/30 bg-gradient-to-r from-gray-100 via-yellow-50 to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 shadow-lg">
+      <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
         <div className="container mx-auto max-w-7xl">
           <TabsList className="w-full justify-start gap-3 bg-transparent h-16 px-4 py-2">
             <TabsTrigger 
