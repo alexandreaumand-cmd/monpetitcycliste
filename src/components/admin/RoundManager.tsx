@@ -141,7 +141,11 @@ export const RoundManager = () => {
   const openNewRoundMutation = useMutation({
     mutationFn: async ({ phase_id, deadline_at }: { phase_id: string, deadline_at: string }) => {
       const { data, error } = await supabase.functions.invoke('ouvrir-nouveau-round', {
-        body: { phase_id, deadline_at }
+        body: { 
+          phase_id, 
+          deadline_at,
+          league_id: leagueId
+        }
       });
       if (error) throw error;
       return data;

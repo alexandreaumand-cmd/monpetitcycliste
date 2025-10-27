@@ -11,9 +11,25 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Create client with user's auth token to preserve auth.uid()
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Non authentifié' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      }
     );
 
     const { auction_id, league_id } = await req.json();
@@ -24,25 +40,62 @@ Deno.serve(async (req) => {
     
     console.log('Closing round for auction:', auction_id, 'league:', league_id);
 
-    // Verify user is admin of this league
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user } } = await supabase.auth.getUser(token);
-
-    if (!user) {
-      throw new Error('Non authentifié');
+    // Verify user authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Non authentifié' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
+    console.log('User authenticated:', user.id);
+
     // Check if user is league admin
-    const { data: isLeagueAdmin } = await supabase.rpc('is_league_admin', {
+    const { data: isLeagueAdmin, error: rpcError } = await supabase.rpc('is_league_admin', {
       l_id: league_id
     });
 
-    if (!isLeagueAdmin) {
-      throw new Error('Accès refusé: réservé aux administrateurs de la ligue');
+    console.log('League admin check result:', { isLeagueAdmin, rpcError, userId: user.id, leagueId: league_id });
+
+    if (rpcError) {
+      console.error('RPC error:', rpcError);
+      throw new Error('Erreur lors de la vérification des permissions');
     }
 
-    // Get auction details
+    if (!isLeagueAdmin) {
+      // Fallback: direct check on league_members in case RPC fails or returns false unexpectedly
+      const { data: membership, error: membershipError } = await supabase
+        .from('league_members')
+        .select('role_in_league')
+        .eq('league_id', league_id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      console.log('Direct role check result:', {
+        role: membership?.role_in_league,
+        membershipError,
+        userId: user.id,
+        leagueId: league_id,
+      });
+
+      if (membershipError) {
+        console.error('Membership check error:', membershipError);
+      }
+
+      const role = membership?.role_in_league as string | undefined;
+      if (!role || !['owner', 'admin'].includes(role)) {
+        return new Response(
+          JSON.stringify({ error: 'Accès refusé: réservé aux administrateurs de la ligue' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('Fallback admin check passed via league_members for user:', user.id);
+    }
+
+    // Get auction details and verify it belongs to the league
     const { data: auction, error: auctionError } = await supabase
       .from('auctions')
       .select('*, phases(*)')
@@ -50,8 +103,20 @@ Deno.serve(async (req) => {
       .single();
 
     if (auctionError || !auction) {
+      console.error('Auction not found:', auctionError);
       throw new Error('Auction not found');
     }
+
+    // Verify auction belongs to the specified league
+    if (auction.league_id !== league_id) {
+      console.error('League mismatch:', { auction_league: auction.league_id, requested_league: league_id });
+      return new Response(
+        JSON.stringify({ error: 'L\'enchère ne correspond pas à la ligue spécifiée' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Auction verified:', { id: auction.id, league_id: auction.league_id, round: auction.round_number });
 
     // Close the auction
     await supabase
