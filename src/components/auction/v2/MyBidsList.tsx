@@ -101,10 +101,17 @@ export function MyBidsList({
           {/* Amount controls */}
           <div className="flex items-center gap-1">
             {bid.is_existing ? (
-              // Existing rider: just show amount
-              <span className="min-w-12 h-7 px-2 text-xs font-medium flex items-center justify-center text-muted-foreground">
-                {bid.amount}
-              </span>
+              // Existing rider: just show amount with cote
+              <div className="flex items-center gap-1">
+                <span className="min-w-12 h-7 px-2 text-xs font-medium flex items-center justify-center text-muted-foreground">
+                  {bid.amount}
+                </span>
+                {bid.cote && (
+                  <span className="text-[10px] text-muted-foreground/60">
+                    ({bid.cote})
+                  </span>
+                )}
+              </div>
             ) : (
               // New bid: editable
               <>
@@ -133,12 +140,19 @@ export function MyBidsList({
                     </Button>
                   </>
                 ) : (
-                  <button
-                    onClick={() => handleStartEdit(bid)}
-                    className="min-w-12 h-7 px-2 text-xs font-medium hover:bg-muted rounded-md transition-colors"
-                  >
-                    {bid.amount}
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleStartEdit(bid)}
+                      className="min-w-12 h-7 px-2 text-xs font-medium hover:bg-muted rounded-md transition-colors"
+                    >
+                      {bid.amount}
+                    </button>
+                    {bid.cote && (
+                      <span className="text-[10px] text-muted-foreground/60">
+                        ({bid.cote})
+                      </span>
+                    )}
+                  </div>
                 )}
 
                 {/* Remove button - only for new bids */}
