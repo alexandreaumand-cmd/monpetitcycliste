@@ -80,11 +80,11 @@ export const RoundControlCenter = () => {
 
   // Fetch auction stats
   const { data: stats } = useQuery({
-    queryKey: ['auction-stats', currentAuction?.id],
+    queryKey: ['auction-stats', currentAuction?.id, selectedPhaseId, leagueId],
     queryFn: async () => {
-      if (!currentAuction?.id) return null;
+      if (!currentAuction?.id || !selectedPhaseId) return null;
       const { data, error } = await supabase.functions.invoke('auction-get-validation-status', {
-        body: { phase_id: selectedPhaseId }
+        body: { phase_id: selectedPhaseId, league_id: leagueId }
       });
       if (error) throw error;
       return data;

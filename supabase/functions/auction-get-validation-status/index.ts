@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { phase_id } = await req.json();
+    const { phase_id, league_id } = await req.json();
 
     if (!phase_id) {
       return new Response(JSON.stringify({ error: 'phase_id is required' }), {
@@ -21,15 +21,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get active auction
-    const { data: auction } = await supabase
+    // Get active auction - filter by league_id if provided
+    let auctionQuery = supabase
       .from('auctions')
-      .select('id, round_number, deadline_at')
+      .select('id, round_number, deadline_at, league_id')
       .eq('phase_id', phase_id)
       .eq('statut', 'open')
       .order('round_number', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+    
+    if (league_id) {
+      auctionQuery = auctionQuery.eq('league_id', league_id);
+    }
+    
+    const { data: auction } = await auctionQuery.single();
 
     if (!auction) {
       return new Response(JSON.stringify({ error: 'Aucune enchère active' }), {
@@ -38,14 +43,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get the league_id for this auction
-    const { data: auctionLeague } = await supabase
-      .from('auctions')
-      .select('league_id')
-      .eq('id', auction.id)
-      .single();
-    
-    const leagueId = auctionLeague?.league_id;
+    const leagueId = auction.league_id;
 
     // Get all league members with their roster status
     let eligibleManagerIds: string[] = [];
@@ -53,14 +51,27 @@ Deno.serve(async (req) => {
     let totalEligibleManagers = 0;
 
     if (leagueId) {
-      // Step 1: Get league configuration
+      // Step 1: Get league configuration from settings
       const { data: league } = await supabase
         .from('leagues')
-        .select('max_riders_per_manager')
+        .select('settings')
         .eq('id', leagueId)
         .single();
 
-      const maxCoureurs = league?.max_riders_per_manager ?? 30;
+      let maxCoureurs: number = league?.settings?.max_riders ? Number(league.settings.max_riders) : 0;
+      
+      // Fallback to phase max_coureurs if not set in league settings
+      if (!maxCoureurs) {
+        const { data: phase } = await supabase
+          .from('phases')
+          .select('max_coureurs')
+          .eq('id', phase_id)
+          .single();
+        
+        maxCoureurs = phase?.max_coureurs ?? 30;
+      }
+      
+      console.log(`📋 League ${leagueId}: maxCoureurs = ${maxCoureurs}`);
 
       // Step 2: Get all league members' user_ids
       const { data: members } = await supabase
@@ -144,6 +155,7 @@ Deno.serve(async (req) => {
     console.log('📊 Validation status:', {
       phase_id,
       league_id: leagueId,
+      auction_id: auction.id,
       total_eligible: totalEligibleManagers,
       validated: validatedNames.length,
       waiting: waitingNames.length,
