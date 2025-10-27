@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Loader2, Search, Shirt } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { formatAmount } from "@/lib/utils";
 import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
@@ -50,6 +50,22 @@ type ManagerStatus = {
   slots_restants: number;
   max_coureurs: number;
   budget_depense?: number;
+};
+
+// Component for manager jersey icon (extracted to avoid hooks in map)
+const ManagerJerseyIcon = ({ managerId }: { managerId: string }) => {
+  const { selectedSeason } = useSeasonContext();
+  const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
+  
+  return sponsorData?.jersey_image_url ? (
+    <img 
+      src={sponsorData.jersey_image_url} 
+      alt="Maillot" 
+      className="h-6 w-6 object-contain rounded"
+    />
+  ) : (
+    <Shirt className="h-4 w-4 text-muted-foreground" />
+  );
 };
 
 export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) => {
@@ -268,22 +284,10 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
       ) : (
         <Accordion type="single" collapsible className="space-y-3">
           {filteredManagers.map(([mgrId, data]: [string, any]) => {
-            const ManagerJerseyIcon = () => {
-              const { selectedSeason } = useSeasonContext();
-              const { data: sponsorData } = useManagerSponsor(mgrId, selectedSeason?.id);
-              
-              return sponsorData?.jersey_image_url ? (
-                <img 
-                  src={sponsorData.jersey_image_url} 
-                  alt="Maillot" 
-                  className="h-6 w-6 object-contain rounded"
-                />
-              ) : (
-                <Shirt className="h-4 w-4 text-muted-foreground" />
-              );
-            };
-
-            const stats = useMemo(() => calculateStats(data.rosters), [data.rosters]);
+            // Calculate stats directly without useMemo
+            const totalSpent = data.rosters.reduce((sum: number, r: any) => sum + parseFloat(r.prix_signature.toString()), 0);
+            const avgPrice = data.rosters.length > 0 ? totalSpent / data.rosters.length : 0;
+            const mostExpensive = data.rosters.length > 0 ? Math.max(...data.rosters.map((r: any) => parseFloat(r.prix_signature.toString()))) : 0;
             
             return (
               <AccordionItem 
@@ -295,7 +299,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
                   <div className="flex items-center justify-between w-full pr-4">
                     {/* Left: Manager info */}
                     <div className="flex items-center gap-3">
-                      <ManagerJerseyIcon />
+                      <ManagerJerseyIcon managerId={mgrId} />
                       <div className="text-left">
                         <p className="font-semibold">{data.managerName}</p>
                         <p className="text-xs text-muted-foreground">
@@ -308,15 +312,15 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
                     <div className="hidden md:flex gap-6 text-sm">
                       <div>
                         <span className="text-muted-foreground">Dépensé: </span>
-                        <span className="font-medium">{formatAmount(stats.totalSpent)}</span>
+                        <span className="font-medium">{formatAmount(totalSpent)}</span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Moyen: </span>
-                        <span className="font-medium">{formatAmount(stats.avgPrice)}</span>
+                        <span className="font-medium">{formatAmount(avgPrice)}</span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Max: </span>
-                        <span className="font-medium">{formatAmount(stats.mostExpensive)}</span>
+                        <span className="font-medium">{formatAmount(mostExpensive)}</span>
                       </div>
                     </div>
 
