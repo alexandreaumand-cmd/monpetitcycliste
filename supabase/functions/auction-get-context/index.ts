@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
     const { data: auction } = await auctionQuery
       .order('round_number', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (!auction) {
       return new Response(JSON.stringify({ 
