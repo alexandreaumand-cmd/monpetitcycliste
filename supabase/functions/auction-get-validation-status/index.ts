@@ -58,16 +58,24 @@ Deno.serve(async (req) => {
 
     // Get current league members if league_id exists
     let currentMemberUserIds: string[] = [];
+    let totalLeagueMembers = 0;
+    let allLeagueManagers: any[] = [];
+
     if (leagueId) {
       const { data: members } = await supabase
         .from('league_members')
-        .select('user_id')
+        .select(`
+          user_id,
+          managers!inner(nom, user_id)
+        `)
         .eq('league_id', leagueId);
       
-      currentMemberUserIds = (members || []).map(m => m.user_id);
+      allLeagueManagers = members || [];
+      currentMemberUserIds = allLeagueManagers.map(m => m.user_id);
+      totalLeagueMembers = allLeagueManagers.length;
     }
 
-    // Get managers with pending bids (validated) - filter by league members
+    // Get managers with pending bids (validated)
     const { data: validatedManagers } = await supabase
       .from('bids')
       .select(`
@@ -77,35 +85,40 @@ Deno.serve(async (req) => {
       .eq('auction_id', auction.id)
       .eq('statut', 'pending');
 
-    // Get managers with draft bids (waiting) - filter by league members
-    const { data: waitingManagers } = await supabase
-      .from('bids')
-      .select(`
-        manager_id,
-        managers!inner(nom, user_id)
-      `)
-      .eq('auction_id', auction.id)
-      .eq('statut', 'draft');
-
-    // Filter managers by league membership
+    // Filter by league membership if applicable
     const filteredValidated = leagueId && currentMemberUserIds.length > 0
       ? (validatedManagers || []).filter((b: any) => currentMemberUserIds.includes(b.managers.user_id))
       : (validatedManagers || []);
 
-    const filteredWaiting = leagueId && currentMemberUserIds.length > 0
-      ? (waitingManagers || []).filter((b: any) => currentMemberUserIds.includes(b.managers.user_id))
-      : (waitingManagers || []);
-
-    // Extract unique manager names
+    // Extract unique validated manager names
     const validatedNames = [...new Set(
       filteredValidated.map((b: any) => b.managers.nom)
     )];
-    
-    const waitingNames = [...new Set(
-      filteredWaiting.map((b: any) => b.managers.nom)
-    )];
 
-    const totalManagers = validatedNames.length + waitingNames.length;
+    // Calculate waiting managers (all league members minus validated ones)
+    let waitingNames: string[] = [];
+    if (leagueId && allLeagueManagers.length > 0) {
+      // Get all manager names from league
+      const allManagerNames = allLeagueManagers.map((m: any) => m.managers.nom);
+      // Remove those who have validated
+      waitingNames = allManagerNames.filter(name => !validatedNames.includes(name));
+    } else {
+      // Fallback to old logic if no league
+      const { data: waitingManagers } = await supabase
+        .from('bids')
+        .select(`
+          manager_id,
+          managers!inner(nom, user_id)
+        `)
+        .eq('auction_id', auction.id)
+        .eq('statut', 'draft');
+
+      waitingNames = [...new Set(
+        (waitingManagers || []).map((b: any) => b.managers.nom)
+      )];
+    }
+
+    const totalManagers = leagueId ? totalLeagueMembers : (validatedNames.length + waitingNames.length);
 
     return new Response(
       JSON.stringify({
