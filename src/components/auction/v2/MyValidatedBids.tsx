@@ -26,7 +26,7 @@ export function MyValidatedBids({ phaseId, managerId, leagueId, onBack }: MyVali
       const pendingBids = data?.submitted_bids || [];
       
       // Sort by amount descending
-      return pendingBids.sort((a: any, b: any) => (b.montant || 0) - (a.montant || 0));
+      return pendingBids.sort((a: any, b: any) => (b.amount || 0) - (a.amount || 0));
     },
   });
 
@@ -50,7 +50,7 @@ export function MyValidatedBids({ phaseId, managerId, leagueId, onBack }: MyVali
     );
   }
 
-  const totalAmount = bids?.reduce((sum, bid) => sum + (bid.montant || 0), 0) || 0;
+  const totalAmount = bids?.reduce((sum, bid) => sum + (bid.amount || 0), 0) || 0;
   const currency = context?.currency || "€";
 
   return (
@@ -115,14 +115,14 @@ export function MyValidatedBids({ phaseId, managerId, leagueId, onBack }: MyVali
                           {/* Rider info */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="font-semibold truncate">{bid.nom || "N/A"}</p>
+                              <p className="font-semibold truncate">{bid.rider_nom || "N/A"}</p>
                               <Badge variant="outline" className="shrink-0">
                                 <CheckCircle2 className="h-3 w-3 mr-1 text-green-600" />
                                 Validé
                               </Badge>
                             </div>
                             <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                              <span className="truncate">{bid.equipe || "N/A"}</span>
+                              <span className="truncate">{bid.rider_team || "N/A"}</span>
                               {cote && (
                                 <>
                                   <span>•</span>
@@ -135,7 +135,7 @@ export function MyValidatedBids({ phaseId, managerId, leagueId, onBack }: MyVali
                           {/* Amount */}
                           <div className="text-right shrink-0">
                             <p className="text-lg font-bold">
-                              {bid.montant}{currency}
+                              {bid.amount}{currency}
                             </p>
                           </div>
                         </div>
