@@ -56,69 +56,107 @@ Deno.serve(async (req) => {
       leagueId = auctionLeague?.league_id;
     }
 
-    // Get current league members if league_id exists
-    let currentMemberUserIds: string[] = [];
-    let totalLeagueMembers = 0;
-    let allLeagueManagers: any[] = [];
+    // Get all league members with their roster status
+    let eligibleManagerIds: string[] = [];
+    let eligibleManagerNames: string[] = [];
+    let totalEligibleManagers = 0;
 
     if (leagueId) {
-      const { data: members } = await supabase
+      // Step 1: Get phase details
+      const { data: phaseData } = await supabase
+        .from('phases')
+        .select('max_coureurs')
+        .eq('id', phase_id)
+        .single();
+
+      const maxCoureurs = phaseData?.max_coureurs || 30;
+
+      // Step 2: Get all league members
+      const { data: leagueMembers } = await supabase
         .from('league_members')
         .select(`
           user_id,
-          managers!inner(nom, user_id)
+          managers(id, nom)
         `)
         .eq('league_id', leagueId);
+
+      if (leagueMembers && leagueMembers.length > 0) {
+        // For each member, count their rosters for this phase
+        for (const member of leagueMembers) {
+          if (!member.managers) continue;
+          
+          const manager = Array.isArray(member.managers) ? member.managers[0] : member.managers;
+          if (!manager) continue;
+
+          const { count } = await supabase
+            .from('rosters')
+            .select('*', { count: 'exact', head: true })
+            .eq('manager_id', manager.id)
+            .eq('phase_id', phase_id)
+            .eq('league_id', leagueId);
+
+          const rosterCount = count || 0;
+          const slotsRestants = maxCoureurs - rosterCount;
+
+          // Only include managers with incomplete rosters
+          if (slotsRestants > 0) {
+            eligibleManagerIds.push(manager.id);
+            eligibleManagerNames.push(manager.nom);
+          }
+
+          console.log(`📊 ${manager.nom}: ${rosterCount}/${maxCoureurs} coureurs (${slotsRestants} restants)`);
+        }
+
+        totalEligibleManagers = eligibleManagerIds.length;
+      }
+    } else {
+      // Fallback for legacy mode (no league)
+      const { data: incompleteRosters } = await supabase
+        .from('managers_rosters_status')
+        .select('manager_id, manager_nom, slots_restants')
+        .eq('phase_id', phase_id)
+        .gt('slots_restants', 0);
       
-      allLeagueManagers = members || [];
-      currentMemberUserIds = allLeagueManagers.map(m => m.user_id);
-      totalLeagueMembers = allLeagueManagers.length;
+      if (incompleteRosters && incompleteRosters.length > 0) {
+        eligibleManagerIds = incompleteRosters.map((r: any) => r.manager_id);
+        eligibleManagerNames = incompleteRosters.map((r: any) => r.manager_nom);
+        totalEligibleManagers = incompleteRosters.length;
+      }
     }
 
-    // Get managers with pending bids (validated)
+    // Get managers with pending bids (validated) - filter by eligible managers only
     const { data: validatedManagers } = await supabase
       .from('bids')
       .select(`
         manager_id,
-        managers!inner(nom, user_id)
+        managers!inner(nom)
       `)
       .eq('auction_id', auction.id)
-      .eq('statut', 'pending');
-
-    // Filter by league membership if applicable
-    const filteredValidated = leagueId && currentMemberUserIds.length > 0
-      ? (validatedManagers || []).filter((b: any) => currentMemberUserIds.includes(b.managers.user_id))
-      : (validatedManagers || []);
+      .eq('statut', 'pending')
+      .in('manager_id', eligibleManagerIds);
 
     // Extract unique validated manager names
     const validatedNames = [...new Set(
-      filteredValidated.map((b: any) => b.managers.nom)
+      (validatedManagers || []).map((b: any) => b.managers.nom)
     )];
 
-    // Calculate waiting managers (all league members minus validated ones)
-    let waitingNames: string[] = [];
-    if (leagueId && allLeagueManagers.length > 0) {
-      // Get all manager names from league
-      const allManagerNames = allLeagueManagers.map((m: any) => m.managers.nom);
-      // Remove those who have validated
-      waitingNames = allManagerNames.filter(name => !validatedNames.includes(name));
-    } else {
-      // Fallback to old logic if no league
-      const { data: waitingManagers } = await supabase
-        .from('bids')
-        .select(`
-          manager_id,
-          managers!inner(nom, user_id)
-        `)
-        .eq('auction_id', auction.id)
-        .eq('statut', 'draft');
+    // Waiting managers = eligible managers minus those who validated
+    const waitingNames = eligibleManagerNames.filter(
+      name => !validatedNames.includes(name)
+    );
 
-      waitingNames = [...new Set(
-        (waitingManagers || []).map((b: any) => b.managers.nom)
-      )];
-    }
+    const totalManagers = totalEligibleManagers;
 
-    const totalManagers = leagueId ? totalLeagueMembers : (validatedNames.length + waitingNames.length);
+    console.log('📊 Validation status:', {
+      phase_id,
+      league_id: leagueId,
+      total_eligible: totalEligibleManagers,
+      validated: validatedNames.length,
+      waiting: waitingNames.length,
+      eligible_managers: eligibleManagerNames,
+      validated_managers: validatedNames,
+      waiting_managers: waitingNames
+    });
 
     return new Response(
       JSON.stringify({
