@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AuctionHeaderMobile } from "./AuctionHeaderMobile";
@@ -10,10 +10,19 @@ import { AuctionSubmitButton } from "./AuctionSubmitButton";
 import { AuctionValidationConfirmation } from "./AuctionValidationConfirmation";
 import { AuctionLiveAnnouncements } from "./AuctionLiveAnnouncements";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
-import { useLeague } from "@/contexts/LeagueContext";
 
 interface AuctionPageMobileProps {
   phaseId: string;
@@ -33,6 +42,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);
   const [hideLiveAnnouncements, setHideLiveAnnouncements] = useState(false);
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [debouncedSearch] = useDebounce(searchQuery, 250);
 
   // Get auction context
@@ -46,8 +56,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       if (data?.error === "No active auction") return null;
       return data;
     },
-    refetchInterval: 10000, // Refresh every 10s (optimized)
-    refetchOnWindowFocus: false,
+    refetchInterval: 5000,
   });
 
   // Get last closed auction if no active auction
@@ -93,21 +102,16 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   const shouldShowLiveScreen = context?.auction?.statut === 'closed' && context?.auction_id && !hideLiveAnnouncements;
 
   // Fetch available teams from database
-  const { data: teamsData } = useQuery({
+  const { data: availableTeams = [] } = useQuery({
     queryKey: ["auction-teams", phaseId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("auction-get-teams", {
         body: { phase_id: phaseId },
       });
       if (error) throw error;
-      return data;
+      return data.teams || [];
     },
-    enabled: !!phaseId,
   });
-
-  const availableTeams = useMemo(() => {
-    return teamsData?.teams || [];
-  }, [teamsData]);
 
   // Search riders
   const { data: ridersData, isLoading: ridersLoading } = useQuery({
@@ -166,7 +170,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId] });
+      queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId, leagueId] });
       toast({ title: "Enchère enregistrée" });
     },
     onError: (error: any) => {
@@ -188,7 +192,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId] });
+      queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId, leagueId] });
       toast({ title: "Enchère supprimée" });
     },
     onError: (error: any) => {
@@ -210,7 +214,8 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId] });
+      queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId, leagueId] });
+      setShowSubmitDialog(false);
       setShowValidationScreen(true);
     },
     onError: (error: any) => {
@@ -246,7 +251,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   };
 
   const handleSubmitAll = () => {
-    submitAllMutation.mutate();
+    setShowSubmitDialog(true);
   };
 
   if (contextLoading) {
@@ -316,7 +321,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         draft_count={context.totals.draft_count}
         roster_count={context.totals.roster_count}
         max_slots={context.rules.max_bids}
-        deadline_at={context.deadline_at}
+        deadline_at={context.auction?.deadline_at}
         validated_count={context.validated_count}
         total_managers={context.total_managers}
       />
@@ -400,6 +405,42 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         currency={context.currency}
         step={context.rules.step}
       />
+
+      {/* Submit confirmation dialog */}
+      <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la validation</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Tu es sur le point de valider tes enchères. Une fois validées,
+                  tu ne pourras plus les modifier.
+                </p>
+                <div className="rounded-lg bg-muted p-3 space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Nombre d'enchères:</span>
+                    <span className="font-medium">{context.totals.draft_count}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Montant total:</span>
+                    <span className="font-medium">
+                      {context.totals.draft_sum}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm">Es-tu sûr de vouloir continuer ?</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={() => submitAllMutation.mutate()}>
+              Valider définitivement
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
