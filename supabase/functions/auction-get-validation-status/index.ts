@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
           .select('*', { count: 'exact', head: true })
           .eq('manager_id', m.id)
           .eq('phase_id', phase_id)
-          .eq('league_id', leagueId);
+          .or(`league_id.eq.${leagueId},league_id.is.null`);
 
         const rosterCount = count || 0;
         const slotsRestants = maxCoureurs - rosterCount;
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
         managers!inner(nom)
       `)
       .eq('auction_id', auction.id)
-      .eq('league_id', leagueId)
+      .or(`league_id.eq.${leagueId},league_id.is.null`)
       .eq('statut', 'pending')
       .in('manager_id', eligibleManagerIds);
 

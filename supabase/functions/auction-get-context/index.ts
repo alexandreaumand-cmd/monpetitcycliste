@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
       .eq('phase_id', phase_id);
     
     if (league_id) {
-      rosterQuery = rosterQuery.eq('league_id', league_id);
+      rosterQuery = rosterQuery.or(`league_id.eq.${league_id},league_id.is.null`);
     }
     
     const { data: existingRoster } = await rosterQuery;
