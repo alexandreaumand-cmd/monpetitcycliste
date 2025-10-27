@@ -3418,6 +3418,7 @@ export type Database = {
         Row: {
           budget_depense: number | null
           budget_restant: number | null
+          league_id: string | null
           manager_id: string | null
           manager_nom: string | null
           max_coureurs: number | null
@@ -3427,7 +3428,15 @@ export type Database = {
           roster_count: number | null
           slots_restants: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rosters_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       my_last_round_bids: {
         Row: {
