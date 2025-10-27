@@ -81,15 +81,39 @@ export const AuctionTabs = ({
 
   return (
     <Tabs defaultValue="bid" className="w-full">
-      {/* Compact tabs bar */}
-      <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      {/* Enhanced tabs bar */}
+      <div className="sticky top-0 z-10 border-b-2 border-yellow-400/30 bg-gradient-to-r from-gray-100 via-yellow-50 to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 shadow-lg">
         <div className="container mx-auto max-w-7xl">
-          <TabsList className="w-full justify-start bg-transparent h-14 px-4">
+          <TabsList className="w-full justify-start gap-3 bg-transparent h-16 px-4 py-2">
             <TabsTrigger 
               value="bid" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg"
+              className="
+                data-[state=active]:bg-[#FFD500] 
+                data-[state=active]:text-black 
+                data-[state=active]:font-bold
+                data-[state=active]:shadow-md
+                data-[state=active]:border-2
+                data-[state=active]:border-black
+                data-[state=inactive]:bg-white 
+                data-[state=inactive]:text-gray-700
+                data-[state=inactive]:border-2
+                data-[state=inactive]:border-gray-300
+                data-[state=inactive]:shadow-sm
+                hover:bg-yellow-100
+                hover:border-yellow-500
+                dark:data-[state=inactive]:bg-gray-800
+                dark:data-[state=inactive]:text-gray-300
+                rounded-lg 
+                px-5 
+                py-2.5
+                text-base
+                font-semibold
+                transition-all
+                duration-200
+                cursor-pointer
+              "
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-5 w-5 mr-2" />
               Enchérir
             </TabsTrigger>
             
@@ -98,7 +122,31 @@ export const AuctionTabs = ({
               <TabsTrigger
                 key={round.round_number}
                 value={`round-${round.round_number}`}
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg"
+                className="
+                  data-[state=active]:bg-black 
+                  data-[state=active]:text-[#FFD500] 
+                  data-[state=active]:font-bold
+                  data-[state=active]:shadow-md
+                  data-[state=active]:border-2
+                  data-[state=active]:border-[#FFD500]
+                  data-[state=inactive]:bg-white 
+                  data-[state=inactive]:text-gray-700
+                  data-[state=inactive]:border-2
+                  data-[state=inactive]:border-gray-300
+                  data-[state=inactive]:shadow-sm
+                  hover:bg-gray-100
+                  hover:border-gray-600
+                  dark:data-[state=inactive]:bg-gray-800
+                  dark:data-[state=inactive]:text-gray-300
+                  rounded-lg 
+                  px-5 
+                  py-2.5
+                  text-base
+                  font-semibold
+                  transition-all
+                  duration-200
+                  cursor-pointer
+                "
               >
                 Round {round.round_number}
               </TabsTrigger>
@@ -106,7 +154,31 @@ export const AuctionTabs = ({
             
             <TabsTrigger 
               value="teams" 
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg"
+              className="
+                data-[state=active]:bg-[#FFD500] 
+                data-[state=active]:text-black 
+                data-[state=active]:font-bold
+                data-[state=active]:shadow-md
+                data-[state=active]:border-2
+                data-[state=active]:border-black
+                data-[state=inactive]:bg-white 
+                data-[state=inactive]:text-gray-700
+                data-[state=inactive]:border-2
+                data-[state=inactive]:border-gray-300
+                data-[state=inactive]:shadow-sm
+                hover:bg-yellow-100
+                hover:border-yellow-500
+                dark:data-[state=inactive]:bg-gray-800
+                dark:data-[state=inactive]:text-gray-300
+                rounded-lg 
+                px-5 
+                py-2.5
+                text-base
+                font-semibold
+                transition-all
+                duration-200
+                cursor-pointer
+              "
             >
               Équipes adverses
             </TabsTrigger>
