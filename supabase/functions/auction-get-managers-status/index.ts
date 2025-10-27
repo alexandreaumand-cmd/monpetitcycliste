@@ -10,6 +10,7 @@ interface ManagerStatus {
   total_budget: number;
   budget_remaining: number;
   last_activity: string | null;
+  riders_per_round: number[];
 }
 
 Deno.serve(async (req) => {
@@ -172,7 +173,7 @@ Deno.serve(async (req) => {
         // Compter les coureurs dans le roster (filtré par league_id avec compatibilité historique)
         const { count: rosterCount, data: rosterWithDates, error: rosterError } = await supabaseAdmin
           .from('rosters')
-          .select('prix_signature, created_at')
+          .select('prix_signature, created_at, auction_id')
           .eq('manager_id', manager.id)
           .eq('phase_id', phase_id)
           .or(`league_id.eq.${auction.league_id},league_id.is.null`);
@@ -214,6 +215,36 @@ Deno.serve(async (req) => {
           ? allDates.reduce((latest, current) => current > latest ? current : latest)
           : null;
 
+        // Calculer riders_per_round
+        const ridersPerRoundMap: { [round: number]: number } = {};
+        
+        if (rosterWithDates && rosterWithDates.length > 0) {
+          const auctionIds = [...new Set(rosterWithDates.map(r => r.auction_id).filter(Boolean))];
+          
+          if (auctionIds.length > 0) {
+            const { data: auctionsData } = await supabaseAdmin
+              .from('auctions')
+              .select('id, round_number')
+              .in('id', auctionIds);
+            
+            const auctionRoundMap = new Map(
+              auctionsData?.map(a => [a.id, a.round_number]) || []
+            );
+            
+            rosterWithDates.forEach(roster => {
+              if (roster.auction_id) {
+                const round = auctionRoundMap.get(roster.auction_id);
+                if (round !== undefined) {
+                  ridersPerRoundMap[round] = (ridersPerRoundMap[round] || 0) + 1;
+                }
+              }
+            });
+          }
+        }
+        
+        const maxRound = Math.max(...Object.keys(ridersPerRoundMap).map(Number), 0);
+        const riders_per_round = Array.from({ length: maxRound + 1 }, (_, i) => ridersPerRoundMap[i] || 0);
+
         // Déterminer le statut
         let status: 'validated' | 'pending' | 'incomplete';
         
@@ -244,6 +275,7 @@ Deno.serve(async (req) => {
           total_budget: budgetPerManager,
           budget_remaining: budgetPerManager - Math.round(budgetUsed),
           last_activity: lastActivity,
+          riders_per_round,
         };
       })
     );

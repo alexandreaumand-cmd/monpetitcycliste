@@ -15,6 +15,7 @@ interface ManagerStatus {
   total_budget: number;
   budget_remaining: number;
   last_activity: string | null;
+  riders_per_round: number[];
 }
 
 interface ManagersSupervisionProps {

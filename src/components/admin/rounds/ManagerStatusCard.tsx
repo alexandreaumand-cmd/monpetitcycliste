@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import { MultiSegmentProgress } from "./MultiSegmentProgress";
 
 interface ManagerStatus {
   nom: string;
@@ -13,6 +13,7 @@ interface ManagerStatus {
   total_budget: number;
   budget_remaining: number;
   last_activity: string | null;
+  riders_per_round: number[];
 }
 
 interface ManagerStatusCardProps {
@@ -46,7 +47,6 @@ export const ManagerStatusCard = ({ manager }: ManagerStatusCardProps) => {
 
   const config = statusConfig[manager.status];
   const Icon = config.icon;
-  const slotsProgress = (manager.slots_filled / manager.max_slots) * 100;
 
   return (
     <div className={`p-4 rounded-lg border ${config.bgColor} transition-all hover:shadow-md`}>
@@ -66,7 +66,10 @@ export const ManagerStatusCard = ({ manager }: ManagerStatusCardProps) => {
             <span>Coureurs</span>
             <span>{manager.slots_filled}/{manager.max_slots}</span>
           </div>
-          <Progress value={slotsProgress} className="h-1.5" />
+          <MultiSegmentProgress 
+            ridersPerRound={manager.riders_per_round} 
+            maxSlots={manager.max_slots} 
+          />
         </div>
         
         <div className="flex justify-between text-xs text-muted-foreground pt-1">
