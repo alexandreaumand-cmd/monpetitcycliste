@@ -97,8 +97,8 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                   </SidebarMenuItem>
                 ))}
 
-                {/* Admin Ligue - UNIQUEMENT pour les admins de ligue (pas les super admins) */}
-                {isAdminOfCurrentLeague && !isSuperAdmin && (
+                {/* Admin Ligue - Pour les admins/owners de la ligue */}
+                {isAdminOfCurrentLeague && (
                   <SidebarMenuItem>
                     <Tooltip>
                       <TooltipTrigger asChild>
