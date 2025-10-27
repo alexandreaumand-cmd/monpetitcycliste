@@ -10,14 +10,18 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
+    // Client with JWT for authentication checks
+    const supabaseAuthClient = createClient(supabaseUrl, supabaseServiceKey, {
       global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } }
     });
+
+    // Client with service role only to bypass RLS
+    const supabaseAdminClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify authentication
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabaseAuthClient.auth.getUser(token);
 
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Non authentifié' }), {
@@ -27,7 +31,7 @@ Deno.serve(async (req) => {
     }
 
     // Check superadmin role
-    const { data: isSuperAdmin } = await supabaseClient.rpc('is_superadmin');
+    const { data: isSuperAdmin } = await supabaseAuthClient.rpc('is_superadmin');
     console.log('admin-leagues-list user', user?.id, 'isSuperAdmin', isSuperAdmin);
     if (!isSuperAdmin) {
       return new Response(JSON.stringify({ error: 'Accès refusé: réservé aux super-administrateurs' }), {
@@ -45,8 +49,8 @@ Deno.serve(async (req) => {
     const page = parseInt(url.searchParams.get('page') || '0');
     const limit = parseInt(url.searchParams.get('limit') || '50');
 
-    // Build query
-    let query = supabaseClient
+    // Build query with admin client to bypass RLS
+    let query = supabaseAdminClient
       .from('leagues')
       .select(`
         *,
@@ -94,14 +98,14 @@ Deno.serve(async (req) => {
     })) || [];
 
     // Log action
-    const { data: managerData } = await supabaseClient
+    const { data: managerData } = await supabaseAdminClient
       .from('managers')
       .select('id')
       .eq('user_id', user.id)
       .single();
 
     if (managerData) {
-      await supabaseClient.from('audits').insert({
+      await supabaseAdminClient.from('audits').insert({
         actor_manager_id: managerData.id,
         action: 'admin_leagues_list',
         payload_json: JSON.stringify({ 
