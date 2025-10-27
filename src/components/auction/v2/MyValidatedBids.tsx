@@ -22,8 +22,8 @@ export function MyValidatedBids({ phaseId, managerId, leagueId, onBack }: MyVali
       });
       if (error) throw error;
       
-      // Filter only pending bids from roster
-      const pendingBids = (data?.roster || []).filter((bid: any) => bid.statut === 'pending');
+      // Get submitted bids (already filtered to pending status)
+      const pendingBids = data?.submitted_bids || [];
       
       // Sort by amount descending
       return pendingBids.sort((a: any, b: any) => (b.montant || 0) - (a.montant || 0));
