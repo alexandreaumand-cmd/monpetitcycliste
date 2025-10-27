@@ -1,8 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useUserRole } from "@/hooks/useUserRole";
-import { useUserLeagues } from "@/hooks/useUserLeagues";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,15 +13,13 @@ import { Loader2, Trash2, AlertTriangle } from "lucide-react";
 export const AuctionCleanupTab = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isSuperAdmin, loading: roleLoading } = useUserRole();
-  const { leagues: userLeagues } = useUserLeagues();
 
   const [leagueId, setLeagueId] = useState<string>("");
   const [phaseId, setPhaseId] = useState<string>("");
   const [confirmPhrase, setConfirmPhrase] = useState("");
 
-  // Fetch all leagues for superadmin, or use user leagues for others
-  const { data: allLeagues } = useQuery({
+  // Fetch all leagues
+  const { data: leagues, isLoading: leaguesLoading } = useQuery({
     queryKey: ['admin-all-leagues'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -34,12 +30,7 @@ export const AuctionCleanupTab = () => {
       if (error) throw error;
       return data;
     },
-    enabled: isSuperAdmin,
   });
-
-  const availableLeagues = isSuperAdmin 
-    ? allLeagues || []
-    : userLeagues.filter(l => l.role === 'owner' || l.role === 'admin');
 
   // Fetch phases
   const { data: phases } = useQuery({
@@ -103,7 +94,7 @@ export const AuctionCleanupTab = () => {
     onSuccess: (data) => {
       toast({
         title: "✅ Enchères supprimées",
-        description: data?.message || `${data?.auctions_deleted || 0} round(s) d'enchères supprimé(s)`,
+        description: data?.message || `${data?.deleted_auctions || 0} round(s) d'enchères supprimé(s)`,
       });
       
       // Reset form
@@ -127,25 +118,23 @@ export const AuctionCleanupTab = () => {
     },
   });
 
-  // Normalize confirmation phrase for non-superadmins
-  const normalizedPhrase = isSuperAdmin 
-    ? "" 
-    : ((confirmPhrase ?? '').toString())
-        .normalize('NFKC')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .toUpperCase();
+  // Normalize confirmation phrase
+  const normalizedPhrase = ((confirmPhrase ?? '').toString())
+    .normalize('NFKC')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
 
   const isDeleteDisabled = 
     !leagueId || 
     !phaseId || 
     isPending || 
-    (!isSuperAdmin && normalizedPhrase !== 'RESET ENCHERES');
+    normalizedPhrase !== 'RESET ENCHERES';
 
   const selectedPhase = phases?.find(p => p.id === phaseId);
-  const selectedLeague = availableLeagues.find(l => l.id === leagueId);
+  const selectedLeague = leagues?.find(l => l.id === leagueId);
 
-  if (roleLoading) {
+  if (leaguesLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -176,7 +165,6 @@ export const AuctionCleanupTab = () => {
           </CardTitle>
           <CardDescription>
             Sélectionnez une ligue et une phase pour supprimer toutes les enchères associées
-            {isSuperAdmin && " (phrase de confirmation optionnelle pour les superadmins)"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -188,7 +176,7 @@ export const AuctionCleanupTab = () => {
                   <SelectValue placeholder="Sélectionnez une ligue" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableLeagues.map((league) => (
+                  {leagues?.map((league) => (
                     <SelectItem key={league.id} value={league.id}>
                       {league.name}
                     </SelectItem>
@@ -233,8 +221,7 @@ export const AuctionCleanupTab = () => {
 
           <div className="space-y-2">
             <Label htmlFor="confirm-phrase">
-              Phrase de confirmation
-              {isSuperAdmin && <span className="text-muted-foreground ml-2">(optionnel pour superadmin)</span>}
+              Phrase de confirmation <span className="text-destructive">*</span>
             </Label>
             <Input
               id="confirm-phrase"
@@ -243,11 +230,9 @@ export const AuctionCleanupTab = () => {
               value={confirmPhrase}
               onChange={(e) => setConfirmPhrase(e.target.value)}
             />
-            {!isSuperAdmin && (
-              <p className="text-xs text-muted-foreground">
-                Tapez exactement : <code className="bg-muted px-1 rounded">RESET ENCHERES</code>
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Pour confirmer la suppression, tapez exactement : <code className="bg-muted px-1 rounded">RESET ENCHERES</code>
+            </p>
           </div>
 
           <Button
