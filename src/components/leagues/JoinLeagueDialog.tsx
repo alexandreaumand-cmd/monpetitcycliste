@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Globe, Lock } from "lucide-react";
 import type { League } from "@/lib/leagues/types";
 
@@ -25,6 +26,8 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
   const { setLeagueId } = useLeague();
   const { leagues: myLeagues, refetch } = useUserLeagues();
   const [joiningLeagueId, setJoiningLeagueId] = useState<string | null>(null);
+  const [inviteCode, setInviteCode] = useState('');
+  const [isJoiningByCode, setIsJoiningByCode] = useState(false);
 
   const { data: publicLeagues, isLoading } = useQuery({
     queryKey: ['public-leagues'],
@@ -69,6 +72,52 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
       toast.error(error.message || "Erreur lors de la tentative de rejoindre la ligue");
     } finally {
       setJoiningLeagueId(null);
+    }
+  };
+
+  const handleJoinByCode = async () => {
+    if (!inviteCode.trim()) {
+      toast.error("Veuillez entrer un code d'invitation");
+      return;
+    }
+    
+    try {
+      setIsJoiningByCode(true);
+      
+      const { data, error } = await supabase.functions.invoke('leagues-join-by-token', {
+        body: { token: inviteCode.trim() },
+      });
+      
+      if (error) throw error;
+      
+      toast.success(`Vous avez rejoint la ligue "${data.league_name}" !`);
+      
+      // Refresh leagues list
+      await refetch();
+      
+      // Switch to new league
+      setLeagueId(data.league_id);
+      
+      // Reset form and close dialog
+      setInviteCode('');
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error('Error joining by code:', error);
+      
+      // Messages d'erreur spécifiques selon le code erreur
+      if (error.message?.includes('Invalid token')) {
+        toast.error("Code d'invitation invalide");
+      } else if (error.message?.includes('revoked')) {
+        toast.error("Ce code d'invitation a été révoqué");
+      } else if (error.message?.includes('expired')) {
+        toast.error("Ce code d'invitation a expiré");
+      } else if (error.message?.includes('limit reached')) {
+        toast.error("Ce code d'invitation a atteint sa limite d'utilisations");
+      } else {
+        toast.error(error.message || "Erreur lors de la tentative de rejoindre la ligue");
+      }
+    } finally {
+      setIsJoiningByCode(false);
     }
   };
 
@@ -124,12 +173,43 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
           )}
         </div>
 
-        <div className="mt-4 p-4 bg-muted rounded-lg">
-          <div className="flex items-start gap-2">
-            <Lock className="h-4 w-4 mt-0.5 text-muted-foreground" />
-            <div className="text-sm text-muted-foreground">
-              <p className="font-medium mb-1">Ligues privées</p>
-              <p>Pour rejoindre une ligue privée, demandez une invitation à son administrateur.</p>
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="h-px bg-border flex-1" />
+            <span className="text-sm text-muted-foreground">ou</span>
+            <div className="h-px bg-border flex-1" />
+          </div>
+
+          <div className="p-4 border rounded-lg space-y-3">
+            <div className="flex items-start gap-2">
+              <Lock className="h-4 w-4 mt-0.5 text-muted-foreground" />
+              <div className="flex-1">
+                <p className="font-medium text-sm mb-1">Rejoindre une ligue privée</p>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Entrez le code d'invitation fourni par l'administrateur de la ligue.
+                </p>
+                
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="ABC123DEF456"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && inviteCode.trim()) {
+                        handleJoinByCode();
+                      }
+                    }}
+                    className="font-mono"
+                    disabled={isJoiningByCode}
+                  />
+                  <Button
+                    onClick={handleJoinByCode}
+                    disabled={!inviteCode.trim() || isJoiningByCode}
+                  >
+                    {isJoiningByCode ? "Vérification..." : "Rejoindre"}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
