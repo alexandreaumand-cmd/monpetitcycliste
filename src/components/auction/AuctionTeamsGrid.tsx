@@ -1,17 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useLeagueClient } from "@/lib/supabase/leagueClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Loader2, Search, Shirt } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useMemo } from "react";
 import { formatAmount } from "@/lib/utils";
 import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface AuctionTeamsGridProps {
   phaseId: string;
@@ -23,8 +34,14 @@ type RosterData = {
   manager_id: string;
   coureur_id: string;
   prix_signature: number;
-  coureurs: { id: string; nom: string; equipe?: string };
+  coureurs: { id: string; nom: string; equipe?: string; prix_initial?: number };
   managers: { nom: string } | null;
+  losing_bids?: Array<{
+    manager_id: string;
+    montant: number;
+    manager_nom: string;
+  }>;
+  winning_round?: number;
 };
 
 type ManagerStatus = {
@@ -32,6 +49,7 @@ type ManagerStatus = {
   budget_restant: number;
   slots_restants: number;
   max_coureurs: number;
+  budget_depense?: number;
 };
 
 export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) => {
@@ -44,9 +62,9 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
     prix: number;
   } | null>(null);
 
-  // Get all managers rosters
+  // Get all managers rosters with enriched data
   const rostersQuery = useQuery({
-    queryKey: ['all-managers-rosters', phaseId, leagueId] as const,
+    queryKey: ['all-managers-rosters-enriched', phaseId, leagueId] as const,
     queryFn: async (): Promise<RosterData[]> => {
       if (!leagueId) return [];
       
@@ -57,6 +75,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
         .eq('id', phaseId)
         .maybeSingle();
 
+      // Récupérer les rosters avec les infos de base
       const rostersResult = await supabase
         .from('rosters')
         .select(`
@@ -73,14 +92,47 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
 
       if (rostersResult.error) throw rostersResult.error;
 
-      // Enrichir avec l'équipe de la saison
+      // Récupérer tous les auctions de cette phase pour récupérer les rounds
+      const auctionsResult = await supabase
+        .from('auctions')
+        .select('id, round_number')
+        .eq('phase_id', phaseId);
+
+      const auctionIds = auctionsResult.data?.map(a => a.id) || [];
+
+      // Enrichir avec équipe, prix initial, managers battus, et round
       const enrichedData: RosterData[] = await Promise.all(
         (rostersResult.data || []).map(async (roster: any) => {
+          // Équipe du coureur
           const seasonResult = await supabase
             .from('coureurs_saisons')
-            .select('equipe')
+            .select('equipe, prix_initial')
             .eq('coureur_id', roster.coureur_id)
             .eq('saison_id', phaseResult.data?.saison_id || '')
+            .maybeSingle();
+
+          // Enchères perdues pour ce coureur
+          const lostBidsResult = await supabase
+            .from('bids')
+            .select(`
+              manager_id,
+              montant,
+              managers(nom)
+            `)
+            .eq('coureur_id', roster.coureur_id)
+            .eq('league_id', leagueId)
+            .eq('statut', 'lost')
+            .in('auction_id', auctionIds);
+
+          // Round où le coureur a été gagné
+          const winningBidResult = await supabase
+            .from('bids')
+            .select('round_number')
+            .eq('coureur_id', roster.coureur_id)
+            .eq('manager_id', roster.manager_id)
+            .eq('league_id', leagueId)
+            .eq('statut', 'won')
+            .in('auction_id', auctionIds)
             .maybeSingle();
 
           return {
@@ -90,9 +142,16 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
             prix_signature: roster.prix_signature,
             coureurs: {
               ...roster.coureurs,
-              equipe: seasonResult.data?.equipe || 'N/A'
+              equipe: seasonResult.data?.equipe || 'N/A',
+              prix_initial: seasonResult.data?.prix_initial || 0
             },
-            managers: roster.managers
+            managers: roster.managers,
+            losing_bids: (lostBidsResult.data || []).map((bid: any) => ({
+              manager_id: bid.manager_id,
+              montant: bid.montant,
+              manager_nom: bid.managers?.nom || 'Inconnu'
+            })),
+            winning_round: winningBidResult.data?.round_number || null
           };
         })
       );
@@ -110,7 +169,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
       
       const result = await supabase
         .from('managers_rosters_status')
-        .select('manager_id, budget_restant, slots_restants, max_coureurs');
+        .select('manager_id, budget_restant, budget_depense, slots_restants, max_coureurs');
 
       if (result.error) throw result.error;
       
@@ -157,6 +216,26 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
     return managerMatch || coureurMatch;
   });
 
+  // Utility functions
+  const getBudgetVariant = (budget: number): "default" | "secondary" | "destructive" => {
+    if (budget < 100) return "destructive";
+    if (budget < 300) return "secondary";
+    return "default";
+  };
+
+  const getDiffVariant = (diff: number): "default" | "destructive" | "outline" => {
+    if (diff > 50) return "destructive";
+    if (diff < -20) return "default";
+    return "outline";
+  };
+
+  const calculateStats = (rosters: any[]) => {
+    const totalSpent = rosters.reduce((sum, r) => sum + parseFloat(r.prix_signature.toString()), 0);
+    const avgPrice = rosters.length > 0 ? totalSpent / rosters.length : 0;
+    const mostExpensive = rosters.length > 0 ? Math.max(...rosters.map(r => parseFloat(r.prix_signature.toString()))) : 0;
+    return { totalSpent, avgPrice, mostExpensive };
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
@@ -183,95 +262,164 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
       </div>
 
       {filteredManagers.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            Aucune équipe trouvée
-          </CardContent>
-        </Card>
+        <div className="py-8 text-center text-muted-foreground border rounded-lg">
+          Aucune équipe trouvée
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Accordion type="single" collapsible className="space-y-3">
           {filteredManagers.map(([mgrId, data]: [string, any]) => {
-            const ManagerJerseyHeader = () => {
+            const ManagerJerseyIcon = () => {
               const { selectedSeason } = useSeasonContext();
               const { data: sponsorData } = useManagerSponsor(mgrId, selectedSeason?.id);
               
-              return (
-                <div className="flex items-center gap-2">
-                  {sponsorData?.jersey_image_url ? (
-                    <img 
-                      src={sponsorData.jersey_image_url} 
-                      alt="Maillot" 
-                      className="h-6 w-6 object-contain rounded"
-                    />
-                  ) : (
-                    <Shirt className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <CardTitle className="text-base">{data.managerName}</CardTitle>
-                </div>
+              return sponsorData?.jersey_image_url ? (
+                <img 
+                  src={sponsorData.jersey_image_url} 
+                  alt="Maillot" 
+                  className="h-6 w-6 object-contain rounded"
+                />
+              ) : (
+                <Shirt className="h-4 w-4 text-muted-foreground" />
               );
             };
+
+            const stats = useMemo(() => calculateStats(data.rosters), [data.rosters]);
             
             return (
-              <Card key={mgrId} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <ManagerJerseyHeader />
-                      <p className="text-sm text-muted-foreground">
-                        {data.rosters.length}/{data.maxCoureurs} coureurs
-                      </p>
+              <AccordionItem 
+                key={mgrId} 
+                value={mgrId}
+                className="border rounded-lg overflow-hidden"
+              >
+                <AccordionTrigger className="hover:bg-muted/50 px-4 py-3 [&[data-state=open]]:bg-yellow-50 dark:[&[data-state=open]]:bg-yellow-950/20">
+                  <div className="flex items-center justify-between w-full pr-4">
+                    {/* Left: Manager info */}
+                    <div className="flex items-center gap-3">
+                      <ManagerJerseyIcon />
+                      <div className="text-left">
+                        <p className="font-semibold">{data.managerName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {data.rosters.length}/{data.maxCoureurs} coureurs · {data.slotsRestants} slots
+                        </p>
+                      </div>
                     </div>
+
+                    {/* Center: KPIs */}
+                    <div className="hidden md:flex gap-6 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Dépensé: </span>
+                        <span className="font-medium">{formatAmount(stats.totalSpent)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Moyen: </span>
+                        <span className="font-medium">{formatAmount(stats.avgPrice)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Max: </span>
+                        <span className="font-medium">{formatAmount(stats.mostExpensive)}</span>
+                      </div>
+                    </div>
+
+                    {/* Right: Budget restant */}
                     <Badge 
-                      variant={data.budgetRestant < 100 ? "destructive" : "secondary"}
-                      className="ml-2"
+                      variant={getBudgetVariant(data.budgetRestant)}
+                      className="text-sm px-3 py-1"
                     >
-                      {formatAmount(data.budgetRestant)} restant
+                      💰 {formatAmount(data.budgetRestant)} restant
                     </Badge>
                   </div>
-                </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Slots restants:</span>
-                  <Badge variant="outline">{data.slotsRestants}</Badge>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Dépensé:</span>
-                  <span className="font-medium">
-                    {formatAmount(data.rosters.reduce((sum: number, r: any) => 
-                      sum + parseFloat(r.prix_signature.toString()), 0
-                    ))}
-                  </span>
-                </div>
+                </AccordionTrigger>
 
-                <div className="mt-4 space-y-2">
-                  {data.rosters
-                    .sort((a: any, b: any) => parseFloat(b.prix_signature.toString()) - parseFloat(a.prix_signature.toString()))
-                    .map((roster: any) => (
-                      <button
-                        key={roster.id}
-                        onClick={() => setSelectedRider({
-                          id: roster.coureur_id,
-                          nom: roster.coureurs.nom,
-                          equipe: roster.coureurs.equipe,
-                          prix: parseFloat(roster.prix_signature.toString())
-                        })}
-                        className="w-full flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors text-left"
-                      >
-                        <div>
-                          <p className="font-medium">{roster.coureurs.nom}</p>
-                          <p className="text-sm text-muted-foreground">{roster.coureurs.equipe}</p>
-                        </div>
-                        <Badge variant="outline">
-                          {formatAmount(roster.prix_signature)}
-                        </Badge>
-                      </button>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
+                <AccordionContent className="px-4 pb-4">
+                  <div className="bg-muted/30 rounded-md overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Coureur</TableHead>
+                          <TableHead className="text-right">Prix payé</TableHead>
+                          <TableHead className="text-right">Cote</TableHead>
+                          <TableHead className="text-right">Diff.</TableHead>
+                          <TableHead>Managers battus</TableHead>
+                          <TableHead className="text-center">Round</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.rosters
+                          .sort((a: any, b: any) => parseFloat(b.prix_signature.toString()) - parseFloat(a.prix_signature.toString()))
+                          .map((roster: any) => {
+                            const prixPaye = parseFloat(roster.prix_signature.toString());
+                            const cote = roster.coureurs.prix_initial || 0;
+                            const diff = prixPaye - cote;
+                            
+                            return (
+                              <TableRow 
+                                key={roster.id}
+                                className="cursor-pointer hover:bg-muted/50"
+                                onClick={() => setSelectedRider({
+                                  id: roster.coureur_id,
+                                  nom: roster.coureurs.nom,
+                                  equipe: roster.coureurs.equipe || 'N/A',
+                                  prix: prixPaye
+                                })}
+                              >
+                                <TableCell>
+                                  <div>
+                                    <p className="font-medium">{roster.coureurs.nom}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {roster.coureurs.equipe || 'N/A'}
+                                    </p>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right font-semibold">
+                                  {formatAmount(prixPaye)}
+                                </TableCell>
+                                <TableCell className="text-right text-muted-foreground">
+                                  {formatAmount(cote)}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Badge variant={getDiffVariant(diff)}>
+                                    {diff > 0 ? `+${formatAmount(diff)}` : formatAmount(diff)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {roster.losing_bids && roster.losing_bids.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {roster.losing_bids.map((bid: any, idx: number) => (
+                                        <Badge 
+                                          key={`${bid.manager_id}-${idx}`}
+                                          variant="outline"
+                                          className="text-xs"
+                                        >
+                                          {bid.manager_nom} ({formatAmount(bid.montant)})
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">
+                                      Aucun
+                                    </span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {roster.winning_round ? (
+                                    <Badge variant="secondary">
+                                      R{roster.winning_round}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
             );
           })}
-        </div>
+        </Accordion>
       )}
 
       <RiderPointsDetail
