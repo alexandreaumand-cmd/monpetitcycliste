@@ -100,7 +100,14 @@ export function AuctionValidationConfirmation({ phaseId, managerId, leagueId, on
             </div>
           </div>
           <div>
-            <CardTitle className="text-2xl md:text-3xl">Enchères validées ! 🎉</CardTitle>
+            <CardTitle className="text-2xl md:text-3xl">
+              Enchères validées ! 🎉
+              {status.round_number && (
+                <span className="block text-lg text-muted-foreground font-normal mt-1">
+                  Round {status.round_number}
+                </span>
+              )}
+            </CardTitle>
             <p className="text-muted-foreground mt-2">
               Tes enchères ont été soumises avec succès
             </p>
