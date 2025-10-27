@@ -19,6 +19,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { MoreVertical, Eye, Users, Archive, ArchiveRestore, Trash2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import type { League } from "@/lib/leagues/types";
@@ -34,6 +36,7 @@ export function SuperAdminLeagueActions({ league, onActionComplete }: SuperAdmin
   const [isDeleting, setIsDeleting] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [confirmPhrase, setConfirmPhrase] = useState("");
 
   const handleArchiveToggle = async () => {
     try {
@@ -85,18 +88,29 @@ export function SuperAdminLeagueActions({ league, onActionComplete }: SuperAdmin
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const { error } = await supabase.functions.invoke("leagues-delete-full", {
-        body: { league_id: league.id },
+      const { data, error } = await supabase.functions.invoke("leagues-delete-full", {
+        body: { 
+          league_id: league.id,
+          league_name: league.name,
+          confirmation_phrase: confirmPhrase
+        },
       });
 
       if (error) throw error;
 
-      toast.success("Ligue supprimée définitivement");
+      toast.success(`Ligue "${league.name}" supprimée définitivement`, {
+        description: data?.deleted ? 
+          `${Object.values(data.deleted).reduce((a: number, b: number) => a + b, 0)} entrées supprimées` : 
+          undefined
+      });
       setShowDeleteDialog(false);
+      setConfirmPhrase("");
       onActionComplete();
     } catch (error) {
       console.error("Error deleting league:", error);
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de la suppression", {
+        description: error instanceof Error ? error.message : "Une erreur inconnue s'est produite"
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -176,25 +190,49 @@ export function SuperAdminLeagueActions({ league, onActionComplete }: SuperAdmin
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialog open={showDeleteDialog} onOpenChange={(open) => {
+        setShowDeleteDialog(open);
+        if (!open) setConfirmPhrase("");
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer définitivement la ligue ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cette action est irréversible. Toutes les données de la ligue "{league.name}" seront
-              supprimées définitivement, incluant :
-              <ul className="list-disc list-inside mt-2 space-y-1">
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Cette action est irréversible. Toutes les données de la ligue "{league.name}" seront
+                supprimées définitivement, incluant :
+              </p>
+              <ul className="list-disc list-inside space-y-1">
                 <li>Tous les membres</li>
                 <li>Toutes les invitations</li>
                 <li>Tous les paramètres et configurations</li>
               </ul>
+              
+              <div className="space-y-2 mt-4">
+                <Label htmlFor="confirm-phrase" className="text-sm font-medium">
+                  Pour confirmer, tapez exactement :
+                </Label>
+                <code className="block p-2 bg-muted rounded text-sm font-mono">
+                  DELETE LEAGUE {league.name}
+                </code>
+                <Input
+                  id="confirm-phrase"
+                  value={confirmPhrase}
+                  onChange={(e) => setConfirmPhrase(e.target.value)}
+                  placeholder="DELETE LEAGUE ..."
+                  className="font-mono"
+                  disabled={isDeleting}
+                />
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting} onClick={() => setConfirmPhrase("")}>
+              Annuler
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={isDeleting}
+              disabled={isDeleting || confirmPhrase !== `DELETE LEAGUE ${league.name}`}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? "Suppression..." : "Supprimer définitivement"}
