@@ -10,6 +10,7 @@ import { AuctionSubmitButton } from "./AuctionSubmitButton";
 import { AuctionValidationConfirmation } from "./AuctionValidationConfirmation";
 import { MyValidatedBids } from "./MyValidatedBids";
 import { AuctionLiveAnnouncements } from "./AuctionLiveAnnouncements";
+import { AuctionCompletedView } from "./AuctionCompletedView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -323,6 +324,21 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         leagueId={leagueId}
         onBack={() => setShowValidationScreen(false)}
         onViewMyBids={() => setShowMyValidatedBids(true)}
+      />
+    );
+  }
+
+  // Check if roster is complete
+  const isRosterComplete = context.totals.roster_count >= context.rules.max_bids;
+
+  if (isRosterComplete) {
+    return (
+      <AuctionCompletedView
+        roster={context.roster}
+        budget_spent={context.totals.budget_spent}
+        starting_budget={context.starting_budget}
+        currency={context.currency}
+        max_slots={context.rules.max_bids}
       />
     );
   }

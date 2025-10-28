@@ -10,6 +10,7 @@ import { AuctionValidationConfirmation } from "./AuctionValidationConfirmation";
 import { MyValidatedBids } from "./MyValidatedBids";
 import { AuctionLiveAnnouncements } from "./AuctionLiveAnnouncements";
 import { AuctionTabs } from "./AuctionTabs";
+import { AuctionCompletedView } from "./AuctionCompletedView";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2 } from "lucide-react";
@@ -318,6 +319,21 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
         leagueId={leagueId}
         onBack={() => setShowValidationScreen(false)}
         onViewMyBids={() => setShowMyValidatedBids(true)}
+      />
+    );
+  }
+
+  // Check if roster is complete
+  const isRosterComplete = context.totals.roster_count >= context.rules.max_bids;
+
+  if (isRosterComplete) {
+    return (
+      <AuctionCompletedView
+        roster={context.roster}
+        budget_spent={context.totals.budget_spent}
+        starting_budget={context.starting_budget}
+        currency={context.currency}
+        max_slots={context.rules.max_bids}
       />
     );
   }
