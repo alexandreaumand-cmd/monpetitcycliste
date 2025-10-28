@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useUserLeagues } from "@/hooks/useUserLeagues";
@@ -23,6 +24,7 @@ type JoinLeagueDialogProps = {
 };
 
 export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) {
+  const navigate = useNavigate();
   const { setLeagueId } = useLeague();
   const { leagues: myLeagues, refetch } = useUserLeagues();
   const [joiningLeagueId, setJoiningLeagueId] = useState<string | null>(null);
@@ -65,6 +67,9 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
       // Switch to new league
       setLeagueId(leagueId);
       
+      // Redirect to auctions page
+      navigate(`/dashboard/encheres?leagueId=${leagueId}`);
+      
       // Close dialog
       onOpenChange(false);
     } catch (error: any) {
@@ -97,6 +102,9 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
       
       // Switch to new league
       setLeagueId(data.league_id);
+      
+      // Redirect to auctions page
+      navigate(`/dashboard/encheres?leagueId=${data.league_id}`);
       
       // Reset form and close dialog
       setInviteCode('');

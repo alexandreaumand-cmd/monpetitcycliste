@@ -63,9 +63,9 @@ export function JoinLeaguePage() {
         setStatus("success");
         setMessage("Vous avez rejoint la ligue avec succès !");
 
-        // Redirect to home with league selected
+        // Redirect to auctions page with league selected
         setTimeout(() => {
-          navigate(`/?leagueId=${data.league_id}`);
+          navigate(`/dashboard/encheres?leagueId=${data.league_id}`);
         }, 2000);
       } catch (err) {
         console.error('Join league error:', err);
