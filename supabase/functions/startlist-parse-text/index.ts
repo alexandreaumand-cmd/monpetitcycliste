@@ -99,12 +99,7 @@ serve(async (req) => {
       );
     }
 
-    if (!league_id) {
-      return new Response(
-        JSON.stringify({ error: 'league_id est requis' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // league_id is now optional for global imports
 
     // Determine phase
     let phaseId = phase_id;
@@ -159,15 +154,15 @@ serve(async (req) => {
       }
     }
 
-    // Load rosters + coureurs for the phase (matching only against roster)
-    const { data: rostersData } = await supabase
-      .from('rosters')
-      .select('coureur_id, manager_id, coureurs(id, nom, equipe), managers(id, nom)')
-      .eq('phase_id', phaseId)
-      .eq('league_id', league_id);
-
-    if (!rostersData) {
-      throw new Error('Impossible de charger les rosters');
+    // Load rosters for matching (only if league_id provided)
+    let rostersData: any[] = [];
+    if (league_id) {
+      const { data } = await supabase
+        .from('rosters')
+        .select('coureur_id, manager_id, coureurs(id, nom, equipe), managers(id, nom)')
+        .eq('phase_id', phaseId)
+        .eq('league_id', league_id);
+      rostersData = data || [];
     }
 
     // Extract unique riders from rosters
