@@ -6,33 +6,99 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Normalize text for matching (unaccent + clean)
-function normalize(s: string): string {
-  return (s || '')
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')   // Remove accents
-    .replace(/[''`´'']/g, "'")         // Unify all apostrophe variants
-    .replace(/[.\-]/g, ' ')            // . and - to space
-    .replace(/\s+/g, ' ')              // Multiple spaces to one
-    .trim()
-    .toUpperCase();
+// Common name particles for multi-part last names
+const PARTICLES = ['VAN', 'DE', 'DER', 'DEN', 'LA', 'LE', 'DU', 'DA', 'DI', 'DEL', 'DELLA', 'VON'];
+
+// Character transliteration map
+const CHAR_MAP: Record<string, string> = {
+  'Ø': 'O', 'ø': 'o',
+  'Æ': 'AE', 'æ': 'ae',
+  'Å': 'A', 'å': 'a',
+  'Ä': 'A', 'ä': 'a',
+  'Ö': 'O', 'ö': 'o',
+  'Ü': 'U', 'ü': 'u',
+  'ß': 'ss',
+  'Č': 'C', 'č': 'c',
+  'Š': 'S', 'š': 's',
+  'Ž': 'Z', 'ž': 'z',
+  'Ł': 'L', 'ł': 'l',
+};
+
+// Advanced normalization with comprehensive special character handling
+function normalizeText(text: string): string {
+  if (!text) return '';
+  
+  let result = text;
+  
+  // 1. Explicit transliteration of European special characters
+  for (const [char, replacement] of Object.entries(CHAR_MAP)) {
+    result = result.replaceAll(char, replacement);
+  }
+  
+  // 2. Remove all apostrophes and quotes (straight and typographic)
+  result = result.replace(/['''`"""]/g, '');
+  
+  // 3. Remove parentheses and their content (e.g., "(ITA)")
+  result = result.replace(/\([^)]*\)/g, '');
+  
+  // 4. Replace separators with space
+  result = result.replace(/[-_/\.]/g, ' ');
+  
+  // 5. Normalize multi-spaces to single space
+  result = result.replace(/\s+/g, ' ');
+  
+  // 6. Trim and uppercase
+  return result.trim().toUpperCase();
 }
 
-// Token signature: sorted unique tokens
-function tokenSig(s: string): string {
-  return normalize(s).split(' ').sort().join(' ');
+// Extract tokens from normalized text (sorted for token-set comparison)
+function extractTokens(normalized: string): string[] {
+  return normalized.split(/\s+/).filter(t => t.length > 0).sort();
 }
-
 
 // Extract last name from normalized text
-function extractLastName(normalized: string): string {
+function extractLastName(normalized: string, includeParticles: boolean = false): string {
   const tokens = normalized.split(/\s+/).filter(t => t.length > 0);
   if (tokens.length === 0) return '';
-  return tokens[tokens.length - 1];
+  
+  const lastName = tokens[tokens.length - 1];
+  
+  if (includeParticles && tokens.length > 1) {
+    let particleCount = 0;
+    for (let i = tokens.length - 2; i >= 0; i--) {
+      if (PARTICLES.includes(tokens[i])) {
+        particleCount++;
+      } else {
+        break;
+      }
+    }
+    
+    if (particleCount > 0) {
+      return tokens.slice(tokens.length - 1 - particleCount).join('');
+    }
+  }
+  
+  return lastName;
 }
 
-// Simple Levenshtein distance
-function levenshtein(a: string, b: string): number {
+// Invert name from "LAST First" to "First LAST"
+function invertName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  
+  if (parts.length === 2) {
+    return `${parts[1]} ${parts[0]}`;
+  }
+  
+  const lastName = parts[0];
+  const restOfName = parts.slice(1).join(' ');
+  return `${restOfName} ${lastName}`;
+}
+
+// Optimized Levenshtein distance with early exit
+function levenshtein(a: string, b: string, maxDistance: number = Infinity): number {
+  if (Math.abs(a.length - b.length) > maxDistance) return maxDistance + 1;
+  
   const matrix: number[][] = [];
   for (let i = 0; i <= b.length; i++) {
     matrix[i] = [i];
@@ -41,6 +107,7 @@ function levenshtein(a: string, b: string): number {
     matrix[0][j] = j;
   }
   for (let i = 1; i <= b.length; i++) {
+    let minInRow = Infinity;
     for (let j = 1; j <= a.length; j++) {
       if (b.charAt(i - 1) === a.charAt(j - 1)) {
         matrix[i][j] = matrix[i - 1][j - 1];
@@ -51,7 +118,9 @@ function levenshtein(a: string, b: string): number {
           matrix[i - 1][j] + 1
         );
       }
+      minInRow = Math.min(minInRow, matrix[i][j]);
     }
+    if (minInRow > maxDistance) return maxDistance + 1;
   }
   return matrix[b.length][a.length];
 }
@@ -61,17 +130,6 @@ function similarity(a: string, b: string): number {
   const distance = levenshtein(a, b);
   const maxLen = Math.max(a.length, b.length);
   return maxLen === 0 ? 1 : 1 - distance / maxLen;
-}
-
-// Canonicalize: "TRENTIN Matteo" -> "Matteo TRENTIN"
-function canonizeName(nameRaw: string): string {
-  const toks = (nameRaw || '').trim().split(/\s+/);
-  let i = 0;
-  // Cluster of ALLCAPS tokens at start (surname: DE, VAN, TRENTIN, etc.)
-  while (i < toks.length && /^[A-Z''''\-]+$/.test(toks[i])) i++;
-  const surname = toks.slice(0, i).join(' ').toUpperCase();
-  const given = toks.slice(i).map(t => t.charAt(0) + t.slice(1).toLowerCase()).join(' ');
-  return (given && surname) ? `${given} ${surname}` : nameRaw;
 }
 
 serve(async (req) => {
@@ -172,16 +230,11 @@ serve(async (req) => {
       if (match) {
         const teamCode = match[1].toUpperCase();
         const nameRaw = match[2].trim();
-        const canonicalGuess = canonizeName(nameRaw);
-        const normalized = normalize(canonicalGuess);
         
         parsedEntries.push({
           line_no: i + 1,
-          team_code: teamCode,
+          source_team: teamCode,
           source_name: nameRaw,
-          canonical_guess: canonicalGuess,
-          normalized,
-          key_sig: tokenSig(canonicalGuess),
         });
       }
     }
@@ -235,158 +288,213 @@ serve(async (req) => {
       .from('name_aliases')
       .select('alias_text, coureur_id, source_team');
 
-    const aliasMap = new Map<string, string>();
+    const aliasMap = new Map<string, Array<{ coureur_id: string; source_team: string | null }>>();
     if (aliases) {
       for (const a of aliases) {
-        const key = normalize(a.alias_text);
-        aliasMap.set(key, a.coureur_id);
+        const key = normalizeText(a.alias_text);
+        if (!aliasMap.has(key)) {
+          aliasMap.set(key, []);
+        }
+        aliasMap.get(key)!.push({ coureur_id: a.coureur_id, source_team: a.source_team });
       }
     }
 
-    // Build maps for fast lookup (from rosters)
-    const riderByNorm = new Map<string, any>();
-    const riderBySig = new Map<string, any>();
+    // Build advanced dictionaries with name inversion support
+    const mapFirstLast = new Map<string, string>();
+    const mapLastFirst = new Map<string, string>();
+    const mapTokenSet = new Map<string, string>();
     
-    for (const r of riders) {
-      const norm = normalize(r.nom);
-      const sig = tokenSig(r.nom);
-      if (!riderByNorm.has(norm)) riderByNorm.set(norm, r);
-      if (!riderBySig.has(sig)) riderBySig.set(sig, r);
+    interface RiderData {
+      id: string;
+      nom: string;
+      equipe: string | null;
+      nomNorm: string;
+      nomSwap: string;
+      tokens: string[];
+      tokenSetKey: string;
+      lastName: string;
+      lastNameAlt: string;
     }
-
-    // Build ALL coureurs map (includes off-roster) with last name info
-    const allCoureursMap = new Map<string, any>();
-    for (const c of allCoureurs) {
-      allCoureursMap.set(c.id, {
-        ...c,
-        lastName: extractLastName(normalize(c.nom))
+    
+    const riderDataMap = new Map<string, RiderData>();
+    const tokenSetCount = new Map<string, number>();
+    
+    allCoureurs.forEach(rider => {
+      const nomNorm = normalizeText(rider.nom);
+      const nomSwap = normalizeText(invertName(rider.nom));
+      const tokens = extractTokens(nomNorm);
+      const tokenSetKey = tokens.join('|');
+      const lastName = extractLastName(nomNorm);
+      const lastNameAlt = extractLastName(nomNorm, true);
+      
+      riderDataMap.set(rider.id, {
+        id: rider.id,
+        nom: rider.nom,
+        equipe: rider.equipe,
+        nomNorm,
+        nomSwap,
+        tokens,
+        tokenSetKey,
+        lastName,
+        lastNameAlt,
       });
-    }
+      
+      mapFirstLast.set(nomNorm, rider.id);
+      mapLastFirst.set(nomSwap, rider.id);
+      
+      tokenSetCount.set(tokenSetKey, (tokenSetCount.get(tokenSetKey) || 0) + 1);
+    });
+    
+    // Only add unique token sets to map
+    riderDataMap.forEach((data, riderId) => {
+      if (tokenSetCount.get(data.tokenSetKey) === 1) {
+        mapTokenSet.set(data.tokenSetKey, riderId);
+      }
+    });
 
-    // Match each entry
+    console.log(`Built dictionaries: ${mapFirstLast.size} FirstLast, ${mapLastFirst.size} LastFirst, ${mapTokenSet.size} unique TokenSets`);
+
+    // Match each entry - Enhanced multi-pass cascade
     const matched: any[] = [];
     const unmatched: any[] = [];
+    let passAlias = 0, passExact = 0, passFuzzy = 0;
 
     for (const entry of parsedEntries) {
-      let bestMatch = null;
-      let matchType = 'none';
-      let matchScore = 0;
-      let onRoster = false;
+      const normalized = normalizeText(entry.source_name);
+      const normalizedInverted = normalizeText(invertName(entry.source_name));
+      const sourceTokens = extractTokens(normalized);
+      const sourceTokenSetKey = sourceTokens.join('|');
+      
+      let isMatched = false;
+      let coureurId = null;
+      let confidence = 0;
+      let matchMethod = '';
 
-      const entryLastName = extractLastName(entry.normalized);
+      // === PASS 1: Alias exact match (priority) - Test both variants ===
+      let aliasMatches = aliasMap.get(normalized);
+      if (!aliasMatches) aliasMatches = aliasMap.get(normalizedInverted);
+      
+      if (aliasMatches && aliasMatches.length > 0) {
+        if (entry.source_team) {
+          const teamMatch = aliasMatches.find(a => 
+            a.source_team && normalizeText(a.source_team) === normalizeText(entry.source_team)
+          );
+          if (teamMatch) {
+            coureurId = teamMatch.coureur_id;
+            confidence = 1.0;
+            isMatched = true;
+            matchMethod = 'alias-team';
+            passAlias++;
+          }
+        }
+        if (!isMatched && aliasMatches.length === 1) {
+          coureurId = aliasMatches[0].coureur_id;
+          confidence = 0.95;
+          isMatched = true;
+          matchMethod = 'alias-unique';
+          passAlias++;
+        }
+      }
 
-      // 0) Alias match (highest priority) - check both roster and all coureurs
-      const aliasKey = normalize(entry.source_name);
-      if (aliasMap.has(aliasKey)) {
-        const coureurId = aliasMap.get(aliasKey);
+      // === PASS 2: Exact map lookups (with name inversion support) ===
+      if (!isMatched) {
+        const lastFirstMatch = mapLastFirst.get(normalized) || mapLastFirst.get(normalizedInverted);
+        const firstLastMatch = mapFirstLast.get(normalized) || mapFirstLast.get(normalizedInverted);
+        const tokenSetMatch = mapTokenSet.get(sourceTokenSetKey);
+        
+        coureurId = lastFirstMatch || null;
         if (coureurId) {
-          // Try roster first
-          bestMatch = riders.find(r => r.id === coureurId);
-          if (bestMatch) {
-            matchType = 'alias';
-            matchScore = 1.0;
-            onRoster = true;
+          confidence = 0.98;
+          isMatched = true;
+          matchMethod = 'exact-lastfirst';
+          passExact++;
+        } else {
+          coureurId = firstLastMatch || null;
+          if (coureurId) {
+            confidence = 0.98;
+            isMatched = true;
+            matchMethod = 'exact-firstlast';
+            passExact++;
           } else {
-            // Check all coureurs (off-roster)
-            const offRosterCoureur = allCoureursMap.get(coureurId);
-            if (offRosterCoureur) {
-              bestMatch = offRosterCoureur;
-              matchType = 'alias';
-              matchScore = 1.0;
-              onRoster = false;
+            coureurId = tokenSetMatch || null;
+            if (coureurId) {
+              confidence = 0.96;
+              isMatched = true;
+              matchMethod = 'exact-tokenset';
+              passExact++;
             }
           }
         }
       }
 
-      // 1) Exact match (roster only)
-      if (!bestMatch && riderByNorm.has(entry.normalized)) {
-        bestMatch = riderByNorm.get(entry.normalized);
-        matchType = 'exact';
-        matchScore = 1.0;
-        onRoster = true;
-      }
-      
-      // 2) Token signature match (roster only, with last name guard)
-      if (!bestMatch && riderBySig.has(entry.key_sig)) {
-        const candidate = riderBySig.get(entry.key_sig);
-        const candidateLastName = extractLastName(normalize(candidate.nom));
+      // === PASS 3: Enhanced fuzzy matching ===
+      if (!isMatched) {
+        let bestScore = 0;
+        let bestId = null;
         
-        if (candidateLastName === entryLastName) {
-          bestMatch = candidate;
-          matchType = 'tokens';
-          matchScore = 0.95;
-          onRoster = true;
+        for (const [riderId, riderData] of riderDataMap) {
+          const score1 = similarity(normalized, riderData.nomNorm);
+          const score2 = similarity(normalized, riderData.nomSwap);
+          const bestRiderScore = Math.max(score1, score2);
+          
+          if (bestRiderScore >= 0.85 && bestRiderScore > bestScore) {
+            bestScore = bestRiderScore;
+            bestId = riderId;
+          }
+        }
+        
+        if (bestId && bestScore >= 0.85) {
+          coureurId = bestId;
+          confidence = bestScore;
+          isMatched = true;
+          matchMethod = 'fuzzy';
+          passFuzzy++;
         }
       }
 
-      // 3) Fuzzy match (roster only, with strict last name guard)
-      if (!bestMatch) {
-        for (const r of riders) {
-          const riderLastName = extractLastName(normalize(r.nom));
-          
-          // STRICT: Only consider if last names match exactly
-          if (riderLastName !== entryLastName) {
-            continue;
-          }
-          
-          const finalScore = similarity(entry.normalized, normalize(r.nom));
-          
-          if (finalScore >= 0.9 && finalScore > matchScore) {
-            matchScore = finalScore;
-            bestMatch = r;
-            matchType = 'fuzzy';
-            onRoster = true;
-          }
-        }
-      }
-
-      if (bestMatch) {
+      if (isMatched && coureurId) {
+        const riderData = riderDataMap.get(coureurId)!;
+        const onRoster = rostersByRider.has(coureurId);
+        
         matched.push({
           ...entry,
-          coureur_id: bestMatch.id,
-          nom: bestMatch.nom,
-          equipe: bestMatch.equipe,
-          confidence: matchScore,
-          match_type: matchType,
+          coureur_id: coureurId,
+          nom: riderData.nom,
+          equipe: riderData.equipe,
+          confidence: confidence,
+          match_type: matchMethod,
           on_roster: onRoster,
         });
 
         if (with_diagnostics) {
           diagnostics.push({
             line_no: entry.line_no,
-            team_code: entry.team_code,
+            team_code: entry.source_team,
             name_raw: entry.source_name,
-            canonical_guess: entry.canonical_guess,
-            normalized: entry.normalized,
-            match_type: matchType,
-            score: matchScore,
-            db_nom: bestMatch.nom,
-            db_equipe: bestMatch.equipe,
+            normalized: normalized,
+            match_type: matchMethod,
+            score: confidence,
+            db_nom: riderData.nom,
+            db_equipe: riderData.equipe,
             on_roster: onRoster,
           });
         }
       } else {
-        // Get suggestions (roster only, with strict last name guard)
-        const suggestions = riders
+        // Get suggestions
+        const suggestions = Array.from(riderDataMap.values())
           .map(r => {
-            const riderLastName = extractLastName(normalize(r.nom));
-            
-            // STRICT: Only suggest if last names match
-            if (riderLastName !== entryLastName) {
-              return null;
-            }
-            
-            const score = similarity(entry.normalized, normalize(r.nom));
+            const score1 = similarity(normalized, r.nomNorm);
+            const score2 = similarity(normalized, r.nomSwap);
+            const score = Math.max(score1, score2);
             return {
               coureur_id: r.id,
               nom: r.nom,
               equipe: r.equipe,
               score,
-              on_roster: true,
+              on_roster: rostersByRider.has(r.id),
             };
           })
-          .filter((s): s is NonNullable<typeof s> => s !== null && s.score >= 0.65)
+          .filter(s => s.score >= 0.65)
           .sort((a, b) => b.score - a.score)
           .slice(0, 5);
 
@@ -398,15 +506,16 @@ serve(async (req) => {
         if (with_diagnostics) {
           diagnostics.push({
             line_no: entry.line_no,
-            team_code: entry.team_code,
+            team_code: entry.source_team,
             name_raw: entry.source_name,
-            canonical_guess: entry.canonical_guess,
-            normalized: entry.normalized,
+            normalized: normalized,
             match_type: 'none',
           });
         }
       }
     }
+
+    console.log(`✅ Matching complete: ${matched.length} matched, ${unmatched.length} unmatched (Alias: ${passAlias}, Exact: ${passExact}, Fuzzy: ${passFuzzy})`);
 
     // Build manager map using rostersByRider (only for on_roster matches)
     const managerMap = new Map();
