@@ -27,8 +27,9 @@ export function ManagersTable({ managers }: ManagersTableProps) {
     return "secondary";
   };
 
-  const formatBudget = (amount: number) => {
-    return `${amount.toLocaleString('fr-FR')} M`;
+  const formatBudget = (amount: number | undefined | null) => {
+    const n = Number(amount ?? 0);
+    return `${n.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} M`;
   };
 
   return (
@@ -99,7 +100,7 @@ export function ManagersTable({ managers }: ManagersTableProps) {
                   <div className="space-y-0.5">
                     <div className="text-sm font-medium">{formatBudget(manager.previous_rounds_budget)}</div>
                     <div className="text-xs text-muted-foreground">
-                      Reste: {formatBudget(manager.budget_total - manager.previous_rounds_budget - manager.current_round_budget)}
+                      Reste: {formatBudget(Number(manager.budget_total ?? 0) - Number(manager.previous_rounds_budget ?? 0) - Number(manager.current_round_budget ?? 0))}
                     </div>
                   </div>
                 </TableCell>
