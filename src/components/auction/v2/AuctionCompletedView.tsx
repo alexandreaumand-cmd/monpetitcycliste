@@ -184,31 +184,42 @@ export function AuctionCompletedView({
         </CardContent>
       </Card>
 
-      {/* Team list */}
+      {/* Team list - NOW IN ACCORDION */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg md:text-xl">Mon équipe ({roster.length} coureurs)</CardTitle>
+          <CardTitle className="text-lg md:text-xl">Mon équipe</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="divide-y">
-            {sortedRoster.map((rider) => (
-              <div
-                key={rider.coureur_id}
-                className="flex items-center justify-between p-3 md:p-4 hover:bg-accent/50 transition-colors"
-              >
-                <div className="flex-1 min-w-0 mr-3">
-                  <p className="font-medium text-sm md:text-base truncate">{rider.rider_nom}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground truncate">{rider.rider_team}</p>
+        <CardContent>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="team" className="border-none">
+              <AccordionTrigger className="hover:no-underline py-2">
+                <span className="text-sm text-muted-foreground">
+                  Voir mes {roster.length} coureurs
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="divide-y">
+                  {sortedRoster.map((rider) => (
+                    <div
+                      key={rider.coureur_id}
+                      className="flex items-center justify-between p-3 md:p-4 hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0 mr-3">
+                        <p className="font-medium text-sm md:text-base truncate">{rider.rider_nom}</p>
+                        <p className="text-xs md:text-sm text-muted-foreground truncate">{rider.rider_team}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-semibold text-sm md:text-base">{rider.amount}{currency}</p>
+                        {rider.round_number && (
+                          <p className="text-xs text-muted-foreground">Round {rider.round_number}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="font-semibold text-sm md:text-base">{rider.amount}{currency}</p>
-                  {rider.round_number && (
-                    <p className="text-xs text-muted-foreground">Round {rider.round_number}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </CardContent>
       </Card>
 
