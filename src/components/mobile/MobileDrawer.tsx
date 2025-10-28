@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import {
   Sheet,
   SheetContent,
@@ -40,6 +40,8 @@ export const MobileDrawer = ({
 }: MobileDrawerProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const currentLeagueId = searchParams.get('leagueId');
   const { selectedSeason } = useSeasonContext();
   const { data: seasonSponsor } = useManagerSponsor(manager?.id, selectedSeason?.id);
   
@@ -81,7 +83,8 @@ export const MobileDrawer = ({
   };
 
   const handleNavigate = (path: string) => {
-    navigate(path);
+    const url = currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
+    navigate(url);
     onOpenChange(false);
   };
 

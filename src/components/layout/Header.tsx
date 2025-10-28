@@ -1,4 +1,4 @@
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +43,8 @@ const mobileNavLinks = [
 
 export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const currentLeagueId = searchParams.get('leagueId');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
   const { selectedSeason, setSelectedSeason, seasons, isLoading: seasonsLoading, isLeagueSeason, lockedLeagueSeason } = useSeasonContext();
@@ -58,6 +60,10 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   const allMobileLinks = isAdmin 
     ? [...mobileNavLinks, { label: 'Admin', href: '/dashboard/admin', icon: Shield }]
     : mobileNavLinks;
+
+  const buildNavUrl = (href: string) => {
+    return currentLeagueId ? `${href}?leagueId=${currentLeagueId}` : href;
+  };
 
   const isActive = (href: string) => {
     if (href === '/dashboard/encheres' && location.pathname === '/dashboard') return true;
@@ -178,7 +184,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
               return (
                 <Link
                   key={link.href}
-                  to={link.href}
+                  to={buildNavUrl(link.href)}
                   aria-current={active ? 'page' : 'false'}
                   className={cn(
                     "px-4 py-2 rounded-full font-poppins font-semibold transition-all flex items-center gap-2",
@@ -218,7 +224,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                 return (
                   <Link
                     key={link.href}
-                    to={link.href}
+                    to={buildNavUrl(link.href)}
                     onClick={() => setMobileMenuOpen(false)}
                     aria-current={active ? 'page' : 'false'}
                     className={cn(
