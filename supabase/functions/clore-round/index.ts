@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { notifyLeagueMembers } from '../_shared/notifications.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -280,6 +281,20 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Round closed, ${annonces.length} annonces created`);
+
+    // Notify all league members
+    await notifyLeagueMembers(supabase, league_id, {
+      type: 'auction_closed',
+      title: `⏰ Round d'enchères clôturé`,
+      message: `Le round ${auction.round_number} est maintenant terminé. Consultez les résultats !`,
+      metadata: {
+        auction_id: auction_id,
+        round_number: auction.round_number,
+        phase_id: auction.phase_id,
+        league_id: league_id,
+        annonces_count: annonces.length
+      }
+    });
 
     return new Response(
       JSON.stringify({ success: true, annonces_count: annonces.length }),

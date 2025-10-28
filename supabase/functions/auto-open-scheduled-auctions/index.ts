@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { notifyLeagueMembers } from '../_shared/notifications.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -9,7 +10,7 @@ Deno.serve(async (req) => {
     // Get all scheduled auctions that should now be open
     const { data: scheduledAuctions, error: fetchError } = await supabase
       .from('auctions')
-      .select('id, opens_at, league_id')
+      .select('id, opens_at, league_id, round_number, phase_id, deadline_at')
       .eq('statut', 'scheduled')
       .lte('opens_at', new Date().toISOString());
 
@@ -45,6 +46,24 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Opened ${data?.length || 0} scheduled auctions`);
+
+    // Notify league members for each opened auction
+    if (data && data.length > 0) {
+      for (const auction of data) {
+        await notifyLeagueMembers(supabase, auction.league_id, {
+          type: 'auction_opened',
+          title: `🎯 Nouveau round d'enchères ouvert !`,
+          message: `Le round ${auction.round_number} est maintenant ouvert. Placez vos enchères avant la deadline !`,
+          metadata: {
+            auction_id: auction.id,
+            round_number: auction.round_number,
+            phase_id: auction.phase_id,
+            league_id: auction.league_id,
+            deadline_at: auction.deadline_at
+          }
+        });
+      }
+    }
 
     return new Response(
       JSON.stringify({ 

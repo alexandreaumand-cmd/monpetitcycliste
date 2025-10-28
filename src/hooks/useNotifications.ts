@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface Notification {
   id: string;
-  type: 'startlist_validated' | 'results_added';
+  type: 'startlist_validated' | 'results_added' | 'auction_opened' | 'auction_closed';
   title: string;
   message: string;
   metadata: {
@@ -12,6 +12,10 @@ export interface Notification {
     course_id?: string;
     type_classement?: string;
     etape_numero?: number;
+    auction_id?: string;
+    round_number?: number;
+    phase_id?: string;
+    league_id?: string;
   };
   created_at: string;
   is_read: boolean;

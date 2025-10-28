@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { notifyLeagueMembers } from '../_shared/notifications.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -118,6 +119,20 @@ Deno.serve(async (req) => {
     if (error) throw error;
 
     console.log('New round created:', newAuction);
+
+    // Notify all league members
+    await notifyLeagueMembers(supabase, league_id, {
+      type: 'auction_opened',
+      title: `🎯 Nouveau round d'enchères ouvert !`,
+      message: `Le round ${newRoundNumber} est maintenant ouvert. Placez vos enchères avant la deadline !`,
+      metadata: {
+        auction_id: newAuction.id,
+        round_number: newRoundNumber,
+        phase_id: phase_id,
+        league_id: league_id,
+        deadline_at: deadline_at
+      }
+    });
 
     return new Response(
       JSON.stringify({ success: true, auction: newAuction }),
