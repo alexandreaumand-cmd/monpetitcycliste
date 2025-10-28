@@ -30,7 +30,7 @@ export const ManagersSupervision = ({ managers, isLoading }: ManagersSupervision
 
   // Filter managers based on search and completion status
   const filteredManagers = managers.filter(m => {
-    const matchesSearch = m.manager_nom.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (m.manager_nom || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     if (statusFilter === "all") return matchesSearch;
     if (statusFilter === "incomplete") return matchesSearch && m.slots_missing > 0;
