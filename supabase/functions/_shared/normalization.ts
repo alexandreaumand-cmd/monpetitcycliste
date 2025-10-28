@@ -70,9 +70,12 @@ export function canonizeName(raw: string): string {
     let lastNameEndIdx = 0;
     for (let i = 0; i < tokens.length; i++) {
       const tok = tokens[i];
-      if (tok === tok.toUpperCase() && tok.length > 1 && !PARTICLES.includes(tok)) {
+      // Include both all-caps tokens AND particles in the last name
+      if ((tok === tok.toUpperCase() && tok.length > 1) || PARTICLES.includes(tok)) {
         lastNameEndIdx = i;
-      } else break;
+      } else {
+        break;
+      }
     }
     const lastName = tokens.slice(0, lastNameEndIdx + 1).join(' ');
     const firstName = tokens.slice(lastNameEndIdx + 1).join(' ');

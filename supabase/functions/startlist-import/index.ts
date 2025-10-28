@@ -23,9 +23,9 @@ function parseStartlistText(raw_text: string): ParsedEntry[] {
   const lines = raw_text.split(/\r?\n/);
   const entries: ParsedEntry[] = [];
   
-  // Regex patterns (with optional period after place number)
-  const fullPattern = /^\s*(?<place>\d+)?\.?\s*(?<team>[A-Z]{3})\s+(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+?)(?:\s+(?<rest>.*))?$/i;
-  const loosePattern = /^\s*(?<place>\d+)?\.?\s*(?<team>[A-Z]{3})?\s+(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+)$/i;
+  // Regex patterns (with optional period after place number, 2-4 chars team code)
+  const fullPattern = /^\s*(?<place>\d+)?\.?\s*(?<team>[A-Z0-9]{2,4})\s+(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+?)(?:\s+(?<rest>.*))?$/i;
+  const loosePattern = /^\s*(?<place>\d+)?\.?\s*(?<team>[A-Z0-9]{2,4})?\s+(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+)$/i;
   
   lines.forEach((line, idx) => {
     const trimmed = line.trim();
@@ -149,20 +149,84 @@ function matchEntry(
       coureur_id: best.id,
       confidence: best.score,
       status: 'confirmed',
-      match_type: 'fuzzy',
+      match_type: 'fuzzy_roster',
       on_roster: true
     };
   }
   
-  // 5) Unmatched + suggestions
-  const suggestions = rosterRiders
+  // 5) FALLBACK sur allRiders (off-roster)
+  // 5a) Exact match
+  for (const rider of allRiders) {
+    if (normalize(rider.nom) === entryNorm) {
+      return {
+        coureur_id: rider.id,
+        confidence: 1.0,
+        status: 'confirmed',
+        match_type: 'exact_off_roster',
+        on_roster: false
+      };
+    }
+  }
+  
+  // 5b) TokenSig + même nom de famille
+  for (const rider of allRiders) {
+    const riderSig = tokenSig(rider.nom);
+    const riderLastName = extractLastName(rider.nom);
+    
+    if (riderSig === entrySig && riderLastName === entryLastName) {
+      return {
+        coureur_id: rider.id,
+        confidence: 0.95,
+        status: 'confirmed',
+        match_type: 'tokens_off_roster',
+        on_roster: false
+      };
+    }
+  }
+  
+  // 5c) Fuzzy + même nom de famille (seuil plus strict pour off-roster)
+  let bestOffRoster = { id: null as string | null, score: 0 };
+  for (const rider of allRiders) {
+    const riderLastName = extractLastName(rider.nom);
+    if (riderLastName !== entryLastName) continue;
+    
+    const score = similarity(entryNorm, normalize(rider.nom));
+    if (score > bestOffRoster.score) {
+      bestOffRoster = { id: rider.id, score };
+    }
+  }
+  
+  if (bestOffRoster.id && bestOffRoster.score >= 0.92) {
+    return {
+      coureur_id: bestOffRoster.id,
+      confidence: bestOffRoster.score,
+      status: 'confirmed',
+      match_type: 'fuzzy_off_roster',
+      on_roster: false
+    };
+  }
+  
+  // 6) Unmatched + suggestions combinées roster + allRiders
+  const rosterSuggestions = rosterRiders
     .filter(r => extractLastName(r.nom) === entryLastName)
     .map(r => ({
       coureur_id: r.id,
       nom: r.nom,
       equipe: r.equipe,
       similarity: similarity(entryNorm, normalize(r.nom))
-    }))
+    }));
+    
+  const offRosterSuggestions = allRiders
+    .filter(r => extractLastName(r.nom) === entryLastName)
+    .filter(r => !rosterRiders.some(rr => rr.id === r.id))
+    .map(r => ({
+      coureur_id: r.id,
+      nom: r.nom,
+      equipe: r.equipe,
+      similarity: similarity(entryNorm, normalize(r.nom))
+    }));
+  
+  const suggestions = [...rosterSuggestions, ...offRosterSuggestions]
     .filter(x => x.similarity >= 0.75)
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, 5);
@@ -309,8 +373,16 @@ serve(async (req) => {
     let confirmedCount = 0;
     let unmatchedCount = 0;
 
-    const entriesToInsert = parsedEntries.map(entry => {
+    const entriesToInsert = parsedEntries.map((entry, idx) => {
       const matchResult = matchEntry(entry, rosterRiders, allRiders, aliases);
+      
+      // Log premiers exemples pour debug
+      if (idx < 3) {
+        console.log(`[startlist-import] Entry ${entry.line_no}: "${entry.source_name}" → canonical: "${entry.canonical_guess}" → ${matchResult.status} (${matchResult.match_type || 'none'})`);
+      }
+      if (idx === 0 && matchResult.status === 'confirmed') {
+        console.log(`[startlist-import] Example match: ${matchResult.match_type}, confidence ${matchResult.confidence}, on_roster=${matchResult.on_roster}`);
+      }
       
       if (matchResult.status === 'confirmed') {
         confirmedCount++;
