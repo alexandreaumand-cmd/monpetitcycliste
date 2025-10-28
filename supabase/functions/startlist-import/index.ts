@@ -85,9 +85,9 @@ function matchEntry(
   allRiders: RiderRef[],
   aliases: AliasRef[]
 ): MatchResult {
-  const entryNorm = entry.normalized;
-  const entryLastName = extractLastName(entry.source_name);
-  const entrySig = entry.key_sig;
+  const entryNorm = normalize(entry.canonical_guess);
+  const entryLastName = extractLastName(entry.canonical_guess);
+  const entrySig = tokenSig(entry.canonical_guess);
   
   // 1) Alias (prio max)
   for (const alias of aliases) {
