@@ -60,11 +60,16 @@ export const StartlistImportManager = () => {
       return;
     }
 
+    if (!selectedRaceId || selectedRaceId === 'all') {
+      toast.error("Veuillez sélectionner une course");
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('startlist-parse-text', {
         body: { 
-          race_id: selectedRaceId && selectedRaceId !== 'all' ? selectedRaceId : null,
+          race_id: selectedRaceId,
           phase_id: selectedPhaseId,
           text: textContent,
           with_diagnostics: false,
@@ -106,12 +111,17 @@ export const StartlistImportManager = () => {
       return;
     }
 
+    if (!selectedRaceId || selectedRaceId === 'all') {
+      toast.error("Veuillez sélectionner une course");
+      return;
+    }
+
     setIsLoading(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('phase_id', selectedPhaseId);
-      if (selectedRaceId && selectedRaceId !== 'all') formData.append('race_id', selectedRaceId);
+      formData.append('race_id', selectedRaceId);
 
       const { data, error } = await supabase.functions.invoke('startlist-upload-and-parse', {
         body: formData
@@ -325,13 +335,12 @@ export const StartlistImportManager = () => {
 
             {selectedPhaseId && (
               <div className="space-y-2">
-                <Label htmlFor="race">Course (optionnel)</Label>
+                <Label htmlFor="race">Course *</Label>
                 <Select value={selectedRaceId} onValueChange={setSelectedRaceId}>
                   <SelectTrigger id="race">
-                    <SelectValue placeholder="Toutes les courses" />
+                    <SelectValue placeholder="Sélectionner une course" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Toutes les courses</SelectItem>
                     {courses?.map((course) => (
                       <SelectItem key={course.id} value={course.id}>
                         {course.nom} ({course.date_debut})
@@ -366,7 +375,7 @@ export const StartlistImportManager = () => {
 
             <Button 
               onClick={handleParse} 
-              disabled={isLoading || !textContent.trim() || !selectedPhaseId}
+              disabled={isLoading || !textContent.trim() || !selectedPhaseId || !selectedRaceId || selectedRaceId === 'all'}
               className="w-full"
             >
               {isLoading ? (
@@ -414,13 +423,12 @@ export const StartlistImportManager = () => {
 
             {selectedPhaseId && (
               <div className="space-y-2">
-                <Label htmlFor="race-file">Course (optionnel)</Label>
+                <Label htmlFor="race-file">Course *</Label>
                 <Select value={selectedRaceId} onValueChange={setSelectedRaceId}>
                   <SelectTrigger id="race-file">
-                    <SelectValue placeholder="Toutes les courses" />
+                    <SelectValue placeholder="Sélectionner une course" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Toutes les courses</SelectItem>
                     {courses?.map((course) => (
                       <SelectItem key={course.id} value={course.id}>
                         {course.nom} ({course.date_debut})
@@ -444,7 +452,7 @@ export const StartlistImportManager = () => {
                 type="file"
                 accept=".pdf,.txt"
                 onChange={handleFileUpload}
-                disabled={isLoading || !selectedPhaseId}
+                disabled={isLoading || !selectedPhaseId || !selectedRaceId || selectedRaceId === 'all'}
                 className="hidden"
               />
               <p className="text-xs text-muted-foreground mt-2">

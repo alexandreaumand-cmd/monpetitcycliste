@@ -92,6 +92,8 @@ serve(async (req) => {
 
     const { race_id, phase_id, text, with_diagnostics, startlisteur_note, league_id } = await req.json();
 
+    console.info('📋 Input validation:', { race_id, phase_id, text_length: text?.length, league_id });
+
     if (!text) {
       return new Response(
         JSON.stringify({ error: 'Le texte est requis' }),
@@ -122,6 +124,17 @@ serve(async (req) => {
         JSON.stringify({ error: 'phase_id ou race_id requis' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // VALIDATION: race_id est requis pour enregistrer la startlist
+    if (!raceId) {
+      console.error('❌ race_id is required to save startlist');
+      return new Response(JSON.stringify({ 
+        error: 'race_id est requis pour enregistrer la startlist. Veuillez sélectionner une course.' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Parse lines
@@ -418,28 +431,26 @@ serve(async (req) => {
     })).sort((a, b) => b.starters_count - a.starters_count);
 
     // ===== SAVE TO DATABASE =====
-    // Get current manager ID
+    // Get current manager ID (optional for superadmins)
     const { data: userData } = await supabase.auth.getUser();
     const { data: managerData } = await supabase
       .from('managers')
       .select('id')
       .eq('user_id', userData?.user?.id)
-      .single();
+      .maybeSingle();
 
     if (!managerData) {
-      console.error('Manager not found for user');
-      return new Response(
-        JSON.stringify({ error: 'Manager introuvable' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.warn('⚠️ No manager found for user:', userData?.user?.id, '(allowed for superadmins)');
     }
+
+    const createdByManagerId = managerData?.id ?? null;
 
     // Create startlist_imports record
     const { data: importRecord, error: importError } = await supabase
       .from('startlist_imports')
       .insert({
         race_id: raceId,
-        created_by_manager_id: managerData.id,
+        created_by_manager_id: createdByManagerId,
         raw_text: text,
         startlisteur_note: startlisteur_note,
       })
