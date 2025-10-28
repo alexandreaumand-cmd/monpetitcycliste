@@ -106,13 +106,13 @@ function parseStartlistText(raw_text: string): ParsedEntry[] {
   const lines = raw_text.split(/\r?\n/);
   const entries: ParsedEntry[] = [];
   
-  // Regex patterns (with optional period after place number, 2-4 chars team code)
-  // fullPattern: TEAM NAME (greedy name capture)
-  const fullPattern = /^\s*(?<place>\d+)?\.?\s*(?<team>[A-Z0-9]{2,4})\s+(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+)$/i;
-  // endTeamPattern: NAME TEAM (team code at end)
-  const endTeamPattern = /^\s*(?<place>\d+)?\.?\s*(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+)\s+(?<team>[A-Z0-9]{2,4})$/i;
-  // loosePattern: just NAME (no team)
-  const loosePattern = /^\s*(?<place>\d+)?\.?\s*(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+)$/i;
+  // Regex patterns (with optional period after place number, 2-4 chars team code, optional time suffix)
+  // fullPattern: TEAM NAME [TIME] (greedy name capture with optional time)
+  const fullPattern = /^\s*(?<place>\d+)?\.?\s*(?<team>[A-Z0-9]{2,4})\s+(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+?)(?:\s+[\d:]+)?$/i;
+  // endTeamPattern: NAME TEAM [TIME] (team code at end with optional time)
+  const endTeamPattern = /^\s*(?<place>\d+)?\.?\s*(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+?)\s+(?<team>[A-Z0-9]{2,4})(?:\s+[\d:]+)?$/i;
+  // loosePattern: just NAME [TIME] (no team, optional time)
+  const loosePattern = /^\s*(?<place>\d+)?\.?\s*(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+?)(?:\s+[\d:]+)?$/i;
   
   lines.forEach((line, idx) => {
     const trimmed = line.trim();
@@ -133,7 +133,7 @@ function parseStartlistText(raw_text: string): ParsedEntry[] {
       const norm = normalize(canonical);
       const sig = tokenSig(canonical);
       
-      entries.push({
+      const entry = {
         line_no: idx + 1,
         bib_no: match.groups.place || undefined,
         source_team: match.groups.team || undefined,
@@ -141,10 +141,18 @@ function parseStartlistText(raw_text: string): ParsedEntry[] {
         canonical_guess: canonical,
         normalized: norm,
         key_sig: sig
-      });
+      };
+      
+      entries.push(entry);
+      
+      // Debug log for first 3 entries
+      if (entries.length <= 3) {
+        console.log(`[PARSE] Entry ${entries.length}: line_no=${entry.line_no}, team=${entry.source_team}, source="${entry.source_name}", canonical="${entry.canonical_guess}"`);
+      }
     }
   });
   
+  console.log(`[PARSE] Total parsed: ${entries.length} entries`);
   return entries;
 }
 
@@ -468,12 +476,9 @@ serve(async (req) => {
     const entriesToInsert = parsedEntries.map((entry, idx) => {
       const matchResult = matchEntry(entry, rosterRiders, allRiders, aliases);
       
-      // Log premiers exemples pour debug
-      if (idx < 3) {
-        console.log(`[startlist-import] Entry ${entry.line_no}: "${entry.source_name}" → canonical: "${entry.canonical_guess}" → ${matchResult.status} (${matchResult.match_type || 'none'})`);
-      }
-      if (idx === 0 && matchResult.status === 'confirmed') {
-        console.log(`[startlist-import] Example match: ${matchResult.match_type}, confidence ${matchResult.confidence}, on_roster=${matchResult.on_roster}`);
+      // Debug log for first match
+      if (idx === 0) {
+        console.log(`[MATCH] First match: coureur_id=${matchResult.coureur_id}, strategy="${matchResult.match_type || 'none'}", confidence=${matchResult.confidence}, on_roster=${matchResult.on_roster || false}`);
       }
       
       if (matchResult.status === 'confirmed') {
@@ -502,7 +507,7 @@ serve(async (req) => {
       if (entriesError) throw entriesError;
     }
 
-    console.log(`[startlist-import] Saved ${entriesToInsert.length} entries (${confirmedCount} confirmed, ${unmatchedCount} unmatched)`);
+    console.log(`[SUMMARY] Parsed ${parsedEntries.length} entries → ${confirmedCount} confirmed, ${unmatchedCount} unmatched`);
 
     return new Response(
       JSON.stringify({
