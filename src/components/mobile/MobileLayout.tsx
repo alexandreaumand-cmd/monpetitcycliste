@@ -6,7 +6,7 @@ import { MobileDrawer } from "./MobileDrawer";
 import { Button } from "@/components/ui/button";
 
 import { Menu } from "lucide-react";
-import mpcLogo from "@/assets/mpc-logo.png";
+import mpcLogo from "@/assets/mpc-logo-horizontal.png";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { useLeague } from "@/contexts/LeagueContext";
@@ -55,7 +55,7 @@ export const MobileLayout = ({
               <img 
                 src={mpcLogo} 
                 alt="Logo Mon Petit Cycliste" 
-                className="h-10 w-auto"
+                className="h-8 w-auto max-w-[200px]"
               />
             </Link>
 
