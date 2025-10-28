@@ -172,10 +172,10 @@ Deno.serve(async (req) => {
     // Pour chaque manager, calculer son statut
     const managerStatuses: ManagerStatus[] = await Promise.all(
       managers.map(async (manager) => {
-        // Récupérer tous les rosters avec leur auction_id
+        // Récupérer tous les rosters (sans auction_id car colonne inexistante)
         const { count: rosterCount, data: rosterWithDates, error: rosterError } = await supabaseAdmin
           .from('rosters')
-          .select('prix_signature, auction_id', { count: 'exact' })
+          .select('prix_signature', { count: 'exact' })
           .eq('manager_id', manager.id)
           .eq('phase_id', phase_id)
           .or(`league_id.eq.${auction.league_id},league_id.is.null`);
@@ -184,50 +184,25 @@ Deno.serve(async (req) => {
           console.error(`Error counting roster for manager ${manager.nom}:`, rosterError);
         }
 
-        // Séparer les coureurs du tour actuel vs tours précédents
-        let current_round_riders = 0;
-        let current_round_budget = 0;
-        let previous_rounds_riders = 0;
-        let previous_rounds_budget = 0;
-
-        const ridersPerRoundMap: { [round: number]: number } = {};
-        const auctionIds = [...new Set(rosterWithDates?.map(r => r.auction_id).filter(Boolean) || [])];
-
-        if (auctionIds.length > 0) {
-          const { data: auctionsData } = await supabaseAdmin
-            .from('auctions')
-            .select('id, round_number')
-            .in('id', auctionIds);
-          
-          const auctionRoundMap = new Map(
-            auctionsData?.map(a => [a.id, a.round_number]) || []
-          );
-          
-          rosterWithDates?.forEach(roster => {
-            const price = Number(roster.prix_signature || 0);
-            
-            if (roster.auction_id === auction_id) {
-              current_round_riders += 1;
-              current_round_budget += price;
-            } else {
-              previous_rounds_riders += 1;
-              previous_rounds_budget += price;
-            }
-
-            if (roster.auction_id) {
-              const round = auctionRoundMap.get(roster.auction_id);
-              if (round !== undefined) {
-                ridersPerRoundMap[round] = (ridersPerRoundMap[round] || 0) + 1;
-              }
-            }
-          });
-        }
-
-        const maxRound = Math.max(...Object.keys(ridersPerRoundMap).map(Number), 0);
-        const riders_per_round = Array.from({ length: maxRound + 1 }, (_, i) => ridersPerRoundMap[i] || 0);
+        console.log("No auction_id in rosters, using totals only");
 
         const totalRiderCount = rosterCount || 0;
-        const slots_missing = maxRidersPerManager - totalRiderCount;
+        const totalBudgetSpent = (rosterWithDates || []).reduce(
+          (sum, roster) => sum + Number(roster.prix_signature || 0),
+          0
+        );
+
+        // Sans auction_id, on ne peut pas séparer tour actuel vs précédents
+        // On met tout dans "previous rounds" pour afficher les totaux
+        const current_round_riders = 0;
+        const current_round_budget = 0;
+        const previous_rounds_riders = totalRiderCount;
+        const previous_rounds_budget = totalBudgetSpent;
+
+        // Sans auction_id, on ne peut pas grouper par round
+        const riders_per_round: number[] = totalRiderCount > 0 ? [totalRiderCount] : [];
+
+        const slots_missing = Math.max(0, maxRidersPerManager - totalRiderCount);
 
         // Calculer la dernière activité depuis les bids uniquement
         const { data: lastBid } = await supabaseAdmin
@@ -245,9 +220,9 @@ Deno.serve(async (req) => {
           manager_id: manager.id,
           manager_nom: manager.nom,
           current_round_riders,
-          current_round_budget: Math.round(current_round_budget),
+          current_round_budget,
           previous_rounds_riders,
-          previous_rounds_budget: Math.round(previous_rounds_budget),
+          previous_rounds_budget,
           slots_missing,
           max_slots: maxRidersPerManager,
           budget_total: budgetPerManager,
