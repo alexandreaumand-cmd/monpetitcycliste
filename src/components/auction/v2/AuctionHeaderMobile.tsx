@@ -5,7 +5,7 @@ import { CheckCircle2, AlertCircle, Clock, Users, ChevronDown, ChevronUp } from 
 import { useEffect, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link } from "react-router-dom";
-import mpcLogo from "@/assets/mpc-logo.png";
+import mpcLogo from "@/assets/mpc-logo-horizontal.png";
 
 interface AuctionHeaderMobileProps {
   starting_budget: number;
