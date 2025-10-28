@@ -107,14 +107,22 @@ function parseStartlistText(raw_text: string): ParsedEntry[] {
   const entries: ParsedEntry[] = [];
   
   // Regex patterns (with optional period after place number, 2-4 chars team code)
-  const fullPattern = /^\s*(?<place>\d+)?\.?\s*(?<team>[A-Z0-9]{2,4})\s+(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+?)(?:\s+(?<rest>.*))?$/i;
-  const loosePattern = /^\s*(?<place>\d+)?\.?\s*(?<team>[A-Z0-9]{2,4})?\s+(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+)$/i;
+  // fullPattern: TEAM NAME (greedy name capture)
+  const fullPattern = /^\s*(?<place>\d+)?\.?\s*(?<team>[A-Z0-9]{2,4})\s+(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+)$/i;
+  // endTeamPattern: NAME TEAM (team code at end)
+  const endTeamPattern = /^\s*(?<place>\d+)?\.?\s*(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+)\s+(?<team>[A-Z0-9]{2,4})$/i;
+  // loosePattern: just NAME (no team)
+  const loosePattern = /^\s*(?<place>\d+)?\.?\s*(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+)$/i;
   
   lines.forEach((line, idx) => {
     const trimmed = line.trim();
     if (!trimmed || trimmed.length < 3) return;
     
+    // Try patterns in order: fullPattern → endTeamPattern → loosePattern
     let match = trimmed.match(fullPattern);
+    if (!match) {
+      match = trimmed.match(endTeamPattern);
+    }
     if (!match) {
       match = trimmed.match(loosePattern);
     }
@@ -122,7 +130,8 @@ function parseStartlistText(raw_text: string): ParsedEntry[] {
     if (match && match.groups?.name) {
       const sourceName = match.groups.name.trim();
       const canonical = canonizeName(sourceName);
-      const norm = normalize(sourceName);
+      const norm = normalize(canonical);
+      const sig = tokenSig(canonical);
       
       entries.push({
         line_no: idx + 1,
@@ -131,7 +140,7 @@ function parseStartlistText(raw_text: string): ParsedEntry[] {
         source_name: sourceName,
         canonical_guess: canonical,
         normalized: norm,
-        key_sig: tokenSig(sourceName)
+        key_sig: sig
       });
     }
   });
