@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, FileText } from "lucide-react";
+import { Loader2, FileText, CheckCircle2, ImageIcon } from "lucide-react";
+import { RouteImageUploader } from "@/components/startlist/RouteImageUploader";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +31,22 @@ export const StartlistImportManager = () => {
   const [textContent, setTextContent] = useState<string>("");
   const [startlisteurNote, setStartlisteurNote] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [importedStartlistId, setImportedStartlistId] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [pcsValidated, setPcsValidated] = useState(false);
+
+  // Load current user on mount
+  const loadCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: manager } = await supabase
+        .from('managers')
+        .select('id, nom')
+        .eq('user_id', user.id)
+        .single();
+      setCurrentUser(manager);
+    }
+  };
 
   // Fetch courses for selected phase (only in import mode)
   const { data: courses } = useQuery({
@@ -47,6 +64,11 @@ export const StartlistImportManager = () => {
       return data || [];
     },
     enabled: !!selectedPhaseId && viewMode === 'import'
+  });
+
+  // Load current user on component mount
+  useState(() => {
+    loadCurrentUser();
   });
 
   const handleParse = async () => {
@@ -79,20 +101,26 @@ export const StartlistImportManager = () => {
 
       if (error) throw error;
 
+      // Capture the startlist_id from the response
+      if (data.startlist_id) {
+        setImportedStartlistId(data.startlist_id);
+        setPcsValidated(false);
+      }
+
       queryClient.invalidateQueries({ queryKey: ['startlist-imports'] });
       
       toast.success(
         `Startlist enregistrée : ${data.counts.matched_db} coureurs matchés sur ${data.counts.parsed}`
       );
 
-      // Retour à la liste après import réussi
-      setViewMode('list');
-      setSelectedRace(null);
-      setSelectedPhaseId("");
-      setSelectedRaceId("all");
-      setTextContent("");
-      setStartlisteurNote("");
-      setIsReimport(false);
+      // Ne pas retourner à la liste, rester en mode import pour afficher les boutons
+      // setViewMode('list');
+      // setSelectedRace(null);
+      // setSelectedPhaseId("");
+      // setSelectedRaceId("all");
+      // setTextContent("");
+      // setStartlisteurNote("");
+      // setIsReimport(false);
       
     } catch (error: any) {
       console.error('Parse error:', error);
@@ -128,6 +156,30 @@ export const StartlistImportManager = () => {
     }
   };
 
+  const handlePcsValidation = async () => {
+    if (!importedStartlistId || !currentUser) return;
+    
+    try {
+      const newStatus = !pcsValidated;
+      
+      const { error } = await supabase
+        .from('startlist_imports')
+        .update({ 
+          pcs_validated: newStatus,
+          pcs_validated_at: newStatus ? new Date().toISOString() : null,
+          pcs_validated_by_manager_id: newStatus ? currentUser.id : null
+        })
+        .eq('id', importedStartlistId);
+
+      if (error) throw error;
+
+      setPcsValidated(newStatus);
+      toast.success(newStatus ? "Startlist validée PCS ✓" : "Validation PCS retirée");
+      queryClient.invalidateQueries({ queryKey: ['startlist-imports'] });
+    } catch (error: any) {
+      toast.error("Erreur : " + error.message);
+    }
+  };
 
   // Mode "list" : afficher la grille de vignettes (vue par défaut)
   if (viewMode === 'list') {
@@ -168,7 +220,7 @@ export const StartlistImportManager = () => {
         <div className="flex items-center gap-4">
           <Button 
             variant="ghost" 
-            onClick={() => {
+          onClick={() => {
               setViewMode('list');
               setSelectedRace(null);
               setSelectedPhaseId("");
@@ -176,6 +228,8 @@ export const StartlistImportManager = () => {
               setTextContent("");
               setStartlisteurNote("");
               setIsReimport(false);
+              setImportedStartlistId(null);
+              setPcsValidated(false);
             }}
           >
             ← Retour à la liste
@@ -368,6 +422,29 @@ export const StartlistImportManager = () => {
                 </>
               )}
             </Button>
+
+            {/* Boutons supplémentaires (activés après import réussi) */}
+            {importedStartlistId && (
+              <div className="flex gap-2 mt-4">
+                <RouteImageUploader
+                  startlistId={importedStartlistId}
+                  currentImageUrl={null}
+                  onUploadComplete={() => {
+                    queryClient.invalidateQueries({ queryKey: ['startlist-imports'] });
+                    toast.success("Image du parcours uploadée !");
+                  }}
+                />
+                <Button 
+                  onClick={handlePcsValidation} 
+                  variant="default" 
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  {pcsValidated ? "Retirer validation PCS" : "Valider PCS"}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
         </div>
