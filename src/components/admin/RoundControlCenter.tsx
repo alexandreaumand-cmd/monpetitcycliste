@@ -310,6 +310,13 @@ export const RoundControlCenter = () => {
               ties={stats.ties || 0}
               totalManagers={stats.total_managers || (managerStatuses?.length || 0)}
               validatedManagers={stats.validated_count || 0}
+              validatedManagerNames={stats.validated_managers || []}
+              waitingManagerNames={stats.waiting_managers || []}
+              completedManagerNames={
+                managerStatuses
+                  ?.filter(m => m.slots_missing === 0)
+                  .map(m => m.manager_nom) || []
+              }
             />
           )}
 

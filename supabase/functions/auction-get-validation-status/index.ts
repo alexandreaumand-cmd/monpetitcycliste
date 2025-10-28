@@ -93,12 +93,12 @@ Deno.serve(async (req) => {
 
       // Step 4: For each manager, count their rosters
       for (const m of managersRows || []) {
-        const { count } = await supabase
-          .from('rosters')
-          .select('*', { count: 'exact', head: true })
-          .eq('manager_id', m.id)
-          .eq('phase_id', phase_id)
-          .or(`league_id.eq.${leagueId},league_id.is.null`);
+      const { count } = await supabase
+        .from('rosters')
+        .select('*', { count: 'exact', head: true })
+        .eq('manager_id', m.id)
+        .eq('phase_id', phase_id)
+        .eq('league_id', leagueId);
 
         const rosterCount = count || 0;
         const slotsRestants = maxCoureurs - rosterCount;

@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
           .select('prix_signature', { count: 'exact' })
           .eq('manager_id', manager.id)
           .eq('phase_id', phase_id)
-          .or(`league_id.eq.${auction.league_id},league_id.is.null`);
+          .eq('league_id', auction.league_id);
 
         if (rosterError) {
           console.error(`Error counting roster for manager ${manager.nom}:`, rosterError);
@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
           .from('bids')
           .select('updated_at')
           .eq('manager_id', manager.id)
-          .or(`league_id.eq.${auction.league_id},league_id.is.null`)
+          .eq('league_id', auction.league_id)
           .order('updated_at', { ascending: false })
           .limit(1)
           .maybeSingle();
