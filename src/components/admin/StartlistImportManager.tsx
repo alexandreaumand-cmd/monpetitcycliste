@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Upload, FileText } from "lucide-react";
+import { Loader2, FileText } from "lucide-react";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -128,54 +128,6 @@ export const StartlistImportManager = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!selectedPhaseId) {
-      toast.error("Veuillez d'abord sélectionner une phase");
-      return;
-    }
-
-    if (!selectedRaceId || selectedRaceId === 'all') {
-      toast.error("Veuillez sélectionner une course");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('phase_id', selectedPhaseId);
-      formData.append('race_id', selectedRaceId);
-
-      const { data, error } = await supabase.functions.invoke('startlist-upload-and-parse', {
-        body: formData
-      });
-
-      if (error) throw error;
-
-      queryClient.invalidateQueries({ queryKey: ['startlist-imports'] });
-      
-      toast.success(
-        `Fichier importé : ${data.counts.matched_db} coureurs matchés sur ${data.counts.parsed}`
-      );
-
-      // Retour à la liste après import réussi
-      setViewMode('list');
-      setSelectedRace(null);
-      setSelectedPhaseId("");
-      setSelectedRaceId("all");
-      setIsReimport(false);
-      
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      toast.error("Erreur lors de l'upload: " + error.message);
-    } finally {
-      setIsLoading(false);
-      e.target.value = '';
-    }
-  };
 
   // Mode "list" : afficher la grille de vignettes (vue par défaut)
   if (viewMode === 'list') {
@@ -416,85 +368,6 @@ export const StartlistImportManager = () => {
                 </>
               )}
             </Button>
-          </CardContent>
-        </Card>
-
-        {/* File Upload */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5" />
-              Import par fichier
-            </CardTitle>
-            <CardDescription>
-              Uploadez un fichier PDF ou TXT de startlist
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="phase-file">Phase *</Label>
-              <Select value={selectedPhaseId} onValueChange={setSelectedPhaseId}>
-                <SelectTrigger id="phase-file">
-                  <SelectValue placeholder="Sélectionner une phase" />
-                </SelectTrigger>
-                <SelectContent>
-                  {phases?.map((phase) => (
-                    <SelectItem key={phase.id} value={phase.id}>
-                      Phase {phase.index_dans_saison} ({phase.date_debut} - {phase.date_fin})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedPhaseId && (
-              <div className="space-y-2">
-                <Label htmlFor="race-file">Course *</Label>
-                <Select value={selectedRaceId} onValueChange={setSelectedRaceId}>
-                  <SelectTrigger id="race-file">
-                    <SelectValue placeholder="Sélectionner une course" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {courses?.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.nom} ({course.date_debut})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="border-2 border-dashed rounded-lg p-8 text-center">
-              <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <Label 
-                htmlFor="file-upload" 
-                className="cursor-pointer text-sm font-medium text-primary hover:underline"
-              >
-                Cliquez pour sélectionner un fichier
-              </Label>
-              <Input
-                id="file-upload"
-                type="file"
-                accept=".pdf,.txt"
-                onChange={handleFileUpload}
-                disabled={isLoading || !selectedPhaseId || !selectedRaceId || selectedRaceId === 'all'}
-                className="hidden"
-              />
-              <p className="text-xs text-muted-foreground mt-2">
-                PDF ou TXT uniquement
-              </p>
-            </div>
-
-            <div className="bg-muted p-4 rounded-lg space-y-2">
-              <p className="text-sm font-medium">Fonctionnalités :</p>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li>• Matching automatique avec la base de données</li>
-                <li>• Gestion des coureurs non trouvés</li>
-                <li>• Export CSV des résultats</li>
-                <li>• Validation PCS par les managers</li>
-              </ul>
-            </div>
           </CardContent>
         </Card>
         </div>
