@@ -29,7 +29,7 @@ export async function notifyLeagueMembers(
     }
     
     // Create a notification for each member
-    const notifications = members.map(member => ({
+    const notifications = members.map((member: any) => ({
       manager_id: member.managers.id,
       type: notification.type,
       title: notification.title,
