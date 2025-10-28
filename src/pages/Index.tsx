@@ -36,7 +36,7 @@ const Index = () => {
             <span className="font-montserrat font-bold text-xl">Mon Petit Cycliste</span>
           </div>
           <Button onClick={() => (user ? navigate("/dashboard/home") : navigate("/auth"))}>
-            {user ? "Mon Dashboard" : "Connexion"}
+            {user ? "Mes Ligues" : "Connexion"}
           </Button>
         </div>
       </header>
@@ -65,7 +65,7 @@ const Index = () => {
                 className="tdf-yellow-bg text-black hover:bg-yellow-400 font-montserrat font-bold text-lg px-8 py-6 shadow-2xl transition-all hover:scale-105"
                 onClick={() => (user ? navigate("/dashboard/home") : navigate("/auth"))}
               >
-                🟡 {user ? "Mon Dashboard" : "Créer ma ligue"}
+                🟡 {user ? "Mes Ligues" : "Créer ma ligue"}
               </Button>
               <Button
                 size="lg"
