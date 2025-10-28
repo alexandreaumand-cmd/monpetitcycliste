@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
         phase_id,
         manager_id,
         starting_budget: budget,
-        currency: '€',
+        currency: '',
         rules: { min_bid: 1, step: 1, max_bids: max_coureurs },
         my_bids: [],
         submitted_bids: [],
@@ -305,7 +305,7 @@ Deno.serve(async (req) => {
           deadline_at: auction.deadline_at
         },
         starting_budget: budget,
-        currency: '€',
+        currency: '',
         rules: { min_bid: 1, step: 1, max_bids: max_coureurs },
         roster: enriched_roster,
         my_bids: enriched_my_bids,

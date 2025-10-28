@@ -240,7 +240,7 @@ export const AuctionTabs = ({
                         }}
                         onSubmit={(amount) => handleSubmitBid(amount, rider.rider_id)}
                         remainingBudget={context?.totals.remaining_budget || 0}
-                        currency={context?.currency || "€"}
+                        currency={context?.currency || ""}
                         step={context?.rules.step || 1}
                       />
                     )}
@@ -296,7 +296,7 @@ export const AuctionTabs = ({
                     bids={myBids}
                     onUpdateAmount={handleUpdateAmount}
                     onRemove={handleRemoveBid}
-                    currency={context?.currency || "€"}
+                    currency={context?.currency || ""}
                     step={context?.rules.step || 1}
                     isUpdating={isUpdating}
                   />

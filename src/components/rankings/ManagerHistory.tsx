@@ -393,7 +393,7 @@ export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
                             {bid.statut === 'lost' && bid.winner_name && (
                               <div className="text-sm">
                                 <div>{bid.winner_name}</div>
-                                <div className="text-muted-foreground text-xs">{bid.winning_amount}€</div>
+                                <div className="text-muted-foreground text-xs">{bid.winning_amount}</div>
                               </div>
                             )}
                           </TableCell>
@@ -439,7 +439,7 @@ export function ManagerHistory({ phaseId, saisonId }: ManagerHistoryProps) {
                               <div>
                                 <div className="font-medium">{bid.coureurs.nom}</div>
                                 <div className="text-xs text-muted-foreground">
-                                  {bid.total_points} pts / {bid.montant}€
+                                  {bid.total_points} pts / {bid.montant}
                                 </div>
                               </div>
                             </div>

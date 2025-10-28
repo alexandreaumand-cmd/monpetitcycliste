@@ -65,13 +65,13 @@ Deno.serve(async (req) => {
           .map((l) => `${l.manager} (${l.montant.toFixed(1)})`)
           .join(' · ');
 
-        text = `🥁 [Round ${annonce.round_number}] ${annonce.coureurs.nom} — GAGNÉ par ${annonce.managers.nom} à ${annonce.winning_amount.toFixed(1)} €.\n${losersList ? `Managers battus : ${losersList}.` : ''}`;
+        text = `🥁 [Round ${annonce.round_number}] ${annonce.coureurs.nom} — GAGNÉ par ${annonce.managers.nom} à ${annonce.winning_amount.toFixed(1)}.\n${losersList ? `Managers battus : ${losersList}.` : ''}`;
       } else {
         const exAequoList = (annonce.losers_json as any[])
           .map((l) => l.manager)
           .join(', ');
 
-        text = `🟨 [Round ${annonce.round_number}] ${annonce.coureurs.nom} — ÉGALITÉ au montant max ${annonce.winning_amount.toFixed(1)} € entre : ${exAequoList}.\nLe coureur repart au PROCHAIN ROUND.`;
+        text = `🟨 [Round ${annonce.round_number}] ${annonce.coureurs.nom} — ÉGALITÉ au montant max ${annonce.winning_amount.toFixed(1)} entre : ${exAequoList}.\nLe coureur repart au PROCHAIN ROUND.`;
       }
 
       return new Response(

@@ -206,7 +206,7 @@ export function AuctionLiveAnnouncements({
                                       <p className="text-sm">
                                         {annonce.is_my_win ? (
                                           <span className="font-semibold text-primary">
-                                            🎉 Gagné par toi pour {annonce.winning_amount}€
+                                            🎉 Gagné par toi pour {annonce.winning_amount}
                                             {(!annonce.losers || annonce.losers.length === 0) && (
                                               <Badge variant="outline" className="ml-2 text-xs">
                                                 Seul enchérisseur
@@ -215,16 +215,16 @@ export function AuctionLiveAnnouncements({
                                           </span>
                                         ) : (
                                           <span>
-                                            Gagné par <strong>{annonce.winning_manager?.nom}</strong> pour {annonce.winning_amount}€
+                                            Gagné par <strong>{annonce.winning_manager?.nom}</strong> pour {annonce.winning_amount}
                                           </span>
                                         )}
                                       </p>
                                       {annonce.losers && annonce.losers.length > 0 && (
                                         <p className="text-xs text-muted-foreground mt-1">
                                           {annonce.is_my_win ? (
-                                            <>✅ Tu bats : {annonce.losers.map((l: any) => `${l.manager} (${l.montant}€)`).join(', ')}</>
+                                            <>✅ Tu bats : {annonce.losers.map((l: any) => `${l.manager} (${l.montant})`).join(', ')}</>
                                           ) : (
-                                            <>Autres enchères : {annonce.losers.map((l: any) => `${l.manager} (${l.montant}€)`).join(', ')}</>
+                                            <>Autres enchères : {annonce.losers.map((l: any) => `${l.manager} (${l.montant})`).join(', ')}</>
                                           )}
                                         </p>
                                       )}
@@ -232,7 +232,7 @@ export function AuctionLiveAnnouncements({
                                   ) : (
                                     <div>
                                       <p className="text-sm">
-                                        🟨 Égalité à {annonce.winning_amount}€
+                                        🟨 Égalité à {annonce.winning_amount}
                                       </p>
                                       <p className="text-xs text-muted-foreground mt-1">
                                         {annonce.losers?.map((l: any) => l.manager).join(', ')} - On retente au prochain round !
@@ -302,7 +302,7 @@ export function AuctionLiveAnnouncements({
                           <p className="font-semibold">{rider.nom}</p>
                           <p className="text-sm text-muted-foreground">{rider.equipe}</p>
                         </div>
-                        <Badge variant="secondary">{rider.prix_signature}€</Badge>
+                        <Badge variant="secondary">{rider.prix_signature}</Badge>
                       </div>
                     ))}
                   </div>

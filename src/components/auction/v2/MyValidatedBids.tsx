@@ -51,7 +51,7 @@ export function MyValidatedBids({ phaseId, managerId, leagueId, onBack }: MyVali
   }
 
   const totalAmount = bids?.reduce((sum, bid) => sum + (bid.amount || 0), 0) || 0;
-  const currency = context?.currency || "€";
+  const currency = context?.currency || "";
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
