@@ -2,13 +2,15 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import { corsHeaders } from '../_shared/cors.ts';
 
 interface ManagerStatus {
-  nom: string;
-  status: 'validated' | 'pending' | 'incomplete';
-  slots_filled: number;
+  manager_id: string;
+  manager_nom: string;
+  current_round_riders: number;
+  current_round_budget: number;
+  previous_rounds_riders: number;
+  previous_rounds_budget: number;
+  slots_missing: number;
   max_slots: number;
-  budget_used: number;
-  total_budget: number;
-  budget_remaining: number;
+  budget_total: number;
   last_activity: string | null;
   riders_per_round: number[];
 }
@@ -170,7 +172,7 @@ Deno.serve(async (req) => {
     // Pour chaque manager, calculer son statut
     const managerStatuses: ManagerStatus[] = await Promise.all(
       managers.map(async (manager) => {
-        // Compter les coureurs dans le roster (filtré par league_id avec compatibilité historique)
+        // Récupérer tous les rosters avec leur auction_id
         const { count: rosterCount, data: rosterWithDates, error: rosterError } = await supabaseAdmin
           .from('rosters')
           .select('prix_signature, created_at, auction_id')
@@ -182,111 +184,92 @@ Deno.serve(async (req) => {
           console.error(`Error counting roster for manager ${manager.nom}:`, rosterError);
         }
 
-        const budgetSpent = rosterWithDates?.reduce((sum, r) => sum + Number(r.prix_signature || 0), 0) || 0;
+        // Séparer les coureurs du tour actuel vs tours précédents
+        let current_round_riders = 0;
+        let current_round_budget = 0;
+        let previous_rounds_riders = 0;
+        let previous_rounds_budget = 0;
 
-        // CRITICAL: Compter les enchères filtré par auction_id ET league_id (avec compatibilité historique)
-        const { data: bids, error: bidsError } = await supabaseAdmin
-          .from('bids')
-          .select('statut, montant, created_at')
-          .eq('manager_id', manager.id)
-          .eq('auction_id', auction_id)
-          .or(`league_id.eq.${auction.league_id},league_id.is.null`);
+        const ridersPerRoundMap: { [round: number]: number } = {};
+        const auctionIds = [...new Set(rosterWithDates?.map(r => r.auction_id).filter(Boolean) || [])];
 
-        if (bidsError) {
-          console.error(`Error fetching bids for manager ${manager.nom}:`, bidsError);
+        if (auctionIds.length > 0) {
+          const { data: auctionsData } = await supabaseAdmin
+            .from('auctions')
+            .select('id, round_number')
+            .in('id', auctionIds);
+          
+          const auctionRoundMap = new Map(
+            auctionsData?.map(a => [a.id, a.round_number]) || []
+          );
+          
+          rosterWithDates?.forEach(roster => {
+            const price = Number(roster.prix_signature || 0);
+            
+            if (roster.auction_id === auction_id) {
+              current_round_riders += 1;
+              current_round_budget += price;
+            } else {
+              previous_rounds_riders += 1;
+              previous_rounds_budget += price;
+            }
+
+            if (roster.auction_id) {
+              const round = auctionRoundMap.get(roster.auction_id);
+              if (round !== undefined) {
+                ridersPerRoundMap[round] = (ridersPerRoundMap[round] || 0) + 1;
+              }
+            }
+          });
         }
 
-        const draftCount = bids?.filter(b => b.statut === 'draft').length || 0;
-        const pendingCount = bids?.filter(b => b.statut === 'pending').length || 0;
-        const draftSum = bids?.filter(b => b.statut === 'draft').reduce((sum, b) => sum + Number(b.montant || 0), 0) || 0;
-        const pendingSum = bids?.filter(b => b.statut === 'pending').reduce((sum, b) => sum + Number(b.montant || 0), 0) || 0;
+        const maxRound = Math.max(...Object.keys(ridersPerRoundMap).map(Number), 0);
+        const riders_per_round = Array.from({ length: maxRound + 1 }, (_, i) => ridersPerRoundMap[i] || 0);
 
-        const totalRosterCount = rosterCount || 0;
-        const slotsFilled = totalRosterCount + draftCount + pendingCount;
-        const budgetUsed = budgetSpent + draftSum + pendingSum;
+        const totalRiderCount = rosterCount || 0;
+        const slots_missing = maxRidersPerManager - totalRiderCount;
 
         // Calculer la dernière activité
+        const { data: lastBid } = await supabaseAdmin
+          .from('bids')
+          .select('updated_at')
+          .eq('manager_id', manager.id)
+          .or(`league_id.eq.${auction.league_id},league_id.is.null`)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
         const allDates = [
           ...(rosterWithDates?.map(r => r.created_at) || []),
-          ...(bids?.map(b => b.created_at) || [])
+          lastBid?.updated_at
         ].filter(Boolean);
         
         const lastActivity = allDates.length > 0 
           ? allDates.reduce((latest, current) => current > latest ? current : latest)
           : null;
 
-        // Calculer riders_per_round
-        const ridersPerRoundMap: { [round: number]: number } = {};
-        
-        if (rosterWithDates && rosterWithDates.length > 0) {
-          const auctionIds = [...new Set(rosterWithDates.map(r => r.auction_id).filter(Boolean))];
-          
-          if (auctionIds.length > 0) {
-            const { data: auctionsData } = await supabaseAdmin
-              .from('auctions')
-              .select('id, round_number')
-              .in('id', auctionIds);
-            
-            const auctionRoundMap = new Map(
-              auctionsData?.map(a => [a.id, a.round_number]) || []
-            );
-            
-            rosterWithDates.forEach(roster => {
-              if (roster.auction_id) {
-                const round = auctionRoundMap.get(roster.auction_id);
-                if (round !== undefined) {
-                  ridersPerRoundMap[round] = (ridersPerRoundMap[round] || 0) + 1;
-                }
-              }
-            });
-          }
-        }
-        
-        const maxRound = Math.max(...Object.keys(ridersPerRoundMap).map(Number), 0);
-        const riders_per_round = Array.from({ length: maxRound + 1 }, (_, i) => ridersPerRoundMap[i] || 0);
-
-        // Déterminer le statut
-        let status: 'validated' | 'pending' | 'incomplete';
-        
-        // Cas 1: A soumis des enchères pour ce tour
-        if (pendingCount > 0) {
-          status = 'validated';
-        }
-        // Cas 2: Roster complet ET pas d'enchères en draft
-        // → N'a plus besoin de participer aux enchères
-        else if (slotsFilled >= maxRidersPerManager && draftCount === 0) {
-          status = 'validated';
-        }
-        // Cas 3: Roster incomplet
-        else if (slotsFilled < maxRidersPerManager) {
-          status = 'incomplete';
-        }
-        // Cas 4: A des drafts mais n'a pas encore validé
-        else {
-          status = 'pending';
-        }
-
         return {
-          nom: manager.nom,
-          status,
-          slots_filled: slotsFilled,
+          manager_id: manager.id,
+          manager_nom: manager.nom,
+          current_round_riders,
+          current_round_budget: Math.round(current_round_budget),
+          previous_rounds_riders,
+          previous_rounds_budget: Math.round(previous_rounds_budget),
+          slots_missing,
           max_slots: maxRidersPerManager,
-          budget_used: Math.round(budgetUsed),
-          total_budget: budgetPerManager,
-          budget_remaining: budgetPerManager - Math.round(budgetUsed),
+          budget_total: budgetPerManager,
           last_activity: lastActivity,
           riders_per_round,
         };
       })
     );
 
-    // Trier par statut (incomplete > pending > validated)
+    // Trier par slots_missing DESC (plus incomplet en premier), puis par nom
     const sortedStatuses = managerStatuses.sort((a, b) => {
-      const statusOrder = { incomplete: 0, pending: 1, validated: 2 };
-      if (statusOrder[a.status] !== statusOrder[b.status]) {
-        return statusOrder[a.status] - statusOrder[b.status];
+      if (b.slots_missing !== a.slots_missing) {
+        return b.slots_missing - a.slots_missing;
       }
-      return a.nom.localeCompare(b.nom);
+      return a.manager_nom.localeCompare(b.manager_nom);
     });
 
     console.log(`Found ${sortedStatuses.length} managers with statuses`);

@@ -1,19 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ManagerStatusCard } from "./ManagerStatusCard";
-import { Badge } from "@/components/ui/badge";
-import { Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Search } from "lucide-react";
 import { useState } from "react";
+import { ManagersTable } from "./ManagersTable";
 
 interface ManagerStatus {
-  nom: string;
-  status: 'validated' | 'pending' | 'incomplete';
-  slots_filled: number;
+  manager_id: string;
+  manager_nom: string;
+  current_round_riders: number;
+  current_round_budget: number;
+  previous_rounds_riders: number;
+  previous_rounds_budget: number;
+  slots_missing: number;
   max_slots: number;
-  budget_used: number;
-  total_budget: number;
-  budget_remaining: number;
+  budget_total: number;
   last_activity: string | null;
   riders_per_round: number[];
 }
@@ -27,84 +28,62 @@ export const ManagersSupervision = ({ managers, isLoading }: ManagersSupervision
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  // Filter managers based on search and status
+  // Filter managers based on search and completion status
   const filteredManagers = managers.filter(m => {
-    const matchesSearch = m.nom.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || m.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesSearch = m.manager_nom.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (statusFilter === "all") return matchesSearch;
+    if (statusFilter === "incomplete") return matchesSearch && m.slots_missing > 0;
+    if (statusFilter === "complete") return matchesSearch && m.slots_missing === 0;
+    
+    return matchesSearch;
   });
 
-  // Sort managers: incomplete > pending > validated
-  const sortedManagers = [...filteredManagers].sort((a, b) => {
-    const priority = { incomplete: 0, pending: 1, validated: 2 };
-    return priority[a.status] - priority[b.status];
-  });
-
-  const counts = {
-    validated: managers.filter(m => m.status === 'validated').length,
-    pending: managers.filter(m => m.status === 'pending').length,
-    incomplete: managers.filter(m => m.status === 'incomplete').length
-  };
+  const incompleteCount = managers.filter(m => m.slots_missing > 0).length;
+  const completeCount = managers.filter(m => m.slots_missing === 0).length;
 
   return (
     <Card>
-      <CardHeader className="space-y-4">
+      <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Supervision Managers
-          </div>
-          <div className="flex gap-2">
-            {counts.incomplete > 0 && (
-              <Badge variant="destructive">{counts.incomplete} incomplet</Badge>
-            )}
-            {counts.pending > 0 && (
-              <Badge variant="secondary">{counts.pending} en attente</Badge>
-            )}
-            <Badge variant="outline">{counts.validated} validés</Badge>
+          <span>Supervision Managers</span>
+          <div className="text-sm font-normal text-muted-foreground">
+            {completeCount}/{managers.length} complets
           </div>
         </CardTitle>
-        
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Input 
-            placeholder="Rechercher un manager..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-xs"
-          />
-          <ToggleGroup 
-            type="single" 
-            value={statusFilter} 
-            onValueChange={(value) => setStatusFilter(value || "all")}
-            className="justify-start"
-          >
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Search and Filter */}
+        <div className="flex gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher un manager..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <ToggleGroup type="single" value={statusFilter} onValueChange={(value) => value && setStatusFilter(value)}>
             <ToggleGroupItem value="all" aria-label="Tous">
               Tous
             </ToggleGroupItem>
-            <ToggleGroupItem value="pending" aria-label="En attente">
-              En attente
+            <ToggleGroupItem value="incomplete" aria-label="Incomplets">
+              Incomplets ({incompleteCount})
             </ToggleGroupItem>
-            <ToggleGroupItem value="validated" aria-label="Validés">
-              Validés
+            <ToggleGroupItem value="complete" aria-label="Complets">
+              Complets ({completeCount})
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
-      </CardHeader>
-      <CardContent>
+
+        {/* Managers Table */}
         {isLoading ? (
-          <div className="text-center text-muted-foreground py-8">
-            Chargement...
-          </div>
-        ) : managers.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">
-            Aucun manager
+          <div className="text-center py-8 text-muted-foreground">
+            Chargement des managers...
           </div>
         ) : (
-          <div className="grid gap-3 max-h-[600px] overflow-y-auto">
-            {sortedManagers.map((manager, index) => (
-              <ManagerStatusCard key={index} manager={manager} />
-            ))}
-          </div>
+          <ManagersTable managers={filteredManagers} />
         )}
       </CardContent>
     </Card>
