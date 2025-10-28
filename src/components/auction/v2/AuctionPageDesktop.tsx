@@ -334,6 +334,9 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
         starting_budget={context.starting_budget}
         currency={context.currency}
         max_slots={context.rules.max_bids}
+        phaseId={phaseId}
+        managerId={managerId}
+        leagueId={leagueId}
       />
     );
   }

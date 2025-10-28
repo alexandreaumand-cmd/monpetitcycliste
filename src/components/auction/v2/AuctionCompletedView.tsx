@@ -1,6 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Users } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { AuctionTeamsGrid } from "../AuctionTeamsGrid";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Loader2 } from "lucide-react";
 
 interface AuctionCompletedViewProps {
   roster: Array<{
@@ -15,6 +20,9 @@ interface AuctionCompletedViewProps {
   starting_budget: number;
   currency: string;
   max_slots: number;
+  phaseId: string;
+  managerId: string;
+  leagueId: string | null;
 }
 
 export function AuctionCompletedView({ 
@@ -22,8 +30,50 @@ export function AuctionCompletedView({
   budget_spent, 
   starting_budget, 
   currency, 
-  max_slots 
+  max_slots,
+  phaseId,
+  managerId,
+  leagueId
 }: AuctionCompletedViewProps) {
+  // Fetch validation status
+  const { data: validationStatus, isLoading: validationLoading } = useQuery({
+    queryKey: ['auction-validation-status', phaseId, leagueId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke(
+        'auction-get-validation-status',
+        { body: { phase_id: phaseId, league_id: leagueId } }
+      );
+      if (error) throw error;
+      return data as {
+        validated_count: number;
+        waiting_count: number;
+        total_managers: number;
+        validated_managers: Array<{ manager_id: string; manager_nom: string }>;
+        waiting_managers: Array<{ manager_id: string; manager_nom: string }>;
+      };
+    },
+    enabled: !!phaseId && !!leagueId,
+    refetchInterval: 10000, // Refresh every 10s
+  });
+
+  // Fetch current round info
+  const { data: auctionInfo } = useQuery({
+    queryKey: ['auction-info', phaseId, leagueId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('auctions')
+        .select('round_number')
+        .eq('phase_id', phaseId)
+        .eq('league_id', leagueId)
+        .eq('statut', 'open')
+        .order('round_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!phaseId && !!leagueId,
+  });
   // Sort by round_number then by amount descending
   const sortedRoster = [...roster].sort((a, b) => {
     if (a.round_number !== b.round_number) {
@@ -34,8 +84,10 @@ export function AuctionCompletedView({
 
   const remainingBudget = starting_budget - budget_spent;
 
+  const currentRound = auctionInfo?.round_number || 0;
+
   return (
-    <div className="container max-w-4xl mx-auto p-4 md:p-6">
+    <div className="container max-w-full mx-auto p-4 md:p-6 space-y-6">
       {/* Header with badge */}
       <Card className="border-green-500/50 bg-green-500/5 mb-6">
         <CardContent className="p-4 md:p-6">
@@ -68,6 +120,70 @@ export function AuctionCompletedView({
         </CardContent>
       </Card>
 
+      {/* Round status */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Statut du Round {currentRound}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {validationLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : validationStatus ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Managers ayant validé</p>
+                <Badge variant="default" className="text-base px-3 py-1">
+                  {validationStatus.validated_count} / {validationStatus.total_managers}
+                </Badge>
+              </div>
+
+              {/* Validated managers */}
+              {validationStatus.validated_managers.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">✅ Ont validé :</p>
+                  <div className="flex flex-wrap gap-2">
+                    {validationStatus.validated_managers.map((mgr) => (
+                      <Badge 
+                        key={mgr.manager_id} 
+                        variant="default"
+                        className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20"
+                      >
+                        {mgr.manager_nom}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Waiting managers */}
+              {validationStatus.waiting_managers.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">⏳ En attente :</p>
+                  <div className="flex flex-wrap gap-2">
+                    {validationStatus.waiting_managers.map((mgr) => (
+                      <Badge 
+                        key={mgr.manager_id} 
+                        variant="outline"
+                        className="text-muted-foreground"
+                      >
+                        {mgr.manager_nom}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Aucune information disponible</p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Team list */}
       <Card>
         <CardHeader className="pb-3">
@@ -93,6 +209,32 @@ export function AuctionCompletedView({
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Opponent teams */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Équipes adverses
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="teams" className="border-none">
+              <AccordionTrigger className="hover:no-underline py-2">
+                <span className="text-sm text-muted-foreground">
+                  Voir les budgets et effectifs des autres managers
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="pt-4">
+                  <AuctionTeamsGrid phaseId={phaseId} managerId={managerId} />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </CardContent>
       </Card>
     </div>
