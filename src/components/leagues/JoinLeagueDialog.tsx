@@ -44,7 +44,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
 
       // Filter out leagues where user is already a member
       const myLeagueIds = new Set(myLeagues.map(l => l.id));
-      return (data || []).filter((league: League) => !myLeagueIds.has(league.id));
+      return (data || []).filter((league: any) => !myLeagueIds.has(league.id));
     },
     enabled: open,
   });
@@ -151,7 +151,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
               <p className="text-sm mt-1">Créez votre propre ligue ou attendez qu'une ligue publique soit créée</p>
             </div>
           ) : (
-            publicLeagues.map((league: League) => (
+            publicLeagues.map((league: any) => (
               <div
                 key={league.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
