@@ -5,8 +5,9 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import mpcLogo from "@/assets/mpc-logo.png";
 
 interface NavItem {
   label: string;
@@ -62,9 +63,13 @@ export const MobileHeader = ({ title, navItems }: MobileHeaderProps) => {
           </SheetContent>
         </Sheet>
 
-        <h1 className="text-lg font-montserrat font-bold truncate flex-1 text-center text-white">
-          {title}
-        </h1>
+        <Link to="/dashboard/home" className="flex items-center justify-center flex-1">
+          <img 
+            src={mpcLogo} 
+            alt="Logo Mon Petit Cycliste" 
+            className="h-10 w-auto"
+          />
+        </Link>
 
         <div className="w-10" /> {/* Spacer for centering */}
       </div>
