@@ -94,8 +94,8 @@ export const RoundControlCenter = () => {
   });
 
   // Fetch real manager statuses
-  const { data: managerStatuses, isLoading: loadingManagers } = useQuery({
-    queryKey: ['manager-statuses', currentAuction?.id, selectedPhaseId],
+  const { data: managerStatuses, isLoading: loadingManagers, error: managersError } = useQuery({
+    queryKey: ['manager-statuses', currentAuction?.id, selectedPhaseId, leagueId],
     queryFn: async () => {
       if (!currentAuction?.id || !selectedPhaseId) return [];
       
@@ -109,9 +109,21 @@ export const RoundControlCenter = () => {
       if (error) throw error;
       return data.managers || [];
     },
-    enabled: !!currentAuction?.id && !!selectedPhaseId && currentAuction?.statut === 'open',
+    enabled: !!currentAuction?.id && !!selectedPhaseId,
     refetchInterval: 10000, // Refresh toutes les 10s
   });
+
+  // Handle errors for manager statuses
+  useEffect(() => {
+    if (managersError) {
+      console.error('Erreur chargement statuts managers:', managersError);
+      toast({
+        title: "Erreur de chargement",
+        description: managersError.message,
+        variant: "destructive"
+      });
+    }
+  }, [managersError]);
 
   // Fetch announcements
   const { data: announcements } = useQuery({
@@ -309,11 +321,13 @@ export const RoundControlCenter = () => {
             </div>
 
             {/* Column 2: Managers Supervision */}
-            {currentAuction.statut === 'open' && (
+            {currentAuction && (
               <div className="lg:col-span-2">
                 <ManagersSupervision
                   managers={managerStatuses || []}
                   isLoading={loadingManagers}
+                  isError={!!managersError}
+                  errorMessage={managersError?.message}
                 />
               </div>
             )}

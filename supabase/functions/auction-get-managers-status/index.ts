@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
         // Récupérer tous les rosters avec leur auction_id
         const { count: rosterCount, data: rosterWithDates, error: rosterError } = await supabaseAdmin
           .from('rosters')
-          .select('prix_signature, auction_id')
+          .select('prix_signature, auction_id', { count: 'exact' })
           .eq('manager_id', manager.id)
           .eq('phase_id', phase_id)
           .or(`league_id.eq.${auction.league_id},league_id.is.null`);

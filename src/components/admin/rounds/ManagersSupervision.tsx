@@ -22,9 +22,11 @@ interface ManagerStatus {
 interface ManagersSupervisionProps {
   managers: ManagerStatus[];
   isLoading?: boolean;
+  isError?: boolean;
+  errorMessage?: string;
 }
 
-export const ManagersSupervision = ({ managers, isLoading }: ManagersSupervisionProps) => {
+export const ManagersSupervision = ({ managers, isLoading, isError, errorMessage }: ManagersSupervisionProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -81,6 +83,10 @@ export const ManagersSupervision = ({ managers, isLoading }: ManagersSupervision
         {isLoading ? (
           <div className="text-center py-8 text-muted-foreground">
             Chargement des managers...
+          </div>
+        ) : isError ? (
+          <div className="text-center py-8 text-destructive">
+            Erreur: {errorMessage || 'Impossible de charger les statuts des managers'}
           </div>
         ) : (
           <ManagersTable managers={filteredManagers} />
