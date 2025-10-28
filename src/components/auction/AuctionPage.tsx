@@ -51,6 +51,32 @@ export const AuctionPage = ({ phaseId, managerId }: AuctionPageProps) => {
     enabled: !!leagueId,
   });
 
+  // Get scheduled auction (if no open auction)
+  const { data: scheduledAuction } = useQuery({
+    queryKey: ['scheduled-auction', phaseId, leagueId],
+    queryFn: async () => {
+      let query = supabase
+        .from('auctions')
+        .select('id, round_number, opens_at, deadline_at, phase_id')
+        .eq('phase_id', phaseId)
+        .eq('statut', 'scheduled')
+        .gte('opens_at', new Date().toISOString());
+      
+      if (leagueId) {
+        query = query.eq('league_id', leagueId);
+      }
+
+      const { data, error } = await query
+        .order('opens_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!leagueId && !openAuction,
+  });
+
   // Get manager phase status
   const { data: phaseStatus } = useQuery({
     queryKey: ['manager-phase-status', managerId, phaseId],
@@ -158,7 +184,7 @@ export const AuctionPage = ({ phaseId, managerId }: AuctionPageProps) => {
         </div>
 
         {/* Next auction card - only if no open auction */}
-        {!openAuction && <NextAuctionCard phaseId={phaseId} />}
+        {!openAuction && <NextAuctionCard phaseId={phaseId} scheduledAuction={scheduledAuction} />}
 
         {/* Ready to submit alert - only if open auction */}
         {isReady && (

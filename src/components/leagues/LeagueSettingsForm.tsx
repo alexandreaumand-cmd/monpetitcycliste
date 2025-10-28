@@ -7,6 +7,13 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getLeagueTemplates, type GameMode, calculateLeagueSettings } from "@/lib/leagues/templates";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 type LeagueSettingsFormProps = {
   name: string;
@@ -20,6 +27,8 @@ type LeagueSettingsFormProps = {
   onSeasonChange: (seasonId: string) => void;
   bonusesEnabled: boolean;
   onBonusesChange: (enabled: boolean) => void;
+  firstAuctionDate: Date | null;
+  onFirstAuctionDateChange: (date: Date | null) => void;
   seasons: Array<{ id: string; annee: number }>;
 };
 
@@ -35,6 +44,8 @@ export function LeagueSettingsForm({
   onSeasonChange,
   bonusesEnabled,
   onBonusesChange,
+  firstAuctionDate,
+  onFirstAuctionDateChange,
   seasons,
 }: LeagueSettingsFormProps) {
   const { data: templates } = useQuery({
@@ -145,6 +156,90 @@ export function LeagueSettingsForm({
           checked={bonusesEnabled}
           onCheckedChange={onBonusesChange}
         />
+      </div>
+
+      {/* First Auction Date */}
+      <div className="space-y-2">
+        <Label>Date et heure du premier tour d'enchères *</Label>
+        <p className="text-sm text-muted-foreground mb-2">
+          Les managers verront un compte à rebours avant le début des enchères
+        </p>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !firstAuctionDate && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {firstAuctionDate ? (
+                format(firstAuctionDate, "PPP 'à' HH:mm", { locale: fr })
+              ) : (
+                <span>Sélectionner une date et heure</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <div className="p-3 space-y-3">
+              <Calendar
+                mode="single"
+                selected={firstAuctionDate || undefined}
+                onSelect={(date) => {
+                  if (date) {
+                    const newDate = firstAuctionDate ? new Date(firstAuctionDate) : new Date();
+                    newDate.setFullYear(date.getFullYear());
+                    newDate.setMonth(date.getMonth());
+                    newDate.setDate(date.getDate());
+                    onFirstAuctionDateChange(newDate);
+                  }
+                }}
+                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                initialFocus
+                className="pointer-events-auto"
+              />
+              <div className="border-t pt-3 space-y-2">
+                <Label className="text-xs">Heure</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="23"
+                    placeholder="HH"
+                    value={firstAuctionDate?.getHours() || ''}
+                    onChange={(e) => {
+                      const hours = parseInt(e.target.value);
+                      if (!isNaN(hours) && hours >= 0 && hours <= 23) {
+                        const newDate = firstAuctionDate ? new Date(firstAuctionDate) : new Date();
+                        newDate.setHours(hours);
+                        onFirstAuctionDateChange(newDate);
+                      }
+                    }}
+                    className="w-20"
+                  />
+                  <span className="self-center">:</span>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="59"
+                    placeholder="MM"
+                    value={firstAuctionDate?.getMinutes() || ''}
+                    onChange={(e) => {
+                      const minutes = parseInt(e.target.value);
+                      if (!isNaN(minutes) && minutes >= 0 && minutes <= 59) {
+                        const newDate = firstAuctionDate ? new Date(firstAuctionDate) : new Date();
+                        newDate.setMinutes(minutes);
+                        onFirstAuctionDateChange(newDate);
+                      }
+                    }}
+                    className="w-20"
+                  />
+                </div>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );

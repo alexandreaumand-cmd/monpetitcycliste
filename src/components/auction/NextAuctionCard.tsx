@@ -9,12 +9,26 @@ import { fr } from "date-fns/locale";
 
 interface NextAuctionCardProps {
   phaseId: string;
+  scheduledAuction?: {
+    id: string;
+    round_number: number;
+    opens_at: string;
+    deadline_at: string;
+  } | null;
 }
 
-export const NextAuctionCard = ({ phaseId }: NextAuctionCardProps) => {
+export const NextAuctionCard = ({ phaseId, scheduledAuction }: NextAuctionCardProps) => {
   const [timeLeft, setTimeLeft] = useState("");
 
-  const { data: nextAuction } = useQuery({
+  // Use scheduled auction if provided, otherwise fetch next auction info
+  const targetAuction = scheduledAuction ? {
+    round_number: scheduledAuction.round_number,
+    target_time: scheduledAuction.opens_at,
+    label: `Début des enchères`,
+    statut: 'scheduled' as const,
+  } : null;
+
+  const { data: nextAuctionInfo } = useQuery({
     queryKey: ['next-auction-info', phaseId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -26,8 +40,11 @@ export const NextAuctionCard = ({ phaseId }: NextAuctionCardProps) => {
 
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !scheduledAuction,
   });
+
+  const nextAuction = targetAuction || nextAuctionInfo;
 
   useEffect(() => {
     if (!nextAuction?.target_time) {
@@ -79,7 +96,8 @@ export const NextAuctionCard = ({ phaseId }: NextAuctionCardProps) => {
   }
 
   const isOpen = nextAuction.statut === 'open';
-  const badgeVariant = isOpen ? 'default' : 'secondary';
+  const isScheduled = nextAuction.statut === 'scheduled';
+  const badgeVariant = isOpen ? 'default' : isScheduled ? 'outline' : 'secondary';
 
   return (
     <Card>
@@ -91,7 +109,7 @@ export const NextAuctionCard = ({ phaseId }: NextAuctionCardProps) => {
       </CardHeader>
       <CardContent className="space-y-3">
         <Badge variant={badgeVariant}>
-          {isOpen ? 'En cours' : 'Programmé'}
+          {isOpen ? 'En cours' : isScheduled ? 'Programmé' : 'À venir'}
         </Badge>
         
         <div className="space-y-1">
@@ -102,8 +120,13 @@ export const NextAuctionCard = ({ phaseId }: NextAuctionCardProps) => {
           {timeLeft && (
             <div className="flex items-center gap-1 text-sm font-medium text-primary">
               <Clock className="h-3 w-3" />
-              {timeLeft}
+              {isScheduled ? 'Les enchères commencent dans ' : ''}{timeLeft}
             </div>
+          )}
+          {isScheduled && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Préparez-vous pour le premier tour d'enchères !
+            </p>
           )}
         </div>
       </CardContent>

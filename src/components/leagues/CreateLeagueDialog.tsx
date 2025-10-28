@@ -35,6 +35,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
   const [playerCount, setPlayerCount] = useState(4);
   const [seasonId, setSeasonId] = useState("");
   const [bonusesEnabled, setBonusesEnabled] = useState(true);
+  const [firstAuctionDate, setFirstAuctionDate] = useState<Date | null>(null);
 
   // Fetch available seasons
   const { data: seasons = [] } = useQuery({
@@ -63,6 +64,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     setPlayerCount(4);
     setSeasonId("");
     setBonusesEnabled(true);
+    setFirstAuctionDate(null);
     onOpenChange(false);
   };
 
@@ -79,6 +81,17 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
   const handleSubmit = async () => {
     if (!selectedMode || !name || !seasonId) return;
 
+    if (!firstAuctionDate) {
+      toast.error("Veuillez sélectionner une date et heure pour le premier tour d'enchères");
+      return;
+    }
+
+    const now = new Date();
+    if (firstAuctionDate <= now) {
+      toast.error("La date du premier tour doit être dans le futur");
+      return;
+    }
+
     setIsCreating(true);
     try {
       const settings = await calculateLeagueSettings(selectedMode, playerCount);
@@ -94,6 +107,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
           budget: settings.budget,
           maxRiders: settings.maxRiders,
           scopeConfig,
+          firstAuctionStartsAt: firstAuctionDate.toISOString(),
         },
       });
 
@@ -115,7 +129,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     }
   };
 
-  const canProceed = step === 1 ? selectedMode !== null : name.trim() !== "" && seasonId !== "";
+  const canProceed = step === 1 ? selectedMode !== null : name.trim() !== "" && seasonId !== "" && firstAuctionDate !== null;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -151,6 +165,8 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
               onSeasonChange={setSeasonId}
               bonusesEnabled={bonusesEnabled}
               onBonusesChange={setBonusesEnabled}
+              firstAuctionDate={firstAuctionDate}
+              onFirstAuctionDateChange={setFirstAuctionDate}
               seasons={seasons}
             />
           )}

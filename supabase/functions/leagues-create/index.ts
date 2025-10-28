@@ -55,7 +55,24 @@ Deno.serve(async (req) => {
       budget,
       maxRiders,
       scopeConfig,
+      firstAuctionStartsAt,
     } = await req.json();
+
+    // Validate first auction date
+    if (!firstAuctionStartsAt) {
+      return new Response(
+        JSON.stringify({ error: 'First auction date is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const firstAuctionDate = new Date(firstAuctionStartsAt);
+    if (firstAuctionDate <= new Date()) {
+      return new Response(
+        JSON.stringify({ error: 'First auction date must be in the future' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Validate inputs
     if (!name || name.length < 3) {
@@ -105,6 +122,7 @@ Deno.serve(async (req) => {
         current_player_count: 0,
         bonuses_enabled: bonusesEnabled,
         status: 'pending',
+        first_auction_starts_at: firstAuctionStartsAt,
         settings: {
           budget,
           max_riders: maxRiders,
@@ -162,6 +180,25 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Failed to add owner as member' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Create first scheduled auction
+    const deadlineAt = new Date(firstAuctionDate.getTime() + 24 * 60 * 60 * 1000);
+    
+    const { error: auctionError } = await supabase
+      .from('auctions')
+      .insert({
+        league_id: league.id,
+        phase_id: scopeConfig.phases[0],
+        round_number: 1,
+        opens_at: firstAuctionStartsAt,
+        deadline_at: deadlineAt.toISOString(),
+        statut: 'scheduled',
+      });
+
+    if (auctionError) {
+      console.error('Error creating first auction:', auctionError);
+      // Don't fail the whole creation if auction creation fails
     }
 
     console.log('League created:', league.id, 'by user:', user.id);

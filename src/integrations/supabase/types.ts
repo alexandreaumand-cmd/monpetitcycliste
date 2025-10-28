@@ -1311,6 +1311,7 @@ export type Database = {
           bonuses_enabled: boolean
           created_at: string
           current_player_count: number
+          first_auction_starts_at: string | null
           game_mode: string
           id: string
           max_players: number
@@ -1326,6 +1327,7 @@ export type Database = {
           bonuses_enabled?: boolean
           created_at?: string
           current_player_count?: number
+          first_auction_starts_at?: string | null
           game_mode?: string
           id?: string
           max_players?: number
@@ -1341,6 +1343,7 @@ export type Database = {
           bonuses_enabled?: boolean
           created_at?: string
           current_player_count?: number
+          first_auction_starts_at?: string | null
           game_mode?: string
           id?: string
           max_players?: number
@@ -4331,6 +4334,7 @@ export type Database = {
         Returns: Json
       }
       admin_results_reset_preview: { Args: never; Returns: Json }
+      auto_open_scheduled_auctions: { Args: never; Returns: undefined }
       course_points_summary: {
         Args: { p_course_id: string; p_manager_id?: string }
         Returns: Json
