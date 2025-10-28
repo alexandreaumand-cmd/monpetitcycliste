@@ -31,14 +31,17 @@ serve(async (req) => {
       );
     }
 
-    const { startlist_id, decisions, save_alias = true } = await req.json();
+    const body = await req.json();
+    const { items, create_alias = true } = body;
 
-    if (!startlist_id || !decisions || !Array.isArray(decisions)) {
+    if (!items || !Array.isArray(items)) {
       return new Response(
-        JSON.stringify({ error: 'startlist_id et decisions (array) sont requis' }),
+        JSON.stringify({ error: 'items (array) requis' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`[startlist-confirm-matches] Confirming ${items.length} matches`);
 
     // Get manager ID
     const { data: { user } } = await supabase.auth.getUser();
@@ -46,26 +49,28 @@ serve(async (req) => {
       .from('managers')
       .select('id')
       .eq('user_id', user?.id)
-      .single();
+      .maybeSingle();
 
-    let matchedNow = 0;
+    let confirmedCount = 0;
+    let aliasesCreated = 0;
 
-    // Process each decision
-    for (const decision of decisions) {
-      const { entry_id, coureur_id } = decision;
+    for (const item of items) {
+      const { entry_id, coureur_id } = item;
 
       if (!entry_id || !coureur_id) {
+        console.warn('[startlist-confirm-matches] Skipping item without entry_id or coureur_id');
         continue;
       }
 
       // Get entry details
-      const { data: entry } = await supabase
+      const { data: entry, error: entryError } = await supabase
         .from('startlist_entries')
         .select('source_name, source_team')
         .eq('id', entry_id)
         .single();
 
-      if (!entry) {
+      if (entryError || !entry) {
+        console.error(`[startlist-confirm-matches] Entry ${entry_id} not found:`, entryError);
         continue;
       }
 
@@ -80,14 +85,14 @@ serve(async (req) => {
         .eq('id', entry_id);
 
       if (updateError) {
-        console.error('Error updating entry:', updateError);
+        console.error(`[startlist-confirm-matches] Error updating entry ${entry_id}:`, updateError);
         continue;
       }
 
-      matchedNow++;
+      confirmedCount++;
 
       // Create alias if requested
-      if (save_alias) {
+      if (create_alias) {
         // Check if alias already exists
         const { data: existingAlias } = await supabase
           .from('name_aliases')
@@ -97,7 +102,7 @@ serve(async (req) => {
           .maybeSingle();
 
         if (!existingAlias) {
-          await supabase
+          const { error: aliasError } = await supabase
             .from('name_aliases')
             .insert({
               alias_text: entry.source_name,
@@ -105,26 +110,27 @@ serve(async (req) => {
               source_team: entry.source_team,
               created_by_manager_id: manager?.id,
             });
+
+          if (!aliasError) {
+            aliasesCreated++;
+          } else {
+            console.error(`[startlist-confirm-matches] Error creating alias:`, aliasError);
+          }
         }
       }
     }
 
-    // Count remaining unmatched
-    const { count: remainingUnmatched } = await supabase
-      .from('startlist_entries')
-      .select('*', { count: 'exact', head: true })
-      .eq('startlist_id', startlist_id)
-      .eq('status', 'unmatched');
+    console.log(`[startlist-confirm-matches] Confirmed ${confirmedCount} matches, created ${aliasesCreated} aliases`);
 
     return new Response(
       JSON.stringify({
-        matched_now: matchedNow,
-        remaining_unmatched: remainingUnmatched || 0,
+        confirmed: confirmedCount,
+        aliases_created: aliasesCreated
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in startlist-confirm-matches:', error);
+    console.error('[startlist-confirm-matches] Error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: message }),

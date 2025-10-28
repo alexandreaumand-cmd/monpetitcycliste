@@ -208,6 +208,27 @@ export type Database = {
           },
         ]
       }
+      app_feature_flags: {
+        Row: {
+          description: string | null
+          flag_name: string
+          is_enabled: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          description?: string | null
+          flag_name: string
+          is_enabled?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          description?: string | null
+          flag_name?: string
+          is_enabled?: boolean
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       app_migrations: {
         Row: {
           executed_at: string
