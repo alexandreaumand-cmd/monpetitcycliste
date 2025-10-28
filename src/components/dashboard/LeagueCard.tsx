@@ -152,13 +152,15 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               </div>
             </div>
 
-            <Button 
-              onClick={() => setInvitesSheetOpen(true)}
-              className="w-full bg-[#FFD500] text-black border-2 border-black font-montserrat font-semibold hover:bg-yellow-400 gap-2"
-            >
-              <UserPlus className="h-4 w-4" />
-              Inviter des joueurs
-            </Button>
+            {isAdmin && (
+              <Button 
+                onClick={() => setInvitesSheetOpen(true)}
+                className="w-full bg-[#FFD500] text-black border-2 border-black font-montserrat font-semibold hover:bg-yellow-400 gap-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                Inviter des joueurs
+              </Button>
+            )}
           </>
         )}
 
