@@ -3099,9 +3099,10 @@ export type Database = {
           coureur_equipe: string | null
           coureur_id: string | null
           coureur_nom: string | null
+          league_id: string | null
           manager_id: string | null
           my_bid: number | null
-          outcome: Database["public"]["Enums"]["bid_statut"] | null
+          outcome: Database["public"]["Enums"]["bid_outcome"] | null
           phase_id: string | null
           round_number: number | null
           winning_amount: number | null
@@ -3191,6 +3192,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_top_riders_global"
             referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "bids_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "bids_manager_id_fkey"

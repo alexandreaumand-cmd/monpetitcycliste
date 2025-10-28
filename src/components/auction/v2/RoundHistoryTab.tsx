@@ -31,10 +31,14 @@ export function RoundHistoryTab({
         .select("*")
         .eq("manager_id", managerId)
         .eq("phase_id", phaseId)
-        .eq("round_number", roundNumber)
-        .order("coureur_nom");
+        .eq("round_number", roundNumber);
 
-      const { data, error } = await query;
+      // Filter by league_id to avoid mixing data from different leagues
+      if (leagueId) {
+        query = query.eq("league_id", leagueId);
+      }
+
+      const { data, error } = await query.order("coureur_nom");
       if (error) throw error;
       return data || [];
     },
