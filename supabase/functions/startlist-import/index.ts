@@ -23,9 +23,9 @@ function parseStartlistText(raw_text: string): ParsedEntry[] {
   const lines = raw_text.split(/\r?\n/);
   const entries: ParsedEntry[] = [];
   
-  // Regex patterns
-  const fullPattern = /^\s*(?<place>\d+)?\s*(?<team>[A-Z]{3})\s+(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+?)(?:\s+(?<rest>.*))?$/i;
-  const loosePattern = /^\s*(?<place>\d+)?\s*(?<team>[A-Z]{3})?\s+(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+)$/i;
+  // Regex patterns (with optional period after place number)
+  const fullPattern = /^\s*(?<place>\d+)?\.?\s*(?<team>[A-Z]{3})\s+(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+?)(?:\s+(?<rest>.*))?$/i;
+  const loosePattern = /^\s*(?<place>\d+)?\.?\s*(?<team>[A-Z]{3})?\s+(?<name>[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸŒŠ\s\'\-\.]+)$/i;
   
   lines.forEach((line, idx) => {
     const trimmed = line.trim();
