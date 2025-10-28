@@ -96,7 +96,33 @@ export const StartlistImportManager = () => {
       
     } catch (error: any) {
       console.error('Parse error:', error);
-      toast.error("Erreur lors du parsing: " + error.message);
+      
+      // Extract detailed error message from FunctionsHttpError
+      let errorMessage = "Erreur lors du parsing";
+      
+      if (error.context?.body) {
+        try {
+          const errorBody = typeof error.context.body === 'string' 
+            ? JSON.parse(error.context.body) 
+            : error.context.body;
+          
+          if (errorBody.error) {
+            errorMessage = errorBody.error;
+            
+            // Special hint for authentication errors
+            if (errorBody.code === 'UNAUTHENTICATED') {
+              errorMessage += " 🔒 Reconnectez-vous pour continuer.";
+            }
+          }
+        } catch (parseError) {
+          // Fallback to generic message
+          errorMessage = error.message || "Erreur inconnue";
+        }
+      } else {
+        errorMessage = error.message || "Erreur inconnue";
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

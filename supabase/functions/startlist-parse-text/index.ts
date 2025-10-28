@@ -90,6 +90,25 @@ serve(async (req) => {
       }
     );
 
+    // Explicit authentication check
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      console.error('❌ Authentication failed:', authError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Non authentifié. Votre session a peut-être expiré, veuillez vous reconnecter.',
+          code: 'UNAUTHENTICATED'
+        }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.info('✅ Authenticated user:', user.id);
+
     const { race_id, phase_id, text, with_diagnostics, startlisteur_note, league_id } = await req.json();
 
     console.info('📋 Input validation:', { race_id, phase_id, text_length: text?.length, league_id });
@@ -458,9 +477,19 @@ serve(async (req) => {
       .single();
 
     if (importError || !importRecord) {
-      console.error('Error creating startlist_import:', importError);
+      console.error('❌ Error creating startlist_import:', {
+        error: importError,
+        message: importError?.message,
+        code: importError?.code,
+        details: importError?.details,
+        hint: importError?.hint
+      });
       return new Response(
-        JSON.stringify({ error: 'Erreur lors de la création de l\'import' }),
+        JSON.stringify({ 
+          error: `Erreur lors de la création de l'import: ${importError?.message || 'Unknown'}`,
+          details: importError?.details,
+          code: importError?.code
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -495,9 +524,19 @@ serve(async (req) => {
       .insert(entriesToInsert);
 
     if (entriesError) {
-      console.error('Error inserting entries:', entriesError);
+      console.error('❌ Error inserting entries:', {
+        error: entriesError,
+        message: entriesError?.message,
+        code: entriesError?.code,
+        details: entriesError?.details,
+        hint: entriesError?.hint
+      });
       return new Response(
-        JSON.stringify({ error: 'Erreur lors de l\'insertion des entrées' }),
+        JSON.stringify({ 
+          error: `Erreur lors de l'insertion des entrées: ${entriesError?.message || 'Unknown'}`,
+          details: entriesError?.details,
+          code: entriesError?.code
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
