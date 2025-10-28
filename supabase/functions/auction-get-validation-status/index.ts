@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
         managers!inner(nom)
       `)
       .eq('auction_id', auction.id)
-      .or(`league_id.eq.${leagueId},league_id.is.null`)
+      .eq('league_id', leagueId)
       .eq('statut', 'pending')
       .in('manager_id', eligibleManagerIds);
 
