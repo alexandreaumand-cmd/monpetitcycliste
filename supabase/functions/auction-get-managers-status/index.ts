@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
         // Récupérer tous les rosters avec leur auction_id
         const { count: rosterCount, data: rosterWithDates, error: rosterError } = await supabaseAdmin
           .from('rosters')
-          .select('prix_signature, created_at, auction_id')
+          .select('prix_signature, auction_id')
           .eq('manager_id', manager.id)
           .eq('phase_id', phase_id)
           .or(`league_id.eq.${auction.league_id},league_id.is.null`);
@@ -229,7 +229,7 @@ Deno.serve(async (req) => {
         const totalRiderCount = rosterCount || 0;
         const slots_missing = maxRidersPerManager - totalRiderCount;
 
-        // Calculer la dernière activité
+        // Calculer la dernière activité depuis les bids uniquement
         const { data: lastBid } = await supabaseAdmin
           .from('bids')
           .select('updated_at')
@@ -239,14 +239,7 @@ Deno.serve(async (req) => {
           .limit(1)
           .maybeSingle();
 
-        const allDates = [
-          ...(rosterWithDates?.map(r => r.created_at) || []),
-          lastBid?.updated_at
-        ].filter(Boolean);
-        
-        const lastActivity = allDates.length > 0 
-          ? allDates.reduce((latest, current) => current > latest ? current : latest)
-          : null;
+        const lastActivity = lastBid?.updated_at || null;
 
         return {
           manager_id: manager.id,
