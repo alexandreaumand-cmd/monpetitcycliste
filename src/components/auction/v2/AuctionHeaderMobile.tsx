@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertCircle, Clock, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Link } from "react-router-dom";
+import mpcLogo from "@/assets/mpc-logo.png";
 
 interface AuctionHeaderMobileProps {
   starting_budget: number;
@@ -80,11 +82,24 @@ export function AuctionHeaderMobile({
   }, [deadline_at]);
 
   return (
-    <Collapsible
-      open={isExpanded}
-      onOpenChange={setIsExpanded}
-      className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b"
-    >
+    <div className="sticky top-0 z-10 bg-background">
+      {/* Logo Header */}
+      <div className="flex items-center justify-center py-2 border-b border-border/50 bg-background/95 backdrop-blur">
+        <Link to="/dashboard/home" className="flex items-center">
+          <img 
+            src={mpcLogo} 
+            alt="Logo Mon Petit Cycliste" 
+            className="h-8 w-auto"
+          />
+        </Link>
+      </div>
+      
+      {/* Existing Collapsible Header */}
+      <Collapsible
+        open={isExpanded}
+        onOpenChange={setIsExpanded}
+        className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      >
       {/* Compact Header - Always Visible */}
       <div className="px-3 py-2">
         <div className="flex items-center justify-between gap-2">
@@ -203,5 +218,6 @@ export function AuctionHeaderMobile({
         </div>
       </CollapsibleContent>
     </Collapsible>
+    </div>
   );
 }

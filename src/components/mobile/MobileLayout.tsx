@@ -1,11 +1,12 @@
 import { useState, ReactNode } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 
 import { MobileBottomBar } from "./MobileBottomBar";
 import { MobileDrawer } from "./MobileDrawer";
 import { Button } from "@/components/ui/button";
 
 import { Menu } from "lucide-react";
+import mpcLogo from "@/assets/mpc-logo.png";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { useLeague } from "@/contexts/LeagueContext";
@@ -50,12 +51,13 @@ export const MobileLayout = ({
               <span className="sr-only">Ouvrir le menu</span>
             </Button>
 
-            <h1 className="text-lg font-bold truncate flex-1 text-center">
-              {title}
-              {selectedSeason?.annee && (
-                <span className="ml-2 text-xs text-muted-foreground">• {selectedSeason.annee}</span>
-              )}
-            </h1>
+            <Link to="/dashboard/home" className="flex items-center justify-center flex-1">
+              <img 
+                src={mpcLogo} 
+                alt="Logo Mon Petit Cycliste" 
+                className="h-10 w-auto"
+              />
+            </Link>
 
             <NotificationCenter />
           </div>
