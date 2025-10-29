@@ -27,6 +27,7 @@ interface AuctionHeaderMobileProps {
   deadline_at?: string;
   validated_count?: number;
   total_managers?: number;
+  phase_index?: number;
 }
 
 export function AuctionHeaderMobile({
@@ -42,6 +43,7 @@ export function AuctionHeaderMobile({
   deadline_at,
   validated_count = 0,
   total_managers = 0,
+  phase_index,
 }: AuctionHeaderMobileProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const progressPercentage = ((budget_spent + draft_sum) / starting_budget) * 100;
@@ -84,7 +86,7 @@ export function AuctionHeaderMobile({
   return (
     <div className="sticky top-0 z-10 bg-background">
       {/* Logo Header */}
-      <div className="flex items-center justify-center py-2 border-b border-border/50 bg-background/95 backdrop-blur">
+      <div className="flex flex-col items-center py-2 border-b border-border/50 bg-background/95 backdrop-blur gap-1">
         <Link to="/dashboard/home" className="flex items-center">
           <img 
             src={mpcLogo} 
@@ -92,6 +94,11 @@ export function AuctionHeaderMobile({
             className="h-7 w-auto max-w-[180px]"
           />
         </Link>
+        {phase_index && (
+          <Badge variant="outline" className="text-[10px]">
+            Phase {phase_index}
+          </Badge>
+        )}
       </div>
       
       {/* Existing Collapsible Header */}

@@ -60,11 +60,11 @@ Deno.serve(async (req) => {
     }
 
     // Get phase info with saison_id
-    const { data: phase } = await supabase
-      .from('phases')
-      .select('budget, max_coureurs, saison_id')
-      .eq('id', phase_id)
-      .single();
+  const { data: phase } = await supabase
+    .from('phases')
+    .select('budget, max_coureurs, saison_id, index_dans_saison')
+    .eq('id', phase_id)
+    .single();
 
     if (!phase) {
       return new Response(JSON.stringify({ error: 'Phase not found' }), {
@@ -118,6 +118,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ 
         error: 'No active auction',
         phase_id,
+        phase_index: phase.index_dans_saison,
         manager_id,
         phase_complete: allRostersComplete,
         completion_status: {
@@ -323,6 +324,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         phase_id,
+        phase_index: phase.index_dans_saison,
         manager_id,
         auction_id: auction.id,
         auction: {

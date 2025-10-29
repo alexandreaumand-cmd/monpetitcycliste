@@ -384,6 +384,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
         roster_count={context.totals.roster_count}
         max_slots={context.rules.max_bids}
         deadline_at={context.auction?.deadline_at}
+        phase_index={context.phase_index}
       />
 
       <MemberWriteGuard>

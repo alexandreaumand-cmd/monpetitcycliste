@@ -23,6 +23,7 @@ interface AuctionHeaderProps {
   deadline_at?: string;
   validated_count?: number;
   total_managers?: number;
+  phase_index?: number;
 }
 
 export function AuctionHeader({
@@ -38,6 +39,7 @@ export function AuctionHeader({
   deadline_at,
   validated_count = 0,
   total_managers = 0,
+  phase_index,
 }: AuctionHeaderProps) {
   const [timeRemaining, setTimeRemaining] = useState<string>("");
 
@@ -91,6 +93,15 @@ export function AuctionHeader({
   return (
     <div className="sticky top-0 z-20 border-b bg-gradient-to-r from-background via-background/95 to-background backdrop-blur-sm shadow-sm">
       <div className="container mx-auto max-w-7xl px-4 py-4">
+        {/* Phase indicator */}
+        {phase_index && (
+          <div className="mb-3">
+            <Badge variant="outline" className="text-xs">
+              Phase {phase_index}
+            </Badge>
+          </div>
+        )}
+        
         <div className="grid grid-cols-4 gap-4">
           {/* Timer */}
           {deadline_at && (

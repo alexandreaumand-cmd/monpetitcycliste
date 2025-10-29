@@ -391,6 +391,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         deadline_at={context.auction?.deadline_at}
         validated_count={context.validated_count}
         total_managers={context.total_managers}
+        phase_index={context.phase_index}
       />
 
       {/* Tabs: Mes Enchères / Recherche */}
