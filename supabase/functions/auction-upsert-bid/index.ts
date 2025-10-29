@@ -55,18 +55,19 @@ Deno.serve(async (req) => {
 
     const manager_id = input_manager_id || manager.id;
 
-    // Get active auction
+    // Get active auction for this league
     const { data: auction } = await supabase
       .from('auctions')
       .select('id, round_number')
       .eq('phase_id', phase_id)
+      .eq('league_id', league_id)
       .eq('statut', 'open')
       .order('round_number', { ascending: false })
       .limit(1)
-      .single();
-
+      .maybeSingle();
+    
     if (!auction) {
-      return new Response(JSON.stringify({ error: 'No active auction' }), {
+      return new Response(JSON.stringify({ error: 'Aucune enchère active pour cette ligue' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -121,7 +122,7 @@ Deno.serve(async (req) => {
       .eq('phase_id', phase_id)
       .eq('league_id', league_id)
       .eq('coureur_id', rider_id)
-      .single();
+      .maybeSingle();
 
     if (existingRoster) {
       return new Response(
