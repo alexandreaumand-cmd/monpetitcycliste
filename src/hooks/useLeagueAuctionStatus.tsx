@@ -51,12 +51,13 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
         };
       }
 
-      // 2. Si aucune enchère ouverte, chercher une enchère SCHEDULED
+      // 2. Si aucune enchère ouverte, chercher une enchère SCHEDULED (future uniquement)
       const { data: scheduledAuction } = await supabase
         .from('auctions')
         .select('id, round_number, opens_at, phase_id')
         .eq('league_id', leagueId)
         .eq('statut', 'scheduled')
+        .gt('opens_at', new Date().toISOString())
         .order('opens_at', { ascending: true })
         .limit(1)
         .maybeSingle();
