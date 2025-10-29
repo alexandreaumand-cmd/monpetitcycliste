@@ -64,16 +64,14 @@ export function BidAmountPopover({
   };
 
   const handleSubmit = () => {
+    // Validate minimum amount only
     if (amount < minAmount) {
       setError(`Le montant minimum est ${minAmount}`);
       return;
     }
 
-    if (simulatedRemaining < 0) {
-      setError("Budget insuffisant");
-      return;
-    }
-
+    // No budget check here - allow draft to exceed budget
+    
     onSubmit(amount);
     setIsOpen(false);
   };
@@ -148,6 +146,11 @@ export function BidAmountPopover({
                 {simulatedRemaining}
               </span>
             </div>
+            {simulatedRemaining < 0 && (
+              <p className="text-xs text-destructive pt-1">
+                ⚠️ Dépassement de {Math.abs(simulatedRemaining)}
+              </p>
+            )}
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -164,7 +167,7 @@ export function BidAmountPopover({
             <Button
               onClick={handleSubmit}
               className="flex-1"
-              disabled={!!error || amount < minAmount}
+              disabled={amount < minAmount}
             >
               Valider
             </Button>

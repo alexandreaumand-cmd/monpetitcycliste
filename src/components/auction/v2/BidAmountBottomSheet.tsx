@@ -66,17 +66,15 @@ export function BidAmountBottomSheet({
   };
 
   const handleSubmit = () => {
-    // Validate
+    // Validate minimum amount only
     if (amount < minAmount) {
       setError(`Le montant minimum est ${minAmount}`);
       return;
     }
 
-    if (simulatedRemaining < 0) {
-      setError("Budget insuffisant");
-      return;
-    }
-
+    // No budget check here - allow draft to exceed budget
+    // Warning will be shown in the UI but submission is allowed
+    
     onSubmit(amount);
     onClose();
   };
@@ -146,6 +144,11 @@ export function BidAmountBottomSheet({
               {simulatedRemaining}
             </span>
           </div>
+          {simulatedRemaining < 0 && (
+            <p className="text-xs text-destructive pt-2">
+              ⚠️ Budget dépassé de {Math.abs(simulatedRemaining)}. Tu devras ajuster avant validation.
+            </p>
+          )}
         </div>
 
         {/* Error message */}
@@ -167,7 +170,7 @@ export function BidAmountBottomSheet({
             onClick={handleSubmit}
             className="flex-1"
             size="lg"
-            disabled={!!error || amount < minAmount}
+            disabled={amount < minAmount}
           >
             Valider
           </Button>
