@@ -58,7 +58,6 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         body: { phase_id: phaseId, manager_id: managerId, league_id: leagueId },
       });
       if (error) throw error;
-      if (data?.error === "No active auction") return null;
       return data;
     },
     refetchInterval: 5000,

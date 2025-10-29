@@ -59,7 +59,6 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
         body: { phase_id: phaseId, manager_id: managerId, league_id: leagueId },
       });
       if (error) throw error;
-      if (data?.error === "No active auction") return null;
       return data;
     },
     refetchInterval: 5000,
