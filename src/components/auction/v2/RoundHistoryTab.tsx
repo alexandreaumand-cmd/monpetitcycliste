@@ -215,14 +215,11 @@ export function RoundHistoryTab({
                           <p className="font-bold text-base">{bid.coureur_nom}</p>
                           <p className="text-xs text-muted-foreground">{bid.coureur_equipe}</p>
                         </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-green-500/20">
-                          <span className="text-xl font-bold text-green-600 dark:text-green-400">
-                            {formatAmount(bid.my_bid)}
-                          </span>
-                          <Badge variant="outline" className="bg-green-500/10 border-green-500/30">
-                            ✓ Gagné
-                          </Badge>
-                        </div>
+                       <div className="flex items-center justify-between pt-2 border-t border-green-500/20">
+                         <span className="text-xl font-bold text-green-600 dark:text-green-400">
+                           {formatAmount(bid.my_bid)}
+                         </span>
+                       </div>
                         {beatManagers.length > 0 && (
                           <div className="pt-2 border-t border-green-500/10">
                             <p className="text-xs text-muted-foreground mb-1">Tu bats :</p>
@@ -277,14 +274,11 @@ export function RoundHistoryTab({
                         <p className="font-bold text-base">{bid.coureur_nom}</p>
                         <p className="text-xs text-muted-foreground">{bid.coureur_equipe}</p>
                       </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-red-500/20">
-                        <span className="text-xl font-bold text-red-600 dark:text-red-400">
-                          {formatAmount(bid.my_bid)}
-                        </span>
-                        <Badge variant="outline" className="bg-red-500/10 border-red-500/30">
-                          ✗ Perdu
-                        </Badge>
-                      </div>
+                       <div className="flex items-center justify-between pt-2 border-t border-red-500/20">
+                         <span className="text-xl font-bold text-red-600 dark:text-red-400">
+                           {formatAmount(bid.my_bid)}
+                         </span>
+                       </div>
                       <div className="pt-2 border-t border-red-500/10 space-y-1">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-muted-foreground">Contre</span>
@@ -337,14 +331,11 @@ export function RoundHistoryTab({
                         <p className="font-bold text-base">{bid.coureur_nom}</p>
                         <p className="text-xs text-muted-foreground">{bid.coureur_equipe}</p>
                       </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-orange-500/20">
-                        <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
-                          {formatAmount(bid.my_bid)}
-                        </span>
-                        <Badge variant="outline" className="bg-orange-500/10 border-orange-500/30">
-                          = Égalité
-                        </Badge>
-                      </div>
+                       <div className="flex items-center justify-between pt-2 border-t border-orange-500/20">
+                         <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                           {formatAmount(bid.my_bid)}
+                         </span>
+                       </div>
                       <p className="text-xs text-orange-700 dark:text-orange-400 pt-2 border-t border-orange-500/10">
                         Ex æquo — repart au prochain round
                       </p>
