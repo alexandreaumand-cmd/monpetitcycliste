@@ -1,5 +1,8 @@
 project_id = "oisfvryhpovwxaxqbmow"
 
+[functions.auto-open-scheduled-auctions]
+verify_jwt = false
+
 [functions.auction-get-managers-status]
 verify_jwt = true
 
