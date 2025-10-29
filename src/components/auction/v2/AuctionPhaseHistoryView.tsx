@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, BookOpen, Users, Trophy, Database } from "lucide-react";
+import { Loader2, Users, Trophy, Database } from "lucide-react";
 import { RoundHistoryTab } from "./RoundHistoryTab";
 import { PhaseRecapTab } from "./PhaseRecapTab";
 import { FinalTeamTab } from "./FinalTeamTab";
@@ -53,29 +53,6 @@ export function AuctionPhaseHistoryView({
 
   return (
     <div className="container max-w-7xl mx-auto px-4 py-6 md:px-6 space-y-6">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border-2 border-primary/20 p-6 md:p-8">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <BookOpen className="h-8 w-8 text-primary" />
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Historique des Enchères
-              </h1>
-            </div>
-            <p className="text-muted-foreground text-lg">
-              {closedRounds.length} round{closedRounds.length > 1 ? "s" : ""} terminé{closedRounds.length > 1 ? "s" : ""}
-            </p>
-          </div>
-          <Badge 
-            variant="secondary" 
-            className="text-base px-4 py-2 bg-gradient-to-r from-primary/20 to-primary/10 border-primary/30 animate-pulse"
-          >
-            ✓ Enchères Terminées
-          </Badge>
-        </div>
-      </div>
-
       <Tabs defaultValue="recap" className="space-y-6">
         <ScrollArea className="w-full">
           <TabsList className="inline-flex h-12 items-center justify-start rounded-lg bg-muted p-1 w-full md:w-auto">
