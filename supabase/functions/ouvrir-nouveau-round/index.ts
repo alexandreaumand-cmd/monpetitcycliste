@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       }
     );
 
-    const { phase_id, deadline_at, league_id } = await req.json();
+    const { phase_id, deadline_at, league_id, auto_launched } = await req.json();
     console.log('Opening new round for phase:', phase_id, 'league:', league_id);
 
     // Verify user authentication
@@ -123,14 +123,19 @@ Deno.serve(async (req) => {
     // Notify all league members
     await notifyLeagueMembers(supabase, league_id, {
       type: 'auction_opened',
-      title: `🎯 Nouveau round d'enchères ouvert !`,
-      message: `Le round ${newRoundNumber} est maintenant ouvert. Placez vos enchères avant la deadline !`,
+      title: auto_launched 
+        ? `🤖 Round ${newRoundNumber} lancé automatiquement` 
+        : `🎯 Nouveau round d'enchères ouvert !`,
+      message: auto_launched
+        ? `Le round ${newRoundNumber} a été lancé automatiquement après publication des annonces. Deadline : ${new Date(deadline_at).toLocaleString('fr-FR')}. Placez vos enchères !`
+        : `Le round ${newRoundNumber} est maintenant ouvert. Placez vos enchères avant la deadline !`,
       metadata: {
         auction_id: newAuction.id,
         round_number: newRoundNumber,
         phase_id: phase_id,
         league_id: league_id,
-        deadline_at: deadline_at
+        deadline_at: deadline_at,
+        auto_launched: auto_launched || false
       }
     });
 

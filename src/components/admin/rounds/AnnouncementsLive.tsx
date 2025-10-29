@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Megaphone, Copy, CheckCircle2 } from "lucide-react";
+import { Megaphone, Copy, CheckCircle2, Zap } from "lucide-react";
 import { formatAmount } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -40,13 +40,26 @@ export const AnnouncementsLive = ({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Megaphone className="h-5 w-5" />
-            Annonces Live
+          <div>
+            <div className="flex items-center gap-2">
+              <Megaphone className="h-5 w-5" />
+              Annonces Live
+            </div>
+            {unpublished.length === 0 && published.length > 0 && (
+              <p className="text-xs text-green-600 mt-1 font-normal">
+                ✅ Toutes publiées · Le prochain round sera lancé automatiquement
+              </p>
+            )}
           </div>
-          <Badge variant="outline">
-            {unpublished.length} restante{unpublished.length > 1 ? 's' : ''}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="gap-1">
+              <Zap className="h-3 w-3" />
+              Auto-launch
+            </Badge>
+            <Badge variant="outline">
+              {unpublished.length} restante{unpublished.length > 1 ? 's' : ''}
+            </Badge>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

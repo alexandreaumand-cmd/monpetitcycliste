@@ -34,10 +34,10 @@ export const RoundActions = ({
   isLoading
 }: RoundActionsProps) => {
   const [showLaunchDialog, setShowLaunchDialog] = useState(false);
-  const [deadlineDate, setDeadlineDate] = useState<Date>(addHours(new Date(), 24));
+  const [deadlineDate, setDeadlineDate] = useState<Date>(addHours(new Date(), 48));
 
   const handleQuickLaunch = () => {
-    const deadline = addHours(new Date(), 24);
+    const deadline = addHours(new Date(), 48);
     onLaunch(deadline.toISOString());
   };
 
@@ -64,12 +64,12 @@ export const RoundActions = ({
               size="lg"
               className="gap-2"
             >
-              <Play className="h-4 w-4" />
-              Lancer nouveau round (24h)
+          <Play className="h-4 w-4" />
+          Lancer nouveau round (48h)
             </Button>
             <Button 
               onClick={() => {
-                setDeadlineDate(addHours(new Date(), 24));
+                setDeadlineDate(addHours(new Date(), 48));
                 setShowLaunchDialog(true);
               }}
               disabled={isLoading}

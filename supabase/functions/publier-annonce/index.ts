@@ -30,6 +30,51 @@ Deno.serve(async (req) => {
 
       if (error) throw error;
 
+      // Check if all annonces are now published
+      const { count: unpublishedCount, error: countError } = await supabase
+        .from('annonces')
+        .select('*', { count: 'exact', head: true })
+        .eq('auction_id', auction_id)
+        .eq('published', false);
+
+      if (countError) {
+        console.error('Error checking unpublished annonces:', countError);
+      }
+
+      // Auto-launch next round if all annonces are published
+      if (unpublishedCount === 0) {
+        console.log('🎯 All annonces published, auto-launching next round...');
+        
+        const { data: currentAuction, error: auctionError } = await supabase
+          .from('auctions')
+          .select('phase_id, round_number, league_id')
+          .eq('id', auction_id)
+          .single();
+        
+        if (auctionError || !currentAuction) {
+          console.error('Error fetching auction:', auctionError);
+        } else {
+          // Calculate deadline: +48h
+          const deadlineAt = new Date();
+          deadlineAt.setHours(deadlineAt.getHours() + 48);
+          
+          const { error: openError } = await supabase.functions.invoke('ouvrir-nouveau-round', {
+            body: {
+              phase_id: currentAuction.phase_id,
+              deadline_at: deadlineAt.toISOString(),
+              league_id: currentAuction.league_id,
+              auto_launched: true
+            }
+          });
+          
+          if (openError) {
+            console.error('❌ Error auto-launching next round:', openError);
+          } else {
+            console.log('✅ Next round auto-launched successfully with deadline:', deadlineAt.toISOString());
+          }
+        }
+      }
+
       return new Response(
         JSON.stringify({ success: true, count: data?.length || 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -57,6 +102,51 @@ Deno.serve(async (req) => {
         .from('annonces')
         .update({ published: true, published_at: new Date().toISOString() })
         .eq('id', annonce.id);
+
+      // Check if all annonces are now published
+      const { count: unpublishedCount, error: countError } = await supabase
+        .from('annonces')
+        .select('*', { count: 'exact', head: true })
+        .eq('auction_id', auction_id)
+        .eq('published', false);
+
+      if (countError) {
+        console.error('Error checking unpublished annonces:', countError);
+      }
+
+      // Auto-launch next round if all annonces are published
+      if (unpublishedCount === 0) {
+        console.log('🎯 All annonces published, auto-launching next round...');
+        
+        const { data: currentAuction, error: auctionError } = await supabase
+          .from('auctions')
+          .select('phase_id, round_number, league_id')
+          .eq('auction_id', auction_id)
+          .single();
+        
+        if (auctionError || !currentAuction) {
+          console.error('Error fetching auction:', auctionError);
+        } else {
+          // Calculate deadline: +48h
+          const deadlineAt = new Date();
+          deadlineAt.setHours(deadlineAt.getHours() + 48);
+          
+          const { error: openError } = await supabase.functions.invoke('ouvrir-nouveau-round', {
+            body: {
+              phase_id: currentAuction.phase_id,
+              deadline_at: deadlineAt.toISOString(),
+              league_id: currentAuction.league_id,
+              auto_launched: true
+            }
+          });
+          
+          if (openError) {
+            console.error('❌ Error auto-launching next round:', openError);
+          } else {
+            console.log('✅ Next round auto-launched successfully with deadline:', deadlineAt.toISOString());
+          }
+        }
+      }
 
       // Generate announcement text
       let text = '';
