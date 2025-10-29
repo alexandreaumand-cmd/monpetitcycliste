@@ -93,7 +93,18 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
     .sort((a, b) => a.diff_percent - b.diff_percent)
     .slice(0, 10);
 
-  // 4 & 5. Round 1 winners
+  // 4. Loser du Tour 1 (enchères perdues au tour 1)
+  const round1Losses = allBids
+    .filter((b) => b.round_number === 1 && b.outcome === "lost")
+    .reduce((acc, bid) => {
+      const manager = bid.managers?.nom || "Inconnu";
+      acc[manager] = (acc[manager] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+  const round1Loser = Object.entries(round1Losses).sort(([, a], [, b]) => b - a)[0]; // max de pertes
+
+  // 5. Roi du Tour 1 (victoires au tour 1)
   const round1Wins = allBids
     .filter((b) => b.round_number === 1 && b.outcome === "won")
     .reduce((acc, bid) => {
@@ -102,8 +113,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
       return acc;
     }, {} as Record<string, number>);
 
-  const round1King = Object.entries(round1Wins).sort(([, a], [, b]) => b - a)[0]; // max
-  const round1Loser = Object.entries(round1Wins).sort(([, a], [, b]) => a - b)[0]; // min
+  const round1King = Object.entries(round1Wins).sort(([, a], [, b]) => b - a)[0]; // max de victoires
 
   return (
     <div className="space-y-6">
@@ -191,7 +201,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
               <>
                 <p className="text-2xl font-bold truncate">{round1Loser[0]}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {round1Loser[1]} victoire{round1Loser[1] > 1 ? "s" : ""}
+                  {round1Loser[1]} raté{round1Loser[1] > 1 ? "s" : ""}
                 </p>
               </>
             ) : (
@@ -236,7 +246,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
           <CardTitle className="flex items-center gap-2 flex-wrap">
             <span>😤 Qui a le seum ?</span>
             <Badge variant="secondary" className="text-xs">
-              Top 10 des gains les plus serrés
+              Les plus gros loupés
             </Badge>
           </CardTitle>
         </CardHeader>
@@ -248,7 +258,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
                   <tr className="border-b">
                     <th className="text-left p-2">Manager</th>
                     <th className="text-left p-2">Coureur</th>
-                    <th className="text-right p-2">Mon enchère</th>
+                    <th className="text-right p-2">Enchère</th>
                     <th className="text-right p-2">Enchère gagnante</th>
                     <th className="text-right p-2">Écart</th>
                   </tr>
