@@ -372,6 +372,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     return (
       <AuctionValidationConfirmation
         phaseId={phaseId}
+        auctionId={context?.auction_id}
         managerId={managerId}
         leagueId={leagueId}
         onBack={() => setShowValidationScreen(false)}

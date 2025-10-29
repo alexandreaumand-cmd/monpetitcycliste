@@ -8,21 +8,26 @@ import { CheckCircle2, Clock, Users, RefreshCw, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface AuctionValidationConfirmationProps {
-  phaseId: string;
+  phaseId: string | null;
+  auctionId?: string;
   managerId: string;
   leagueId: string | null;
   onBack: () => void;
   onViewMyBids: () => void;
 }
 
-export function AuctionValidationConfirmation({ phaseId, managerId, leagueId, onBack, onViewMyBids }: AuctionValidationConfirmationProps) {
+export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, leagueId, onBack, onViewMyBids }: AuctionValidationConfirmationProps) {
   const [timeRemaining, setTimeRemaining] = useState("");
 
   const { data: status, isLoading, refetch } = useQuery({
-    queryKey: ["auction-validation-status", phaseId, leagueId],
+    queryKey: ["auction-validation-status", phaseId, auctionId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("auction-get-validation-status", {
-        body: { phase_id: phaseId, league_id: leagueId },
+        body: { 
+          phase_id: phaseId, 
+          auction_id: auctionId,
+          league_id: leagueId 
+        },
       });
       if (error) throw error;
       return data;
