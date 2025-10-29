@@ -8,6 +8,7 @@ import {
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import mpcLogo from "@/assets/mpc-logo.png";
+import { LeagueSwitcherHeaderMobile } from "@/components/leagues/LeagueSwitcherHeaderMobile";
 
 interface NavItem {
   label: string;
@@ -63,15 +64,18 @@ export const MobileHeader = ({ title, navItems }: MobileHeaderProps) => {
           </SheetContent>
         </Sheet>
 
-        <Link to="/dashboard/home" className="flex items-center justify-center flex-1">
-          <img 
-            src={mpcLogo} 
-            alt="Logo Mon Petit Cycliste" 
-            className="h-10 w-auto"
-          />
-        </Link>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <Link to="/dashboard/home" className="shrink-0">
+            <img 
+              src={mpcLogo} 
+              alt="Logo Mon Petit Cycliste" 
+              className="h-8 w-auto"
+            />
+          </Link>
+          <LeagueSwitcherHeaderMobile />
+        </div>
 
-        <div className="w-10" /> {/* Spacer for centering */}
+        <div className="w-10" /> {/* Spacer for alignment */}
       </div>
     </header>
   );
