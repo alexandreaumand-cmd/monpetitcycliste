@@ -171,20 +171,30 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
   const upsertBidMutation = useMutation({
     mutationFn: async ({ rider_id, amount }: { rider_id: string; amount: number }) => {
       const { data, error } = await supabase.functions.invoke("auction-upsert-bid", {
-        body: { phase_id: phaseId, manager_id: managerId, rider_id, amount, league_id: leagueId },
+        body: { phase_id: phaseId, rider_id, amount, league_id: leagueId },
       });
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId] });
       toast({ title: "Enchère enregistrée" });
+      
+      // Show budget warning if exceeded
+      if (data?.warnings && data.warnings.length > 0) {
+        toast({ 
+          title: "⚠️ Attention", 
+          description: data.warnings[0],
+          variant: "destructive" 
+        });
+      }
     },
     onError: (error: any) => {
-      toast({
-        title: "Erreur",
-        description: error.message || "Impossible d'enregistrer l'enchère",
-        variant: "destructive",
+      const errorMessage = error?.message || "Erreur lors de l'enregistrement de l'enchère";
+      toast({ 
+        title: "Erreur", 
+        description: errorMessage,
+        variant: "destructive" 
       });
     },
   });
