@@ -20,7 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Database, Search, ChevronDown, TrendingDown, TrendingUp, Minus, ArrowUpDown } from "lucide-react";
+import { Database, Search, ChevronDown, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 
@@ -46,7 +46,7 @@ interface AuctionData {
   }>;
 }
 
-type SortField = "coureur_nom" | "cote_initiale" | "winning_amount" | "roi" | "round_number" | "winning_manager";
+type SortField = "coureur_nom" | "cote_initiale" | "winning_amount" | "round_number" | "winning_manager";
 type SortDirection = "asc" | "desc";
 
 export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProps) {
@@ -176,30 +176,6 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
     }
   };
 
-  const getROIBadge = (roi: number) => {
-    if (roi < -10) {
-      return (
-        <Badge variant="secondary" className="bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30">
-          <TrendingDown className="h-3 w-3 mr-1" />
-          {roi.toFixed(1)}%
-        </Badge>
-      );
-    }
-    if (roi > 20) {
-      return (
-        <Badge variant="secondary" className="bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30">
-          <TrendingUp className="h-3 w-3 mr-1" />
-          +{roi.toFixed(1)}%
-        </Badge>
-      );
-    }
-    return (
-      <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30">
-        <Minus className="h-3 w-3 mr-1" />
-        {roi > 0 ? "+" : ""}{roi.toFixed(1)}%
-      </Badge>
-    );
-  };
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" />;
@@ -280,8 +256,8 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
 
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Prix: {priceRange[0]}€</span>
-                <span>{priceRange[1]}€</span>
+              <span>Prix: {priceRange[0]}</span>
+              <span>{priceRange[1]}</span>
               </div>
               <Slider
                 min={0}
@@ -293,22 +269,6 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
             </div>
           </div>
 
-          {/* ROI Legend */}
-          <div className="flex items-center gap-3 mb-4 text-xs">
-            <span className="text-muted-foreground">Légende ROI:</span>
-            <Badge variant="secondary" className="bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30">
-              <TrendingDown className="h-3 w-3 mr-1" />
-              Bonne affaire (&lt; -10%)
-            </Badge>
-            <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30">
-              <Minus className="h-3 w-3 mr-1" />
-              Normal
-            </Badge>
-            <Badge variant="secondary" className="bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30">
-              <TrendingUp className="h-3 w-3 mr-1" />
-              Surcoté (&gt; +20%)
-            </Badge>
-          </div>
 
           {/* Table */}
           <div className="rounded-md border">
@@ -335,12 +295,6 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
                     </Button>
                   </TableHead>
                   <TableHead>
-                    <Button variant="ghost" size="sm" onClick={() => handleSort("roi")} className="h-8 px-2">
-                      ROI
-                      <SortIcon field="roi" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>
                     <Button variant="ghost" size="sm" onClick={() => handleSort("winning_manager")} className="h-8 px-2">
                       Manager
                       <SortIcon field="winning_manager" />
@@ -358,7 +312,7 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
               <TableBody>
                 {filteredAndSortedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       Aucun résultat trouvé
                     </TableCell>
                   </TableRow>
@@ -392,9 +346,8 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
                               <div className="text-xs text-muted-foreground">{item.coureur_equipe}</div>
                             </div>
                           </TableCell>
-                          <TableCell className="font-mono">{item.cote_initiale}€</TableCell>
-                          <TableCell className="font-mono font-semibold">{item.winning_amount}€</TableCell>
-                          <TableCell>{getROIBadge(item.roi)}</TableCell>
+                  <TableCell className="font-mono">{item.cote_initiale}</TableCell>
+                  <TableCell className="font-mono font-semibold">{item.winning_amount}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{item.winning_manager}</Badge>
                           </TableCell>
@@ -423,9 +376,9 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
                                       >
                                         <span className="text-sm">{concurrent.manager_nom}</span>
                                         <div className="flex items-center gap-2">
-                                          <span className="text-sm font-mono">{concurrent.my_bid}€</span>
+                                          <span className="text-sm font-mono">{concurrent.my_bid}</span>
                                           <span className="text-xs text-muted-foreground">
-                                            ({(concurrent.my_bid - item.winning_amount).toFixed(0)}€)
+                                            ({(concurrent.my_bid - item.winning_amount).toFixed(0)})
                                           </span>
                                         </div>
                                       </div>
