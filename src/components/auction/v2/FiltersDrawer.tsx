@@ -106,6 +106,25 @@ export function FiltersDrawer({
 
         <div className="h-full overflow-y-auto py-4">
           <div className="space-y-4 px-1 pb-24">
+            {/* Price Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Côtes {selectedCotes.length > 0 && `(${selectedCotes.length})`}
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {coteOptions.map((cote) => (
+                  <Badge
+                    key={cote}
+                    variant={selectedCotes.includes(cote) ? "default" : "outline"}
+                    className="cursor-pointer hover:bg-primary/10 transition-colors text-xs px-2 py-1"
+                    onClick={() => toggleCote(cote)}
+                  >
+                    {getCoteLabel(cote)}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
             {/* Team Filter */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -159,25 +178,6 @@ export function FiltersDrawer({
                     Aucune équipe trouvée
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* Price Filter */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Côtes {selectedCotes.length > 0 && `(${selectedCotes.length})`}
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {coteOptions.map((cote) => (
-                  <Badge
-                    key={cote}
-                    variant={selectedCotes.includes(cote) ? "default" : "outline"}
-                    className="cursor-pointer hover:bg-primary/10 transition-colors text-xs px-2 py-1"
-                    onClick={() => toggleCote(cote)}
-                  >
-                    {getCoteLabel(cote)}
-                  </Badge>
-                ))}
               </div>
             </div>
           </div>
