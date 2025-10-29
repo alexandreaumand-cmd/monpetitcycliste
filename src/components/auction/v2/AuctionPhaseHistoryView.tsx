@@ -3,10 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, BookOpen, Users, Trophy } from "lucide-react";
+import { Loader2, BookOpen, Users, Trophy, Database } from "lucide-react";
 import { RoundHistoryTab } from "./RoundHistoryTab";
 import { PhaseRecapTab } from "./PhaseRecapTab";
 import { FinalTeamTab } from "./FinalTeamTab";
+import { AuctionDatabaseTab } from "./AuctionDatabaseTab";
 
 interface AuctionPhaseHistoryViewProps {
   phaseId: string;
@@ -86,6 +87,15 @@ export function AuctionPhaseHistoryView({
               <span className="hidden sm:inline">Récapitulatif</span>
               <span className="sm:hidden">Recap</span>
             </TabsTrigger>
+
+            <TabsTrigger 
+              value="database" 
+              className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <Database className="h-4 w-4" />
+              <span className="hidden sm:inline">Base de données</span>
+              <span className="sm:hidden">DB</span>
+            </TabsTrigger>
             
             {closedRounds.map((round) => (
               <TabsTrigger 
@@ -109,11 +119,15 @@ export function AuctionPhaseHistoryView({
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
 
-        <TabsContent value="recap" className="animate-fade-in">
-          <PhaseRecapTab phaseId={phaseId} leagueId={leagueId} />
-        </TabsContent>
+            <TabsContent value="recap" className="animate-fade-in">
+              <PhaseRecapTab phaseId={phaseId} leagueId={leagueId} />
+            </TabsContent>
 
-        {closedRounds.map((round) => (
+            <TabsContent value="database" className="animate-fade-in">
+              <AuctionDatabaseTab phaseId={phaseId} leagueId={leagueId} />
+            </TabsContent>
+
+            {closedRounds.map((round) => (
           <TabsContent 
             key={round.round_number} 
             value={`round-${round.round_number}`}
