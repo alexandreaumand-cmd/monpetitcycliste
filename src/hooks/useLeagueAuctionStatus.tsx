@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface AuctionStatus {
   auctionId: string;
-  phaseId: string;
+  phaseId: string | null;
   roundNumber: number;
   validatedCount: number;
   totalManagers: number;
@@ -32,7 +32,7 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
         const { data: validationData, error } = await supabase.functions.invoke(
           'auction-get-validation-status',
           {
-            body: { phase_id: openAuction.phase_id, league_id: leagueId }
+            body: { auction_id: openAuction.id, phase_id: openAuction.phase_id, league_id: leagueId }
           }
         );
 
