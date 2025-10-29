@@ -193,7 +193,7 @@ export function AuctionLiveAnnouncements({
                                       {annonce.coureur?.nom}
                                     </span>
                                     <Badge variant="outline" className="text-xs">
-                                      {annonce.coureur?.equipe}
+                                      {(annonce.losers?.length || 0) + 1} enchère{((annonce.losers?.length || 0) + 1) > 1 ? 's' : ''}
                                     </Badge>
                                     {idx === 0 && (
                                       <Badge variant="secondary" className="text-xs">
@@ -208,11 +208,6 @@ export function AuctionLiveAnnouncements({
                                         {annonce.is_my_win ? (
                                           <span className="font-semibold text-primary">
                                             🎉 Gagné par toi pour {annonce.winning_amount}
-                                            {(!annonce.losers || annonce.losers.length === 0) && (
-                                              <Badge variant="outline" className="ml-2 text-xs">
-                                                Seul enchérisseur
-                                              </Badge>
-                                            )}
                                           </span>
                                         ) : (
                                           <span>
