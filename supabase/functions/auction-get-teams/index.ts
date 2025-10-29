@@ -35,6 +35,7 @@ Deno.serve(async (req) => {
         .select('coureur_equipe')
         .eq('phase_id', phase_id)
         .not('coureur_equipe', 'is', null)
+        .order('coureur_equipe', { ascending: true, nullsFirst: false })
         .range(offset, offset + pageSize - 1);
 
       if (error) throw error;
