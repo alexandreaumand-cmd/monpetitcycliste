@@ -23,15 +23,48 @@ Deno.serve(async (req) => {
 
     console.log('Fetching teams for phase:', phase_id);
 
-    // Use optimized RPC function to get distinct teams
-    const { data: teams, error } = await supabase
-      .rpc('get_unique_teams_for_phase', { p_phase_id: phase_id });
+    const pageSize = 1000;
+    const uniqueTeams = new Set<string>();
+    let offset = 0;
+    let pageCount = 0;
 
-    if (error) throw error;
-    
-    // Normalize to string array
-    const teamNames = (teams || []).map((t: any) => typeof t === 'string' ? t : t.team_name).filter(Boolean);
-    console.log('Found teams:', teamNames.length);
+    // Paginated fetch to avoid API limits
+    while (true) {
+      const { data, error } = await supabase
+        .from('coureurs_disponibilite')
+        .select('coureur_equipe')
+        .eq('phase_id', phase_id)
+        .not('coureur_equipe', 'is', null)
+        .range(offset, offset + pageSize - 1);
+
+      if (error) throw error;
+
+      pageCount++;
+      const fetchedCount = data?.length || 0;
+      
+      // Add teams to set for deduplication
+      data?.forEach(row => {
+        if (row.coureur_equipe) {
+          uniqueTeams.add(row.coureur_equipe);
+        }
+      });
+
+      console.log(`Page ${pageCount} fetched: ${fetchedCount} rows, accumulated unique: ${uniqueTeams.size}`);
+
+      // Stop if we got less than pageSize (last page)
+      if (fetchedCount < pageSize) {
+        break;
+      }
+
+      offset += pageSize;
+    }
+
+    // Sort alphabetically
+    const teamNames = Array.from(uniqueTeams).sort((a, b) => 
+      a.localeCompare(b, 'fr', { sensitivity: 'base' })
+    );
+
+    console.log(`Found teams: ${teamNames.length} (pages: ${pageCount})`);
 
     return new Response(
       JSON.stringify({ teams: teamNames }),
