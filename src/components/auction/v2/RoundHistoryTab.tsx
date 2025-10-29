@@ -1,11 +1,13 @@
+import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Trophy, XCircle, AlertCircle } from "lucide-react";
-import { formatAmount } from "@/lib/utils";
+import { formatAmount, cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface RoundHistoryTabProps {
   phaseId: string;
@@ -22,6 +24,13 @@ export function RoundHistoryTab({
   roundNumber,
   closedAt,
 }: RoundHistoryTabProps) {
+  const isMobile = useIsMobile();
+  const [activeSection, setActiveSection] = React.useState<'won' | 'lost' | 'carried' | null>(null);
+  
+  const wonRef = React.useRef<HTMLDivElement>(null);
+  const lostRef = React.useRef<HTMLDivElement>(null);
+  const carriedRef = React.useRef<HTMLDivElement>(null);
+
   // Get bid outcomes for this round
   const { data: outcomes = [], isLoading } = useQuery({
     queryKey: ["round-history", phaseId, managerId, leagueId, roundNumber],
@@ -87,6 +96,25 @@ export function RoundHistoryTab({
     return acc;
   }, {} as Record<string, Array<{ nom: string; montant: number }>>);
 
+  // Reset active section when round changes
+  React.useEffect(() => {
+    setActiveSection(null);
+  }, [roundNumber]);
+
+  // Scroll to section with smooth behavior
+  const scrollToSection = (
+    ref: React.RefObject<HTMLDivElement>,
+    section: 'won' | 'lost' | 'carried'
+  ) => {
+    setActiveSection(section);
+    setTimeout(() => {
+      ref.current?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start'
+      });
+    }, 100);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -112,21 +140,39 @@ export function RoundHistoryTab({
               </p>
             </div>
             <div className="flex gap-3 flex-wrap">
-              <div className="text-center px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-lg">
+              <button
+                onClick={() => isMobile && scrollToSection(wonRef, 'won')}
+                className={cn(
+                  "text-center px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-lg transition-all",
+                  isMobile && "hover:bg-green-500/20 active:scale-95 cursor-pointer"
+                )}
+              >
                 <Trophy className="h-5 w-5 text-green-600 dark:text-green-400 mx-auto mb-1" />
                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">{won.length}</p>
                 <p className="text-xs text-muted-foreground">Gagnée{won.length > 1 ? "s" : ""}</p>
-              </div>
-              <div className="text-center px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-lg">
+              </button>
+              <button
+                onClick={() => isMobile && scrollToSection(lostRef, 'lost')}
+                className={cn(
+                  "text-center px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-lg transition-all",
+                  isMobile && "hover:bg-red-500/20 active:scale-95 cursor-pointer"
+                )}
+              >
                 <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 mx-auto mb-1" />
                 <p className="text-2xl font-bold text-red-600 dark:text-red-400">{lost.length}</p>
                 <p className="text-xs text-muted-foreground">Perdue{lost.length > 1 ? "s" : ""}</p>
-              </div>
-              <div className="text-center px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+              </button>
+              <button
+                onClick={() => isMobile && scrollToSection(carriedRef, 'carried')}
+                className={cn(
+                  "text-center px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-lg transition-all",
+                  isMobile && "hover:bg-orange-500/20 active:scale-95 cursor-pointer"
+                )}
+              >
                 <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400 mx-auto mb-1" />
                 <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{carriedOver.length}</p>
                 <p className="text-xs text-muted-foreground">Égalité{carriedOver.length > 1 ? "s" : ""}</p>
-              </div>
+              </button>
             </div>
           </div>
         </CardHeader>
@@ -135,7 +181,13 @@ export function RoundHistoryTab({
       {/* Grid 3 columns with enhanced cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Won */}
-        <Card className="bg-gradient-to-br from-green-500/10 via-green-500/5 to-background border-green-500/30 hover:border-green-500/50 transition-all">
+        <Card 
+          ref={wonRef}
+          className={cn(
+            "bg-gradient-to-br from-green-500/10 via-green-500/5 to-background border-green-500/30 hover:border-green-500/50 transition-all",
+            activeSection === 'won' && "ring-2 ring-green-500 shadow-lg shadow-green-500/20"
+          )}
+        >
           <CardHeader className="pb-4 border-b border-green-500/20">
             <CardTitle className="text-xl flex items-center gap-2 text-green-700 dark:text-green-400">
               <Trophy className="h-6 w-6" />
@@ -194,7 +246,13 @@ export function RoundHistoryTab({
         </Card>
 
         {/* Lost */}
-        <Card className="bg-gradient-to-br from-red-500/10 via-red-500/5 to-background border-red-500/30 hover:border-red-500/50 transition-all">
+        <Card 
+          ref={lostRef}
+          className={cn(
+            "bg-gradient-to-br from-red-500/10 via-red-500/5 to-background border-red-500/30 hover:border-red-500/50 transition-all",
+            activeSection === 'lost' && "ring-2 ring-red-500 shadow-lg shadow-red-500/20"
+          )}
+        >
           <CardHeader className="pb-4 border-b border-red-500/20">
             <CardTitle className="text-xl flex items-center gap-2 text-red-700 dark:text-red-400">
               <XCircle className="h-6 w-6" />
@@ -248,7 +306,13 @@ export function RoundHistoryTab({
         </Card>
 
         {/* Carried Over */}
-        <Card className="bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-background border-orange-500/30 hover:border-orange-500/50 transition-all">
+        <Card 
+          ref={carriedRef}
+          className={cn(
+            "bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-background border-orange-500/30 hover:border-orange-500/50 transition-all",
+            activeSection === 'carried' && "ring-2 ring-orange-500 shadow-lg shadow-orange-500/20"
+          )}
+        >
           <CardHeader className="pb-4 border-b border-orange-500/20">
             <CardTitle className="text-xl flex items-center gap-2 text-orange-700 dark:text-orange-400">
               <AlertCircle className="h-6 w-6" />
