@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Users, DollarSign, TrendingUp, Award } from "lucide-react";
 import { formatAmount } from "@/lib/utils";
 
 interface FinalTeamTabProps {
@@ -104,8 +105,13 @@ export function FinalTeamTab({
 
   const totalSpent = roster.reduce((sum, r) => sum + Number(r.prix_signature), 0);
   const remaining = budget - totalSpent;
+  const spentPercentage = (totalSpent / budget) * 100;
+  const rosterCompletion = (roster.length / maxRiders) * 100;
 
-  // Sort by round then by amount
+  // Sort by price descending for podium effect
+  const sortedByPrice = [...roster].sort((a, b) => Number(b.prix_signature) - Number(a.prix_signature));
+  
+  // Sort by round then by amount for display
   const sortedRoster = [...roster].sort((a, b) => {
     if (a.round_number !== b.round_number) {
       return (a.round_number || 0) - (b.round_number || 0);
@@ -123,32 +129,75 @@ export function FinalTeamTab({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <CardTitle className="text-2xl">👥 Mon Équipe Finale</CardTitle>
-            <div className="flex gap-3">
-              <Badge variant="default" className="text-lg px-4 py-2">
-                {roster.length} / {maxRiders} coureurs
+      {/* Hero Budget Card */}
+      <Card className="overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/30">
+        <CardHeader className="pb-4">
+          <div className="flex items-start justify-between flex-wrap gap-4">
+            <div className="space-y-1">
+              <CardTitle className="text-3xl flex items-center gap-3">
+                <Users className="h-8 w-8 text-primary" />
+                Mon Équipe Finale
+              </CardTitle>
+              <p className="text-muted-foreground">Composition complète de votre effectif</p>
+            </div>
+            <div className="flex gap-3 items-center">
+              <Badge variant="default" className="text-lg px-5 py-2 bg-primary">
+                {roster.length} / {maxRiders}
               </Badge>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
-            <div>
-              <p className="text-sm text-muted-foreground">Budget Initial</p>
-              <p className="text-xl font-bold">{formatAmount(budget)}</p>
+        <CardContent className="space-y-6">
+          {/* Budget Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-background/80 rounded-xl border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Budget Initial</p>
+              </div>
+              <p className="text-2xl font-bold">{formatAmount(budget)}</p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Budget Dépensé</p>
-              <p className="text-xl font-bold text-primary">{formatAmount(totalSpent)}</p>
+            <div className="p-4 bg-background/80 rounded-xl border border-primary/30">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                <p className="text-sm text-muted-foreground">Dépensé</p>
+              </div>
+              <p className="text-2xl font-bold text-primary">{formatAmount(totalSpent)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{spentPercentage.toFixed(1)}% du budget</p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Budget Restant</p>
-              <p className="text-xl font-bold text-green-600 dark:text-green-400">
+            <div className="p-4 bg-background/80 rounded-xl border border-green-500/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Award className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <p className="text-sm text-muted-foreground">Restant</p>
+              </div>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                 {formatAmount(remaining)}
               </p>
+              <p className="text-xs text-muted-foreground mt-1">{(100 - spentPercentage).toFixed(1)}% disponible</p>
+            </div>
+          </div>
+
+          {/* Progress Bars */}
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Utilisation du budget</span>
+                <span className="text-sm text-muted-foreground">{spentPercentage.toFixed(0)}%</span>
+              </div>
+              <Progress 
+                value={spentPercentage} 
+                className="h-3"
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Effectif complété</span>
+                <span className="text-sm text-muted-foreground">{rosterCompletion.toFixed(0)}%</span>
+              </div>
+              <Progress 
+                value={rosterCompletion} 
+                className="h-3"
+              />
             </div>
           </div>
         </CardContent>
@@ -158,34 +207,62 @@ export function FinalTeamTab({
       <div className="space-y-4">
         {Object.entries(rosterByRound)
           .sort(([a], [b]) => Number(a) - Number(b))
-          .map(([roundNum, riders]) => (
-            <Card key={roundNum}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Badge variant="outline">Round {roundNum}</Badge>
-                  <span className="text-sm font-normal text-muted-foreground">
-                    {riders.length} coureur{riders.length > 1 ? "s" : ""}
-                  </span>
-                </CardTitle>
+          .map(([roundNum, riders], roundIdx) => (
+            <Card key={roundNum} className="animate-fade-in hover-scale" style={{ animationDelay: `${roundIdx * 50}ms` }}>
+              <CardHeader className="pb-4 bg-gradient-to-r from-primary/5 to-background">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <CardTitle className="text-xl flex items-center gap-3">
+                    <Badge variant="secondary" className="text-base px-4 py-1.5 bg-primary/20 border-primary/30">
+                      Round {roundNum}
+                    </Badge>
+                    <span className="text-sm font-normal text-muted-foreground">
+                      {riders.length} coureur{riders.length > 1 ? "s" : ""}
+                    </span>
+                  </CardTitle>
+                  <Badge variant="outline" className="text-sm">
+                    {formatAmount(riders.reduce((sum, r) => sum + Number(r.prix_signature), 0))} total
+                  </Badge>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {riders.map((rider) => (
-                    <div
-                      key={rider.coureur_id}
-                      className="flex items-center justify-between p-3 bg-background rounded-lg border"
-                    >
-                      <div className="flex-1">
-                        <p className="font-semibold">{rider.nom}</p>
-                        <p className="text-sm text-muted-foreground">{rider.equipe}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-primary">
-                          {formatAmount(rider.prix_signature)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {riders.map((rider, idx) => {
+                    const isPodium = sortedByPrice.slice(0, 3).find(r => r.coureur_id === rider.coureur_id);
+                    const podiumPosition = isPodium ? sortedByPrice.indexOf(rider) + 1 : null;
+                    
+                    return (
+                      <Card
+                        key={rider.coureur_id}
+                        className={`transition-all hover:shadow-lg hover:scale-[1.02] ${
+                          podiumPosition === 1 ? 'border-yellow-500/50 bg-gradient-to-br from-yellow-500/10 to-background' :
+                          podiumPosition === 2 ? 'border-gray-400/50 bg-gradient-to-br from-gray-400/10 to-background' :
+                          podiumPosition === 3 ? 'border-orange-600/50 bg-gradient-to-br from-orange-600/10 to-background' :
+                          ''
+                        }`}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-bold text-base truncate">{rider.nom}</p>
+                                {podiumPosition && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {podiumPosition === 1 ? '🥇' : podiumPosition === 2 ? '🥈' : '🥉'}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground truncate">{rider.equipe}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xl font-bold text-primary">
+                                {formatAmount(rider.prix_signature)}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

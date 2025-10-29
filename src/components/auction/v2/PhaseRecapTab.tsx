@@ -108,148 +108,160 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">📊 Récapitulatif de la Phase</CardTitle>
-        </CardHeader>
-      </Card>
-
-      {/* KPIs Grid */}
+      {/* Hero Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
+        <Card className="bg-gradient-to-br from-primary/20 via-primary/10 to-background border-primary/30 hover-scale">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Trophy className="h-4 w-4" />
+              <Trophy className="h-5 w-5 text-primary" />
               Rounds Totaux
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{totalRounds}</p>
+            <p className="text-5xl font-bold text-primary">{totalRounds}</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
+        <Card className="bg-gradient-to-br from-primary/15 via-primary/5 to-background border-primary/20 hover-scale">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Budget Moyen Dépensé
+              <DollarSign className="h-5 w-5 text-primary" />
+              Budget Moyen
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{formatAmount(avgSpent)}</p>
+            <p className="text-4xl font-bold">{formatAmount(avgSpent)}</p>
+            <p className="text-xs text-muted-foreground mt-1">par acquisition</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
+        <Card className="bg-gradient-to-br from-primary/15 via-primary/5 to-background border-primary/20 hover-scale">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Coureurs Différents
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{uniqueRiders}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Target className="h-4 w-4" />
+              <Target className="h-5 w-5 text-primary" />
               Taux de Réussite
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{successRate.toFixed(1)}%</p>
+            <p className="text-4xl font-bold text-green-600 dark:text-green-400">{successRate.toFixed(1)}%</p>
             <p className="text-xs text-muted-foreground mt-1">
-              {wonBids.length} gagnées / {totalBids} tentées
+              {wonBids.length} / {totalBids} enchères
             </p>
           </CardContent>
         </Card>
+      </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Enchère la Plus Élevée
+      {/* Secondary KPIs Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="hover-scale transition-all">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Coureurs
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{formatAmount(highestBid)}</p>
+            <p className="text-2xl font-bold">{uniqueRiders}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover-scale transition-all">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Enchère Max
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-primary">{formatAmount(highestBid)}</p>
             {highestBidDetails && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {highestBidDetails.coureur_nom} ({highestBidDetails.winning_manager})
+              <p className="text-xs text-muted-foreground mt-1 truncate">
+                {highestBidDetails.coureur_nom}
               </p>
             )}
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+        <Card className="hover-scale transition-all">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-2">
               <Award className="h-4 w-4" />
-              Manager le Plus Actif
+              Plus Actif
             </CardTitle>
           </CardHeader>
           <CardContent>
             {mostActiveManager ? (
               <>
-                <p className="text-2xl font-bold">{mostActiveManager[0]}</p>
+                <p className="text-lg font-bold truncate">{mostActiveManager[0]}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {mostActiveManager[1]} enchères
                 </p>
               </>
             ) : (
-              <p className="text-muted-foreground">N/A</p>
+              <p className="text-muted-foreground text-sm">N/A</p>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Timeline */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">🏆 Timeline des Enchères Gagnées</CardTitle>
+      {/* Timeline - Vertical with visual indicators */}
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-primary/10 to-background border-b">
+          <CardTitle className="text-2xl flex items-center gap-2">
+            <Trophy className="h-6 w-6 text-primary" />
+            Timeline des Acquisitions
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {Object.entries(timelineByRound)
-            .sort(([a], [b]) => Number(a) - Number(b))
-            .map(([roundNum, items]) => (
-              <div key={roundNum}>
-                <div className="flex items-center gap-3 mb-3">
-                  <Badge variant="outline" className="text-base px-3 py-1">
-                    Round {roundNum}
-                  </Badge>
-                  {items[0]?.created_at && (
-                    <span className="text-sm text-muted-foreground">
-                      {format(new Date(items[0].created_at), "PPP", { locale: fr })}
-                    </span>
-                  )}
-                </div>
-                <div className="space-y-2 pl-6 border-l-2 border-primary/20">
-                  {items.map((item, idx) => (
-                    <div key={idx} className="flex items-start gap-3 pb-3">
-                      <div className="flex-1">
-                        <p className="font-semibold">
-                          {item.coureur_nom}
-                          <span className="text-muted-foreground font-normal text-sm ml-2">
-                            {item.coureur_equipe}
-                          </span>
-                        </p>
-                        <div className="flex items-center gap-4 mt-1 text-sm">
-                          <span className="font-bold text-primary">
-                            {formatAmount(item.winning_amount)}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {item.winning_manager}
-                          </span>
-                        </div>
-                      </div>
+        <CardContent className="pt-6">
+          <div className="relative space-y-8">
+            {/* Vertical line */}
+            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-primary/50 to-primary/20" />
+            
+            {Object.entries(timelineByRound)
+              .sort(([a], [b]) => Number(a) - Number(b))
+              .map(([roundNum, items], roundIdx) => (
+                <div key={roundNum} className="relative pl-12 animate-fade-in" style={{ animationDelay: `${roundIdx * 100}ms` }}>
+                  {/* Round badge indicator */}
+                  <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-primary border-4 border-background flex items-center justify-center shadow-lg">
+                    <span className="text-xs font-bold text-primary-foreground">{roundNum}</span>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="secondary" className="text-base px-4 py-1 bg-primary/20 border-primary/30">
+                        Round {roundNum}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {items.length} acquisition{items.length > 1 ? "s" : ""}
+                      </span>
                     </div>
-                  ))}
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {items.map((item, idx) => (
+                        <Card key={idx} className="hover-scale bg-gradient-to-br from-card to-card/50">
+                          <CardContent className="p-4">
+                            <div className="space-y-2">
+                              <div>
+                                <p className="font-bold text-base">{item.coureur_nom}</p>
+                                <p className="text-xs text-muted-foreground">{item.coureur_equipe}</p>
+                              </div>
+                              <div className="flex items-center justify-between pt-2 border-t">
+                                <span className="text-lg font-bold text-primary">
+                                  {formatAmount(item.winning_amount)}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {item.winning_manager}
+                                </Badge>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+          </div>
         </CardContent>
       </Card>
     </div>

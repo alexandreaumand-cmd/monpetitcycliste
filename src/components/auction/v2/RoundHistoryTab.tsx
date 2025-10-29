@@ -97,76 +97,96 @@ export function RoundHistoryTab({
 
   return (
     <div className="space-y-6">
-      {/* Header with KPIs */}
-      <Card>
-        <CardHeader>
+      {/* Enhanced Header */}
+      <Card className="overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/30">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <h2 className="text-2xl font-bold">Round {roundNumber}</h2>
-              <p className="text-sm text-muted-foreground">
-                Clôturé le {format(new Date(closedAt), "PPP", { locale: fr })}
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <Badge variant="default" className="text-xl px-5 py-2 bg-primary">
+                  Round {roundNumber}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <span>Clôturé le {format(new Date(closedAt), "PPP", { locale: fr })}</span>
               </p>
             </div>
             <div className="flex gap-3 flex-wrap">
-              <Badge variant="default" className="flex items-center gap-1.5 px-3 py-1.5">
-                <Trophy className="h-4 w-4" />
-                {won.length} gagnée{won.length > 1 ? "s" : ""}
-              </Badge>
-              <Badge variant="destructive" className="flex items-center gap-1.5 px-3 py-1.5">
-                <XCircle className="h-4 w-4" />
-                {lost.length} perdue{lost.length > 1 ? "s" : ""}
-              </Badge>
-              <Badge variant="secondary" className="flex items-center gap-1.5 px-3 py-1.5">
-                <AlertCircle className="h-4 w-4" />
-                {carriedOver.length} égalité{carriedOver.length > 1 ? "s" : ""}
-              </Badge>
+              <div className="text-center px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-lg">
+                <Trophy className="h-5 w-5 text-green-600 dark:text-green-400 mx-auto mb-1" />
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{won.length}</p>
+                <p className="text-xs text-muted-foreground">Gagnée{won.length > 1 ? "s" : ""}</p>
+              </div>
+              <div className="text-center px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 mx-auto mb-1" />
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">{lost.length}</p>
+                <p className="text-xs text-muted-foreground">Perdue{lost.length > 1 ? "s" : ""}</p>
+              </div>
+              <div className="text-center px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400 mx-auto mb-1" />
+                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{carriedOver.length}</p>
+                <p className="text-xs text-muted-foreground">Égalité{carriedOver.length > 1 ? "s" : ""}</p>
+              </div>
             </div>
           </div>
         </CardHeader>
       </Card>
 
-      {/* Grid 3 columns */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Grid 3 columns with enhanced cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Won */}
-        <Card className="bg-green-50/50 dark:bg-green-950/10 border-green-200 dark:border-green-900">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2 text-green-700 dark:text-green-400">
-              <Trophy className="h-5 w-5" />
+        <Card className="bg-gradient-to-br from-green-500/10 via-green-500/5 to-background border-green-500/30 hover:border-green-500/50 transition-all">
+          <CardHeader className="pb-4 border-b border-green-500/20">
+            <CardTitle className="text-xl flex items-center gap-2 text-green-700 dark:text-green-400">
+              <Trophy className="h-6 w-6" />
               Gagnées ({won.length})
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="pt-4 space-y-3">
             {won.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
+              <p className="text-sm text-muted-foreground text-center py-8">
                 Aucune enchère gagnée
               </p>
             ) : (
-              won.map((bid) => {
+              won.map((bid, idx) => {
                 const beatManagers = losersByRider[bid.coureur_id!] || [];
                 
                 return (
-                  <div
+                  <Card
                     key={bid.bid_id}
-                    className="p-3 bg-background rounded-lg border shadow-sm"
+                    className="hover-scale bg-background/80 border-green-500/20 animate-fade-in"
+                    style={{ animationDelay: `${idx * 50}ms` }}
                   >
-                    <p className="font-semibold text-sm">{bid.coureur_nom}</p>
-                    <p className="text-xs text-muted-foreground">{bid.coureur_equipe}</p>
-                    <p className="text-lg font-bold text-green-600 dark:text-green-400 mt-1">
-                      {formatAmount(bid.my_bid)}
-                    </p>
-                    {beatManagers.length > 0 && (
-                      <>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Tu bats :
-                        </p>
-                        {beatManagers.map((loser, idx) => (
-                          <p key={idx} className="text-xs font-medium text-green-700 dark:text-green-400">
-                            {loser.nom} à {formatAmount(loser.montant)}
-                          </p>
-                        ))}
-                      </>
-                    )}
-                  </div>
+                    <CardContent className="p-4">
+                      <div className="space-y-2">
+                        <div>
+                          <p className="font-bold text-base">{bid.coureur_nom}</p>
+                          <p className="text-xs text-muted-foreground">{bid.coureur_equipe}</p>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-green-500/20">
+                          <span className="text-xl font-bold text-green-600 dark:text-green-400">
+                            {formatAmount(bid.my_bid)}
+                          </span>
+                          <Badge variant="outline" className="bg-green-500/10 border-green-500/30">
+                            ✓ Gagné
+                          </Badge>
+                        </div>
+                        {beatManagers.length > 0 && (
+                          <div className="pt-2 border-t border-green-500/10">
+                            <p className="text-xs text-muted-foreground mb-1">Tu bats :</p>
+                            <div className="space-y-1">
+                              {beatManagers.map((loser, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-xs">
+                                  <span className="font-medium">{loser.nom}</span>
+                                  <span className="text-muted-foreground">{formatAmount(loser.montant)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 );
               })
             )}
@@ -174,69 +194,99 @@ export function RoundHistoryTab({
         </Card>
 
         {/* Lost */}
-        <Card className="bg-red-50/50 dark:bg-red-950/10 border-red-200 dark:border-red-900">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2 text-red-700 dark:text-red-400">
-              <XCircle className="h-5 w-5" />
+        <Card className="bg-gradient-to-br from-red-500/10 via-red-500/5 to-background border-red-500/30 hover:border-red-500/50 transition-all">
+          <CardHeader className="pb-4 border-b border-red-500/20">
+            <CardTitle className="text-xl flex items-center gap-2 text-red-700 dark:text-red-400">
+              <XCircle className="h-6 w-6" />
               Perdues ({lost.length})
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="pt-4 space-y-3">
             {lost.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
+              <p className="text-sm text-muted-foreground text-center py-8">
                 Aucune enchère perdue
               </p>
             ) : (
-              lost.map((bid) => (
-                <div
+              lost.map((bid, idx) => (
+                <Card
                   key={bid.bid_id}
-                  className="p-3 bg-background rounded-lg border shadow-sm"
+                  className="hover-scale bg-background/80 border-red-500/20 animate-fade-in"
+                  style={{ animationDelay: `${idx * 50}ms` }}
                 >
-                  <p className="font-semibold text-sm">{bid.coureur_nom}</p>
-                  <p className="text-xs text-muted-foreground">{bid.coureur_equipe}</p>
-                  <p className="text-lg font-bold text-red-600 dark:text-red-400 mt-1">
-                    {formatAmount(bid.my_bid)}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Contre <strong>{bid.winning_manager}</strong>
-                  </p>
-                  <p className="text-xs font-medium text-red-700 dark:text-red-400">
-                    à {formatAmount(bid.winning_amount)}
-                  </p>
-                </div>
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
+                      <div>
+                        <p className="font-bold text-base">{bid.coureur_nom}</p>
+                        <p className="text-xs text-muted-foreground">{bid.coureur_equipe}</p>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-red-500/20">
+                        <span className="text-xl font-bold text-red-600 dark:text-red-400">
+                          {formatAmount(bid.my_bid)}
+                        </span>
+                        <Badge variant="outline" className="bg-red-500/10 border-red-500/30">
+                          ✗ Perdu
+                        </Badge>
+                      </div>
+                      <div className="pt-2 border-t border-red-500/10 space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Contre</span>
+                          <span className="font-medium">{bid.winning_manager}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Enchère gagnante</span>
+                          <span className="font-bold text-red-700 dark:text-red-400">
+                            {formatAmount(bid.winning_amount)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               ))
             )}
           </CardContent>
         </Card>
 
         {/* Carried Over */}
-        <Card className="bg-orange-50/50 dark:bg-orange-950/10 border-orange-200 dark:border-orange-900">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2 text-orange-700 dark:text-orange-400">
-              <AlertCircle className="h-5 w-5" />
+        <Card className="bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-background border-orange-500/30 hover:border-orange-500/50 transition-all">
+          <CardHeader className="pb-4 border-b border-orange-500/20">
+            <CardTitle className="text-xl flex items-center gap-2 text-orange-700 dark:text-orange-400">
+              <AlertCircle className="h-6 w-6" />
               Égalités ({carriedOver.length})
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="pt-4 space-y-3">
             {carriedOver.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
+              <p className="text-sm text-muted-foreground text-center py-8">
                 Aucune égalité
               </p>
             ) : (
-              carriedOver.map((bid) => (
-                <div
+              carriedOver.map((bid, idx) => (
+                <Card
                   key={bid.bid_id}
-                  className="p-3 bg-background rounded-lg border shadow-sm"
+                  className="hover-scale bg-background/80 border-orange-500/20 animate-fade-in"
+                  style={{ animationDelay: `${idx * 50}ms` }}
                 >
-                  <p className="font-semibold text-sm">{bid.coureur_nom}</p>
-                  <p className="text-xs text-muted-foreground">{bid.coureur_equipe}</p>
-                  <p className="text-lg font-bold text-orange-600 dark:text-orange-400 mt-1">
-                    {formatAmount(bid.my_bid)}
-                  </p>
-                  <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
-                    Ex æquo — repart au prochain round
-                  </p>
-                </div>
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
+                      <div>
+                        <p className="font-bold text-base">{bid.coureur_nom}</p>
+                        <p className="text-xs text-muted-foreground">{bid.coureur_equipe}</p>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-orange-500/20">
+                        <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                          {formatAmount(bid.my_bid)}
+                        </span>
+                        <Badge variant="outline" className="bg-orange-500/10 border-orange-500/30">
+                          = Égalité
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-orange-700 dark:text-orange-400 pt-2 border-t border-orange-500/10">
+                        Ex æquo — repart au prochain round
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
               ))
             )}
           </CardContent>
