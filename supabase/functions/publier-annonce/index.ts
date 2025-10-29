@@ -20,28 +20,62 @@ Deno.serve(async (req) => {
     console.log('Publishing annonce for auction:', auction_id, 'publish_all:', publish_all);
 
     if (publish_all) {
-      // Publish all unpublished annonces
-      const { data, error } = await supabase
+      console.log('📢 Publishing all annonces in order (highest amount first)...');
+      
+      // Fetch all unpublished annonces sorted by winning_amount DESC
+      const { data: unpublishedAnnonces, error: fetchError } = await supabase
         .from('annonces')
-        .update({ published: true, published_at: new Date().toISOString() })
+        .select('id, winning_amount')
         .eq('auction_id', auction_id)
         .eq('published', false)
-        .select();
-
-      if (error) throw error;
-
-      // Check if all annonces are now published
+        .order('winning_amount', { ascending: false }); // Highest first
+      
+      if (fetchError) throw fetchError;
+      
+      if (!unpublishedAnnonces || unpublishedAnnonces.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, count: 0, message: 'No annonces to publish' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Publish each annonce with incremental timestamp
+      let baseTimestamp = new Date();
+      let publishedCount = 0;
+      
+      for (let i = 0; i < unpublishedAnnonces.length; i++) {
+        const annonce = unpublishedAnnonces[i];
+        const publishedAt = new Date(baseTimestamp.getTime() + (i * 1000)); // +1 second each
+        
+        const { error: updateError } = await supabase
+          .from('annonces')
+          .update({ 
+            published: true, 
+            published_at: publishedAt.toISOString() 
+          })
+          .eq('id', annonce.id);
+        
+        if (updateError) {
+          console.error(`Error publishing annonce ${annonce.id}:`, updateError);
+        } else {
+          publishedCount++;
+          console.log(`✅ Published annonce ${annonce.id} (${annonce.winning_amount}) at ${publishedAt.toISOString()}`);
+        }
+      }
+      
+      console.log(`📢 Published ${publishedCount}/${unpublishedAnnonces.length} annonces`);
+      
+      // Auto-launch next round logic
       const { count: unpublishedCount, error: countError } = await supabase
         .from('annonces')
         .select('*', { count: 'exact', head: true })
         .eq('auction_id', auction_id)
         .eq('published', false);
-
+      
       if (countError) {
         console.error('Error checking unpublished annonces:', countError);
       }
-
-      // Auto-launch next round if all annonces are published
+      
       if (unpublishedCount === 0) {
         console.log('🎯 All annonces published, auto-launching next round...');
         
@@ -54,7 +88,6 @@ Deno.serve(async (req) => {
         if (auctionError || !currentAuction) {
           console.error('Error fetching auction:', auctionError);
         } else {
-          // Calculate deadline: +48h
           const deadlineAt = new Date();
           deadlineAt.setHours(deadlineAt.getHours() + 48);
           
@@ -70,13 +103,13 @@ Deno.serve(async (req) => {
           if (openError) {
             console.error('❌ Error auto-launching next round:', openError);
           } else {
-            console.log('✅ Next round auto-launched successfully with deadline:', deadlineAt.toISOString());
+            console.log('✅ Next round auto-launched successfully');
           }
         }
       }
-
+      
       return new Response(
-        JSON.stringify({ success: true, count: data?.length || 0 }),
+        JSON.stringify({ success: true, count: publishedCount }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else {
