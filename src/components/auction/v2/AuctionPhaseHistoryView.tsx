@@ -59,7 +59,7 @@ export function AuctionPhaseHistoryView({
             <div className="flex items-center gap-3">
               <BookOpen className="h-8 w-8 text-primary" />
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Historique de la Phase
+                Historique des Enchères
               </h1>
             </div>
             <p className="text-muted-foreground text-lg">
@@ -70,7 +70,7 @@ export function AuctionPhaseHistoryView({
             variant="secondary" 
             className="text-base px-4 py-2 bg-gradient-to-r from-primary/20 to-primary/10 border-primary/30 animate-pulse"
           >
-            ✓ Phase Terminée
+            ✓ Enchères Terminées
           </Badge>
         </div>
       </div>

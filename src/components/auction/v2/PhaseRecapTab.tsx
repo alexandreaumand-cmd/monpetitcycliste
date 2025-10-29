@@ -30,37 +30,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
     },
   });
 
-  // Fetch timeline from annonces  (using bids_outcomes instead since annonces doesn't have rider names)
-  const { data: timelineRaw = [], isLoading: timelineLoading } = useQuery({
-    queryKey: ["phase-timeline", phaseId, leagueId],
-    queryFn: async () => {
-      let query = supabase
-        .from("bids_outcomes")
-        .select("*")
-        .eq("phase_id", phaseId)
-        .eq("outcome", "won")
-        .order("round_number", { ascending: true });
-
-      if (leagueId) query = query.eq("league_id", leagueId);
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Transform to timeline format
-  const timeline = timelineRaw.map(item => ({
-    round_number: item.round_number,
-    coureur_id: item.coureur_id,
-    coureur_nom: item.coureur_nom,
-    coureur_equipe: item.coureur_equipe,
-    winning_amount: item.winning_amount,
-    winning_manager: item.winning_manager,
-    created_at: null,
-  }));
-
-  if (bidsLoading || timelineLoading) {
+  if (bidsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -96,15 +66,6 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
 
   // Find highest bid details
   const highestBidDetails = allBids.find((b) => b.winning_amount === highestBid);
-
-  // Group timeline by round
-  const timelineByRound = timeline.reduce((acc, item) => {
-    if (!acc[item.round_number]) {
-      acc[item.round_number] = [];
-    }
-    acc[item.round_number].push(item);
-    return acc;
-  }, {} as Record<number, typeof timeline>);
 
   return (
     <div className="space-y-6">
@@ -203,67 +164,6 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
           </CardContent>
         </Card>
       </div>
-
-      {/* Timeline - Vertical with visual indicators */}
-      <Card className="overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-primary/10 to-background border-b">
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <Trophy className="h-6 w-6 text-primary" />
-            Timeline des Acquisitions
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="relative space-y-8">
-            {/* Vertical line */}
-            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-primary/50 to-primary/20" />
-            
-            {Object.entries(timelineByRound)
-              .sort(([a], [b]) => Number(a) - Number(b))
-              .map(([roundNum, items], roundIdx) => (
-                <div key={roundNum} className="relative pl-12 animate-fade-in" style={{ animationDelay: `${roundIdx * 100}ms` }}>
-                  {/* Round badge indicator */}
-                  <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-primary border-4 border-background flex items-center justify-center shadow-lg">
-                    <span className="text-xs font-bold text-primary-foreground">{roundNum}</span>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="secondary" className="text-base px-4 py-1 bg-primary/20 border-primary/30">
-                        Round {roundNum}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {items.length} acquisition{items.length > 1 ? "s" : ""}
-                      </span>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {items.map((item, idx) => (
-                        <Card key={idx} className="hover-scale bg-gradient-to-br from-card to-card/50">
-                          <CardContent className="p-4">
-                            <div className="space-y-2">
-                              <div>
-                                <p className="font-bold text-base">{item.coureur_nom}</p>
-                                <p className="text-xs text-muted-foreground">{item.coureur_equipe}</p>
-                              </div>
-                              <div className="flex items-center justify-between pt-2 border-t">
-                                <span className="text-lg font-bold text-primary">
-                                  {formatAmount(item.winning_amount)}
-                                </span>
-                                <Badge variant="outline" className="text-xs">
-                                  {item.winning_manager}
-                                </Badge>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
