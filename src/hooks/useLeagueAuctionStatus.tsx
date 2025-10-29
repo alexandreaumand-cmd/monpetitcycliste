@@ -8,6 +8,7 @@ interface AuctionStatus {
   validatedCount: number;
   totalManagers: number;
   deadlineAt: string;
+  isScheduled?: boolean;
 }
 
 export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean = true) {
@@ -16,8 +17,8 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
     queryFn: async (): Promise<AuctionStatus | null> => {
       if (!leagueId) return null;
 
-      // Récupérer l'enchère ouverte pour cette ligue
-      const { data: auctionData } = await supabase
+      // 1. Chercher une enchère OUVERTE
+      const { data: openAuction } = await supabase
         .from('auctions')
         .select('id, round_number, deadline_at, phase_id')
         .eq('league_id', leagueId)
@@ -26,29 +27,54 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
         .limit(1)
         .maybeSingle();
 
-      if (!auctionData) return null;
+      if (openAuction) {
+        // Récupérer le statut de validation pour l'enchère ouverte
+        const { data: validationData, error } = await supabase.functions.invoke(
+          'auction-get-validation-status',
+          {
+            body: { phase_id: openAuction.phase_id, league_id: leagueId }
+          }
+        );
 
-      // Appeler la fonction edge pour le statut de validation
-      const { data: validationData, error } = await supabase.functions.invoke(
-        'auction-get-validation-status',
-        {
-          body: { phase_id: auctionData.phase_id, league_id: leagueId }
+        if (error || !validationData) {
+          console.error('Error fetching validation status:', error);
+          return null;
         }
-      );
 
-      if (error || !validationData) {
-        console.error('Error fetching validation status:', error);
-        return null;
+        return {
+          auctionId: openAuction.id,
+          phaseId: openAuction.phase_id,
+          roundNumber: openAuction.round_number,
+          validatedCount: validationData.validated_count,
+          totalManagers: validationData.total_managers,
+          deadlineAt: openAuction.deadline_at,
+        };
       }
 
-      return {
-        auctionId: auctionData.id,
-        phaseId: auctionData.phase_id,
-        roundNumber: auctionData.round_number,
-        validatedCount: validationData.validated_count,
-        totalManagers: validationData.total_managers,
-        deadlineAt: auctionData.deadline_at,
-      };
+      // 2. Si aucune enchère ouverte, chercher une enchère SCHEDULED
+      const { data: scheduledAuction } = await supabase
+        .from('auctions')
+        .select('id, round_number, opens_at, phase_id')
+        .eq('league_id', leagueId)
+        .eq('statut', 'scheduled')
+        .order('opens_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (scheduledAuction) {
+        // Pour une enchère scheduled, pas de validation status
+        return {
+          auctionId: scheduledAuction.id,
+          phaseId: scheduledAuction.phase_id,
+          roundNumber: scheduledAuction.round_number,
+          validatedCount: 0,
+          totalManagers: 0,
+          deadlineAt: scheduledAuction.opens_at,
+          isScheduled: true,
+        };
+      }
+
+      return null;
     },
     enabled: enabled && !!leagueId,
     refetchInterval: 30000, // Rafraîchir toutes les 30 secondes

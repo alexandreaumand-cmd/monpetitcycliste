@@ -275,91 +275,113 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               <p className="text-sm text-muted-foreground text-center py-4">Aucune donnée disponible</p>
             )}
 
-            {/* Section enchères en cours */}
+            {/* Section enchères (en cours OU programmées) */}
             {auctionStatus && !loadingAuction && (
               <div 
                 onClick={() => onViewDetails(true)}
-                className="bg-gradient-to-br from-[#FFF4CC] to-[#FFE999] border-2 border-[#FFD500] rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+                className={auctionStatus.isScheduled 
+                  ? "bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-400 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+                  : "bg-gradient-to-br from-[#FFF4CC] to-[#FFE999] border-2 border-[#FFD500] rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+                }
               >
                 <div className="flex items-center gap-2">
-                  <Gavel className="h-5 w-5 text-black" />
-                  <h3 className="font-montserrat font-bold text-black">
-                    Enchères en cours
-                  </h3>
+                  {auctionStatus.isScheduled ? (
+                    <>
+                      <Clock className="h-5 w-5 text-blue-600" />
+                      <h3 className="font-montserrat font-bold text-blue-900">
+                        Enchères programmées
+                      </h3>
+                    </>
+                  ) : (
+                    <>
+                      <Gavel className="h-5 w-5 text-black" />
+                      <h3 className="font-montserrat font-bold text-black">
+                        Enchères en cours
+                      </h3>
+                    </>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
                   {/* Round number */}
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-poppins text-gray-900">Tour d'enchères</span>
-                    <span className="text-lg font-montserrat font-bold text-black">
+                    <span className={`text-sm font-poppins ${auctionStatus.isScheduled ? 'text-blue-800' : 'text-gray-900'}`}>
+                      Tour d'enchères
+                    </span>
+                    <span className={`text-lg font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
                       Round {auctionStatus.roundNumber}
                     </span>
                   </div>
                   
-                  {/* Validation status */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-poppins text-gray-900 flex items-center gap-1">
-                      <CheckCircle2 className="h-4 w-4" />
-                      Managers validés
-                    </span>
-                    <span className="text-lg font-montserrat font-bold text-black">
-                      {auctionStatus.validatedCount}/{auctionStatus.totalManagers}
-                    </span>
-                  </div>
-                  
-                  {/* Progress bar */}
-                  <div className="w-full bg-white/50 rounded-full h-2 overflow-hidden">
-                    <div 
-                      className="bg-black h-full transition-all duration-500 ease-out"
-                      style={{ 
-                        width: `${(auctionStatus.validatedCount / auctionStatus.totalManagers) * 100}%` 
-                      }}
-                    />
-                  </div>
+                  {/* Validation status - seulement pour enchères ouvertes */}
+                  {!auctionStatus.isScheduled && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-poppins text-gray-900 flex items-center gap-1">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Managers validés
+                        </span>
+                        <span className="text-lg font-montserrat font-bold text-black">
+                          {auctionStatus.validatedCount}/{auctionStatus.totalManagers}
+                        </span>
+                      </div>
+                      
+                      {/* Progress bar */}
+                      <div className="w-full bg-white/50 rounded-full h-2 overflow-hidden">
+                        <div 
+                          className="bg-black h-full transition-all duration-500 ease-out"
+                          style={{ 
+                            width: `${(auctionStatus.validatedCount / auctionStatus.totalManagers) * 100}%` 
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
 
                   {/* Countdown */}
-                  <div className="bg-white/80 rounded-lg p-3 border border-black/10 mt-3">
+                  <div className={`${auctionStatus.isScheduled ? 'bg-blue-50/80' : 'bg-white/80'} rounded-lg p-3 border ${auctionStatus.isScheduled ? 'border-blue-200' : 'border-black/10'} mt-3`}>
                     <div className="flex items-center gap-2 mb-2">
-                      <Clock className="h-4 w-4 text-black" />
-                      <span className="text-xs font-poppins text-gray-900 font-medium">
-                        Temps restant
+                      <Clock className={`h-4 w-4 ${auctionStatus.isScheduled ? 'text-blue-600' : 'text-black'}`} />
+                      <span className={`text-xs font-poppins font-medium ${auctionStatus.isScheduled ? 'text-blue-800' : 'text-gray-900'}`}>
+                        {auctionStatus.isScheduled ? "Ouverture dans" : "Temps restant"}
                       </span>
                     </div>
                     
                     {countdown.isExpired ? (
                       <p className="text-sm font-montserrat font-bold text-red-600">
-                        Clôture en cours...
+                        {auctionStatus.isScheduled ? 'Ouverture en cours...' : 'Clôture en cours...'}
                       </p>
                     ) : (
                       <div className="flex items-center justify-center gap-2">
                         {countdown.days > 0 && (
                           <div className="text-center">
-                            <div className="text-2xl font-montserrat font-bold text-black">
+                            <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
                               {countdown.days}
                             </div>
-                            <div className="text-xs text-gray-600">jour{countdown.days > 1 ? 's' : ''}</div>
+                            <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>
+                              jour{countdown.days > 1 ? 's' : ''}
+                            </div>
                           </div>
                         )}
                         <div className="text-center">
-                          <div className="text-2xl font-montserrat font-bold text-black">
+                          <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
                             {String(countdown.hours).padStart(2, '0')}
                           </div>
-                          <div className="text-xs text-gray-600">h</div>
+                          <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>h</div>
                         </div>
-                        <div className="text-xl font-bold text-black">:</div>
+                        <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>:</div>
                         <div className="text-center">
-                          <div className="text-2xl font-montserrat font-bold text-black">
+                          <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
                             {String(countdown.minutes).padStart(2, '0')}
                           </div>
-                          <div className="text-xs text-gray-600">min</div>
+                          <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>min</div>
                         </div>
-                        <div className="text-xl font-bold text-black">:</div>
+                        <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>:</div>
                         <div className="text-center">
-                          <div className="text-2xl font-montserrat font-bold text-black">
+                          <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
                             {String(countdown.seconds).padStart(2, '0')}
                           </div>
-                          <div className="text-xs text-gray-600">sec</div>
+                          <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>sec</div>
                         </div>
                       </div>
                     )}
