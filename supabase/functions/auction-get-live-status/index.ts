@@ -61,13 +61,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get all annonces for this auction
+    // Get all annonces for this auction - sorted by winning amount (highest first)
     const { data: allAnnonces } = await supabase
       .from('annonces')
       .select('*, coureurs(*), managers:winning_manager_id(*)')
       .eq('auction_id', auction_id)
-      .order('published_at', { ascending: true, nullsFirst: false })
-      .order('created_at', { ascending: true });
+      .order('winning_amount', { ascending: false, nullsFirst: false });
 
     const total_annonces = allAnnonces?.length || 0;
     const published_annonces = allAnnonces?.filter(a => a.published) || [];
