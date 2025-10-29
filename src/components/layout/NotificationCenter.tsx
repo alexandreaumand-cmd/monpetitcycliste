@@ -23,7 +23,7 @@ export const NotificationCenter = () => {
       navigate('/dashboard/startlist');
     } else if (notification.type === 'results_added') {
       navigate('/dashboard/resultats');
-    } else if (notification.type === 'auction_opened' || notification.type === 'auction_closed') {
+    } else if (notification.type === 'auction_opened' || notification.type === 'auction_closed' || notification.type === 'auction_ready_to_close') {
       navigate(`/dashboard/encheres?leagueId=${notification.metadata.league_id}`);
     }
   };

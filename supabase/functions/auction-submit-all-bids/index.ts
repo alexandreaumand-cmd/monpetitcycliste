@@ -252,6 +252,44 @@ Deno.serve(async (req) => {
 
     console.log(`✅ Manager ${manager_id} validated ${draftBids.length} bids for auction ${auction.id}`);
 
+    // Check if this was the last manager to validate
+    try {
+      const { data: validationStatus, error: validationError } = await supabase.functions.invoke(
+        'auction-get-validation-status',
+        { body: { phase_id, league_id } }
+      );
+
+      if (!validationError && validationStatus) {
+        const { validated_count, total_managers } = validationStatus;
+        
+        console.log(`📊 Validation status: ${validated_count}/${total_managers} managers validated`);
+        
+        if (validated_count === total_managers && total_managers > 0) {
+          console.log('🎉 All managers have validated! Sending notification...');
+          
+          // Import and call notification function
+          const { notifyLeagueMembers } = await import('../_shared/notifications.ts');
+          
+          await notifyLeagueMembers(supabase, league_id, {
+            type: 'auction_ready_to_close',
+            title: '🎯 Enchères complètes !',
+            message: `Tous les managers ont validé leurs enchères ! Les annonces vont bientôt arriver...`,
+            metadata: {
+              auction_id: auction.id,
+              round_number: auction.round_number,
+              phase_id,
+              league_id
+            }
+          });
+          
+          console.log('✅ Notification sent to all league members');
+        }
+      }
+    } catch (notifError) {
+      // Don't fail the whole request if notification fails
+      console.error('❌ Error sending notification:', notifError);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
