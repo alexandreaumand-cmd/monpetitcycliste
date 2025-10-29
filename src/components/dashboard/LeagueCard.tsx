@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus, CheckCircle, Lock, Globe, Gavel, CheckCircle2 } from "lucide-react";
+import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus, CheckCircle, Lock, Globe, Gavel, CheckCircle2, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { useMyLeagueStats } from "@/hooks/useMyLeagueStats";
 import { useLeagueMembers } from "@/hooks/useLeagueMembers";
 import { useLeagueSeason } from "@/hooks/useLeagueSeason";
 import { useLeagueAuctionStatus } from "@/hooks/useLeagueAuctionStatus";
+import { useCountdown } from "@/hooks/useCountdown";
 import { LeagueStatusBadge } from "@/components/leagues/LeagueStatusBadge";
 import type { LeagueWithRole } from "@/lib/leagues/types";
 import { getLeagueTemplates } from "@/lib/leagues/templates";
@@ -48,6 +49,9 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
     league.id,
     isActive // Only fetch if league is active
   );
+
+  // Countdown for auction deadline
+  const countdown = useCountdown(auctionStatus?.deadlineAt || null);
 
   const { data: templates } = useQuery({
     queryKey: ['league-templates'],
@@ -312,6 +316,53 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                         width: `${(auctionStatus.validatedCount / auctionStatus.totalManagers) * 100}%` 
                       }}
                     />
+                  </div>
+
+                  {/* Countdown */}
+                  <div className="bg-white/80 rounded-lg p-3 border border-black/10 mt-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="h-4 w-4 text-black" />
+                      <span className="text-xs font-poppins text-gray-900 font-medium">
+                        Temps restant
+                      </span>
+                    </div>
+                    
+                    {countdown.isExpired ? (
+                      <p className="text-sm font-montserrat font-bold text-red-600">
+                        Clôture en cours...
+                      </p>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2">
+                        {countdown.days > 0 && (
+                          <div className="text-center">
+                            <div className="text-2xl font-montserrat font-bold text-black">
+                              {countdown.days}
+                            </div>
+                            <div className="text-xs text-gray-600">jour{countdown.days > 1 ? 's' : ''}</div>
+                          </div>
+                        )}
+                        <div className="text-center">
+                          <div className="text-2xl font-montserrat font-bold text-black">
+                            {String(countdown.hours).padStart(2, '0')}
+                          </div>
+                          <div className="text-xs text-gray-600">h</div>
+                        </div>
+                        <div className="text-xl font-bold text-black">:</div>
+                        <div className="text-center">
+                          <div className="text-2xl font-montserrat font-bold text-black">
+                            {String(countdown.minutes).padStart(2, '0')}
+                          </div>
+                          <div className="text-xs text-gray-600">min</div>
+                        </div>
+                        <div className="text-xl font-bold text-black">:</div>
+                        <div className="text-center">
+                          <div className="text-2xl font-montserrat font-bold text-black">
+                            {String(countdown.seconds).padStart(2, '0')}
+                          </div>
+                          <div className="text-xs text-gray-600">sec</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
