@@ -68,7 +68,7 @@ export function FinalTeamTab({
 
       const { data: coureurs } = await supabase
         .from("coureurs_saisons")
-        .select("coureur_id, coureurs!inner(id, nom), equipe")
+        .select("coureur_id, coureurs!inner(id, nom), equipe, prix_initial")
         .eq("saison_id", phase.saison_id)
         .in(
           "coureur_id",
@@ -81,6 +81,7 @@ export function FinalTeamTab({
           {
             nom: c.coureurs?.nom || "",
             equipe: c.equipe || "",
+            cote_initiale: c.prix_initial || 0,
           },
         ])
       );
@@ -90,6 +91,7 @@ export function FinalTeamTab({
         nom: coureursMap.get(r.coureur_id)?.nom || "",
         equipe: coureursMap.get(r.coureur_id)?.equipe || "",
         prix_signature: r.prix_signature,
+        cote_initiale: coureursMap.get(r.coureur_id)?.cote_initiale || 0,
         round_number: roundMap.get(r.coureur_id) || null,
       }));
     },
@@ -107,6 +109,23 @@ export function FinalTeamTab({
   const remaining = budget - totalSpent;
   const spentPercentage = (totalSpent / budget) * 100;
   const rosterCompletion = (roster.length / maxRiders) * 100;
+
+  // Calculs des nouveaux KPIs
+  const totalCotes = roster.reduce((sum, r) => sum + Number(r.cote_initiale), 0);
+
+  const mostExpensive = roster.length > 0 ? roster.reduce((max, r) => 
+    Number(r.prix_signature) > Number(max.prix_signature) ? r : max
+  , roster[0]) : { prix_signature: 0, nom: "-" };
+
+  const mostOverpaid = roster.length > 0 ? roster.reduce((max, r) => {
+    const diff = Number(r.prix_signature) - Number(r.cote_initiale);
+    const maxDiff = Number(max.prix_signature) - Number(max.cote_initiale);
+    return diff > maxDiff ? r : max;
+  }, roster[0]) : { prix_signature: 0, cote_initiale: 0, nom: "-" };
+
+  const highestCote = roster.length > 0 ? roster.reduce((max, r) => 
+    Number(r.cote_initiale) > Number(max.cote_initiale) ? r : max
+  , roster[0]) : { cote_initiale: 0, nom: "-" };
 
   // Sort by price descending for podium effect
   const sortedByPrice = [...roster].sort((a, b) => Number(b.prix_signature) - Number(a.prix_signature));
@@ -147,57 +166,57 @@ export function FinalTeamTab({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Budget Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="space-y-4">
+          {/* Nouveaux KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Valeur théorique */}
             <div className="p-4 bg-background/80 rounded-xl border border-primary/20">
               <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Budget Initial</p>
+                <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <p className="text-sm text-muted-foreground">Valeur théorique</p>
               </div>
-              <p className="text-2xl font-bold">{formatAmount(budget)}</p>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {formatAmount(totalCotes)}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Somme des cotes initiales
+              </p>
             </div>
-            <div className="p-4 bg-background/80 rounded-xl border border-primary/30">
+
+            {/* Coureur le plus cher */}
+            <div className="p-4 bg-background/80 rounded-xl border border-amber-500/20">
               <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                <p className="text-sm text-muted-foreground">Dépensé</p>
+                <Award className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <p className="text-sm text-muted-foreground">Coureur le plus cher</p>
               </div>
-              <p className="text-2xl font-bold text-primary">{formatAmount(totalSpent)}</p>
-              <p className="text-xs text-muted-foreground mt-1">{spentPercentage.toFixed(1)}% du budget</p>
+              <p className="text-lg font-bold truncate">{mostExpensive.nom}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {formatAmount(mostExpensive.prix_signature)}
+              </p>
             </div>
+
+            {/* Coureur le plus surpayé */}
+            <div className="p-4 bg-background/80 rounded-xl border border-red-500/20">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="h-4 w-4 text-red-600 dark:text-red-400" />
+                <p className="text-sm text-muted-foreground">Le plus surpayé</p>
+              </div>
+              <p className="text-lg font-bold truncate">{mostOverpaid.nom}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                +{formatAmount(Number(mostOverpaid.prix_signature) - Number(mostOverpaid.cote_initiale))} vs cote
+              </p>
+            </div>
+
+            {/* Cote la plus haute */}
             <div className="p-4 bg-background/80 rounded-xl border border-green-500/20">
               <div className="flex items-center gap-2 mb-2">
-                <Award className="h-4 w-4 text-green-600 dark:text-green-400" />
-                <p className="text-sm text-muted-foreground">Restant</p>
+                <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <p className="text-sm text-muted-foreground">Cote la plus haute</p>
               </div>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {formatAmount(remaining)}
+              <p className="text-lg font-bold truncate">{highestCote.nom}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Cote: {formatAmount(highestCote.cote_initiale)}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">{(100 - spentPercentage).toFixed(1)}% disponible</p>
-            </div>
-          </div>
-
-          {/* Progress Bars */}
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Utilisation du budget</span>
-                <span className="text-sm text-muted-foreground">{spentPercentage.toFixed(0)}%</span>
-              </div>
-              <Progress 
-                value={spentPercentage} 
-                className="h-3"
-              />
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Effectif complété</span>
-                <span className="text-sm text-muted-foreground">{rosterCompletion.toFixed(0)}%</span>
-              </div>
-              <Progress 
-                value={rosterCompletion} 
-                className="h-3"
-              />
             </div>
           </div>
         </CardContent>
