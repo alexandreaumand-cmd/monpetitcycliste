@@ -12,6 +12,7 @@ import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { useLeague } from "@/contexts/LeagueContext";
 import { Badge } from "@/components/ui/badge";
 import { LeagueSwitcherMobile } from "@/components/leagues/LeagueSwitcherMobile";
+import { LeagueSwitcherHeaderMobile } from "@/components/leagues/LeagueSwitcherHeaderMobile";
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -40,24 +41,28 @@ export const MobileLayout = ({
       {/* Header with menu button - masqué sur home */}
       {!isHomePage && (
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 safe-top">
-          <div className="flex h-14 items-center justify-between px-4">
+          <div className="flex h-14 items-center gap-2 px-4">
             <Button
               variant="ghost"
               size="icon"
-              className="touch-target"
+              className="touch-target shrink-0"
               onClick={() => setDrawerOpen(true)}
             >
               <Menu className="h-5 w-5" />
               <span className="sr-only">Ouvrir le menu</span>
             </Button>
 
-            <Link to="/dashboard/home" className="flex items-center justify-center flex-1">
-              <img 
-                src={mpcLogo} 
-                alt="Logo Mon Petit Cycliste" 
-                className="h-8 w-auto max-w-[200px]"
-              />
-            </Link>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Link to="/dashboard/home" className="shrink-0">
+                <img 
+                  src={mpcLogo} 
+                  alt="Logo Mon Petit Cycliste" 
+                  className="h-7 w-auto"
+                />
+              </Link>
+              
+              {leagueId && <LeagueSwitcherHeaderMobile />}
+            </div>
 
             <NotificationCenter />
           </div>
