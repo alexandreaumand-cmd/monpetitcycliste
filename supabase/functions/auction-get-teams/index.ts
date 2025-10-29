@@ -23,23 +23,16 @@ Deno.serve(async (req) => {
 
     console.log('Fetching teams for phase:', phase_id);
 
-    // Get distinct team names from coureurs_disponibilite
+    // Use optimized RPC function to get distinct teams
     const { data: teams, error } = await supabase
-      .from('coureurs_disponibilite')
-      .select('coureur_equipe')
-      .eq('phase_id', phase_id)
-      .not('coureur_equipe', 'is', null)
-      .order('coureur_equipe', { ascending: true });
+      .rpc('get_unique_teams_for_phase', { p_phase_id: phase_id });
 
     if (error) throw error;
-
-    // Extract unique team names
-    const uniqueTeams = [...new Set(teams?.map(t => t.coureur_equipe) || [])];
     
-    console.log('Found teams:', uniqueTeams.length);
+    console.log('Found teams:', teams?.length || 0);
 
     return new Response(
-      JSON.stringify({ teams: uniqueTeams }),
+      JSON.stringify({ teams: teams || [] }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

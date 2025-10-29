@@ -4420,6 +4420,12 @@ export type Database = {
           total_points: number
         }[]
       }
+      get_unique_teams_for_phase: {
+        Args: { p_phase_id: string }
+        Returns: {
+          team_name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
