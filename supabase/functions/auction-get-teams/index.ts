@@ -29,10 +29,12 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
     
-    console.log('Found teams:', teams?.length || 0);
+    // Normalize to string array
+    const teamNames = (teams || []).map((t: any) => typeof t === 'string' ? t : t.team_name).filter(Boolean);
+    console.log('Found teams:', teamNames.length);
 
     return new Response(
-      JSON.stringify({ teams: teams || [] }),
+      JSON.stringify({ teams: teamNames }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
