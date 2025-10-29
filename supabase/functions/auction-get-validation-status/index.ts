@@ -12,32 +12,46 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { phase_id, league_id } = await req.json();
+    const { phase_id, league_id, auction_id } = await req.json();
 
-    if (!phase_id) {
-      return new Response(JSON.stringify({ error: 'phase_id is required' }), {
+    if (!phase_id && !auction_id) {
+      return new Response(JSON.stringify({ error: 'phase_id or auction_id is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Get active auction - filter by league_id if provided
-    let auctionQuery = supabase
-      .from('auctions')
-      .select('id, round_number, deadline_at, league_id')
-      .eq('phase_id', phase_id)
-      .eq('statut', 'open')
-      .order('round_number', { ascending: false })
-      .limit(1);
-    
-    if (league_id) {
-      auctionQuery = auctionQuery.eq('league_id', league_id);
+    let auction;
+
+    // If auction_id is provided, use it directly (more reliable)
+    if (auction_id) {
+      const { data } = await supabase
+        .from('auctions')
+        .select('id, round_number, deadline_at, league_id, phase_id')
+        .eq('id', auction_id)
+        .single();
+      
+      auction = data;
+    } else {
+      // Otherwise, find the active auction for the phase
+      let auctionQuery = supabase
+        .from('auctions')
+        .select('id, round_number, deadline_at, league_id')
+        .eq('phase_id', phase_id)
+        .eq('statut', 'open')
+        .order('round_number', { ascending: false })
+        .limit(1);
+      
+      if (league_id) {
+        auctionQuery = auctionQuery.eq('league_id', league_id);
+      }
+      
+      const { data } = await auctionQuery.single();
+      auction = data;
     }
-    
-    const { data: auction } = await auctionQuery.single();
 
     if (!auction) {
-      return new Response(JSON.stringify({ error: 'Aucune enchère active' }), {
+      return new Response(JSON.stringify({ error: 'Aucune enchère trouvée' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

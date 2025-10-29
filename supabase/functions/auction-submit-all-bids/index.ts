@@ -256,7 +256,7 @@ Deno.serve(async (req) => {
     try {
       const { data: validationStatus, error: validationError } = await supabase.functions.invoke(
         'auction-get-validation-status',
-        { body: { phase_id, league_id } }
+        { body: { phase_id, league_id, auction_id: auction.id } }
       );
 
       if (!validationError && validationStatus) {
