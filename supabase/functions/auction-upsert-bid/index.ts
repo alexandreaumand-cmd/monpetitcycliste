@@ -85,6 +85,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    // CRITICAL: Warning if request league_id ≠ auction.league_id (but proceed with auction.league_id)
+    if (league_id !== auction.league_id) {
+      console.warn('⚠️ League mismatch between request and auction!', { 
+        request_league_id: league_id, 
+        auction_league_id: auction.league_id,
+        auction_id: auction.id
+      });
+    }
+
     console.log('🎯 Active auction found:', { 
       auction_id: auction.id, 
       league_id: auction.league_id, 
@@ -157,13 +166,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get current draft bids filtered by league_id
+    // Get current draft bids filtered by auction.league_id
     const { data: currentBids, error: bidsError } = await supabase
       .from('bids')
       .select('id, coureur_id, montant')
       .eq('auction_id', auction.id)
       .eq('manager_id', manager_id)
-      .eq('league_id', league_id)
+      .eq('league_id', auction.league_id)
       .eq('statut', 'draft');
 
     if (bidsError) {
@@ -219,7 +228,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // UPSERT bid (draft status) - onConflict ensures uniqueness per auction/manager/rider
+    // UPSERT bid (draft status) - FORCE league_id from auction to prevent FK violations
     const { error: upsertError } = await supabase
       .from('bids')
       .upsert({
@@ -229,7 +238,7 @@ Deno.serve(async (req) => {
         montant: amount,
         statut: 'draft',
         round_number: auction.round_number,
-        league_id: league_id,
+        league_id: auction.league_id, // ✅ Use auction's league_id, not request's
       }, {
         onConflict: 'auction_id,manager_id,coureur_id',
       });
@@ -247,13 +256,13 @@ Deno.serve(async (req) => {
       is_update: !isNewBid 
     });
 
-    // Return refreshed context filtered by league_id
+    // Return refreshed context filtered by auction.league_id
     const { data: allBids } = await supabase
       .from('bids')
       .select('id, coureur_id, montant, statut')
       .eq('auction_id', auction.id)
       .eq('manager_id', manager_id)
-      .eq('league_id', league_id);
+      .eq('league_id', auction.league_id);
 
     const my_bids = (allBids || [])
       .filter(b => b.statut === 'draft')

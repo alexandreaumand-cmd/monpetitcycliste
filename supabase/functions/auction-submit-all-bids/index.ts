@@ -73,22 +73,29 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Get active auction
+    // Get active auction - CRITICAL: filter by league_id to avoid selecting wrong auction
     const { data: auction } = await supabase
       .from('auctions')
       .select('id, round_number, statut')
       .eq('phase_id', phase_id)
+      .eq('league_id', league_id)
       .eq('statut', 'open')
       .order('round_number', { ascending: false })
       .limit(1)
       .single();
 
     if (!auction) {
-      return new Response(JSON.stringify({ error: 'Aucune enchère active' }), {
+      return new Response(JSON.stringify({ error: 'Aucune enchère active pour cette ligue' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('🎯 Active auction found for submit:', { 
+      auction_id: auction.id, 
+      league_id, 
+      round_number: auction.round_number 
+    });
 
     // Get phase info with saison_id
     const { data: phase } = await supabase
