@@ -17,10 +17,10 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
   const { data: allBids = [], isLoading: bidsLoading } = useQuery({
     queryKey: ["phase-all-bids", phaseId, leagueId],
     queryFn: async () => {
-      let query = supabase
-        .from("bids_outcomes")
-        .select("*")
-        .eq("phase_id", phaseId);
+    let query = supabase
+      .from("bids_outcomes")
+      .select("*, managers!inner(nom)")
+      .eq("phase_id", phaseId);
 
       if (leagueId) query = query.eq("league_id", leagueId);
 
@@ -73,7 +73,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
   const managerLostCounts = allBids
     .filter((b) => b.outcome === "lost")
     .reduce((acc, bid) => {
-      const manager = bid.winning_manager || "Inconnu";
+      const manager = bid.managers?.nom || "Inconnu";
       acc[manager] = (acc[manager] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -256,9 +256,9 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
                 <tbody>
                   {closeCalls.map((call, idx) => (
                     <tr key={idx} className="border-b hover:bg-muted/50">
-                      <td className="p-2 truncate max-w-[100px]">
-                        {call.winning_manager || "Inconnu"}
-                      </td>
+                <td className="p-2 truncate max-w-[100px]">
+                  {call.managers?.nom || "Inconnu"}
+                </td>
                       <td className="p-2 truncate max-w-[120px]">{call.coureur_nom}</td>
                       <td className="p-2 text-right font-mono">{formatAmount(call.my_bid)}</td>
                       <td className="p-2 text-right font-mono font-bold">
