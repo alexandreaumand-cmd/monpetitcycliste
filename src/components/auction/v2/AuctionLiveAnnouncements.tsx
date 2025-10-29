@@ -156,12 +156,13 @@ export function AuctionLiveAnnouncements({
                     </p>
                   ) : (
                     (() => {
-                      const reversedAnnonces = [...liveAnnonces].reverse();
-                      const shouldShowTop10Message = totalAnnonces > 10;
-                      const top10Position = totalAnnonces - 10;
+        const reversedAnnonces = [...liveAnnonces].reverse();
+        const shouldShowTop10Message = totalAnnonces > 10;
+        // Le message doit apparaître à l'index 9 (avant la 10ème annonce en partant de la fin)
+        const top10Position = 9;
 
-                      return reversedAnnonces.map((annonce, idx) => {
-                        const showTop10Before = shouldShowTop10Message && idx === top10Position;
+        return reversedAnnonces.map((annonce, idx) => {
+          const showTop10Before = shouldShowTop10Message && idx === top10Position;
 
                         return (
                           <div key={`wrapper-${annonce.id}`}>

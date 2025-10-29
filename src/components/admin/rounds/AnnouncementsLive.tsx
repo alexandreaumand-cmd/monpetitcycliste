@@ -127,7 +127,8 @@ export const AnnouncementsLive = ({
                 {(() => {
                   const totalCount = announcements.length;
                   const shouldShowTop10 = totalCount > 10;
-                  const top10Position = totalCount - 10;
+                  // Le message doit apparaître à l'index 9 (avant la 10ème annonce en partant de la fin)
+                  const top10Position = 9;
 
                   return published.map((annonce, idx) => {
                     const showTop10Before = shouldShowTop10 && idx === top10Position;
