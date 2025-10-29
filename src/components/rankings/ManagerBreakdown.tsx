@@ -33,7 +33,8 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
       let query = client
         .from("v_manager_breakdown")
         .select("*")
-        .eq("manager_id", managerId);
+        .eq("manager_id", managerId)
+        .eq("league_id", leagueId);
       
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
