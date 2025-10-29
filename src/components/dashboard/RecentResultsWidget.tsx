@@ -291,7 +291,7 @@ export function RecentResultsWidget() {
     queryKey: ['recent-results-top10'],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('home-recent-results-top10', {
-        body: { limit: 3 }
+        body: { limit: 6 }
       });
 
       if (error) throw error;

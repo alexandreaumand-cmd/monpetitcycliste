@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { limit = 3 } = await req.json();
+    const { limit = 6 } = await req.json();
 
     // Get recent races with results
     const { data: recentCourses, error: coursesError } = await supabase
