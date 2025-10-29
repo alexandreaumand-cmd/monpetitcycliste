@@ -11,6 +11,7 @@ import { MyValidatedBids } from "./MyValidatedBids";
 import { AuctionLiveAnnouncements } from "./AuctionLiveAnnouncements";
 import { AuctionTabs } from "./AuctionTabs";
 import { AuctionCompletedView } from "./AuctionCompletedView";
+import { AuctionPhaseHistoryView } from "./AuctionPhaseHistoryView";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2 } from "lucide-react";
@@ -333,6 +334,21 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
         leagueId={leagueId}
         onBack={() => setShowValidationScreen(false)}
         onViewMyBids={() => setShowMyValidatedBids(true)}
+      />
+    );
+  }
+
+  // Check if phase is complete (all managers done)
+  const isPhaseComplete = context?.phase_complete === true;
+
+  if (isPhaseComplete) {
+    return (
+      <AuctionPhaseHistoryView
+        phaseId={phaseId}
+        managerId={managerId}
+        leagueId={leagueId}
+        budget={context.starting_budget}
+        maxRiders={context.rules.max_bids}
       />
     );
   }

@@ -11,6 +11,7 @@ import { AuctionValidationConfirmation } from "./AuctionValidationConfirmation";
 import { MyValidatedBids } from "./MyValidatedBids";
 import { AuctionLiveAnnouncements } from "./AuctionLiveAnnouncements";
 import { AuctionCompletedView } from "./AuctionCompletedView";
+import { AuctionPhaseHistoryView } from "./AuctionPhaseHistoryView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -338,6 +339,21 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         leagueId={leagueId}
         onBack={() => setShowValidationScreen(false)}
         onViewMyBids={() => setShowMyValidatedBids(true)}
+      />
+    );
+  }
+
+  // Check if phase is complete (all managers done)
+  const isPhaseComplete = context?.phase_complete === true;
+
+  if (isPhaseComplete) {
+    return (
+      <AuctionPhaseHistoryView
+        phaseId={phaseId}
+        managerId={managerId}
+        leagueId={leagueId}
+        budget={context.starting_budget}
+        maxRiders={context.rules.max_bids}
       />
     );
   }

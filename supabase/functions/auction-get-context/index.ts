@@ -94,10 +94,37 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!auction) {
+      // Check if phase is complete (all managers have full rosters)
+      let allCompleteQuery = supabase
+        .from('managers_rosters_status')
+        .select('manager_id, slots_restants')
+        .eq('phase_id', phase_id);
+      
+      if (league_id) {
+        allCompleteQuery = allCompleteQuery.eq('league_id', league_id);
+      }
+      
+      const { data: managerStatuses } = await allCompleteQuery;
+      
+      const allRostersComplete = (managerStatuses || []).every(
+        ms => ms.slots_restants === 0
+      );
+      
+      const total_managers = managerStatuses?.length || 0;
+      const completed_managers = (managerStatuses || []).filter(
+        ms => ms.slots_restants === 0
+      ).length;
+
       return new Response(JSON.stringify({ 
         error: 'No active auction',
         phase_id,
         manager_id,
+        phase_complete: allRostersComplete,
+        completion_status: {
+          completed_managers,
+          total_managers,
+          is_complete: allRostersComplete
+        },
         starting_budget: budget,
         currency: '',
         rules: { min_bid: 1, step: 1, max_bids: max_coureurs },
