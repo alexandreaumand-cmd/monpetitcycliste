@@ -67,7 +67,12 @@ export function RoundHistoryTab({
       
       let query = supabase
         .from("bids_outcomes")
-        .select("coureur_id, my_bid, winning_manager")
+        .select(`
+          coureur_id, 
+          my_bid, 
+          manager_id,
+          managers!inner(nom)
+        `)
         .eq("phase_id", phaseId)
         .eq("round_number", roundNumber)
         .eq("outcome", "lost")
@@ -90,7 +95,7 @@ export function RoundHistoryTab({
       acc[loser.coureur_id!] = [];
     }
     acc[loser.coureur_id!].push({
-      nom: loser.winning_manager || 'Inconnu',
+      nom: loser.managers?.nom || 'Inconnu',
       montant: loser.my_bid!
     });
     return acc;
