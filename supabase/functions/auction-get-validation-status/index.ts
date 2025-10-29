@@ -61,8 +61,7 @@ Deno.serve(async (req) => {
 
     // Get all league members with their roster status
     let eligibleManagerIds: string[] = [];
-    let eligibleManagerNames: string[] = [];
-    let totalEligibleManagers = 0;
+    let eligibleManagers: Array<{ manager_id: string; manager_nom: string }> = [];
 
     if (leagueId) {
       // Step 1: Get league configuration from settings
@@ -119,14 +118,16 @@ Deno.serve(async (req) => {
         
         if (slotsRestants > 0) {
           eligibleManagerIds.push(m.id);
-          eligibleManagerNames.push(m.nom);
+          eligibleManagers.push({
+            manager_id: m.id,
+            manager_nom: m.nom
+          });
         }
         
         console.log(`📊 ${m.nom}: ${rosterCount}/${maxCoureurs} coureurs (${slotsRestants} restants)`);
       }
 
-      totalEligibleManagers = eligibleManagerIds.length;
-      console.log(`✅ Total eligible managers: ${totalEligibleManagers}`);
+      console.log(`✅ Total eligible managers: ${eligibleManagers.length}`);
     } else {
       // Fallback for legacy mode (no league)
       const { data: incompleteRosters } = await supabase
@@ -137,8 +138,10 @@ Deno.serve(async (req) => {
       
       if (incompleteRosters && incompleteRosters.length > 0) {
         eligibleManagerIds = incompleteRosters.map((r: any) => r.manager_id);
-        eligibleManagerNames = incompleteRosters.map((r: any) => r.manager_nom);
-        totalEligibleManagers = incompleteRosters.length;
+        eligibleManagers = incompleteRosters.map((r: any) => ({
+          manager_id: r.manager_id,
+          manager_nom: r.manager_nom
+        }));
       }
     }
 
@@ -154,28 +157,37 @@ Deno.serve(async (req) => {
       .eq('statut', 'pending')
       .in('manager_id', eligibleManagerIds);
 
-    // Extract unique validated manager names
-    const validatedNames = [...new Set(
-      (validatedManagers || []).map((b: any) => b.managers.nom)
-    )];
+    // Build validated managers array with full objects
+    const validatedManagersArray: Array<{ manager_id: string; manager_nom: string }> = [];
+    const validatedManagerIds: string[] = [];
+    
+    (validatedManagers || []).forEach((b: any) => {
+      if (!validatedManagerIds.includes(b.manager_id)) {
+        validatedManagerIds.push(b.manager_id);
+        validatedManagersArray.push({
+          manager_id: b.manager_id,
+          manager_nom: b.managers.nom
+        });
+      }
+    });
 
     // Waiting managers = eligible managers minus those who validated
-    const waitingNames = eligibleManagerNames.filter(
-      name => !validatedNames.includes(name)
+    const waitingManagersArray = eligibleManagers.filter(
+      eligible => !validatedManagerIds.includes(eligible.manager_id)
     );
 
-    const totalManagers = totalEligibleManagers;
+    const totalManagers = eligibleManagers.length;
 
     console.log('📊 Validation status:', {
       phase_id,
       league_id: leagueId,
       auction_id: auction.id,
-      total_eligible: totalEligibleManagers,
-      validated: validatedNames.length,
-      waiting: waitingNames.length,
-      eligible_managers: eligibleManagerNames,
-      validated_managers: validatedNames,
-      waiting_managers: waitingNames
+      total_eligible: totalManagers,
+      validated: validatedManagersArray.length,
+      waiting: waitingManagersArray.length,
+      eligible_managers: eligibleManagers.map(m => m.manager_nom),
+      validated_managers: validatedManagersArray.map(m => m.manager_nom),
+      waiting_managers: waitingManagersArray.map(m => m.manager_nom)
     });
 
     return new Response(
@@ -183,11 +195,15 @@ Deno.serve(async (req) => {
         auction_id: auction.id,
         round_number: auction.round_number,
         deadline_at: auction.deadline_at,
-        validated_count: validatedNames.length,
-        waiting_count: waitingNames.length,
+        validated_count: validatedManagersArray.length,
+        waiting_count: waitingManagersArray.length,
         total_managers: totalManagers,
-        validated_managers: validatedNames.sort(),
-        waiting_managers: waitingNames.sort(),
+        validated_managers: validatedManagersArray.sort((a, b) => 
+          a.manager_nom.localeCompare(b.manager_nom)
+        ),
+        waiting_managers: waitingManagersArray.sort((a, b) => 
+          a.manager_nom.localeCompare(b.manager_nom)
+        ),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
