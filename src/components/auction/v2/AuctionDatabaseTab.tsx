@@ -40,7 +40,8 @@ interface AuctionData {
   cote_initiale: number;
   roi: number;
   concurrents_battus: Array<{
-    winning_manager: string;
+    manager_id: string;
+    manager_nom: string;
     my_bid: number;
   }>;
 }
@@ -83,7 +84,13 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
 
       let losersQuery = supabase
         .from("bids_outcomes")
-        .select("coureur_id, my_bid, winning_manager")
+        .select(`
+          coureur_id,
+          round_number,
+          my_bid,
+          manager_id,
+          managers!inner(nom)
+        `)
         .eq("phase_id", phaseId)
         .eq("outcome", "lost")
         .in("coureur_id", coureurIds);
@@ -95,7 +102,13 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
 
       return winners.map((w) => {
         const cote = coureurs?.find((c) => c.id === w.coureur_id)?.prix_initial || 0;
-        const concurrents = (losers || []).filter((l) => l.coureur_id === w.coureur_id);
+        const concurrents = (losers || [])
+          .filter((l: any) => l.coureur_id === w.coureur_id && l.round_number === w.round_number)
+          .map((l: any) => ({
+            manager_id: l.manager_id as string,
+            manager_nom: l.managers?.nom || "Inconnu",
+            my_bid: l.my_bid as number,
+          }));
         const roi = cote > 0 ? ((w.winning_amount - cote) / cote) * 100 : 0;
 
         return {
@@ -408,7 +421,7 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
                                         key={idx}
                                         className="flex items-center justify-between p-2 rounded-md bg-background border border-border"
                                       >
-                                        <span className="text-sm">{concurrent.winning_manager}</span>
+                                        <span className="text-sm">{concurrent.manager_nom}</span>
                                         <div className="flex items-center gap-2">
                                           <span className="text-sm font-mono">{concurrent.my_bid}€</span>
                                           <span className="text-xs text-muted-foreground">
