@@ -12,6 +12,7 @@ import { AuctionLiveAnnouncements } from "./AuctionLiveAnnouncements";
 import { AuctionTabs } from "./AuctionTabs";
 import { AuctionCompletedView } from "./AuctionCompletedView";
 import { AuctionPhaseHistoryView } from "./AuctionPhaseHistoryView";
+import { AuctionScheduledView } from "./AuctionScheduledView";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2 } from "lucide-react";
@@ -80,6 +81,34 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
       
       const { data, error } = await query
         .order('closed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: context === null, // Only fetch if no active auction
+  });
+
+  // Get next scheduled auction if no active auction
+  const { data: scheduledAuction } = useQuery({
+    queryKey: ["scheduled-auction", phaseId, leagueId],
+    queryFn: async () => {
+      let query = supabase
+        .from('auctions')
+        .select('id, opens_at, round_number, phase_id')
+        .eq('statut', 'scheduled');
+      
+      if (leagueId) {
+        query = query.eq('league_id', leagueId);
+      }
+      
+      if (phaseId) {
+        query = query.eq('phase_id', phaseId);
+      }
+      
+      const { data, error } = await query
+        .order('opens_at', { ascending: true })
         .limit(1)
         .maybeSingle();
       
@@ -285,14 +314,28 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     );
   }
 
+  // Show scheduled auction countdown if exists
+  if (!context && scheduledAuction) {
+    return (
+      <div className="container max-w-4xl mx-auto p-6">
+        <AuctionScheduledView
+          opensAt={scheduledAuction.opens_at}
+          roundNumber={scheduledAuction.round_number}
+          phaseId={phaseId}
+          leagueId={leagueId}
+        />
+      </div>
+    );
+  }
+
   if (!context) {
     return (
       <Card className="m-8">
         <CardContent className="flex items-center justify-center p-12 text-center">
           <div>
-            <p className="text-muted-foreground">Aucune enchère active</p>
+            <p className="text-muted-foreground">Aucune enchère programmée</p>
             <p className="text-sm text-muted-foreground mt-2">
-              Attends qu'un nouveau round soit ouvert
+              Les enchères n'ont pas encore été planifiées
             </p>
           </div>
         </CardContent>

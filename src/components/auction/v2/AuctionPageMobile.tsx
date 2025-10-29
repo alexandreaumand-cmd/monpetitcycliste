@@ -12,6 +12,7 @@ import { MyValidatedBids } from "./MyValidatedBids";
 import { AuctionLiveAnnouncements } from "./AuctionLiveAnnouncements";
 import { AuctionCompletedView } from "./AuctionCompletedView";
 import { AuctionPhaseHistoryView } from "./AuctionPhaseHistoryView";
+import { AuctionScheduledView } from "./AuctionScheduledView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -79,6 +80,34 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       
       const { data, error } = await query
         .order('closed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: context === null, // Only fetch if no active auction
+  });
+
+  // Get next scheduled auction if no active auction
+  const { data: scheduledAuction } = useQuery({
+    queryKey: ["scheduled-auction", phaseId, leagueId],
+    queryFn: async () => {
+      let query = supabase
+        .from('auctions')
+        .select('id, opens_at, round_number, phase_id')
+        .eq('statut', 'scheduled');
+      
+      if (leagueId) {
+        query = query.eq('league_id', leagueId);
+      }
+      
+      if (phaseId) {
+        query = query.eq('phase_id', phaseId);
+      }
+      
+      const { data, error } = await query
+        .order('opens_at', { ascending: true })
         .limit(1)
         .maybeSingle();
       
@@ -294,13 +323,25 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     );
   }
 
+  // Show scheduled auction countdown if exists
+  if (!context && scheduledAuction) {
+    return (
+      <AuctionScheduledView
+        opensAt={scheduledAuction.opens_at}
+        roundNumber={scheduledAuction.round_number}
+        phaseId={phaseId}
+        leagueId={leagueId}
+      />
+    );
+  }
+
   if (!context) {
     return (
       <div className="flex items-center justify-center min-h-screen p-4 text-center">
         <div>
-          <p className="text-muted-foreground">Aucune enchère active</p>
+          <p className="text-muted-foreground">Aucune enchère programmée</p>
           <p className="text-sm text-muted-foreground mt-2">
-            Attends qu'un nouveau round soit ouvert
+            Les enchères n'ont pas encore été planifiées
           </p>
         </div>
       </div>
