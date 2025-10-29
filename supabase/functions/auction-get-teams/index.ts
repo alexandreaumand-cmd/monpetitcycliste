@@ -7,6 +7,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('[auction-get-teams] v3-RPC - Starting');
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -21,7 +23,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('Fetching teams for phase:', phase_id);
+    console.log('[auction-get-teams] v3-RPC - Fetching teams for phase:', phase_id);
 
     // Use the RPC function for reliable distinct team retrieval
     const { data: teams, error } = await supabase
@@ -39,7 +41,7 @@ Deno.serve(async (req) => {
     // Sort alphabetically for consistency
     teamNames.sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
 
-    console.log(`Found teams (RPC): ${teamNames.length}`);
+    console.log(`[auction-get-teams] v3-RPC - Found teams: ${teamNames.length}`);
 
 
     return new Response(
