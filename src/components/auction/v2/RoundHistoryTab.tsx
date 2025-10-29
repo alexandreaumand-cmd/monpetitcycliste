@@ -48,6 +48,45 @@ export function RoundHistoryTab({
   const lost = outcomes.filter((o) => o.outcome === "lost");
   const carriedOver = outcomes.filter((o) => o.outcome === "carried_over");
 
+  // Get losers (beaten managers) for each won rider
+  const { data: losersData = [] } = useQuery({
+    queryKey: ["round-losers", phaseId, leagueId, roundNumber, won.map(w => w.coureur_id)],
+    queryFn: async () => {
+      if (won.length === 0) return [];
+      
+      const coureurIds = won.map(w => w.coureur_id);
+      
+      let query = supabase
+        .from("bids_outcomes")
+        .select("coureur_id, my_bid, winning_manager")
+        .eq("phase_id", phaseId)
+        .eq("round_number", roundNumber)
+        .eq("outcome", "lost")
+        .in("coureur_id", coureurIds);
+      
+      if (leagueId) {
+        query = query.eq("league_id", leagueId);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: won.length > 0,
+  });
+
+  // Group losers by coureur_id
+  const losersByRider = losersData.reduce((acc, loser) => {
+    if (!acc[loser.coureur_id!]) {
+      acc[loser.coureur_id!] = [];
+    }
+    acc[loser.coureur_id!].push({
+      nom: loser.winning_manager || 'Inconnu',
+      montant: loser.my_bid!
+    });
+    return acc;
+  }, {} as Record<string, Array<{ nom: string; montant: number }>>);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -102,18 +141,34 @@ export function RoundHistoryTab({
                 Aucune enchère gagnée
               </p>
             ) : (
-              won.map((bid) => (
-                <div
-                  key={bid.bid_id}
-                  className="p-3 bg-background rounded-lg border shadow-sm"
-                >
-                  <p className="font-semibold text-sm">{bid.coureur_nom}</p>
-                  <p className="text-xs text-muted-foreground">{bid.coureur_equipe}</p>
-                  <p className="text-lg font-bold text-green-600 dark:text-green-400 mt-1">
-                    {formatAmount(bid.my_bid)}
-                  </p>
-                </div>
-              ))
+              won.map((bid) => {
+                const beatManagers = losersByRider[bid.coureur_id!] || [];
+                
+                return (
+                  <div
+                    key={bid.bid_id}
+                    className="p-3 bg-background rounded-lg border shadow-sm"
+                  >
+                    <p className="font-semibold text-sm">{bid.coureur_nom}</p>
+                    <p className="text-xs text-muted-foreground">{bid.coureur_equipe}</p>
+                    <p className="text-lg font-bold text-green-600 dark:text-green-400 mt-1">
+                      {formatAmount(bid.my_bid)}
+                    </p>
+                    {beatManagers.length > 0 && (
+                      <>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Tu bats :
+                        </p>
+                        {beatManagers.map((loser, idx) => (
+                          <p key={idx} className="text-xs font-medium text-green-700 dark:text-green-400">
+                            {loser.nom} à {formatAmount(loser.montant)}
+                          </p>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                );
+              })
             )}
           </CardContent>
         </Card>
