@@ -7,7 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus } from "lucide-react";
 
 interface AddBaremeDialogProps {
+  saisons: any[];
   onAdd: (bareme: {
+    saison_id: string;
     categorie: string;
     type_classement: string;
     place: number;
@@ -34,9 +36,10 @@ const typeClassements = [
   { value: "jeune", label: "Jeune" },
 ];
 
-export function AddBaremeDialog({ onAdd }: AddBaremeDialogProps) {
+export function AddBaremeDialog({ saisons, onAdd }: AddBaremeDialogProps) {
   const [open, setOpen] = useState(false);
   const [newBareme, setNewBareme] = useState({
+    saison_id: "",
     categorie: "",
     type_classement: "",
     place: 1,
@@ -44,12 +47,13 @@ export function AddBaremeDialog({ onAdd }: AddBaremeDialogProps) {
   });
 
   const handleSubmit = () => {
-    if (!newBareme.categorie || !newBareme.type_classement) {
+    if (!newBareme.saison_id || !newBareme.categorie || !newBareme.type_classement) {
       return;
     }
 
     onAdd(newBareme);
     setNewBareme({
+      saison_id: "",
       categorie: "",
       type_classement: "",
       place: 1,
@@ -71,6 +75,25 @@ export function AddBaremeDialog({ onAdd }: AddBaremeDialogProps) {
           <DialogTitle>Ajouter un barème</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-4">
+          <div className="space-y-2">
+            <Label>Saison</Label>
+            <Select
+              value={newBareme.saison_id}
+              onValueChange={(value) => setNewBareme({ ...newBareme, saison_id: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner une saison" />
+              </SelectTrigger>
+              <SelectContent>
+                {saisons?.map((saison) => (
+                  <SelectItem key={saison.id} value={saison.id}>
+                    {saison.annee}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2">
             <Label>Catégorie</Label>
             <Select
@@ -135,7 +158,7 @@ export function AddBaremeDialog({ onAdd }: AddBaremeDialogProps) {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!newBareme.categorie || !newBareme.type_classement}
+              disabled={!newBareme.saison_id || !newBareme.categorie || !newBareme.type_classement}
             >
               Ajouter
             </Button>

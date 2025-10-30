@@ -8,6 +8,7 @@ import { Save, X, Loader2, Trash2 } from "lucide-react";
 
 interface BaremesTableProps {
   baremes: any[];
+  saisons: any[];
   isLoading: boolean;
   onSave: (updates: Array<{ id: string; changes: any }>) => void;
   onDelete: (baremeId: string, baremeInfo: string) => void;
@@ -32,7 +33,7 @@ const typeClassements = [
   { value: "jeune", label: "Jeune" },
 ];
 
-export const BaremesTable = ({ baremes, isLoading, onSave, onDelete }: BaremesTableProps) => {
+export const BaremesTable = ({ baremes, saisons, isLoading, onSave, onDelete }: BaremesTableProps) => {
   const [editedBaremes, setEditedBaremes] = useState<Map<string, any>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
 
@@ -117,18 +118,19 @@ export const BaremesTable = ({ baremes, isLoading, onSave, onDelete }: BaremesTa
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[25%]">Catégorie</TableHead>
-              <TableHead className="w-[20%]">Type classement</TableHead>
-              <TableHead className="w-[15%]">Place</TableHead>
-              <TableHead className="w-[15%]">Points</TableHead>
-              <TableHead className="w-[15%]">Type</TableHead>
+              <TableHead className="w-[15%]">Saison</TableHead>
+              <TableHead className="w-[20%]">Catégorie</TableHead>
+              <TableHead className="w-[18%]">Type classement</TableHead>
+              <TableHead className="w-[12%]">Place</TableHead>
+              <TableHead className="w-[12%]">Points</TableHead>
+              <TableHead className="w-[13%]">Type</TableHead>
               <TableHead className="w-[10%]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {baremes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                   Aucun barème trouvé
                 </TableCell>
               </TableRow>
@@ -137,6 +139,25 @@ export const BaremesTable = ({ baremes, isLoading, onSave, onDelete }: BaremesTa
                 const isEdited = hasChanges(bareme.id);
                 return (
                   <TableRow key={bareme.id} className={isEdited ? "bg-muted/50" : ""}>
+                    {/* Saison */}
+                    <TableCell>
+                      <Select
+                        value={getDisplayValue(bareme, 'saison_id')}
+                        onValueChange={(value) => handleFieldChange(bareme.id, 'saison_id', value)}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {saisons?.map((saison) => (
+                            <SelectItem key={saison.id} value={saison.id}>
+                              {saison.annee}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+
                     {/* Catégorie */}
                     <TableCell>
                       <Select

@@ -5,6 +5,7 @@ import { RotateCcw } from "lucide-react";
 interface BaremesFiltersProps {
   saisons: any[];
   filters: {
+    saison_id: string;
     categorie: string;
     type_classement: string;
   };
@@ -33,9 +34,23 @@ const typeClassements = [
   { value: "jeune", label: "Jeune" },
 ];
 
-export function BaremesFilters({ filters, onFilterChange, onReset }: BaremesFiltersProps) {
+export function BaremesFilters({ saisons, filters, onFilterChange, onReset }: BaremesFiltersProps) {
   return (
     <div className="flex flex-col md:flex-row gap-3">
+      <Select value={filters.saison_id} onValueChange={(value) => onFilterChange('saison_id', value)}>
+        <SelectTrigger className="w-full md:w-[250px]">
+          <SelectValue placeholder="Saison" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Toutes les saisons</SelectItem>
+          {saisons?.map((saison) => (
+            <SelectItem key={saison.id} value={saison.id}>
+              {saison.annee}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
       <Select value={filters.categorie} onValueChange={(value) => onFilterChange('categorie', value)}>
         <SelectTrigger className="w-full md:w-[250px]">
           <SelectValue placeholder="Catégorie" />

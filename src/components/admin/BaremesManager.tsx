@@ -13,6 +13,7 @@ export function BaremesManager() {
   const queryClient = useQueryClient();
 
   const [filters, setFilters] = useState({
+    saison_id: "all",
     categorie: "all",
     type_classement: "all",
   });
@@ -36,12 +37,15 @@ export function BaremesManager() {
     queryKey: ['admin-baremes', filters],
     queryFn: async () => {
       let query = supabase
-        .from('scoring_rules')
-        .select('*')
+        .from('scoring_rules_saisons')
+        .select('*, saisons(annee)')
         .order('categorie', { ascending: true })
         .order('type_classement', { ascending: true })
         .order('place', { ascending: true });
 
+      if (filters.saison_id !== "all") {
+        query = query.eq('saison_id', filters.saison_id);
+      }
       if (filters.categorie !== "all") {
         query = query.eq('categorie', filters.categorie);
       }
@@ -59,11 +63,8 @@ export function BaremesManager() {
   const createBaremeMutation = useMutation({
     mutationFn: async (newBareme: any) => {
       const { error } = await supabase
-        .from('scoring_rules')
-        .insert([{
-          ...newBareme,
-          id: `${newBareme.categorie}_${newBareme.type_classement}_${newBareme.place}`.toLowerCase().replace(/\s+/g, '_'),
-        }]);
+        .from('scoring_rules_saisons')
+        .insert([newBareme]);
       
       if (error) throw error;
     },
@@ -88,7 +89,7 @@ export function BaremesManager() {
     mutationFn: async (updates: Array<{ id: string; changes: any }>) => {
       const promises = updates.map(({ id, changes }) =>
         supabase
-          .from('scoring_rules')
+          .from('scoring_rules_saisons')
           .update(changes)
           .eq('id', id)
       );
@@ -117,7 +118,7 @@ export function BaremesManager() {
   const deleteBaremeMutation = useMutation({
     mutationFn: async (baremeId: string) => {
       const { error } = await supabase
-        .from('scoring_rules')
+        .from('scoring_rules_saisons')
         .delete()
         .eq('id', baremeId);
       
@@ -145,6 +146,7 @@ export function BaremesManager() {
 
   const handleResetFilters = () => {
     setFilters({
+      saison_id: "all",
       categorie: "all",
       type_classement: "all",
     });
@@ -166,7 +168,7 @@ export function BaremesManager() {
         icon={BarChart}
         title="Gestion des barèmes"
         subtitle="Gérez les points attribués par catégorie et position"
-        actions={<AddBaremeDialog onAdd={handleAddBareme} />}
+        actions={<AddBaremeDialog saisons={saisons || []} onAdd={handleAddBareme} />}
         filters={
           <BaremesFilters
             saisons={saisons || []}
@@ -179,6 +181,7 @@ export function BaremesManager() {
 
       <BaremesTable
         baremes={baremes || []}
+        saisons={saisons || []}
         isLoading={isLoading}
         onSave={(updates) => updateBaremesMutation.mutate(updates)}
         onDelete={handleDelete}
