@@ -46,18 +46,16 @@ Deno.serve(async (req) => {
       throw new Error('Phase not found');
     }
 
-    // Step 2: Build base query on coureurs_saisons with join to equipes_saisons
+    // Step 2: Build base query on coureurs_saisons
     let query = supabase
       .from('coureurs_saisons')
       .select(`
         coureur_id,
         equipe_id,
         prix_initial,
-        coureurs!inner(id, nom),
-        equipes_saisons!inner(equipe_id, saison_id, nom_affiche)
+        coureurs!inner(id, nom)
       `)
-      .eq('saison_id', phase.saison_id)
-      .eq('equipes_saisons.saison_id', phase.saison_id);
+      .eq('saison_id', phase.saison_id);
 
     // Search by name
     if (q && q.trim().length >= 2) {
@@ -113,7 +111,25 @@ Deno.serve(async (req) => {
 
     console.log(`[auction-search-riders] Found ${coureursSaisons.length} riders`);
 
-    // Step 3: Calculate is_taken per league
+    // Step 3: Get team names for all riders
+    const equipeIds = [...new Set(coureursSaisons.map((cs: any) => cs.equipe_id).filter(Boolean))];
+    
+    let equipesMap = new Map();
+    if (equipeIds.length > 0) {
+      const { data: equipesData, error: equipesError } = await supabase
+        .from('equipes_saisons')
+        .select('id, nom_affiche, equipes(nom_complet)')
+        .eq('saison_id', phase.saison_id)
+        .in('id', equipeIds);
+      
+      if (!equipesError && equipesData) {
+        equipesData.forEach((eq: any) => {
+          equipesMap.set(eq.id, eq.nom_affiche || eq.equipes?.nom_complet || 'N/A');
+        });
+      }
+    }
+
+    // Step 4: Calculate is_taken per league
     const riderIds = coureursSaisons.map((cs: any) => cs.coureur_id);
     
     let takenRiders: any[] = [];
@@ -159,20 +175,21 @@ Deno.serve(async (req) => {
       });
     });
 
-    // Step 4: Enrich riders with is_taken status
+    // Step 5: Enrich riders with is_taken status and team name
     const items = coureursSaisons.map((cs: any) => {
       const taken = takenMap.get(cs.coureur_id) || { is_taken: false, taken_by_manager_nom: null };
+      const teamName = equipesMap.get(cs.equipe_id) || 'N/A';
       return {
         rider_id: cs.coureur_id,
         rider_nom: cs.coureurs.nom,
-        rider_team: cs.equipes_saisons?.nom_affiche || 'N/A',
+        rider_team: teamName,
         cote: cs.prix_initial,
         is_taken: taken.is_taken,
         taken_by_manager_nom: taken.taken_by_manager_nom,
       };
     });
 
-    // Step 5: Filter by available_only after calculating league-specific is_taken
+    // Step 6: Filter by available_only after calculating league-specific is_taken
     const filteredItems = available_only 
       ? items.filter((i: any) => !i.is_taken)
       : items;
