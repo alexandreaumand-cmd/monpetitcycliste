@@ -4539,14 +4539,16 @@ export type Database = {
           p_league_id?: string
           p_limit?: number
           p_phase_id?: string
-          p_saison_id: string
+          p_saison_id?: string
         }
         Returns: {
-          prix_achat: number
-          race_count: number
-          rider_equipe: string
-          rider_id: string
-          rider_name: string
+          coureur_equipe: string
+          coureur_id: string
+          coureur_nom: string
+          courses_count: number
+          owner_manager_id: string
+          owner_manager_nom: string
+          prix_initial: number
           total_points: number
         }[]
       }
