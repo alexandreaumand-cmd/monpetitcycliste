@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
       // Otherwise, find the active auction for the phase
       let auctionQuery = supabase
         .from('auctions')
-        .select('id, round_number, deadline_at, league_id')
+        .select('id, round_number, deadline_at, league_id, phase_id')
         .eq('phase_id', phase_id)
         .eq('statut', 'open')
         .order('round_number', { ascending: false })
@@ -58,6 +58,7 @@ Deno.serve(async (req) => {
     }
 
     const leagueId = auction.league_id;
+    const phaseId = auction.phase_id;
 
     // Get all league members with their roster status
     let eligibleManagerIds: string[] = [];
@@ -74,11 +75,11 @@ Deno.serve(async (req) => {
       let maxCoureurs: number = league?.settings?.max_riders ? Number(league.settings.max_riders) : 0;
       
       // Fallback to phase max_coureurs if not set in league settings
-      if (!maxCoureurs) {
+      if (!maxCoureurs && phaseId) {
         const { data: phase } = await supabase
           .from('phases')
           .select('max_coureurs')
-          .eq('id', phase_id)
+          .eq('id', phaseId)
           .single();
         
         maxCoureurs = phase?.max_coureurs ?? 30;
@@ -110,7 +111,7 @@ Deno.serve(async (req) => {
         .from('rosters')
         .select('*', { count: 'exact', head: true })
         .eq('manager_id', m.id)
-        .eq('phase_id', phase_id)
+        .eq('phase_id', phaseId)
         .eq('league_id', leagueId);
 
         const rosterCount = count || 0;
@@ -133,7 +134,7 @@ Deno.serve(async (req) => {
       const { data: incompleteRosters } = await supabase
         .from('managers_rosters_status')
         .select('manager_id, manager_nom, slots_restants')
-        .eq('phase_id', phase_id)
+        .eq('phase_id', phaseId)
         .gt('slots_restants', 0);
       
       if (incompleteRosters && incompleteRosters.length > 0) {
@@ -179,7 +180,7 @@ Deno.serve(async (req) => {
     const totalManagers = eligibleManagers.length;
 
     console.log('📊 Validation status:', {
-      phase_id,
+      phase_id: phaseId,
       league_id: leagueId,
       auction_id: auction.id,
       total_eligible: totalManagers,
