@@ -100,18 +100,41 @@ Deno.serve(async (req) => {
       round_number: auction.round_number 
     });
 
-    // Get coureur info - handle potential duplicates by using limit(1) and taking first result
-    const { data: coureurData, error: coureurError } = await supabase
-      .from('coureurs_disponibilite_enrichie')
-      .select('id, nom, prix_initial')
-      .eq('phase_id', phase_id)
-      .eq('id', rider_id)
-      .limit(1);
+    // Get coureur info directly from coureurs_saisons, fallback to coureurs
+    // This bypasses the view to avoid duplicate issues from equipes_saisons
+    let coureur: { id: string; nom: string; prix_initial: number } | null = null;
+    
+    // First try coureurs_saisons
+    const { data: coureurSaison } = await supabase
+      .from('coureurs_saisons')
+      .select('coureur_id, nom, prix_initial')
+      .eq('coureur_id', rider_id)
+      .eq('saison_id', (await supabase.from('phases').select('saison_id').eq('id', phase_id).single()).data?.saison_id)
+      .limit(1)
+      .maybeSingle();
+    
+    if (coureurSaison) {
+      coureur = {
+        id: coureurSaison.coureur_id,
+        nom: coureurSaison.nom,
+        prix_initial: coureurSaison.prix_initial
+      };
+    } else {
+      // Fallback to coureurs table
+      const { data: coureurBase } = await supabase
+        .from('coureurs')
+        .select('id, nom, prix_initial')
+        .eq('id', rider_id)
+        .limit(1)
+        .maybeSingle();
+      
+      if (coureurBase) {
+        coureur = coureurBase;
+      }
+    }
 
-    const coureur = coureurData?.[0];
-
-    if (coureurError || !coureur) {
-      console.error('❌ Rider not found:', { rider_id, phase_id, error: coureurError });
+    if (!coureur) {
+      console.error('❌ Rider not found:', { rider_id, phase_id });
       return new Response(JSON.stringify({ error: 'Coureur introuvable pour cette phase' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
