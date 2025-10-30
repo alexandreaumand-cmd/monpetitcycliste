@@ -12,14 +12,18 @@ interface AuctionsListProps {
 
 export const AuctionsList = ({ managerId }: AuctionsListProps) => {
   const { leagueId } = useLeague();
-  const { data: activePhases, isLoading } = useQuery({
-    queryKey: ['my-active-phases'],
+  const { data: activeAuctions, isLoading } = useQuery({
+    queryKey: ['my-active-auctions', leagueId],
+    enabled: !!leagueId,
     queryFn: async () => {
+      if (!leagueId) return null;
+      
       const { data, error } = await supabase
-        .from('phases')
-        .select('id')
-        .eq('statut', 'active')
-        .order('date_debut', { ascending: false })
+        .from('auctions')
+        .select('phase_id')
+        .eq('league_id', leagueId)
+        .eq('statut', 'open')
+        .order('opens_at', { ascending: false })
         .limit(1);
       
       if (error) throw error;
@@ -35,7 +39,7 @@ export const AuctionsList = ({ managerId }: AuctionsListProps) => {
     );
   }
 
-  if (!activePhases || activePhases.length === 0) {
+  if (!activeAuctions || activeAuctions.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -51,5 +55,5 @@ export const AuctionsList = ({ managerId }: AuctionsListProps) => {
   }
 
   // Always use V2
-  return <AuctionPageV2 phaseId={activePhases[0].id} managerId={managerId} leagueId={leagueId} />;
+  return <AuctionPageV2 phaseId={activeAuctions[0].phase_id} managerId={managerId} leagueId={leagueId} />;
 };
