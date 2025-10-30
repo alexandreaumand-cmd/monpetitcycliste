@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Save, X, Loader2 } from "lucide-react";
+import { EquipeSelect } from "@/components/shared/EquipeSelect";
 
 interface CoureursTableProps {
   coureurs: any[];
@@ -82,10 +83,10 @@ export const CoureursTable = ({ coureurs, isLoading, onSave }: CoureursTableProp
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[30%]">Nom</TableHead>
-              <TableHead className="w-[15%]">Saison</TableHead>
-              <TableHead className="w-[35%]">Équipe</TableHead>
-              <TableHead className="w-[20%]">Cote</TableHead>
+              <TableHead className="w-[25%]">Nom</TableHead>
+              <TableHead className="w-[12%]">Saison</TableHead>
+              <TableHead className="w-[40%]">Équipe</TableHead>
+              <TableHead className="w-[23%]">Cote</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -111,12 +112,19 @@ export const CoureursTable = ({ coureurs, isLoading, onSave }: CoureursTableProp
                       {coureur.saison?.annee || 'N/A'}
                     </TableCell>
 
-                    {/* Équipe */}
+                    {/* Équipe (éditable) */}
                     <TableCell>
-                      {coureur.equipes_saisons?.nom_affiche || 'Non définie'}
-                      <span className="text-xs text-muted-foreground ml-2">
-                        ({coureur.equipes_saisons?.equipes?.code_court || 'N/A'})
-                      </span>
+                      <EquipeSelect
+                        saisonId={coureur.saison_id}
+                        value={getCellValue(coureur, 'equipe_id')}
+                        onChange={(equipeId) => handleCellEdit(coureur.id, 'equipe_id', equipeId)}
+                        placeholder={coureur.equipes_saisons?.nom_affiche || 'Sélectionner une équipe'}
+                      />
+                      {coureur.equipes_saisons?.equipes?.code_court && (
+                        <span className="text-xs text-muted-foreground mt-1 block">
+                          Actuel: {coureur.equipes_saisons.nom_affiche} ({coureur.equipes_saisons.equipes.code_court})
+                        </span>
+                      )}
                     </TableCell>
 
                     {/* Cote / Prix initial (éditable) */}
