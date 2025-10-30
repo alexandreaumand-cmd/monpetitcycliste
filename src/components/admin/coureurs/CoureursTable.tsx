@@ -82,15 +82,16 @@ export const CoureursTable = ({ coureurs, isLoading, onSave }: CoureursTableProp
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[40%]">Nom</TableHead>
-              <TableHead className="w-[40%]">Équipe</TableHead>
+              <TableHead className="w-[30%]">Nom</TableHead>
+              <TableHead className="w-[15%]">Saison</TableHead>
+              <TableHead className="w-[35%]">Équipe</TableHead>
               <TableHead className="w-[20%]">Cote</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {coureurs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
                   Aucun coureur trouvé
                 </TableCell>
               </TableRow>
@@ -105,7 +106,12 @@ export const CoureursTable = ({ coureurs, isLoading, onSave }: CoureursTableProp
                       {coureur.coureurs?.nom || 'Nom inconnu'}
                     </TableCell>
 
-                    {/* Équipe (read-only for now, will add EquipeSelect in admin version) */}
+                    {/* Saison */}
+                    <TableCell className="text-sm text-muted-foreground">
+                      {coureur.saison?.annee || 'N/A'}
+                    </TableCell>
+
+                    {/* Équipe */}
                     <TableCell>
                       {coureur.equipes_saisons?.nom_affiche || 'Non définie'}
                       <span className="text-xs text-muted-foreground ml-2">
@@ -118,7 +124,7 @@ export const CoureursTable = ({ coureurs, isLoading, onSave }: CoureursTableProp
                       <Input
                         type="number"
                         min={10}
-                        max={120}
+                        max={370}
                         value={getCellValue(coureur, 'prix_initial')}
                         onChange={(e) => handleCellEdit(coureur.id, 'prix_initial', parseFloat(e.target.value))}
                         className="h-8 w-24"

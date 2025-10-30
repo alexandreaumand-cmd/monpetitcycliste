@@ -1,15 +1,18 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Search, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { MultiSelect, type MultiSelectOption } from "@/components/ui/multi-select";
 
 interface CoureursFiltersProps {
   filters: {
-    saison_id: string;
+    saison_ids: string[];
     search: string;
-    equipe: string;
+    equipe_ids: string[];
+    cote_ranges: string[];
   };
   onFiltersChange: (filters: any) => void;
 }
@@ -27,42 +30,76 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
   });
 
   const { data: equipes } = useQuery({
-    queryKey: ['equipes-saisons-filter', filters.saison_id],
+    queryKey: ['equipes-saisons-filter', filters.saison_ids],
     queryFn: async () => {
-      if (!filters.saison_id) return [];
+      if (filters.saison_ids.length === 0) return [];
 
       const { data, error } = await supabase
         .from('equipes_saisons')
         .select('equipe_id, nom_affiche, equipes!inner(code_court)')
-        .eq('saison_id', filters.saison_id)
+        .in('saison_id', filters.saison_ids)
         .order('nom_affiche');
       
       if (error) throw error;
-      return data || [];
+      
+      // Remove duplicates by equipe_id
+      const uniqueEquipes = data?.reduce((acc, curr) => {
+        if (!acc.find(e => e.equipe_id === curr.equipe_id)) {
+          acc.push(curr);
+        }
+        return acc;
+      }, [] as typeof data) || [];
+      
+      return uniqueEquipes;
     },
-    enabled: !!filters.saison_id,
+    enabled: filters.saison_ids.length > 0,
   });
+
+  const saisonOptions: MultiSelectOption[] = saisons?.map(s => ({
+    value: s.id,
+    label: `Saison ${s.annee}`,
+  })) || [];
+
+  const equipeOptions: MultiSelectOption[] = equipes?.map(eq => ({
+    value: eq.equipe_id,
+    label: `${eq.nom_affiche} (${eq.equipes.code_court})`,
+  })) || [];
+
+  const coteOptions: MultiSelectOption[] = [
+    { value: "10-30", label: "10-30 (Domestiques)" },
+    { value: "40-60", label: "40-60 (Bons coureurs)" },
+    { value: "70-90", label: "70-90 (Très bons coureurs)" },
+    { value: "100-120", label: "100-120 (Leaders)" },
+    { value: "130-150", label: "130-150 (Stars)" },
+    { value: "150+", label: "150+ (Super-stars)" },
+  ];
+
+  const handleReset = () => {
+    onFiltersChange({
+      saison_ids: [],
+      search: "",
+      equipe_ids: [],
+      cote_ranges: [],
+    });
+  };
+
+  const totalFilters = 
+    filters.saison_ids.length + 
+    filters.equipe_ids.length + 
+    filters.cote_ranges.length +
+    (filters.search ? 1 : 0);
 
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Saison */}
-          <Select
-            value={filters.saison_id}
-            onValueChange={(value) => onFiltersChange({ ...filters, saison_id: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionner une saison *" />
-            </SelectTrigger>
-            <SelectContent>
-              {saisons?.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  Saison {s.annee}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <CardContent className="pt-6 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Saisons */}
+          <MultiSelect
+            options={saisonOptions}
+            selected={filters.saison_ids}
+            onChange={(selected) => onFiltersChange({ ...filters, saison_ids: selected, equipe_ids: [] })}
+            placeholder="Sélectionner saisons *"
+          />
 
           {/* Recherche */}
           <div className="relative">
@@ -75,25 +112,55 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
             />
           </div>
 
-          {/* Équipe */}
-          <Select
-            value={filters.equipe}
-            onValueChange={(value) => onFiltersChange({ ...filters, equipe: value })}
-            disabled={!filters.saison_id}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Toutes les équipes" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes les équipes</SelectItem>
-              {equipes?.map((eq) => (
-                <SelectItem key={eq.equipe_id} value={eq.equipe_id}>
-                  {eq.nom_affiche} ({eq.equipes.code_court})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Équipes */}
+          <MultiSelect
+            options={equipeOptions}
+            selected={filters.equipe_ids}
+            onChange={(selected) => onFiltersChange({ ...filters, equipe_ids: selected })}
+            placeholder="Toutes les équipes"
+            disabled={filters.saison_ids.length === 0}
+          />
+
+          {/* Côtes */}
+          <MultiSelect
+            options={coteOptions}
+            selected={filters.cote_ranges}
+            onChange={(selected) => onFiltersChange({ ...filters, cote_ranges: selected })}
+            placeholder="Toutes les côtes"
+          />
         </div>
+
+        {/* Summary and reset */}
+        {totalFilters > 0 && (
+          <div className="flex items-center justify-between pt-2 border-t">
+            <div className="flex items-center gap-2 flex-wrap">
+              {filters.saison_ids.length > 0 && (
+                <Badge variant="secondary">
+                  {filters.saison_ids.length} saison{filters.saison_ids.length > 1 ? 's' : ''}
+                </Badge>
+              )}
+              {filters.equipe_ids.length > 0 && (
+                <Badge variant="secondary">
+                  {filters.equipe_ids.length} équipe{filters.equipe_ids.length > 1 ? 's' : ''}
+                </Badge>
+              )}
+              {filters.cote_ranges.length > 0 && (
+                <Badge variant="secondary">
+                  {filters.cote_ranges.length} plage{filters.cote_ranges.length > 1 ? 's' : ''} de côtes
+                </Badge>
+              )}
+              {filters.search && (
+                <Badge variant="secondary">
+                  Recherche active
+                </Badge>
+              )}
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleReset}>
+              <X className="h-4 w-4 mr-2" />
+              Réinitialiser
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
