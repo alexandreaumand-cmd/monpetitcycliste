@@ -58,7 +58,20 @@ Deno.serve(async (req) => {
     }
 
     const leagueId = auction.league_id;
-    const phaseId = auction.phase_id;
+    let phaseId = auction.phase_id;
+
+    // Fallback: if auction has no phase_id, use current active phase
+    if (!phaseId) {
+      const { data: activePhase } = await supabase
+        .from('phases')
+        .select('id')
+        .eq('statut', 'active')
+        .order('date_debut', { ascending: false })
+        .limit(1)
+        .single();
+      phaseId = activePhase?.id ?? null;
+      console.log(`⚠️ auction ${auction.id} has no phase_id, fallback to active phase: ${phaseId}`);
+    }
 
     // Get all league members with their roster status
     let eligibleManagerIds: string[] = [];
