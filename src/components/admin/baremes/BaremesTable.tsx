@@ -26,11 +26,17 @@ const categories = [
 ];
 
 const typeClassements = [
-  { value: "general", label: "Général" },
-  { value: "etape", label: "Étape" },
-  { value: "points", label: "Points" },
-  { value: "montagne", label: "Montagne" },
-  { value: "jeune", label: "Jeune" },
+  { value: "General", label: "Général" },
+  { value: "Etape", label: "Étape" },
+  { value: "Points", label: "Points" },
+  { value: "Montagne", label: "Montagne" },
+  { value: "Jeune", label: "Jeune" },
+  { value: "Combatif", label: "Combativité" },
+  { value: "Porteur Général", label: "🟡 Porteur Jaune" },
+  { value: "Porteur Vert", label: "🟢 Porteur Vert" },
+  { value: "Porteur Montagne", label: "🔴 Porteur Pois" },
+  { value: "Porteur Jeune", label: "⚪ Porteur Blanc" },
+  { value: "Porteur Combattif", label: "🔵 Porteur Combativité" },
 ];
 
 export const BaremesTable = ({ baremes, saisons, isLoading, onSave, onDelete }: BaremesTableProps) => {
