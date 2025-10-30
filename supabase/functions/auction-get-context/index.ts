@@ -199,7 +199,7 @@ Deno.serve(async (req) => {
       for (const coureurId of rosterCoureurIds) {
         const { data: coureurData } = await supabase
           .from('coureurs_saisons')
-          .select('coureur_id, coureurs!inner(id, nom), equipe, prix_initial')
+          .select('coureur_id, coureurs!inner(id, nom), equipes_saisons!inner(nom_affiche), prix_initial')
           .eq('saison_id', phase.saison_id)
           .eq('coureur_id', coureurId)
           .limit(1);
@@ -207,10 +207,11 @@ Deno.serve(async (req) => {
         if (coureurData && coureurData.length > 0) {
           const cs = coureurData[0];
           const coureurInfo = cs.coureurs as any;
+          const equipeInfo = cs.equipes_saisons as any;
           rosterCoureursMap.set(coureurId, {
             id: coureurInfo?.id || cs.coureur_id,
             nom: coureurInfo?.nom || '',
-            equipe: cs.equipe,
+            equipe: equipeInfo?.nom_affiche || '',
             prix_initial: cs.prix_initial
           });
         }
@@ -255,7 +256,7 @@ Deno.serve(async (req) => {
         console.log(`Fetching coureur ${coureurId}...`);
         const { data: coureurData, error: coureurError } = await supabase
           .from('coureurs_saisons')
-          .select('coureur_id, coureurs!inner(id, nom), equipe, prix_initial')
+          .select('coureur_id, coureurs!inner(id, nom), equipes_saisons!inner(nom_affiche), prix_initial')
           .eq('saison_id', phase.saison_id)
           .eq('coureur_id', coureurId)
           .limit(1);
@@ -265,10 +266,11 @@ Deno.serve(async (req) => {
         if (coureurData && coureurData.length > 0) {
           const cs = coureurData[0];
           const coureurInfo = cs.coureurs as any;
+          const equipeInfo = cs.equipes_saisons as any;
           coureursMap.set(coureurId, {
             id: coureurInfo?.id || cs.coureur_id,
             nom: coureurInfo?.nom || '',
-            equipe: cs.equipe,
+            equipe: equipeInfo?.nom_affiche || '',
             prix_initial: cs.prix_initial
           });
           console.log(`✅ Enriched coureur ${coureurId} with nom: ${coureurInfo?.nom}`);
