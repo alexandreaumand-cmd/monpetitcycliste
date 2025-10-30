@@ -205,37 +205,39 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 4. Check all amounts >= prix_initial
+    // 4. Check all amounts >= prix_initial - Using same approach as auction-get-context
     console.log(`🔍 Fetching ${coureurIds.length} coureurs for saison_id: ${phase.saison_id}`, coureurIds);
     
-    const { data: coureurs, error: coureursError } = await supabase
-      .from('coureurs_saisons')
-      .select(`
-        coureur_id,
-        prix_initial,
-        coureurs!inner (
-          id,
-          nom
-        )
-      `)
-      .eq('saison_id', phase.saison_id)
-      .in('coureur_id', coureurIds);
+    // Fetch coureurs with team info - one query per coureur to ensure we get them all
+    const coureurPromises = coureurIds.map(async (coureurId) => {
+      const { data, error } = await supabase
+        .from('coureurs_saisons')
+        .select('coureur_id, equipe_id, prix_initial, coureurs(id, nom)')
+        .eq('saison_id', phase.saison_id)
+        .eq('coureur_id', coureurId)
+        .limit(1)
+        .single();
+      
+      if (error) {
+        console.error(`❌ Error fetching coureur ${coureurId}:`, error);
+        return null;
+      }
+      
+      return data;
+    });
     
-    if (coureursError) {
-      console.error('❌ Error fetching coureurs:', coureursError);
-      throw coureursError;
-    }
+    const coureursData = await Promise.all(coureurPromises);
+    const coureurs = coureursData.filter(c => c !== null);
     
-    console.log(`✅ Found ${coureurs?.length || 0} coureurs in coureurs_saisons`);
-
-    const coureursMap = new Map((coureurs || []).map(c => {
-      // c.coureurs is the relation to the coureurs table
-      const coureurData = Array.isArray(c.coureurs) ? c.coureurs[0] : c.coureurs;
+    console.log(`✅ Found ${coureurs.length}/${coureurIds.length} coureurs in coureurs_saisons`);
+    
+    const coureursMap = new Map(coureurs.map(c => {
+      const coureurInfo = c.coureurs as any;
       return [
         c.coureur_id, 
         { 
           id: c.coureur_id, 
-          nom: coureurData?.nom || c.coureur_id, 
+          nom: coureurInfo?.nom || c.coureur_id, 
           prix_initial: c.prix_initial 
         }
       ];
