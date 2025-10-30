@@ -190,24 +190,32 @@ Deno.serve(async (req) => {
     
     const { data: existingRoster } = await rosterQuery;
 
-    // Enrich roster with coureurs_saisons data
+    // Enrich roster with coureurs_saisons data - handle duplicates with limit(1)
     const rosterCoureurIds = (existingRoster || []).map(r => r.coureur_id);
-    const { data: rosterCoureurs } = rosterCoureurIds.length > 0 ? await supabase
-      .from('coureurs_saisons')
-      .select('coureur_id, coureurs!inner(id, nom), equipe, prix_initial')
-      .eq('saison_id', phase.saison_id)
-      .in('coureur_id', rosterCoureurIds)
-      : { data: [] };
-
-    const rosterCoureursMap = new Map((rosterCoureurs || []).map((cs: any) => [
-      cs.coureur_id,
-      {
-        id: cs.coureurs?.id || cs.coureur_id,
-        nom: cs.coureurs?.nom || '',
-        equipe: cs.equipe,
-        prix_initial: cs.prix_initial
+    const rosterCoureursMap = new Map();
+    
+    if (rosterCoureurIds.length > 0) {
+      // Fetch each rider individually to handle duplicates
+      for (const coureurId of rosterCoureurIds) {
+        const { data: coureurData } = await supabase
+          .from('coureurs_saisons')
+          .select('coureur_id, coureurs!inner(id, nom), equipe, prix_initial')
+          .eq('saison_id', phase.saison_id)
+          .eq('coureur_id', coureurId)
+          .limit(1);
+        
+        if (coureurData && coureurData.length > 0) {
+          const cs = coureurData[0];
+          const coureurInfo = cs.coureurs as any;
+          rosterCoureursMap.set(coureurId, {
+            id: coureurInfo?.id || cs.coureur_id,
+            nom: coureurInfo?.nom || '',
+            equipe: cs.equipe,
+            prix_initial: cs.prix_initial
+          });
+        }
       }
-    ]));
+    }
 
     const roster_count = existingRoster?.length || 0;
     const budget_spent = existingRoster?.reduce((sum, r) => sum + Number(r.prix_signature), 0) || 0;
@@ -234,24 +242,49 @@ Deno.serve(async (req) => {
       };
     });
 
-    // Get coureur details for bids from coureurs_saisons
+    // Get coureur details for bids from coureurs_saisons - handle duplicates with limit(1)
     const coureur_ids = [...my_bids, ...submitted_bids].map(b => b.coureur_id);
-    const { data: coureurs } = coureur_ids.length > 0 ? await supabase
-      .from('coureurs_saisons')
-      .select('coureur_id, coureurs!inner(id, nom), equipe, prix_initial')
-      .eq('saison_id', phase.saison_id)
-      .in('coureur_id', coureur_ids)
-      : { data: [] };
-
-    const coureursMap = new Map((coureurs || []).map((cs: any) => [
-      cs.coureur_id,
-      {
-        id: cs.coureurs?.id || cs.coureur_id,
-        nom: cs.coureurs?.nom || '',
-        equipe: cs.equipe,
-        prix_initial: cs.prix_initial
+    const coureursMap = new Map();
+    
+    if (coureur_ids.length > 0) {
+      // Fetch each rider individually to handle duplicates
+      for (const coureurId of coureur_ids) {
+        const { data: coureurData } = await supabase
+          .from('coureurs_saisons')
+          .select('coureur_id, coureurs!inner(id, nom), equipe, prix_initial')
+          .eq('saison_id', phase.saison_id)
+          .eq('coureur_id', coureurId)
+          .limit(1);
+        
+        if (coureurData && coureurData.length > 0) {
+          const cs = coureurData[0];
+          const coureurInfo = cs.coureurs as any;
+          coureursMap.set(coureurId, {
+            id: coureurInfo?.id || cs.coureur_id,
+            nom: coureurInfo?.nom || '',
+            equipe: cs.equipe,
+            prix_initial: cs.prix_initial
+          });
+        } else {
+          // Fallback to coureurs table if not in coureurs_saisons
+          const { data: baseData } = await supabase
+            .from('coureurs')
+            .select('id, nom, prix_initial')
+            .eq('id', coureurId)
+            .limit(1);
+          
+          if (baseData && baseData.length > 0) {
+            const base = baseData[0];
+            coureursMap.set(coureurId, {
+              id: base.id,
+              nom: base.nom,
+              equipe: '',
+              prix_initial: base.prix_initial
+            });
+          }
+        }
       }
-    ]));
+    }
 
     // Enrich bids with coureur info
     const enriched_my_bids = my_bids.map(b => ({
