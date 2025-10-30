@@ -4527,11 +4527,10 @@ export type Database = {
           p_league_id?: string
           p_limit?: number
           p_phase_id?: string
-          p_saison_id?: string
+          p_saison_id: string
         }
         Returns: {
           prix_achat: number
-          prix_initial: number
           race_count: number
           rider_equipe: string
           rider_id: string
