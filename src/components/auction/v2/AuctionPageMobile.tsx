@@ -42,7 +42,8 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
-  const [sortOrder, setSortOrder] = useState<'nom' | 'cote'>('nom');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [sortOrder, setSortOrder] = useState<'nom' | 'cote'>('cote');
   const [selectedRider, setSelectedRider] = useState<any>(null);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);
@@ -156,6 +157,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       debouncedSearch,
       selectedTeams,
       selectedCotes,
+      selectedCategories,
       sortOrder,
       context?.my_bids?.map((b: any) => b.coureur_id) || [],
     ],
@@ -182,6 +184,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
           league_id: leagueId,
           q: debouncedSearch || null,
           teams: selectedTeams.length > 0 ? selectedTeams : null,
+          categories: selectedCategories.length > 0 ? selectedCategories : null,
           cote_min,
           cote_max,
           exclude_rider_ids: context?.my_bids?.map((b: any) => b.coureur_id) || [],
@@ -500,6 +503,8 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         onTeamsChange={setSelectedTeams}
         selectedCotes={selectedCotes}
         onCotesChange={setSelectedCotes}
+        selectedCategories={selectedCategories}
+        onCategoriesChange={setSelectedCategories}
         availableTeams={availableTeams}
       />
 

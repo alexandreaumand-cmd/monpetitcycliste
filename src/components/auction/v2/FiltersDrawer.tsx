@@ -12,6 +12,8 @@ interface FiltersDrawerProps {
   onTeamsChange: (teams: string[]) => void;
   selectedCotes: number[];
   onCotesChange: (cotes: number[]) => void;
+  selectedCategories: string[];
+  onCategoriesChange: (categories: string[]) => void;
   availableTeams: Array<{ id: string; name: string }>;
 }
 
@@ -20,9 +22,17 @@ export function FiltersDrawer({
   onTeamsChange,
   selectedCotes,
   onCotesChange,
+  selectedCategories,
+  onCategoriesChange,
   availableTeams,
 }: FiltersDrawerProps) {
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
+
+  const categoryOptions = [
+    { value: "WT", label: "WT" },
+    { value: "PCT", label: "PCT" },
+    { value: "CT", label: "CT" },
+  ];
 
   const toggleTeam = (teamId: string) => {
     if (selectedTeams.includes(teamId)) {
@@ -60,13 +70,22 @@ export function FiltersDrawer({
     return `${cote}`;
   };
 
+  const toggleCategory = (category: string) => {
+    if (selectedCategories.includes(category)) {
+      onCategoriesChange(selectedCategories.filter(c => c !== category));
+    } else {
+      onCategoriesChange([...selectedCategories, category]);
+    }
+  };
+
   const clearAllFilters = () => {
     onTeamsChange([]);
     onCotesChange([]);
+    onCategoriesChange([]);
   };
 
-  const hasActiveFilters = selectedTeams.length > 0 || selectedCotes.length > 0;
-  const activeFiltersCount = (selectedTeams.length > 0 ? 1 : 0) + (selectedCotes.length > 0 ? 1 : 0);
+  const hasActiveFilters = selectedTeams.length > 0 || selectedCotes.length > 0 || selectedCategories.length > 0;
+  const activeFiltersCount = (selectedTeams.length > 0 ? 1 : 0) + (selectedCotes.length > 0 ? 1 : 0) + (selectedCategories.length > 0 ? 1 : 0);
 
   return (
     <Sheet>
@@ -120,6 +139,25 @@ export function FiltersDrawer({
                     onClick={() => toggleCote(cote)}
                   >
                     {getCoteLabel(cote)}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Category Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Catégories {selectedCategories.length > 0 && `(${selectedCategories.length})`}
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {categoryOptions.map((cat) => (
+                  <Badge
+                    key={cat.value}
+                    variant={selectedCategories.includes(cat.value) ? "default" : "outline"}
+                    className="cursor-pointer hover:bg-primary/10 transition-colors text-xs px-2 py-1"
+                    onClick={() => toggleCategory(cat.value)}
+                  >
+                    {cat.label}
                   </Badge>
                 ))}
               </div>
