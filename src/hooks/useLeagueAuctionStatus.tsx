@@ -32,7 +32,7 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
         const { data: validationData, error } = await supabase.functions.invoke(
           'auction-get-validation-status',
           {
-            body: { auction_id: openAuction.id, phase_id: openAuction.phase_id, league_id: leagueId }
+            body: { auction_id: openAuction.id, league_id: leagueId }
           }
         );
 
