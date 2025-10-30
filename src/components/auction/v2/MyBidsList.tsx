@@ -162,7 +162,7 @@ export function MyBidsList({
                       disabled={isUpdating || bid.amount <= (bid.cote || 1)}
                       className="h-7 w-7 p-0 hover:bg-muted"
                     >
-                      <Minus className="h-3 w-3" />
+                      <Minus className="h-2.5 w-2.5" />
                     </Button>
                     
                     {/* Montant cliquable pour édition manuelle */}
@@ -181,7 +181,7 @@ export function MyBidsList({
                       disabled={isUpdating}
                       className="h-7 w-7 p-0 hover:bg-muted"
                     >
-                      <Plus className="h-3 w-3" />
+                      <Plus className="h-2.5 w-2.5" />
                     </Button>
                     
                     {/* Côte */}
