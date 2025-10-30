@@ -1197,6 +1197,7 @@ export type Database = {
         Row: {
           by_phase: boolean
           competitions: string[] | null
+          course_filters: Json | null
           gt_only: boolean
           id: string
           league_id: string
@@ -1207,6 +1208,7 @@ export type Database = {
         Insert: {
           by_phase?: boolean
           competitions?: string[] | null
+          course_filters?: Json | null
           gt_only?: boolean
           id?: string
           league_id: string
@@ -1217,6 +1219,7 @@ export type Database = {
         Update: {
           by_phase?: boolean
           competitions?: string[] | null
+          course_filters?: Json | null
           gt_only?: boolean
           id?: string
           league_id?: string
@@ -1250,11 +1253,14 @@ export type Database = {
       }
       league_templates: {
         Row: {
+          auction_phase_groups: number[] | null
+          auction_strategy: string
           base_budget: number
           base_max_riders: number
           budget_multiplier_per_player: number
           by_phase: boolean
           competitions: string[] | null
+          course_filters: Json | null
           created_at: string
           description: string
           gt_only: boolean
@@ -1262,17 +1268,21 @@ export type Database = {
           is_active: boolean
           is_system: boolean
           name: string
+          phase_indexes: number[]
           player_counts: number[]
           riders_multiplier_per_player: number
           updated_at: string
           wt_only: boolean
         }
         Insert: {
+          auction_phase_groups?: number[] | null
+          auction_strategy?: string
           base_budget: number
           base_max_riders: number
           budget_multiplier_per_player?: number
           by_phase?: boolean
           competitions?: string[] | null
+          course_filters?: Json | null
           created_at?: string
           description: string
           gt_only?: boolean
@@ -1280,17 +1290,21 @@ export type Database = {
           is_active?: boolean
           is_system?: boolean
           name: string
+          phase_indexes?: number[]
           player_counts?: number[]
           riders_multiplier_per_player?: number
           updated_at?: string
           wt_only?: boolean
         }
         Update: {
+          auction_phase_groups?: number[] | null
+          auction_strategy?: string
           base_budget?: number
           base_max_riders?: number
           budget_multiplier_per_player?: number
           by_phase?: boolean
           competitions?: string[] | null
+          course_filters?: Json | null
           created_at?: string
           description?: string
           gt_only?: boolean
@@ -1298,6 +1312,7 @@ export type Database = {
           is_active?: boolean
           is_system?: boolean
           name?: string
+          phase_indexes?: number[]
           player_counts?: number[]
           riders_multiplier_per_player?: number
           updated_at?: string

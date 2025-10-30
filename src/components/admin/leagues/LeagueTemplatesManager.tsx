@@ -25,6 +25,15 @@ type LeagueTemplate = {
   base_max_riders: number;
   budget_multiplier_per_player: number;
   riders_multiplier_per_player: number;
+  phase_indexes: number[];
+  auction_strategy: 'single' | 'per_phase' | 'grouped';
+  auction_phase_groups?: number[][];
+  course_filters: {
+    wt_tier?: string[];
+    categorie?: string[];
+    competitions?: string[];
+    exclude_proseries?: boolean;
+  };
   by_phase: boolean;
   gt_only: boolean;
   wt_only: boolean;

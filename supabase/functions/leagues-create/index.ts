@@ -1,5 +1,9 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -7,48 +11,42 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get authenticated user
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
     );
 
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Authenticate user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Non authentifié' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // Get manager for this user
+    // Get manager
     const { data: manager, error: managerError } = await supabase
       .from('managers')
-      .select('id, user_id')
+      .select('id')
       .eq('user_id', user.id)
       .single();
 
     if (managerError || !manager) {
-      return new Response(
-        JSON.stringify({ error: 'Manager not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Manager introuvable' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // Parse request body
-    const {
-      name,
-      visibility,
+    const { 
+      name, 
+      visibility = 'private',
       gameMode,
       maxPlayers,
       bonusesEnabled,
@@ -58,57 +56,82 @@ Deno.serve(async (req) => {
       firstAuctionStartsAt,
     } = await req.json();
 
-    // Validate first auction date
-    if (!firstAuctionStartsAt) {
+    // Validate inputs
+    if (!name || !gameMode || !maxPlayers || !firstAuctionStartsAt) {
       return new Response(
-        JSON.stringify({ error: 'First auction date is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Paramètres manquants' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       );
     }
 
+    // Validate first auction date
     const firstAuctionDate = new Date(firstAuctionStartsAt);
     if (firstAuctionDate <= new Date()) {
       return new Response(
-        JSON.stringify({ error: 'First auction date must be in the future' }),
+        JSON.stringify({ error: 'La date de la première enchère doit être dans le futur' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate inputs
-    if (!name || name.length < 3) {
+    // Get template
+    const { data: template, error: templateError } = await supabase
+      .from('league_templates')
+      .select('*')
+      .eq('id', gameMode)
+      .eq('is_active', true)
+      .single();
+
+    if (templateError || !template) {
       return new Response(
-        JSON.stringify({ error: 'League name must be at least 3 characters' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Template invalide' }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       );
     }
 
-    if (!['public', 'private'].includes(visibility)) {
+    // Get active season
+    const { data: season, error: seasonError } = await supabase
+      .from('saisons')
+      .select('id')
+      .order('annee', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (seasonError || !season) {
       return new Response(
-        JSON.stringify({ error: 'Invalid visibility' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Aucune saison active trouvée' }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       );
     }
 
-    if (!['full_season', 'short_gt', 'short_wt', 'short_classics'].includes(gameMode)) {
+    // Get phases based on phase_indexes from template
+    const { data: phases, error: phasesError } = await supabase
+      .from('phases')
+      .select('id, index_dans_saison, budget, max_coureurs')
+      .eq('saison_id', season.id)
+      .in('index_dans_saison', template.phase_indexes);
+
+    if (phasesError || !phases || phases.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'Invalid game mode' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Phases introuvables pour ce template' }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       );
     }
 
-    if (![4, 6, 8, 10].includes(maxPlayers)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid player count' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!scopeConfig?.seasonId) {
-      return new Response(
-        JSON.stringify({ error: 'Season ID is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Sort phases by index
+    phases.sort((a, b) => a.index_dans_saison - b.index_dans_saison);
+    const phaseUuids = phases.map(p => p.id);
 
     // Create league
     const { data: league, error: leagueError } = await supabase
@@ -119,50 +142,56 @@ Deno.serve(async (req) => {
         owner_manager_id: manager.id,
         game_mode: gameMode,
         max_players: maxPlayers,
-        current_player_count: 0,
-        bonuses_enabled: bonusesEnabled,
+        current_player_count: 1,
+        bonuses_enabled: bonusesEnabled ?? true,
         status: 'pending',
         first_auction_starts_at: firstAuctionStartsAt,
         settings: {
-          budget,
-          max_riders: maxRiders,
+          budget: budget || template.base_budget,
+          max_riders: maxRiders || template.base_max_riders,
         },
       })
       .select()
       .single();
 
     if (leagueError) {
-      console.error('Error creating league:', leagueError);
+      console.error('League creation error:', leagueError);
       return new Response(
-        JSON.stringify({ error: leagueError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Erreur lors de la création de la ligue' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       );
     }
 
-    // Create league scope
+    // Create league scope with new fields
     const { error: scopeError } = await supabase
       .from('league_scopes')
       .insert({
         league_id: league.id,
-        season_id: scopeConfig.seasonId,
-        by_phase: scopeConfig.byPhase,
-        gt_only: scopeConfig.gtOnly,
-        wt_only: scopeConfig.wtOnly,
-        phases: scopeConfig.phases,
-        competitions: scopeConfig.competitions,
+        season_id: season.id,
+        by_phase: template.by_phase,
+        gt_only: template.gt_only,
+        wt_only: template.wt_only,
+        phases: phaseUuids,
+        competitions: template.competitions || [],
+        course_filters: template.course_filters || {},
       });
 
     if (scopeError) {
-      console.error('Error creating league scope:', scopeError);
-      // Rollback league creation
+      console.error('Scope creation error:', scopeError);
       await supabase.from('leagues').delete().eq('id', league.id);
       return new Response(
-        JSON.stringify({ error: 'Failed to create league scope' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Erreur lors de la création du scope' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       );
     }
 
-    // Add creator as owner member
+    // Add owner as member
     const { error: memberError } = await supabase
       .from('league_members')
       .insert({
@@ -172,46 +201,103 @@ Deno.serve(async (req) => {
       });
 
     if (memberError) {
-      console.error('Error adding league member:', memberError);
-      // Rollback
+      console.error('Member creation error:', memberError);
       await supabase.from('league_scopes').delete().eq('league_id', league.id);
       await supabase.from('leagues').delete().eq('id', league.id);
       return new Response(
-        JSON.stringify({ error: 'Failed to add owner as member' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Erreur lors de l\'ajout du membre' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       );
     }
 
-    // Create first scheduled auction
+    // Create auctions based on strategy
+    const auctionStrategy = template.auction_strategy as string;
     const deadlineAt = new Date(firstAuctionDate.getTime() + 24 * 60 * 60 * 1000);
     
-    const { error: auctionError } = await supabase
-      .from('auctions')
-      .insert({
-        league_id: league.id,
-        phase_id: scopeConfig.phases[0],
-        round_number: 1,
-        opens_at: firstAuctionStartsAt,
-        deadline_at: deadlineAt.toISOString(),
-        statut: 'scheduled',
-      });
+    if (auctionStrategy === 'single') {
+      // One auction for the first phase only
+      const { error: auctionError } = await supabase
+        .from('auctions')
+        .insert({
+          phase_id: phases[0].id,
+          league_id: league.id,
+          round_number: 1,
+          statut: 'scheduled',
+          opens_at: firstAuctionStartsAt,
+          deadline_at: deadlineAt.toISOString(),
+        });
 
-    if (auctionError) {
-      console.error('Error creating first auction:', auctionError);
-      // Don't fail the whole creation if auction creation fails
+      if (auctionError) {
+        console.error('Auction creation error:', auctionError);
+      }
+    } else if (auctionStrategy === 'per_phase') {
+      // One auction per phase
+      const auctionsToCreate = phases.map((phase, index) => ({
+        phase_id: phase.id,
+        league_id: league.id,
+        round_number: 1,
+        statut: 'scheduled' as const,
+        opens_at: index === 0 ? firstAuctionStartsAt : null,
+        deadline_at: index === 0 ? deadlineAt.toISOString() : null,
+      }));
+
+      const { error: auctionError } = await supabase
+        .from('auctions')
+        .insert(auctionsToCreate);
+
+      if (auctionError) {
+        console.error('Auctions creation error:', auctionError);
+      }
+    } else if (auctionStrategy === 'grouped') {
+      // One auction per group of phases
+      const groups = (template.auction_phase_groups as number[][]) || [];
+      const auctionsToCreate = groups.map((group, groupIndex) => {
+        // Find the first phase in this group
+        const firstPhaseInGroup = phases.find(p => group.includes(p.index_dans_saison));
+        if (!firstPhaseInGroup) return null;
+
+        return {
+          phase_id: firstPhaseInGroup.id,
+          league_id: league.id,
+          round_number: 1,
+          statut: 'scheduled' as const,
+          opens_at: groupIndex === 0 ? firstAuctionStartsAt : null,
+          deadline_at: groupIndex === 0 ? deadlineAt.toISOString() : null,
+        };
+      }).filter(Boolean);
+
+      if (auctionsToCreate.length > 0) {
+        const { error: auctionError } = await supabase
+          .from('auctions')
+          .insert(auctionsToCreate as any[]);
+
+        if (auctionError) {
+          console.error('Grouped auctions creation error:', auctionError);
+        }
+      }
     }
 
     console.log('League created:', league.id, 'by user:', user.id);
 
     return new Response(
       JSON.stringify({ league }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      {
+        status: 201,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
     );
   } catch (error) {
-    console.error('Error in leagues-create:', error);
+    console.error('Unexpected error:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
     );
   }
 });

@@ -11,6 +11,15 @@ export type LeagueTemplate = {
   defaultMaxRiders: number;
   budgetMultiplierPerPlayer: number;
   ridersMultiplierPerPlayer: number;
+  phaseIndexes: number[];
+  auctionStrategy: 'single' | 'per_phase' | 'grouped';
+  auctionPhaseGroups?: number[][];
+  courseFilters: {
+    wt_tier?: string[];
+    categorie?: string[];
+    competitions?: string[];
+    exclude_proseries?: boolean;
+  };
   scopeConfig: {
     byPhase: boolean;
     gtOnly: boolean;
@@ -31,6 +40,9 @@ export const FALLBACK_TEMPLATES: LeagueTemplate[] = [
     defaultMaxRiders: 30,
     budgetMultiplierPerPlayer: 0.15,
     ridersMultiplierPerPlayer: 0.10,
+    phaseIndexes: [1, 2, 3, 4, 5],
+    auctionStrategy: 'per_phase',
+    courseFilters: {},
     scopeConfig: {
       byPhase: true,
       gtOnly: false,
@@ -48,6 +60,9 @@ export const FALLBACK_TEMPLATES: LeagueTemplate[] = [
     defaultMaxRiders: 22,
     budgetMultiplierPerPlayer: 0.15,
     ridersMultiplierPerPlayer: 0.10,
+    phaseIndexes: [3, 4],
+    auctionStrategy: 'single',
+    courseFilters: { wt_tier: ['GT'] },
     scopeConfig: {
       byPhase: false,
       gtOnly: true,
@@ -65,6 +80,9 @@ export const FALLBACK_TEMPLATES: LeagueTemplate[] = [
     defaultMaxRiders: 26,
     budgetMultiplierPerPlayer: 0.15,
     ridersMultiplierPerPlayer: 0.10,
+    phaseIndexes: [1, 2, 3, 4, 5],
+    auctionStrategy: 'per_phase',
+    courseFilters: { exclude_proseries: true },
     scopeConfig: {
       byPhase: false,
       gtOnly: false,
@@ -82,6 +100,20 @@ export const FALLBACK_TEMPLATES: LeagueTemplate[] = [
     defaultMaxRiders: 18,
     budgetMultiplierPerPlayer: 0.15,
     ridersMultiplierPerPlayer: 0.10,
+    phaseIndexes: [1, 2],
+    auctionStrategy: 'single',
+    courseFilters: {
+      competitions: [
+        'Milano-Sanremo',
+        'Ronde van Vlaanderen',
+        'Paris-Roubaix',
+        'Liège-Bastogne-Liège',
+        'Il Lombardia',
+        'Strade Bianche',
+        'Amstel Gold Race',
+        'La Flèche Wallonne',
+      ],
+    },
     scopeConfig: {
       byPhase: false,
       gtOnly: false,
@@ -121,6 +153,10 @@ export async function getLeagueTemplates(): Promise<LeagueTemplate[]> {
       defaultMaxRiders: t.base_max_riders,
       budgetMultiplierPerPlayer: Number(t.budget_multiplier_per_player),
       ridersMultiplierPerPlayer: Number(t.riders_multiplier_per_player),
+      phaseIndexes: t.phase_indexes || [1, 2, 3, 4, 5],
+      auctionStrategy: (t.auction_strategy as 'single' | 'per_phase' | 'grouped') || 'per_phase',
+      auctionPhaseGroups: t.auction_phase_groups ? (t.auction_phase_groups as any as number[][]) : undefined,
+      courseFilters: (t.course_filters as any) || {},
       scopeConfig: {
         byPhase: t.by_phase,
         gtOnly: t.gt_only,
@@ -167,6 +203,10 @@ export async function getLeagueScopeConfig(mode: GameMode, seasonId: string) {
 
   return {
     seasonId,
+    phaseIndexes: template.phaseIndexes,
+    auctionStrategy: template.auctionStrategy,
+    auctionPhaseGroups: template.auctionPhaseGroups,
+    courseFilters: template.courseFilters,
     byPhase: template.scopeConfig.byPhase,
     gtOnly: template.scopeConfig.gtOnly,
     wtOnly: template.scopeConfig.wtOnly,
