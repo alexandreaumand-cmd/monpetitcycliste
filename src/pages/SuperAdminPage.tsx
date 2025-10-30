@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
-import { Trophy, FileText, Database, Users, Shield, Calendar } from "lucide-react";
+import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataManagementTabs } from "@/components/admin/DataManagementTabs";
 import { SuperAdminLeaguesPage } from "@/pages/admin/SuperAdminLeaguesPage";
@@ -9,10 +9,12 @@ import { StartlistImportManager } from "@/components/admin/StartlistImportManage
 import { CourseManagementTabs } from "@/components/admin/CourseManagementTabs";
 import { SuperAdminHeader } from "@/components/admin/SuperAdminHeader";
 import { CoursesManager } from "@/components/admin/CoursesManager";
+import { CoureursManager } from "@/components/admin/CoureursManager";
 
 const superAdminNavItems = [
   { label: 'Résultats', path: 'results', icon: Trophy },
   { label: 'Courses', path: 'courses', icon: Calendar },
+  { label: 'Coureurs', path: 'coureurs', icon: UserCircle },
   { label: 'Startlists', path: 'startlists', icon: FileText },
   { label: 'Données', path: 'data', icon: Database },
   { label: 'Ligues', path: 'leagues', icon: Users },
@@ -77,6 +79,7 @@ export const SuperAdminPage = ({ manager, onSignOut }: SuperAdminPageProps) => {
             <Route index element={<Navigate to="/dashboard/super-admin/results" replace />} />
             <Route path="results" element={<CourseManagementTabs />} />
             <Route path="courses" element={<CoursesManager />} />
+            <Route path="coureurs" element={<CoureursManager />} />
             <Route path="startlists" element={<StartlistImportManager />} />
             <Route path="data" element={<DataManagementTabs />} />
             <Route path="leagues" element={<SuperAdminLeaguesPage />} />
