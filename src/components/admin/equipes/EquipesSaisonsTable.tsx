@@ -122,14 +122,14 @@ export const EquipesSaisonsTable = ({ equipesSaisons, isLoading, onSave, onDelet
                     {/* Catégorie (éditable) */}
                     <TableCell>
                       <Select
-                        value={getCellValue(equipe, 'categorie') || ''}
-                        onValueChange={(value) => handleCellEdit(equipe.id, 'categorie', value || null)}
+                        value={getCellValue(equipe, 'categorie') || 'none'}
+                        onValueChange={(value) => handleCellEdit(equipe.id, 'categorie', value === 'none' ? null : value)}
                       >
                         <SelectTrigger className="h-8">
                           <SelectValue placeholder="Aucune" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Aucune</SelectItem>
+                          <SelectItem value="none">Aucune</SelectItem>
                           <SelectItem value="WT">WorldTeam</SelectItem>
                           <SelectItem value="PT">ProTeam</SelectItem>
                           <SelectItem value="CT">Continental</SelectItem>
