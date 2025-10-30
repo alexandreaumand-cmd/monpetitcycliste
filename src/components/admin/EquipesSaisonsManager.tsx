@@ -50,7 +50,24 @@ export const EquipesSaisonsManager = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+
+      // Enrichir avec le nombre de coureurs
+      const enrichedData = await Promise.all(
+        (data || []).map(async (equipe) => {
+          const { count } = await supabase
+            .from('coureurs_saisons')
+            .select('*', { count: 'exact', head: true })
+            .eq('equipe_id', equipe.equipe_id)
+            .eq('saison_id', equipe.saison_id);
+          
+          return {
+            ...equipe,
+            nb_coureurs: count || 0,
+          };
+        })
+      );
+
+      return enrichedData;
     },
     enabled: !!filters.saison_id,
   });

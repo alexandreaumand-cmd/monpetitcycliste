@@ -86,15 +86,16 @@ export const EquipesSaisonsTable = ({ equipesSaisons, isLoading, onSave, onDelet
           <TableHeader>
             <TableRow>
               <TableHead className="w-[15%]">Saison</TableHead>
-              <TableHead className="w-[60%]">Nom</TableHead>
+              <TableHead className="w-[40%]">Nom</TableHead>
+              <TableHead className="w-[15%]">Nb Coureurs</TableHead>
               <TableHead className="w-[15%]">Catégorie</TableHead>
-              <TableHead className="w-[10%]">Actions</TableHead>
+              <TableHead className="w-[15%]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {equipesSaisons.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                   Aucune équipe trouvée
                 </TableCell>
               </TableRow>
@@ -117,6 +118,13 @@ export const EquipesSaisonsTable = ({ equipesSaisons, isLoading, onSave, onDelet
                         onChange={(e) => handleCellEdit(equipe.id, 'nom_affiche', e.target.value)}
                         className="h-8"
                       />
+                    </TableCell>
+
+                    {/* Nb Coureurs (read-only) */}
+                    <TableCell>
+                      <div className="text-sm text-muted-foreground">
+                        {equipe.nb_coureurs || 0}
+                      </div>
                     </TableCell>
 
                     {/* Catégorie (éditable) */}
