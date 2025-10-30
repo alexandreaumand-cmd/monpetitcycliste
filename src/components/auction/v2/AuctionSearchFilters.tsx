@@ -61,7 +61,7 @@ export function AuctionSearchFilters({
 
   // Filter teams based on search query
   const filteredTeams = availableTeams.filter(team =>
-    team.name.toLowerCase().includes(teamSearchQuery.toLowerCase())
+    team?.name?.toLowerCase().includes(teamSearchQuery.toLowerCase())
   );
 
   // Get team names to display in the button
