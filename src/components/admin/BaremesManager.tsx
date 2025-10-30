@@ -13,7 +13,7 @@ export function BaremesManager() {
   const queryClient = useQueryClient();
 
   const [filters, setFilters] = useState({
-    saison_id: "all",
+    saison_id: "dcbc02b7-3b3e-471d-9471-efa70743f808", // Saison 2025 par défaut
     categorie: "all",
     type_classement: "all",
   });
@@ -146,7 +146,7 @@ export function BaremesManager() {
 
   const handleResetFilters = () => {
     setFilters({
-      saison_id: "all",
+      saison_id: "dcbc02b7-3b3e-471d-9471-efa70743f808",
       categorie: "all",
       type_classement: "all",
     });
