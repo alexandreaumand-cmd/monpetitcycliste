@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X } from "lucide-react";
+import { X, Minus, Plus } from "lucide-react";
 import { useState, useMemo } from "react";
 
 interface MyBid {
@@ -51,6 +51,19 @@ export function MyBidsList({
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditValue("");
+  };
+
+  const handleIncrement = (bid: MyBid) => {
+    const newAmount = bid.amount + step;
+    onUpdateAmount(bid.bid_id!, bid.coureur_id, newAmount);
+  };
+
+  const handleDecrement = (bid: MyBid) => {
+    const minAmount = bid.cote || 1;
+    const newAmount = Math.max(minAmount, bid.amount - step);
+    if (newAmount !== bid.amount) {
+      onUpdateAmount(bid.bid_id!, bid.coureur_id, newAmount);
+    }
   };
 
   // Sort bids: new bids first, then existing roster, then by amount descending
@@ -140,15 +153,40 @@ export function MyBidsList({
                     </Button>
                   </>
                 ) : (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-0.5">
+                    {/* Bouton - */}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDecrement(bid)}
+                      disabled={isUpdating || bid.amount <= (bid.cote || 1)}
+                      className="h-7 w-7 p-0 hover:bg-muted"
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    
+                    {/* Montant cliquable pour édition manuelle */}
                     <button
                       onClick={() => handleStartEdit(bid)}
                       className="min-w-12 h-7 px-2 text-xs font-medium hover:bg-muted rounded-md transition-colors"
                     >
                       {bid.amount}
                     </button>
+                    
+                    {/* Bouton + */}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleIncrement(bid)}
+                      disabled={isUpdating}
+                      className="h-7 w-7 p-0 hover:bg-muted"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                    
+                    {/* Côte */}
                     {bid.cote && (
-                      <span className="text-[10px] text-muted-foreground/60">
+                      <span className="text-[10px] text-muted-foreground/60 ml-0.5">
                         ({bid.cote})
                       </span>
                     )}
