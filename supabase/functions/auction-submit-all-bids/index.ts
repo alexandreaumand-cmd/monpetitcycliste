@@ -207,12 +207,19 @@ Deno.serve(async (req) => {
 
     // 4. Check all amounts >= prix_initial
     const { data: coureurs } = await supabase
-      .from('coureurs_disponibilite_enrichie')
-      .select('id, nom, prix_initial')
-      .eq('phase_id', phase_id)
-      .in('id', coureurIds);
+      .from('coureurs_saisons')
+      .select('coureur_id, prix_initial, coureurs(id, nom)')
+      .eq('saison_id', phase.saison_id)
+      .in('coureur_id', coureurIds);
 
-    const coureursMap = new Map((coureurs || []).map(c => [c.id, c]));
+    const coureursMap = new Map((coureurs || []).map(c => [
+      c.coureur_id, 
+      { 
+        id: c.coureur_id, 
+        nom: c.coureurs?.nom || c.coureur_id, 
+        prix_initial: c.prix_initial 
+      }
+    ]));
 
     for (const bid of draftBids) {
       const coureur = coureursMap.get(bid.coureur_id);
