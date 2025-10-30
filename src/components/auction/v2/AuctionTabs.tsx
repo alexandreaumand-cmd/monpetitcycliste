@@ -213,7 +213,7 @@ export const AuctionTabs = ({
           </div>
 
           {/* Main content - Full height columns */}
-          <div className="grid grid-cols-2 gap-6 py-4 h-[calc(100vh-240px)]">
+          <div className="grid grid-cols-[2fr_1fr] gap-6 py-4 h-[calc(100vh-240px)]">
             {/* Left: Search Results - Full height */}
             <div className="flex flex-col h-full">
               <div className="mb-2 flex items-center justify-between flex-shrink-0">
