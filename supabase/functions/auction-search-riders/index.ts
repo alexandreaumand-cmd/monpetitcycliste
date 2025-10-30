@@ -17,6 +17,7 @@ Deno.serve(async (req) => {
     league_id = null,
     q = null,
     teams = null,
+    categories = null,
     cote_min = null,
     cote_max = null,
     limit = 100,
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('[auction-search-riders] Request:', { phase_id, league_id, q, available_only, limit, offset, order_by });
+    console.log('[auction-search-riders] Request:', { phase_id, league_id, q, teams, categories, available_only, limit, offset, order_by });
 
     // Step 1: Get phase's saison_id
     const { data: phase, error: phaseError } = await supabase
@@ -46,16 +47,18 @@ Deno.serve(async (req) => {
       throw new Error('Phase not found');
     }
 
-    // Step 2: Build base query on coureurs_saisons
+    // Step 2: Build base query on coureurs_saisons with equipes_saisons join for category filtering
     let query = supabase
       .from('coureurs_saisons')
       .select(`
         coureur_id,
         equipe_id,
         prix_initial,
-        coureurs!inner(id, nom)
+        coureurs!inner(id, nom),
+        equipes_saisons!inner(categorie)
       `)
-      .eq('saison_id', phase.saison_id);
+      .eq('saison_id', phase.saison_id)
+      .eq('equipes_saisons.saison_id', phase.saison_id);
 
     // Search by name
     if (q && q.trim().length >= 2) {
@@ -65,6 +68,11 @@ Deno.serve(async (req) => {
     // Filter by teams (now using equipe_id instead of equipe text)
     if (teams && Array.isArray(teams) && teams.length > 0) {
       query = query.in('equipe_id', teams);
+    }
+
+    // Filter by team categories (WT, PT, CT)
+    if (categories && Array.isArray(categories) && categories.length > 0) {
+      query = query.in('equipes_saisons.categorie', categories);
     }
 
     // Filter by cote (prix_initial)
