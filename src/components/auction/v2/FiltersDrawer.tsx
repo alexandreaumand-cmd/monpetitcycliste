@@ -12,7 +12,7 @@ interface FiltersDrawerProps {
   onTeamsChange: (teams: string[]) => void;
   selectedCotes: number[];
   onCotesChange: (cotes: number[]) => void;
-  availableTeams: string[];
+  availableTeams: Array<{ id: string; name: string }>;
 }
 
 export function FiltersDrawer({
@@ -24,16 +24,16 @@ export function FiltersDrawer({
 }: FiltersDrawerProps) {
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
 
-  const toggleTeam = (team: string) => {
-    if (selectedTeams.includes(team)) {
-      onTeamsChange(selectedTeams.filter(t => t !== team));
+  const toggleTeam = (teamId: string) => {
+    if (selectedTeams.includes(teamId)) {
+      onTeamsChange(selectedTeams.filter(t => t !== teamId));
     } else {
-      onTeamsChange([...selectedTeams, team]);
+      onTeamsChange([...selectedTeams, teamId]);
     }
   };
 
   const selectAllTeams = () => {
-    onTeamsChange([...availableTeams]);
+    onTeamsChange(availableTeams.map(t => t.id));
   };
 
   const clearAllTeams = () => {
@@ -42,7 +42,7 @@ export function FiltersDrawer({
 
   // Filter teams based on search query
   const filteredTeams = availableTeams.filter(team =>
-    team.toLowerCase().includes(teamSearchQuery.toLowerCase())
+    team.name.toLowerCase().includes(teamSearchQuery.toLowerCase())
   );
 
   const coteOptions = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 101]; // 101 represents 100+
@@ -160,16 +160,16 @@ export function FiltersDrawer({
               <div className="border rounded-md p-2 space-y-1 max-h-[400px] overflow-y-auto">
                 {filteredTeams.map((team) => (
                   <div
-                    key={team}
+                    key={team.id}
                     className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
-                    onClick={() => toggleTeam(team)}
+                    onClick={() => toggleTeam(team.id)}
                   >
                     <Checkbox
-                      checked={selectedTeams.includes(team)}
-                      onCheckedChange={() => toggleTeam(team)}
+                      checked={selectedTeams.includes(team.id)}
+                      onCheckedChange={() => toggleTeam(team.id)}
                     />
                     <label className="flex-1 text-sm cursor-pointer">
-                      {team}
+                      {team.name}
                     </label>
                   </div>
                 ))}

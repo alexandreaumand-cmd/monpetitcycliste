@@ -23,29 +23,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('[auction-get-teams] v3-RPC - Fetching teams for phase:', phase_id);
+    console.log('[auction-get-teams] v4-team-options - Fetching teams for phase:', phase_id);
 
-    // Use the RPC function for reliable distinct team retrieval
+    // Use the new RPC function that returns team IDs and names
     const { data: teams, error } = await supabase
-      .rpc('get_unique_teams_for_phase', { p_phase_id: phase_id });
+      .rpc('get_team_options_for_phase', { p_phase_id: phase_id });
     
     if (error) throw error;
 
-    // Normalize the response to string[] with explicit typing
-    type TeamRow = { team_name: string | null };
-    const rows: TeamRow[] = (teams as TeamRow[] | null) ?? [];
-    const teamNames: string[] = rows
-      .map((t) => t.team_name)
-      .filter((name): name is string => Boolean(name));
+    // Type the response
+    type TeamOption = { equipe_id: string; nom_affiche: string };
+    const rows: TeamOption[] = (teams as TeamOption[] | null) ?? [];
+    
+    // Map to { id, name } format
+    const teamOptions = rows.map(t => ({
+      id: t.equipe_id,
+      name: t.nom_affiche
+    }));
 
-    // Sort alphabetically for consistency
-    teamNames.sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
-
-    console.log(`[auction-get-teams] v3-RPC - Found teams: ${teamNames.length}`);
-
+    console.log(`[auction-get-teams] v4-team-options - Found teams: ${teamOptions.length}`);
 
     return new Response(
-      JSON.stringify({ teams: teamNames }),
+      JSON.stringify({ teams: teamOptions }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

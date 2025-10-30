@@ -142,11 +142,8 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         body: { phase_id: phaseId },
       });
       if (error) throw error;
-      const raw = data?.teams || [];
-      const normalized = Array.isArray(raw)
-        ? raw.map((t: any) => (typeof t === 'string' ? t : t?.team_name)).filter(Boolean)
-        : [];
-      return normalized;
+      const teams = data?.teams || [];
+      return Array.isArray(teams) ? teams : [];
     },
   });
 

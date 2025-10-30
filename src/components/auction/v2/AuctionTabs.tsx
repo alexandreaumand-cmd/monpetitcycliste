@@ -23,7 +23,7 @@ interface AuctionTabsProps {
   setSelectedTeams: (teams: string[]) => void;
   selectedCotes: number[];
   setSelectedCotes: (cotes: number[]) => void;
-  availableTeams: string[];
+  availableTeams: Array<{ id: string; name: string }>;
   // Riders and bids
   riders: any[];
   isSearching: boolean;

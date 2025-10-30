@@ -14,7 +14,7 @@ interface AuctionSearchFiltersProps {
   onTeamsChange: (teams: string[]) => void;
   selectedCotes: number[];
   onCotesChange: (cotes: number[]) => void;
-  availableTeams: string[];
+  availableTeams: Array<{ id: string; name: string }>;
 }
 
 export function AuctionSearchFilters({
@@ -28,16 +28,16 @@ export function AuctionSearchFilters({
 }: AuctionSearchFiltersProps) {
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
 
-  const toggleTeam = (team: string) => {
-    if (selectedTeams.includes(team)) {
-      onTeamsChange(selectedTeams.filter(t => t !== team));
+  const toggleTeam = (teamId: string) => {
+    if (selectedTeams.includes(teamId)) {
+      onTeamsChange(selectedTeams.filter(t => t !== teamId));
     } else {
-      onTeamsChange([...selectedTeams, team]);
+      onTeamsChange([...selectedTeams, teamId]);
     }
   };
 
   const selectAllTeams = () => {
-    onTeamsChange(availableTeams);
+    onTeamsChange(availableTeams.map(t => t.id));
   };
 
   const clearAllTeams = () => {
@@ -61,8 +61,16 @@ export function AuctionSearchFilters({
 
   // Filter teams based on search query
   const filteredTeams = availableTeams.filter(team =>
-    team.toLowerCase().includes(teamSearchQuery.toLowerCase())
+    team.name.toLowerCase().includes(teamSearchQuery.toLowerCase())
   );
+
+  // Get team names to display in the button
+  const getSelectedTeamNames = () => {
+    return selectedTeams
+      .map(id => availableTeams.find(t => t.id === id)?.name)
+      .filter(Boolean)
+      .join(", ");
+  };
 
   return (
     <div className="flex items-center gap-3">
@@ -99,7 +107,7 @@ export function AuctionSearchFilters({
               {selectedTeams.length === 0 
                 ? "Équipes" 
                 : selectedTeams.length <= 2 
-                  ? selectedTeams.join(", ")
+                  ? getSelectedTeamNames()
                   : `${selectedTeams.length} équipes`}
             </span>
             <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -131,12 +139,12 @@ export function AuctionSearchFilters({
           <div className="max-h-[500px] overflow-y-auto p-2 space-y-1">
             {filteredTeams.map((team) => (
               <div
-                key={team}
+                key={team.id}
                 className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded-sm cursor-pointer"
-                onClick={() => toggleTeam(team)}
+                onClick={() => toggleTeam(team.id)}
               >
-                <Checkbox checked={selectedTeams.includes(team)} />
-                <span className="flex-1 text-sm">{team}</span>
+                <Checkbox checked={selectedTeams.includes(team.id)} />
+                <span className="flex-1 text-sm">{team.name}</span>
               </div>
             ))}
             {filteredTeams.length === 0 && (

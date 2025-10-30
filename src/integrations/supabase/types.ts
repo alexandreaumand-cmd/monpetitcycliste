@@ -4527,6 +4527,13 @@ export type Database = {
               total_points: number
             }[]
           }
+      get_team_options_for_phase: {
+        Args: { p_phase_id: string }
+        Returns: {
+          equipe_id: string
+          nom_affiche: string
+        }[]
+      }
       get_top_riders_optimized: {
         Args: {
           p_league_id?: string
