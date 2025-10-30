@@ -208,46 +208,58 @@ Deno.serve(async (req) => {
     // 4. Check all amounts >= prix_initial
     console.log(`🔍 Fetching ${coureurIds.length} coureurs for saison_id: ${phase.saison_id}`, coureurIds);
     
-    // Fetch coureurs - handling potential multiple entries per coureur (team changes)
-    const coureurPromises = coureurIds.map(async (coureurId) => {
-      const { data, error } = await supabase
-        .from('coureurs_saisons')
-        .select('coureur_id, equipe_id, prix_initial, coureurs(id, nom)')
-        .eq('saison_id', phase.saison_id)
-        .eq('coureur_id', coureurId)
-        .limit(1)
-        .maybeSingle();
+    // Fetch prix_initial from coureurs_saisons
+    const { data: coureursSeasons, error: seasonsError } = await supabase
+      .from('coureurs_saisons')
+      .select('coureur_id, prix_initial')
+      .eq('saison_id', phase.saison_id)
+      .in('coureur_id', coureurIds);
+    
+    if (seasonsError) {
+      console.error('❌ Error fetching coureurs_saisons:', seasonsError);
+      throw seasonsError;
+    }
+    
+    console.log(`✅ Found ${coureursSeasons?.length || 0} entries in coureurs_saisons`);
+    
+    // Fetch noms from coureurs
+    const { data: coureursData, error: coureursError } = await supabase
+      .from('coureurs')
+      .select('id, nom')
+      .in('id', coureurIds);
+    
+    if (coureursError) {
+      console.error('❌ Error fetching coureurs:', coureursError);
+      throw coureursError;
+    }
+    
+    console.log(`✅ Found ${coureursData?.length || 0} entries in coureurs`);
+    
+    // Create maps for easy lookup
+    const priceMap = new Map((coureursSeasons || []).map(cs => [cs.coureur_id, cs.prix_initial]));
+    const nameMap = new Map((coureursData || []).map(c => [c.id, c.nom]));
+    
+    // Build final coureurs map
+    const coureursMap = new Map();
+    for (const coureurId of coureurIds) {
+      const prix_initial = priceMap.get(coureurId);
+      const nom = nameMap.get(coureurId);
       
-      if (error) {
-        console.error(`❌ Error fetching coureur ${coureurId}:`, error);
-        return null;
+      if (!prix_initial && prix_initial !== 0) {
+        console.error(`❌ Missing prix_initial for coureur ${coureurId}`);
+      }
+      if (!nom) {
+        console.error(`❌ Missing nom for coureur ${coureurId}`);
       }
       
-      if (!data) {
-        console.warn(`⚠️ Coureur ${coureurId} not found in coureurs_saisons for saison ${phase.saison_id}`);
-        return null;
-      }
-      
-      console.log(`✅ Found coureur ${coureurId}:`, data);
-      return data;
-    });
+      coureursMap.set(coureurId, {
+        id: coureurId,
+        nom: nom || coureurId,
+        prix_initial: prix_initial || 0
+      });
+    }
     
-    const coureursData = await Promise.all(coureurPromises);
-    const coureurs = coureursData.filter(c => c !== null);
-    
-    console.log(`✅ Found ${coureurs.length}/${coureurIds.length} coureurs in coureurs_saisons`);
-    
-    const coureursMap = new Map(coureurs.map(c => {
-      const coureurInfo = c.coureurs as any;
-      return [
-        c.coureur_id, 
-        { 
-          id: c.coureur_id, 
-          nom: coureurInfo?.nom || c.coureur_id, 
-          prix_initial: c.prix_initial 
-        }
-      ];
-    }));
+    console.log(`✅ Built coureursMap with ${coureursMap.size} entries`);
 
     for (const bid of draftBids) {
       const coureur = coureursMap.get(bid.coureur_id);
