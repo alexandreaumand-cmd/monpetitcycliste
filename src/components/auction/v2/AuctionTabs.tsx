@@ -23,7 +23,9 @@ interface AuctionTabsProps {
   setSelectedTeams: (teams: string[]) => void;
   selectedCotes: number[];
   setSelectedCotes: (cotes: number[]) => void;
-  availableTeams: Array<{ id: string; name: string }>;
+  selectedCategories: string[];
+  setSelectedCategories: (categories: string[]) => void;
+  availableTeams: Array<{ id: string; name: string; categorie?: string }>;
   // Riders and bids
   riders: any[];
   isSearching: boolean;
@@ -51,6 +53,8 @@ export const AuctionTabs = ({
   setSelectedTeams,
   selectedCotes,
   setSelectedCotes,
+  selectedCategories,
+  setSelectedCategories,
   availableTeams,
   riders,
   isSearching,
@@ -202,6 +206,8 @@ export const AuctionTabs = ({
               onTeamsChange={setSelectedTeams}
               selectedCotes={selectedCotes}
               onCotesChange={setSelectedCotes}
+              selectedCategories={selectedCategories}
+              onCategoriesChange={setSelectedCategories}
               availableTeams={availableTeams}
             />
           </div>

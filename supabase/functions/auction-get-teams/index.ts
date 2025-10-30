@@ -32,16 +32,17 @@ Deno.serve(async (req) => {
     if (error) throw error;
 
     // Type the response
-    type TeamOption = { equipe_id: string; nom_affiche: string };
+    type TeamOption = { equipe_id: string; nom_affiche: string; categorie?: string };
     const rows: TeamOption[] = (teams as TeamOption[] | null) ?? [];
     
     console.log(`[auction-get-teams] v5-filtered - RPC returned ${rows.length} teams`);
     console.log('[auction-get-teams] v5-filtered - Sample teams:', rows.slice(0, 3));
     
-    // Map to { id, name } format
+    // Map to { id, name, categorie } format
     const teamOptions = rows.map(t => ({
       id: t.equipe_id,
-      name: t.nom_affiche
+      name: t.nom_affiche,
+      categorie: t.categorie
     }));
 
     console.log(`[auction-get-teams] v5-filtered - Returning ${teamOptions.length} teams`);

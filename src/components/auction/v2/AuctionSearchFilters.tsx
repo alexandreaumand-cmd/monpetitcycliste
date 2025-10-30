@@ -14,7 +14,9 @@ interface AuctionSearchFiltersProps {
   onTeamsChange: (teams: string[]) => void;
   selectedCotes: number[];
   onCotesChange: (cotes: number[]) => void;
-  availableTeams: Array<{ id: string; name: string }>;
+  selectedCategories: string[];
+  onCategoriesChange: (categories: string[]) => void;
+  availableTeams: Array<{ id: string; name: string; categorie?: string }>;
 }
 
 export function AuctionSearchFilters({
@@ -24,9 +26,17 @@ export function AuctionSearchFilters({
   onTeamsChange,
   selectedCotes,
   onCotesChange,
+  selectedCategories,
+  onCategoriesChange,
   availableTeams,
 }: AuctionSearchFiltersProps) {
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
+
+  const categorieOptions = [
+    { value: "WT", label: "WorldTeam" },
+    { value: "PT", label: "ProTeam" },
+    { value: "CT", label: "Continental" },
+  ];
 
   const toggleTeam = (teamId: string) => {
     if (selectedTeams.includes(teamId)) {
@@ -59,10 +69,21 @@ export function AuctionSearchFilters({
     return `${cote}`;
   };
 
-  // Filter teams based on search query
-  const filteredTeams = availableTeams.filter(team =>
-    team?.name?.toLowerCase().includes(teamSearchQuery.toLowerCase())
-  );
+  const toggleCategorie = (categorie: string) => {
+    if (selectedCategories.includes(categorie)) {
+      onCategoriesChange(selectedCategories.filter(c => c !== categorie));
+    } else {
+      onCategoriesChange([...selectedCategories, categorie]);
+    }
+  };
+
+  // Filter teams based on search query and selected categories
+  const filteredTeams = availableTeams.filter(team => {
+    const matchesSearch = team?.name?.toLowerCase().includes(teamSearchQuery.toLowerCase());
+    const matchesCategory = selectedCategories.length === 0 || 
+      (team.categorie && selectedCategories.includes(team.categorie));
+    return matchesSearch && matchesCategory;
+  });
 
   // Get team names to display in the button
   const getSelectedTeamNames = () => {
@@ -93,6 +114,21 @@ export function AuctionSearchFilters({
             <X className="h-4 w-4" />
           </Button>
         )}
+      </div>
+
+      {/* Team Category Filter */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm text-muted-foreground whitespace-nowrap">Catégorie:</span>
+        {categorieOptions.map((cat) => (
+          <Badge
+            key={cat.value}
+            variant={selectedCategories.includes(cat.value) ? "default" : "outline"}
+            className="cursor-pointer hover:bg-primary/10 transition-colors"
+            onClick={() => toggleCategorie(cat.value)}
+          >
+            {cat.label}
+          </Badge>
+        ))}
       </div>
 
       {/* Team Filter */}
