@@ -46,10 +46,16 @@ Deno.serve(async (req) => {
       throw new Error('Phase not found');
     }
 
-    // Step 2: Build base query on coureurs_saisons
+    // Step 2: Build base query on coureurs_saisons with join to equipes_saisons
     let query = supabase
       .from('coureurs_saisons')
-      .select('coureur_id, equipe, prix_initial, coureurs!inner(id, nom)')
+      .select(`
+        coureur_id,
+        equipe_id,
+        prix_initial,
+        coureurs!inner(id, nom),
+        equipes_saisons!coureurs_saisons_equipe_id_saison_id_fkey(nom_affiche)
+      `)
       .eq('saison_id', phase.saison_id);
 
     // Search by name
@@ -57,9 +63,9 @@ Deno.serve(async (req) => {
       query = query.ilike('coureurs.nom', `%${q.trim()}%`);
     }
 
-    // Filter by teams
+    // Filter by teams (now using equipe_id instead of equipe text)
     if (teams && Array.isArray(teams) && teams.length > 0) {
-      query = query.in('equipe', teams);
+      query = query.in('equipe_id', teams);
     }
 
     // Filter by cote (prix_initial)
@@ -158,7 +164,7 @@ Deno.serve(async (req) => {
       return {
         rider_id: cs.coureur_id,
         rider_nom: cs.coureurs.nom,
-        rider_team: cs.equipe,
+        rider_team: cs.equipes_saisons?.nom_affiche || 'N/A',
         cote: cs.prix_initial,
         is_taken: taken.is_taken,
         taken_by_manager_nom: taken.taken_by_manager_nom,
