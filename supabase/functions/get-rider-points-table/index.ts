@@ -58,16 +58,20 @@ Deno.serve(async (req) => {
       targetSaisonId = phaseData?.saison_id;
     }
 
-    // Get team for the season
+    // Get team for the season from equipes_saisons
     let equipe = 'N/A';
     if (targetSaisonId) {
       const { data: seasonData } = await supabase
         .from('coureurs_saisons')
-        .select('equipe')
+        .select(`
+          equipe_id,
+          equipes_saisons!inner(nom_affiche)
+        `)
         .eq('coureur_id', rider_id)
         .eq('saison_id', targetSaisonId)
+        .eq('equipes_saisons.saison_id', targetSaisonId)
         .maybeSingle();
-      equipe = seasonData?.equipe || 'N/A';
+      equipe = (seasonData as any)?.equipes_saisons?.nom_affiche || 'N/A';
     }
 
     // Build query for points WITHOUT joins (to avoid SQL alias issues)

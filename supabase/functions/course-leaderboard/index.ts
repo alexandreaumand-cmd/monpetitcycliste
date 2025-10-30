@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
     console.log('managers fetched:', managers?.length || 0);
     const managerMap = new Map(managers?.map(m => [m.id, m.nom]) || []);
 
-    // Get rider names
+    // Get rider names and teams
     const riderIds = Array.from(
       new Set(
         Array.from(contributorsByManager.values())
@@ -126,13 +126,35 @@ Deno.serve(async (req) => {
 
     console.log('riderIds count:', riderIds.length);
 
-    let riders: Array<{ id: string; nom: string; equipe: string | null }> = [];
-    if (riderIds.length > 0) {
+    // Get season ID from phase
+    const { data: phaseData } = await supabaseClient
+      .from('phases')
+      .select('saison_id')
+      .eq('id', course.phase_id)
+      .single();
+    
+    const saisonId = phaseData?.saison_id;
+
+    let riders: Array<{ id: string; nom: string; equipe: string }> = [];
+    if (riderIds.length > 0 && saisonId) {
       const { data } = await supabaseClient
         .from('coureurs')
-        .select('id, nom, equipe')
+        .select(`
+          id,
+          nom,
+          coureurs_saisons!inner(
+            equipe_id,
+            equipes_saisons!inner(nom_affiche)
+          )
+        `)
+        .eq('coureurs_saisons.saison_id', saisonId)
         .in('id', riderIds);
-      riders = data || [];
+      
+      riders = data?.map((r: any) => ({
+        id: r.id,
+        nom: r.nom,
+        equipe: Array.isArray(r.coureurs_saisons) && r.coureurs_saisons[0]?.equipes_saisons?.nom_affiche || 'N/A'
+      })) || [];
     }
 
     const riderMap = new Map(riders.map(r => [r.id, { nom: r.nom, equipe: r.equipe }]) || []);

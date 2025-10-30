@@ -151,19 +151,49 @@ Deno.serve(async (req) => {
       id => coureurStats.get(id)!.points_total > 0
     );
 
-    // Get coureur details
+    // Get coureur details with team from equipes_saisons
+    // First get saison_id from phase
+    let saisonId: string | null = null;
+    if (phase_id) {
+      const { data: phaseData } = await supabaseClient
+        .from('phases')
+        .select('saison_id')
+        .eq('id', phase_id)
+        .single();
+      saisonId = phaseData?.saison_id || null;
+    } else if (saison_id) {
+      saisonId = saison_id;
+    }
+    
     let coureursQuery = supabaseClient
       .from('coureurs')
-      .select('id, nom, equipe')
+      .select(`
+        id,
+        nom,
+        coureurs_saisons!inner(
+          equipe_id,
+          equipes_saisons!inner(nom_affiche)
+        )
+      `)
       .in('id', coureurIdsWithPoints);
+
+    if (saisonId) {
+      coureursQuery = coureursQuery.eq('coureurs_saisons.saison_id', saisonId);
+    }
 
     if (search && search.trim()) {
       coureursQuery = coureursQuery.ilike('nom', `%${search}%`);
     }
 
-    const { data: coureurs, error: coureursError } = await coureursQuery;
+    const { data: coureursData, error: coureursError } = await coureursQuery;
 
     if (coureursError) throw coureursError;
+    
+    const coureurs = coureursData?.map((c: any) => ({
+      id: c.id,
+      nom: c.nom,
+      equipe: Array.isArray(c.coureurs_saisons) && c.coureurs_saisons[0]?.equipes_saisons?.nom_affiche || 'N/A'
+    })) || [];
 
     // Build items array
     const items = coureurs?.map(c => {
