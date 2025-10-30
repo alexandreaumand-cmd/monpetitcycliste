@@ -28,13 +28,7 @@ export const CoureursManager = () => {
         .from('coureurs_saisons')
         .select(`
           *,
-          coureurs!inner(id, nom, uci_id),
-          equipes_saisons!inner(
-            equipe_id,
-            nom_affiche,
-            categorie,
-            equipes!inner(code_court, nom_complet)
-          )
+          coureurs!inner(id, nom, uci_id)
         `)
         .eq('saison_id', filters.saison_id);
 
@@ -49,6 +43,30 @@ export const CoureursManager = () => {
 
       const { data, error } = await query;
       if (error) throw error;
+
+      // Enrich with team information
+      if (data && data.length > 0) {
+        const uniqueEquipeIds = [...new Set(data.map(cs => cs.equipe_id).filter(Boolean))];
+        
+        if (uniqueEquipeIds.length > 0) {
+          const { data: equipesData } = await supabase
+            .from('equipes_saisons')
+            .select('equipe_id, nom_affiche, categorie, equipes!inner(code_court, nom_complet)')
+            .in('equipe_id', uniqueEquipeIds)
+            .eq('saison_id', filters.saison_id);
+          
+          const equipesMap = new Map(
+            equipesData?.map(e => [e.equipe_id, e]) || []
+          );
+          
+          // Enrich each coureur with team info
+          return data.map(cs => ({
+            ...cs,
+            equipes_saisons: equipesMap.get(cs.equipe_id) || null
+          }));
+        }
+      }
+
       return data;
     },
     enabled: !!filters.saison_id,
