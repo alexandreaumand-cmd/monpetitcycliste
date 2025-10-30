@@ -4466,6 +4466,10 @@ export type Database = {
           missing_count: number
         }[]
       }
+      generate_team_code_unique: {
+        Args: { team_name: string }
+        Returns: string
+      }
       get_league_course_ids: {
         Args: { p_league_id: string }
         Returns: {
