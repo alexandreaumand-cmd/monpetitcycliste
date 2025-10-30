@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('[auction-get-teams] v4-team-options - Fetching teams for phase:', phase_id);
+    console.log('[auction-get-teams] v5-filtered - Fetching teams for phase:', phase_id);
 
     // Use the new RPC function that returns team IDs and names
     const { data: teams, error } = await supabase
@@ -35,13 +35,16 @@ Deno.serve(async (req) => {
     type TeamOption = { equipe_id: string; nom_affiche: string };
     const rows: TeamOption[] = (teams as TeamOption[] | null) ?? [];
     
+    console.log(`[auction-get-teams] v5-filtered - RPC returned ${rows.length} teams`);
+    console.log('[auction-get-teams] v5-filtered - Sample teams:', rows.slice(0, 3));
+    
     // Map to { id, name } format
     const teamOptions = rows.map(t => ({
       id: t.equipe_id,
       name: t.nom_affiche
     }));
 
-    console.log(`[auction-get-teams] v4-team-options - Found teams: ${teamOptions.length}`);
+    console.log(`[auction-get-teams] v5-filtered - Returning ${teamOptions.length} teams`);
 
     return new Response(
       JSON.stringify({ teams: teamOptions }),
