@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       // Single phase context: query ALL rosters for this phase with league filter
       const rosterQuery = supabase
         .from('rosters')
-        .select('coureur_id, manager_id')
+        .select('coureur_id, manager_id, prix_signature')
         .eq('phase_id', phase_id)
         .eq('league_id', league_id);
       
@@ -89,13 +89,19 @@ Deno.serve(async (req) => {
         
         ownersMap = rosterData.reduce((acc: any, r: any) => {
           if (!acc[r.coureur_id]) {
-            acc[r.coureur_id] = [];
+            acc[r.coureur_id] = {
+              owners: [],
+              prix_signatures: []
+            };
           }
           if (r.manager_id && managersMap[r.manager_id]) {
-            acc[r.coureur_id].push({
+            acc[r.coureur_id].owners.push({
               manager_id: r.manager_id,
               manager_nom: managersMap[r.manager_id]
             });
+          }
+          if (r.prix_signature) {
+            acc[r.coureur_id].prix_signatures.push(Number(r.prix_signature));
           }
           return acc;
         }, {});
@@ -121,7 +127,7 @@ Deno.serve(async (req) => {
         while (hasMore) {
           const rosterPageQuery = supabase
             .from('rosters')
-            .select('coureur_id, manager_id, phase_id')
+            .select('coureur_id, manager_id, phase_id, prix_signature')
             .in('phase_id', phaseIds)
             .eq('league_id', league_id);
           
@@ -154,12 +160,13 @@ Deno.serve(async (req) => {
           
           const managersMap = Object.fromEntries((managers || []).map(m => [m.id, m.nom]));
           
-          // Build ownersMap with owners_all and owners_by_phase
+          // Build ownersMap with owners_all, owners_by_phase and prix_signatures
           ownersMap = allRosterData.reduce((acc: any, r: any) => {
             if (!acc[r.coureur_id]) {
               acc[r.coureur_id] = {
                 owners_all: [],
-                owners_by_phase: {}
+                owners_by_phase: {},
+                prix_signatures: []
               };
             }
             
@@ -183,6 +190,11 @@ Deno.serve(async (req) => {
               }
               acc[r.coureur_id].owners_by_phase[phaseKey].push(owner);
             }
+            
+            if (r.prix_signature) {
+              acc[r.coureur_id].prix_signatures.push(Number(r.prix_signature));
+            }
+            
             return acc;
           }, {});
           
@@ -201,10 +213,16 @@ Deno.serve(async (req) => {
 
     // Map and enrich each item
     const mappedItems = items.map((item: any) => {
-      const ownerData = ownersMap[item.coureur_id] || (phase_id ? [] : { owners_all: [], owners_by_phase: {} });
+      const ownerData = ownersMap[item.coureur_id] || (phase_id ? { owners: [], prix_signatures: [] } : { owners_all: [], owners_by_phase: {}, prix_signatures: [] });
       const prixInitial = Number(item.prix_initial) || 0;
-      const ratio = item.total_points > 0 && prixInitial > 0
-        ? Number((item.total_points / prixInitial).toFixed(2))
+      
+      // Calculate prix_achat from prix_signatures
+      const prixAchat = ownerData.prix_signatures && ownerData.prix_signatures.length > 0
+        ? Math.max(...ownerData.prix_signatures)
+        : prixInitial;
+      
+      const ratio = item.total_points > 0 && prixAchat > 0
+        ? Number((item.total_points / prixAchat).toFixed(2))
         : 0;
 
       return {
@@ -212,12 +230,12 @@ Deno.serve(async (req) => {
         rider_nom: item.coureur_nom,
         rider_equipe: item.coureur_equipe,
         total_points: item.total_points,
-        prix_initial: prixInitial,
+        prix_achat: prixAchat,
         ratio_points_par_prix: ratio,
         courses_count: item.courses_count,
         // Add owners based on context
         ...(phase_id 
-          ? { owners: ownerData }
+          ? { owners: ownerData.owners || [] }
           : { 
               owners_all: ownerData.owners_all || [],
               owners_by_phase: ownerData.owners_by_phase || {}
