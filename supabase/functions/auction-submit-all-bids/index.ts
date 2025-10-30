@@ -205,10 +205,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 4. Check all amounts >= prix_initial - Using same approach as auction-get-context
+    // 4. Check all amounts >= prix_initial
     console.log(`🔍 Fetching ${coureurIds.length} coureurs for saison_id: ${phase.saison_id}`, coureurIds);
     
-    // Fetch coureurs with team info - one query per coureur to ensure we get them all
+    // Fetch coureurs - handling potential multiple entries per coureur (team changes)
     const coureurPromises = coureurIds.map(async (coureurId) => {
       const { data, error } = await supabase
         .from('coureurs_saisons')
@@ -216,13 +216,19 @@ Deno.serve(async (req) => {
         .eq('saison_id', phase.saison_id)
         .eq('coureur_id', coureurId)
         .limit(1)
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error(`❌ Error fetching coureur ${coureurId}:`, error);
         return null;
       }
       
+      if (!data) {
+        console.warn(`⚠️ Coureur ${coureurId} not found in coureurs_saisons for saison ${phase.saison_id}`);
+        return null;
+      }
+      
+      console.log(`✅ Found coureur ${coureurId}:`, data);
       return data;
     });
     
