@@ -1,6 +1,7 @@
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ManagerDropdown } from "@/components/layout/ManagerDropdown";
+import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import mpcLogo from "@/assets/mpc-logo.png";
@@ -53,6 +54,8 @@ export function DashboardHomeHeader({
               compact={isMobile}
             />
           )}
+
+          <NotificationCenter />
 
           {isSuperAdmin && (
             <Button
