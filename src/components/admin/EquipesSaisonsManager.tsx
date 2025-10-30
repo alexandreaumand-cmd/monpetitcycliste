@@ -11,26 +11,44 @@ import { Card } from "@/components/ui/card";
 export const EquipesSaisonsManager = () => {
   const [filters, setFilters] = useState({
     saison_id: "",
+    search: "",
+    categorie: "all",
   });
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   // Fetch équipes saisons pour une saison spécifique
   const { data: equipesSaisons, isLoading } = useQuery({
-    queryKey: ['admin-equipes-saisons', filters.saison_id],
+    queryKey: ['admin-equipes-saisons', filters],
     queryFn: async () => {
       if (!filters.saison_id) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('equipes_saisons')
         .select(`
           *,
           saisons!inner(annee),
           equipes!inner(code_court, nom_complet)
         `)
-        .eq('saison_id', filters.saison_id)
-        .order('nom_affiche');
+        .eq('saison_id', filters.saison_id);
 
+      // Filtre de recherche par nom
+      if (filters.search) {
+        query = query.ilike('nom_affiche', `%${filters.search}%`);
+      }
+
+      // Filtre par catégorie
+      if (filters.categorie !== "all") {
+        if (filters.categorie === "none") {
+          query = query.is('categorie', null);
+        } else {
+          query = query.eq('categorie', filters.categorie);
+        }
+      }
+
+      query = query.order('nom_affiche');
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
