@@ -65,14 +65,14 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
         .maybeSingle();
 
       if (scheduledAuction) {
-        // Pour une enchère scheduled, pas de validation status
+        // Pour une enchère scheduled, on retourne opensAt dans deadlineAt pour le countdown
         return {
           auctionId: scheduledAuction.id,
           phaseId: scheduledAuction.phase_id,
           roundNumber: scheduledAuction.round_number,
           validatedCount: 0,
           totalManagers: 0,
-          deadlineAt: scheduledAuction.opens_at,
+          deadlineAt: scheduledAuction.opens_at, // Utilisé pour le countdown
           isScheduled: true,
         };
       }

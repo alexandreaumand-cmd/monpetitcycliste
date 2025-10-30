@@ -4,6 +4,7 @@ import { Loader2, Trophy } from "lucide-react";
 import { AuctionPage } from "./AuctionPage";
 import { AuctionPageV2 } from "./v2/AuctionPageV2";
 import { AuctionPhaseHistoryView } from "./v2/AuctionPhaseHistoryView";
+import { AuctionScheduledView } from "./v2/AuctionScheduledView";
 import { MobileEmptyState } from "@/components/mobile";
 import { useLeague } from "@/contexts/LeagueContext";
 
@@ -32,9 +33,29 @@ export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
     }
   });
 
+  const { data: scheduledAuctions, isLoading: isLoadingScheduled } = useQuery({
+    queryKey: ['my-scheduled-auctions', leagueId],
+    enabled: !!leagueId && (!activeAuctions || activeAuctions.length === 0),
+    queryFn: async () => {
+      if (!leagueId) return null;
+      
+      const { data, error } = await supabase
+        .from('auctions')
+        .select('phase_id, opens_at, round_number')
+        .eq('league_id', leagueId)
+        .eq('statut', 'scheduled')
+        .gt('opens_at', new Date().toISOString())
+        .order('opens_at', { ascending: true })
+        .limit(1);
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const { data: closedAuctions, isLoading: isLoadingClosed } = useQuery({
     queryKey: ['my-closed-auctions', leagueId],
-    enabled: !!leagueId && (!activeAuctions || activeAuctions.length === 0),
+    enabled: !!leagueId && (!activeAuctions || activeAuctions.length === 0) && (!scheduledAuctions || scheduledAuctions.length === 0),
     queryFn: async () => {
       if (!leagueId) return null;
       
@@ -51,7 +72,7 @@ export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
     }
   });
 
-  if (isLoading || isLoadingClosed) {
+  if (isLoading || isLoadingScheduled || isLoadingClosed) {
     return (
       <div className="flex justify-center items-center p-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -62,6 +83,18 @@ export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
   // Si une enchère est ouverte
   if (activeAuctions && activeAuctions.length > 0) {
     return <AuctionPageV2 phaseId={activeAuctions[0].phase_id} managerId={managerId} leagueId={leagueId} />;
+  }
+
+  // Si enchère programmée → afficher le compte à rebours
+  if (scheduledAuctions && scheduledAuctions.length > 0) {
+    return (
+      <AuctionScheduledView
+        opensAt={scheduledAuctions[0].opens_at}
+        roundNumber={scheduledAuctions[0].round_number}
+        phaseId={scheduledAuctions[0].phase_id}
+        leagueId={leagueId}
+      />
+    );
   }
 
   // Si des enchères fermées existent
