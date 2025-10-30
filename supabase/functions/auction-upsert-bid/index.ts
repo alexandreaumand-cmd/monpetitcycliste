@@ -104,32 +104,41 @@ Deno.serve(async (req) => {
     // This bypasses the view to avoid duplicate issues from equipes_saisons
     let coureur: { id: string; nom: string; prix_initial: number } | null = null;
     
-    // First try coureurs_saisons
-    const { data: coureurSaison } = await supabase
-      .from('coureurs_saisons')
-      .select('coureur_id, nom, prix_initial')
-      .eq('coureur_id', rider_id)
-      .eq('saison_id', (await supabase.from('phases').select('saison_id').eq('id', phase_id).single()).data?.saison_id)
-      .limit(1)
-      .maybeSingle();
+    // First get saison_id from phase
+    const { data: phaseData } = await supabase
+      .from('phases')
+      .select('saison_id')
+      .eq('id', phase_id)
+      .single();
     
-    if (coureurSaison) {
-      coureur = {
-        id: coureurSaison.coureur_id,
-        nom: coureurSaison.nom,
-        prix_initial: coureurSaison.prix_initial
-      };
-    } else {
+    if (phaseData?.saison_id) {
+      // Try coureurs_saisons - use limit(1) to get first result if duplicates exist
+      const { data: coureurSaisonData } = await supabase
+        .from('coureurs_saisons')
+        .select('coureur_id, nom, prix_initial')
+        .eq('coureur_id', rider_id)
+        .eq('saison_id', phaseData.saison_id)
+        .limit(1);
+      
+      if (coureurSaisonData && coureurSaisonData.length > 0) {
+        coureur = {
+          id: coureurSaisonData[0].coureur_id,
+          nom: coureurSaisonData[0].nom,
+          prix_initial: coureurSaisonData[0].prix_initial
+        };
+      }
+    }
+    
+    if (!coureur) {
       // Fallback to coureurs table
-      const { data: coureurBase } = await supabase
+      const { data: coureurBaseData } = await supabase
         .from('coureurs')
         .select('id, nom, prix_initial')
         .eq('id', rider_id)
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
       
-      if (coureurBase) {
-        coureur = coureurBase;
+      if (coureurBaseData && coureurBaseData.length > 0) {
+        coureur = coureurBaseData[0];
       }
     }
 
