@@ -4466,6 +4466,7 @@ export type Database = {
           missing_count: number
         }[]
       }
+      generate_team_code: { Args: { team_name: string }; Returns: string }
       generate_team_code_unique: {
         Args: { team_name: string }
         Returns: string
