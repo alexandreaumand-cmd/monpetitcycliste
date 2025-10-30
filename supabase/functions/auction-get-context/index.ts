@@ -246,15 +246,21 @@ Deno.serve(async (req) => {
     const coureur_ids = [...my_bids, ...submitted_bids].map(b => b.coureur_id);
     const coureursMap = new Map();
     
+    console.log('Enriching bids for coureur_ids:', coureur_ids);
+    console.log('Using saison_id:', phase.saison_id);
+    
     if (coureur_ids.length > 0) {
       // Fetch each rider individually to handle duplicates
       for (const coureurId of coureur_ids) {
-        const { data: coureurData } = await supabase
+        console.log(`Fetching coureur ${coureurId}...`);
+        const { data: coureurData, error: coureurError } = await supabase
           .from('coureurs_saisons')
           .select('coureur_id, coureurs!inner(id, nom), equipe, prix_initial')
           .eq('saison_id', phase.saison_id)
           .eq('coureur_id', coureurId)
           .limit(1);
+        
+        console.log(`Coureur ${coureurId} result:`, coureurData, 'error:', coureurError);
         
         if (coureurData && coureurData.length > 0) {
           const cs = coureurData[0];
@@ -265,7 +271,9 @@ Deno.serve(async (req) => {
             equipe: cs.equipe,
             prix_initial: cs.prix_initial
           });
+          console.log(`✅ Enriched coureur ${coureurId} with nom: ${coureurInfo?.nom}`);
         } else {
+          console.log(`⚠️ No coureurs_saisons found for ${coureurId}, trying coureurs table...`);
           // Fallback to coureurs table if not in coureurs_saisons
           const { data: baseData } = await supabase
             .from('coureurs')
@@ -281,10 +289,15 @@ Deno.serve(async (req) => {
               equipe: '',
               prix_initial: base.prix_initial
             });
+            console.log(`✅ Fallback enriched coureur ${coureurId} with nom: ${base.nom}`);
+          } else {
+            console.error(`❌ Could not find coureur ${coureurId} in any table`);
           }
         }
       }
     }
+    
+    console.log('Final coureursMap:', Array.from(coureursMap.entries()));
 
     // Enrich bids with coureur info
     const enriched_my_bids = my_bids.map(b => ({
