@@ -103,22 +103,51 @@ Deno.serve(async (req) => {
 
     const newRoundNumber = lastAuction ? lastAuction.round_number + 1 : 1;
 
-    // Create new auction
-    const { data: newAuction, error } = await supabase
+    // Check if auction already exists for this round (open or scheduled)
+    const { data: existingAuction } = await supabase
       .from('auctions')
-      .insert({
-        phase_id,
-        league_id,
-        round_number: newRoundNumber,
-        deadline_at,
-        statut: 'open',
-      })
-      .select()
-      .single();
+      .select('*')
+      .eq('phase_id', phase_id)
+      .eq('league_id', league_id)
+      .eq('round_number', newRoundNumber)
+      .in('statut', ['open', 'scheduled'])
+      .maybeSingle();
 
-    if (error) throw error;
+    let newAuction;
 
-    console.log('New round created:', newAuction);
+    if (existingAuction) {
+      // Update existing auction
+      const { data: updatedAuction, error } = await supabase
+        .from('auctions')
+        .update({
+          deadline_at,
+          statut: 'open',
+        })
+        .eq('id', existingAuction.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      newAuction = updatedAuction;
+      console.log('Auction updated:', newAuction);
+    } else {
+      // Create new auction
+      const { data: insertedAuction, error } = await supabase
+        .from('auctions')
+        .insert({
+          phase_id,
+          league_id,
+          round_number: newRoundNumber,
+          deadline_at,
+          statut: 'open',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      newAuction = insertedAuction;
+      console.log('New round created:', newAuction);
+    }
 
     // Notify all league members
     await notifyLeagueMembers(supabase, league_id, {

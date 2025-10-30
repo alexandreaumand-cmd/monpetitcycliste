@@ -24,6 +24,7 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
         .eq('league_id', leagueId)
         .eq('statut', 'open')
         .order('round_number', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
