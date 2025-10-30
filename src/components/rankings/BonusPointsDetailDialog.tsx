@@ -74,14 +74,17 @@ export const BonusPointsDetailDialog = ({
 
           const { data: seasonData } = await supabase
             .from('coureurs_saisons')
-            .select('equipe')
+            .select(`
+              equipe_id,
+              equipes_saisons!coureurs_saisons_equipe_id_saison_id_fkey(nom_affiche)
+            `)
             .eq('coureur_id', bonus.coureur_id)
             .eq('saison_id', bonus.phases.saison_id)
             .maybeSingle();
 
           return {
             ...bonus,
-            coureur_equipe: seasonData?.equipe || 'N/A'
+            coureur_equipe: (seasonData?.equipes_saisons as any)?.nom_affiche || 'N/A'
           };
         })
       );

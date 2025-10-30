@@ -28,17 +28,24 @@ export const CoureursManager = () => {
         .from('coureurs_saisons')
         .select(`
           *,
-          coureurs!inner(id, nom, uci_id)
+          coureurs!inner(id, nom, uci_id),
+          equipes_saisons!inner(
+            equipe_id,
+            nom_affiche,
+            categorie,
+            equipes!inner(code_court, nom_complet)
+          )
         `)
-        .eq('saison_id', filters.saison_id)
-        .order('coureurs(nom)', { ascending: true });
+        .eq('saison_id', filters.saison_id);
 
       if (filters.search) {
         query = query.ilike('coureurs.nom', `%${filters.search}%`);
       }
       if (filters.equipe !== "all") {
-        query = query.eq('equipe', filters.equipe);
+        query = query.eq('equipe_id', filters.equipe);
       }
+      
+      query = query.order('coureurs(nom)', { ascending: true });
 
       const { data, error } = await query;
       if (error) throw error;

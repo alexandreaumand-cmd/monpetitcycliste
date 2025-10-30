@@ -122,7 +122,11 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
           // Équipe du coureur
           const seasonResult = await supabase
             .from('coureurs_saisons')
-            .select('equipe, prix_initial')
+            .select(`
+              equipe_id,
+              prix_initial,
+              equipes_saisons!coureurs_saisons_equipe_id_saison_id_fkey(nom_affiche)
+            `)
             .eq('coureur_id', roster.coureur_id)
             .eq('saison_id', phaseResult.data?.saison_id || '')
             .maybeSingle();
@@ -158,7 +162,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
             prix_signature: roster.prix_signature,
             coureurs: {
               ...roster.coureurs,
-              equipe: seasonResult.data?.equipe || 'N/A',
+              equipe: (seasonResult.data?.equipes_saisons as any)?.nom_affiche || 'N/A',
               prix_initial: seasonResult.data?.prix_initial || 0
             },
             managers: roster.managers,

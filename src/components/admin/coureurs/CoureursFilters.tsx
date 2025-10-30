@@ -27,17 +27,18 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
   });
 
   const { data: equipes } = useQuery({
-    queryKey: ['equipes-for-filter', filters.saison_id],
+    queryKey: ['equipes-saisons-filter', filters.saison_id],
     queryFn: async () => {
       if (!filters.saison_id) return [];
-      const { data } = await supabase
-        .from('coureurs_saisons')
-        .select('equipe')
+
+      const { data, error } = await supabase
+        .from('equipes_saisons')
+        .select('equipe_id, nom_affiche, equipes!inner(code_court)')
         .eq('saison_id', filters.saison_id)
-        .not('equipe', 'is', null);
+        .order('nom_affiche');
       
-      const uniqueEquipes = [...new Set(data?.map(d => d.equipe))];
-      return uniqueEquipes.sort();
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!filters.saison_id,
   });
@@ -85,9 +86,9 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes les équipes</SelectItem>
-              {equipes?.map((e) => (
-                <SelectItem key={e} value={e}>
-                  {e}
+              {equipes?.map((eq) => (
+                <SelectItem key={eq.equipe_id} value={eq.equipe_id}>
+                  {eq.nom_affiche} ({eq.equipes.code_court})
                 </SelectItem>
               ))}
             </SelectContent>

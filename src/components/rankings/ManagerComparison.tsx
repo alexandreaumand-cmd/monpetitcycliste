@@ -360,14 +360,17 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
         (data || []).map(async (coureur) => {
           const { data: seasonData } = await supabase
             .from('coureurs_saisons')
-            .select('equipe')
+            .select(`
+              equipe_id,
+              equipes_saisons!coureurs_saisons_equipe_id_saison_id_fkey(nom_affiche)
+            `)
             .eq('coureur_id', coureur.id)
             .eq('saison_id', saisonId)
             .maybeSingle();
 
           return {
             ...coureur,
-            equipe: seasonData?.equipe || 'N/A' as string
+            equipe: (seasonData?.equipes_saisons as any)?.nom_affiche || 'N/A' as string
           };
         })
       );

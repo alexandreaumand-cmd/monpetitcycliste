@@ -88,7 +88,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "annonces_coureur_id_fkey"
@@ -444,7 +444,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "bids_coureur_id_fkey"
@@ -581,7 +581,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "bonus_points_coureur_id_fkey"
@@ -777,7 +777,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "bonus_rider_selections_coureur_id_fkey"
@@ -929,7 +929,7 @@ export type Database = {
         Row: {
           coureur_id: string
           created_at: string | null
-          equipe: string | null
+          equipe_id: string
           id: string
           prix_initial: number | null
           saison_id: string
@@ -938,7 +938,7 @@ export type Database = {
         Insert: {
           coureur_id: string
           created_at?: string | null
-          equipe?: string | null
+          equipe_id: string
           id?: string
           prix_initial?: number | null
           saison_id: string
@@ -947,7 +947,7 @@ export type Database = {
         Update: {
           coureur_id?: string
           created_at?: string | null
-          equipe?: string | null
+          equipe_id?: string
           id?: string
           prix_initial?: number | null
           saison_id?: string
@@ -966,7 +966,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "coureurs_saisons_coureur_id_fkey"
@@ -1002,6 +1002,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_top_riders_global"
             referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_equipe_id_fkey"
+            columns: ["equipe_id"]
+            isOneToOne: false
+            referencedRelation: "equipes"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "coureurs_saisons_saison_id_fkey"
@@ -1086,6 +1093,84 @@ export type Database = {
             columns: ["phase_id"]
             isOneToOne: false
             referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipes: {
+        Row: {
+          code_court: string
+          created_at: string | null
+          id: string
+          logo_url: string | null
+          nom_complet: string
+          pays: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          code_court: string
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          nom_complet: string
+          pays?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          code_court?: string
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          nom_complet?: string
+          pays?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      equipes_saisons: {
+        Row: {
+          actif: boolean | null
+          categorie: string | null
+          created_at: string | null
+          equipe_id: string
+          id: string
+          nom_affiche: string
+          saison_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          actif?: boolean | null
+          categorie?: string | null
+          created_at?: string | null
+          equipe_id: string
+          id?: string
+          nom_affiche: string
+          saison_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          actif?: boolean | null
+          categorie?: string | null
+          created_at?: string | null
+          equipe_id?: string
+          id?: string
+          nom_affiche?: string
+          saison_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipes_saisons_equipe_id_fkey"
+            columns: ["equipe_id"]
+            isOneToOne: false
+            referencedRelation: "equipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipes_saisons_saison_id_fkey"
+            columns: ["saison_id"]
+            isOneToOne: false
+            referencedRelation: "saisons"
             referencedColumns: ["id"]
           },
         ]
@@ -1806,7 +1891,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "name_aliases_coureur_id_fkey"
@@ -2020,7 +2105,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "points_ledger_coureur_id_fkey"
@@ -2246,7 +2331,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "race_results_coureur_id_fkey"
@@ -2438,7 +2523,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "fk_coureur"
@@ -2585,7 +2670,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "rosters_coureur_id_fkey"
@@ -2830,7 +2915,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "startlist_entries_coureur_id_fkey"
@@ -3195,7 +3280,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "bids_coureur_id_fkey"
@@ -3271,16 +3356,34 @@ export type Database = {
       }
       coureurs_disponibilite: {
         Row: {
-          coureur_equipe: string | null
-          coureur_id: string | null
-          coureur_nom: string | null
+          equipe: string | null
+          equipe_id: string | null
+          id: string | null
           is_taken: boolean | null
+          nom: string | null
           phase_id: string | null
+          phase_statut: Database["public"]["Enums"]["phase_statut"] | null
           prix_initial: number | null
-          search_text: string | null
+          saison_id: string | null
           taken_by_manager_nom: string | null
+          uci_id: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "coureurs_saisons_equipe_id_fkey"
+            columns: ["equipe_id"]
+            isOneToOne: false
+            referencedRelation: "equipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_saison_id_fkey"
+            columns: ["saison_id"]
+            isOneToOne: false
+            referencedRelation: "saisons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       coureurs_disponibilite_enrichie: {
         Row: {
@@ -3851,7 +3954,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "points_ledger_coureur_id_fkey"
@@ -4060,7 +4163,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "race_results_coureur_id_fkey"
@@ -4271,7 +4374,7 @@ export type Database = {
             columns: ["coureur_id"]
             isOneToOne: false
             referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["coureur_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "points_ledger_coureur_id_fkey"

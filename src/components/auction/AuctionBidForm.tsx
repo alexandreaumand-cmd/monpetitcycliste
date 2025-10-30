@@ -132,7 +132,12 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
       const coureurIds = bids.map(b => b.coureur_id);
       const { data: coureurs } = await supabase
         .from('coureurs_saisons')
-        .select('coureur_id, coureurs!inner(nom), equipe, prix_initial')
+        .select(`
+          coureur_id,
+          coureurs!inner(nom),
+          equipes_saisons!coureurs_saisons_equipe_id_saison_id_fkey(nom_affiche),
+          prix_initial
+        `)
         .eq('saison_id', phaseData.saison_id)
         .in('coureur_id', coureurIds);
 
@@ -141,7 +146,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
           cs.coureur_id,
           {
             nom: cs.coureurs.nom,
-            equipe: cs.equipe,
+            equipe: (cs.equipes_saisons as any)?.nom_affiche || 'N/A',
             prix_initial: cs.prix_initial
           }
         ])
@@ -182,7 +187,12 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
       const coureurIds = bids.map(b => b.coureur_id);
       const { data: coureurs } = await supabase
         .from('coureurs_saisons')
-        .select('coureur_id, coureurs!inner(nom), equipe, prix_initial')
+        .select(`
+          coureur_id,
+          coureurs!inner(nom),
+          equipes_saisons!coureurs_saisons_equipe_id_saison_id_fkey(nom_affiche),
+          prix_initial
+        `)
         .eq('saison_id', phaseData.saison_id)
         .in('coureur_id', coureurIds);
 
@@ -191,7 +201,7 @@ export const AuctionBidForm = ({ auction, managerId }: AuctionBidFormProps) => {
           cs.coureur_id,
           {
             nom: cs.coureurs.nom,
-            equipe: cs.equipe,
+            equipe: (cs.equipes_saisons as any)?.nom_affiche || 'N/A',
             prix_initial: cs.prix_initial
           }
         ])

@@ -76,7 +76,10 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
 
           const { data: seasonData } = await supabase
             .from('coureurs_saisons')
-            .select('equipe')
+            .select(`
+              equipe_id,
+              equipes_saisons!coureurs_saisons_equipe_id_saison_id_fkey(nom_affiche)
+            `)
             .eq('coureur_id', bonus.coureur_id)
             .eq('saison_id', phaseInfo.saison_id)
             .maybeSingle();
@@ -85,7 +88,7 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
             ...bonus,
             coureur: {
               ...bonus.coureur,
-              equipe: seasonData?.equipe || 'N/A'
+              equipe: (seasonData?.equipes_saisons as any)?.nom_affiche || 'N/A'
             }
           };
         })

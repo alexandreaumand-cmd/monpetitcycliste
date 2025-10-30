@@ -105,14 +105,12 @@ export const CoureursTable = ({ coureurs, isLoading, onSave }: CoureursTableProp
                       {coureur.coureurs?.nom || 'Nom inconnu'}
                     </TableCell>
 
-                    {/* Équipe (éditable) */}
+                    {/* Équipe (read-only for now, will add EquipeSelect in admin version) */}
                     <TableCell>
-                      <Input
-                        value={getCellValue(coureur, 'equipe') || ''}
-                        onChange={(e) => handleCellEdit(coureur.id, 'equipe', e.target.value)}
-                        className="h-8"
-                        placeholder="Nom de l'équipe"
-                      />
+                      {coureur.equipes_saisons?.nom_affiche || 'Non définie'}
+                      <span className="text-xs text-muted-foreground ml-2">
+                        ({coureur.equipes_saisons?.equipes?.code_court || 'N/A'})
+                      </span>
                     </TableCell>
 
                     {/* Cote / Prix initial (éditable) */}
