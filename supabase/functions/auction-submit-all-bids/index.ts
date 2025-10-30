@@ -206,20 +206,33 @@ Deno.serve(async (req) => {
     }
 
     // 4. Check all amounts >= prix_initial
-    const { data: coureurs } = await supabase
+    console.log(`🔍 Fetching ${coureurIds.length} coureurs for saison_id: ${phase.saison_id}`, coureurIds);
+    
+    const { data: coureurs, error: coureursError } = await supabase
       .from('coureurs_saisons')
       .select('coureur_id, prix_initial, coureurs(id, nom)')
       .eq('saison_id', phase.saison_id)
       .in('coureur_id', coureurIds);
+    
+    if (coureursError) {
+      console.error('❌ Error fetching coureurs:', coureursError);
+      throw coureursError;
+    }
+    
+    console.log(`✅ Found ${coureurs?.length || 0} coureurs in coureurs_saisons`);
 
-    const coureursMap = new Map((coureurs || []).map(c => [
-      c.coureur_id, 
-      { 
-        id: c.coureur_id, 
-        nom: c.coureurs?.nom || c.coureur_id, 
-        prix_initial: c.prix_initial 
-      }
-    ]));
+    const coureursMap = new Map((coureurs || []).map(c => {
+      // c.coureurs is the relation to the coureurs table
+      const coureurData = Array.isArray(c.coureurs) ? c.coureurs[0] : c.coureurs;
+      return [
+        c.coureur_id, 
+        { 
+          id: c.coureur_id, 
+          nom: coureurData?.nom || c.coureur_id, 
+          prix_initial: c.prix_initial 
+        }
+      ];
+    }));
 
     for (const bid of draftBids) {
       const coureur = coureursMap.get(bid.coureur_id);
