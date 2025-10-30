@@ -118,13 +118,13 @@ Deno.serve(async (req) => {
     if (equipeIds.length > 0) {
       const { data: equipesData, error: equipesError } = await supabase
         .from('equipes_saisons')
-        .select('id, nom_affiche, equipes(nom_complet)')
+        .select('equipe_id, nom_affiche, equipes(nom_complet)')
         .eq('saison_id', phase.saison_id)
-        .in('id', equipeIds);
+        .in('equipe_id', equipeIds);
       
       if (!equipesError && equipesData) {
         equipesData.forEach((eq: any) => {
-          equipesMap.set(eq.id, eq.nom_affiche || eq.equipes?.nom_complet || 'N/A');
+          equipesMap.set(eq.equipe_id, eq.nom_affiche || eq.equipes?.nom_complet || 'N/A');
         });
       }
     }
