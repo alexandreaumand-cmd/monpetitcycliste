@@ -114,6 +114,9 @@ Deno.serve(async (req) => {
     // Step 3: Get team names for all riders
     const equipeIds = [...new Set(coureursSaisons.map((cs: any) => cs.equipe_id).filter(Boolean))];
     
+    console.log(`[auction-search-riders] saison_id=${phase.saison_id}, found ${equipeIds.length} unique teams`);
+    console.log('[auction-search-riders] Sample equipe_ids:', equipeIds.slice(0, 5));
+    
     let equipesMap = new Map();
     if (equipeIds.length > 0) {
       const { data: equipesData, error: equipesError } = await supabase
@@ -122,13 +125,16 @@ Deno.serve(async (req) => {
         .eq('saison_id', phase.saison_id)
         .in('equipe_id', equipeIds);
       
-      if (!equipesError && equipesData) {
+      if (equipesError) {
+        console.error('[auction-search-riders] Error fetching team names:', equipesError);
+      } else if (equipesData) {
         console.log(`[auction-search-riders] Found ${equipesData.length} team names for ${equipeIds.length} unique teams`);
+        console.log('[auction-search-riders] Sample teams:', equipesData.slice(0, 3));
         equipesData.forEach((eq: any) => {
           equipesMap.set(eq.equipe_id, eq.nom_affiche || 'N/A');
         });
-      } else if (equipesError) {
-        console.error('[auction-search-riders] Error fetching team names:', equipesError);
+      } else {
+        console.log('[auction-search-riders] No team data returned');
       }
     }
 
