@@ -49,9 +49,9 @@ Deno.serve(async (req) => {
         .from('coureurs_saisons')
         .select(`
           coureur_id,
-          equipe,
+          equipe_id,
           prix_initial,
-          coureurs!inner(id, nom, uci_id)
+          coureurs!inner(id, nom)
         `)
         .eq('saison_id', saison_id)
         .order('coureurs(nom)', { ascending: true })
@@ -60,7 +60,33 @@ Deno.serve(async (req) => {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        allCoureurs = allCoureurs.concat(data);
+        // Enrich with team names
+        const enrichedData = await Promise.all(data.map(async (cs) => {
+          const coureurData = Array.isArray(cs.coureurs) ? cs.coureurs[0] : cs.coureurs;
+          let equipeName = '';
+
+          if (cs.equipe_id) {
+            const { data: equipeData } = await supabase
+              .from('equipes_saisons')
+              .select('nom_affiche')
+              .eq('equipe_id', cs.equipe_id)
+              .eq('saison_id', saison_id)
+              .single();
+            
+            if (equipeData) {
+              equipeName = equipeData.nom_affiche;
+            }
+          }
+
+          return {
+            coureur_id: cs.coureur_id,
+            coureurs: coureurData,
+            equipe: equipeName,
+            prix_initial: cs.prix_initial
+          };
+        }));
+
+        allCoureurs = allCoureurs.concat(enrichedData);
         console.log(`Fetched page: ${Math.floor(from / pageSize) + 1}, rows: ${data.length}, total so far: ${allCoureurs.length}`);
         
         // If we got fewer rows than pageSize, we've reached the end
@@ -82,9 +108,10 @@ Deno.serve(async (req) => {
     let csv = headers.join(',') + '\n';
 
     for (const coureur of coureurs || []) {
+      const coureurData = coureur.coureurs;
       const row = [
-        coureur.coureur_id || coureur.coureurs?.id || '',
-        `"${(coureur.coureurs?.nom || '').replace(/"/g, '""')}"`,
+        coureur.coureur_id || coureurData?.id || '',
+        `"${(coureurData?.nom || '').replace(/"/g, '""')}"`,
         `"${(coureur.equipe || '').replace(/"/g, '""')}"`,
         coureur.prix_initial || '0'
       ];
