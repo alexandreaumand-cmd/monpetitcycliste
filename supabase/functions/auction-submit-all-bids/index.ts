@@ -210,7 +210,14 @@ Deno.serve(async (req) => {
     
     const { data: coureurs, error: coureursError } = await supabase
       .from('coureurs_saisons')
-      .select('coureur_id, prix_initial, coureurs(id, nom)')
+      .select(`
+        coureur_id,
+        prix_initial,
+        coureurs!inner (
+          id,
+          nom
+        )
+      `)
       .eq('saison_id', phase.saison_id)
       .in('coureur_id', coureurIds);
     
