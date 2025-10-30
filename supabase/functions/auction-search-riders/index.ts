@@ -118,14 +118,17 @@ Deno.serve(async (req) => {
     if (equipeIds.length > 0) {
       const { data: equipesData, error: equipesError } = await supabase
         .from('equipes_saisons')
-        .select('equipe_id, nom_affiche, equipes(nom_complet)')
+        .select('equipe_id, nom_affiche')
         .eq('saison_id', phase.saison_id)
         .in('equipe_id', equipeIds);
       
       if (!equipesError && equipesData) {
+        console.log(`[auction-search-riders] Found ${equipesData.length} team names for ${equipeIds.length} unique teams`);
         equipesData.forEach((eq: any) => {
-          equipesMap.set(eq.equipe_id, eq.nom_affiche || eq.equipes?.nom_complet || 'N/A');
+          equipesMap.set(eq.equipe_id, eq.nom_affiche || 'N/A');
         });
+      } else if (equipesError) {
+        console.error('[auction-search-riders] Error fetching team names:', equipesError);
       }
     }
 
