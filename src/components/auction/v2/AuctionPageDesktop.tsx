@@ -46,7 +46,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [sortOrder, setSortOrder] = useState<'nom' | 'cote'>('nom');
+  const [sortOrder, setSortOrder] = useState<'nom' | 'cote'>('cote');
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);
   const [showMyValidatedBids, setShowMyValidatedBids] = useState(false);
