@@ -199,19 +199,31 @@ Deno.serve(async (req) => {
       for (const coureurId of rosterCoureurIds) {
         const { data: coureurData } = await supabase
           .from('coureurs_saisons')
-          .select('coureur_id, coureurs!inner(id, nom), equipes_saisons!inner(nom_affiche), prix_initial')
+          .select('coureur_id, coureurs!inner(id, nom), equipe_id, prix_initial')
           .eq('saison_id', phase.saison_id)
           .eq('coureur_id', coureurId)
           .limit(1);
-        
+
         if (coureurData && coureurData.length > 0) {
           const cs = coureurData[0];
           const coureurInfo = cs.coureurs as any;
-          const equipeInfo = cs.equipes_saisons as any;
+          
+          // Fetch equipe name separately using equipe_id
+          let equipeName = '';
+          if (cs.equipe_id) {
+            const { data: equipeData } = await supabase
+              .from('equipes_saisons')
+              .select('nom_affiche')
+              .eq('equipe_id', cs.equipe_id)
+              .eq('saison_id', phase.saison_id)
+              .limit(1);
+            equipeName = equipeData?.[0]?.nom_affiche || '';
+          }
+          
           rosterCoureursMap.set(coureurId, {
             id: coureurInfo?.id || cs.coureur_id,
             nom: coureurInfo?.nom || '',
-            equipe: equipeInfo?.nom_affiche || '',
+            equipe: equipeName,
             prix_initial: cs.prix_initial
           });
         }
@@ -256,7 +268,7 @@ Deno.serve(async (req) => {
         console.log(`Fetching coureur ${coureurId}...`);
         const { data: coureurData, error: coureurError } = await supabase
           .from('coureurs_saisons')
-          .select('coureur_id, coureurs!inner(id, nom), equipes_saisons!inner(nom_affiche), prix_initial')
+          .select('coureur_id, coureurs!inner(id, nom), equipe_id, prix_initial')
           .eq('saison_id', phase.saison_id)
           .eq('coureur_id', coureurId)
           .limit(1);
@@ -266,11 +278,23 @@ Deno.serve(async (req) => {
         if (coureurData && coureurData.length > 0) {
           const cs = coureurData[0];
           const coureurInfo = cs.coureurs as any;
-          const equipeInfo = cs.equipes_saisons as any;
+          
+          // Fetch equipe name separately using equipe_id
+          let equipeName = '';
+          if (cs.equipe_id) {
+            const { data: equipeData } = await supabase
+              .from('equipes_saisons')
+              .select('nom_affiche')
+              .eq('equipe_id', cs.equipe_id)
+              .eq('saison_id', phase.saison_id)
+              .limit(1);
+            equipeName = equipeData?.[0]?.nom_affiche || '';
+          }
+          
           coureursMap.set(coureurId, {
             id: coureurInfo?.id || cs.coureur_id,
             nom: coureurInfo?.nom || '',
-            equipe: equipeInfo?.nom_affiche || '',
+            equipe: equipeName,
             prix_initial: cs.prix_initial
           });
           console.log(`✅ Enriched coureur ${coureurId} with nom: ${coureurInfo?.nom}`);
