@@ -56,9 +56,9 @@ export const CoureursCombobox = ({
       
       const { data, error } = await supabase
         .from('coureurs_disponibilite')
-        .select('*')
+        .select('id, nom, uci_id, equipe, equipe_id, prix_initial, saison_id, phase_id, is_taken, taken_by_manager_nom')
         .eq('phase_id', phaseId)
-        .eq('coureur_id', value)
+        .eq('id', value)
         .single();
       
       if (error) return null;
