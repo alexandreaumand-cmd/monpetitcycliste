@@ -265,8 +265,9 @@ Deno.serve(async (req) => {
     for (const bid of draftBids) {
       const coureur = coureursMap.get(bid.coureur_id);
       if (!coureur) {
+        console.error(`❌ Coureur ${bid.coureur_id} not in map. Map has:`, Array.from(coureursMap.keys()));
         return new Response(
-          JSON.stringify({ error: `Coureur introuvable: ${bid.coureur_id}` }),
+          JSON.stringify({ error: `Coureur introuvable: ${bid.coureur_id}. Vérifiez que ce coureur existe bien dans la base de données pour cette saison.` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
