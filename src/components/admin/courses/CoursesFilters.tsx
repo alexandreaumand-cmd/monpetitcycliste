@@ -11,6 +11,7 @@ interface CoursesFiltersProps {
     saison_id: string;
     statut: string;
     search: string;
+    categorie: string;
   };
   onFiltersChange: (filters: any) => void;
 }
@@ -41,7 +42,7 @@ export const CoursesFilters = ({ filters, onFiltersChange }: CoursesFiltersProps
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {/* Recherche */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -102,6 +103,42 @@ export const CoursesFilters = ({ filters, onFiltersChange }: CoursesFiltersProps
               <SelectItem value="scheduled">Programmé</SelectItem>
               <SelectItem value="in_progress">En cours</SelectItem>
               <SelectItem value="completed">Terminé</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Catégorie */}
+          <Select
+            value={filters.categorie}
+            onValueChange={(value) => onFiltersChange({ ...filters, categorie: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Toutes les catégories" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px]">
+              <SelectItem value="all">Toutes les catégories</SelectItem>
+              
+              {/* WorldTour */}
+              <SelectItem value="WT Monument">WT Monument</SelectItem>
+              <SelectItem value="WT GT">WT GT</SelectItem>
+              <SelectItem value="Tours WT Cat 1">Tours WT Cat 1</SelectItem>
+              <SelectItem value="Tours WT Cat 2">Tours WT Cat 2</SelectItem>
+              <SelectItem value="Tours WT Cat 3">Tours WT Cat 3</SelectItem>
+              <SelectItem value="Classiques WT Cat 1">Classiques WT Cat 1</SelectItem>
+              <SelectItem value="Classiques WT Cat 2">Classiques WT Cat 2</SelectItem>
+              <SelectItem value="Classiques WT Cat 3">Classiques WT Cat 3</SelectItem>
+              
+              {/* UCI */}
+              <SelectItem value="1.1">1.1</SelectItem>
+              <SelectItem value="1.pro">1.pro</SelectItem>
+              <SelectItem value="2.1">2.1</SelectItem>
+              <SelectItem value="2.pro">2.pro</SelectItem>
+              
+              {/* Championnats */}
+              <SelectItem value="CN">CN</SelectItem>
+              <SelectItem value="EC ITT">EC ITT</SelectItem>
+              <SelectItem value="EC RR">EC RR</SelectItem>
+              <SelectItem value="WC ITT">WC ITT</SelectItem>
+              <SelectItem value="WC RR">WC RR</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -18,6 +18,7 @@ export const CoursesManager = () => {
     saison_id: "all",
     statut: "all",
     search: "",
+    categorie: "all",
   });
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newCourse, setNewCourse] = useState({
@@ -73,6 +74,9 @@ export const CoursesManager = () => {
       }
       if (filters.statut !== "all") {
         query = query.eq('statut', filters.statut as "completed" | "scheduled");
+      }
+      if (filters.categorie !== "all") {
+        query = query.eq('categorie', filters.categorie);
       }
       if (filters.search) {
         query = query.ilike('nom', `%${filters.search}%`);
