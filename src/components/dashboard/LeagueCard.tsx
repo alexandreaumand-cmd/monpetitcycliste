@@ -16,6 +16,8 @@ import { LeagueStatusBadge } from "@/components/leagues/LeagueStatusBadge";
 import type { LeagueWithRole } from "@/lib/leagues/types";
 import { getLeagueTemplates } from "@/lib/leagues/templates";
 import { LeagueInvitesBottomSheet } from "@/components/leagues/LeagueInvitesBottomSheet";
+import { LeagueParticipantsHover } from "./LeagueParticipantsHover";
+import { useLeagueOwner } from "@/hooks/useLeagueOwner";
 
 interface LeagueCardProps {
   league: LeagueWithRole;
@@ -26,6 +28,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
   const [invitesSheetOpen, setInvitesSheetOpen] = useState(false);
   const { data: memberCount, isLoading: loadingMembers } = useLeagueMemberCount(league.id);
   const { data: members = [], isLoading: loadingMembersList } = useLeagueMembers(league.id);
+  const { data: owner, isLoading: loadingOwner } = useLeagueOwner(league.owner_manager_id);
   
   const isAdmin = league.role === 'owner' || league.role === 'admin';
   const isPending = league.status === 'pending';
@@ -123,10 +126,18 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         {isWaitingForPlayers && (
           <>
             <div className="space-y-2">
-              <h4 className="text-sm font-medium flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Joueurs inscrits ({league.current_player_count}/{league.max_players})
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Joueurs inscrits
+                </h4>
+                <LeagueParticipantsHover
+                  ownerName={owner?.nom || null}
+                  members={members}
+                  currentPlayerCount={league.current_player_count}
+                  isLoading={loadingMembersList || loadingOwner}
+                />
+              </div>
               {loadingMembersList ? (
                 <Skeleton className="h-20 w-full" />
               ) : (
@@ -182,10 +193,18 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-sm font-medium flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                {league.max_players} joueurs inscrits
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Joueurs inscrits
+                </h4>
+                <LeagueParticipantsHover
+                  ownerName={owner?.nom || null}
+                  members={members}
+                  currentPlayerCount={league.current_player_count}
+                  isLoading={loadingMembersList || loadingOwner}
+                />
+              </div>
               <div className="bg-muted/50 rounded-lg p-3">
                 {loadingMembersList ? (
                   <Skeleton className="h-20 w-full" />
@@ -211,9 +230,14 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         {/* EN COURS */}
         {isActive && (
           <>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users className="h-4 w-4" />
-              <span>{league.current_player_count} joueurs</span>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Participants</span>
+              <LeagueParticipantsHover
+                ownerName={owner?.nom || null}
+                members={members}
+                currentPlayerCount={league.current_player_count}
+                isLoading={loadingMembersList || loadingOwner}
+              />
             </div>
 
             {loadingStats ? (
