@@ -69,11 +69,19 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Get saison_id from phase
+      const { data: phaseData } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', phaseId)
+        .single();
+
+      const saisonId = phaseData?.saison_id;
+
       const { data, error } = await supabase
         .from('bonus_points')
         .select(`
           *,
-          coureur:coureurs(nom, equipe),
           manager:managers!bonus_points_manager_id_fkey(nom),
           target_manager:managers!bonus_points_target_manager_id_fkey(nom)
         `)
@@ -89,8 +97,47 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Enrich with coureur data from coureurs_saisons + equipes_saisons
+      const enrichedBonuses = [];
+      for (const bonus of (data || [])) {
+        let coureurData = null;
+        
+        if (bonus.coureur_id && saisonId) {
+          const { data: csData } = await supabase
+            .from('coureurs_saisons')
+            .select('coureur_id, coureurs!inner(nom), equipe_id')
+            .eq('saison_id', saisonId)
+            .eq('coureur_id', bonus.coureur_id)
+            .limit(1);
+
+          if (csData && csData.length > 0) {
+            const cs = csData[0];
+            let equipeName = '';
+            
+            if (cs.equipe_id) {
+              const { data: equipeData } = await supabase
+                .from('equipes_saisons')
+                .select('nom_affiche')
+                .eq('id', cs.equipe_id)
+                .limit(1);
+              equipeName = equipeData?.[0]?.nom_affiche || '';
+            }
+            
+            coureurData = {
+              nom: (cs.coureurs as any)?.nom || '',
+              equipe: equipeName
+            };
+          }
+        }
+
+        enrichedBonuses.push({
+          ...bonus,
+          coureur: coureurData
+        });
+      }
+
       return new Response(
-        JSON.stringify({ bonuses: data }),
+        JSON.stringify({ bonuses: enrichedBonuses }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

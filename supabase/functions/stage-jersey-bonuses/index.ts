@@ -46,14 +46,15 @@ Deno.serve(async (req) => {
 
     const currentManagerId = managerData?.id;
 
-    // Get course phase
+    // Get course phase and saison
     const { data: courseData } = await supabase
       .from('courses')
-      .select('phase_id')
+      .select('phase_id, phases!inner(saison_id)')
       .eq('id', course_id)
       .single();
 
     const phaseId = courseData?.phase_id;
+    const saisonId = (courseData?.phases as any)?.saison_id;
 
     // Jersey types with their icons
     const jerseyTypes = [
@@ -72,9 +73,7 @@ Deno.serve(async (req) => {
         .from('points_ledger')
         .select(`
           coureur_id,
-          manager_id,
           points,
-          coureurs!inner(nom, equipe),
           managers!inner(nom)
         `)
         .eq('course_id', course_id)
@@ -86,16 +85,56 @@ Deno.serve(async (req) => {
 
       if (pointsData && pointsData.length > 0) {
         const record = pointsData[0];
+        
+        // Get coureur data from coureurs_saisons + equipes_saisons
+        let coureurNom = '';
+        let equipe = '';
+        let managerId = null;
+        
+        if (saisonId) {
+          const { data: csData } = await supabase
+            .from('coureurs_saisons')
+            .select('coureur_id, coureurs!inner(nom), equipe_id')
+            .eq('saison_id', saisonId)
+            .eq('coureur_id', record.coureur_id)
+            .limit(1);
+
+          if (csData && csData.length > 0) {
+            const cs = csData[0];
+            coureurNom = (cs.coureurs as any)?.nom || '';
+            
+            if (cs.equipe_id) {
+              const { data: equipeData } = await supabase
+                .from('equipes_saisons')
+                .select('nom_affiche')
+                .eq('id', cs.equipe_id)
+                .limit(1);
+              equipe = equipeData?.[0]?.nom_affiche || '';
+            }
+          }
+        }
+
+        // Get manager_id from rosters
+        if (phaseId) {
+          const { data: rosterData } = await supabase
+            .from('rosters')
+            .select('manager_id')
+            .eq('phase_id', phaseId)
+            .eq('coureur_id', record.coureur_id)
+            .limit(1);
+          managerId = rosterData?.[0]?.manager_id || null;
+        }
+
         bonuses.push({
           jersey_type: jersey.label.toLowerCase(),
           icon: jersey.icon,
           coureur_id: record.coureur_id,
-          coureur_nom: (record.coureurs as any).nom,
-          equipe: (record.coureurs as any).equipe,
-          manager_id: record.manager_id,
+          coureur_nom: coureurNom,
+          equipe: equipe,
+          manager_id: managerId,
           manager_nom: (record.managers as any).nom,
           points: record.points,
-          is_my_rider: currentManagerId ? record.manager_id === currentManagerId : false
+          is_my_rider: currentManagerId && managerId ? managerId === currentManagerId : false
         });
       }
     }
