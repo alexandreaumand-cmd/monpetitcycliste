@@ -85,6 +85,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (templateError || !template) {
+      console.error('Template error:', templateError);
       return new Response(
         JSON.stringify({ error: 'Template invalide' }),
         {
@@ -93,6 +94,14 @@ Deno.serve(async (req) => {
         }
       );
     }
+
+    console.log('Creating league with template:', {
+      templateId: template.id,
+      templateName: template.name,
+      auctionStrategy: template.auction_strategy,
+      byPhase: template.by_phase,
+      phaseIndexes: template.phase_indexes
+    });
 
     // Get active season
     const { data: season, error: seasonError } = await supabase
@@ -119,7 +128,19 @@ Deno.serve(async (req) => {
       .eq('saison_id', season.id)
       .in('index_dans_saison', template.phase_indexes);
 
-    if (phasesError || !phases || phases.length === 0) {
+    if (phasesError) {
+      console.error('Phases fetch error:', phasesError);
+      return new Response(
+        JSON.stringify({ error: phasesError.message }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    if (!phases || phases.length === 0) {
+      console.error('No phases found for season:', season.id, 'with phase_indexes:', template.phase_indexes);
       return new Response(
         JSON.stringify({ error: 'Phases introuvables pour ce template' }),
         {
@@ -132,6 +153,12 @@ Deno.serve(async (req) => {
     // Sort phases by index
     phases.sort((a, b) => a.index_dans_saison - b.index_dans_saison);
     const phaseUuids = phases.map(p => p.id);
+
+    console.log('Found phases for league:', {
+      count: phases.length,
+      phaseIds: phaseUuids,
+      indexes: phases.map(p => p.index_dans_saison)
+    });
 
     // Create league
     const { data: league, error: leagueError } = await supabase
@@ -165,6 +192,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Validate phases for by_phase leagues BEFORE creating scope
+    if (template.by_phase && phaseUuids.length === 0) {
+      console.error('Critical error: by_phase is true but no phases found for league:', league.id);
+      await supabase.from('leagues').delete().eq('id', league.id);
+      return new Response(
+        JSON.stringify({ error: 'Impossible de créer une ligue par phase sans phases disponibles' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Create league scope with new fields
     const { error: scopeError } = await supabase
       .from('league_scopes')
@@ -190,6 +227,8 @@ Deno.serve(async (req) => {
         }
       );
     }
+
+    console.log('League scope created successfully for league:', league.id);
 
     // Add owner as member
     const { error: memberError } = await supabase
@@ -217,6 +256,8 @@ Deno.serve(async (req) => {
     const auctionStrategy = template.auction_strategy as string;
     const deadlineAt = new Date(firstAuctionDate.getTime() + 24 * 60 * 60 * 1000);
     
+    console.log('Creating auctions with strategy:', auctionStrategy);
+    
     if (auctionStrategy === 'single') {
       // One auction for the first phase only
       const auctionData = {
@@ -238,17 +279,30 @@ Deno.serve(async (req) => {
         .insert(auctionData);
 
       if (auctionError) {
-        console.error('Auction creation error:', auctionError);
+        console.error('Single auction creation error:', auctionError);
+        // Rollback all created data
+        await supabase.from('league_members').delete().eq('league_id', league.id);
+        await supabase.from('league_scopes').delete().eq('league_id', league.id);
+        await supabase.from('leagues').delete().eq('id', league.id);
+        return new Response(JSON.stringify({ error: 'Erreur lors de la création de l\'enchère: ' + auctionError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
+      console.log('Single auction created successfully for league:', league.id);
     } else if (auctionStrategy === 'per_phase') {
       // One auction per phase
+      console.log('Creating per_phase auctions for', phases.length, 'phases');
+      
       const auctionsToCreate = phases.map((phase, index) => ({
         phase_id: phase.id,
         league_id: league.id,
         round_number: 1,
         statut: 'scheduled' as const,
-        opens_at: index === 0 ? firstAuctionStartsAt : null,
-        deadline_at: index === 0 ? deadlineAt.toISOString() : null,
+        opens_at: index === 0 ? firstAuctionStartsAt : new Date(Date.now() + (index * 90 * 24 * 60 * 60 * 1000)).toISOString(),
+        deadline_at: index === 0 
+          ? deadlineAt.toISOString()
+          : new Date(Date.now() + (index * 90 * 24 * 60 * 60 * 1000) + 24 * 60 * 60 * 1000).toISOString()
       }));
 
       // Vérification de sécurité : tous les phase_id doivent être définis
@@ -261,11 +315,22 @@ Deno.serve(async (req) => {
         .insert(auctionsToCreate);
 
       if (auctionError) {
-        console.error('Auctions creation error:', auctionError);
+        console.error('Per-phase auctions creation error:', auctionError);
+        // Rollback all created data
+        await supabase.from('league_members').delete().eq('league_id', league.id);
+        await supabase.from('league_scopes').delete().eq('league_id', league.id);
+        await supabase.from('leagues').delete().eq('id', league.id);
+        return new Response(JSON.stringify({ error: 'Erreur lors de la création des enchères: ' + auctionError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
+      console.log('Per-phase auctions created successfully:', auctionsToCreate.length, 'auctions');
     } else if (auctionStrategy === 'grouped') {
       // One auction per group of phases
       const groups = (template.auction_phase_groups as number[][]) || [];
+      console.log('Creating grouped auctions for', groups.length, 'groups');
+      
       const auctionsToCreate = groups.map((group, groupIndex) => {
         // Find the first phase in this group
         const firstPhaseInGroup = phases.find(p => group.includes(p.index_dans_saison));
@@ -276,8 +341,10 @@ Deno.serve(async (req) => {
           league_id: league.id,
           round_number: 1,
           statut: 'scheduled' as const,
-          opens_at: groupIndex === 0 ? firstAuctionStartsAt : null,
-          deadline_at: groupIndex === 0 ? deadlineAt.toISOString() : null,
+          opens_at: groupIndex === 0 ? firstAuctionStartsAt : new Date(Date.now() + (groupIndex * 90 * 24 * 60 * 60 * 1000)).toISOString(),
+          deadline_at: groupIndex === 0 
+            ? deadlineAt.toISOString()
+            : new Date(Date.now() + (groupIndex * 90 * 24 * 60 * 60 * 1000) + 24 * 60 * 60 * 1000).toISOString()
         };
       }).filter(Boolean);
 
@@ -293,11 +360,44 @@ Deno.serve(async (req) => {
 
         if (auctionError) {
           console.error('Grouped auctions creation error:', auctionError);
+          // Rollback all created data
+          await supabase.from('league_members').delete().eq('league_id', league.id);
+          await supabase.from('league_scopes').delete().eq('league_id', league.id);
+          await supabase.from('leagues').delete().eq('id', league.id);
+          return new Response(JSON.stringify({ error: 'Erreur lors de la création des enchères groupées: ' + auctionError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
         }
+        console.log('Grouped auctions created successfully:', auctionsToCreate.length, 'auctions');
       }
     }
 
-    console.log('League created:', league.id, 'by user:', user.id);
+    // Final verification: ensure auctions were created
+    const { count: auctionCount, error: countError } = await supabase
+      .from('auctions')
+      .select('*', { count: 'exact', head: true })
+      .eq('league_id', league.id);
+
+    if (countError) {
+      console.error('Error counting auctions:', countError);
+    }
+
+    console.log('Final auction count for league', league.id, ':', auctionCount);
+
+    if (auctionCount === 0) {
+      console.error('CRITICAL: No auctions created for league:', league.id);
+      // Rollback all created data
+      await supabase.from('league_members').delete().eq('league_id', league.id);
+      await supabase.from('league_scopes').delete().eq('league_id', league.id);
+      await supabase.from('leagues').delete().eq('id', league.id);
+      return new Response(
+        JSON.stringify({ error: 'Aucune enchère n\'a pu être créée pour cette ligue' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('League created successfully:', league.id, 'with', auctionCount, 'auction(s)', 'by user:', user.id);
 
     return new Response(
       JSON.stringify({ league }),
