@@ -14,7 +14,10 @@ Deno.serve(async (req) => {
 
     const { phase_id, league_id, auction_id } = await req.json();
 
+    console.log('[auction-get-validation-status] Request body:', { auction_id, league_id, phase_id });
+
     if (!phase_id && !auction_id) {
+      console.log('[auction-get-validation-status] Missing phase_id and auction_id');
       return new Response(JSON.stringify({ error: 'phase_id or auction_id is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
