@@ -54,9 +54,10 @@ Deno.serve(async (req) => {
         equipe_id,
         prix_initial,
         coureurs!inner(id, nom),
-        equipes_saisons!coureurs_saisons_equipe_id_saison_id_fkey(nom_affiche)
+        equipes_saisons!inner(equipe_id, saison_id, nom_affiche)
       `)
-      .eq('saison_id', phase.saison_id);
+      .eq('saison_id', phase.saison_id)
+      .eq('equipes_saisons.saison_id', phase.saison_id);
 
     // Search by name
     if (q && q.trim().length >= 2) {
