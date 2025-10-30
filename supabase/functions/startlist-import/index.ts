@@ -378,10 +378,10 @@ serve(async (req) => {
 
     console.log(`[startlist-import] Starting import for race ${race_id}`);
 
-    // Résoudre phase_id
+    // Resolve phase_id and saison_id
     const { data: raceData, error: raceError } = await supabase
       .from('courses')
-      .select('phase_id')
+      .select('phase_id, phases!inner(saison_id)')
       .eq('id', race_id)
       .single();
 
@@ -393,32 +393,56 @@ serve(async (req) => {
     }
 
     const phase_id = raceData.phase_id;
-    console.log(`[startlist-import] Phase ID: ${phase_id}`);
+    const phase = Array.isArray(raceData.phases) ? raceData.phases[0] : raceData.phases;
+    const saison_id = (phase as any)?.saison_id;
+    console.log(`[startlist-import] Phase ID: ${phase_id}, Saison ID: ${saison_id}`);
 
     // Parse le texte
     const parsedEntries = parseStartlistText(raw_text);
     console.log(`[startlist-import] Parsed ${parsedEntries.length} entries`);
 
-    // Charger roster unique de la phase
+    // Load roster riders from rosters
     const { data: rostersData, error: rostersError } = await supabase
       .from('rosters')
-      .select('coureur_id, coureurs!inner(id, nom, equipe)')
+      .select('coureur_id')
       .eq('phase_id', phase_id);
 
     if (rostersError) throw rostersError;
 
+    const rosterCoureurIds = [...new Set((rostersData || []).map(r => r.coureur_id))];
+    console.log(`[startlist-import] Found ${rosterCoureurIds.length} unique coureur_ids in rosters`);
+
+    // Load coureur details from coureurs_saisons + equipes_saisons
     const rosterRiders: RiderRef[] = [];
-    const seenIds = new Set<string>();
-    
-    for (const r of rostersData || []) {
-      const coureur = (r as any).coureurs;
-      if (coureur && !seenIds.has(coureur.id)) {
-        rosterRiders.push({
-          id: coureur.id,
-          nom: coureur.nom,
-          equipe: coureur.equipe
-        });
-        seenIds.add(coureur.id);
+    if (saison_id && rosterCoureurIds.length > 0) {
+      for (const coureurId of rosterCoureurIds) {
+        const { data: csData } = await supabase
+          .from('coureurs_saisons')
+          .select('coureur_id, coureurs!inner(id, nom), equipe_id')
+          .eq('saison_id', saison_id)
+          .eq('coureur_id', coureurId)
+          .limit(1);
+
+        if (csData && csData.length > 0) {
+          const cs = csData[0];
+          const coureurInfo = Array.isArray(cs.coureurs) ? cs.coureurs[0] : cs.coureurs;
+          let equipeName = '';
+          
+          if (cs.equipe_id) {
+            const { data: equipeData } = await supabase
+              .from('equipes_saisons')
+              .select('nom_affiche')
+              .eq('id', cs.equipe_id)
+              .limit(1);
+            equipeName = equipeData?.[0]?.nom_affiche || '';
+          }
+          
+          rosterRiders.push({
+            id: (coureurInfo as any)?.id || cs.coureur_id,
+            nom: (coureurInfo as any)?.nom || '',
+            equipe: equipeName
+          });
+        }
       }
     }
 

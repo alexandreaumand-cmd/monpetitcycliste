@@ -19,34 +19,72 @@ Deno.serve(async (req) => {
 
     console.log('Fetching entries for startlist:', startlist_id);
 
-    // Get all entries with coureur details if matched
+    // Get startlist to find saison_id
+    const { data: startlistData } = await supabase
+      .from('startlist_imports')
+      .select('race_id, courses!inner(phase_id, phases!inner(saison_id))')
+      .eq('id', startlist_id)
+      .single();
+
+    const race = Array.isArray(startlistData?.courses) ? startlistData.courses[0] : startlistData?.courses;
+    const phase = Array.isArray(race?.phases) ? race.phases[0] : race?.phases;
+    const saisonId = phase?.saison_id;
+
+    // Get all entries without coureur details
     const { data: entries, error: entriesError } = await supabase
       .from('startlist_entries')
-      .select(`
-        id,
-        line_no,
-        bib_no,
-        status,
-        source_name,
-        source_team,
-        coureur_id,
-        coureurs(
-          nom,
-          equipe
-        )
-      `)
+      .select('id, line_no, bib_no, status, source_name, source_team, coureur_id')
       .eq('startlist_id', startlist_id)
       .order('line_no', { ascending: true });
 
     if (entriesError) throw entriesError;
 
+    // Enrich with coureur data from coureurs_saisons + equipes_saisons
+    const enrichedEntries = [];
+    for (const entry of (entries || [])) {
+      let coureurData = null;
+      
+      if (entry.coureur_id && saisonId) {
+        const { data: csData } = await supabase
+          .from('coureurs_saisons')
+          .select('coureur_id, coureurs!inner(nom), equipe_id')
+          .eq('saison_id', saisonId)
+          .eq('coureur_id', entry.coureur_id)
+          .limit(1);
+
+        if (csData && csData.length > 0) {
+          const cs = csData[0];
+          let equipeName = '';
+          
+          if (cs.equipe_id) {
+            const { data: equipeData } = await supabase
+              .from('equipes_saisons')
+              .select('nom_affiche')
+              .eq('id', cs.equipe_id)
+              .limit(1);
+            equipeName = equipeData?.[0]?.nom_affiche || '';
+          }
+          
+          coureurData = {
+            nom: (cs.coureurs as any)?.nom || '',
+            equipe: equipeName
+          };
+        }
+      }
+
+      enrichedEntries.push({
+        ...entry,
+        coureurs: coureurData
+      });
+    }
+
     // Calculate stats
-    const total = entries?.length || 0;
-    const matched = entries?.filter(e => e.coureur_id !== null).length || 0;
+    const total = enrichedEntries.length;
+    const matched = enrichedEntries.filter(e => e.coureur_id !== null).length;
     const unmatched = total - matched;
 
     const result = {
-      entries: entries || [],
+      entries: enrichedEntries,
       stats: {
         total,
         matched,

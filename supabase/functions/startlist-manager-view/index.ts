@@ -76,22 +76,40 @@ Deno.serve(async (req) => {
 
     // Enrich entries with coureurs_saisons data
     const coureurIds = (entries || []).map(e => e.coureur_id);
-    const { data: coureurs } = coureurIds.length > 0 ? await supabase
-      .from('coureurs_saisons')
-      .select('coureur_id, coureurs!inner(id, nom), equipe, prix_initial')
-      .eq('saison_id', saisonId)
-      .in('coureur_id', coureurIds)
-      : { data: [] };
+    const coureursMap = new Map();
 
-    const coureursMap = new Map((coureurs || []).map((cs: any) => [
-      cs.coureur_id,
-      {
-        id: cs.coureurs?.id || cs.coureur_id,
-        nom: cs.coureurs?.nom || '',
-        equipe: cs.equipe,
-        prix_initial: cs.prix_initial
+    if (coureurIds.length > 0 && saisonId) {
+      for (const coureurId of coureurIds) {
+        const { data: csData } = await supabase
+          .from('coureurs_saisons')
+          .select('coureur_id, coureurs!inner(id, nom), equipe_id, prix_initial')
+          .eq('saison_id', saisonId)
+          .eq('coureur_id', coureurId)
+          .limit(1);
+
+        if (csData && csData.length > 0) {
+          const cs = csData[0];
+          const coureurInfo = Array.isArray(cs.coureurs) ? cs.coureurs[0] : cs.coureurs;
+          let equipeName = '';
+          
+          if (cs.equipe_id) {
+            const { data: equipeData } = await supabase
+              .from('equipes_saisons')
+              .select('nom_affiche')
+              .eq('id', cs.equipe_id)
+              .limit(1);
+            equipeName = equipeData?.[0]?.nom_affiche || '';
+          }
+          
+          coureursMap.set(coureurId, {
+            id: (coureurInfo as any)?.id || cs.coureur_id,
+            nom: (coureurInfo as any)?.nom || '',
+            equipe: equipeName,
+            prix_initial: cs.prix_initial
+          });
+        }
       }
-    ]));
+    }
 
     // Enrich entries with coureur data
     const enrichedEntries = (entries || []).map(e => ({
