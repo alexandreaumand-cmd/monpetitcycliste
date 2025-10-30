@@ -153,6 +153,32 @@ export const CoursesManager = () => {
     },
   });
 
+  // Mutation pour supprimer une course
+  const deleteCourseMutation = useMutation({
+    mutationFn: async (courseId: string) => {
+      const { error } = await supabase
+        .from('courses')
+        .delete()
+        .eq('id', courseId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
+      toast({
+        title: "✅ Course supprimée",
+        description: "La course a été supprimée avec succès",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "❌ Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateCourse = () => {
     if (!newCourse.nom || !newCourse.date_debut || !newCourse.date_fin || !newCourse.phase_id) {
       toast({
@@ -163,6 +189,12 @@ export const CoursesManager = () => {
       return;
     }
     createCourseMutation.mutate(newCourse);
+  };
+
+  const handleDelete = (courseId: string, courseName: string) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la course "${courseName}" ?\n\nCette action est irréversible.`)) {
+      deleteCourseMutation.mutate(courseId);
+    }
   };
 
   return (
@@ -303,6 +335,7 @@ export const CoursesManager = () => {
         courses={courses || []}
         isLoading={isLoading}
         onSave={(updates) => updateCoursesMutation.mutate(updates)}
+        onDelete={handleDelete}
       />
     </div>
   );

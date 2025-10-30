@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Save, X, Loader2 } from "lucide-react";
+import { Save, X, Loader2, Trash2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,9 +13,10 @@ interface CoursesTableProps {
   courses: any[];
   isLoading: boolean;
   onSave: (updates: Array<{ id: string; changes: any }>) => void;
+  onDelete: (courseId: string, courseName: string) => void;
 }
 
-export const CoursesTable = ({ courses, isLoading, onSave }: CoursesTableProps) => {
+export const CoursesTable = ({ courses, isLoading, onSave, onDelete }: CoursesTableProps) => {
   const [editedCourses, setEditedCourses] = useState<Map<string, any>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
 
@@ -98,18 +99,19 @@ export const CoursesTable = ({ courses, isLoading, onSave }: CoursesTableProps) 
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[30%]">Nom</TableHead>
-              <TableHead className="w-[12%]">Date début</TableHead>
-              <TableHead className="w-[12%]">Date fin</TableHead>
-              <TableHead className="w-[15%]">Catégorie</TableHead>
-              <TableHead className="w-[18%]">Phase</TableHead>
-              <TableHead className="w-[13%]">Statut</TableHead>
+              <TableHead className="w-[27%]">Nom</TableHead>
+              <TableHead className="w-[11%]">Date début</TableHead>
+              <TableHead className="w-[11%]">Date fin</TableHead>
+              <TableHead className="w-[14%]">Catégorie</TableHead>
+              <TableHead className="w-[17%]">Phase</TableHead>
+              <TableHead className="w-[12%]">Statut</TableHead>
+              <TableHead className="w-[8%]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {courses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                   Aucune course trouvée
                 </TableCell>
               </TableRow>
@@ -188,6 +190,18 @@ export const CoursesTable = ({ courses, isLoading, onSave }: CoursesTableProps) 
                       >
                         {course.statut}
                       </Badge>
+                    </TableCell>
+
+                    {/* Actions */}
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDelete(course.id, course.nom)}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );
