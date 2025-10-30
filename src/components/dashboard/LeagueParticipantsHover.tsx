@@ -19,15 +19,12 @@ export function LeagueParticipantsHover({
   return (
     <HoverCard>
       <HoverCardTrigger asChild>
-        <Badge 
-          variant="outline" 
-          className="gap-1 cursor-pointer hover:bg-muted transition-colors"
-        >
-          <Users className="h-3 w-3" />
+        <span className="text-sm font-medium cursor-help hover:text-primary transition-colors flex items-center gap-1.5">
+          <Users className="h-3.5 w-3.5" />
           {currentPlayerCount} {currentPlayerCount > 1 ? 'joueurs' : 'joueur'}
-        </Badge>
+        </span>
       </HoverCardTrigger>
-      <HoverCardContent className="w-72" side="bottom" align="start">
+      <HoverCardContent className="w-72" side="bottom" align="end">
         <div className="space-y-3">
           {/* Admin Section */}
           <div>
