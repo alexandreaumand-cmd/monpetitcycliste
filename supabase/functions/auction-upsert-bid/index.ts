@@ -100,13 +100,14 @@ Deno.serve(async (req) => {
       round_number: auction.round_number 
     });
 
-    // Get coureur info
+    // Get coureur info - use maybeSingle to handle potential duplicates gracefully
     const { data: coureur, error: coureurError } = await supabase
       .from('coureurs_disponibilite_enrichie')
       .select('id, nom, prix_initial')
       .eq('phase_id', phase_id)
       .eq('id', rider_id)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     if (coureurError || !coureur) {
       console.error('❌ Rider not found:', { rider_id, phase_id, error: coureurError });
