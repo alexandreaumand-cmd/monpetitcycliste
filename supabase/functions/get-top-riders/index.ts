@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     }
 
     // Extract unique rider IDs
-    const riderIds = [...new Set(items.map((item: any) => item.rider_id))];
+    const riderIds = [...new Set(items.map((item: any) => item.coureur_id))];
 
     // Fetch owner information
     let ownersMap: Record<string, any> = {};
@@ -201,20 +201,20 @@ Deno.serve(async (req) => {
 
     // Map and enrich each item
     const mappedItems = items.map((item: any) => {
-      const ownerData = ownersMap[item.rider_id] || (phase_id ? [] : { owners_all: [], owners_by_phase: {} });
-      const prixAchat = Number(item.prix_achat) || 0;
-      const ratio = prixAchat > 0 
-        ? Number((item.total_points / prixAchat).toFixed(2))
+      const ownerData = ownersMap[item.coureur_id] || (phase_id ? [] : { owners_all: [], owners_by_phase: {} });
+      const prixInitial = Number(item.prix_initial) || 0;
+      const ratio = item.total_points > 0 && prixInitial > 0
+        ? Number((item.total_points / prixInitial).toFixed(2))
         : 0;
 
       return {
-        rider_id: item.rider_id,
-        rider_nom: item.rider_name,
-        rider_equipe: item.rider_equipe,
+        rider_id: item.coureur_id,
+        rider_nom: item.coureur_nom,
+        rider_equipe: item.coureur_equipe,
         total_points: item.total_points,
-        prix_achat: prixAchat,
+        prix_initial: prixInitial,
         ratio_points_par_prix: ratio,
-        courses_count: item.race_count,
+        courses_count: item.courses_count,
         // Add owners based on context
         ...(phase_id 
           ? { owners: ownerData }
