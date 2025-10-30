@@ -1,0 +1,239 @@
+import { useState } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
+import { Save, X, Loader2, Trash2 } from "lucide-react";
+
+interface BaremesTableProps {
+  baremes: any[];
+  isLoading: boolean;
+  onSave: (updates: Array<{ id: string; changes: any }>) => void;
+  onDelete: (baremeId: string, baremeInfo: string) => void;
+}
+
+const categories = [
+  "WT Monument",
+  "WT Grand Tour",
+  "WT Stage Race",
+  "WT One-Day",
+  "UCI ProSeries",
+  "UCI 1",
+  "UCI 2",
+  "Championnats",
+];
+
+const typeClassements = [
+  { value: "general", label: "Général" },
+  { value: "etape", label: "Étape" },
+  { value: "points", label: "Points" },
+  { value: "montagne", label: "Montagne" },
+  { value: "jeune", label: "Jeune" },
+];
+
+export const BaremesTable = ({ baremes, isLoading, onSave, onDelete }: BaremesTableProps) => {
+  const [editedBaremes, setEditedBaremes] = useState<Map<string, any>>(new Map());
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleFieldChange = (baremeId: string, field: string, value: any) => {
+    const bareme = baremes.find(b => b.id === baremeId);
+    const currentEdits = editedBaremes.get(baremeId) || {};
+    
+    const newEdits = { ...currentEdits, [field]: value };
+    const newEditedBaremes = new Map(editedBaremes);
+    newEditedBaremes.set(baremeId, newEdits);
+    setEditedBaremes(newEditedBaremes);
+  };
+
+  const hasChanges = (baremeId: string) => {
+    return editedBaremes.has(baremeId);
+  };
+
+  const cancelEdit = (baremeId: string) => {
+    const newEditedBaremes = new Map(editedBaremes);
+    newEditedBaremes.delete(baremeId);
+    setEditedBaremes(newEditedBaremes);
+  };
+
+  const handleSaveAll = async () => {
+    if (editedBaremes.size === 0) return;
+
+    setIsSaving(true);
+    const updates = Array.from(editedBaremes.entries()).map(([id, changes]) => ({
+      id,
+      changes,
+    }));
+
+    await onSave(updates);
+    setEditedBaremes(new Map());
+    setIsSaving(false);
+  };
+
+  const getDisplayValue = (bareme: any, field: string) => {
+    if (editedBaremes.has(bareme.id)) {
+      const edits = editedBaremes.get(bareme.id);
+      if (field in edits) {
+        return edits[field];
+      }
+    }
+    return bareme[field];
+  };
+
+  if (isLoading) {
+    return (
+      <Card className="p-6">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {editedBaremes.size > 0 && (
+        <div className="flex justify-end gap-2">
+          <Button
+            onClick={() => setEditedBaremes(new Map())}
+            variant="outline"
+            disabled={isSaving}
+          >
+            <X className="h-4 w-4 mr-2" />
+            Annuler tout
+          </Button>
+          <Button onClick={handleSaveAll} disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Sauvegarder ({editedBaremes.size})
+          </Button>
+        </div>
+      )}
+
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[25%]">Catégorie</TableHead>
+              <TableHead className="w-[20%]">Type classement</TableHead>
+              <TableHead className="w-[15%]">Place</TableHead>
+              <TableHead className="w-[15%]">Points</TableHead>
+              <TableHead className="w-[15%]">Type</TableHead>
+              <TableHead className="w-[10%]">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {baremes.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  Aucun barème trouvé
+                </TableCell>
+              </TableRow>
+            ) : (
+              baremes.map((bareme) => {
+                const isEdited = hasChanges(bareme.id);
+                return (
+                  <TableRow key={bareme.id} className={isEdited ? "bg-muted/50" : ""}>
+                    {/* Catégorie */}
+                    <TableCell>
+                      <Select
+                        value={getDisplayValue(bareme, 'categorie')}
+                        onValueChange={(value) => handleFieldChange(bareme.id, 'categorie', value)}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {cat}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+
+                    {/* Type classement */}
+                    <TableCell>
+                      <Select
+                        value={getDisplayValue(bareme, 'type_classement')}
+                        onValueChange={(value) => handleFieldChange(bareme.id, 'type_classement', value)}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {typeClassements.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+
+                    {/* Place */}
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={getDisplayValue(bareme, 'place')}
+                        onChange={(e) => handleFieldChange(bareme.id, 'place', parseInt(e.target.value))}
+                        className="h-8"
+                      />
+                    </TableCell>
+
+                    {/* Points */}
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={getDisplayValue(bareme, 'points')}
+                        onChange={(e) => handleFieldChange(bareme.id, 'points', parseInt(e.target.value))}
+                        className="h-8"
+                      />
+                    </TableCell>
+
+                    {/* Type */}
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">
+                        {bareme.type || '-'}
+                      </span>
+                    </TableCell>
+
+                    {/* Actions */}
+                    <TableCell>
+                      <div className="flex gap-1">
+                        {isEdited && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => cancelEdit(bareme.id)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDelete(bareme.id, `${bareme.categorie} - ${bareme.type_classement} - Place ${bareme.place}`)}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+    </div>
+  );
+};

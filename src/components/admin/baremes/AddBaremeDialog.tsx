@@ -1,0 +1,147 @@
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus } from "lucide-react";
+
+interface AddBaremeDialogProps {
+  onAdd: (bareme: {
+    categorie: string;
+    type_classement: string;
+    place: number;
+    points: number;
+  }) => void;
+}
+
+const categories = [
+  "WT Monument",
+  "WT Grand Tour",
+  "WT Stage Race",
+  "WT One-Day",
+  "UCI ProSeries",
+  "UCI 1",
+  "UCI 2",
+  "Championnats",
+];
+
+const typeClassements = [
+  { value: "general", label: "Général" },
+  { value: "etape", label: "Étape" },
+  { value: "points", label: "Points" },
+  { value: "montagne", label: "Montagne" },
+  { value: "jeune", label: "Jeune" },
+];
+
+export function AddBaremeDialog({ onAdd }: AddBaremeDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [newBareme, setNewBareme] = useState({
+    categorie: "",
+    type_classement: "",
+    place: 1,
+    points: 0,
+  });
+
+  const handleSubmit = () => {
+    if (!newBareme.categorie || !newBareme.type_classement) {
+      return;
+    }
+
+    onAdd(newBareme);
+    setNewBareme({
+      categorie: "",
+      type_classement: "",
+      place: 1,
+      points: 0,
+    });
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Nouveau barème
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Ajouter un barème</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-4">
+          <div className="space-y-2">
+            <Label>Catégorie</Label>
+            <Select
+              value={newBareme.categorie}
+              onValueChange={(value) => setNewBareme({ ...newBareme, categorie: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner une catégorie" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Type de classement</Label>
+            <Select
+              value={newBareme.type_classement}
+              onValueChange={(value) => setNewBareme({ ...newBareme, type_classement: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner un type" />
+              </SelectTrigger>
+              <SelectContent>
+                {typeClassements.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Place</Label>
+            <Input
+              type="number"
+              min="1"
+              value={newBareme.place}
+              onChange={(e) => setNewBareme({ ...newBareme, place: parseInt(e.target.value) || 1 })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Points</Label>
+            <Input
+              type="number"
+              min="0"
+              value={newBareme.points}
+              onChange={(e) => setNewBareme({ ...newBareme, points: parseInt(e.target.value) || 0 })}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!newBareme.categorie || !newBareme.type_classement}
+            >
+              Ajouter
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
