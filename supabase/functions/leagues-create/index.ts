@@ -219,16 +219,23 @@ Deno.serve(async (req) => {
     
     if (auctionStrategy === 'single') {
       // One auction for the first phase only
+      const auctionData = {
+        phase_id: phases[0].id,
+        league_id: league.id,
+        round_number: 1,
+        statut: 'scheduled' as const,
+        opens_at: firstAuctionStartsAt,
+        deadline_at: deadlineAt.toISOString(),
+      };
+
+      // Vérification de sécurité avant INSERT
+      if (!auctionData.phase_id) {
+        throw new Error('Cannot create auction without phase_id');
+      }
+
       const { error: auctionError } = await supabase
         .from('auctions')
-        .insert({
-          phase_id: phases[0].id,
-          league_id: league.id,
-          round_number: 1,
-          statut: 'scheduled',
-          opens_at: firstAuctionStartsAt,
-          deadline_at: deadlineAt.toISOString(),
-        });
+        .insert(auctionData);
 
       if (auctionError) {
         console.error('Auction creation error:', auctionError);
@@ -243,6 +250,11 @@ Deno.serve(async (req) => {
         opens_at: index === 0 ? firstAuctionStartsAt : null,
         deadline_at: index === 0 ? deadlineAt.toISOString() : null,
       }));
+
+      // Vérification de sécurité : tous les phase_id doivent être définis
+      if (auctionsToCreate.some(a => !a.phase_id)) {
+        throw new Error('Cannot create auctions without phase_id');
+      }
 
       const { error: auctionError } = await supabase
         .from('auctions')
@@ -268,6 +280,11 @@ Deno.serve(async (req) => {
           deadline_at: groupIndex === 0 ? deadlineAt.toISOString() : null,
         };
       }).filter(Boolean);
+
+      // Vérification de sécurité : tous les phase_id doivent être définis
+      if (auctionsToCreate.some(a => !(a as any).phase_id)) {
+        throw new Error('Cannot create grouped auctions without phase_id');
+      }
 
       if (auctionsToCreate.length > 0) {
         const { error: auctionError } = await supabase

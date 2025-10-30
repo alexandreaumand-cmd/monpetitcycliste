@@ -252,7 +252,7 @@ export type Database = {
           id: string
           league_id: string
           opens_at: string | null
-          phase_id: string | null
+          phase_id: string
           round_number: number
           statut: Database["public"]["Enums"]["auction_statut"] | null
         }
@@ -263,7 +263,7 @@ export type Database = {
           id?: string
           league_id: string
           opens_at?: string | null
-          phase_id?: string | null
+          phase_id: string
           round_number: number
           statut?: Database["public"]["Enums"]["auction_statut"] | null
         }
@@ -274,7 +274,7 @@ export type Database = {
           id?: string
           league_id?: string
           opens_at?: string | null
-          phase_id?: string | null
+          phase_id?: string
           round_number?: number
           statut?: Database["public"]["Enums"]["auction_statut"] | null
         }
@@ -4349,6 +4349,7 @@ export type Database = {
         Returns: Json
       }
       admin_results_reset_preview: { Args: never; Returns: Json }
+      auto_close_ghost_auctions: { Args: never; Returns: undefined }
       auto_open_scheduled_auctions: { Args: never; Returns: undefined }
       course_points_summary: {
         Args: { p_course_id: string; p_manager_id?: string }

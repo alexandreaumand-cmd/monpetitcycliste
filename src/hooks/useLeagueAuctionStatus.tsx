@@ -23,6 +23,7 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
         .select('id, round_number, deadline_at, phase_id')
         .eq('league_id', leagueId)
         .eq('statut', 'open')
+        .not('phase_id', 'is', null)  // ✅ Filtrer les enchères fantômes
         .order('round_number', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(1)

@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     // Get active auction - CRITICAL: filter by league_id to avoid selecting wrong auction
     const { data: auction } = await supabase
       .from('auctions')
-      .select('id, round_number, statut')
+      .select('id, round_number, statut, phase_id')
       .eq('phase_id', phase_id)
       .eq('league_id', league_id)
       .eq('statut', 'open')
@@ -96,6 +96,19 @@ Deno.serve(async (req) => {
       league_id, 
       round_number: auction.round_number 
     });
+
+    // Validation 0 : phase_id obligatoire (sécurité anti-enchères fantômes)
+    // Note: Cette validation ne devrait jamais échouer grâce au filtre dans la requête
+    // et à la contrainte NOT NULL en DB, mais on garde une double sécurité
+    if (!auction.phase_id) {
+      console.error('❌ Invalid auction: phase_id is NULL', auction.id);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Cette enchère est invalide (pas de phase associée)' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Get phase info with saison_id
     const { data: phase } = await supabase

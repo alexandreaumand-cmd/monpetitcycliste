@@ -36,6 +36,17 @@ Deno.serve(async (req) => {
     const { phase_id, deadline_at, league_id, auto_launched } = await req.json();
     console.log('Opening new round for phase:', phase_id, 'league:', league_id);
 
+    // Validation stricte du phase_id
+    if (!phase_id) {
+      console.error('❌ Missing phase_id in ouvrir-nouveau-round');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Le phase_id est obligatoire pour créer une enchère' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Verify user authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
