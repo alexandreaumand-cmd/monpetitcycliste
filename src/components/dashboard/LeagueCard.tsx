@@ -353,16 +353,15 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                       </p>
                     ) : (
                       <div className="flex items-center justify-center gap-2">
-                        {countdown.days > 0 && (
-                          <div className="text-center">
-                            <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
-                              {countdown.days}
-                            </div>
-                            <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>
-                              jour{countdown.days > 1 ? 's' : ''}
-                            </div>
+                        <div className="text-center">
+                          <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
+                            {String(countdown.days).padStart(2, '0')}
                           </div>
-                        )}
+                          <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>
+                            jour{countdown.days > 1 ? 's' : ''}
+                          </div>
+                        </div>
+                        <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>:</div>
                         <div className="text-center">
                           <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
                             {String(countdown.hours).padStart(2, '0')}
