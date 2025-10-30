@@ -2,7 +2,7 @@ export async function notifyLeagueMembers(
   supabase: any,
   leagueId: string,
   notification: {
-    type: 'auction_opened' | 'auction_closed' | 'auction_ready_to_close';
+    type: 'auction_opened' | 'auction_closed' | 'auction_ready_to_close' | 'auction_validation';
     title: string;
     message: string;
     metadata: any;

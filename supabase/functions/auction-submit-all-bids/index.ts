@@ -252,42 +252,94 @@ Deno.serve(async (req) => {
 
     console.log(`✅ Manager ${manager_id} validated ${draftBids.length} bids for auction ${auction.id}`);
 
-    // Check if this was the last manager to validate
+    // Check if all managers now have complete rosters
     try {
-      const { data: validationStatus, error: validationError } = await supabase.functions.invoke(
-        'auction-get-validation-status',
-        { body: { phase_id, league_id, auction_id: auction.id } }
-      );
-
-      if (!validationError && validationStatus) {
-        const { validated_count, total_managers } = validationStatus;
+      console.log('🔍 Checking if all managers have complete rosters...');
+      
+      // Get all league members
+      const { data: leagueMembers } = await supabase
+        .from('league_members')
+        .select('user_id')
+        .eq('league_id', league_id);
+      
+      if (!leagueMembers || leagueMembers.length === 0) {
+        console.log('⚠️ No league members found');
+        throw new Error('No league members');
+      }
+      
+      // Get manager IDs for these users
+      const { data: managers } = await supabase
+        .from('managers')
+        .select('id, nom')
+        .in('user_id', leagueMembers.map(m => m.user_id));
+      
+      if (!managers || managers.length === 0) {
+        console.log('⚠️ No managers found');
+        throw new Error('No managers');
+      }
+      
+      console.log(`📊 Checking ${managers.length} managers for complete rosters (target: ${max_coureurs} riders each)`);
+      
+      // Check roster count for each manager
+      let allManagersComplete = true;
+      const incompleteManagers = [];
+      
+      for (const mgr of managers) {
+        const { count } = await supabase
+          .from('rosters')
+          .select('*', { count: 'exact', head: true })
+          .eq('manager_id', mgr.id)
+          .eq('phase_id', phase_id)
+          .eq('league_id', league_id);
         
-        console.log(`📊 Validation status: ${validated_count}/${total_managers} managers validated`);
+        const rosterCount = count || 0;
+        console.log(`  - ${mgr.nom}: ${rosterCount}/${max_coureurs} riders`);
         
-        if (validated_count === total_managers && total_managers > 0) {
-          console.log('🎉 All managers have validated! Sending notification...');
-          
-          // Import and call notification function
-          const { notifyLeagueMembers } = await import('../_shared/notifications.ts');
-          
-          await notifyLeagueMembers(supabase, league_id, {
-            type: 'auction_ready_to_close',
-            title: '🎯 Enchères complètes !',
-            message: `Tous les managers ont validé leurs enchères ! Les annonces vont bientôt arriver...`,
-            metadata: {
-              auction_id: auction.id,
-              round_number: auction.round_number,
-              phase_id,
-              league_id
-            }
-          });
-          
-          console.log('✅ Notification sent to all league members');
+        if (rosterCount < max_coureurs) {
+          allManagersComplete = false;
+          incompleteManagers.push({ nom: mgr.nom, count: rosterCount });
         }
       }
-    } catch (notifError) {
-      // Don't fail the whole request if notification fails
-      console.error('❌ Error sending notification:', notifError);
+      
+      if (allManagersComplete && managers.length > 0) {
+        console.log('🎉 All managers have complete rosters! Auto-closing round...');
+        
+        // Auto-close the auction round
+        const { error: closeError } = await supabase.functions.invoke('clore-round', {
+          body: {
+            auction_id: auction.id,
+            league_id: league_id,
+          }
+        });
+        
+        if (closeError) {
+          console.error('❌ Error auto-closing round:', closeError);
+        } else {
+          console.log('✅ Round automatically closed successfully');
+        }
+      } else {
+        console.log(`⏳ Not all managers ready yet. Incomplete: ${incompleteManagers.map(m => `${m.nom} (${m.count}/${max_coureurs})`).join(', ')}`);
+        
+        // Send notification that someone validated but round not ready yet
+        const { notifyLeagueMembers } = await import('../_shared/notifications.ts');
+        
+        await notifyLeagueMembers(supabase, league_id, {
+          type: 'auction_validation',
+          title: '✅ Enchères validées',
+          message: `Un manager a validé ses enchères. En attente des autres managers...`,
+          metadata: {
+            auction_id: auction.id,
+            round_number: auction.round_number,
+            phase_id,
+            league_id,
+            complete_managers: managers.length - incompleteManagers.length,
+            total_managers: managers.length
+          }
+        });
+      }
+    } catch (autoCloseError) {
+      // Don't fail the whole request if auto-close check fails
+      console.error('❌ Error in auto-close check:', autoCloseError);
     }
 
     return new Response(
