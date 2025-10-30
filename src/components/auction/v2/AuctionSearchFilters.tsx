@@ -33,9 +33,9 @@ export function AuctionSearchFilters({
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
 
   const categorieOptions = [
-    { value: "WT", label: "WorldTeam" },
-    { value: "PT", label: "ProTeam" },
-    { value: "CT", label: "Continental" },
+    { value: "WT", label: "WT" },
+    { value: "PT", label: "PT" },
+    { value: "CT", label: "CT" },
   ];
 
   const toggleTeam = (teamId: string) => {
