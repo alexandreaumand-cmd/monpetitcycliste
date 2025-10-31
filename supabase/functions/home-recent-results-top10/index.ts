@@ -49,14 +49,10 @@ Deno.serve(async (req) => {
     // For each race, get metadata and top 10 from points_ledger
     const racesWithTop10 = await Promise.all(
       recentCourses.map(async (course) => {
-        // Get top 10 from points_ledger with coureur names
-        const { data: top10, error: topError } = await supabase
+        // Get top 10 from points_ledger (just IDs and points)
+        const { data: top10Data, error: topError } = await supabase
           .from('points_ledger')
-          .select(`
-            coureur_id,
-            points,
-            coureurs!inner(nom)
-          `)
+          .select('coureur_id, points')
           .eq('course_id', course.course_id)
           .eq('type_classement', 'General')
           .is('etape_numero', null)
@@ -65,6 +61,26 @@ Deno.serve(async (req) => {
 
         if (topError) {
           console.error(`Error fetching top 10 for ${course.course_id}:`, topError);
+        }
+
+        // Get coureur names separately
+        let coureurNames: Record<string, string> = {};
+        if (top10Data && top10Data.length > 0) {
+          const coureurIds = top10Data.map(d => d.coureur_id);
+          const { data: coureursData, error: coureursError } = await supabase
+            .from('coureurs')
+            .select('id, nom')
+            .in('id', coureurIds);
+          
+          if (coureursError) {
+            console.error(`Error fetching coureur names for ${course.course_id}:`, coureursError);
+          }
+          
+          if (coureursData) {
+            coureurNames = Object.fromEntries(
+              coureursData.map(c => [c.id, c.nom])
+            );
+          }
         }
 
         // Get available classification types from points_ledger
@@ -88,9 +104,9 @@ Deno.serve(async (req) => {
         const uniqueStages = [...new Set((stages || []).map(s => s.etape_numero).filter(Boolean))];
 
         // Format top10 results
-        const formattedTop10 = (top10 || []).map((r: any, index: number) => ({
+        const formattedTop10 = (top10Data || []).map((r: any, index: number) => ({
           position: index + 1,
-          coureur_nom: r.coureurs?.nom || '',
+          coureur_nom: coureurNames[r.coureur_id] || 'Inconnu',
           coureur_equipe: '',
           points: r.points || 0
         }));
