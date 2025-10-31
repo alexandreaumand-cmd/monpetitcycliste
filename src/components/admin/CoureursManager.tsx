@@ -38,7 +38,7 @@ export const CoureursManager = () => {
     if (defaultSeason?.id && filters.saison_ids.length === 0) {
       setFilters(prev => ({ ...prev, saison_ids: [defaultSeason.id] }));
     }
-  }, [defaultSeason?.id]);
+  }, [defaultSeason?.id, filters.saison_ids.length]);
 
   // Solution 2: Requête optimisée avec un seul JOIN
   const { data: coureurs, isLoading } = useQuery({
@@ -81,12 +81,17 @@ export const CoureursManager = () => {
         );
       }
       
-      query = query.order('coureurs(nom)', { ascending: true });
-
       const { data, error } = await query;
-      if (error) throw error;
-
-      return data;
+      if (error) {
+        console.error('Erreur requête coureurs:', error);
+        throw error;
+      }
+      console.log('Coureurs chargés:', data?.length || 0);
+      
+      // Tri côté client car PostgREST ne supporte pas order() sur les relations
+      return data?.sort((a, b) => 
+        (a.coureurs?.nom || '').localeCompare(b.coureurs?.nom || '')
+      ) || [];
     },
     enabled: filters.saison_ids.length > 0,
   });
