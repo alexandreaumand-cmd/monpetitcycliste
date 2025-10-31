@@ -180,12 +180,13 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
     return [...new Set(allAuctionData.map((item) => item.round_number))].sort((a, b) => a - b);
   }, [allAuctionData]);
 
-  const toggleRow = (coureurId: string) => {
+  const toggleRow = (coureurId: string, roundNumber: number) => {
+    const key = `${coureurId}-${roundNumber}`;
     const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(coureurId)) {
-      newExpanded.delete(coureurId);
+    if (newExpanded.has(key)) {
+      newExpanded.delete(key);
     } else {
-      newExpanded.add(coureurId);
+      newExpanded.add(key);
     }
     setExpandedRows(newExpanded);
   };
@@ -341,7 +342,7 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
                   </TableRow>
                 ) : (
                   filteredAndSortedData.map((item) => (
-                    <Collapsible key={item.coureur_id} asChild open={expandedRows.has(item.coureur_id)}>
+                    <Collapsible key={`${item.coureur_id}-${item.round_number}`} asChild open={expandedRows.has(`${item.coureur_id}-${item.round_number}`)}>
                       <>
                         <TableRow className="hover:bg-muted/50 transition-colors">
                           <TableCell>
@@ -350,13 +351,13 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 w-6 p-0"
-                                onClick={() => toggleRow(item.coureur_id)}
+                                onClick={() => toggleRow(item.coureur_id, item.round_number)}
                                 disabled={item.concurrents_battus.length === 0}
                               >
                                 {item.concurrents_battus.length > 0 && (
                                   <ChevronDown
                                     className={`h-4 w-4 transition-transform ${
-                                      expandedRows.has(item.coureur_id) ? "rotate-180" : ""
+                                      expandedRows.has(`${item.coureur_id}-${item.round_number}`) ? "rotate-180" : ""
                                     }`}
                                   />
                                 )}
