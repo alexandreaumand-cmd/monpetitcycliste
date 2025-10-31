@@ -264,7 +264,7 @@ export const MyTeamMobile = () => {
       if (targetManagerId && selectedPhaseId && leagueId) {
         const { data: standing } = await supabase
           .from('v_manager_standings_by_phase_v2')
-          .select('total_points, bonus_points')
+          .select('total_points, manager_bonus, rider_bonus')
           .match({ 
             phase_id: selectedPhaseId,
             manager_id: targetManagerId,
@@ -273,10 +273,11 @@ export const MyTeamMobile = () => {
           .maybeSingle();
 
         if (standing) {
+          const totalBonus = (standing.manager_bonus || 0) + (standing.rider_bonus || 0);
           setKpis(prev => ({
             ...prev,
             total_points: Number(standing.total_points) || 0,
-            bonus_points: Number(standing.bonus_points) || 0,
+            bonus_points: totalBonus,
             total_with_bonus: Number(standing.total_points) || 0,
           }));
         }

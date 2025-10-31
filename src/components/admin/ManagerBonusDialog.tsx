@@ -40,7 +40,7 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
       // Get managers standings for this phase
       const { data: standings, error: standingsError } = await supabase
         .from('v_manager_standings_by_phase_v2')
-        .select('manager_id, race_points, bonus_points, league_id')
+        .select('manager_id, total_race_pts, manager_bonus, rider_bonus, league_id')
         .eq('phase_id', phaseId)
         .eq('league_id', leagueId);
 
@@ -81,7 +81,7 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
           return {
             manager_id: s.manager_id,
             manager_nom: managerNom || 'Unknown',
-            course_points: s.race_points || 0,
+            course_points: s.total_race_pts || 0,
             bonus_itt: existingBonus?.bonus_itt || 0,
             bonus_ttt: existingBonus?.bonus_ttt || 0,
             bonus_first_win: existingBonus?.bonus_first_win || 0,
