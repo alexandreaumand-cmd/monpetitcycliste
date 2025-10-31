@@ -75,12 +75,33 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
       if (!winners || winners.length === 0) return [];
 
       const coureurIds = [...new Set(winners.map((w) => w.coureur_id))];
+      
       const { data: coureurs, error: coteError } = await supabase
         .from("coureurs")
         .select("id, prix_initial")
         .in("id", coureurIds);
 
       if (coteError) throw coteError;
+
+      // Récupérer les informations d'équipe depuis v_coureurs_with_teams
+      const { data: phase } = await supabase
+        .from("phases")
+        .select("saison_id")
+        .eq("id", phaseId)
+        .single();
+
+      const { data: coureursWithTeams, error: teamsError } = await supabase
+        .from("v_coureurs_with_teams")
+        .select("coureur_id, coureur_nom, equipe_nom")
+        .eq("saison_id", phase?.saison_id)
+        .in("coureur_id", coureurIds);
+
+      if (teamsError) throw teamsError;
+
+      // Créer une map pour accès rapide aux équipes
+      const teamsMap = new Map(
+        (coureursWithTeams || []).map((c) => [c.coureur_id, c.equipe_nom || ""])
+      );
 
       let losersQuery = supabase
         .from("bids_outcomes")
@@ -102,6 +123,7 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
 
       return winners.map((w) => {
         const cote = coureurs?.find((c) => c.id === w.coureur_id)?.prix_initial || 0;
+        const equipe = teamsMap.get(w.coureur_id) || w.coureur_equipe || "";
         const concurrents = (losers || [])
           .filter((l: any) => l.coureur_id === w.coureur_id && l.round_number === w.round_number)
           .map((l: any) => ({
@@ -113,6 +135,7 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
 
         return {
           ...w,
+          coureur_equipe: equipe,
           cote_initiale: cote,
           roi,
           concurrents_battus: concurrents,
