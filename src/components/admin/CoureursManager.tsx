@@ -51,7 +51,6 @@ export const CoureursManager = () => {
         .select(`
           *,
           coureurs!inner(id, nom, uci_id),
-          equipes_saisons(equipe_id, saison_id, nom_affiche, categorie, equipes(code_court, nom_complet)),
           saisons(id, annee)
         `)
         .in('saison_id', filters.saison_ids);
@@ -104,7 +103,7 @@ export const CoureursManager = () => {
       
       const { data, error } = await supabase
         .from('equipes_saisons')
-        .select('equipe_id, saison_id, nom_affiche, equipes!inner(code_court, nom_complet)')
+        .select('equipe_id, saison_id, nom_affiche, categorie, equipes!inner(code_court, nom_complet)')
         .in('saison_id', filters.saison_ids)
         .order('nom_affiche');
       
@@ -113,6 +112,17 @@ export const CoureursManager = () => {
     },
     enabled: filters.saison_ids.length > 0,
   });
+
+  // Enrichir les coureurs avec les infos d'équipe côté client
+  const enrichedCoureurs = coureurs?.map(cs => {
+    const equipeInfo = preloadedEquipes?.find(
+      eq => eq.equipe_id === cs.equipe_id && eq.saison_id === cs.saison_id
+    );
+    return {
+      ...cs,
+      equipes_saisons: equipeInfo || null
+    };
+  }) || [];
 
   // Mutation pour update coureurs_saisons
   const updateCoureursMutation = useMutation({
@@ -156,7 +166,7 @@ export const CoureursManager = () => {
 
       {filters.saison_ids.length > 0 ? (
         <CoureursTable
-          coureurs={coureurs || []}
+          coureurs={enrichedCoureurs}
           isLoading={isLoading}
           onSave={(updates) => updateCoureursMutation.mutate(updates)}
           preloadedEquipes={preloadedEquipes || []}
