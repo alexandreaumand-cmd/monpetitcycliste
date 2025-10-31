@@ -37,10 +37,16 @@ export const CoureursManager = () => {
 
   // Synchroniser avec les filtres quand la saison est chargée
   useEffect(() => {
-    if (defaultSeason && filters.saison_ids.length === 0) {
-      setFilters(prev => ({ ...prev, saison_ids: [defaultSeason.id] }));
+    if (defaultSeason?.id) {
+      setFilters(prev => {
+        // Ne mettre à jour que si vraiment vide
+        if (prev.saison_ids.length === 0) {
+          return { ...prev, saison_ids: [defaultSeason.id] };
+        }
+        return prev;
+      });
     }
-  }, [defaultSeason]);
+  }, [defaultSeason?.id]);
 
   // Solution 2: Optimisation de la requête avec un seul SELECT et tous les JOINs
   const { data: coureurs, isLoading } = useQuery({
