@@ -22,6 +22,7 @@ import DashboardHome from "./DashboardHome";
 import { LeagueDetailPage } from "./admin/LeagueDetailPage";
 import { SuperAdminPage } from "./SuperAdminPage";
 import { SuperAdminGuard } from "@/components/guards/SuperAdminGuard";
+import { ManagerDetailMobile } from "./ManagerDetail.mobile";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -118,6 +119,7 @@ const Dashboard = () => {
             <Route path="courses" element={<UpcomingCourses />} />
             <Route path="resultats" element={<ResultsPage />} />
             <Route path="classement" element={<Rankings />} />
+            <Route path="rankings/:managerId" element={<ManagerDetailMobile />} />
             <Route path="statistiques" element={<Statistics />} />
             <Route path="startlist" element={<Startlist />} />
             <Route path="compte" element={<AccountPage />} />
