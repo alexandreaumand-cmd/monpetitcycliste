@@ -10,9 +10,10 @@ interface CoureursTableProps {
   coureurs: any[];
   isLoading: boolean;
   onSave: (updates: Array<{ id: string; changes: any }>) => void;
+  preloadedEquipes?: any[];
 }
 
-export const CoureursTable = ({ coureurs, isLoading, onSave }: CoureursTableProps) => {
+export const CoureursTable = ({ coureurs, isLoading, onSave, preloadedEquipes }: CoureursTableProps) => {
   const [editedCoureurs, setEditedCoureurs] = useState<Map<string, any>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
 
