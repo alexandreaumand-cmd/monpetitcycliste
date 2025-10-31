@@ -420,7 +420,9 @@ export const RankingsMobile = () => {
                           className="w-full"
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/dashboard/rankings/${standing.manager_id}`);
+                            const params = new URLSearchParams();
+                            if (leagueId) params.set('leagueId', leagueId);
+                            navigate(`/dashboard/rankings/${standing.manager_id}?${params.toString()}`);
                           }}
                         >
                           Voir le détail complet
