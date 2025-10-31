@@ -56,7 +56,7 @@ type ResultRow = {
   position: number;
   coureur_id: string | null;
   coureur_nom: string | null;
-  manager_nom: string | null;
+  coureur_equipe?: string | null;
   statut: ResultStatut;
   points: number;
   grid_version?: string;
@@ -322,18 +322,18 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
       if (existingResults.length > 0) {
         console.log('✅ Résultats existants trouvés, barème disponible:', scoringRules?.length || 0);
-        // Pre-existing results found - merge with full grid from scoring rules
-        if (!scoringRules || scoringRules.length === 0) {
-          // Still display existing results even without scoring rules
-          rows = existingResults.map((r: any) => ({
-            position: r.row_position,
-            coureur_id: r.coureur_id,
-            coureur_nom: r.coureur_nom,
-            manager_nom: r.manager_nom,
-            statut: r.statut,
-            points: 0,
-            grid_version: sel_key,
-          }));
+          // Pre-existing results found - merge with full grid from scoring rules
+          if (!scoringRules || scoringRules.length === 0) {
+            // Still display existing results even without scoring rules
+            rows = existingResults.map((r: any) => ({
+              position: r.position,
+              coureur_id: r.coureur_id,
+              coureur_nom: r.coureur_nom,
+              coureur_equipe: r.coureur_equipe,
+              statut: 'finished' as ResultStatut,
+              points: r.points || 0,
+              grid_version: sel_key,
+            }));
         } else {
           // Create full grid based on scoring rules
           const maxPlace = Math.max(...scoringRules.map((r) => r.place));
@@ -347,9 +347,9 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               position,
               coureur_id: existing?.coureur_id || null,
               coureur_nom: existing?.coureur_nom || null,
-              manager_nom: existing?.manager_nom || null,
-              statut: existing?.statut || ("finished" as ResultStatut),
-              points: existing?.points_theoriques || rule?.points || 0,
+              coureur_equipe: existing?.coureur_equipe || null,
+              statut: 'finished' as ResultStatut,
+              points: existing?.points || rule?.points || 0,
               grid_version: sel_key,
             };
           });
@@ -374,7 +374,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
             position,
             coureur_id: null,
             coureur_nom: null,
-            manager_nom: null,
+            coureur_equipe: null,
             statut: "finished" as ResultStatut,
             points: rule?.points || 0,
             grid_version: sel_key,
@@ -709,10 +709,10 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     },
   });
 
-  const handleRiderChange = (index: number, riderId: string | null, riderName: string | null, managerNom: string | null = null) => {
+  const handleRiderChange = (index: number, riderId: string | null, riderName: string | null) => {
     setResultRows((prev) =>
       prev.map((row, i) =>
-        i === index ? { ...row, coureur_id: riderId, coureur_nom: riderName, manager_nom: managerNom } : row
+        i === index ? { ...row, coureur_id: riderId, coureur_nom: riderName } : row
       )
     );
     setIsDirty(true);
@@ -881,11 +881,10 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                   onCheckedChange={async (checked) => {
                     setIsCancelled(checked === true);
                     if (checked) {
-                      setResultRows(prev => prev.map(row => ({
+                    setResultRows(prev => prev.map(row => ({
                         ...row,
                         coureur_id: null,
                         coureur_nom: null,
-                        manager_nom: null,
                       })));
                       setIsDirty(true);
                       
@@ -975,26 +974,26 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-muted">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium w-20">Pos</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Coureur</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium w-32">Manager</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium w-24">Points</th>
-                    </tr>
+                     <tr>
+                       <th className="px-4 py-3 text-left text-sm font-medium w-20">Pos</th>
+                       <th className="px-4 py-3 text-left text-sm font-medium">Coureur</th>
+                       <th className="px-4 py-3 text-left text-sm font-medium w-32">Équipe</th>
+                       <th className="px-4 py-3 text-right text-sm font-medium w-24">Points</th>
+                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {resultRows.map((row, index) => (
                       <tr key={index} className={cn("hover:bg-muted/50", isCancelled && "opacity-50 pointer-events-none")}>
                         <td className="px-4 py-2 text-sm font-medium">{row.position}</td>
-                        <td className="px-4 py-2">
+                         <td className="px-4 py-2">
                           <CoureursCombobox
                             phaseId={course.phase_id}
                             value={row.coureur_id}
                             onSelect={(coureur) => {
                               if (coureur) {
-                                handleRiderChange(index, coureur.coureur_id, coureur.coureur_nom, coureur.taken_by_manager_nom);
+                                handleRiderChange(index, coureur.coureur_id, coureur.coureur_nom);
                               } else {
-                                handleRiderChange(index, null, null, null);
+                                handleRiderChange(index, null, null);
                               }
                             }}
                             placeholder={row.coureur_nom || "Sélectionner un coureur..."}
@@ -1002,14 +1001,8 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                             disabled={isCancelled}
                           />
                         </td>
-                        <td className="px-4 py-2">
-                          {row.manager_nom ? (
-                            <Badge variant="secondary" className="text-xs">
-                              {row.manager_nom}
-                            </Badge>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">—</span>
-                          )}
+                        <td className="px-4 py-2 text-sm text-muted-foreground">
+                          {row.coureur_equipe || '—'}
                         </td>
                         <td className="px-4 py-2 text-right text-sm font-medium">{row.points}</td>
                       </tr>

@@ -4227,8 +4227,6 @@ export type Database = {
           coureur_equipe: string
           coureur_id: string
           coureur_nom: string
-          manager_id: string
-          manager_nom: string
           points: number
           position: number
         }[]
