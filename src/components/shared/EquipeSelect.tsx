@@ -13,15 +13,17 @@ interface EquipeSelectProps {
   value?: string;
   onChange: (equipeId: string) => void;
   placeholder?: string;
+  preloadedEquipes?: any[];
 }
 
 export const EquipeSelect = ({
   saisonId,
   value,
   onChange,
-  placeholder = "Sélectionner une équipe"
+  placeholder = "Sélectionner une équipe",
+  preloadedEquipes
 }: EquipeSelectProps) => {
-  const { data: equipes, isLoading } = useQuery({
+  const { data: fetchedEquipes, isLoading } = useQuery({
     queryKey: ['equipes-saisons-select', saisonId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -33,8 +35,13 @@ export const EquipeSelect = ({
       if (error) throw error;
       return data || [];
     },
-    enabled: !!saisonId,
+    enabled: !!saisonId && !preloadedEquipes,
   });
+
+  // Utiliser le cache si disponible, sinon les données fetchées
+  const equipes = preloadedEquipes 
+    ? preloadedEquipes.filter(e => e.saison_id === saisonId)
+    : fetchedEquipes;
 
   if (isLoading) {
     return (

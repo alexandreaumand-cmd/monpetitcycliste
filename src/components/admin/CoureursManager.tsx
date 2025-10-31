@@ -19,7 +19,28 @@ export const CoureursManager = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch coureurs pour une saison spécifique
+  // Solution 1: Charger la saison par défaut (la plus récente)
+  const { data: defaultSeason } = useQuery({
+    queryKey: ['default-season'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('saisons')
+        .select('id, annee')
+        .order('annee', { ascending: false })
+        .limit(1)
+        .single();
+      return data;
+    },
+  });
+
+  // Synchroniser avec les filtres quand la saison est chargée
+  useState(() => {
+    if (defaultSeason?.id && filters.saison_ids.length === 0) {
+      setFilters(prev => ({ ...prev, saison_ids: [defaultSeason.id] }));
+    }
+  });
+
+  // Solution 2: Requête optimisée avec un seul JOIN
   const { data: coureurs, isLoading } = useQuery({
     queryKey: ['admin-coureurs', filters],
     queryFn: async () => {
@@ -29,7 +50,9 @@ export const CoureursManager = () => {
         .from('coureurs_saisons')
         .select(`
           *,
-          coureurs!inner(id, nom, uci_id)
+          coureurs!inner(id, nom, uci_id),
+          equipes_saisons(equipe_id, saison_id, nom_affiche, categorie, equipes(code_court, nom_complet)),
+          saisons(id, annee)
         `)
         .in('saison_id', filters.saison_ids);
 
@@ -63,47 +86,25 @@ export const CoureursManager = () => {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Enrich with team and season information
-      if (data && data.length > 0) {
-        const uniqueEquipeIds = [...new Set(data.map(cs => cs.equipe_id).filter(Boolean))];
-        const uniqueSaisonIds = [...new Set(data.map(cs => cs.saison_id).filter(Boolean))];
-        
-        // Fetch teams
-        let equipesMap = new Map();
-        if (uniqueEquipeIds.length > 0) {
-          const { data: equipesData } = await supabase
-            .from('equipes_saisons')
-            .select('equipe_id, saison_id, nom_affiche, categorie, equipes!inner(code_court, nom_complet)')
-            .in('equipe_id', uniqueEquipeIds)
-            .in('saison_id', filters.saison_ids);
-          
-          equipesMap = new Map(
-            equipesData?.map(e => [`${e.equipe_id}_${e.saison_id}`, e]) || []
-          );
-        }
-
-        // Fetch seasons
-        let saisonsMap = new Map();
-        if (uniqueSaisonIds.length > 0) {
-          const { data: saisonsData } = await supabase
-            .from('saisons')
-            .select('id, annee')
-            .in('id', uniqueSaisonIds);
-          
-          saisonsMap = new Map(
-            saisonsData?.map(s => [s.id, s]) || []
-          );
-        }
-        
-        // Enrich each coureur with team and season info
-        return data.map(cs => ({
-          ...cs,
-          equipes_saisons: equipesMap.get(`${cs.equipe_id}_${cs.saison_id}`) || null,
-          saison: saisonsMap.get(cs.saison_id) || null
-        }));
-      }
-
       return data;
+    },
+    enabled: filters.saison_ids.length > 0,
+  });
+
+  // Solution 3: Pré-charger toutes les équipes pour le cache
+  const { data: preloadedEquipes } = useQuery({
+    queryKey: ['equipes-for-table', filters.saison_ids],
+    queryFn: async () => {
+      if (filters.saison_ids.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('equipes_saisons')
+        .select('equipe_id, saison_id, nom_affiche, equipes!inner(code_court, nom_complet)')
+        .in('saison_id', filters.saison_ids)
+        .order('nom_affiche');
+      
+      if (error) throw error;
+      return data || [];
     },
     enabled: filters.saison_ids.length > 0,
   });
@@ -153,6 +154,7 @@ export const CoureursManager = () => {
           coureurs={coureurs || []}
           isLoading={isLoading}
           onSave={(updates) => updateCoureursMutation.mutate(updates)}
+          preloadedEquipes={preloadedEquipes || []}
         />
       ) : (
         <Card className="p-12 text-center">
