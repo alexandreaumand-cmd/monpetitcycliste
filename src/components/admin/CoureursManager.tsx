@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -34,11 +34,11 @@ export const CoureursManager = () => {
   });
 
   // Synchroniser avec les filtres quand la saison est chargée
-  useState(() => {
+  useEffect(() => {
     if (defaultSeason?.id && filters.saison_ids.length === 0) {
       setFilters(prev => ({ ...prev, saison_ids: [defaultSeason.id] }));
     }
-  });
+  }, [defaultSeason?.id]);
 
   // Solution 2: Requête optimisée avec un seul JOIN
   const { data: coureurs, isLoading } = useQuery({
