@@ -3670,41 +3670,45 @@ export type Database = {
       }
       v_manager_standings_by_phase_v2: {
         Row: {
-          bonus_points: number | null
           league_id: string | null
+          manager_bonus: number | null
           manager_id: string | null
           manager_nom: string | null
+          nb_scoreurs: number | null
+          nb_victoires: number | null
           phase_id: string | null
-          race_points: number | null
-          scoreurs_count: number | null
+          rider_bonus: number | null
           total_points: number | null
-          victories_count: number | null
+          total_race_pts: number | null
         }
         Relationships: []
       }
       v_manager_standings_by_season_v2: {
         Row: {
-          bonus_points: number | null
           league_id: string | null
+          manager_bonus: number | null
           manager_id: string | null
           manager_nom: string | null
-          race_points: number | null
+          nb_scoreurs: number | null
+          nb_victoires: number | null
+          rider_bonus: number | null
           saison_id: string | null
-          scoreurs_count: number | null
           total_points: number | null
-          victories_count: number | null
+          total_race_pts: number | null
         }
         Relationships: []
       }
       v_manager_standings_total: {
         Row: {
-          bonus_points: number | null
           league_id: string | null
+          manager_bonus: number | null
           manager_id: string | null
-          race_points: number | null
-          scoreurs_count: number | null
+          manager_nom: string | null
+          nb_scoreurs: number | null
+          nb_victoires: number | null
+          rider_bonus: number | null
           total_points: number | null
-          victories_count: number | null
+          total_race_pts: number | null
         }
         Relationships: []
       }

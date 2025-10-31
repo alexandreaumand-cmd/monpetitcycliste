@@ -34,27 +34,73 @@ Deno.serve(async (req) => {
 
     console.log('Getting aggregated leaderboard:', { saison_id, phase_id, filters, league_id });
 
+    // Step 1: Get league's configured season and filter courses by league_scopes
+    const { data: leagueScope, error: scopeError } = await supabaseClient
+      .from('league_scopes')
+      .select('season_id')
+      .eq('league_id', league_id)
+      .single();
+
+    if (scopeError || !leagueScope) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'League scope not configured',
+          leaderboard: [] 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    // Get valid phases for this league's season
+    const { data: validPhases } = await supabaseClient
+      .from('phases')
+      .select('id')
+      .eq('saison_id', leagueScope.season_id);
+
+    const validPhaseIds = validPhases?.map(p => p.id) || [];
+
+    if (validPhaseIds.length === 0) {
+      return new Response(
+        JSON.stringify({ leaderboard: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
     // Build courses filter conditions
     const uciCategories = filters?.filter(f => !['GT', 'Monument', 'WT_Tours', 'WT_Classiques'].includes(f)) || [];
     const wtFilters = filters?.filter(f => ['GT', 'Monument', 'WT_Tours', 'WT_Classiques'].includes(f)) || [];
 
-    // Build query for points_ledger with courses join
+    // Build query for points_ledger with courses join, filtered by league's valid phases
     let coursesQuery = supabaseClient
       .from('courses')
-      .select('id');
+      .select('id')
+      .in('phase_id', validPhaseIds);
 
-    // Apply phase or saison filter
+    // Apply additional filters if provided
     if (phase_id) {
+      if (!validPhaseIds.includes(phase_id)) {
+        return new Response(
+          JSON.stringify({ leaderboard: [] }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
       coursesQuery = coursesQuery.eq('phase_id', phase_id);
     } else if (saison_id) {
-      const { data: phases } = await supabaseClient
+      const { data: requestedPhases } = await supabaseClient
         .from('phases')
         .select('id')
         .eq('saison_id', saison_id);
       
-      const phaseIds = phases?.map(p => p.id) || [];
-      if (phaseIds.length > 0) {
-        coursesQuery = coursesQuery.in('phase_id', phaseIds);
+      const requestedPhaseIds = requestedPhases?.map(p => p.id) || [];
+      const intersection = validPhaseIds.filter(id => requestedPhaseIds.includes(id));
+      
+      if (intersection.length > 0) {
+        coursesQuery = coursesQuery.in('phase_id', intersection);
+      } else {
+        return new Response(
+          JSON.stringify({ leaderboard: [] }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
       }
     }
 

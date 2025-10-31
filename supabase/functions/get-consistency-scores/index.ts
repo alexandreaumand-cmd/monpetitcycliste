@@ -100,75 +100,28 @@ Deno.serve(async (req) => {
 
     console.log(`[get-consistency-scores] Found ${managers?.length || 0} managers`);
 
-    // STEP 1: Calculate all phase standings once (cache optimization)
+    // STEP 1: Calculate all phase standings using v_manager_standings_by_phase_v2 (season-filtered)
     const phaseStandingsCache = new Map<string, Array<{ manager_id: string; total_points: number }>>();
 
     for (const phase of phases) {
-      const allManagersPoints: Array<{ manager_id: string; total_points: number }> = [];
+      const { data: phaseStandings, error: standingsError } = await supabase
+        .from('v_manager_standings_by_phase_v2')
+        .select('manager_id, total_points')
+        .eq('league_id', league_id)
+        .eq('phase_id', phase.id)
+        .order('total_points', { ascending: false });
 
-      for (const mgr of managers) {
-        // Get manager's roster for this phase
-        const { data: roster } = await supabase
-          .from('rosters')
-          .select('coureur_id')
-          .eq('phase_id', phase.id)
-          .eq('manager_id', mgr.id)
-          .eq('league_id', league_id);
-
-        const coureurIds = roster?.map(r => r.coureur_id) || [];
-
-        // Get race points for manager's riders
-        let raceTotalMgr = 0;
-        if (coureurIds.length > 0) {
-          const { data: racePts } = await supabase
-            .from('points_ledger')
-            .select('points')
-            .eq('phase_id', phase.id)
-            .in('coureur_id', coureurIds);
-
-          raceTotalMgr = racePts?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
-        }
-
-        // Get manager bonus
-        const { data: mgrBonus } = await supabase
-          .from('manager_bonus_points')
-          .select('bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs')
-          .eq('phase_id', phase.id)
-          .eq('manager_id', mgr.id)
-          .eq('league_id', league_id)
-          .maybeSingle();
-
-        const bonusTotalMgr = mgrBonus
-          ? (mgrBonus.bonus_itt || 0) +
-            (mgrBonus.bonus_ttt || 0) +
-            (mgrBonus.bonus_first_win || 0) +
-            (mgrBonus.bonus_coureurs || 0) +
-            (mgrBonus.bonus_scoreurs || 0)
-          : 0;
-
-        // Get rider bonus
-        const { data: riderBonusMgr } = await supabase
-          .from('bonus_points')
-          .select('points')
-          .eq('phase_id', phase.id)
-          .eq('league_id', league_id)
-          .or(`manager_id.eq.${mgr.id},target_manager_id.eq.${mgr.id}`);
-
-        const riderBonusTotalMgr = riderBonusMgr?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
-
-        const totalMgr = raceTotalMgr + bonusTotalMgr + riderBonusTotalMgr;
-
-        allManagersPoints.push({
-          manager_id: mgr.id,
-          total_points: totalMgr
-        });
+      if (standingsError) {
+        console.error(`Error fetching standings for phase ${phase.id}:`, standingsError);
+        continue;
       }
 
-      // Sort and cache
-      phaseStandingsCache.set(
-        phase.id,
-        allManagersPoints.sort((a, b) => b.total_points - a.total_points)
-      );
+      const sortedManagers = (phaseStandings || []).map(s => ({
+        manager_id: s.manager_id,
+        total_points: s.total_points,
+      }));
+
+      phaseStandingsCache.set(phase.id, sortedManagers);
     }
 
     // STEP 1.5: Calculate total points distributed per phase

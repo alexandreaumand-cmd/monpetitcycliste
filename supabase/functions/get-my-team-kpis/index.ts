@@ -74,6 +74,25 @@ Deno.serve(async (req) => {
       phaseIds = allPhases?.map(p => p.id) || [];
     }
 
+    // Filter phaseIds by league's configured season if league_id provided
+    if (league_id) {
+      const { data: leagueScope } = await supabaseClient
+        .from('league_scopes')
+        .select('season_id')
+        .eq('league_id', league_id)
+        .single();
+
+      if (leagueScope) {
+        const { data: validPhases } = await supabaseClient
+          .from('phases')
+          .select('id')
+          .eq('saison_id', leagueScope.season_id);
+
+        const validPhaseIds = validPhases?.map(p => p.id) || [];
+        phaseIds = phaseIds.filter(id => validPhaseIds.includes(id));
+      }
+    }
+
     if (phaseIds.length === 0) {
       return new Response(JSON.stringify({
         total_points: 0,
