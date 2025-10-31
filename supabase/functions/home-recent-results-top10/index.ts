@@ -28,14 +28,17 @@ Deno.serve(async (req) => {
 
     const { limit = 6 } = await req.json();
 
-    // Get recent races with results
+    // Get recent races with results from view
     const { data: recentCourses, error: coursesError } = await supabase
       .from('v_home_recent_results')
       .select('course_id, course_nom, date_fin, total_points')
       .order('date_fin', { ascending: false })
       .limit(limit);
 
-    if (coursesError) throw coursesError;
+    if (coursesError) {
+      console.error('Error fetching recent courses:', coursesError);
+      throw coursesError;
+    }
 
     if (!recentCourses || recentCourses.length === 0) {
       return new Response(JSON.stringify({ races: [] }), {
@@ -43,23 +46,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // For each race, get metadata and top 10 from general classification
+    // For each race, get metadata and top 10 from points_ledger
     const racesWithTop10 = await Promise.all(
       recentCourses.map(async (course) => {
-        // Get course metadata
-        const { data: metaData, error: metaError } = await supabase.rpc('results_course_meta_v2', {
-          p_course_id: course.course_id
-        });
-
-        const meta = metaData && metaData.length > 0 ? metaData[0] : null;
-
-        // Get top 10 for General classification from points_ledger instead
+        // Get top 10 from points_ledger with coureur names
         const { data: top10, error: topError } = await supabase
           .from('points_ledger')
           .select(`
             coureur_id,
-            coureurs!inner(nom),
-            points
+            points,
+            coureurs!inner(nom)
           `)
           .eq('course_id', course.course_id)
           .eq('type_classement', 'General')
@@ -71,11 +67,27 @@ Deno.serve(async (req) => {
           console.error(`Error fetching top 10 for ${course.course_id}:`, topError);
         }
 
-        if (metaError) {
-          console.error(`Error fetching metadata for ${course.course_id}:`, metaError);
-        }
+        // Get available classification types from points_ledger
+        const { data: types, error: typesError } = await supabase
+          .from('points_ledger')
+          .select('type_classement')
+          .eq('course_id', course.course_id)
+          .is('etape_numero', null);
 
-        // Format top10 results with position based on order
+        const uniqueTypes = [...new Set((types || []).map(t => t.type_classement))];
+
+        // Get available stages
+        const { data: stages, error: stagesError } = await supabase
+          .from('points_ledger')
+          .select('etape_numero')
+          .eq('course_id', course.course_id)
+          .eq('type_classement', 'Etape')
+          .not('etape_numero', 'is', null)
+          .order('etape_numero');
+
+        const uniqueStages = [...new Set((stages || []).map(s => s.etape_numero).filter(Boolean))];
+
+        // Format top10 results
         const formattedTop10 = (top10 || []).map((r: any, index: number) => ({
           position: index + 1,
           coureur_nom: r.coureurs?.nom || '',
@@ -89,8 +101,8 @@ Deno.serve(async (req) => {
           date_fin: course.date_fin,
           total_points: course.total_points,
           top10: formattedTop10,
-          types_disponibles: meta?.types_disponibles || [],
-          etapes_disponibles: meta?.etapes_disponibles || []
+          types_disponibles: uniqueTypes,
+          etapes_disponibles: uniqueStages
         };
       })
     );
