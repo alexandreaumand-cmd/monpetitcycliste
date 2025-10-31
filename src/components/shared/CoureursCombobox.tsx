@@ -32,6 +32,7 @@ type CoureursComboboxProps = {
   showTakenRiders?: boolean;
   disabled?: boolean;
   showManager?: boolean;
+  context?: 'auction' | 'super-admin';
 };
 
 export const CoureursCombobox = ({
@@ -42,6 +43,7 @@ export const CoureursCombobox = ({
   showTakenRiders = true,
   disabled = false,
   showManager = false,
+  context = 'auction',
 }: CoureursComboboxProps) => {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -75,22 +77,35 @@ export const CoureursCombobox = ({
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ['coureurs-search-infinite', phaseId, leagueId, debouncedSearchTerm, showTakenRiders, showManager],
+    queryKey: ['coureurs-search-infinite', phaseId, leagueId, debouncedSearchTerm, showTakenRiders, showManager, context],
     queryFn: async ({ pageParam = 0 }) => {
       if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) {
         return { items: [], pagination: { limit: 100, offset: 0, has_more: false } };
       }
 
-      const { data, error } = await supabase.functions.invoke('auction-search-riders', {
-        body: {
-          phase_id: phaseId,
-          league_id: leagueId,
-          q: debouncedSearchTerm,
-          available_only: !showTakenRiders,
-          limit: 100,
-          offset: pageParam,
-          exclude_rider_ids: null,
-        },
+      const edgeFunction = context === 'super-admin' 
+        ? 'super-admin-search-riders' 
+        : 'auction-search-riders';
+
+      const requestBody = context === 'super-admin' 
+        ? {
+            phase_id: phaseId,
+            q: debouncedSearchTerm,
+            limit: 100,
+            offset: pageParam,
+          }
+        : {
+            phase_id: phaseId,
+            league_id: leagueId,
+            q: debouncedSearchTerm,
+            available_only: !showTakenRiders,
+            limit: 100,
+            offset: pageParam,
+            exclude_rider_ids: null,
+          };
+
+      const { data, error } = await supabase.functions.invoke(edgeFunction, {
+        body: requestBody,
       });
 
       if (error) throw error;
@@ -112,12 +127,12 @@ export const CoureursCombobox = ({
       coureur_id: item.rider_id,
       coureur_nom: item.rider_nom,
       coureur_equipe: item.rider_team,
-      is_taken: item.is_taken,
-      taken_by_manager_nom: item.taken_by_manager_nom,
+      is_taken: context === 'super-admin' ? false : item.is_taken,
+      taken_by_manager_nom: context === 'super-admin' ? null : item.taken_by_manager_nom,
       id: item.rider_id,
       nom: item.rider_nom,
       equipe: item.rider_team,
-      manager_nom: item.taken_by_manager_nom,
+      manager_nom: context === 'super-admin' ? null : item.taken_by_manager_nom,
     }))
   ) || [];
 
@@ -192,7 +207,7 @@ export const CoureursCombobox = ({
                             </span>
                           )}
                         </div>
-                        {coureur.is_taken && coureur.taken_by_manager_nom && (
+                        {context !== 'super-admin' && coureur.is_taken && coureur.taken_by_manager_nom && (
                           <Badge variant="secondary" className="ml-2 text-xs">
                             {coureur.taken_by_manager_nom}
                           </Badge>

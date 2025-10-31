@@ -807,6 +807,7 @@ export const ResultsEntryStudioMobile = ({
                         onSelect={(coureur) => handleRiderChange(index, coureur)}
                         phaseId={course.phase_id}
                         disabled={isCancelled}
+                        context="super-admin"
                       />
                     </div>
                     <Badge variant="secondary" className="text-[9px] px-1 py-0 whitespace-nowrap">{row.points}pts</Badge>
@@ -866,6 +867,7 @@ export const ResultsEntryStudioMobile = ({
                         onSelect={(coureur) => handleRiderChange(index, coureur)}
                         phaseId={course.phase_id}
                         disabled={isCancelled}
+                        context="super-admin"
                       />
                     </div>
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
@@ -913,6 +915,7 @@ export const ResultsEntryStudioMobile = ({
                         onSelect={(coureur) => handleRiderChange(index, coureur)}
                         phaseId={course.phase_id}
                         disabled={isCancelled}
+                        context="super-admin"
                       />
                     </div>
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
@@ -961,6 +964,7 @@ export const ResultsEntryStudioMobile = ({
                         onSelect={(coureur) => handleRiderChange(index, coureur)}
                         phaseId={course.phase_id}
                         disabled={isCancelled}
+                        context="super-admin"
                       />
                     </div>
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
@@ -1009,6 +1013,7 @@ export const ResultsEntryStudioMobile = ({
                         onSelect={(coureur) => handleRiderChange(index, coureur)}
                         phaseId={course.phase_id}
                         disabled={isCancelled}
+                        context="super-admin"
                       />
                     </div>
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{row.points}pts</Badge>
@@ -1052,6 +1057,7 @@ export const ResultsEntryStudioMobile = ({
                       onSelect={(coureur) => setCombatifWinner(coureur?.coureur_id || null)}
                       phaseId={course.phase_id}
                       disabled={isCancelled}
+                      context="super-admin"
                     />
                   </div>
                 )}

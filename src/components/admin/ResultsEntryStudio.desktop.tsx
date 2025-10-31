@@ -986,20 +986,21 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                       <tr key={index} className={cn("hover:bg-muted/50", isCancelled && "opacity-50 pointer-events-none")}>
                         <td className="px-4 py-2 text-sm font-medium">{row.position}</td>
                          <td className="px-4 py-2">
-                          <CoureursCombobox
-                            phaseId={course.phase_id}
-                            value={row.coureur_id}
-                            onSelect={(coureur) => {
-                              if (coureur) {
-                                handleRiderChange(index, coureur.coureur_id, coureur.coureur_nom);
-                              } else {
-                                handleRiderChange(index, null, null);
-                              }
-                            }}
-                            placeholder={row.coureur_nom || "Sélectionner un coureur..."}
-                            showTakenRiders={true}
-                            disabled={isCancelled}
-                          />
+                  <CoureursCombobox
+                    phaseId={course.phase_id}
+                    value={row.coureur_id}
+                    onSelect={(coureur) => {
+                      if (coureur) {
+                        handleRiderChange(index, coureur.coureur_id, coureur.coureur_nom);
+                      } else {
+                        handleRiderChange(index, null, null);
+                      }
+                    }}
+                    placeholder={row.coureur_nom || "Sélectionner un coureur..."}
+                    showTakenRiders={true}
+                    disabled={isCancelled}
+                    context="super-admin"
+                  />
                         </td>
                         <td className="px-4 py-2 text-sm text-muted-foreground">
                           {row.coureur_equipe || '—'}
@@ -1040,6 +1041,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                   setIsDirty(true);
                 }}
                 showTakenRiders={true}
+                context="super-admin"
               />
             </div>
           )}
