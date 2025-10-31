@@ -433,6 +433,8 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         validated_count={context.validated_count}
         total_managers={context.total_managers}
         phase_index={context.phase_index}
+        onSubmit={handleSubmitAll}
+        isSubmitting={submitAllMutation.isPending}
       />
 
       {/* Tabs: Mes Enchères / Recherche */}
@@ -447,7 +449,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         </TabsList>
 
         <TabsContent value="my-bids" className="flex-1 mt-0 pt-2 flex flex-col">
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto pb-4">
             <MyBidsList
               bids={[...(context.roster || []), ...(context.my_bids || [])]}
               onUpdateAmount={handleUpdateAmount}
@@ -457,16 +459,6 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
               isUpdating={upsertBidMutation.isPending || removeBidMutation.isPending}
             />
           </div>
-          
-          {/* Submit Button - Only in My Bids tab */}
-          <AuctionSubmitButton
-            canSubmit={context.validation_status.can_submit}
-            onSubmit={handleSubmitAll}
-            isSubmitting={submitAllMutation.isPending}
-            draft_count={context.totals.draft_count}
-            draft_sum={context.totals.draft_sum}
-            currency={context.currency}
-          />
         </TabsContent>
 
         <TabsContent value="search" className="flex-1 mt-0 flex flex-col">

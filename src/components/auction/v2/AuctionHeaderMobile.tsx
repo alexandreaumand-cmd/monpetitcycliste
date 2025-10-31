@@ -28,6 +28,8 @@ interface AuctionHeaderMobileProps {
   validated_count?: number;
   total_managers?: number;
   phase_index?: number;
+  onSubmit?: () => void;
+  isSubmitting?: boolean;
 }
 
 export function AuctionHeaderMobile({
@@ -44,6 +46,8 @@ export function AuctionHeaderMobile({
   validated_count = 0,
   total_managers = 0,
   phase_index,
+  onSubmit,
+  isSubmitting = false,
 }: AuctionHeaderMobileProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const progressPercentage = ((budget_spent + draft_sum) / starting_budget) * 100;
@@ -127,8 +131,26 @@ export function AuctionHeaderMobile({
             </div>
           </div>
 
-          {/* Status + Expand Button */}
-          <div className="flex items-center gap-2">
+          {/* Validation Button + Status + Expand */}
+          <div className="flex items-center gap-1.5">
+            {draft_count > 0 && onSubmit && (
+              <Button
+                onClick={onSubmit}
+                disabled={!allValid || isSubmitting}
+                size="sm"
+                className="h-7 text-[10px] px-2"
+              >
+                {isSubmitting ? (
+                  "..."
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Valider
+                  </>
+                )}
+              </Button>
+            )}
+            
             {allValid ? (
               <Badge variant="default" className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px] px-1.5 py-0">
                 <CheckCircle2 className="h-3 w-3 mr-0.5" />
