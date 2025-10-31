@@ -103,7 +103,7 @@ export const CoureursTable = ({ coureurs, isLoading, onSave, preloadedEquipes }:
                       {coureur.saison_annee || 'N/A'}
                     </TableCell>
 
-                    {/* Coureur ID (text, modifiable) */}
+                    {/* Coureur */}
                     <TableCell>
                       {editing ? (
                         <>
@@ -119,11 +119,8 @@ export const CoureursTable = ({ coureurs, isLoading, onSave, preloadedEquipes }:
                           </span>
                         </>
                       ) : (
-                        <div>
-                          <div className="font-mono text-xs">{coureur.coureur_id}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {coureur.coureur_nom || 'Nom inconnu'}
-                          </div>
+                        <div className="text-sm">
+                          {coureur.coureur_nom || 'Nom inconnu'}
                         </div>
                       )}
                     </TableCell>
