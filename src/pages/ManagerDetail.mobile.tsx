@@ -20,15 +20,20 @@ export const ManagerDetailMobile = () => {
   const { data: standing, isLoading } = useQuery({
     queryKey: ["manager-detail", managerId, selectedSeason?.id, leagueId],
     queryFn: async () => {
-      if (!managerId || !leagueId || !selectedSeason?.id) return null;
-
-      const { data, error } = await supabase
+      if (!managerId || !selectedSeason?.id) return null;
+      
+      // Si pas de leagueId dans le contexte, chercher dans toutes les ligues
+      let query = supabase
         .from("v_manager_standings_by_season_v2")
         .select("*")
         .eq("manager_id", managerId)
-        .eq("saison_id", selectedSeason.id)
-        .eq("league_id", leagueId)
-        .maybeSingle();
+        .eq("saison_id", selectedSeason.id);
+      
+      if (leagueId) {
+        query = query.eq("league_id", leagueId);
+      }
+      
+      const { data, error } = await query.maybeSingle();
 
       if (error) throw error;
       
@@ -57,25 +62,25 @@ export const ManagerDetailMobile = () => {
       
       return data;
     },
-    enabled: !!managerId && !!selectedSeason?.id && !!leagueId,
+    enabled: !!managerId && !!selectedSeason?.id,
   });
 
   const { data: allStandings } = useQuery({
-    queryKey: ["all-standings", selectedSeason?.id, leagueId],
+    queryKey: ["all-standings", selectedSeason?.id, standing?.league_id],
     queryFn: async () => {
-      if (!leagueId || !selectedSeason?.id) return [];
+      if (!selectedSeason?.id || !standing?.league_id) return [];
 
       const { data, error } = await supabase
         .from("v_manager_standings_by_season_v2")
         .select("*")
         .eq("saison_id", selectedSeason.id)
-        .eq("league_id", leagueId)
+        .eq("league_id", standing.league_id)
         .order("total_points", { ascending: false });
 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!selectedSeason?.id && !!leagueId,
+    enabled: !!selectedSeason?.id && !!standing?.league_id,
   });
 
   const { data: sponsorData } = useManagerSponsor(managerId || "", selectedSeason?.id);
