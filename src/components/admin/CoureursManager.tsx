@@ -19,22 +19,28 @@ export const CoureursManager = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Solution 1: Charger la saison par défaut
-  useEffect(() => {
-    const loadDefaultSeason = async () => {
-      const { data: latestSeason } = await supabase
+  // Solution 4: Charger la saison par défaut avec useQuery
+  const { data: defaultSeason, isLoading: isLoadingDefaultSeason } = useQuery({
+    queryKey: ['default-season'],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('saisons')
         .select('id')
         .order('annee', { ascending: false })
         .limit(1)
         .single();
       
-      if (latestSeason && filters.saison_ids.length === 0) {
-        setFilters(prev => ({ ...prev, saison_ids: [latestSeason.id] }));
-      }
-    };
-    loadDefaultSeason();
-  }, []);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Synchroniser avec les filtres quand la saison est chargée
+  useEffect(() => {
+    if (defaultSeason && filters.saison_ids.length === 0) {
+      setFilters(prev => ({ ...prev, saison_ids: [defaultSeason.id] }));
+    }
+  }, [defaultSeason]);
 
   // Solution 2: Optimisation de la requête avec un seul SELECT et tous les JOINs
   const { data: coureurs, isLoading } = useQuery({
@@ -86,7 +92,7 @@ export const CoureursManager = () => {
 
       return data || [];
     },
-    enabled: filters.saison_ids.length > 0,
+    enabled: !isLoadingDefaultSeason && filters.saison_ids.length > 0,
   });
 
   // Solution 3: Pré-charger toutes les équipes pour éviter N requêtes
