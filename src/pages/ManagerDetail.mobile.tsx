@@ -20,17 +20,41 @@ export const ManagerDetailMobile = () => {
   const { data: standing, isLoading } = useQuery({
     queryKey: ["manager-detail", managerId, selectedSeason?.id, leagueId],
     queryFn: async () => {
-      if (!managerId || !leagueId) return null;
+      if (!managerId || !leagueId || !selectedSeason?.id) return null;
 
       const { data, error } = await supabase
         .from("v_manager_standings_by_season_v2")
         .select("*")
         .eq("manager_id", managerId)
-        .eq("saison_id", selectedSeason?.id)
+        .eq("saison_id", selectedSeason.id)
         .eq("league_id", leagueId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      
+      // Si pas de données pour cette saison, récupérer les infos du manager quand même
+      if (!data) {
+        const { data: managerData } = await supabase
+          .from("managers")
+          .select("id, nom")
+          .eq("id", managerId)
+          .maybeSingle();
+        
+        if (managerData) {
+          return {
+            manager_id: managerData.id,
+            manager_nom: managerData.nom,
+            total_points: 0,
+            race_points: 0,
+            bonus_points: 0,
+            scoreurs_count: 0,
+            victories_count: 0,
+            league_id: leagueId,
+            saison_id: selectedSeason.id,
+          };
+        }
+      }
+      
       return data;
     },
     enabled: !!managerId && !!selectedSeason?.id && !!leagueId,
@@ -85,7 +109,12 @@ export const ManagerDetailMobile = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-bold">Manager introuvable</h1>
+            <h1 className="text-lg font-bold">Détails manager</h1>
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="text-center py-8 text-muted-foreground">
+            Aucune donnée disponible pour ce manager dans cette saison
           </div>
         </div>
       </div>
