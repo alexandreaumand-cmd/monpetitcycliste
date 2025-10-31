@@ -133,16 +133,16 @@ export const CoureursTable = ({ coureurs, isLoading, onSave, preloadedEquipes }:
                             saisonId={coureur.saison_id}
                             value={getCellValue(coureur, 'equipe_id')}
                             onChange={(equipeId) => handleCellEdit(coureur.id, 'equipe_id', equipeId)}
-                            placeholder={coureur.equipe_nom_affiche || 'Sélectionner une équipe'}
+                            placeholder={coureur.equipe_nom || 'Sélectionner une équipe'}
                             preloadedEquipes={preloadedEquipes}
                           />
                           <span className="text-xs text-muted-foreground mt-1 block">
-                            Actuel: {coureur.equipe_nom_affiche || 'N/A'}
+                            Actuel: {coureur.equipe_nom || 'N/A'}
                           </span>
                         </>
                       ) : (
                         <div className="text-sm">
-                          {coureur.equipe_nom_affiche || 'Aucune équipe'}
+                          {coureur.equipe_nom || 'Aucune équipe'}
                         </div>
                       )}
                     </TableCell>
