@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -53,7 +53,7 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedManager, setSelectedManager] = useState<string>("all");
   const [selectedRound, setSelectedRound] = useState<string>("all");
-  const [priceRange, setPriceRange] = useState([0, 500]);
+  const [priceRange, setPriceRange] = useState([0, 1000]);
   const [sortField, setSortField] = useState<SortField>("round_number");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -180,6 +180,15 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
     return [...new Set(allAuctionData.map((item) => item.round_number))].sort((a, b) => a - b);
   }, [allAuctionData]);
 
+  const maxPrice = useMemo(() => {
+    if (allAuctionData.length === 0) return 1000;
+    return Math.max(...allAuctionData.map(item => item.winning_amount));
+  }, [allAuctionData]);
+
+  useEffect(() => {
+    setPriceRange([0, maxPrice]);
+  }, [maxPrice]);
+
   const toggleRow = (coureurId: string, roundNumber: number) => {
     const key = `${coureurId}-${roundNumber}`;
     const newExpanded = new Set(expandedRows);
@@ -285,7 +294,7 @@ export function AuctionDatabaseTab({ phaseId, leagueId }: AuctionDatabaseTabProp
               </div>
               <Slider
                 min={0}
-                max={500}
+                max={maxPrice}
                 step={10}
                 value={priceRange}
                 onValueChange={setPriceRange}
