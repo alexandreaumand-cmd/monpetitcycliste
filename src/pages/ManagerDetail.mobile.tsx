@@ -198,7 +198,7 @@ export const ManagerDetailMobile = () => {
         </div>
 
         {/* Breakdown */}
-        <ManagerBreakdown managerId={managerId || ""} />
+        <ManagerBreakdown managerId={managerId || ""} phaseId={activePhase?.id} />
       </div>
     </div>
   );
