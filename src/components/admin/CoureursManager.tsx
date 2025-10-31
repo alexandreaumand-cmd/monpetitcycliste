@@ -40,23 +40,19 @@ export const CoureursManager = () => {
     }
   }, [defaultSeason?.id]); // Enlever filters.saison_ids.length pour éviter la boucle
 
-  // Requête simplifiée pour charger les coureurs
+  // Requête simplifiée pour charger les coureurs via la vue
   const { data: coureurs, isLoading } = useQuery({
     queryKey: ['admin-coureurs', filters],
     queryFn: async () => {
       if (filters.saison_ids.length === 0) return [];
 
       let query = supabase
-        .from('coureurs_saisons')
-        .select(`
-          *,
-          coureurs!inner(id, nom, uci_id),
-          saisons(id, annee)
-        `)
+        .from('v_coureurs_saisons_admin')
+        .select('*')
         .in('saison_id', filters.saison_ids);
 
       if (filters.search) {
-        query = query.ilike('coureurs.nom', `%${filters.search}%`);
+        query = query.ilike('coureur_nom', `%${filters.search}%`);
       }
       if (filters.equipe_ids.length > 0) {
         query = query.in('equipe_id', filters.equipe_ids);
@@ -82,7 +78,7 @@ export const CoureursManager = () => {
       if (error) throw error;
       
       return data?.sort((a, b) => 
-        (a.coureurs?.nom || '').localeCompare(b.coureurs?.nom || '')
+        (a.coureur_nom || '').localeCompare(b.coureur_nom || '')
       ) || [];
     },
     enabled: filters.saison_ids.length > 0,

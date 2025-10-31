@@ -100,7 +100,7 @@ export const CoureursTable = ({ coureurs, isLoading, onSave, preloadedEquipes }:
 
                     {/* Saison (affiche l'année) */}
                     <TableCell className="text-sm font-medium">
-                      {coureur.saison?.annee || 'N/A'}
+                      {coureur.saison_annee || 'N/A'}
                     </TableCell>
 
                     {/* Coureur ID (text, modifiable) */}
@@ -115,14 +115,14 @@ export const CoureursTable = ({ coureurs, isLoading, onSave, preloadedEquipes }:
                             placeholder="coureur_id"
                           />
                           <span className="text-xs text-muted-foreground mt-1 block">
-                            {coureur.coureurs?.nom || 'Nom inconnu'}
+                            {coureur.coureur_nom || 'Nom inconnu'}
                           </span>
                         </>
                       ) : (
                         <div>
                           <div className="font-mono text-xs">{coureur.coureur_id}</div>
                           <div className="text-xs text-muted-foreground">
-                            {coureur.coureurs?.nom || 'Nom inconnu'}
+                            {coureur.coureur_nom || 'Nom inconnu'}
                           </div>
                         </div>
                       )}
@@ -136,16 +136,16 @@ export const CoureursTable = ({ coureurs, isLoading, onSave, preloadedEquipes }:
                             saisonId={coureur.saison_id}
                             value={getCellValue(coureur, 'equipe_id')}
                             onChange={(equipeId) => handleCellEdit(coureur.id, 'equipe_id', equipeId)}
-                            placeholder={coureur.equipes_saisons?.nom_affiche || 'Sélectionner une équipe'}
+                            placeholder={coureur.equipe_nom_affiche || 'Sélectionner une équipe'}
                             preloadedEquipes={preloadedEquipes}
                           />
                           <span className="text-xs text-muted-foreground mt-1 block">
-                            Actuel: {coureur.equipes_saisons?.nom_affiche || 'N/A'}
+                            Actuel: {coureur.equipe_nom_affiche || 'N/A'}
                           </span>
                         </>
                       ) : (
                         <div className="text-sm">
-                          {coureur.equipes_saisons?.nom_affiche || 'Aucune équipe'}
+                          {coureur.equipe_nom_affiche || 'Aucune équipe'}
                         </div>
                       )}
                     </TableCell>
