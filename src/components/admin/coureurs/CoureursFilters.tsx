@@ -32,48 +32,27 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
   const { data: equipes } = useQuery({
     queryKey: ['equipes-saisons-filter', filters.saison_ids],
     queryFn: async () => {
+      if (filters.saison_ids.length === 0) return [];
+
       const { data, error } = await supabase
         .from('equipes_saisons')
         .select('equipe_id, nom_affiche, equipes!inner(code_court)')
-        .then(async (result) => {
-          if (filters.saison_ids.length > 0) {
-            return supabase
-              .from('equipes_saisons')
-              .select('equipe_id, nom_affiche, equipes!inner(code_court)')
-              .in('saison_id', filters.saison_ids)
-              .order('nom_affiche');
-          }
-          return supabase
-            .from('equipes_saisons')
-            .select('equipe_id, nom_affiche, equipes!inner(code_court)')
-            .order('nom_affiche')
-            .limit(1000);
-        });
+        .in('saison_id', filters.saison_ids)
+        .order('nom_affiche');
       
-      const { data: finalData, error: finalError } = await (filters.saison_ids.length > 0
-        ? supabase
-            .from('equipes_saisons')
-            .select('equipe_id, nom_affiche, equipes!inner(code_court)')
-            .in('saison_id', filters.saison_ids)
-            .order('nom_affiche')
-        : supabase
-            .from('equipes_saisons')
-            .select('equipe_id, nom_affiche, equipes!inner(code_court)')
-            .order('nom_affiche')
-            .limit(1000));
-      
-      if (finalError) throw finalError;
+      if (error) throw error;
       
       // Remove duplicates by equipe_id
-      const uniqueEquipes = finalData?.reduce((acc, curr) => {
+      const uniqueEquipes = data?.reduce((acc, curr) => {
         if (!acc.find(e => e.equipe_id === curr.equipe_id)) {
           acc.push(curr);
         }
         return acc;
-      }, [] as typeof finalData) || [];
+      }, [] as typeof data) || [];
       
       return uniqueEquipes;
     },
+    enabled: filters.saison_ids.length > 0,
   });
 
   const saisonOptions: MultiSelectOption[] = saisons?.map(s => ({
@@ -119,7 +98,7 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
             options={saisonOptions}
             selected={filters.saison_ids}
             onChange={(selected) => onFiltersChange({ ...filters, saison_ids: selected, equipe_ids: [] })}
-            placeholder="Toutes les saisons"
+            placeholder="Sélectionner saisons *"
           />
 
           {/* Recherche */}
@@ -139,6 +118,7 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
             selected={filters.equipe_ids}
             onChange={(selected) => onFiltersChange({ ...filters, equipe_ids: selected })}
             placeholder="Toutes les équipes"
+            disabled={filters.saison_ids.length === 0}
           />
 
           {/* Côtes */}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -19,53 +19,19 @@ export const CoureursManager = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Solution 4: Charger la saison par défaut avec useQuery
-  const { data: defaultSeason, isLoading: isLoadingDefaultSeason } = useQuery({
-    queryKey: ['default-season'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('saisons')
-        .select('id')
-        .order('annee', { ascending: false })
-        .limit(1)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Synchroniser avec les filtres quand la saison est chargée
-  useEffect(() => {
-    if (defaultSeason?.id) {
-      setFilters(prev => {
-        // Ne mettre à jour que si vraiment vide
-        if (prev.saison_ids.length === 0) {
-          return { ...prev, saison_ids: [defaultSeason.id] };
-        }
-        return prev;
-      });
-    }
-  }, [defaultSeason?.id]);
-
-  // Solution 2: Optimisation de la requête avec un seul SELECT et tous les JOINs
+  // Fetch coureurs pour une saison spécifique
   const { data: coureurs, isLoading } = useQuery({
     queryKey: ['admin-coureurs', filters],
     queryFn: async () => {
-      if (filters.saison_ids.length === 0) {
-        return [];
-      }
+      if (filters.saison_ids.length === 0) return [];
 
       let query = supabase
         .from('coureurs_saisons')
         .select(`
           *,
-          coureurs!inner(id, nom, uci_id),
-          equipes_saisons!left(equipe_id, saison_id, nom_affiche, categorie, equipes!inner(code_court, nom_complet)),
-          saisons!inner(id, annee)
-        `);
-
-      query = query.in('saison_id', filters.saison_ids);
+          coureurs!inner(id, nom, uci_id)
+        `)
+        .in('saison_id', filters.saison_ids);
 
       if (filters.search) {
         query = query.ilike('coureurs.nom', `%${filters.search}%`);
@@ -84,6 +50,7 @@ export const CoureursManager = () => {
           return { min, max };
         });
 
+        // Apply OR logic for multiple price ranges
         query = query.or(
           priceFilters
             .map(({ min, max }) => `and(prix_initial.gte.${min},prix_initial.lte.${max})`)
@@ -96,21 +63,47 @@ export const CoureursManager = () => {
       const { data, error } = await query;
       if (error) throw error;
 
-      return data || [];
-    },
-    enabled: !isLoadingDefaultSeason && filters.saison_ids.length > 0,
-  });
+      // Enrich with team and season information
+      if (data && data.length > 0) {
+        const uniqueEquipeIds = [...new Set(data.map(cs => cs.equipe_id).filter(Boolean))];
+        const uniqueSaisonIds = [...new Set(data.map(cs => cs.saison_id).filter(Boolean))];
+        
+        // Fetch teams
+        let equipesMap = new Map();
+        if (uniqueEquipeIds.length > 0) {
+          const { data: equipesData } = await supabase
+            .from('equipes_saisons')
+            .select('equipe_id, saison_id, nom_affiche, categorie, equipes!inner(code_court, nom_complet)')
+            .in('equipe_id', uniqueEquipeIds)
+            .in('saison_id', filters.saison_ids);
+          
+          equipesMap = new Map(
+            equipesData?.map(e => [`${e.equipe_id}_${e.saison_id}`, e]) || []
+          );
+        }
 
-  // Solution 3: Pré-charger toutes les équipes pour éviter N requêtes
-  const { data: allEquipes } = useQuery({
-    queryKey: ['equipes-for-table', filters.saison_ids],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('equipes_saisons')
-        .select('equipe_id, saison_id, nom_affiche, categorie, equipes!inner(code_court, nom_complet)')
-        .in('saison_id', filters.saison_ids)
-        .order('nom_affiche');
-      return data || [];
+        // Fetch seasons
+        let saisonsMap = new Map();
+        if (uniqueSaisonIds.length > 0) {
+          const { data: saisonsData } = await supabase
+            .from('saisons')
+            .select('id, annee')
+            .in('id', uniqueSaisonIds);
+          
+          saisonsMap = new Map(
+            saisonsData?.map(s => [s.id, s]) || []
+          );
+        }
+        
+        // Enrich each coureur with team and season info
+        return data.map(cs => ({
+          ...cs,
+          equipes_saisons: equipesMap.get(`${cs.equipe_id}_${cs.saison_id}`) || null,
+          saison: saisonsMap.get(cs.saison_id) || null
+        }));
+      }
+
+      return data;
     },
     enabled: filters.saison_ids.length > 0,
   });
@@ -155,12 +148,18 @@ export const CoureursManager = () => {
 
       <CoureursFilters filters={filters} onFiltersChange={setFilters} />
 
-      <CoureursTable
-        coureurs={coureurs || []}
-        isLoading={isLoading}
-        onSave={(updates) => updateCoureursMutation.mutate(updates)}
-        preloadedEquipes={allEquipes || []}
-      />
+      {filters.saison_ids.length > 0 ? (
+        <CoureursTable
+          coureurs={coureurs || []}
+          isLoading={isLoading}
+          onSave={(updates) => updateCoureursMutation.mutate(updates)}
+        />
+      ) : (
+        <Card className="p-12 text-center">
+          <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">Sélectionnez au moins une saison pour voir les coureurs</p>
+        </Card>
+      )}
     </div>
   );
 };
