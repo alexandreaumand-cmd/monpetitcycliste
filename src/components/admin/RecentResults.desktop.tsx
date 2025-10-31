@@ -35,7 +35,7 @@ type ResultsStatus = {
 };
 
 export const RecentResults = () => {
-  const { selectedSeason, seasons, phases: allPhases } = useSeasonContext();
+  const { selectedSeason, seasons, setSelectedSeason, phases: allPhases } = useSeasonContext();
   
   type ViewMode = '30days' | 'phase';
   const [viewMode, setViewMode] = useState<ViewMode>('30days');
@@ -224,6 +224,31 @@ export const RecentResults = () => {
               <Award className="h-4 w-4" />
               Bonus
             </Button>
+          )}
+          
+          {/* Sélecteur de saison */}
+          {selectedSeason && seasons.length > 0 && (
+            <div className="flex items-center gap-2 ml-auto">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Select 
+                value={selectedSeason.id} 
+                onValueChange={(value) => {
+                  const season = seasons.find(s => s.id === value);
+                  if (season) setSelectedSeason(season);
+                }}
+              >
+                <SelectTrigger className="h-9 w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {seasons.map((season) => (
+                    <SelectItem key={season.id} value={season.id}>
+                      Saison {season.annee}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
         </div>
 
