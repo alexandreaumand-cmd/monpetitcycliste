@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Users, Plus } from "lucide-react";
 import { CoureursTable } from "./coureurs/CoureursTable";
 import { CoureursFilters } from "./coureurs/CoureursFilters";
+import { AddCoureurDialog } from "./coureurs/AddCoureurDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,6 +17,7 @@ export const CoureursManager = () => {
     equipe_ids: [] as string[],
     cote_ranges: [] as string[],
   });
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -145,11 +147,17 @@ export const CoureursManager = () => {
         title="Gestion des coureurs"
         subtitle="Éditer les équipes et cotes des coureurs par saison"
         actions={
-          <Button onClick={() => toast({ title: "🚧 À venir", description: "Fonctionnalité d'ajout de coureur en développement" })}>
+          <Button onClick={() => setIsAddDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Ajouter un coureur
           </Button>
         }
+      />
+
+      <AddCoureurDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        defaultSaisonId={filters.saison_ids[0]}
       />
 
       <CoureursFilters filters={filters} onFiltersChange={setFilters} />
