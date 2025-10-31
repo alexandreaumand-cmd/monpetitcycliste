@@ -23,15 +23,17 @@ export const CoureursManager = () => {
   const { data: coureurs, isLoading } = useQuery({
     queryKey: ['admin-coureurs', filters],
     queryFn: async () => {
-      if (filters.saison_ids.length === 0) return [];
-
+      // Si aucune saison sélectionnée, on charge tous les coureurs
       let query = supabase
         .from('coureurs_saisons')
         .select(`
           *,
           coureurs!inner(id, nom, uci_id)
-        `)
-        .in('saison_id', filters.saison_ids);
+        `);
+
+      if (filters.saison_ids.length > 0) {
+        query = query.in('saison_id', filters.saison_ids);
+      }
 
       if (filters.search) {
         query = query.ilike('coureurs.nom', `%${filters.search}%`);
@@ -71,11 +73,15 @@ export const CoureursManager = () => {
         // Fetch teams
         let equipesMap = new Map();
         if (uniqueEquipeIds.length > 0) {
+          const equipesFilter = filters.saison_ids.length > 0
+            ? filters.saison_ids
+            : uniqueSaisonIds;
+
           const { data: equipesData } = await supabase
             .from('equipes_saisons')
             .select('equipe_id, saison_id, nom_affiche, categorie, equipes!inner(code_court, nom_complet)')
             .in('equipe_id', uniqueEquipeIds)
-            .in('saison_id', filters.saison_ids);
+            .in('saison_id', equipesFilter);
           
           equipesMap = new Map(
             equipesData?.map(e => [`${e.equipe_id}_${e.saison_id}`, e]) || []
@@ -105,7 +111,6 @@ export const CoureursManager = () => {
 
       return data;
     },
-    enabled: filters.saison_ids.length > 0,
   });
 
   // Mutation pour update coureurs_saisons
@@ -148,18 +153,11 @@ export const CoureursManager = () => {
 
       <CoureursFilters filters={filters} onFiltersChange={setFilters} />
 
-      {filters.saison_ids.length > 0 ? (
-        <CoureursTable
-          coureurs={coureurs || []}
-          isLoading={isLoading}
-          onSave={(updates) => updateCoureursMutation.mutate(updates)}
-        />
-      ) : (
-        <Card className="p-12 text-center">
-          <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">Sélectionnez au moins une saison pour voir les coureurs</p>
-        </Card>
-      )}
+      <CoureursTable
+        coureurs={coureurs || []}
+        isLoading={isLoading}
+        onSave={(updates) => updateCoureursMutation.mutate(updates)}
+      />
     </div>
   );
 };
