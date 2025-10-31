@@ -19,7 +19,7 @@ export const CoureursManager = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Solution 1: Charger la saison par défaut (la plus récente)
+  // Charger la saison par défaut (la plus récente) une seule fois
   const { data: defaultSeason } = useQuery({
     queryKey: ['default-season'],
     queryFn: async () => {
@@ -33,14 +33,14 @@ export const CoureursManager = () => {
     },
   });
 
-  // Synchroniser avec les filtres quand la saison est chargée
+  // Initialiser les filtres une seule fois au chargement
   useEffect(() => {
     if (defaultSeason?.id && filters.saison_ids.length === 0) {
       setFilters(prev => ({ ...prev, saison_ids: [defaultSeason.id] }));
     }
-  }, [defaultSeason?.id, filters.saison_ids.length]);
+  }, [defaultSeason?.id]); // Enlever filters.saison_ids.length pour éviter la boucle
 
-  // Solution 2: Requête optimisée avec un seul JOIN
+  // Requête simplifiée pour charger les coureurs
   const { data: coureurs, isLoading } = useQuery({
     queryKey: ['admin-coureurs', filters],
     queryFn: async () => {
@@ -62,7 +62,6 @@ export const CoureursManager = () => {
         query = query.in('equipe_id', filters.equipe_ids);
       }
 
-      // Apply price range filters
       if (filters.cote_ranges.length > 0) {
         const priceFilters = filters.cote_ranges.map(range => {
           if (range === "150+") {
@@ -72,7 +71,6 @@ export const CoureursManager = () => {
           return { min, max };
         });
 
-        // Apply OR logic for multiple price ranges
         query = query.or(
           priceFilters
             .map(({ min, max }) => `and(prix_initial.gte.${min},prix_initial.lte.${max})`)
@@ -81,13 +79,8 @@ export const CoureursManager = () => {
       }
       
       const { data, error } = await query;
-      if (error) {
-        console.error('Erreur requête coureurs:', error);
-        throw error;
-      }
-      console.log('Coureurs chargés:', data?.length || 0);
+      if (error) throw error;
       
-      // Tri côté client car PostgREST ne supporte pas order() sur les relations
       return data?.sort((a, b) => 
         (a.coureurs?.nom || '').localeCompare(b.coureurs?.nom || '')
       ) || [];
@@ -95,7 +88,7 @@ export const CoureursManager = () => {
     enabled: filters.saison_ids.length > 0,
   });
 
-  // Solution 3: Pré-charger toutes les équipes pour le cache
+  // Pré-charger les équipes pour le cache
   const { data: preloadedEquipes } = useQuery({
     queryKey: ['equipes-for-table', filters.saison_ids],
     queryFn: async () => {
@@ -111,9 +104,10 @@ export const CoureursManager = () => {
       return data || [];
     },
     enabled: filters.saison_ids.length > 0,
+    staleTime: 5 * 60 * 1000, // Cache 5 minutes
   });
 
-  // Enrichir les coureurs avec les infos d'équipe côté client
+  // Enrichir les coureurs avec les infos d'équipe
   const enrichedCoureurs = coureurs?.map(cs => {
     const equipeInfo = preloadedEquipes?.find(
       eq => eq.equipe_id === cs.equipe_id && eq.saison_id === cs.saison_id
@@ -155,7 +149,7 @@ export const CoureursManager = () => {
         title="Gestion des coureurs"
         subtitle="Éditer les équipes et cotes des coureurs par saison"
         actions={
-          <Button>
+          <Button onClick={() => toast({ title: "🚧 À venir", description: "Fonctionnalité d'ajout de coureur en développement" })}>
             <Plus className="h-4 w-4 mr-2" />
             Ajouter un coureur
           </Button>
