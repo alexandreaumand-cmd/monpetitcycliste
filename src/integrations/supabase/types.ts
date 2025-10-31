@@ -3482,6 +3482,60 @@ export type Database = {
           },
         ]
       }
+      v_coureurs_with_teams: {
+        Row: {
+          coureur_id: string | null
+          coureur_nom: string | null
+          equipe_id: string | null
+          equipe_nom: string | null
+          prix_initial: number | null
+          saison_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coureurs_saisons_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_equipe_id_fkey"
+            columns: ["equipe_id"]
+            isOneToOne: false
+            referencedRelation: "equipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coureurs_saisons_saison_id_fkey"
+            columns: ["saison_id"]
+            isOneToOne: false
+            referencedRelation: "saisons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_course_points_theoriques: {
         Row: {
           categorie: string | null

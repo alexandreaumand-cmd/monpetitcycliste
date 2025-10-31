@@ -66,30 +66,25 @@ export function FinalTeamTab({
 
       if (!phase) return [];
 
-    const { data: coureurs } = await supabase
-      .from("coureurs_saisons")
-      .select(`
-        coureur_id,
-        coureurs!inner(id, nom),
-        prix_initial,
-        equipes_saisons!inner(nom_affiche)
-      `)
-      .eq("saison_id", phase.saison_id)
-      .in(
-        "coureur_id",
-        rosterData.map((r) => r.coureur_id)
-      );
+      const { data: coureurs } = await supabase
+        .from("v_coureurs_with_teams")
+        .select("coureur_id, coureur_nom, equipe_nom, prix_initial")
+        .eq("saison_id", phase.saison_id)
+        .in(
+          "coureur_id",
+          rosterData.map((r) => r.coureur_id)
+        );
 
-    const coureursMap = new Map(
-      (coureurs || []).map((c: any) => [
-        c.coureur_id,
-        {
-          nom: c.coureurs?.nom || "",
-          equipe: c.equipes_saisons?.nom_affiche || "",
-          cote_initiale: c.prix_initial || 0,
-        },
-      ])
-    );
+      const coureursMap = new Map(
+        (coureurs || []).map((c: any) => [
+          c.coureur_id,
+          {
+            nom: c.coureur_nom || "",
+            equipe: c.equipe_nom || "",
+            cote_initiale: c.prix_initial || 0,
+          },
+        ])
+      );
 
       return rosterData.map((r) => ({
         coureur_id: r.coureur_id,
