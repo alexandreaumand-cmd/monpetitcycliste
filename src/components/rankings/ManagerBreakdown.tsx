@@ -18,27 +18,23 @@ import {
 type ManagerBreakdownProps = {
   managerId: string;
   phaseId?: string | null;
-  leagueId?: string | null;
 };
 
-export const ManagerBreakdown = ({ managerId, phaseId, leagueId: propLeagueId }: ManagerBreakdownProps) => {
-  const { leagueId: contextLeagueId, isLoading: leagueLoading } = useLeague();
+export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) => {
+  const { leagueId, isLoading: leagueLoading } = useLeague();
   const leagueClient = useLeagueClient();
   
-  // Utiliser le leagueId passé en prop ou celui du contexte
-  const effectiveLeagueId = propLeagueId || contextLeagueId;
-  
   const { data: breakdown, isLoading } = useQuery({
-    queryKey: ["manager-breakdown", managerId, phaseId, effectiveLeagueId] as const,
+    queryKey: ["manager-breakdown", managerId, phaseId, leagueId] as const,
     queryFn: async (): Promise<any[]> => {
-      if (!effectiveLeagueId) return [];
+      if (!leagueId) return [];
       
       const client: any = leagueClient;
       let query = client
         .from("v_manager_breakdown")
         .select("*")
         .eq("manager_id", managerId)
-        .eq("league_id", effectiveLeagueId);
+        .eq("league_id", leagueId);
       
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -49,7 +45,7 @@ export const ManagerBreakdown = ({ managerId, phaseId, leagueId: propLeagueId }:
       if (error) throw error;
       return data || [];
     },
-    enabled: !leagueLoading && !!effectiveLeagueId,
+    enabled: !leagueLoading && !!leagueId,
   });
 
   // Grouper les points par course
