@@ -53,13 +53,19 @@ Deno.serve(async (req) => {
 
         const meta = metaData && metaData.length > 0 ? metaData[0] : null;
 
-        // Get top 10 for General classification
-        const { data: top10, error: topError } = await supabase.rpc('results_course_top', {
-          p_course_id: course.course_id,
-          p_type_classement: 'General',
-          p_etape_numero: null,
-          p_limit: 10
-        });
+        // Get top 10 for General classification from points_ledger instead
+        const { data: top10, error: topError } = await supabase
+          .from('points_ledger')
+          .select(`
+            coureur_id,
+            coureurs!inner(nom),
+            points
+          `)
+          .eq('course_id', course.course_id)
+          .eq('type_classement', 'General')
+          .is('etape_numero', null)
+          .order('points', { ascending: false })
+          .limit(10);
 
         if (topError) {
           console.error(`Error fetching top 10 for ${course.course_id}:`, topError);
@@ -69,11 +75,11 @@ Deno.serve(async (req) => {
           console.error(`Error fetching metadata for ${course.course_id}:`, metaError);
         }
 
-        // Format top10 results
-        const formattedTop10 = (top10 || []).map((r: any) => ({
-          position: r.row_position || r.position || 0,
-          coureur_nom: r.coureur_nom || '',
-          coureur_equipe: r.equipe || '',
+        // Format top10 results with position based on order
+        const formattedTop10 = (top10 || []).map((r: any, index: number) => ({
+          position: index + 1,
+          coureur_nom: r.coureurs?.nom || '',
+          coureur_equipe: '',
           points: r.points || 0
         }));
 
