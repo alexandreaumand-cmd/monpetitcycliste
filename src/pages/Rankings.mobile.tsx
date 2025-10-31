@@ -552,7 +552,7 @@ export const RankingsMobile = () => {
         description="Historique des points par course"
       >
         {selectedManager && (
-          <ManagerBreakdown managerId={selectedManager} />
+          <ManagerBreakdown managerId={selectedManager} phaseId={selectedPhase} />
         )}
       </MobileBottomSheet>
 
