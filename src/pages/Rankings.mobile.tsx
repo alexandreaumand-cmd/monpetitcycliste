@@ -25,7 +25,7 @@ import { ManagerPrestigeIcons } from "@/components/rankings/ManagerPrestigeIcons
 import { useLeague } from "@/contexts/LeagueContext";
 import { useNavigate } from "react-router-dom";
 
-type TabView = "standings" | "riders" | "timeline" | "comparison" | "teams" | "courses";
+type TabView = "standings" | "riders" | "timeline" | "comparison";
 
 export const RankingsMobile = () => {
   const { selectedSeason, phases, activePhase } = useSeasonContext();
@@ -194,8 +194,6 @@ export const RankingsMobile = () => {
     { label: "Coureurs", value: "riders" as TabView },
     { label: "Chrono", value: "timeline" as TabView },
     { label: "Comparaison", value: "comparison" as TabView },
-    { label: "Équipes", value: "teams" as TabView },
-    { label: "Courses", value: "courses" as TabView },
   ];
 
   const getRankBadge = (rank: number) => {
@@ -544,22 +542,6 @@ export const RankingsMobile = () => {
 
         {activeTab === "comparison" && (
           <ManagerComparisonMobile phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
-        )}
-
-        {activeTab === "teams" && (
-          <MobileEmptyState
-            icon={<User className="h-12 w-12" />}
-            title="Détail par équipe"
-            description="Les détails par équipe seront disponibles prochainement"
-          />
-        )}
-
-        {activeTab === "courses" && (
-          <MobileEmptyState
-            icon={<Trophy className="h-12 w-12" />}
-            title="Par course"
-            description="Les classements par course seront disponibles prochainement"
-          />
         )}
       </div>
 
