@@ -46,6 +46,8 @@ export const RankingsMobile = () => {
   } | null>(null);
   const [riderDetailsOpen, setRiderDetailsOpen] = useState(false);
   const [expandedManagerId, setExpandedManagerId] = useState<string | null>(null);
+  const [fullDetailsOpen, setFullDetailsOpen] = useState(false);
+  const [fullDetailsManagerId, setFullDetailsManagerId] = useState<string | null>(null);
 
   // Fetch standings
   const { data: standings, isLoading: standingsLoading } = useQuery({
@@ -420,9 +422,9 @@ export const RankingsMobile = () => {
                           className="w-full"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const params = new URLSearchParams();
-                            if (leagueId) params.set('leagueId', leagueId);
-                            navigate(`/dashboard/rankings/${standing.manager_id}?${params.toString()}`);
+                            setFullDetailsManagerId(standing.manager_id);
+                            setExpandedManagerId(null);
+                            setFullDetailsOpen(true);
                           }}
                         >
                           Voir le détail complet
@@ -571,6 +573,23 @@ export const RankingsMobile = () => {
         phaseId={selectedPhase || ''}
         saisonId={selectedSeason?.id}
       />
+
+      <MobileBottomSheet
+        open={fullDetailsOpen}
+        onOpenChange={(open) => {
+          setFullDetailsOpen(open);
+          if (!open) setFullDetailsManagerId(null);
+        }}
+        title="Détail complet"
+        className="h-[95vh]"
+      >
+        {fullDetailsManagerId && (
+          <ManagerBreakdown 
+            managerId={fullDetailsManagerId} 
+            phaseId={selectedPhase}
+          />
+        )}
+      </MobileBottomSheet>
 
     </div>
   );
