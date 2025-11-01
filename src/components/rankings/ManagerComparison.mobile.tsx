@@ -487,42 +487,6 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     enabled: !!managerB,
   });
 
-  // Fetch coureurs details with season team
-  const { data: coureurs } = useQuery({
-    queryKey: ["coureurs-all-comparison", saisonId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("coureurs")
-        .select("id, nom");
-      if (error) throw error;
-
-      // Enrichir avec l'équipe de la saison depuis equipes_saisons
-      if (!saisonId) {
-        return (data || []).map(c => ({ ...c, equipe: 'N/A' as string }));
-      }
-
-      const enrichedData = await Promise.all(
-        (data || []).map(async (coureur) => {
-          const { data: seasonData } = await supabase
-            .from('coureurs_saisons')
-            .select(`
-              equipe_id,
-              equipes_saisons!coureurs_saisons_equipe_id_saison_id_fkey(nom_affiche)
-            `)
-            .eq('coureur_id', coureur.id)
-            .eq('saison_id', saisonId)
-            .maybeSingle();
-
-          return {
-            ...coureur,
-            equipe: (seasonData?.equipes_saisons as any)?.nom_affiche || 'N/A' as string
-          };
-        })
-      );
-
-      return enrichedData;
-    },
-  });
 
   // Calculate metrics - CORRIGÉ: ajouter bonus
   const totalPointsA = useMemo(() => {
@@ -625,66 +589,6 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     });
   }, [pointsA, pointsB, courses, coursesMap]);
 
-  // Top scorers
-  const topScorersA = useMemo(() => {
-    if (!rostersA || !pointsA || !coureurs) return [];
-
-    const coureurPoints = new Map<string, number>();
-    const rosterCoureurIds = new Set(rostersA.map(r => r.coureur_id));
-
-    pointsA.forEach(p => {
-      if (rosterCoureurIds.has(p.coureur_id)) {
-        const current = coureurPoints.get(p.coureur_id) || 0;
-        coureurPoints.set(p.coureur_id, current + (p.points || 0));
-      }
-    });
-
-    return Array.from(coureurPoints.entries())
-      .map(([coureurId, points]) => {
-        const coureur = coureurs.find(c => c.id === coureurId);
-        const roster = rostersA.find(r => r.coureur_id === coureurId);
-        return {
-          coureur_id: coureurId,
-          nom: coureur?.nom || "",
-          equipe: coureur?.equipe || "",
-          points,
-          prix: roster?.prix_signature || 0,
-          ratio: roster?.prix_signature ? points / roster.prix_signature : 0,
-        };
-      })
-      .sort((a, b) => b.points - a.points)
-      .slice(0, 10);
-  }, [rostersA, pointsA, coureurs]);
-
-  const topScorersB = useMemo(() => {
-    if (!rostersB || !pointsB || !coureurs) return [];
-
-    const coureurPoints = new Map<string, number>();
-    const rosterCoureurIds = new Set(rostersB.map(r => r.coureur_id));
-
-    pointsB.forEach(p => {
-      if (rosterCoureurIds.has(p.coureur_id)) {
-        const current = coureurPoints.get(p.coureur_id) || 0;
-        coureurPoints.set(p.coureur_id, current + (p.points || 0));
-      }
-    });
-
-    return Array.from(coureurPoints.entries())
-      .map(([coureurId, points]) => {
-        const coureur = coureurs.find(c => c.id === coureurId);
-        const roster = rostersB.find(r => r.coureur_id === coureurId);
-        return {
-          coureur_id: coureurId,
-          nom: coureur?.nom || "",
-          equipe: coureur?.equipe || "",
-          points,
-          prix: roster?.prix_signature || 0,
-          ratio: roster?.prix_signature ? points / roster.prix_signature : 0,
-        };
-      })
-      .sort((a, b) => b.points - a.points)
-      .slice(0, 10);
-  }, [rostersB, pointsB, coureurs]);
 
   const managerAName = selectedManagers?.find(m => m.id === managerA)?.nom || "Manager A";
   const managerBName = selectedManagers?.find(m => m.id === managerB)?.nom || "Manager B";
@@ -911,56 +815,6 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
         </Card>
       </div>
 
-      {/* Top Scorers */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold">Top 10 scoreurs - {managerAName}</h3>
-        {topScorersA.map((scorer, idx) => (
-          <MobileCard
-            key={scorer.coureur_id}
-            title={scorer.nom}
-            subtitle={scorer.equipe}
-            meta={`Ratio: ${scorer.ratio.toFixed(2)}`}
-            avatar={
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                  #{idx + 1}
-                </AvatarFallback>
-              </Avatar>
-            }
-            badge={
-              <div className="flex items-baseline gap-1">
-                <span className="text-xl font-bold text-primary">{scorer.points}</span>
-                <span className="text-xs text-muted-foreground">pts</span>
-              </div>
-            }
-          />
-        ))}
-      </div>
-
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold">Top 10 scoreurs - {managerBName}</h3>
-        {topScorersB.map((scorer, idx) => (
-          <MobileCard
-            key={scorer.coureur_id}
-            title={scorer.nom}
-            subtitle={scorer.equipe}
-            meta={`Ratio: ${scorer.ratio.toFixed(2)}`}
-            avatar={
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-destructive/10 text-destructive font-bold">
-                  #{idx + 1}
-                </AvatarFallback>
-              </Avatar>
-            }
-            badge={
-              <div className="flex items-baseline gap-1">
-                <span className="text-xl font-bold text-destructive">{scorer.points}</span>
-                <span className="text-xs text-muted-foreground">pts</span>
-              </div>
-            }
-          />
-        ))}
-      </div>
     </div>
   );
 };
