@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     const racesWithTop10 = await Promise.all(
       recentCourses.map(async (course) => {
         // Get top 10 from race_results using the existing RPC
-        const { data: top10Response, error: topError } = await supabase
+        const { data: top10Data, error: topError } = await supabase
           .rpc('results_course_top', {
             p_course_id: course.course_id,
             p_type_classement: 'General',
@@ -61,8 +61,6 @@ Deno.serve(async (req) => {
         if (topError) {
           console.error(`Error fetching top 10 for ${course.course_id}:`, topError);
         }
-
-        const top10Data = top10Response?.results || [];
 
         // Get available classification types from race_results
         const { data: types, error: typesError } = await supabase
