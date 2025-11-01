@@ -491,15 +491,14 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
   const { data: coureurs } = useQuery({
     queryKey: ["coureurs-all-comparison", saisonId],
     queryFn: async () => {
-      // Récupérer d'abord les coureurs avec leur équipe de base
       const { data, error } = await supabase
         .from("coureurs")
-        .select("id, nom, equipe");
+        .select("id, nom");
       if (error) throw error;
 
-      // Enrichir avec l'équipe de la saison si disponible
+      // Enrichir avec l'équipe de la saison depuis equipes_saisons
       if (!saisonId) {
-        return (data || []).map(c => ({ ...c, equipe: c.equipe || 'N/A' as string }));
+        return (data || []).map(c => ({ ...c, equipe: 'N/A' as string }));
       }
 
       const enrichedData = await Promise.all(
@@ -516,7 +515,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
 
           return {
             ...coureur,
-            equipe: (seasonData?.equipes_saisons as any)?.nom_affiche || coureur.equipe || 'N/A' as string
+            equipe: (seasonData?.equipes_saisons as any)?.nom_affiche || 'N/A' as string
           };
         })
       );
