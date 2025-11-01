@@ -59,9 +59,9 @@ function RaceCard({ race }: { race: RaceWithResults }) {
       if (error) throw error;
       
       const formattedData: RiderResult[] = (data || []).map((r: any) => ({
-        position: r.row_position || r.position || 0,
+        position: r.position,
         coureur_nom: r.coureur_nom || '',
-        coureur_equipe: r.equipe || '',
+        coureur_equipe: r.coureur_equipe || '',
         points: r.points || 0
       }));
       
