@@ -46,46 +46,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    // For each race, get metadata and top 10 from points_ledger
+    // For each race, get metadata and top 10 from race_results
     const racesWithTop10 = await Promise.all(
       recentCourses.map(async (course) => {
-        // Get top 10 from points_ledger (just IDs and points)
-        const { data: top10Data, error: topError } = await supabase
-          .from('points_ledger')
-          .select('coureur_id, points')
-          .eq('course_id', course.course_id)
-          .eq('type_classement', 'General')
-          .is('etape_numero', null)
-          .order('points', { ascending: false })
-          .limit(10);
+        // Get top 10 from race_results using the existing RPC
+        const { data: top10Response, error: topError } = await supabase
+          .rpc('results_course_top', {
+            p_course_id: course.course_id,
+            p_type_classement: 'General',
+            p_etape_numero: null,
+            p_limit: 10
+          });
 
         if (topError) {
           console.error(`Error fetching top 10 for ${course.course_id}:`, topError);
         }
 
-        // Get coureur names separately
-        let coureurNames: Record<string, string> = {};
-        if (top10Data && top10Data.length > 0) {
-          const coureurIds = top10Data.map(d => d.coureur_id);
-          const { data: coureursData, error: coureursError } = await supabase
-            .from('coureurs')
-            .select('id, nom')
-            .in('id', coureurIds);
-          
-          if (coureursError) {
-            console.error(`Error fetching coureur names for ${course.course_id}:`, coureursError);
-          }
-          
-          if (coureursData) {
-            coureurNames = Object.fromEntries(
-              coureursData.map(c => [c.id, c.nom])
-            );
-          }
-        }
+        const top10Data = top10Response?.results || [];
 
-        // Get available classification types from points_ledger
+        // Get available classification types from race_results
         const { data: types, error: typesError } = await supabase
-          .from('points_ledger')
+          .from('race_results')
           .select('type_classement')
           .eq('course_id', course.course_id)
           .is('etape_numero', null);
@@ -94,7 +75,7 @@ Deno.serve(async (req) => {
 
         // Get available stages
         const { data: stages, error: stagesError } = await supabase
-          .from('points_ledger')
+          .from('race_results')
           .select('etape_numero')
           .eq('course_id', course.course_id)
           .eq('type_classement', 'Etape')
@@ -104,10 +85,10 @@ Deno.serve(async (req) => {
         const uniqueStages = [...new Set((stages || []).map(s => s.etape_numero).filter(Boolean))];
 
         // Format top10 results
-        const formattedTop10 = (top10Data || []).map((r: any, index: number) => ({
+        const formattedTop10 = top10Data.map((r: any, index: number) => ({
           position: index + 1,
-          coureur_nom: coureurNames[r.coureur_id] || 'Inconnu',
-          coureur_equipe: '',
+          coureur_nom: r.coureur_nom || 'Inconnu',
+          coureur_equipe: r.coureur_equipe || '',
           points: r.points || 0
         }));
 
