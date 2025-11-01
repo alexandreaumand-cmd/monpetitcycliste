@@ -4405,10 +4405,9 @@ export type Database = {
           coureur_id: string
           coureur_nom: string
           has_official_points: boolean
-          manager_id: string
-          manager_nom: string
           points: number
           position: number
+          statut: Database["public"]["Enums"]["result_statut"]
         }[]
       }
       results_courses_with_entries:
