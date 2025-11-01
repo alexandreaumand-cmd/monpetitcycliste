@@ -83,8 +83,8 @@ Deno.serve(async (req) => {
         const uniqueStages = [...new Set((stages || []).map(s => s.etape_numero).filter(Boolean))];
 
         // Format top10 results
-        const formattedTop10 = top10Data.map((r: any, index: number) => ({
-          position: index + 1,
+        const formattedTop10 = top10Data.map((r: any) => ({
+          position: r.position,
           coureur_nom: r.coureur_nom || 'Inconnu',
           coureur_equipe: r.coureur_equipe || '',
           points: r.points || 0
