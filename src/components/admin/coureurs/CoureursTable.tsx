@@ -3,17 +3,29 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Save, X, Loader2, Pencil } from "lucide-react";
+import { Save, X, Loader2, Pencil, Trash2 } from "lucide-react";
 import { EquipeSelect } from "@/components/shared/EquipeSelect";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface CoureursTableProps {
   coureurs: any[];
   isLoading: boolean;
   onSave: (updates: Array<{ id: string; changes: any }>) => void;
+  onDelete: (id: string) => void;
   preloadedEquipes?: any[];
 }
 
-export const CoureursTable = ({ coureurs, isLoading, onSave, preloadedEquipes }: CoureursTableProps) => {
+export const CoureursTable = ({ coureurs, isLoading, onSave, onDelete, preloadedEquipes }: CoureursTableProps) => {
   const [editedCoureurs, setEditedCoureurs] = useState<Map<string, any>>(new Map());
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -210,14 +222,47 @@ export const CoureursTable = ({ coureurs, isLoading, onSave, preloadedEquipes }:
                           </Button>
                         </div>
                       ) : (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleEdit(coureur.id)}
-                        >
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Modifier
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleEdit(coureur.id)}
+                          >
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Modifier
+                          </Button>
+                          
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Désactiver ce coureur ?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Voulez-vous désactiver <strong>{coureur.coureur_nom}</strong> pour la saison {coureur.saison_annee} ?
+                                  <br /><br />
+                                  Le coureur sera marqué comme inactif mais les données historiques seront préservées.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => onDelete(coureur.id)}
+                                  className="bg-destructive hover:bg-destructive/90"
+                                >
+                                  Désactiver
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>

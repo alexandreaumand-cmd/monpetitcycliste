@@ -51,7 +51,8 @@ export const CoureursManager = () => {
       let query = supabase
         .from('v_coureurs_saisons_admin')
         .select('*')
-        .in('saison_id', filters.saison_ids);
+        .in('saison_id', filters.saison_ids)
+        .eq('actif', true);
 
       if (filters.search) {
         query = query.ilike('coureur_nom', `%${filters.search}%`);
@@ -140,6 +141,32 @@ export const CoureursManager = () => {
     },
   });
 
+  // Mutation pour désactiver un coureur (suppression logique)
+  const deleteCoureursMutation = useMutation({
+    mutationFn: async (coureurSaisonId: string) => {
+      const { error } = await supabase
+        .from('coureurs_saisons')
+        .update({ actif: false })
+        .eq('id', coureurSaisonId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-coureurs'] });
+      toast({
+        title: "✅ Coureur désactivé",
+        description: "Le coureur a été marqué comme inactif",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "❌ Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -167,6 +194,7 @@ export const CoureursManager = () => {
           coureurs={enrichedCoureurs}
           isLoading={isLoading}
           onSave={(updates) => updateCoureursMutation.mutate(updates)}
+          onDelete={(id) => deleteCoureursMutation.mutate(id)}
           preloadedEquipes={preloadedEquipes || []}
         />
       ) : (
