@@ -184,14 +184,14 @@ export function BaremesManager() {
         query = query.eq('categorie', params.filters.categorie);
       }
       if (params.filters?.type_classement) {
-        query = query.eq('type_classement', params.filters.type_classement);
+        query = query.eq('type_classement', params.filters.type_classement as any);
       }
       
       const { data: sourceBaremes, error: fetchError } = await query;
       if (fetchError) throw fetchError;
       
       // 2. Créer les nouveaux barèmes
-      const newBaremes = sourceBaremes.map(({ id, created_at, updated_at, ...rest }) => ({
+      const newBaremes = sourceBaremes.map(({ id, ...rest }) => ({
         ...rest,
         saison_id: params.targetSaisonId,
       }));

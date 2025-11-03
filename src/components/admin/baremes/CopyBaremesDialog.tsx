@@ -81,7 +81,7 @@ export function CopyBaremesDialog({ saisons, onCopy }: CopyBaremesDialogProps) {
         query = query.eq('categorie', categorie);
       }
       if (typeClassement) {
-        query = query.eq('type_classement', typeClassement);
+        query = query.eq('type_classement', typeClassement as any);
       }
 
       const { count, error } = await query;
@@ -179,7 +179,6 @@ export function CopyBaremesDialog({ saisons, onCopy }: CopyBaremesDialogProps) {
                   <SelectValue placeholder="Toutes les catégories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Toutes les catégories</SelectItem>
                   {categories.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
@@ -196,7 +195,6 @@ export function CopyBaremesDialog({ saisons, onCopy }: CopyBaremesDialogProps) {
                   <SelectValue placeholder="Tous les types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tous les types</SelectItem>
                   {typeClassements.map((type) => (
                     <SelectItem key={type.value} value={type.value}>
                       {type.label}
