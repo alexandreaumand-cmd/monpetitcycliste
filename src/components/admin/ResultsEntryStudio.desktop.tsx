@@ -114,6 +114,9 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const [isTTT, setIsTTT] = useState(false);
   const [tttRidersCount, setTttRidersCount] = useState(7);
   const [saisonId, setSaisonId] = useState<string | null>(null);
+  
+  // Track if TTT was manually set by user to prevent DB from overwriting it
+  const tttManuallySet = useRef(false);
 
   const isOneDay = course.type_course === "One day";
   const classementType: ClassementType = isOneDay
@@ -265,6 +268,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     
     if (stageChanged || classementChanged || tabChanged) {
       console.log('🔄 Real stage/tab change detected, resetting TTT', { prevStage, currentStage, prevActiveTab, activeTab });
+      tttManuallySet.current = false; // Reset manual flag on stage/tab change
       setIsTTT(false);
       setTttRidersCount(7);
     }
@@ -340,8 +344,12 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
       // Set cancellation status and TTT mode
       setIsCancelled(resultSetData?.data?.is_cancelled || false);
-      setIsTTT(resultSetData?.data?.is_ttt || false);
-      setTttRidersCount(resultSetData?.data?.ttt_riders_count || 7);
+      
+      // Only load TTT settings from DB if not manually set by user
+      if (!tttManuallySet.current) {
+        setIsTTT(resultSetData?.data?.is_ttt || false);
+        setTttRidersCount(resultSetData?.data?.ttt_riders_count || 7);
+      }
 
       // Map jersey holders from single query
       if (!isOneDay && activeTab === "stages" && etapeNumero) {
@@ -737,6 +745,9 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           title: "✅ Points calculés",
           description: "Les points ont été mis à jour avec succès.",
         });
+        
+        // Reset manual TTT flag after successful save
+        tttManuallySet.current = false;
       }
 
       // Save jersey holders if on stage race + stages tab
@@ -1144,6 +1155,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                     onCheckedChange={(checked) => {
                       setIsTTT(checked === true);
                       setIsDirty(true);
+                      tttManuallySet.current = true; // Mark as manually set to prevent DB override
                       // Reset grid when switching TTT mode
                       setResultRows([]);
                       setGridPrepared(false);
