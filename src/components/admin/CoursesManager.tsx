@@ -91,10 +91,25 @@ export const CoursesManager = () => {
   // Mutation pour créer une course
   const createCourseMutation = useMutation({
     mutationFn: async (courseData: any) => {
+      // Générer un ID unique basé sur le nom de la course
+      const generateCourseId = (nom: string): string => {
+        const slug = nom
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Enlever les accents
+          .replace(/[^a-z0-9]+/g, '-')     // Remplacer les espaces/caractères spéciaux par des tirets
+          .replace(/^-+|-+$/g, '');        // Enlever les tirets au début/fin
+        const timestamp = Date.now().toString(36); // Timestamp en base 36 pour plus court
+        return `${slug}-${timestamp}`;
+      };
+
+      const courseId = generateCourseId(courseData.nom);
+
       const { data, error } = await supabase
         .from('courses')
         .insert({
           ...courseData,
+          id: courseId,
           statut: 'scheduled',
         })
         .select()
