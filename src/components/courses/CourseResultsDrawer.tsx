@@ -93,6 +93,7 @@ interface CourseMeta {
 interface ResultRow {
   race_result_id: string;
   row_position: number | null;
+  position_decimal: number | null;
   statut: string;
   coureur_id: string;
   coureur_nom: string;
@@ -590,7 +591,8 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                     </TableHeader>
                     <TableBody>
                       {displayedResults.map((row) => {
-                        const isFinished = row.statut === 'finished' && row.row_position !== null;
+          // For TTT races, position can be null but position_decimal is used instead
+          const isFinished = row.statut === 'finished' && (row.row_position !== null || row.position_decimal !== null);
                         const statutBadge = getStatutBadge(row.statut);
                         // Toujours afficher les points théoriques (barème de la course)
                         const points = row.points_theoriques;
