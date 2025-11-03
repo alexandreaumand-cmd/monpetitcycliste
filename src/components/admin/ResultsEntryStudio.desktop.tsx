@@ -678,6 +678,11 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       // Only process validRows if we have them
       let saveResult = null;
       if (validRows.length > 0) {
+        // Validate that saison_id is loaded (required for race_results)
+        if (!saisonId) {
+          throw new Error("Saison ID not loaded. Cannot save results.");
+        }
+
         if (isTTT) {
           // TTT Mode: Insert directly to race_results with equipe_id and position_decimal
           // First, delete existing results for this stage
@@ -699,6 +704,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
             statut: row.statut,
             equipe_id: row.equipe_id,
             date_classement: dateClassement,
+            saison_id: saisonId,
           }));
 
           const { error: insertError } = await supabase
