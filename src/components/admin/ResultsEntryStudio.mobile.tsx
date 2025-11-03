@@ -93,19 +93,19 @@ export const ResultsEntryStudioMobile = ({
   const { data: scoringRules } = useQuery({
     queryKey: ['scoring-rules-mobile', course.course_id, currentClassement],
     queryFn: async () => {
-      // First, get the normalized category for this course
-      const { data: courseNorm, error: courseError } = await supabase
-        .from('courses_for_points_norm')
-        .select('cat_canon')
-        .eq('id', course.course_id)
+      // 1. Récupérer la saison de la course
+      const { data: phaseData, error: phaseError } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', course.phase_id)
         .single();
 
-      if (courseError || !courseNorm) {
-        console.error('Error fetching course category:', courseError);
+      if (phaseError || !phaseData) {
+        console.error('Error fetching phase:', phaseError);
         return [];
       }
 
-      // Map classement type to canonical form
+      // 2. Mapper le type de classement
       const typeMap: Record<string, string> = {
         Etape: "Etape",
         General: "General",
@@ -114,14 +114,15 @@ export const ResultsEntryStudioMobile = ({
         Jeune: "Jeune",
         Combatif: "Combatif",
       };
-      const typeCanon = typeMap[currentClassement] || currentClassement;
+      const typeClassement = typeMap[currentClassement] || currentClassement;
 
-      // Fetch scoring rules using normalized category
+      // 3. Récupérer les barèmes directement depuis scoring_rules_saisons
       const { data: rulesData, error: rulesError } = await supabase
-        .from('scoring_rules_norm')
+        .from('scoring_rules_saisons')
         .select('place, points')
-        .eq('cat_canon', courseNorm.cat_canon)
-        .eq('type_canon', typeCanon)
+        .eq('saison_id', phaseData.saison_id)
+        .eq('categorie', course.categorie)
+        .eq('type_classement', typeClassement as any)
         .order('place');
 
       if (rulesError) {

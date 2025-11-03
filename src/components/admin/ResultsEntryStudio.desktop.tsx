@@ -147,7 +147,19 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const { data: scoringRules } = useQuery({
     queryKey: ["scoring-rules-studio", course.course_id, classementType],
     queryFn: async () => {
-      // Map classement type to canonical form (only for scoring rules)
+      // 1. Récupérer la saison de la course
+      const { data: phaseData, error: phaseError } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', course.phase_id)
+        .single();
+
+      if (phaseError || !phaseData) {
+        console.error('Error fetching phase:', phaseError);
+        return [];
+      }
+
+      // 2. Mapper le type de classement
       const typeMap: Record<string, string> = {
         Etape: "Etape",
         General: "General",
@@ -156,26 +168,15 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         Jeune: "Jeune",
         Combatif: "Combatif",
       };
-      const typeCanon = typeMap[classementType] || classementType;
+      const typeClassementValue = typeMap[classementType] || classementType;
 
-      // First, get the normalized category for this course
-      const { data: courseNorm, error: courseError } = await supabase
-        .from("courses_for_points_norm")
-        .select("cat_canon")
-        .eq("id", course.course_id)
-        .single();
-
-      if (courseError || !courseNorm) {
-        console.error('Error fetching course category:', courseError);
-        return [];
-      }
-
-      // Then fetch scoring rules using normalized category
+      // 3. Récupérer les barèmes directement depuis scoring_rules_saisons
       const { data: rulesData, error: rulesError } = await supabase
-        .from("scoring_rules_norm")
+        .from("scoring_rules_saisons")
         .select("place, points")
-        .eq("cat_canon", courseNorm.cat_canon)
-        .eq("type_canon", typeCanon)
+        .eq("saison_id", phaseData.saison_id)
+        .eq("categorie", course.categorie)
+        .eq("type_classement", typeClassementValue as any)
         .order("place");
 
       if (rulesError) {
@@ -183,12 +184,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         return [];
       }
 
-      // De-duplicate scoring rules by place
-      const map = new Map();
-      for (const r of rulesData || []) {
-        if (!map.has(r.place)) map.set(r.place, r);
-      }
-      return Array.from(map.values());
+      return rulesData || [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes - scoring rules rarely change
     gcTime: 10 * 60 * 1000,   // 10 minutes in cache
