@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { BaremesFilters } from "./baremes/BaremesFilters";
@@ -18,6 +18,15 @@ export function BaremesManager() {
     categorie: "all",
     type_classement: "all",
   });
+
+  // Log de debug pour vérifier les permissions (temporaire)
+  useEffect(() => {
+    const checkPermissions = async () => {
+      const { data, error } = await supabase.rpc('is_superadmin');
+      console.log('🔐 Is superadmin?', data, error);
+    };
+    checkPermissions();
+  }, []);
 
   // Query pour charger les saisons
   const { data: saisons } = useQuery({
@@ -93,11 +102,29 @@ export function BaremesManager() {
           .from('scoring_rules_saisons')
           .update(changes)
           .eq('id', id)
+          .select() // Récupérer les lignes modifiées pour vérifier le succès
       );
       
       const results = await Promise.all(promises);
+      
+      // Vérifier les erreurs explicites
       const errors = results.filter(r => r.error);
-      if (errors.length > 0) throw errors[0].error;
+      if (errors.length > 0) {
+        console.error('❌ Erreurs UPDATE:', errors);
+        throw errors[0].error;
+      }
+      
+      // Vérifier que des lignes ont bien été modifiées
+      const emptyUpdates = results.filter(r => !r.data || r.data.length === 0);
+      if (emptyUpdates.length > 0) {
+        console.error('⚠️ Aucune ligne modifiée pour', emptyUpdates.length, 'UPDATE(s)');
+        throw new Error(
+          `${emptyUpdates.length} barème(s) n'ont pas pu être modifiés. Vérifiez vos permissions superadmin.`
+        );
+      }
+      
+      console.log('✅ UPDATE réussi:', results.length, 'ligne(s) modifiée(s)');
+      return results;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-baremes'] });
@@ -108,7 +135,7 @@ export function BaremesManager() {
     },
     onError: (error: any) => {
       toast({
-        title: "❌ Erreur",
+        title: "❌ Erreur de sauvegarde",
         description: error.message,
         variant: "destructive",
       });
