@@ -231,7 +231,47 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
 
       if (error) throw error;
 
-      setResults(data?.rows || []);
+      const rows = data?.rows || [];
+      
+      // Check if this is a TTT (has position_decimal)
+      const isTTT = selectedType === 'Etape' && rows.some((r: any) => r.position_decimal !== null);
+      
+      if (isTTT) {
+        // Group results by team position
+        const grouped = rows.reduce((acc: any, row: any) => {
+          const teamPosition = Math.floor(row.position_decimal);
+          if (!acc[teamPosition]) {
+            acc[teamPosition] = {
+              teamRow: {
+                race_result_id: `team-${teamPosition}`,
+                row_position: teamPosition,
+                position_decimal: teamPosition,
+                coureur_nom: row.equipe,
+                equipe: row.equipe,
+                points_theoriques: row.points_theoriques,
+                statut: 'finished',
+                isTeamHeader: true,
+                is_my_rider: false,
+                manager_nom: null
+              },
+              riders: []
+            };
+          }
+          acc[teamPosition].riders.push(row);
+          return acc;
+        }, {});
+
+        // Flatten: team header + riders
+        const flatResults: any[] = [];
+        Object.keys(grouped).sort((a, b) => Number(a) - Number(b)).forEach(pos => {
+          flatResults.push(grouped[pos].teamRow);
+          flatResults.push(...grouped[pos].riders);
+        });
+        
+        setResults(flatResults);
+      } else {
+        setResults(rows);
+      }
     } catch (error) {
       console.error('Error loading results:', error);
       setResults([]);
@@ -370,6 +410,11 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xl font-bold">{meta.course_nom}</span>
                     <Badge variant="outline">{meta.categorie}</Badge>
+                    {selectedType === 'Etape' && results.some((r: any) => r.position_decimal !== null && !r.isTeamHeader) && (
+                      <Badge variant="secondary" className="bg-blue-500 text-white">
+                        TTT
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground font-normal">
                     <Calendar className="h-4 w-4" />
@@ -591,31 +636,45 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                     </TableHeader>
                     <TableBody>
                       {displayedResults.map((row) => {
-          // For TTT races, position can be null but position_decimal is used instead
-          const isFinished = row.statut === 'finished' && (row.row_position !== null || row.position_decimal !== null);
+                        const isTeamHeader = row.isTeamHeader;
+                        const isFinished = row.statut === 'finished' && (row.row_position !== null || row.position_decimal !== null);
                         const statutBadge = getStatutBadge(row.statut);
-                        // Toujours afficher les points théoriques (barème de la course)
                         const points = row.points_theoriques;
+                        const displayPosition = row.position_decimal || row.row_position;
                         
                         return (
                           <TableRow
                             key={row.race_result_id}
-                            className={row.is_my_rider ? "bg-primary/5 border-l-2 border-l-primary" : ""}
+                            className={
+                              isTeamHeader 
+                                ? "bg-muted/50 font-bold" 
+                                : row.is_my_rider 
+                                  ? "bg-primary/5 border-l-2 border-l-primary" 
+                                  : ""
+                            }
                           >
                             <TableCell className="font-medium">
                               {isFinished ? (
                                 <div className="flex items-center gap-2">
-                                  {row.row_position && row.row_position <= 3 && (
-                                    <span className={`text-lg ${
-                                      row.row_position === 1 ? "text-yellow-500" :
-                                      row.row_position === 2 ? "text-gray-400" :
-                                      "text-amber-600"
-                                    }`}>
-                                      {row.row_position === 1 ? "🥇" : 
-                                       row.row_position === 2 ? "🥈" : "🥉"}
+                                  {isTeamHeader ? (
+                                    <>
+                                      {displayPosition <= 3 && (
+                                        <span className={`text-lg ${
+                                          displayPosition === 1 ? "text-yellow-500" :
+                                          displayPosition === 2 ? "text-gray-400" :
+                                          "text-amber-600"
+                                        }`}>
+                                          {displayPosition === 1 ? "🥇" : 
+                                           displayPosition === 2 ? "🥈" : "🥉"}
+                                        </span>
+                                      )}
+                                      <span>{displayPosition}</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-muted-foreground ml-6">
+                                      {displayPosition}
                                     </span>
                                   )}
-                                  <span>{row.row_position}</span>
                                 </div>
                               ) : statutBadge ? (
                                 <Badge variant={statutBadge.variant}>
@@ -626,18 +685,22 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                               )}
                             </TableCell>
                             <TableCell>
-                              <div className="flex flex-col">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold">{row.coureur_nom}</span>
-                                  {row.is_my_rider && (
-                                    <Badge variant="default" className="text-xs">Mon équipe</Badge>
-                                  )}
+                              {isTeamHeader ? (
+                                <span className="font-bold">{row.coureur_nom}</span>
+                              ) : (
+                                <div className="flex flex-col">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold">{row.coureur_nom}</span>
+                                    {row.is_my_rider && (
+                                      <Badge variant="default" className="text-xs">Mon équipe</Badge>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-muted-foreground md:hidden">{row.equipe}</span>
                                 </div>
-                                <span className="text-xs text-muted-foreground md:hidden">{row.equipe}</span>
-                              </div>
+                              )}
                             </TableCell>
                             <TableCell className="hidden md:table-cell">
-                              {row.equipe && (
+                              {!isTeamHeader && row.equipe && (
                                 <Badge variant="outline" className="text-xs">
                                   {row.equipe}
                                 </Badge>
@@ -651,7 +714,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                               )}
                             </TableCell>
                             <TableCell className="text-muted-foreground text-sm">
-                              {row.manager_nom ? (
+                              {!isTeamHeader && row.manager_nom ? (
                                 <span className="text-xs truncate">{row.manager_nom}</span>
                               ) : (
                                 "—"

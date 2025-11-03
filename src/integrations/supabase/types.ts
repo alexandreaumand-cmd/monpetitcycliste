@@ -4468,6 +4468,7 @@ export type Database = {
           coureur_nom: string
           points: number
           position: number
+          position_decimal: number
         }[]
       }
       results_course_table:
