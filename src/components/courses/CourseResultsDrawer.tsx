@@ -103,6 +103,7 @@ interface ResultRow {
   points_officiels: number | null;
   points_theoriques: number;
   is_my_rider: boolean;
+  isTeamHeader?: boolean;
 }
 
 interface TotalRider {
@@ -236,30 +237,32 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
       // Check if this is a TTT (has position_decimal)
       const isTTT = selectedType === 'Etape' && rows.some((r: any) => r.position_decimal !== null);
       
-      if (isTTT) {
-        // Group results by team position
-        const grouped = rows.reduce((acc: any, row: any) => {
-          const teamPosition = Math.floor(row.position_decimal);
-          if (!acc[teamPosition]) {
-            acc[teamPosition] = {
-              teamRow: {
-                race_result_id: `team-${teamPosition}`,
-                row_position: teamPosition,
-                position_decimal: teamPosition,
-                coureur_nom: row.equipe,
-                equipe: row.equipe,
-                points_theoriques: row.points_theoriques,
-                statut: 'finished',
-                isTeamHeader: true,
-                is_my_rider: false,
-                manager_nom: null
-              },
-              riders: []
-            };
-          }
-          acc[teamPosition].riders.push(row);
-          return acc;
-        }, {});
+    if (isTTT) {
+      // Group results by team position
+      const grouped = rows.reduce((acc: any, row: any) => {
+        const teamPosition = Math.floor(row.position_decimal);
+        if (!acc[teamPosition]) {
+          acc[teamPosition] = {
+            teamRow: {
+              race_result_id: `team-${teamPosition}`,
+              row_position: teamPosition,
+              position_decimal: teamPosition,
+              coureur_nom: row.equipe,
+              equipe: row.equipe,
+              points_theoriques: 0,
+              statut: 'finished',
+              isTeamHeader: true,
+              is_my_rider: false,
+              manager_nom: null
+            },
+            riders: []
+          };
+        }
+        // Accumulate points from all riders in the team
+        acc[teamPosition].teamRow.points_theoriques += (row.points_theoriques || 0);
+        acc[teamPosition].riders.push(row);
+        return acc;
+      }, {});
 
         // Flatten: team header + riders
         const flatResults: any[] = [];
