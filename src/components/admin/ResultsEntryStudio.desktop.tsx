@@ -10,11 +10,12 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle, Loader2, Camera, Trash2 } from "lucide-react";
+import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle, Loader2, Camera, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { ExportResultsImage } from "./ExportResultsImage";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
+import { EquipeCombobox } from "@/components/shared/EquipeCombobox";
 import { JerseyHoldersInput } from "@/components/admin/JerseyHoldersInput";
 import { cn } from "@/lib/utils";
 import {
@@ -60,6 +61,15 @@ type ResultRow = {
   statut: ResultStatut;
   points: number;
   grid_version?: string;
+  // TTT specific fields
+  equipe_id?: string | null;
+  is_expanded?: boolean;
+  team_riders?: Array<{
+    coureur_id: string | null;
+    coureur_nom: string | null;
+    coureur_equipe?: string | null;
+    position_decimal: number;
+  }>;
 };
 
 type StudioProps = {
@@ -92,6 +102,9 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const [isCancelled, setIsCancelled] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [isTTT, setIsTTT] = useState(false);
+  const [tttRidersCount, setTttRidersCount] = useState(7);
+  const [saisonId, setSaisonId] = useState<string | null>(null);
 
   const isOneDay = course.type_course === "One day";
   const classementType: ClassementType = isOneDay
@@ -190,12 +203,30 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     gcTime: 10 * 60 * 1000,   // 10 minutes in cache
   });
 
+  // Load saison_id on mount
+  useEffect(() => {
+    const loadSaisonId = async () => {
+      const { data } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', course.phase_id)
+        .single();
+      
+      if (data) {
+        setSaisonId(data.saison_id);
+      }
+    };
+    loadSaisonId();
+  }, [course.phase_id]);
+
   // Reset state when sel_key changes
   useEffect(() => {
     setResultRows([]);
     setGridPrepared(false);
     setIsDirty(false);
     setIsCancelled(false);
+    setIsTTT(false);
+    setTttRidersCount(7);
     setJerseyHolders({
       general: null,
       vert: null,
@@ -238,10 +269,10 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           }
         }),
         
-        // 2. Load cancellation status
+        // 2. Load cancellation status AND TTT info
         supabase
           .from('race_result_sets')
-          .select('is_cancelled')
+          .select('is_cancelled, is_ttt, ttt_riders_count')
           .eq('course_id', course.course_id)
           .eq('type_classement', classementType)
           .eq('etape_numero', etapeNumeroValue)
@@ -282,8 +313,10 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       const existingResults = existingData.data?.rows || [];
       console.log('📊 Résultats existants chargés:', existingResults.length);
 
-      // Set cancellation status
+      // Set cancellation status and TTT mode
       setIsCancelled(resultSetData?.data?.is_cancelled || false);
+      setIsTTT(resultSetData?.data?.is_ttt || false);
+      setTttRidersCount(resultSetData?.data?.ttt_riders_count || 7);
 
       // Map jersey holders from single query
       if (!isOneDay && activeTab === "stages" && etapeNumero) {
@@ -313,12 +346,60 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         courseId: course.course_id,
         classementType,
         etapeNumero,
-        existingResultsCount: existingResults.length
+        existingResultsCount: existingResults.length,
+        isTTT: resultSetData?.data?.is_ttt
       });
 
       if (existingResults.length > 0) {
         console.log('✅ Résultats existants trouvés, barème disponible:', scoringRules?.length || 0);
-          // Pre-existing results found - merge with full grid from scoring rules
+        
+        // Check if this is TTT mode with existing results
+        if (resultSetData?.data?.is_ttt) {
+          // TTT Mode: Group results by team
+          const teamResults: Record<number, { equipe_id: string; riders: any[] }> = {};
+          
+          existingResults.forEach((r: any) => {
+            if (!teamResults[r.row_position]) {
+              teamResults[r.row_position] = {
+                equipe_id: r.equipe_id,
+                riders: []
+              };
+            }
+            teamResults[r.row_position].riders.push({
+              coureur_id: r.coureur_id,
+              coureur_nom: r.coureur_nom,
+              coureur_equipe: r.coureur_equipe,
+              position_decimal: r.position_decimal || (r.row_position + (teamResults[r.row_position].riders.length + 1) / 10),
+            });
+          });
+
+          // Create TTT grid (positions 1-10)
+          rows = Array.from({ length: 10 }, (_, i) => {
+            const position = i + 1;
+            const rule = scoringRules?.find((r) => r.place === position);
+            const teamData = teamResults[position];
+            const pointsPerRider = Math.round((rule?.points || 0) / tttRidersCount);
+            
+            return {
+              position,
+              coureur_id: null,
+              coureur_nom: null,
+              coureur_equipe: null,
+              statut: 'finished' as ResultStatut,
+              points: pointsPerRider,
+              grid_version: sel_key,
+              equipe_id: teamData?.equipe_id || null,
+              is_expanded: false,
+              team_riders: teamData?.riders || Array.from({ length: tttRidersCount }, (_, idx) => ({
+                coureur_id: null,
+                coureur_nom: null,
+                coureur_equipe: null,
+                position_decimal: position + (idx + 1) / 10,
+              })),
+            };
+          });
+        } else {
+          // Normal Mode: existing logic
           if (!scoringRules || scoringRules.length === 0) {
             // Still display existing results even without scoring rules
             rows = existingResults.map((r: any) => ({
@@ -330,25 +411,26 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               points: r.points || 0,
               grid_version: sel_key,
             }));
-        } else {
-          // Create full grid based on scoring rules
-          const maxPlace = Math.max(...scoringRules.map((r) => r.place));
-          rows = Array.from({ length: maxPlace }, (_, i) => {
-            const position = i + 1;
-            const rule = scoringRules.find((r) => r.place === position);
-            // Check if we have existing data for this position
-            const existing = existingResults.find((r: any) => r.row_position === position);
-            
-            return {
-              position,
-              coureur_id: existing?.coureur_id || null,
-              coureur_nom: existing?.coureur_nom || null,
-              coureur_equipe: existing?.coureur_equipe || null,
-              statut: 'finished' as ResultStatut,
-              points: existing?.points || rule?.points || 0,
-              grid_version: sel_key,
-            };
-          });
+          } else {
+            // Create full grid based on scoring rules
+            const maxPlace = Math.max(...scoringRules.map((r) => r.place));
+            rows = Array.from({ length: maxPlace }, (_, i) => {
+              const position = i + 1;
+              const rule = scoringRules.find((r) => r.place === position);
+              // Check if we have existing data for this position
+              const existing = existingResults.find((r: any) => r.row_position === position);
+              
+              return {
+                position,
+                coureur_id: existing?.coureur_id || null,
+                coureur_nom: existing?.coureur_nom || null,
+                coureur_equipe: existing?.coureur_equipe || null,
+                statut: 'finished' as ResultStatut,
+                points: existing?.points || rule?.points || 0,
+                grid_version: sel_key,
+              };
+            });
+          }
         }
       } else {
         console.log('➕ Aucun résultat existant, création grille vide');
@@ -362,20 +444,48 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           return;
         }
 
-        const maxPlace = Math.max(...scoringRules.map((r) => r.place));
-        rows = Array.from({ length: maxPlace }, (_, i) => {
-          const position = i + 1;
-          const rule = scoringRules.find((r) => r.place === position);
-          return {
-            position,
-            coureur_id: null,
-            coureur_nom: null,
-            coureur_equipe: null,
-            statut: "finished" as ResultStatut,
-            points: rule?.points || 0,
-            grid_version: sel_key,
-          };
-        });
+        if (isTTT) {
+          // TTT Mode: Create empty grid for positions 1-10
+          rows = Array.from({ length: 10 }, (_, i) => {
+            const position = i + 1;
+            const rule = scoringRules.find((r) => r.place === position);
+            const pointsPerRider = Math.round((rule?.points || 0) / tttRidersCount);
+            
+            return {
+              position,
+              coureur_id: null,
+              coureur_nom: null,
+              coureur_equipe: null,
+              statut: "finished" as ResultStatut,
+              points: pointsPerRider,
+              grid_version: sel_key,
+              equipe_id: null,
+              is_expanded: false,
+              team_riders: Array.from({ length: tttRidersCount }, (_, idx) => ({
+                coureur_id: null,
+                coureur_nom: null,
+                coureur_equipe: null,
+                position_decimal: position + (idx + 1) / 10,
+              })),
+            };
+          });
+        } else {
+          // Normal Mode: Create full grid
+          const maxPlace = Math.max(...scoringRules.map((r) => r.place));
+          rows = Array.from({ length: maxPlace }, (_, i) => {
+            const position = i + 1;
+            const rule = scoringRules.find((r) => r.place === position);
+            return {
+              position,
+              coureur_id: null,
+              coureur_nom: null,
+              coureur_equipe: null,
+              statut: "finished" as ResultStatut,
+              points: rule?.points || 0,
+              grid_version: sel_key,
+            };
+          });
+        }
       }
 
       console.log('📝 Grille finale créée:', rows.length, 'lignes');
@@ -394,7 +504,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     } finally {
       setIsLoadingGrid(false);
     }
-  }, [sel_key, scoringRules, isOneDay]);
+  }, [sel_key, scoringRules, isOneDay, isTTT, tttRidersCount, currentStage, currentFinalClassement, course.course_id, course.date_debut, course.date_fin, activeTab]);
 
   // Auto-prepare grid regardless of scoring rules
   useEffect(() => {
@@ -444,13 +554,38 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     mutationFn: async () => {
       const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
 
-      // Update cancellation status in race_result_sets
+      // Get saison_id for race_result_sets
+      const { data: phaseData } = await supabase
+        .from('phases')
+        .select('saison_id')
+        .eq('id', course.phase_id)
+        .single();
+      
+      if (!phaseData) throw new Error("Phase introuvable");
+
+      // Get manager_id for created_by field
+      const { data: managerData } = await supabase
+        .from('managers')
+        .select('id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      // Update/create race_result_sets with TTT info
       await leagueClient
         .from('race_result_sets')
-        .update({ is_cancelled: isCancelled })
-        .eq('course_id', course.course_id)
-        .eq('type_classement', classementType)
-        .eq('etape_numero', etapeNumeroValue);
+        .upsert({
+          course_id: course.course_id,
+          saison_id: phaseData.saison_id,
+          type_classement: classementType,
+          etape_numero: etapeNumeroValue,
+          is_cancelled: isCancelled,
+          is_ttt: isTTT,
+          ttt_riders_count: isTTT ? tttRidersCount : null,
+          created_by: managerData?.id
+        }, {
+          onConflict: 'course_id,type_classement,etape_numero',
+          ignoreDuplicates: false
+        });
 
       // If cancelled, delete all results and return
       if (isCancelled) {
@@ -464,8 +599,27 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         return { success: true, message: 'Annulation enregistrée' };
       }
 
-      // Otherwise, save results normally
-      const validRows = resultRows.filter((r) => r.coureur_id);
+      // TTT Mode: prepare team riders for save
+      let validRows;
+      if (isTTT) {
+        // Flatten all team riders from all teams
+        validRows = resultRows.flatMap((teamRow) => {
+          if (!teamRow.equipe_id || !teamRow.team_riders) return [];
+          return teamRow.team_riders
+            .filter(r => r.coureur_id)
+            .map(r => ({
+              coureur_id: r.coureur_id!,
+              position: teamRow.position,
+              position_decimal: r.position_decimal,
+              statut: 'finished' as ResultStatut,
+              points: teamRow.points,
+              equipe_id: teamRow.equipe_id,
+            }));
+        });
+      } else {
+        // Normal Mode: use existing logic
+        validRows = resultRows.filter((r) => r.coureur_id);
+      }
       
       // Allow save if either:
       // 1. We have valid rows in resultRows
@@ -491,23 +645,53 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       // Only process validRows if we have them
       let saveResult = null;
       if (validRows.length > 0) {
-        // Prepare rows for DB function
-        const rowsForDb = validRows.map((row) => ({
-          coureur_id: row.coureur_id!,
-          position: Number(row.position),
-          statut: row.statut,
-        }));
+        if (isTTT) {
+          // TTT Mode: Insert directly to race_results with equipe_id and position_decimal
+          // First, delete existing results for this stage
+          await supabase
+            .from('race_results')
+            .delete()
+            .eq('course_id', course.course_id)
+            .eq('type_classement', classementType)
+            .eq('etape_numero', etapeNumeroValue);
 
-        // Call unified UPSERT function (handles both create and update)
-        const { data, error: saveError } = await supabase.rpc("admin_result_save_lot", {
-          p_course_id: course.course_id,
-          p_type_classement: classementType,
-          p_etape_numero: etapeNumeroValue,
-          p_rows: rowsForDb,
-        });
+          // Insert new TTT results with equipe_id and position_decimal
+          const resultsToInsert = validRows.map((row: any) => ({
+            course_id: course.course_id,
+            coureur_id: row.coureur_id,
+            type_classement: classementType,
+            etape_numero: etapeNumeroValue,
+            position: row.position,
+            position_decimal: row.position_decimal,
+            statut: row.statut,
+            equipe_id: row.equipe_id,
+            date_classement: dateClassement,
+          }));
 
-        if (saveError) throw saveError;
-        saveResult = data;
+          const { error: insertError } = await supabase
+            .from('race_results')
+            .insert(resultsToInsert);
+
+          if (insertError) throw insertError;
+          saveResult = { rows_affected: resultsToInsert.length };
+        } else {
+          // Normal Mode: use existing RPC function
+          const rowsForDb = validRows.map((row: any) => ({
+            coureur_id: row.coureur_id!,
+            position: Number(row.position),
+            statut: row.statut,
+          }));
+
+          const { data, error: saveError } = await supabase.rpc("admin_result_save_lot", {
+            p_course_id: course.course_id,
+            p_type_classement: classementType,
+            p_etape_numero: etapeNumeroValue,
+            p_rows: rowsForDb,
+          });
+
+          if (saveError) throw saveError;
+          saveResult = data;
+        }
       }
 
       // Immediately recompute points for this course to reflect Porteur points
@@ -729,7 +913,63 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     setIsDirty(true);
   };
 
-  const validLinesCount = resultRows.filter((r) => r.coureur_id).length;
+  // TTT specific handlers
+  const handleTeamChange = (index: number, equipeId: string | null) => {
+    setResultRows((prev) =>
+      prev.map((row, i) => {
+        if (i !== index) return row;
+        const rule = scoringRules?.find((r) => r.place === row.position);
+        const pointsPerRider = Math.round((rule?.points || 0) / tttRidersCount);
+        
+        // Initialize team riders array
+        const teamRiders = equipeId ? Array.from({ length: tttRidersCount }, (_, idx) => ({
+          coureur_id: null,
+          coureur_nom: null,
+          coureur_equipe: null,
+          position_decimal: row.position + (idx + 1) / 10,
+        })) : [];
+        
+        return {
+          ...row,
+          equipe_id: equipeId,
+          team_riders: teamRiders,
+          points: pointsPerRider,
+        };
+      })
+    );
+    setIsDirty(true);
+  };
+
+  const handleToggleExpand = (index: number) => {
+    setResultRows((prev) =>
+      prev.map((row, i) =>
+        i === index ? { ...row, is_expanded: !row.is_expanded } : row
+      )
+    );
+  };
+
+  const handleTeamRiderChange = (teamIndex: number, riderIndex: number, riderId: string | null, riderName: string | null) => {
+    setResultRows((prev) =>
+      prev.map((row, i) => {
+        if (i !== teamIndex || !row.team_riders) return row;
+        const newTeamRiders = [...row.team_riders];
+        newTeamRiders[riderIndex] = {
+          ...newTeamRiders[riderIndex],
+          coureur_id: riderId,
+          coureur_nom: riderName,
+        };
+        return {
+          ...row,
+          team_riders: newTeamRiders,
+        };
+      })
+    );
+    setIsDirty(true);
+  };
+
+  const validLinesCount = isTTT 
+    ? resultRows.reduce((count, row) => count + (row.team_riders?.filter(r => r.coureur_id).length || 0), 0)
+    : resultRows.filter((r) => r.coureur_id).length;
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -870,6 +1110,48 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               })()}
             </div>
             <div className="flex items-center gap-3">
+              {/* TTT Mode Checkbox - Only for Stages */}
+              {activeTab === "stages" && !isOneDay && (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="ttt-checkbox"
+                    checked={isTTT}
+                    onCheckedChange={(checked) => {
+                      setIsTTT(checked === true);
+                      setIsDirty(true);
+                      // Reset grid when switching TTT mode
+                      setResultRows([]);
+                      setGridPrepared(false);
+                    }}
+                    disabled={isCancelled}
+                  />
+                  <label htmlFor="ttt-checkbox" className="text-sm font-medium cursor-pointer">
+                    TTT
+                  </label>
+                </div>
+              )}
+              
+              {/* TTT Riders Count Input */}
+              {isTTT && activeTab === "stages" && !isOneDay && (
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-muted-foreground">Nb coureurs:</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={tttRidersCount}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (value >= 1 && value <= 10) {
+                        setTttRidersCount(value);
+                        setIsDirty(true);
+                      }
+                    }}
+                    className="w-20"
+                  />
+                </div>
+              )}
+              
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="cancelled-checkbox"
@@ -964,8 +1246,8 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
             </div>
           )}
 
-          {/* Results Table */}
-          {!isLoadingGrid && gridPrepared && (
+          {/* Results Table - Normal Mode */}
+          {!isLoadingGrid && gridPrepared && !isTTT && (
             <div key={sel_key} className="border rounded-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -1003,6 +1285,87 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                         </td>
                         <td className="px-4 py-2 text-right text-sm font-medium">{row.points}</td>
                       </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Results Table - TTT Mode */}
+          {!isLoadingGrid && gridPrepared && isTTT && saisonId && (
+            <div key={sel_key} className="border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted">
+                     <tr>
+                       <th className="px-4 py-3 text-left text-sm font-medium w-20">Pos</th>
+                       <th className="px-4 py-3 text-left text-sm font-medium">Équipe / Coureurs</th>
+                       <th className="px-4 py-3 text-right text-sm font-medium w-24">Points</th>
+                       <th className="px-4 py-3 text-center text-sm font-medium w-24">Action</th>
+                     </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {resultRows.slice(0, 10).map((row, index) => (
+                      <>
+                        {/* Team Row */}
+                        <tr key={`team-${index}`} className={cn("hover:bg-muted/50", isCancelled && "opacity-50 pointer-events-none")}>
+                          <td className="px-4 py-2 text-sm font-medium">{row.position}</td>
+                          <td className="px-4 py-2">
+                            <EquipeCombobox
+                              saisonId={saisonId}
+                              value={row.equipe_id || undefined}
+                              onValueChange={(equipeId) => handleTeamChange(index, equipeId || null)}
+                              disabled={isCancelled}
+                            />
+                          </td>
+                          <td className="px-4 py-2 text-right text-sm text-muted-foreground">
+                            {scoringRules?.find((r) => r.place === row.position)?.points || 0}
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            {row.equipe_id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleToggleExpand(index)}
+                              >
+                                {row.is_expanded ? "Réduire" : "Développer"}
+                                <Badge variant="secondary" className="ml-2">
+                                  {row.team_riders?.filter(r => r.coureur_id).length || 0}/{tttRidersCount}
+                                </Badge>
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                        
+                        {/* Team Riders Sub-rows */}
+                        {row.is_expanded && row.team_riders?.map((rider, riderIndex) => (
+                          <tr key={`rider-${index}-${riderIndex}`} className="bg-muted/30">
+                            <td className="px-4 py-2 text-xs text-muted-foreground pl-8">
+                              {row.position}.{riderIndex + 1}
+                            </td>
+                            <td className="px-4 py-2 pl-8">
+                              <CoureursCombobox
+                                phaseId={course.phase_id}
+                                value={rider.coureur_id}
+                                onSelect={(coureur) => {
+                                  if (coureur) {
+                                    handleTeamRiderChange(index, riderIndex, coureur.coureur_id, coureur.coureur_nom);
+                                  } else {
+                                    handleTeamRiderChange(index, riderIndex, null, null);
+                                  }
+                                }}
+                                placeholder={rider.coureur_nom || "Sélectionner un coureur..."}
+                                showTakenRiders={true}
+                                disabled={isCancelled}
+                                context="super-admin"
+                              />
+                            </td>
+                            <td className="px-4 py-2 text-right text-sm font-medium">{row.points}</td>
+                            <td></td>
+                          </tr>
+                        ))}
+                      </>
                     ))}
                   </tbody>
                 </table>
@@ -1050,7 +1413,10 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           <div className="flex items-center justify-between max-w-7xl mx-auto">
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground">
-                {validLinesCount} / {resultRows.length} lignes valides
+                {isTTT 
+                  ? `${validLinesCount} coureurs / ${resultRows.filter(r => r.equipe_id).length} équipes`
+                  : `${validLinesCount} / ${resultRows.length} lignes valides`
+                }
               </span>
               {isDirty && <Badge variant="outline">Non sauvegardé</Badge>}
             </div>

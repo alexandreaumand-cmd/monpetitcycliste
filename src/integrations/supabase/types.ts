@@ -2071,7 +2071,9 @@ export type Database = {
           etape_numero: number | null
           id: string
           is_cancelled: boolean
+          is_ttt: boolean | null
           saison_id: string
+          ttt_riders_count: number | null
           type_classement: Database["public"]["Enums"]["type_classement"]
         }
         Insert: {
@@ -2081,7 +2083,9 @@ export type Database = {
           etape_numero?: number | null
           id?: string
           is_cancelled?: boolean
+          is_ttt?: boolean | null
           saison_id: string
+          ttt_riders_count?: number | null
           type_classement: Database["public"]["Enums"]["type_classement"]
         }
         Update: {
@@ -2091,7 +2095,9 @@ export type Database = {
           etape_numero?: number | null
           id?: string
           is_cancelled?: boolean
+          is_ttt?: boolean | null
           saison_id?: string
+          ttt_riders_count?: number | null
           type_classement?: Database["public"]["Enums"]["type_classement"]
         }
         Relationships: [
@@ -2130,11 +2136,13 @@ export type Database = {
           coureur_id: string | null
           course_id: string | null
           date_classement: string
+          equipe_id: string | null
           etape_numero: number | null
           id: string
           manager_id: string | null
           points: number
           position: number | null
+          position_decimal: number | null
           result_set_id: string | null
           saison_id: string
           statut: Database["public"]["Enums"]["result_statut"] | null
@@ -2146,11 +2154,13 @@ export type Database = {
           coureur_id?: string | null
           course_id?: string | null
           date_classement: string
+          equipe_id?: string | null
           etape_numero?: number | null
           id?: string
           manager_id?: string | null
           points?: number
           position?: number | null
+          position_decimal?: number | null
           result_set_id?: string | null
           saison_id: string
           statut?: Database["public"]["Enums"]["result_statut"] | null
@@ -2162,11 +2172,13 @@ export type Database = {
           coureur_id?: string | null
           course_id?: string | null
           date_classement?: string
+          equipe_id?: string | null
           etape_numero?: number | null
           id?: string
           manager_id?: string | null
           points?: number
           position?: number | null
+          position_decimal?: number | null
           result_set_id?: string | null
           saison_id?: string
           statut?: Database["public"]["Enums"]["result_statut"] | null
@@ -2237,6 +2249,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_home_recent_results"
             referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "race_results_equipe_id_fkey"
+            columns: ["equipe_id"]
+            isOneToOne: false
+            referencedRelation: "equipes_saisons"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "race_results_manager_id_fkey"
