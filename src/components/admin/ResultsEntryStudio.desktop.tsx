@@ -694,12 +694,13 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
             .eq('etape_numero', etapeNumeroValue);
 
           // Insert new TTT results with equipe_id and position_decimal
+          // Set position to null to avoid unique constraint violations (multiple riders can have same team position)
           const resultsToInsert = validRows.map((row: any) => ({
             course_id: course.course_id,
             coureur_id: row.coureur_id,
             type_classement: classementType,
             etape_numero: etapeNumeroValue,
-            position: row.position,
+            position: null, // null for TTT since position_decimal contains the actual ranking
             position_decimal: row.position_decimal,
             statut: row.statut,
             equipe_id: row.equipe_id,
