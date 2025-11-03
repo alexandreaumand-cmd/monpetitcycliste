@@ -78,6 +78,15 @@ type StudioProps = {
   onClose: () => void;
 };
 
+// Hook to track previous values
+function usePrevious<T>(value: T): T | undefined {
+  const ref = useRef<T>();
+  useEffect(() => {
+    ref.current = value;
+  });
+  return ref.current;
+}
+
 export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const queryClient = useQueryClient();
   const leagueClient = useLeagueClient();
@@ -243,11 +252,23 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     }
   }, [sel_key, activeTab, etapeNumero, course.date_debut, course.date_fin]);
 
-  // Reset TTT settings only when changing stage/classification
+  // Track previous values to detect real changes
+  const prevStage = usePrevious(currentStage);
+  const prevFinalClassement = usePrevious(currentFinalClassement);
+  const prevActiveTab = usePrevious(activeTab);
+
+  // Reset TTT settings ONLY when stage/classification actually changes
   useEffect(() => {
-    setIsTTT(false);
-    setTttRidersCount(7);
-  }, [activeTab, currentStage, currentFinalClassement]);
+    const stageChanged = prevStage !== undefined && prevStage !== currentStage;
+    const classementChanged = prevFinalClassement !== undefined && prevFinalClassement !== currentFinalClassement;
+    const tabChanged = prevActiveTab !== undefined && prevActiveTab !== activeTab;
+    
+    if (stageChanged || classementChanged || tabChanged) {
+      console.log('🔄 Real stage/tab change detected, resetting TTT', { prevStage, currentStage, prevActiveTab, activeTab });
+      setIsTTT(false);
+      setTttRidersCount(7);
+    }
+  }, [currentStage, currentFinalClassement, activeTab, prevStage, prevFinalClassement, prevActiveTab]);
 
   // Memoize handlePrepareGrid with all dependencies
   const handlePrepareGrid = useCallback(async () => {
