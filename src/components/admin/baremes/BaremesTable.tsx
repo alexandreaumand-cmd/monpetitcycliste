@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Save, X, Loader2, Trash2 } from "lucide-react";
 
 interface BaremesTableProps {
@@ -12,6 +13,7 @@ interface BaremesTableProps {
   isLoading: boolean;
   onSave: (updates: Array<{ id: string; changes: any }>) => void;
   onDelete: (baremeId: string, baremeInfo: string) => void;
+  onDeleteBatch: (baremeIds: string[]) => void;
 }
 
 const categories = [
@@ -55,9 +57,10 @@ const typeClassements = [
   { value: "Porteur Combattif", label: "🔵 Porteur Combativité" },
 ];
 
-export const BaremesTable = ({ baremes, saisons, isLoading, onSave, onDelete }: BaremesTableProps) => {
+export const BaremesTable = ({ baremes, saisons, isLoading, onSave, onDelete, onDeleteBatch }: BaremesTableProps) => {
   const [editedBaremes, setEditedBaremes] = useState<Map<string, any>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedBaremes, setSelectedBaremes] = useState<Set<string>>(new Set());
 
   const handleFieldChange = (baremeId: string, field: string, value: any) => {
     const bareme = baremes.find(b => b.id === baremeId);
@@ -103,6 +106,32 @@ export const BaremesTable = ({ baremes, saisons, isLoading, onSave, onDelete }: 
     return bareme[field];
   };
 
+  const toggleSelectAll = () => {
+    if (selectedBaremes.size === baremes.length) {
+      setSelectedBaremes(new Set());
+    } else {
+      setSelectedBaremes(new Set(baremes.map(b => b.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedBaremes);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedBaremes(newSet);
+  };
+
+  const handleDeleteSelected = () => {
+    const count = selectedBaremes.size;
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer ${count} barème(s) ?\n\nCette action est irréversible.`)) {
+      onDeleteBatch(Array.from(selectedBaremes));
+      setSelectedBaremes(new Set());
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="p-6">
@@ -140,19 +169,25 @@ export const BaremesTable = ({ baremes, saisons, isLoading, onSave, onDelete }: 
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[15%]">Saison</TableHead>
-              <TableHead className="w-[20%]">Catégorie</TableHead>
-              <TableHead className="w-[18%]">Type classement</TableHead>
-              <TableHead className="w-[12%]">Place</TableHead>
-              <TableHead className="w-[12%]">Points</TableHead>
-              <TableHead className="w-[13%]">Type</TableHead>
+              <TableHead className="w-[50px]">
+                <Checkbox
+                  checked={selectedBaremes.size === baremes.length && baremes.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+              </TableHead>
+              <TableHead className="w-[13%]">Saison</TableHead>
+              <TableHead className="w-[18%]">Catégorie</TableHead>
+              <TableHead className="w-[16%]">Type classement</TableHead>
+              <TableHead className="w-[10%]">Place</TableHead>
+              <TableHead className="w-[10%]">Points</TableHead>
+              <TableHead className="w-[11%]">Type</TableHead>
               <TableHead className="w-[10%]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {baremes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                   Aucun barème trouvé
                 </TableCell>
               </TableRow>
@@ -161,6 +196,14 @@ export const BaremesTable = ({ baremes, saisons, isLoading, onSave, onDelete }: 
                 const isEdited = hasChanges(bareme.id);
                 return (
                   <TableRow key={bareme.id} className={isEdited ? "bg-muted/50" : ""}>
+                    {/* Checkbox */}
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedBaremes.has(bareme.id)}
+                        onCheckedChange={() => toggleSelect(bareme.id)}
+                      />
+                    </TableCell>
+
                     {/* Saison */}
                     <TableCell>
                       <Select
@@ -277,6 +320,20 @@ export const BaremesTable = ({ baremes, saisons, isLoading, onSave, onDelete }: 
           </TableBody>
         </Table>
       </Card>
+
+      {selectedBaremes.size > 0 && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            variant="destructive"
+            size="lg"
+            onClick={handleDeleteSelected}
+            className="shadow-lg"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Supprimer la sélection ({selectedBaremes.size})
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

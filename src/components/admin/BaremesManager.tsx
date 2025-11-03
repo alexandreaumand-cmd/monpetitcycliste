@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BaremesFilters } from "./baremes/BaremesFilters";
 import { BaremesTable } from "./baremes/BaremesTable";
 import { AddBaremeDialog } from "./baremes/AddBaremeDialog";
+import { CopyBaremesDialog } from "./baremes/CopyBaremesDialog";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { BarChart } from "lucide-react";
@@ -140,6 +141,85 @@ export function BaremesManager() {
     },
   });
 
+  // Mutation pour supprimer plusieurs barèmes en masse
+  const deleteBaremesBatchMutation = useMutation({
+    mutationFn: async (baremeIds: string[]) => {
+      const { error } = await supabase
+        .from('scoring_rules_saisons')
+        .delete()
+        .in('id', baremeIds);
+      
+      if (error) throw error;
+    },
+    onSuccess: (_, baremeIds) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-baremes'] });
+      toast({
+        title: "✅ Suppression réussie",
+        description: `${baremeIds.length} barème(s) supprimé(s)`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "❌ Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation pour copier des barèmes entre saisons
+  const copyBaremesMutation = useMutation({
+    mutationFn: async (params: {
+      sourceSaisonId: string;
+      targetSaisonId: string;
+      filters?: { categorie?: string; type_classement?: string };
+    }) => {
+      // 1. Récupérer les barèmes source
+      let query = supabase
+        .from('scoring_rules_saisons')
+        .select('*')
+        .eq('saison_id', params.sourceSaisonId);
+      
+      if (params.filters?.categorie) {
+        query = query.eq('categorie', params.filters.categorie);
+      }
+      if (params.filters?.type_classement) {
+        query = query.eq('type_classement', params.filters.type_classement);
+      }
+      
+      const { data: sourceBaremes, error: fetchError } = await query;
+      if (fetchError) throw fetchError;
+      
+      // 2. Créer les nouveaux barèmes
+      const newBaremes = sourceBaremes.map(({ id, created_at, updated_at, ...rest }) => ({
+        ...rest,
+        saison_id: params.targetSaisonId,
+      }));
+      
+      const { error: insertError } = await supabase
+        .from('scoring_rules_saisons')
+        .insert(newBaremes);
+      
+      if (insertError) throw insertError;
+      
+      return newBaremes.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-baremes'] });
+      toast({
+        title: "✅ Copie réussie",
+        description: `${count} barème(s) copié(s)`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "❌ Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleFilterChange = (key: string, value: string) => {
     setFilters({ ...filters, [key]: value });
   };
@@ -162,13 +242,26 @@ export function BaremesManager() {
     createBaremeMutation.mutate(newBareme);
   };
 
+  const handleCopy = (params: {
+    sourceSaisonId: string;
+    targetSaisonId: string;
+    filters?: { categorie?: string; type_classement?: string };
+  }) => {
+    copyBaremesMutation.mutate(params);
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
         icon={BarChart}
         title="Gestion des barèmes"
         subtitle="Gérez les points attribués par catégorie et position"
-        actions={<AddBaremeDialog saisons={saisons || []} onAdd={handleAddBareme} />}
+        actions={
+          <>
+            <CopyBaremesDialog saisons={saisons || []} onCopy={handleCopy} />
+            <AddBaremeDialog saisons={saisons || []} onAdd={handleAddBareme} />
+          </>
+        }
         filters={
           <BaremesFilters
             saisons={saisons || []}
@@ -185,6 +278,7 @@ export function BaremesManager() {
         isLoading={isLoading}
         onSave={(updates) => updateBaremesMutation.mutate(updates)}
         onDelete={handleDelete}
+        onDeleteBatch={(ids) => deleteBaremesBatchMutation.mutate(ids)}
       />
     </div>
   );
