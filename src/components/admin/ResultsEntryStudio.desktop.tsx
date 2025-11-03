@@ -225,8 +225,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     setGridPrepared(false);
     setIsDirty(false);
     setIsCancelled(false);
-    setIsTTT(false);
-    setTttRidersCount(7);
     setJerseyHolders({
       general: null,
       vert: null,
@@ -244,6 +242,12 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       setDateClassement(course.date_fin);
     }
   }, [sel_key, activeTab, etapeNumero, course.date_debut, course.date_fin]);
+
+  // Reset TTT settings only when changing stage/classification
+  useEffect(() => {
+    setIsTTT(false);
+    setTttRidersCount(7);
+  }, [activeTab, currentStage, currentFinalClassement]);
 
   // Memoize handlePrepareGrid with all dependencies
   const handlePrepareGrid = useCallback(async () => {
