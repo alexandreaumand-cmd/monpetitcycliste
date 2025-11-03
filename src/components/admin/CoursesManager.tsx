@@ -46,6 +46,22 @@ export const CoursesManager = () => {
     },
   });
 
+  // Fetch catégories depuis scoring_rules
+  const { data: categories } = useQuery({
+    queryKey: ['scoring-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('scoring_rules')
+        .select('categorie')
+        .order('categorie');
+      if (error) throw error;
+      
+      // Extraire les catégories uniques
+      const unique = [...new Set(data.map(r => r.categorie))];
+      return unique;
+    },
+  });
+
   // Fetch courses avec filtres
   const { data: courses, isLoading } = useQuery({
     queryKey: ['admin-courses', filters],
@@ -285,12 +301,21 @@ export const CoursesManager = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="categorie">Catégorie</Label>
-                    <Input
-                      id="categorie"
+                    <Select
                       value={newCourse.categorie}
-                      onChange={(e) => setNewCourse({ ...newCourse, categorie: e.target.value })}
-                      placeholder="Ex: WT, 1.1, 2.1"
-                    />
+                      onValueChange={(value) => setNewCourse({ ...newCourse, categorie: value })}
+                    >
+                      <SelectTrigger id="categorie">
+                        <SelectValue placeholder="Sélectionner une catégorie" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {categories?.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <Label htmlFor="type-course">Type de course</Label>
