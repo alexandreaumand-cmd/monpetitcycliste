@@ -137,24 +137,19 @@ Deno.serve(async (req) => {
 
     let riders: Array<{ id: string; nom: string; equipe: string }> = [];
     if (riderIds.length > 0 && saisonId) {
-      const { data } = await supabaseClient
-        .from('coureurs')
-        .select(`
-          id,
-          nom,
-          coureurs_saisons!inner(
-            equipe_id,
-            equipes_saisons!inner(nom_affiche)
-          )
-        `)
-        .eq('coureurs_saisons.saison_id', saisonId)
-        .in('id', riderIds);
+      console.log(`[course-leaderboard] Fetching ${riderIds.length} riders for saison ${saisonId}`);
       
-      riders = data?.map((r: any) => ({
-        id: r.id,
-        nom: r.nom,
-        equipe: Array.isArray(r.coureurs_saisons) && r.coureurs_saisons[0]?.equipes_saisons?.nom_affiche || 'N/A'
-      })) || [];
+      const { data, error } = await supabaseClient.rpc('get_riders_with_teams', {
+        p_rider_ids: riderIds,
+        p_saison_id: saisonId
+      });
+
+      if (error) {
+        console.error('[course-leaderboard] Error fetching riders:', error);
+      } else {
+        console.log(`[course-leaderboard] Successfully fetched ${data?.length || 0} riders`);
+        riders = data || [];
+      }
     }
 
     const riderMap = new Map(riders.map(r => [r.id, { nom: r.nom, equipe: r.equipe }]) || []);

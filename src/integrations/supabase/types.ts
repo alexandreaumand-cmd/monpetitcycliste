@@ -4407,6 +4407,14 @@ export type Database = {
               total_points: number
             }[]
           }
+      get_riders_with_teams: {
+        Args: { p_rider_ids: string[]; p_saison_id: string }
+        Returns: {
+          equipe: string
+          id: string
+          nom: string
+        }[]
+      }
       get_team_options_for_phase: {
         Args: { p_phase_id: string }
         Returns: {
