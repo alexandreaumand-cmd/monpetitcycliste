@@ -620,6 +620,20 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           ignoreDuplicates: false
         });
 
+      // Save TTT config to course_stage_config for points calculation
+      if (isTTT && etapeNumeroValue && tttRidersCount) {
+        await supabase
+          .from('course_stage_config')
+          .upsert({
+            course_id: course.course_id,
+            etape_numero: etapeNumeroValue,
+            ttt_riders_per_team: tttRidersCount
+          }, {
+            onConflict: 'course_id,etape_numero',
+            ignoreDuplicates: false
+          });
+      }
+
       // If cancelled, delete all results and return
       if (isCancelled) {
         await leagueClient
