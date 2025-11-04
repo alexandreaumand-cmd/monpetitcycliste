@@ -38,6 +38,7 @@ type StatutType = "finished" | "dnf" | "dns" | "dsq";
 
 type ResultRow = {
   position: number;
+  position_decimal?: number | null;
   coureur_id: string | null;
   coureur_nom: string | null;
   statut: StatutType;
@@ -151,14 +152,15 @@ export const ResultsEntryDrawer = ({
       const rows: ResultRow[] = [];
 
       // Finished riders (with positions)
-      const finishedResults = existingData?.filter(r => r.statut === 'finished' && r.position) || [];
+      const finishedResults = existingData?.filter(r => r.statut === 'finished' && (r.position || r.position_decimal)) || [];
       
       for (let i = 1; i <= maxPlace; i++) {
-        const existing = finishedResults.find(r => r.position === i);
+        const existing = finishedResults.find(r => r.position === i || Math.floor(r.position_decimal || 0) === i);
         const points = scoringRules.find(sr => sr.place === i)?.points || 0;
         
         rows.push({
           position: i,
+          position_decimal: existing?.position_decimal || null,
           coureur_id: existing?.coureur_id || null,
           coureur_nom: existing ? (existing.coureurs as any)?.nom || null : null,
           statut: 'finished' as StatutType,
@@ -285,6 +287,7 @@ export const ResultsEntryDrawer = ({
       const resultsToUpsert = validRows.map(row => {
         const isFinished = row.statut === 'finished';
         const positionValue = isFinished && row.position > 0 ? row.position : null;
+        const positionDecimalValue = row.position_decimal || null;
         const points = isFinished && row.position > 0 ? (scoringMap.get(row.position) || 0) : 0;
         
         return {
@@ -293,6 +296,7 @@ export const ResultsEntryDrawer = ({
           type_classement: classementType,
           etape_numero: classementType === 'Etape' ? etapeNumero : null,
           position: positionValue,
+          position_decimal: positionDecimalValue,
           statut: row.statut,
           date_classement: dateClassement,
           manager_id: riderManagerMap.get(row.coureur_id!),

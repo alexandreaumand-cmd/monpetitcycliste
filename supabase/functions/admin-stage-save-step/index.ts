@@ -106,7 +106,8 @@ Deno.serve(async (req) => {
       type_classement: 'Etape',
       etape_numero,
       coureur_id: t.coureur_id,
-      position: t.position,
+      position: t.position_decimal ? Math.floor(t.position_decimal) : t.position,
+      position_decimal: t.position_decimal || null,
       statut: 'finished',
       date_classement,
       updated_by_manager_id: manager_id
