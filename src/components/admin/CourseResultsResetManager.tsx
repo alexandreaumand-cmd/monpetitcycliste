@@ -13,20 +13,38 @@ import { AlertTriangle, Trash2 } from "lucide-react";
 
 export const CourseResultsResetManager = () => {
   const [courseId, setCourseId] = useState("");
+  const [courseSaisonFilter, setCourseSaisonFilter] = useState("");
   const [saisonId, setSaisonId] = useState("");
   const [confirmPhraseCourse, setConfirmPhraseCourse] = useState("");
   const [confirmPhraseSeason, setConfirmPhraseSeason] = useState("");
   const [confirmPhraseAll, setConfirmPhraseAll] = useState("");
   const { toast } = useToast();
 
-  // Fetch courses
+  // Fetch courses with season info
   const { data: courses } = useQuery({
-    queryKey: ['courses-for-reset'],
+    queryKey: ['courses-for-reset', courseSaisonFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('courses')
-        .select('id, nom')
+        .select(`
+          id, 
+          nom,
+          phase_id,
+          phases!inner(
+            id,
+            nom,
+            saison_id,
+            saisons!inner(annee)
+          )
+        `)
         .order('nom');
+      
+      // Filter by season if selected
+      if (courseSaisonFilter) {
+        query = query.eq('phases.saison_id', courseSaisonFilter);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -125,6 +143,36 @@ export const CourseResultsResetManager = () => {
           </TabsList>
 
           <TabsContent value="course" className="space-y-4">
+            {/* Season filter */}
+            <div className="space-y-2">
+              <Label>Filtrer par saison (optionnel)</Label>
+              <Select 
+                value={courseSaisonFilter} 
+                onValueChange={(value) => {
+                  setCourseSaisonFilter(value);
+                  setCourseId(""); // Reset course selection when season changes
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Toutes les saisons" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Toutes les saisons</SelectItem>
+                  {seasons?.map((season) => (
+                    <SelectItem key={season.id} value={season.id}>
+                      Saison {season.annee}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {courseSaisonFilter && courses && (
+                <p className="text-xs text-muted-foreground">
+                  {courses.length} course(s) dans cette saison
+                </p>
+              )}
+            </div>
+
+            {/* Course selector */}
             <div className="space-y-2">
               <Label>Course</Label>
               <Select value={courseId} onValueChange={setCourseId}>
