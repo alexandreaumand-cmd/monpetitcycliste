@@ -199,23 +199,26 @@ export const ResultsEntryDrawer = ({
     }
   };
 
-  // Load ttt_riders_per_team from courses table when opening drawer
+  // Load ttt_riders_per_team from course_stage_config when opening drawer or changing stage
   useEffect(() => {
-    if (open) {
+    if (open && etapeNumero) {
       const loadTttConfig = async () => {
         const { data } = await supabase
-          .from('courses')
+          .from('course_stage_config')
           .select('ttt_riders_per_team')
-          .eq('id', course.course_id)
-          .single();
+          .eq('course_id', course.course_id)
+          .eq('etape_numero', etapeNumero)
+          .maybeSingle();
         
         if (data?.ttt_riders_per_team) {
           setTttRidersPerTeam(data.ttt_riders_per_team);
+        } else {
+          setTttRidersPerTeam(0); // Reset if no TTT config for this stage
         }
       };
       loadTttConfig();
     }
-  }, [open, course.course_id]);
+  }, [open, course.course_id, etapeNumero]);
 
   // Auto-load grid when drawer opens and scoring rules are ready
   useEffect(() => {
@@ -270,13 +273,17 @@ export const ResultsEntryDrawer = ({
         throw new Error("Aucun résultat à sauvegarder");
       }
 
-      // Save ttt_riders_per_team to courses table if it's a TTT stage
-      if (tttRidersPerTeam > 0) {
-        await supabase
-          .from('courses')
-          .update({ ttt_riders_per_team: tttRidersPerTeam })
-          .eq('id', course.course_id);
-      }
+      // Save ttt_riders_per_team to course_stage_config (per stage)
+      await supabase
+        .from('course_stage_config')
+        .upsert({
+          course_id: course.course_id,
+          etape_numero: etapeNumero,
+          ttt_riders_per_team: tttRidersPerTeam > 0 ? tttRidersPerTeam : null,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'course_id,etape_numero'
+        });
 
       // Check for duplicates among finished riders
       const finishedRiders = validRows.filter(r => r.statut === 'finished');

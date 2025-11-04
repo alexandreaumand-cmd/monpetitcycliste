@@ -931,6 +931,62 @@ export type Database = {
           },
         ]
       }
+      course_stage_config: {
+        Row: {
+          course_id: string
+          created_at: string | null
+          etape_numero: number
+          id: string
+          ttt_riders_per_team: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          course_id: string
+          created_at?: string | null
+          etape_numero: number
+          id?: string
+          ttt_riders_per_team?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          course_id?: string
+          created_at?: string | null
+          etape_numero?: number
+          id?: string
+          ttt_riders_per_team?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_stage_config_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_stage_config_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_for_points_norm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_stage_config_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_course_points_theoriques"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "course_stage_config_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_recent_results"
+            referencedColumns: ["course_id"]
+          },
+        ]
+      }
       courses: {
         Row: {
           categorie: string | null
@@ -941,7 +997,6 @@ export type Database = {
           pays: string | null
           phase_id: string | null
           statut: Database["public"]["Enums"]["race_statut"] | null
-          ttt_riders_per_team: number | null
           type_course: string | null
           uci_code: string | null
           wt_tier: Database["public"]["Enums"]["wt_tier_type"] | null
@@ -955,7 +1010,6 @@ export type Database = {
           pays?: string | null
           phase_id?: string | null
           statut?: Database["public"]["Enums"]["race_statut"] | null
-          ttt_riders_per_team?: number | null
           type_course?: string | null
           uci_code?: string | null
           wt_tier?: Database["public"]["Enums"]["wt_tier_type"] | null
@@ -969,7 +1023,6 @@ export type Database = {
           pays?: string | null
           phase_id?: string | null
           statut?: Database["public"]["Enums"]["race_statut"] | null
-          ttt_riders_per_team?: number | null
           type_course?: string | null
           uci_code?: string | null
           wt_tier?: Database["public"]["Enums"]["wt_tier_type"] | null
