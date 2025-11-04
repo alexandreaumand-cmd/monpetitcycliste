@@ -80,3 +80,6 @@ verify_jwt = true
 
 [functions.admin-reset-phase-auctions]
 verify_jwt = false
+
+[functions.admin-reset-season-results]
+verify_jwt = true
