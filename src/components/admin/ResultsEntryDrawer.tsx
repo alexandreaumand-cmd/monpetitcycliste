@@ -199,10 +199,10 @@ export const ResultsEntryDrawer = ({
     }
   };
 
-  // Load ttt_riders_per_team from courses table when opening drawer
+  // Load ttt_riders_per_team from courses table when opening drawer, then auto-load grid
   useEffect(() => {
     if (open) {
-      const loadTttConfig = async () => {
+      const loadTttConfigAndGrid = async () => {
         const { data } = await supabase
           .from('courses')
           .select('ttt_riders_per_team')
@@ -212,17 +212,15 @@ export const ResultsEntryDrawer = ({
         if (data?.ttt_riders_per_team) {
           setTttRidersPerTeam(data.ttt_riders_per_team);
         }
+        
+        // Auto-load grid after loading TTT config
+        if (!isLoadingRules && (scoringRules?.length || 0) > 0) {
+          handlePrepareGrid();
+        }
       };
-      loadTttConfig();
+      loadTttConfigAndGrid();
     }
-  }, [open, course.course_id]);
-
-  // Auto-load grid when opening and scoring rules are ready
-  useEffect(() => {
-    if (open && !gridPrepared && !isLoadingRules && (scoringRules?.length || 0) > 0) {
-      handlePrepareGrid();
-    }
-  }, [open, sel_key, gridPrepared, isLoadingRules, scoringRules]);
+  }, [open, course.course_id, sel_key]);
 
   const handleRiderChange = (index: number, riderId: string | null, riderName: string | null) => {
     setResultRows(prev => prev.map((row, i) => 
