@@ -941,6 +941,7 @@ export type Database = {
           pays: string | null
           phase_id: string | null
           statut: Database["public"]["Enums"]["race_statut"] | null
+          ttt_riders_per_team: number | null
           type_course: string | null
           uci_code: string | null
           wt_tier: Database["public"]["Enums"]["wt_tier_type"] | null
@@ -954,6 +955,7 @@ export type Database = {
           pays?: string | null
           phase_id?: string | null
           statut?: Database["public"]["Enums"]["race_statut"] | null
+          ttt_riders_per_team?: number | null
           type_course?: string | null
           uci_code?: string | null
           wt_tier?: Database["public"]["Enums"]["wt_tier_type"] | null
@@ -967,6 +969,7 @@ export type Database = {
           pays?: string | null
           phase_id?: string | null
           statut?: Database["public"]["Enums"]["race_statut"] | null
+          ttt_riders_per_team?: number | null
           type_course?: string | null
           uci_code?: string | null
           wt_tier?: Database["public"]["Enums"]["wt_tier_type"] | null
