@@ -23,10 +23,10 @@ Deno.serve(async (req) => {
       throw new Error('Non authentifié');
     }
 
-    // Check superadmin access
-    const { data: isSuperAdmin, error: adminError } = await supabaseClient.rpc('is_superadmin');
-    if (adminError || !isSuperAdmin) {
-      throw new Error('Accès refusé: réservé aux superadministrateurs');
+    // Check admin access
+    const { data: isAdmin, error: adminError } = await supabaseClient.rpc('is_admin');
+    if (adminError || !isAdmin) {
+      throw new Error('Accès refusé: réservé aux administrateurs');
     }
 
     const { course_id, confirm_phrase } = await req.json();
