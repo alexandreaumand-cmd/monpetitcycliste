@@ -32,7 +32,6 @@ export const CourseResultsResetManager = () => {
           phase_id,
           phases!inner(
             id,
-            nom,
             saison_id,
             saisons!inner(annee)
           )
