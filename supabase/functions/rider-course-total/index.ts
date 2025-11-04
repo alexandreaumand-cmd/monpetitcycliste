@@ -85,23 +85,20 @@ Deno.serve(async (req) => {
     let riders: Array<{ id: string; nom: string; equipe: string }> = [];
     if (riderIds.length > 0 && saisonId) {
       const { data: ridersData, error: ridersError } = await supabaseClient
-        .from('coureurs')
+        .from('coureurs_saisons')
         .select(`
-          id,
-          nom,
-          coureurs_saisons!inner(
-            equipe_id,
-            equipes_saisons!inner(nom_affiche)
-          )
+          coureur_id,
+          coureurs(id, nom),
+          equipes_saisons(nom_affiche)
         `)
-        .eq('coureurs_saisons.saison_id', saisonId)
-        .in('id', riderIds);
+        .eq('saison_id', saisonId)
+        .in('coureur_id', riderIds);
 
       if (ridersError) throw ridersError;
       riders = ridersData?.map((r: any) => ({
-        id: r.id,
-        nom: r.nom,
-        equipe: Array.isArray(r.coureurs_saisons) && r.coureurs_saisons[0]?.equipes_saisons?.nom_affiche || 'N/A'
+        id: r.coureur_id,
+        nom: r.coureurs?.nom || 'Unknown',
+        equipe: r.equipes_saisons?.nom_affiche || 'N/A'
       })) || [];
     }
 
