@@ -24,8 +24,10 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Verify user is authenticated
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    // Verify user is authenticated by getting user from JWT
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
     
     if (userError) {
       console.error('Auth error:', userError);
