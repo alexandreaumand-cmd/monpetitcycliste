@@ -221,21 +221,22 @@ export const ResultsEntryDrawer = ({
   useEffect(() => {
     console.log('🔍 Auto-load check:', {
       open,
+      sel_key,
       isLoadingRules,
       scoringRulesCount: scoringRules?.length || 0,
       gridPrepared
     });
     
     if (open && !isLoadingRules && scoringRules && scoringRules.length > 0 && !gridPrepared) {
-      // Small delay to ensure all state updates have settled
+      // Delay to ensure scoring rules query has fully completed
       const timer = setTimeout(() => {
         console.log('🎯 Auto-loading grid with scoring rules ready');
         handlePrepareGrid();
-      }, 100);
+      }, 300);
       
       return () => clearTimeout(timer);
     }
-  }, [open, isLoadingRules, scoringRules]);
+  }, [open, sel_key, isLoadingRules, scoringRules]);
 
   const handleRiderChange = (index: number, riderId: string | null, riderName: string | null) => {
     setResultRows(prev => prev.map((row, i) => 
