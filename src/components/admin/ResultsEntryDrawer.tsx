@@ -199,6 +199,24 @@ export const ResultsEntryDrawer = ({
     }
   };
 
+  // Load ttt_riders_per_team from courses table when opening drawer
+  useEffect(() => {
+    if (open) {
+      const loadTttConfig = async () => {
+        const { data } = await supabase
+          .from('courses')
+          .select('ttt_riders_per_team')
+          .eq('id', course.course_id)
+          .single();
+        
+        if (data?.ttt_riders_per_team) {
+          setTttRidersPerTeam(data.ttt_riders_per_team);
+        }
+      };
+      loadTttConfig();
+    }
+  }, [open, course.course_id]);
+
   // Auto-load grid when opening and scoring rules are ready
   useEffect(() => {
     if (open && !gridPrepared && !isLoadingRules && (scoringRules?.length || 0) > 0) {
@@ -236,6 +254,14 @@ export const ResultsEntryDrawer = ({
       
       if (validRows.length === 0) {
         throw new Error("Aucun résultat à sauvegarder");
+      }
+
+      // Save ttt_riders_per_team to courses table if it's a TTT stage
+      if (tttRidersPerTeam > 0) {
+        await supabase
+          .from('courses')
+          .update({ ttt_riders_per_team: tttRidersPerTeam })
+          .eq('id', course.course_id);
       }
 
       // Check for duplicates among finished riders
