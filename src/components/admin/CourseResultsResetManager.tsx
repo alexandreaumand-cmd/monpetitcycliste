@@ -157,7 +157,6 @@ export const CourseResultsResetManager = () => {
                   <SelectValue placeholder="Toutes les saisons" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Toutes les saisons</SelectItem>
                   {seasons?.map((season) => (
                     <SelectItem key={season.id} value={season.id}>
                       Saison {season.annee}
@@ -165,6 +164,19 @@ export const CourseResultsResetManager = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {courseSaisonFilter && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    setCourseSaisonFilter("");
+                    setCourseId("");
+                  }}
+                  className="h-8"
+                >
+                  Réinitialiser le filtre
+                </Button>
+              )}
               {courseSaisonFilter && courses && (
                 <p className="text-xs text-muted-foreground">
                   {courses.length} course(s) dans cette saison
