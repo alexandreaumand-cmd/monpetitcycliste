@@ -219,11 +219,23 @@ export const ResultsEntryDrawer = ({
 
   // Auto-load grid when drawer opens and scoring rules are ready
   useEffect(() => {
+    console.log('🔍 Auto-load check:', {
+      open,
+      isLoadingRules,
+      scoringRulesCount: scoringRules?.length || 0,
+      gridPrepared
+    });
+    
     if (open && !isLoadingRules && scoringRules && scoringRules.length > 0 && !gridPrepared) {
-      console.log('🎯 Auto-loading grid with scoring rules ready');
-      handlePrepareGrid();
+      // Small delay to ensure all state updates have settled
+      const timer = setTimeout(() => {
+        console.log('🎯 Auto-loading grid with scoring rules ready');
+        handlePrepareGrid();
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
-  }, [open, isLoadingRules, scoringRules, gridPrepared]);
+  }, [open, isLoadingRules, scoringRules]);
 
   const handleRiderChange = (index: number, riderId: string | null, riderName: string | null) => {
     setResultRows(prev => prev.map((row, i) => 
