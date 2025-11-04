@@ -98,6 +98,8 @@ interface ResultRow {
   coureur_id: string;
   coureur_nom: string;
   equipe: string;
+  equipe_id_uci?: string | null;
+  equipe_nom_uci?: string | null;
   manager_id: string | null;
   manager_nom: string | null;
   points_officiels: number | null;
@@ -238,17 +240,20 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
       const isTTT = selectedType === 'Etape' && rows.some((r: any) => r.position_decimal !== null);
       
     if (isTTT) {
-      // Group results by team position
+      // Group results by team (using equipe_id_uci for accurate grouping)
       const grouped = rows.reduce((acc: any, row: any) => {
         const teamPosition = Math.floor(row.position_decimal);
-        if (!acc[teamPosition]) {
-          acc[teamPosition] = {
+        const teamKey = `${teamPosition}-${row.equipe_id_uci || row.equipe}`;
+        
+        if (!acc[teamKey]) {
+          acc[teamKey] = {
             teamRow: {
-              race_result_id: `team-${teamPosition}`,
+              race_result_id: `team-${teamKey}`,
               row_position: teamPosition,
               position_decimal: teamPosition,
-              coureur_nom: row.equipe,
-              equipe: row.equipe,
+              coureur_nom: row.equipe_nom_uci || row.equipe || 'Équipe inconnue',
+              equipe: row.equipe_nom_uci || row.equipe || 'Équipe inconnue',
+              equipe_id_uci: row.equipe_id_uci,
               points_theoriques: 0,
               statut: 'finished',
               isTeamHeader: true,
@@ -258,18 +263,27 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
             riders: []
           };
         }
+        
         // Accumulate points from all riders in the team
-        acc[teamPosition].teamRow.points_theoriques += (row.points_theoriques || 0);
-        acc[teamPosition].riders.push(row);
+        acc[teamKey].teamRow.points_theoriques += (row.points_theoriques || 0);
+        acc[teamKey].riders.push(row);
         return acc;
       }, {});
 
-        // Flatten: team header + riders
+        // Flatten: team header + riders, sorted properly
         const flatResults: any[] = [];
-        Object.keys(grouped).sort((a, b) => Number(a) - Number(b)).forEach(pos => {
-          flatResults.push(grouped[pos].teamRow);
-          flatResults.push(...grouped[pos].riders);
-        });
+        Object.keys(grouped)
+          .sort((a, b) => {
+            const posA = parseInt(a.split('-')[0]);
+            const posB = parseInt(b.split('-')[0]);
+            return posA - posB;
+          })
+          .forEach(key => {
+            flatResults.push(grouped[key].teamRow);
+            // Sort riders by position_decimal within team
+            grouped[key].riders.sort((a: any, b: any) => a.position_decimal - b.position_decimal);
+            flatResults.push(...grouped[key].riders);
+          });
         
         setResults(flatResults);
       } else {

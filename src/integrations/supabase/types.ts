@@ -4505,11 +4505,14 @@ export type Database = {
               coureur_id: string
               coureur_nom: string
               equipe: string
+              equipe_id_uci: string
+              equipe_nom_uci: string
               is_my_rider: boolean
               manager_id: string
               manager_nom: string
               points_officiels: number
               points_theoriques: number
+              position_decimal: number
               race_result_id: string
               row_position: number
               statut: Database["public"]["Enums"]["result_statut"]
