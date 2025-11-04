@@ -68,6 +68,7 @@ export const ResultsEntryDrawer = ({
   const [etapeNumero, setEtapeNumero] = useState<number>(initialEtape || 1);
   const [resultRows, setResultRows] = useState<ResultRow[]>([]);
   const [gridPrepared, setGridPrepared] = useState(false);
+  const [tttRidersPerTeam, setTttRidersPerTeam] = useState<number>(6); // Default 6 riders per team for TTT
   const requestIdRef = useRef(0);
   const [currentRequestId, setCurrentRequestId] = useState(0);
   const queryClient = useQueryClient();
@@ -156,7 +157,12 @@ export const ResultsEntryDrawer = ({
       
       for (let i = 1; i <= maxPlace; i++) {
         const existing = finishedResults.find(r => r.position === i || Math.floor(r.position_decimal || 0) === i);
-        const points = scoringRules.find(sr => sr.place === i)?.points || 0;
+        const basePoints = scoringRules.find(sr => sr.place === i)?.points || 0;
+        
+        // For TTT: divide points by number of riders per team (only if > 0)
+        const points = (existing?.position_decimal && tttRidersPerTeam > 0)
+          ? Math.floor(basePoints / tttRidersPerTeam) 
+          : basePoints;
         
         rows.push({
           position: i,
@@ -211,8 +217,10 @@ export const ResultsEntryDrawer = ({
   const handleStatutChange = (index: number, statut: StatutType) => {
     setResultRows(prev => prev.map((row, i) => {
       if (i !== index) return row;
+      const basePoints = scoringRules?.find(sr => sr.place === row.position)?.points || 0;
+      // For TTT: divide points by number of riders per team (only if > 0)
       const points = statut === 'finished' 
-        ? (scoringRules?.find(sr => sr.place === row.position)?.points || 0) 
+        ? ((row.position_decimal && tttRidersPerTeam > 0) ? Math.floor(basePoints / tttRidersPerTeam) : basePoints)
         : 0;
       return { ...row, statut, points };
     }));
@@ -288,7 +296,11 @@ export const ResultsEntryDrawer = ({
         const isFinished = row.statut === 'finished';
         const positionValue = isFinished && row.position > 0 ? row.position : null;
         const positionDecimalValue = row.position_decimal || null;
-        const points = isFinished && row.position > 0 ? (scoringMap.get(row.position) || 0) : 0;
+        const basePoints = scoringMap.get(row.position) || 0;
+        // For TTT: divide points by number of riders per team (only if > 0)
+        const points = isFinished && row.position > 0 
+          ? ((positionDecimalValue && tttRidersPerTeam > 0) ? Math.floor(basePoints / tttRidersPerTeam) : basePoints)
+          : 0;
         
         return {
           course_id: course.course_id,
@@ -335,7 +347,11 @@ export const ResultsEntryDrawer = ({
         if (row.statut !== 'finished' || row.position === 0) continue;
 
         // SERVER RECALCULATION of points
-        const serverPoints = scoringMap.get(row.position) || 0;
+        const basePoints = scoringMap.get(row.position) || 0;
+        // For TTT: divide points by number of riders per team (only if > 0)
+        const serverPoints = (row.position_decimal && tttRidersPerTeam > 0)
+          ? Math.floor(basePoints / tttRidersPerTeam)
+          : basePoints;
         if (serverPoints === 0) continue;
 
         const managerId = riderManagerMap.get(row.coureur_id!);
@@ -347,7 +363,7 @@ export const ResultsEntryDrawer = ({
             phase_id: course.phase_id,
             type_classement: classementType,
             etape_numero: classementType === 'Etape' ? etapeNumero : null,
-            points: serverPoints, // SERVER-SIDE recalculated
+            points: serverPoints, // SERVER-SIDE recalculated with TTT division
           });
         }
       }
@@ -432,21 +448,46 @@ export const ResultsEntryDrawer = ({
                 </Tabs>
 
                 {classementType === 'Etape' && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Numéro d'étape</label>
-                    <Select value={etapeNumero.toString()} onValueChange={handleEtapeChange}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: course.nb_etapes }, (_, i) => (
-                          <SelectItem key={i + 1} value={(i + 1).toString()}>
-                            Étape {i + 1}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Numéro d'étape</label>
+                      <Select value={etapeNumero.toString()} onValueChange={handleEtapeChange}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: course.nb_etapes }, (_, i) => (
+                            <SelectItem key={i + 1} value={(i + 1).toString()}>
+                              Étape {i + 1}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Nombre de coureurs TTT (0 si course classique)</label>
+                      <Select value={tttRidersPerTeam.toString()} onValueChange={(v) => setTttRidersPerTeam(parseInt(v))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Course classique (0)</SelectItem>
+                          <SelectItem value="3">3 coureurs/équipe</SelectItem>
+                          <SelectItem value="4">4 coureurs/équipe</SelectItem>
+                          <SelectItem value="5">5 coureurs/équipe</SelectItem>
+                          <SelectItem value="6">6 coureurs/équipe</SelectItem>
+                          <SelectItem value="7">7 coureurs/équipe</SelectItem>
+                          <SelectItem value="8">8 coureurs/équipe</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {tttRidersPerTeam > 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          Points par sous-place = Points de la place ÷ {tttRidersPerTeam}
+                        </p>
+                      )}
+                    </div>
+                  </>
                 )}
 
                 <Button 
