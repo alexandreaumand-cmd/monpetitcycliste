@@ -83,24 +83,22 @@ export const ResultatsImportSection = () => {
         <Alert>
           <Info className="h-4 w-4" />
           <AlertTitle>Format attendu</AlertTitle>
-          <AlertDescription>
-            <code className="text-xs block mb-2 bg-muted p-2 rounded">
-              course_id,coureur_id,type_classement,etape_numero,position,statut,date_classement,saison_id
-            </code>
-            <ul className="text-xs space-y-1 list-disc list-inside">
-              <li><strong>course_id</strong> : ID de la course (ex: P1R1)</li>
-              <li><strong>coureur_id</strong> : ID du coureur</li>
-              <li><strong>type_classement</strong> : Etape, General, Montagne, Points, etc.</li>
-              <li><strong>etape_numero</strong> : Numéro d'étape (vide pour GC)</li>
-              <li><strong>position</strong> : Position (1, 2, 3...)</li>
-              <li><strong>statut</strong> : finished, dnf, dns, ...</li>
-              <li><strong>date_classement</strong> : Date (YYYY-MM-DD ou DD/MM/YYYY)</li>
-              <li><strong>saison_id</strong> : UUID de la saison</li>
-            </ul>
-            <p className="text-xs mt-2 font-semibold">
-              ⚡ Les points sont recalculés automatiquement après l'import
-            </p>
-          </AlertDescription>
+                <AlertDescription>
+                  Format CSV attendu (avec en-têtes) :
+                  <code className="block mt-2 p-2 bg-muted rounded text-xs">
+                    course_id,coureur_id,type_classement,etape_numero,position,statut,date_classement,saison_id
+                  </code>
+                  <ul className="mt-2 text-xs space-y-1">
+                    <li>• <strong>saison_id</strong> : Année (ex: 2025) ou UUID complet (obligatoire)</li>
+                    <li>• <strong>date_classement</strong> : DD/MM/YYYY ou YYYY-MM-DD</li>
+                    <li>• <strong>type_classement</strong> : Général, Etape, Points, Montagne, etc.</li>
+                    <li>• <strong>etape_numero</strong> : numéro (pour type Etape) ou vide</li>
+                    <li>• <strong>statut</strong> : finished, dnf, dns, etc.</li>
+                  </ul>
+                  <p className="text-xs mt-2 font-semibold">
+                    ⚡ Les points sont recalculés automatiquement après l'import
+                  </p>
+                </AlertDescription>
         </Alert>
 
         <Alert variant="destructive">

@@ -36,6 +36,37 @@ Deno.serve(async (req) => {
 
     console.log('[admin-import-race-results-csv] Starting import...');
 
+    // Pre-load saisons for year → UUID mapping
+    const { data: saisons, error: saisonsError } = await supabaseClient
+      .from('saisons')
+      .select('id, annee');
+    
+    if (saisonsError) {
+      console.error('[admin-import-race-results-csv] Error loading saisons:', saisonsError);
+      throw new Error('Impossible de charger les saisons');
+    }
+
+    const saisonCache = new Map<string, string>(
+      (saisons || []).map(s => [s.annee.toString(), s.id])
+    );
+    
+    console.log('[admin-import-race-results-csv] Loaded saisons:', Array.from(saisonCache.keys()));
+
+    // Resolve saison_id from UUID or year
+    const resolveSaisonId = (value: string): string | null => {
+      if (!value) return null;
+      
+      const trimmed = value.trim();
+      
+      // If it contains dashes, assume it's a UUID
+      if (trimmed.includes('-')) {
+        return trimmed;
+      }
+      
+      // Otherwise, treat as year and lookup in cache
+      return saisonCache.get(trimmed) || null;
+    };
+
     // Parse CSV (skip header)
     const lines = csv_content.trim().split('\n');
     const headers = lines[0].split(',').map((h: string) => h.trim());
@@ -69,6 +100,8 @@ Deno.serve(async (req) => {
       const values = line.split(',').map((v: string) => v.trim());
       
       try {
+        const resolvedSaisonId = resolveSaisonId(values[7]);
+        
         const result: any = {
           course_id: values[0] || null,
           coureur_id: values[1] || null,
@@ -77,7 +110,7 @@ Deno.serve(async (req) => {
           position: values[4] ? parseInt(values[4]) : null,
           statut: values[5] || 'finished',
           date_classement: parseDate(values[6]),
-          saison_id: values[7] || null,
+          saison_id: resolvedSaisonId,
         };
 
         // Validation
@@ -90,14 +123,18 @@ Deno.serve(async (req) => {
           continue;
         }
         if (!result.saison_id) {
-          errors.push({ line: i + 1, error: 'saison_id manquant' });
+          errors.push({ 
+            line: i + 1, 
+            error: `saison_id manquant ou année '${values[7]}' non trouvée` 
+          });
           continue;
         }
 
         results.push(result);
         courseIds.add(result.course_id);
       } catch (error) {
-        errors.push({ line: i + 1, error: error.message });
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        errors.push({ line: i + 1, error: errorMessage });
       }
     }
 
@@ -147,8 +184,9 @@ Deno.serve(async (req) => {
           recomputeResults.push({ course_id: courseId, success: true, data });
         }
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`[admin-import-race-results-csv] Exception recomputing points for ${courseId}:`, error);
-        recomputeResults.push({ course_id: courseId, success: false, error: error.message });
+        recomputeResults.push({ course_id: courseId, success: false, error: errorMessage });
       }
     }
 
