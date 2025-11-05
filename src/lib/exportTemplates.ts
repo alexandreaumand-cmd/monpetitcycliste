@@ -72,12 +72,12 @@ Remco EVENEPOEL;John Doe;Phase 1;110`;
  * Generate CSV template for resultats
  */
 export const generateResultatsTemplate = (): string => {
-  return `course_id;coureur_id;type_classement;position;statut;etape_numero;date_classement
-P1R1;POG001;General;1;finished;;2025-01-26
-P1R1;VIN001;General;2;finished;;2025-01-26
-P1R1;EVE001;General;3;finished;;2025-01-26
-P1R1;POG001;Etape;1;finished;1;2025-01-21
-P1R1;VIN001;Etape;2;finished;1;2025-01-21`;
+  return `course_id;coureur_id;type_classement;position;statut;etape_numero;date_classement;saison_id
+P1R1;POG001;General;1;finished;;2025-01-26;2025
+P1R1;VIN001;General;2;finished;;2025-01-26;2025
+P1R1;EVE001;General;3;finished;;2025-01-26;2025
+P1R1;POG001;Etape;1;finished;1;2025-01-21;2025
+P1R1;VIN001;Etape;2;finished;1;2025-01-21;2025`;
 };
 
 /**
