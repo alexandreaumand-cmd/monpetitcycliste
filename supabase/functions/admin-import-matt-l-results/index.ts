@@ -510,12 +510,16 @@ Deno.serve(async (req) => {
       console.log(`✅ Ligne ${lineNum}: Date ${dateClassement} → Saison ${raceYear}`);
 
       // Créer le résultat
+      // Les Porteurs et classements finaux doivent avoir position = 1 pour le calcul des points
+      const isPorteur = typeClassement.startsWith('Porteur');
+      const isFinalClassement = ['Points', 'Montagne', 'Jeune'].includes(typeClassement);
+      
       const result = {
         course_id: courseId,
         coureur_id: coureurId,
         type_classement: typeClassement,
         etape_numero: etapeNumero,
-        position: position > 0 ? position : null,
+        position: (isPorteur || isFinalClassement) ? 1 : (position > 0 ? position : null),
         position_decimal: null,
         statut,
         date_classement: dateClassement,
