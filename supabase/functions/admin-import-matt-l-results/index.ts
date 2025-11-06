@@ -680,10 +680,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Insertion en batch simple (sans upsert pour éviter les conflits de contraintes partielles)
+    // Insertion avec UPSERT pour gérer les doublons et permettre les corrections
     const { error: insertError } = await supabaseClient
       .from('race_results')
-      .insert(validResults);
+      .upsert(validResults, {
+        onConflict: 'course_id,coureur_id,type_classement,etape_numero',
+        ignoreDuplicates: false // Remplace les résultats existants
+      });
 
     if (insertError) throw insertError;
 
