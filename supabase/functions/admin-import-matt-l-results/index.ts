@@ -329,10 +329,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Insertion en batch
+    // Insertion en batch avec UPSERT pour gérer les doublons
     const { error: insertError } = await supabaseClient
       .from('race_results')
-      .insert(validResults);
+      .upsert(validResults, {
+        onConflict: 'course_id,type_classement,coureur_id,etape_numero',
+        ignoreDuplicates: false
+      });
 
     if (insertError) throw insertError;
 
