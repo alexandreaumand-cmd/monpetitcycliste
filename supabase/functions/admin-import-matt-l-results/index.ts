@@ -476,7 +476,22 @@ Deno.serve(async (req) => {
       day = day.padStart(2, '0');
       month = month.padStart(2, '0');
       
-      const dateClassement = `${yearStr}-${month}-${day}`;
+      // Pour les classements généraux (non-étapes), utiliser date_fin de la course (jour précédent)
+      // Pour les étapes, utiliser la date fournie
+      let dateClassement: string;
+      
+      if (etapeNumero === null && typeClassement !== 'Etape') {
+        // Classement général: soustraire un jour (publié J+1, mais appartient à J)
+        const dateObj = new Date(`${yearStr}-${month}-${day}`);
+        dateObj.setDate(dateObj.getDate() - 1);
+        const adjustedYear = dateObj.getFullYear();
+        const adjustedMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const adjustedDay = String(dateObj.getDate()).padStart(2, '0');
+        dateClassement = `${adjustedYear}-${adjustedMonth}-${adjustedDay}`;
+      } else {
+        // Étape: utiliser la date fournie
+        dateClassement = `${yearStr}-${month}-${day}`;
+      }
       
       // Mapper la date vers la saison
       const raceYear = parseInt(yearStr, 10);
