@@ -58,26 +58,54 @@ Deno.serve(async (req) => {
     });
     console.log('Loaded seasons:', saisonMap.size);
 
-    // Pré-charger les courses avec mapping par nom normalisé
-    const { data: courses } = await supabaseClient
-      .from('courses')
-      .select('id, nom');
+    // Pré-charger TOUTES les courses avec pagination (sans limite 1000)
+    let courses: any[] = [];
+    let from = 0;
+    const pageSize = 1000;
+
+    while (true) {
+      const { data, error } = await supabaseClient
+        .from('courses')
+        .select('id, nom')
+        .range(from, from + pageSize - 1);
+      
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      
+      courses = courses.concat(data);
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
     
     const courseByName = new Map<string, { id: string, nom: string, norm: string }>();
     
-    courses?.forEach(c => {
+    courses.forEach(c => {
       const normName = normalize(c.nom);
       courseByName.set(c.id, { id: c.id, nom: c.nom, norm: normName });
     });
     console.log('Loaded courses:', courseByName.size);
 
-    // Pré-charger les coureurs avec normalisation
-    const { data: coureurs } = await supabaseClient
-      .from('coureurs')
-      .select('id, nom');
+    // Pré-charger TOUS les coureurs avec pagination (sans limite 1000)
+    let coureurs: any[] = [];
+    let fromRiders = 0;
+    const pageSizeRiders = 1000;
+
+    while (true) {
+      const { data, error } = await supabaseClient
+        .from('coureurs')
+        .select('id, nom')
+        .range(fromRiders, fromRiders + pageSizeRiders - 1);
+      
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      
+      coureurs = coureurs.concat(data);
+      if (data.length < pageSizeRiders) break;
+      fromRiders += pageSizeRiders;
+    }
     
     const coureurByNorm = new Map<string, { id: string, nom: string, norm: string, tokens: string, lastName: string }>();
-    coureurs?.forEach(c => {
+    coureurs.forEach(c => {
       const canonical = canonizeName(c.nom);
       const norm = normalize(canonical);
       const tokens = tokenSig(canonical);
