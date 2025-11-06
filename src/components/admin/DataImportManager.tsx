@@ -4,6 +4,7 @@ import { CoureursImportSection } from "./import/CoureursImportSection";
 import { BaremesImportSection } from "./import/BaremesImportSection";
 import { RostersImportSection } from "./import/RostersImportSection";
 import { ResultatsImportSection } from "./import/ResultatsImportSection";
+import { MattLImportSection } from "./import/MattLImportSection";
 
 export const DataImportManager = () => {
   return (
@@ -18,6 +19,7 @@ export const DataImportManager = () => {
         <BaremesImportSection />
         <RostersImportSection />
         <ResultatsImportSection />
+        <MattLImportSection />
       </Accordion>
     </div>
   );
