@@ -690,7 +690,7 @@ Deno.serve(async (req) => {
         .from('race_results')
         .delete()
         .in('course_id', uniqueCourseIds)
-        .eq('type_classement', 'general')
+        .eq('type_classement', 'General')
         .is('etape_numero', null);
 
       if (deleteError) {
