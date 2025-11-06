@@ -505,20 +505,20 @@ Deno.serve(async (req) => {
       }
       
       // Mapper la date vers la saison
-      const raceYear = parseInt(yearStr, 10);
-      const saisonId = saisonMap.get(raceYear.toString());
+      const seasonYear = parseInt(yearStr, 10);
+      const saisonId = saisonMap.get(seasonYear.toString());
 
       if (!saisonId) {
         errors.push({
           line: lineNum,
           type: 'season_not_found',
           raw: line,
-          details: `Aucune saison trouvée pour l'année ${raceYear} (date: ${dateClassement})`,
+          details: `Aucune saison trouvée pour l'année ${seasonYear} (date: ${dateClassement})`,
         });
         continue;
       }
 
-      console.log(`✅ Ligne ${lineNum}: Date ${dateClassement} → Saison ${raceYear}`);
+      console.log(`✅ Ligne ${lineNum}: Date ${dateClassement} → Saison ${seasonYear}`);
 
       // Créer le résultat
       // Les Porteurs et classements finaux doivent avoir position = 1 pour le calcul des points
