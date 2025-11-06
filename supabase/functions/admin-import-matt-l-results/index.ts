@@ -34,6 +34,86 @@ interface ImportWarning {
   method?: 'tokens' | 'levenshtein' | 'lastname';
 }
 
+
+// Helper pour créer le rapport par course
+function createCourseReport(
+  lines: string[], 
+  validResults: any[], 
+  errors: ImportError[]
+): Array<{
+  courseName: string;
+  courseId: string | null;
+  imported: number;
+  failed: number;
+  errors: Array<{ riderName: string; reason: string; position?: number }>;
+}> {
+  const courseReport = new Map<string, {
+    courseName: string;
+    courseId: string | null;
+    imported: number;
+    failed: number;
+    errors: Array<{ riderName: string; reason: string; position?: number }>;
+  }>();
+
+  // Analyser toutes les lignes pour créer le rapport
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line || line.includes('course annulée')) continue;
+    
+    const parts = line.split(',');
+    if (parts.length < 8) continue;
+    
+    const courseName = parts[1]?.trim() || 'Inconnu';
+    
+    if (!courseReport.has(courseName)) {
+      courseReport.set(courseName, {
+        courseName,
+        courseId: null,
+        imported: 0,
+        failed: 0,
+        errors: []
+      });
+    }
+    
+    const report = courseReport.get(courseName)!;
+    
+    // Vérifier si cette ligne a été importée avec succès
+    const wasImported = validResults.some(r => r.raw_line === line);
+    
+    if (wasImported) {
+      report.imported++;
+      // Récupérer le courseId depuis validResults
+      const result = validResults.find(r => r.raw_line === line);
+      if (result && !report.courseId) {
+        report.courseId = result.course_id;
+      }
+    } else {
+      // Chercher l'erreur correspondante
+      const error = errors.find(e => e.raw === line);
+      if (error) {
+        report.failed++;
+        
+        // Extraire position si disponible
+        let position: number | undefined = undefined;
+        if (parts.length >= 6) {
+          const pos = parseInt(parts[5]?.trim(), 10);
+          if (!isNaN(pos)) position = pos;
+        }
+        
+        report.errors.push({
+          riderName: error.riderName || parts[0]?.trim() || 'Inconnu',
+          reason: error.type,
+          position
+        });
+      }
+    }
+  }
+
+  // Convertir en array triée par nombre total de lignes
+  return Array.from(courseReport.values())
+    .sort((a, b) => (b.imported + b.failed) - (a.imported + a.failed));
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -570,6 +650,8 @@ Deno.serve(async (req) => {
       const uniqueRidersNotFound = new Set(errors.filter(e => e.type === 'rider_not_found').map(e => e.riderName));
       const uniqueCoursesNotFound = new Set(errors.filter(e => e.type === 'course_not_found').map(e => e.courseName));
 
+      const courseReportArray = createCourseReport(lines, validResults, errors);
+
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -588,6 +670,7 @@ Deno.serve(async (req) => {
             }
           },
           courses_affected: [],
+          course_report: courseReportArray,
           recompute_results: [],
         }),
         { 
@@ -639,6 +722,9 @@ Deno.serve(async (req) => {
     const uniqueRidersNotFound = new Set(errors.filter(e => e.type === 'rider_not_found').map(e => e.riderName));
     const uniqueCoursesNotFound = new Set(errors.filter(e => e.type === 'course_not_found').map(e => e.courseName));
 
+    const courseReportArray = createCourseReport(lines, validResults, errors);
+
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -657,6 +743,7 @@ Deno.serve(async (req) => {
           }
         },
         courses_affected: courseIds,
+        course_report: courseReportArray, // ⭐ NOUVEAU: Rapport détaillé par course
         recompute_results: recomputeResults,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

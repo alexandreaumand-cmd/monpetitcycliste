@@ -215,6 +215,82 @@ export const MattLImportSection = () => {
               </Alert>
             )}
 
+            {/* ⭐ NOUVEAU: Section rapport par course */}
+            {result.course_report && result.course_report.length > 0 && (
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full">
+                    <Info className="h-4 w-4 mr-2 text-blue-600" />
+                    Rapport détaillé par course ({result.course_report.length} course(s) tentée(s))
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2">
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {result.course_report.map((course: any, idx: number) => (
+                      <Alert 
+                        key={idx}
+                        className={course.imported > 0 
+                          ? "border-green-500/50 bg-green-500/5" 
+                          : "border-red-500/50 bg-red-500/5"
+                        }
+                      >
+                        <AlertTitle className="text-sm font-semibold">
+                          {course.courseName}
+                          {course.courseId && (
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              {course.courseId}
+                            </Badge>
+                          )}
+                        </AlertTitle>
+                        <AlertDescription className="text-xs space-y-1 mt-2">
+                          <div className="flex gap-4">
+                            {course.imported > 0 && (
+                              <span className="text-green-600 font-medium">
+                                ✅ {course.imported} importé(s)
+                              </span>
+                            )}
+                            {course.failed > 0 && (
+                              <span className="text-red-600 font-medium">
+                                ❌ {course.failed} rejeté(s)
+                              </span>
+                            )}
+                          </div>
+                          
+                          {course.errors && course.errors.length > 0 && (
+                            <div className="mt-2 pl-2 border-l-2 border-red-500/30">
+                              <div className="font-semibold text-red-600 mb-1">
+                                Échecs détaillés :
+                              </div>
+                              <div className="space-y-0.5 max-h-32 overflow-y-auto">
+                                {course.errors.slice(0, 10).map((err: any, i: number) => (
+                                  <div key={i} className="text-muted-foreground font-mono text-[11px]">
+                                    • {err.riderName} 
+                                    {err.position !== undefined && ` (pos ${err.position})`}
+                                    {' - '}
+                                    <span className="text-red-500">
+                                      {err.reason === 'rider_not_found' && 'coureur inconnu'}
+                                      {err.reason === 'course_not_found' && 'course inconnue'}
+                                      {err.reason === 'invalid_format' && 'format invalide'}
+                                      {err.reason === 'season_not_found' && 'saison introuvable'}
+                                    </span>
+                                  </div>
+                                ))}
+                                {course.errors.length > 10 && (
+                                  <div className="text-muted-foreground italic">
+                                    ... et {course.errors.length - 10} autre(s)
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </AlertDescription>
+                      </Alert>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
             {/* Section warnings de matching */}
             {result.warnings && result.warnings.length > 0 && (
               <Collapsible>
