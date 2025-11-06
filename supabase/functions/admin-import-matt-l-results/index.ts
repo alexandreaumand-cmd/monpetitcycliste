@@ -20,7 +20,6 @@ interface ImportError {
   type: 'rider_not_found' | 'course_not_found' | 'season_not_found' | 'invalid_format' | 'unknown_type';
   riderName?: string;
   courseName?: string;
-  courseCode?: string;
   raw: string;
   details?: string;
 }
