@@ -7,8 +7,9 @@ import { normalize, tokenSig, extractLastName, similarity, canonizeName, matchBy
 interface ParsedLine {
   coureur: string;
   nom_course: string;
-  code_course: string;
-  phase: string;
+  fam_categorie: string;
+  monument_sprint: string;
+  classement: string;
   classement2: string;
   type_class: string;
   date: string;
@@ -179,12 +180,12 @@ Deno.serve(async (req) => {
       }
 
       const parts = line.split(',');
-      if (parts.length < 7) {
+      if (parts.length < 8) {
         errors.push({ 
           line: lineNum, 
           type: 'invalid_format', 
           raw: line,
-          details: 'Moins de 7 colonnes'
+          details: 'Moins de 8 colonnes'
         });
         continue;
       }
@@ -192,17 +193,13 @@ Deno.serve(async (req) => {
       const parsed: ParsedLine = {
         coureur: parts[0].trim(),
         nom_course: parts[1].trim(),
-        code_course: parts[2].trim(),
-        phase: parts[3].trim(),
-        classement2: parts[4].trim(),
-        type_class: parts[5].trim(),
-        date: parts[6].trim(),
+        fam_categorie: parts[2].trim(),
+        monument_sprint: parts[3].trim(),
+        classement: parts[4].trim(),
+        classement2: parts[5].trim(),
+        type_class: parts[6].trim(),
+        date: parts[7].trim(),
       };
-
-      // Ignorer les entrées "maillot" avec position 0
-      if (parsed.type_class === 'maillot' && parsed.classement2 === '0') {
-        continue;
-      }
 
       // Mapper le coureur (avec cache)
       let coureurId: string | null = null;
@@ -383,35 +380,117 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // Position et statut
+      const position = parseInt(parsed.classement2, 10);
+      const isJersey = position === 0;
+      
       // Transformer type_classement
       let typeClassement: string;
       let etapeNumero: number | null = null;
       
-      if (parsed.type_class === 'GC') {
+      const typeClassNorm = parsed.type_class.toLowerCase().trim().replace(/[- ]/g, '');
+      
+      if (typeClassNorm === 'gc') {
         typeClassement = 'General';
-      } else if (parsed.type_class.startsWith('etape')) {
-        typeClassement = 'Etape';
-        const match = parsed.type_class.match(/etape(\d+)/);
-        if (match) {
-          etapeNumero = parseInt(match[1], 10);
+        etapeNumero = null;
+      } 
+      else if (typeClassNorm.startsWith('etape')) {
+        // Extraire le numéro d'étape : etape01 → 1, etape02 → 2
+        const match = typeClassNorm.match(/etape(\d+)/);
+        if (!match) {
+          errors.push({
+            line: lineNum,
+            type: 'invalid_format',
+            raw: line,
+            details: `Format d'étape invalide : ${parsed.type_class}`,
+          });
+          continue;
         }
-      } else {
+        etapeNumero = parseInt(match[1], 10);
+        
+        // Si position = 0 → c'est un maillot après cette étape
+        if (isJersey) {
+          const classementLower = parsed.classement.toLowerCase();
+          
+          if (classementLower.includes('leader') || classementLower.includes('général') || classementLower.includes('general')) {
+            typeClassement = 'Porteur Général';
+          } else if (classementLower.includes('vert') || classementLower.includes('points')) {
+            typeClassement = 'Porteur Vert';
+          } else if (classementLower.includes('pois') || classementLower.includes('grimpeur') || classementLower.includes('montagne')) {
+            typeClassement = 'Porteur Montagne';
+          } else if (classementLower.includes('jeune') || classementLower.includes('blanc')) {
+            typeClassement = 'Porteur Jeune';
+          } else {
+            errors.push({
+              line: lineNum,
+              type: 'unknown_type',
+              raw: line,
+              details: `Type de maillot non reconnu : ${parsed.classement}`,
+            });
+            continue;
+          }
+        } else {
+          // Position > 0 → résultat d'étape normal
+          typeClassement = 'Etape';
+        }
+      }
+      else if (typeClassNorm === 'maillot') {
+        // Maillots finaux (Type_Class = "maillot")
+        const classementLower = parsed.classement.toLowerCase();
+        
+        if (classementLower.includes('vert') || classementLower.includes('points')) {
+          typeClassement = 'Points';
+        } else if (classementLower.includes('pois') || classementLower.includes('grimpeur') || classementLower.includes('montagne')) {
+          typeClassement = 'Montagne';
+        } else if (classementLower.includes('jeune') || classementLower.includes('blanc')) {
+          typeClassement = 'Jeune';
+        } else {
+          errors.push({
+            line: lineNum,
+            type: 'unknown_type',
+            raw: line,
+            details: `Type de maillot final non reconnu : ${parsed.classement}`,
+          });
+          continue;
+        }
+        etapeNumero = null;
+      }
+      else {
         errors.push({ 
           line: lineNum, 
           type: 'unknown_type',
           raw: line,
-          details: `Type de classement inconnu: ${parsed.type_class}`
+          details: `Type_Class non reconnu : ${parsed.type_class}`
         });
         continue;
       }
+      
+      const statut = 'finished';
 
-      // Position et statut
-      const position = parseInt(parsed.classement2, 10);
-      const statut = position === 0 ? 'bonus' : 'finished';
-
-      // Parser la date (format: 9/1/2025 -> 2025-01-09)
-      const [day, month, yearStr] = parsed.date.split('/');
-      const dateClassement = `${yearStr}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      // Parser la date (format: JJ/M/AAAA ou JJ/MM/AAAA -> AAAA-MM-JJ)
+      const dateParts = parsed.date.split('/');
+      if (dateParts.length !== 3) {
+        errors.push({
+          line: lineNum,
+          type: 'invalid_format',
+          raw: line,
+          details: `Format de date invalide : ${parsed.date}`,
+        });
+        continue;
+      }
+      
+      let [day, month, yearStr] = dateParts;
+      
+      // Normaliser année 2 chiffres → 4 chiffres
+      if (yearStr.length === 2) {
+        yearStr = '20' + yearStr;
+      }
+      
+      // Normaliser mois/jour sur 2 chiffres
+      day = day.padStart(2, '0');
+      month = month.padStart(2, '0');
+      
+      const dateClassement = `${yearStr}-${month}-${day}`;
 
       // Créer le résultat
       const result = {
