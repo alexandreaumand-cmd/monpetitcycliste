@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     while (true) {
       const { data, error } = await supabaseClient
         .from('courses')
-        .select('id, nom')
+        .select('id, nom, date_debut, date_fin')
         .range(from, from + pageSize - 1);
       
       if (error) throw error;
@@ -97,19 +97,31 @@ Deno.serve(async (req) => {
       from += pageSize;
     }
     
-    // Indexation optimisée pour recherches O(1)
-    const courseByName = new Map<string, { id: string, nom: string, norm: string }>();
-    const courseByNorm = new Map<string, { id: string, nom: string }>();
-    const courseByTokens = new Map<string, { id: string, nom: string }>();
+    // Indexation optimisée pour recherches O(1) avec dates
+    const courseByName = new Map<string, { id: string, nom: string, norm: string, date_debut: string | null, date_fin: string | null }>();
+    const courseByNorm = new Map<string, { id: string, nom: string, date_debut: string | null, date_fin: string | null }>();
+    const courseByTokens = new Map<string, { id: string, nom: string, date_debut: string | null, date_fin: string | null }>();
+    const coursesByYear = new Map<string, Array<{ id: string, nom: string, norm: string, tokens: string, date_debut: string | null, date_fin: string | null }>>();
     
     courses.forEach(c => {
       const normName = normalize(c.nom);
       const tokens = tokenSig(c.nom);
-      courseByName.set(c.id, { id: c.id, nom: c.nom, norm: normName });
-      courseByNorm.set(normName, { id: c.id, nom: c.nom });
-      courseByTokens.set(tokens, { id: c.id, nom: c.nom });
+      const courseData = { id: c.id, nom: c.nom, norm: normName, date_debut: c.date_debut, date_fin: c.date_fin };
+      
+      courseByName.set(c.id, courseData);
+      courseByNorm.set(normName, { id: c.id, nom: c.nom, date_debut: c.date_debut, date_fin: c.date_fin });
+      courseByTokens.set(tokens, { id: c.id, nom: c.nom, date_debut: c.date_debut, date_fin: c.date_fin });
+      
+      // Index par année pour filtrage rapide
+      if (c.date_debut) {
+        const year = c.date_debut.substring(0, 4);
+        if (!coursesByYear.has(year)) {
+          coursesByYear.set(year, []);
+        }
+        coursesByYear.get(year)!.push({ id: c.id, nom: c.nom, norm: normName, tokens, date_debut: c.date_debut, date_fin: c.date_fin });
+      }
     });
-    console.log('Loaded courses:', courseByName.size);
+    console.log('Loaded courses:', courseByName.size, 'with year index:', coursesByYear.size, 'years');
 
     // Pré-charger TOUS les coureurs avec pagination (sans limite 1000)
     let coureurs: any[] = [];
@@ -252,69 +264,68 @@ Deno.serve(async (req) => {
       }
 
       // Mapper la course (avec cache et optimisation)
+      // IMPORTANT: Extraire l'année de la date CSV pour filtrer les courses
+      let raceYear = '';
+      const dateParts = parsed.date.split('/');
+      if (dateParts.length === 3) {
+        let yearStr = dateParts[2];
+        if (yearStr.length === 2) {
+          yearStr = '20' + yearStr;
+        }
+        raceYear = yearStr;
+      }
+      
       let courseId: string | null = null;
       let matchScore = 0;
       let matchMethod = '';
       let matchedCourseName = '';
       
       const normCourseName = normalize(parsed.nom_course);
+      const cacheKey = `${normCourseName}_${raceYear}`;
       
       // Vérifier le cache
-      if (courseMatchCache.has(normCourseName)) {
-        const cached = courseMatchCache.get(normCourseName)!;
+      if (courseMatchCache.has(cacheKey)) {
+        const cached = courseMatchCache.get(cacheKey)!;
         courseId = cached.id;
         matchScore = cached.score;
         matchMethod = cached.method;
         matchedCourseName = cached.matchedName || '';
       } else {
-        // 1. Match exact normalisé O(1)
-        if (courseByNorm.has(normCourseName)) {
-          const matched = courseByNorm.get(normCourseName)!;
-          courseId = matched.id;
+        // Filtrer les courses par année AVANT le matching
+        const yearCandidates = coursesByYear.get(raceYear) || [];
+        
+        // 1. Match exact normalisé sur les courses de l'année
+        const exactMatch = yearCandidates.find(c => c.norm === normCourseName);
+        if (exactMatch) {
+          courseId = exactMatch.id;
           matchScore = 1.0;
           matchMethod = 'exact';
-          matchedCourseName = matched.nom;
+          matchedCourseName = exactMatch.nom;
         } else {
-          // 2. Match par tokens O(1)
+          // 2. Match par tokens sur les courses de l'année
           const inputTokens = tokenSig(parsed.nom_course);
-          if (courseByTokens.has(inputTokens)) {
-            const matched = courseByTokens.get(inputTokens)!;
-            courseId = matched.id;
+          const tokenMatch = yearCandidates.find(c => c.tokens === inputTokens);
+          if (tokenMatch) {
+            courseId = tokenMatch.id;
             matchScore = 1.0;
             matchMethod = 'tokens_exact';
-            matchedCourseName = matched.nom;
+            matchedCourseName = tokenMatch.nom;
           } else {
-            // 3. Filtrer candidats avant fuzzy matching (réduction drastique)
-            const inputTokensList = normCourseName.split(/\s+/).filter(t => t.length > 2);
-            const candidates: Array<{ id: string, nom: string, norm: string }> = [];
-            
-            for (const [id, courseData] of courseByName) {
-              // Pré-filtre: au moins un token de 3+ chars en commun
-              const courseTokens = courseData.norm.split(/\s+/).filter(t => t.length > 2);
-              const hasCommonToken = inputTokensList.some(it => 
-                courseTokens.some(ct => ct.startsWith(it.substring(0, 3)) || it.startsWith(ct.substring(0, 3)))
-              );
-              
-              if (hasCommonToken) {
-                candidates.push({ id, nom: courseData.nom, norm: courseData.norm });
-              }
-            }
-            
-            // 4. Fuzzy matching UNIQUEMENT sur les candidats filtrés
-            if (candidates.length > 0 && candidates.length < 100) {
+            // 3. Fuzzy matching uniquement sur les courses de l'année
+            if (yearCandidates.length > 0 && yearCandidates.length < 100) {
               let bestMatch: { id: string; nom: string; score: number; method: string } | null = null;
               
-              // D'abord essayer tokens Jaccard sur candidats
-              for (const candidate of candidates) {
+              // D'abord essayer tokens Jaccard
+              for (const candidate of yearCandidates) {
                 const tokenScore = matchByTokens(parsed.nom_course, candidate.nom);
                 if (tokenScore >= 0.7 && (!bestMatch || tokenScore > bestMatch.score)) {
                   bestMatch = { id: candidate.id, nom: candidate.nom, score: tokenScore, method: 'tokens' };
                 }
               }
               
-              // Si pas assez bon, essayer Levenshtein sur candidats
+              // Si pas assez bon, essayer Levenshtein
               if (!bestMatch || bestMatch.score < 0.8) {
-                for (const candidate of candidates) {
+                for (const candidate of yearCandidates) {
                   const levScore = similarity(normCourseName, candidate.norm);
                   if (levScore >= 0.6 && (!bestMatch || levScore > bestMatch.score)) {
                     bestMatch = { id: candidate.id, nom: candidate.nom, score: levScore, method: 'levenshtein' };
@@ -332,8 +343,8 @@ Deno.serve(async (req) => {
           }
         }
         
-        // Mettre en cache
-        courseMatchCache.set(normCourseName, { 
+        // Mettre en cache avec la clé incluant l'année
+        courseMatchCache.set(cacheKey, { 
           id: courseId, 
           score: matchScore, 
           method: matchMethod,
