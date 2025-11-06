@@ -14,6 +14,26 @@ interface ParsedLine {
   date: string;
 }
 
+interface ImportError {
+  line: number;
+  type: 'rider_not_found' | 'course_not_found' | 'season_not_found' | 'invalid_format' | 'unknown_type';
+  riderName?: string;
+  courseName?: string;
+  courseCode?: string;
+  raw: string;
+  details?: string;
+}
+
+interface ImportWarning {
+  line: number;
+  type: 'fuzzy_match_course' | 'fuzzy_match_rider' | 'cancelled_race';
+  message: string;
+  inputValue: string;
+  matchedValue: string;
+  score?: number;
+  method?: 'tokens' | 'levenshtein' | 'lastname';
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -116,8 +136,8 @@ Deno.serve(async (req) => {
 
     // Parser et transformer les lignes
     const validResults: any[] = [];
-    const errors: { line: number; error: string; raw?: string }[] = [];
-    const warnings: string[] = [];
+    const errors: ImportError[] = [];
+    const warnings: ImportWarning[] = [];
     const courseIdsSet = new Set<string>();
 
     for (let i = 1; i < lines.length; i++) {
@@ -126,13 +146,24 @@ Deno.serve(async (req) => {
       
       // Ignorer les lignes de course annulée
       if (line.includes('course annulée')) {
-        warnings.push(`Ligne ${lineNum}: Course annulée, ignorée`);
+        warnings.push({
+          line: lineNum,
+          type: 'cancelled_race',
+          message: 'Course annulée, ignorée',
+          inputValue: line,
+          matchedValue: 'N/A'
+        });
         continue;
       }
 
       const parts = line.split(',');
       if (parts.length < 7) {
-        errors.push({ line: lineNum, error: 'Format invalide', raw: line });
+        errors.push({ 
+          line: lineNum, 
+          type: 'invalid_format', 
+          raw: line,
+          details: 'Moins de 7 colonnes'
+        });
         continue;
       }
 
@@ -190,7 +221,13 @@ Deno.serve(async (req) => {
       }
 
       if (!coureurId) {
-        errors.push({ line: lineNum, error: `Coureur non trouvé: ${parsed.coureur}`, raw: line });
+        errors.push({ 
+          line: lineNum, 
+          type: 'rider_not_found', 
+          riderName: parsed.coureur,
+          courseName: parsed.nom_course,
+          raw: line
+        });
         continue;
       }
 
@@ -228,7 +265,15 @@ Deno.serve(async (req) => {
           matchMethod = 'tokens';
           
           if (matchScore < 0.8) {
-            warnings.push(`Ligne ${lineNum}: Match par tokens pour course "${parsed.nom_course}" → "${bestTokenMatch.nom}" (score: ${(matchScore * 100).toFixed(0)}%)`);
+            warnings.push({
+              line: lineNum,
+              type: 'fuzzy_match_course',
+              message: `Match par tokens pour course "${parsed.nom_course}" → "${bestTokenMatch.nom}" (score: ${(matchScore * 100).toFixed(0)}%)`,
+              inputValue: parsed.nom_course,
+              matchedValue: bestTokenMatch.nom,
+              score: matchScore,
+              method: 'tokens'
+            });
           }
         }
       }
@@ -250,7 +295,15 @@ Deno.serve(async (req) => {
           matchMethod = 'levenshtein';
           
           if (matchScore < 0.8) {
-            warnings.push(`Ligne ${lineNum}: Match Levenshtein pour course "${parsed.nom_course}" → "${bestLevMatch.nom}" (score: ${(matchScore * 100).toFixed(0)}%)`);
+            warnings.push({
+              line: lineNum,
+              type: 'fuzzy_match_course',
+              message: `Match Levenshtein pour course "${parsed.nom_course}" → "${bestLevMatch.nom}" (score: ${(matchScore * 100).toFixed(0)}%)`,
+              inputValue: parsed.nom_course,
+              matchedValue: bestLevMatch.nom,
+              score: matchScore,
+              method: 'levenshtein'
+            });
           }
         }
       }
@@ -258,7 +311,10 @@ Deno.serve(async (req) => {
       if (!courseId) {
         errors.push({ 
           line: lineNum, 
-          error: `Course non trouvée: "${parsed.nom_course}" (code: ${parsed.code_course})`, 
+          type: 'course_not_found',
+          courseName: parsed.nom_course,
+          courseCode: parsed.code_course,
+          riderName: parsed.coureur,
           raw: line 
         });
         continue;
@@ -268,7 +324,12 @@ Deno.serve(async (req) => {
       const year = parsed.date.split('/')[2];
       const saisonId = saisonMap.get(year);
       if (!saisonId) {
-        errors.push({ line: lineNum, error: `Saison non trouvée pour l'année: ${year}`, raw: line });
+        errors.push({ 
+          line: lineNum, 
+          type: 'season_not_found',
+          raw: line,
+          details: `Année: ${year}`
+        });
         continue;
       }
 
@@ -285,7 +346,12 @@ Deno.serve(async (req) => {
           etapeNumero = parseInt(match[1], 10);
         }
       } else {
-        errors.push({ line: lineNum, error: `Type de classement inconnu: ${parsed.type_class}`, raw: line });
+        errors.push({ 
+          line: lineNum, 
+          type: 'unknown_type',
+          raw: line,
+          details: `Type de classement inconnu: ${parsed.type_class}`
+        });
         continue;
       }
 
@@ -361,12 +427,35 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Statistiques par type d'erreur
+    const errorsByType = {
+      rider_not_found: errors.filter(e => e.type === 'rider_not_found'),
+      course_not_found: errors.filter(e => e.type === 'course_not_found'),
+      season_not_found: errors.filter(e => e.type === 'season_not_found'),
+      invalid_format: errors.filter(e => e.type === 'invalid_format'),
+      unknown_type: errors.filter(e => e.type === 'unknown_type'),
+    };
+
+    const uniqueRidersNotFound = new Set(errors.filter(e => e.type === 'rider_not_found').map(e => e.riderName));
+    const uniqueCoursesNotFound = new Set(errors.filter(e => e.type === 'course_not_found').map(e => e.courseName));
+
     return new Response(
       JSON.stringify({
         success: true,
         imported: validResults.length,
         errors,
         warnings,
+        errorsByType: {
+          riders_not_found: Array.from(uniqueRidersNotFound),
+          courses_not_found: Array.from(uniqueCoursesNotFound),
+          total_by_type: {
+            rider_errors: errorsByType.rider_not_found.length,
+            course_errors: errorsByType.course_not_found.length,
+            season_errors: errorsByType.season_not_found.length,
+            format_errors: errorsByType.invalid_format.length,
+            unknown_type_errors: errorsByType.unknown_type.length,
+          }
+        },
         courses_affected: courseIds,
         recompute_results: recomputeResults,
       }),

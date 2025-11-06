@@ -5,9 +5,27 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Loader2, Info, Zap, AlertTriangle } from "lucide-react";
+import { Upload, Loader2, Info, Zap, AlertTriangle, Download } from "lucide-react";
+
+const downloadErrorsCSV = (errors: any[]) => {
+  const csvContent = [
+    'Ligne,Type,Coureur,Course,Code_Course,Détails',
+    ...errors.map(e => 
+      `${e.line},"${e.type}","${e.riderName || ''}","${e.courseName || ''}","${e.courseCode || ''}","${e.details || e.raw}"`
+    )
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `import-errors-${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
 export const MattLImportSection = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -137,6 +155,7 @@ export const MattLImportSection = () => {
 
         {result && (
           <div className="space-y-3 pt-2">
+            {/* Résumé global */}
             <Alert className="bg-green-500/10 border-green-500/20">
               <AlertTitle className="text-green-600">Résultat de l'import</AlertTitle>
               <AlertDescription className="text-xs space-y-1">
@@ -151,38 +170,78 @@ export const MattLImportSection = () => {
               </AlertDescription>
             </Alert>
 
-            {result.errors && result.errors.length > 0 && (
+            {/* Section coureurs non trouvés */}
+            {result.errorsByType?.riders_not_found?.length > 0 && (
               <Alert variant="destructive">
-                <AlertTitle>Erreurs détectées</AlertTitle>
-                <AlertDescription className="text-xs max-h-40 overflow-y-auto">
-                  {result.errors.slice(0, 10).map((err: any, idx: number) => (
-                    <div key={idx} className="mb-1">
-                      Ligne {err.line}: {err.error}
-                    </div>
-                  ))}
-                  {result.errors.length > 10 && (
-                    <p className="mt-2 font-semibold">
-                      ... et {result.errors.length - 10} autres erreurs
-                    </p>
-                  )}
+                <AlertTitle>
+                  Coureurs non trouvés ({result.errorsByType.riders_not_found.length} unique(s))
+                </AlertTitle>
+                <AlertDescription className="text-xs">
+                  <div className="max-h-40 overflow-y-auto space-y-1">
+                    {result.errorsByType.riders_not_found.map((name: string, idx: number) => (
+                      <div key={idx} className="font-mono">• {name}</div>
+                    ))}
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
 
-            {result.warnings && result.warnings.length > 0 && (
-              <Alert className="border-yellow-500/50">
-                <AlertTitle className="text-yellow-600">Avertissements</AlertTitle>
-                <AlertDescription className="text-xs max-h-32 overflow-y-auto">
-                  {result.warnings.slice(0, 5).map((warn: string, idx: number) => (
-                    <div key={idx} className="mb-1">{warn}</div>
-                  ))}
-                  {result.warnings.length > 5 && (
-                    <p className="mt-2 font-semibold">
-                      ... et {result.warnings.length - 5} autres avertissements
-                    </p>
-                  )}
+            {/* Section courses non trouvées */}
+            {result.errorsByType?.courses_not_found?.length > 0 && (
+              <Alert variant="destructive">
+                <AlertTitle>
+                  Courses non trouvées ({result.errorsByType.courses_not_found.length} unique(s))
+                </AlertTitle>
+                <AlertDescription className="text-xs">
+                  <div className="max-h-40 overflow-y-auto space-y-1">
+                    {result.errorsByType.courses_not_found.map((name: string, idx: number) => (
+                      <div key={idx} className="font-mono">• {name}</div>
+                    ))}
+                  </div>
                 </AlertDescription>
               </Alert>
+            )}
+
+            {/* Section warnings de matching */}
+            {result.warnings && result.warnings.length > 0 && (
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full">
+                    <AlertTriangle className="h-4 w-4 mr-2 text-yellow-600" />
+                    Voir les {result.warnings.length} correspondances approximatives
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2">
+                  <Alert className="border-yellow-500/50">
+                    <AlertDescription className="text-xs max-h-60 overflow-y-auto space-y-2">
+                      {result.warnings.map((warn: any, idx: number) => (
+                        <div key={idx} className="border-l-2 border-yellow-500 pl-2">
+                          <div className="font-semibold">Ligne {warn.line}</div>
+                          <div>"{warn.inputValue}" → "{warn.matchedValue}"</div>
+                          {warn.score && (
+                            <div className="text-muted-foreground">
+                              Score: {(warn.score * 100).toFixed(0)}% ({warn.method})
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </AlertDescription>
+                  </Alert>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
+            {/* Bouton export CSV des erreurs */}
+            {result.errors && result.errors.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => downloadErrorsCSV(result.errors)}
+                className="w-full"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Télécharger le rapport d'erreurs (CSV)
+              </Button>
             )}
           </div>
         )}
