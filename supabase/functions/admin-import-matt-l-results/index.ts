@@ -691,7 +691,8 @@ Deno.serve(async (req) => {
         .delete()
         .in('course_id', uniqueCourseIds)
         .eq('type_classement', 'General')
-        .is('etape_numero', null);
+        .is('etape_numero', null)
+        .eq('statut', 'finished');
 
       if (deleteError) {
         console.error('❌ Erreur lors de la suppression:', deleteError);
