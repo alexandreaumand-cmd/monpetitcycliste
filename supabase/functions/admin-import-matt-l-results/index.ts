@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
-import { normalize, tokenSig, extractLastName, similarity, canonizeName } from '../_shared/normalization.ts';
+import { normalize, tokenSig, extractLastName, similarity, canonizeName, matchByTokens } from '../_shared/normalization.ts';
 
 // Supprimé: Le matching se fait maintenant prioritairement par nom de course
 
@@ -166,27 +166,62 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Mapper la course (matching prioritaire par nom)
+      // Mapper la course (matching multi-stratégies)
       let courseId: string | null = null;
       let matchScore = 0;
+      let matchMethod = '';
       
       const normCourseName = normalize(parsed.nom_course);
-      let bestMatch: { id: string; nom: string; score: number } | null = null;
       
+      // 1. Essayer match exact normalisé
       for (const [id, courseData] of courseByName) {
-        const score = similarity(normCourseName, courseData.norm);
-        if (score >= 0.7 && (!bestMatch || score > bestMatch.score)) {
-          bestMatch = { id, nom: courseData.nom, score };
+        if (courseData.norm === normCourseName) {
+          courseId = id;
+          matchScore = 1.0;
+          matchMethod = 'exact';
+          break;
         }
       }
       
-      if (bestMatch) {
-        courseId = bestMatch.id;
-        matchScore = bestMatch.score;
+      // 2. Essayer matching par tokens (Jaccard)
+      if (!courseId) {
+        let bestTokenMatch: { id: string; nom: string; score: number } | null = null;
         
-        // Logger un warning si la similarité est moyenne
-        if (matchScore < 0.9) {
-          warnings.push(`Ligne ${lineNum}: Match partiel pour course "${parsed.nom_course}" → "${bestMatch.nom}" (score: ${(matchScore * 100).toFixed(0)}%)`);
+        for (const [id, courseData] of courseByName) {
+          const tokenScore = matchByTokens(parsed.nom_course, courseData.nom);
+          if (tokenScore >= 0.8 && (!bestTokenMatch || tokenScore > bestTokenMatch.score)) {
+            bestTokenMatch = { id, nom: courseData.nom, score: tokenScore };
+          }
+        }
+        
+        if (bestTokenMatch) {
+          courseId = bestTokenMatch.id;
+          matchScore = bestTokenMatch.score;
+          matchMethod = 'tokens';
+          
+          if (matchScore < 0.95) {
+            warnings.push(`Ligne ${lineNum}: Match par tokens pour course "${parsed.nom_course}" → "${bestTokenMatch.nom}" (score: ${(matchScore * 100).toFixed(0)}%)`);
+          }
+        }
+      }
+      
+      // 3. Fallback : Levenshtein
+      if (!courseId) {
+        let bestLevMatch: { id: string; nom: string; score: number } | null = null;
+        
+        for (const [id, courseData] of courseByName) {
+          const levScore = similarity(normCourseName, courseData.norm);
+          if (levScore >= 0.7 && (!bestLevMatch || levScore > bestLevMatch.score)) {
+            bestLevMatch = { id, nom: courseData.nom, score: levScore };
+          }
+        }
+        
+        if (bestLevMatch) {
+          courseId = bestLevMatch.id;
+          matchScore = bestLevMatch.score;
+          matchMethod = 'levenshtein';
+          
+          warnings.push(`Ligne ${lineNum}: Match Levenshtein pour course "${parsed.nom_course}" → "${bestLevMatch.nom}" (score: ${(matchScore * 100).toFixed(0)}%)`);
         }
       }
 

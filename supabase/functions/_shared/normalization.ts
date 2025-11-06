@@ -61,6 +61,17 @@ export function similarity(a: string, b: string): number {
   return 1.0 - (levenshtein(a, b) / maxLen);
 }
 
+export function matchByTokens(a: string, b: string): number {
+  const tokensA = new Set(normalize(a).split(/\s+/).filter(t => t.length > 2));
+  const tokensB = new Set(normalize(b).split(/\s+/).filter(t => t.length > 2));
+  
+  const intersection = new Set([...tokensA].filter(x => tokensB.has(x)));
+  const union = new Set([...tokensA, ...tokensB]);
+  
+  if (union.size === 0) return 0;
+  return intersection.size / union.size; // Score Jaccard
+}
+
 export function canonizeName(raw: string): string {
   const tokens = raw.trim().split(/\s+/);
   if (tokens.length < 2) return raw;
