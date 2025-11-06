@@ -680,15 +680,34 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Insertion avec UPSERT pour gérer les doublons et permettre les corrections
+    // Stratégie DELETE + INSERT (car la contrainte unique utilise une expression COALESCE)
+    const uniqueCourseIds = Array.from(courseIdsSet);
+
+    if (uniqueCourseIds.length > 0) {
+      console.log(`🗑️ Suppression des résultats existants pour ${uniqueCourseIds.length} course(s)...`);
+      
+      const { error: deleteError } = await supabaseClient
+        .from('race_results')
+        .delete()
+        .in('course_id', uniqueCourseIds)
+        .eq('type_classement', 'general')
+        .is('etape_numero', null);
+
+      if (deleteError) {
+        console.error('❌ Erreur lors de la suppression:', deleteError);
+        throw deleteError;
+      }
+    }
+
+    // Insertion des nouveaux résultats
+    console.log(`📝 Insertion de ${validResults.length} nouveau(x) résultat(s)...`);
     const { error: insertError } = await supabaseClient
       .from('race_results')
-      .upsert(validResults, {
-        onConflict: 'course_id,coureur_id,type_classement,etape_numero',
-        ignoreDuplicates: false // Remplace les résultats existants
-      });
+      .insert(validResults);
 
     if (insertError) throw insertError;
+    
+    console.log(`✅ ${validResults.length} résultats insérés avec succès`);
 
     // Recalculer les points pour chaque course affectée
     const courseIds = Array.from(courseIdsSet);
