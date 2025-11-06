@@ -32,7 +32,7 @@ export const NotificationCenter = () => {
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+          <Bell className="h-5 w-5 text-foreground" />
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 
