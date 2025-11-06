@@ -97,11 +97,17 @@ Deno.serve(async (req) => {
       from += pageSize;
     }
     
+    // Indexation optimisée pour recherches O(1)
     const courseByName = new Map<string, { id: string, nom: string, norm: string }>();
+    const courseByNorm = new Map<string, { id: string, nom: string }>();
+    const courseByTokens = new Map<string, { id: string, nom: string }>();
     
     courses.forEach(c => {
       const normName = normalize(c.nom);
+      const tokens = tokenSig(c.nom);
       courseByName.set(c.id, { id: c.id, nom: c.nom, norm: normName });
+      courseByNorm.set(normName, { id: c.id, nom: c.nom });
+      courseByTokens.set(tokens, { id: c.id, nom: c.nom });
     });
     console.log('Loaded courses:', courseByName.size);
 
@@ -124,13 +130,25 @@ Deno.serve(async (req) => {
       fromRiders += pageSizeRiders;
     }
     
+    // Indexation optimisée pour recherches O(1)
     const coureurByNorm = new Map<string, { id: string, nom: string, norm: string, tokens: string, lastName: string }>();
+    const coureurByTokens = new Map<string, { id: string, nom: string }>();
+    const coureursByLastName = new Map<string, { id: string, nom: string, norm: string }[]>();
+    
     coureurs.forEach(c => {
       const canonical = canonizeName(c.nom);
       const norm = normalize(canonical);
       const tokens = tokenSig(canonical);
       const lastName = extractLastName(canonical);
+      
       coureurByNorm.set(norm, { id: c.id, nom: c.nom, norm, tokens, lastName });
+      coureurByTokens.set(tokens, { id: c.id, nom: c.nom });
+      
+      // Index par nom de famille pour recherche rapide
+      if (!coureursByLastName.has(lastName)) {
+        coureursByLastName.set(lastName, []);
+      }
+      coureursByLastName.get(lastName)!.push({ id: c.id, nom: c.nom, norm });
     });
     console.log('Loaded riders:', coureurByNorm.size);
 
@@ -139,6 +157,10 @@ Deno.serve(async (req) => {
     const errors: ImportError[] = [];
     const warnings: ImportWarning[] = [];
     const courseIdsSet = new Set<string>();
+    
+    // Cache de matching pour éviter les recalculs
+    const riderMatchCache = new Map<string, string | null>();
+    const courseMatchCache = new Map<string, { id: string | null, score: number, method: string, matchedName?: string }>();
 
     for (let i = 1; i < lines.length; i++) {
       const lineNum = i + 1;
@@ -182,42 +204,44 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Mapper le coureur
+      // Mapper le coureur (avec cache)
       let coureurId: string | null = null;
       const canonical = canonizeName(parsed.coureur);
       const normCoureur = normalize(canonical);
       
-      // 1. Match exact normalisé
-      if (coureurByNorm.has(normCoureur)) {
-        coureurId = coureurByNorm.get(normCoureur)!.id;
+      // Vérifier le cache
+      if (riderMatchCache.has(normCoureur)) {
+        coureurId = riderMatchCache.get(normCoureur)!;
       } else {
-        // 2. Match par tokens
-        const inputTokens = tokenSig(canonical);
-        for (const [_, coureur] of coureurByNorm) {
-          if (coureur.tokens === inputTokens) {
-            coureurId = coureur.id;
-            break;
-          }
-        }
-        
-        // 3. Match par nom de famille + similarité
-        if (!coureurId) {
-          const inputLastName = extractLastName(canonical);
-          let bestMatch: { id: string; score: number } | null = null;
-          
-          for (const [_, coureur] of coureurByNorm) {
-            if (coureur.lastName === inputLastName) {
+        // 1. Match exact normalisé O(1)
+        if (coureurByNorm.has(normCoureur)) {
+          coureurId = coureurByNorm.get(normCoureur)!.id;
+        } else {
+          // 2. Match par tokens O(1)
+          const inputTokens = tokenSig(canonical);
+          if (coureurByTokens.has(inputTokens)) {
+            coureurId = coureurByTokens.get(inputTokens)!.id;
+          } else {
+            // 3. Match par nom de famille (recherche filtrée au lieu de parcourir tous)
+            const inputLastName = extractLastName(canonical);
+            const candidates = coureursByLastName.get(inputLastName) || [];
+            
+            let bestMatch: { id: string; score: number } | null = null;
+            for (const coureur of candidates) {
               const score = similarity(normCoureur, coureur.norm);
               if (score >= 0.8 && (!bestMatch || score > bestMatch.score)) {
                 bestMatch = { id: coureur.id, score };
               }
             }
-          }
-          
-          if (bestMatch) {
-            coureurId = bestMatch.id;
+            
+            if (bestMatch) {
+              coureurId = bestMatch.id;
+            }
           }
         }
+        
+        // Mettre en cache
+        riderMatchCache.set(normCoureur, coureurId);
       }
 
       if (!coureurId) {
@@ -231,81 +255,107 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Mapper la course (matching multi-stratégies)
+      // Mapper la course (avec cache et optimisation)
       let courseId: string | null = null;
       let matchScore = 0;
       let matchMethod = '';
+      let matchedCourseName = '';
       
       const normCourseName = normalize(parsed.nom_course);
       
-      // 1. Essayer match exact normalisé
-      for (const [id, courseData] of courseByName) {
-        if (courseData.norm === normCourseName) {
-          courseId = id;
+      // Vérifier le cache
+      if (courseMatchCache.has(normCourseName)) {
+        const cached = courseMatchCache.get(normCourseName)!;
+        courseId = cached.id;
+        matchScore = cached.score;
+        matchMethod = cached.method;
+        matchedCourseName = cached.matchedName || '';
+      } else {
+        // 1. Match exact normalisé O(1)
+        if (courseByNorm.has(normCourseName)) {
+          const matched = courseByNorm.get(normCourseName)!;
+          courseId = matched.id;
           matchScore = 1.0;
           matchMethod = 'exact';
-          break;
+          matchedCourseName = matched.nom;
+        } else {
+          // 2. Match par tokens O(1)
+          const inputTokens = tokenSig(parsed.nom_course);
+          if (courseByTokens.has(inputTokens)) {
+            const matched = courseByTokens.get(inputTokens)!;
+            courseId = matched.id;
+            matchScore = 1.0;
+            matchMethod = 'tokens_exact';
+            matchedCourseName = matched.nom;
+          } else {
+            // 3. Filtrer candidats avant fuzzy matching (réduction drastique)
+            const inputTokensList = normCourseName.split(/\s+/).filter(t => t.length > 2);
+            const candidates: Array<{ id: string, nom: string, norm: string }> = [];
+            
+            for (const [id, courseData] of courseByName) {
+              // Pré-filtre: au moins un token de 3+ chars en commun
+              const courseTokens = courseData.norm.split(/\s+/).filter(t => t.length > 2);
+              const hasCommonToken = inputTokensList.some(it => 
+                courseTokens.some(ct => ct.startsWith(it.substring(0, 3)) || it.startsWith(ct.substring(0, 3)))
+              );
+              
+              if (hasCommonToken) {
+                candidates.push({ id, nom: courseData.nom, norm: courseData.norm });
+              }
+            }
+            
+            // 4. Fuzzy matching UNIQUEMENT sur les candidats filtrés
+            if (candidates.length > 0 && candidates.length < 100) {
+              let bestMatch: { id: string; nom: string; score: number; method: string } | null = null;
+              
+              // D'abord essayer tokens Jaccard sur candidats
+              for (const candidate of candidates) {
+                const tokenScore = matchByTokens(parsed.nom_course, candidate.nom);
+                if (tokenScore >= 0.7 && (!bestMatch || tokenScore > bestMatch.score)) {
+                  bestMatch = { id: candidate.id, nom: candidate.nom, score: tokenScore, method: 'tokens' };
+                }
+              }
+              
+              // Si pas assez bon, essayer Levenshtein sur candidats
+              if (!bestMatch || bestMatch.score < 0.8) {
+                for (const candidate of candidates) {
+                  const levScore = similarity(normCourseName, candidate.norm);
+                  if (levScore >= 0.6 && (!bestMatch || levScore > bestMatch.score)) {
+                    bestMatch = { id: candidate.id, nom: candidate.nom, score: levScore, method: 'levenshtein' };
+                  }
+                }
+              }
+              
+              if (bestMatch) {
+                courseId = bestMatch.id;
+                matchScore = bestMatch.score;
+                matchMethod = bestMatch.method;
+                matchedCourseName = bestMatch.nom;
+              }
+            }
+          }
         }
+        
+        // Mettre en cache
+        courseMatchCache.set(normCourseName, { 
+          id: courseId, 
+          score: matchScore, 
+          method: matchMethod,
+          matchedName: matchedCourseName 
+        });
       }
       
-      // 2. Essayer matching par tokens (Jaccard) - seuil abaissé à 0.7
-      if (!courseId) {
-        let bestTokenMatch: { id: string; nom: string; score: number } | null = null;
-        
-        for (const [id, courseData] of courseByName) {
-          const tokenScore = matchByTokens(parsed.nom_course, courseData.nom);
-          if (tokenScore >= 0.7 && (!bestTokenMatch || tokenScore > bestTokenMatch.score)) {
-            bestTokenMatch = { id, nom: courseData.nom, score: tokenScore };
-          }
-        }
-        
-        if (bestTokenMatch) {
-          courseId = bestTokenMatch.id;
-          matchScore = bestTokenMatch.score;
-          matchMethod = 'tokens';
-          
-          if (matchScore < 0.8) {
-            warnings.push({
-              line: lineNum,
-              type: 'fuzzy_match_course',
-              message: `Match par tokens pour course "${parsed.nom_course}" → "${bestTokenMatch.nom}" (score: ${(matchScore * 100).toFixed(0)}%)`,
-              inputValue: parsed.nom_course,
-              matchedValue: bestTokenMatch.nom,
-              score: matchScore,
-              method: 'tokens'
-            });
-          }
-        }
-      }
-      
-      // 3. Fallback : Levenshtein - seuil abaissé à 0.6
-      if (!courseId) {
-        let bestLevMatch: { id: string; nom: string; score: number } | null = null;
-        
-        for (const [id, courseData] of courseByName) {
-          const levScore = similarity(normCourseName, courseData.norm);
-          if (levScore >= 0.6 && (!bestLevMatch || levScore > bestLevMatch.score)) {
-            bestLevMatch = { id, nom: courseData.nom, score: levScore };
-          }
-        }
-        
-        if (bestLevMatch) {
-          courseId = bestLevMatch.id;
-          matchScore = bestLevMatch.score;
-          matchMethod = 'levenshtein';
-          
-          if (matchScore < 0.8) {
-            warnings.push({
-              line: lineNum,
-              type: 'fuzzy_match_course',
-              message: `Match Levenshtein pour course "${parsed.nom_course}" → "${bestLevMatch.nom}" (score: ${(matchScore * 100).toFixed(0)}%)`,
-              inputValue: parsed.nom_course,
-              matchedValue: bestLevMatch.nom,
-              score: matchScore,
-              method: 'levenshtein'
-            });
-          }
-        }
+      // Ajouter warning si fuzzy match approximatif
+      if (courseId && matchScore < 0.8 && matchScore > 0) {
+        warnings.push({
+          line: lineNum,
+          type: 'fuzzy_match_course',
+          message: `Match ${matchMethod} pour course "${parsed.nom_course}" → "${matchedCourseName}" (score: ${(matchScore * 100).toFixed(0)}%)`,
+          inputValue: parsed.nom_course,
+          matchedValue: matchedCourseName,
+          score: matchScore,
+          method: matchMethod as 'tokens' | 'levenshtein' | 'lastname'
+        });
       }
 
       if (!courseId) {
