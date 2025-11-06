@@ -2,24 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { normalize, tokenSig, extractLastName, similarity, canonizeName } from '../_shared/normalization.ts';
 
-// Mapping manuel des codes de course
-const COURSE_CODE_MAP: Record<string, string> = {
-  'TDU': 'P1R1',
-  'SAUDI': 'P1R2',
-  'CN_AUS_ITT': 'P1CN1',
-  'CN_AUS_RR': 'P1CN2',
-  'CER': 'P1R3',
-  'CCV': 'P1R4',
-  'TFO-CLV': 'P1R5',
-  'TOR': 'P1R6',
-  'TFO-FEL': 'P1R7',
-  'CN_EQU_ITT': 'P1CN3',
-  'TFO-TRA': 'P1R8',
-  'CEGORR': 'P1R9',
-  'CN_EQU_RR': 'P1CN4',
-  'GPLM': 'P1R10',
-  'TFO-ADX': 'P1R11',
-};
+// Supprimé: Le matching se fait maintenant prioritairement par nom de course
 
 interface ParsedLine {
   coureur: string;
@@ -75,26 +58,18 @@ Deno.serve(async (req) => {
     });
     console.log('Loaded seasons:', saisonMap.size);
 
-    // Pré-charger les courses
+    // Pré-charger les courses avec mapping par nom normalisé
     const { data: courses } = await supabaseClient
       .from('courses')
       .select('id, nom');
     
-    const courseByCode = new Map<string, string>();
-    const courseByName = new Map<string, { id: string, norm: string }>();
+    const courseByName = new Map<string, { id: string, nom: string, norm: string }>();
     
     courses?.forEach(c => {
       const normName = normalize(c.nom);
-      courseByName.set(c.id, { id: c.id, norm: normName });
-      
-      // Chercher dans le mapping manuel
-      for (const [code, id] of Object.entries(COURSE_CODE_MAP)) {
-        if (id === c.id) {
-          courseByCode.set(code, c.id);
-        }
-      }
+      courseByName.set(c.id, { id: c.id, nom: c.nom, norm: normName });
     });
-    console.log('Loaded courses:', courses?.length, 'Code mappings:', courseByCode.size);
+    console.log('Loaded courses:', courseByName.size);
 
     // Pré-charger les coureurs avec normalisation
     const { data: coureurs } = await supabaseClient
@@ -191,31 +166,36 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Mapper la course
+      // Mapper la course (matching prioritaire par nom)
       let courseId: string | null = null;
+      let matchScore = 0;
       
-      // 1. Via code
-      if (courseByCode.has(parsed.code_course)) {
-        courseId = courseByCode.get(parsed.code_course)!;
-      } else {
-        // 2. Via nom (fuzzy)
-        const normCourseName = normalize(parsed.nom_course);
-        let bestMatch: { id: string; score: number } | null = null;
-        
-        for (const [id, courseData] of courseByName) {
-          const score = similarity(normCourseName, courseData.norm);
-          if (score >= 0.7 && (!bestMatch || score > bestMatch.score)) {
-            bestMatch = { id, score };
-          }
+      const normCourseName = normalize(parsed.nom_course);
+      let bestMatch: { id: string; nom: string; score: number } | null = null;
+      
+      for (const [id, courseData] of courseByName) {
+        const score = similarity(normCourseName, courseData.norm);
+        if (score >= 0.7 && (!bestMatch || score > bestMatch.score)) {
+          bestMatch = { id, nom: courseData.nom, score };
         }
+      }
+      
+      if (bestMatch) {
+        courseId = bestMatch.id;
+        matchScore = bestMatch.score;
         
-        if (bestMatch) {
-          courseId = bestMatch.id;
+        // Logger un warning si la similarité est moyenne
+        if (matchScore < 0.9) {
+          warnings.push(`Ligne ${lineNum}: Match partiel pour course "${parsed.nom_course}" → "${bestMatch.nom}" (score: ${(matchScore * 100).toFixed(0)}%)`);
         }
       }
 
       if (!courseId) {
-        errors.push({ line: lineNum, error: `Course non trouvée: ${parsed.code_course} (${parsed.nom_course})`, raw: line });
+        errors.push({ 
+          line: lineNum, 
+          error: `Course non trouvée: "${parsed.nom_course}" (code: ${parsed.code_course})`, 
+          raw: line 
+        });
         continue;
       }
 
