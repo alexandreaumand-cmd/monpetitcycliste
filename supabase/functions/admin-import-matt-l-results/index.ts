@@ -140,8 +140,22 @@ Deno.serve(async (req) => {
     const { csv_content } = await req.json();
     if (!csv_content) throw new Error('Contenu CSV manquant');
 
-    const lines = csv_content.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 0);
-    if (lines.length < 2) throw new Error('CSV vide ou invalide');
+    // Détecter automatiquement le type de fin de ligne
+    let lineBreak = '\n';
+    if (csv_content.includes('\r\n')) {
+      lineBreak = '\r\n';
+    } else if (csv_content.includes('\r')) {
+      lineBreak = '\r';
+    }
+    
+    console.log('Detected line break type:', lineBreak === '\r\n' ? 'Windows (CRLF)' : lineBreak === '\r' ? 'Mac (CR)' : 'Unix (LF)');
+    
+    const lines = csv_content.split(lineBreak).map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+    console.log('Total lines after split:', lines.length);
+    
+    if (lines.length < 2) {
+      throw new Error(`CSV invalide: seulement ${lines.length} ligne(s) détectée(s). Vérifiez que votre fichier contient des retours à la ligne.`);
+    }
 
     const header = lines[0].split(',');
     console.log('Header detected:', header);
