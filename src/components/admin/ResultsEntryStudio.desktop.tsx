@@ -451,7 +451,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               const position = i + 1;
               const rule = scoringRules.find((r) => r.place === position);
               // Check if we have existing data for this position
-              const existing = existingResults.find((r: any) => r.row_position === position);
+              const existing = existingResults.find((r: any) => r.position === position);
               
               return {
                 position,
