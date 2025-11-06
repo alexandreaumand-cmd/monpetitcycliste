@@ -266,9 +266,9 @@ Deno.serve(async (req) => {
       // Mapper la course (avec cache et optimisation)
       // IMPORTANT: Extraire l'année de la date CSV pour filtrer les courses
       let raceYear = '';
-      const dateParts = parsed.date.split('/');
-      if (dateParts.length === 3) {
-        let yearStr = dateParts[2];
+      const datePartsForYear = parsed.date.split('/');
+      if (datePartsForYear.length === 3) {
+        let yearStr = datePartsForYear[2];
         if (yearStr.length === 2) {
           yearStr = '20' + yearStr;
         }
