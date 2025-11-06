@@ -680,24 +680,30 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Déduplication intra-batch pour respecter l'unicité (course_id, type_classement, COALESCE(position_decimal, position))
+    // Déduplication intra-batch pour respecter l'unicité (GC et étapes)
+    // - GC (etape_numero = null): unique sur (course_id, type_classement, COALESCE(position_decimal, position))
+    // - Étapes (etape_numero != null): unique sur (course_id, type_classement, etape_numero, COALESCE(position_decimal, position))
     const sanitizedResults = (() => {
       const seen = new Set<string>();
       const arr: any[] = [];
       for (const r of validResults) {
-        const inUniqueIndexScope =
-          r.etape_numero === null &&
+        const isFinishedWithPos =
           r.statut === 'finished' &&
           (r.position !== null || r.position_decimal !== null);
-        if (!inUniqueIndexScope) {
+
+        if (!isFinishedWithPos) {
+          // Hors contrainte partielle -> pas de dédup nécessaire
           arr.push(r);
           continue;
         }
+
         const posKey = r.position_decimal ?? r.position;
-        const key = `${r.course_id}|${r.type_classement}|${posKey}`;
-        if (seen.has(key)) {
-          continue; // skip duplicate within this batch
-        }
+        // Clé différente selon GC vs Étape
+        const key = (r.etape_numero === null)
+          ? `${r.course_id}|${r.type_classement}|final|${posKey}`
+          : `${r.course_id}|${r.type_classement}|stage:${r.etape_numero}|${posKey}`;
+
+        if (seen.has(key)) continue; // doublon dans le lot courant
         seen.add(key);
         arr.push(r);
       }
@@ -705,23 +711,67 @@ Deno.serve(async (req) => {
     })();
     console.log(`🧹 Déduplication: ${validResults.length - sanitizedResults.length} doublon(s) supprimé(s)`);
     
-    // Stratégie DELETE + INSERT (car la contrainte unique utilise une expression COALESCE)
+    // Stratégie DELETE + INSERT (car les contraintes uniques utilisent COALESCE et des clauses partielles)
     const uniqueCourseIds = Array.from(courseIdsSet);
     if (uniqueCourseIds.length > 0) {
-      console.log(`🗑️ Suppression des résultats existants pour ${uniqueCourseIds.length} course(s)...`);
-      
-      const { error: deleteError } = await supabaseClient
-        .from('race_results')
-        .delete()
-        .in('course_id', uniqueCourseIds)
-        .eq('type_classement', 'General')
-        .is('etape_numero', null)
-        .eq('statut', 'finished');
+      console.log(`🗑️ Préparation de la suppression ciblée pour ${uniqueCourseIds.length} course(s)...`);
 
-      if (deleteError) {
-        console.error('❌ Erreur lors de la suppression:', deleteError);
-        throw deleteError;
+      // Construire les plans de suppression selon le contenu du lot
+      const gcMap = new Map<string, Set<string>>(); // course_id -> types
+      const stageMap = new Map<string, Map<number, Set<string>>>(); // course_id -> (etape_numero -> types)
+
+      for (const r of sanitizedResults) {
+        const isFinishedWithPos = r.statut === 'finished' && (r.position !== null || r.position_decimal !== null);
+        if (!isFinishedWithPos) continue;
+
+        if (r.etape_numero === null) {
+          if (!gcMap.has(r.course_id)) gcMap.set(r.course_id, new Set<string>());
+          gcMap.get(r.course_id)!.add(r.type_classement);
+        } else {
+          if (!stageMap.has(r.course_id)) stageMap.set(r.course_id, new Map<number, Set<string>>());
+          const byStage = stageMap.get(r.course_id)!;
+          if (!byStage.has(r.etape_numero)) byStage.set(r.etape_numero, new Set<string>());
+          byStage.get(r.etape_numero)!.add(r.type_classement);
+        }
       }
+
+      let totalDeleted = 0;
+
+      // GC: etape_numero IS NULL
+      for (const [courseId, types] of gcMap.entries()) {
+        const { error, count } = await supabaseClient
+          .from('race_results')
+          .delete({ count: 'exact' })
+          .eq('course_id', courseId)
+          .eq('statut', 'finished')
+          .is('etape_numero', null)
+          .in('type_classement', Array.from(types));
+        if (error) {
+          console.error('❌ Erreur suppression GC:', { courseId, types: Array.from(types) }, error);
+          throw error;
+        }
+        totalDeleted += count || 0;
+      }
+
+      // Étapes: etape_numero = N
+      for (const [courseId, stages] of stageMap.entries()) {
+        for (const [etape, types] of stages.entries()) {
+          const { error, count } = await supabaseClient
+            .from('race_results')
+            .delete({ count: 'exact' })
+            .eq('course_id', courseId)
+            .eq('statut', 'finished')
+            .eq('etape_numero', etape)
+            .in('type_classement', Array.from(types));
+          if (error) {
+            console.error('❌ Erreur suppression Étape:', { courseId, etape, types: Array.from(types) }, error);
+            throw error;
+          }
+          totalDeleted += count || 0;
+        }
+      }
+
+      console.log(`🗑️ Suppression terminée: ${totalDeleted} ligne(s) supprimée(s) avant insertion`);
     }
 
     // Insertion des nouveaux résultats
