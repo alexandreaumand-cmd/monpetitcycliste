@@ -433,15 +433,40 @@ Deno.serve(async (req) => {
     console.log(`Processed ${lines.length - 1} lines: ${validResults.length} valid, ${errors.length} errors`);
 
     if (validResults.length === 0) {
+      // Construire le même rapport que pour un import réussi
+      const errorsByType = {
+        rider_not_found: errors.filter(e => e.type === 'rider_not_found'),
+        course_not_found: errors.filter(e => e.type === 'course_not_found'),
+        season_not_found: errors.filter(e => e.type === 'season_not_found'),
+        invalid_format: errors.filter(e => e.type === 'invalid_format'),
+        unknown_type: errors.filter(e => e.type === 'unknown_type'),
+      };
+
+      const uniqueRidersNotFound = new Set(errors.filter(e => e.type === 'rider_not_found').map(e => e.riderName));
+      const uniqueCoursesNotFound = new Set(errors.filter(e => e.type === 'course_not_found').map(e => e.courseName));
+
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Aucun résultat valide trouvé',
+          imported: 0,
           errors,
           warnings,
+          errorsByType: {
+            riders_not_found: Array.from(uniqueRidersNotFound),
+            courses_not_found: Array.from(uniqueCoursesNotFound),
+            total_by_type: {
+              rider_errors: errorsByType.rider_not_found.length,
+              course_errors: errorsByType.course_not_found.length,
+              season_errors: errorsByType.season_not_found.length,
+              format_errors: errorsByType.invalid_format.length,
+              unknown_type_errors: errorsByType.unknown_type.length,
+            }
+          },
+          courses_affected: [],
+          recompute_results: [],
         }),
         { 
-          status: 400,
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );

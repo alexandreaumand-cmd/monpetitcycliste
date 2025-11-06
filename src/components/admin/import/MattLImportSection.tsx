@@ -55,16 +55,21 @@ export const MattLImportSection = () => {
 
       if (error) throw error;
 
-      if (!data.success) {
-        throw new Error(data.error || 'Import échoué');
-      }
-
+      // Toujours afficher le rapport, même si success === false
       setResult(data);
 
-      toast({
-        title: "✅ Import Matt L réussi",
-        description: `${data.imported || 0} résultats importés, ${data.courses_affected?.length || 0} course(s) recalculée(s)`,
-      });
+      if (data.success) {
+        toast({
+          title: "✅ Import Matt L réussi",
+          description: `${data.imported || 0} résultats importés, ${data.courses_affected?.length || 0} course(s) recalculée(s)`,
+        });
+      } else {
+        toast({
+          title: "⚠️ Analyse terminée",
+          description: "0 ligne importée. Consultez le rapport ci-dessous.",
+          variant: "default",
+        });
+      }
 
       setFile(null);
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -156,11 +161,19 @@ export const MattLImportSection = () => {
         {result && result.imported !== undefined && (
           <div className="space-y-3 pt-2">
             {/* Résumé global */}
-            <Alert className="bg-green-500/10 border-green-500/20">
-              <AlertTitle className="text-green-600">Résultat de l'import</AlertTitle>
+            <Alert className={result.imported > 0 ? "bg-green-500/10 border-green-500/20" : "bg-yellow-500/10 border-yellow-500/20"}>
+              <AlertTitle className={result.imported > 0 ? "text-green-600" : "text-yellow-600"}>
+                Résultat de l'import
+              </AlertTitle>
               <AlertDescription className="text-xs space-y-1">
-                <p>✅ <strong>{result.imported}</strong> résultats importés</p>
-                <p>🏁 <strong>{result.courses_affected?.length || 0}</strong> course(s) recalculée(s)</p>
+                {result.imported > 0 ? (
+                  <>
+                    <p>✅ <strong>{result.imported}</strong> résultats importés</p>
+                    <p>🏁 <strong>{result.courses_affected?.length || 0}</strong> course(s) recalculée(s)</p>
+                  </>
+                ) : (
+                  <p>⚠️ <strong>Aucune ligne importée</strong> — Consultez les erreurs ci-dessous</p>
+                )}
                 {result.warnings && result.warnings.length > 0 && (
                   <p>⚠️ <strong>{result.warnings.length}</strong> avertissement(s)</p>
                 )}
