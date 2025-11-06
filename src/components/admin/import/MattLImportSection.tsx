@@ -14,7 +14,7 @@ const downloadErrorsCSV = (errors: any[]) => {
   const csvContent = [
     'Ligne,Type,Coureur,Course,Code_Course,Détails',
     ...errors.map(e => 
-      `${e.line},"${e.type}","${e.riderName || ''}","${e.courseName || ''}","${e.courseCode || ''}","${e.details || e.raw}"`
+      `${e.line || 'N/A'},"${e.type || ''}","${e.riderName || ''}","${e.courseName || ''}","${e.courseCode || ''}","${e.details || e.raw || ''}"`
     )
   ].join('\n');
   
@@ -153,7 +153,7 @@ export const MattLImportSection = () => {
           )}
         </Button>
 
-        {result && (
+        {result && result.imported !== undefined && (
           <div className="space-y-3 pt-2">
             {/* Résumé global */}
             <Alert className="bg-green-500/10 border-green-500/20">
@@ -179,7 +179,7 @@ export const MattLImportSection = () => {
                 <AlertDescription className="text-xs">
                   <div className="max-h-40 overflow-y-auto space-y-1">
                     {result.errorsByType.riders_not_found.map((name: string, idx: number) => (
-                      <div key={idx} className="font-mono">• {name}</div>
+                      <div key={idx} className="font-mono">• {name || 'Nom inconnu'}</div>
                     ))}
                   </div>
                 </AlertDescription>
@@ -195,7 +195,7 @@ export const MattLImportSection = () => {
                 <AlertDescription className="text-xs">
                   <div className="max-h-40 overflow-y-auto space-y-1">
                     {result.errorsByType.courses_not_found.map((name: string, idx: number) => (
-                      <div key={idx} className="font-mono">• {name}</div>
+                      <div key={idx} className="font-mono">• {name || 'Nom inconnu'}</div>
                     ))}
                   </div>
                 </AlertDescription>
@@ -216,9 +216,14 @@ export const MattLImportSection = () => {
                     <AlertDescription className="text-xs max-h-60 overflow-y-auto space-y-2">
                       {result.warnings.map((warn: any, idx: number) => (
                         <div key={idx} className="border-l-2 border-yellow-500 pl-2">
-                          <div className="font-semibold">Ligne {warn.line}</div>
-                          <div>"{warn.inputValue}" → "{warn.matchedValue}"</div>
-                          {warn.score && (
+                          <div className="font-semibold">Ligne {warn.line || 'N/A'}</div>
+                          {warn.inputValue && warn.matchedValue && (
+                            <div>"{warn.inputValue}" → "{warn.matchedValue}"</div>
+                          )}
+                          {warn.message && !warn.inputValue && (
+                            <div>{warn.message}</div>
+                          )}
+                          {warn.score !== undefined && warn.method && (
                             <div className="text-muted-foreground">
                               Score: {(warn.score * 100).toFixed(0)}% ({warn.method})
                             </div>
