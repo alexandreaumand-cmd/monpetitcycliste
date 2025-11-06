@@ -152,7 +152,7 @@ const Dashboard = () => {
         )}
         <SidebarInset className="flex-1 flex flex-col">
           <AnnouncementBanner />
-          {!isSuperAdminRoute && (
+          {!isHomePage && !isSuperAdminRoute && (
             <TopBar 
               onSignOut={handleSignOut}
               manager={manager}
