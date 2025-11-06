@@ -211,13 +211,13 @@ Deno.serve(async (req) => {
         }
       }
       
-      // 2. Essayer matching par tokens (Jaccard)
+      // 2. Essayer matching par tokens (Jaccard) - seuil abaissé à 0.7
       if (!courseId) {
         let bestTokenMatch: { id: string; nom: string; score: number } | null = null;
         
         for (const [id, courseData] of courseByName) {
           const tokenScore = matchByTokens(parsed.nom_course, courseData.nom);
-          if (tokenScore >= 0.8 && (!bestTokenMatch || tokenScore > bestTokenMatch.score)) {
+          if (tokenScore >= 0.7 && (!bestTokenMatch || tokenScore > bestTokenMatch.score)) {
             bestTokenMatch = { id, nom: courseData.nom, score: tokenScore };
           }
         }
@@ -227,19 +227,19 @@ Deno.serve(async (req) => {
           matchScore = bestTokenMatch.score;
           matchMethod = 'tokens';
           
-          if (matchScore < 0.95) {
+          if (matchScore < 0.8) {
             warnings.push(`Ligne ${lineNum}: Match par tokens pour course "${parsed.nom_course}" → "${bestTokenMatch.nom}" (score: ${(matchScore * 100).toFixed(0)}%)`);
           }
         }
       }
       
-      // 3. Fallback : Levenshtein
+      // 3. Fallback : Levenshtein - seuil abaissé à 0.6
       if (!courseId) {
         let bestLevMatch: { id: string; nom: string; score: number } | null = null;
         
         for (const [id, courseData] of courseByName) {
           const levScore = similarity(normCourseName, courseData.norm);
-          if (levScore >= 0.7 && (!bestLevMatch || levScore > bestLevMatch.score)) {
+          if (levScore >= 0.6 && (!bestLevMatch || levScore > bestLevMatch.score)) {
             bestLevMatch = { id, nom: courseData.nom, score: levScore };
           }
         }
@@ -249,7 +249,9 @@ Deno.serve(async (req) => {
           matchScore = bestLevMatch.score;
           matchMethod = 'levenshtein';
           
-          warnings.push(`Ligne ${lineNum}: Match Levenshtein pour course "${parsed.nom_course}" → "${bestLevMatch.nom}" (score: ${(matchScore * 100).toFixed(0)}%)`);
+          if (matchScore < 0.8) {
+            warnings.push(`Ligne ${lineNum}: Match Levenshtein pour course "${parsed.nom_course}" → "${bestLevMatch.nom}" (score: ${(matchScore * 100).toFixed(0)}%)`);
+          }
         }
       }
 
@@ -329,13 +331,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Insertion en batch avec UPSERT pour gérer les doublons
+    // Insertion en batch simple (sans upsert pour éviter les conflits de contraintes partielles)
     const { error: insertError } = await supabaseClient
       .from('race_results')
-      .upsert(validResults, {
-        onConflict: 'course_id,type_classement,coureur_id,etape_numero',
-        ignoreDuplicates: false
-      });
+      .insert(validResults);
 
     if (insertError) throw insertError;
 
