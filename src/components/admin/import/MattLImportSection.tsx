@@ -49,6 +49,14 @@ export const MattLImportSection = () => {
     try {
       const csvData = await file.text();
       
+      console.log('CSV file size:', file.size, 'bytes');
+      console.log('CSV content preview:', csvData.substring(0, 200));
+      console.log('CSV lines count:', csvData.split('\n').filter(l => l.trim()).length);
+      
+      if (!csvData || csvData.trim().length === 0) {
+        throw new Error('Le fichier CSV est vide');
+      }
+      
       const { data, error } = await supabase.functions.invoke('admin-import-matt-l-results', {
         body: { csv_content: csvData },
       });
