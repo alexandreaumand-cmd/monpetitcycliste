@@ -680,9 +680,33 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Déduplication intra-batch pour respecter l'unicité (course_id, type_classement, COALESCE(position_decimal, position))
+    const sanitizedResults = (() => {
+      const seen = new Set<string>();
+      const arr: any[] = [];
+      for (const r of validResults) {
+        const inUniqueIndexScope =
+          r.etape_numero === null &&
+          r.statut === 'finished' &&
+          (r.position !== null || r.position_decimal !== null);
+        if (!inUniqueIndexScope) {
+          arr.push(r);
+          continue;
+        }
+        const posKey = r.position_decimal ?? r.position;
+        const key = `${r.course_id}|${r.type_classement}|${posKey}`;
+        if (seen.has(key)) {
+          continue; // skip duplicate within this batch
+        }
+        seen.add(key);
+        arr.push(r);
+      }
+      return arr;
+    })();
+    console.log(`🧹 Déduplication: ${validResults.length - sanitizedResults.length} doublon(s) supprimé(s)`);
+    
     // Stratégie DELETE + INSERT (car la contrainte unique utilise une expression COALESCE)
     const uniqueCourseIds = Array.from(courseIdsSet);
-
     if (uniqueCourseIds.length > 0) {
       console.log(`🗑️ Suppression des résultats existants pour ${uniqueCourseIds.length} course(s)...`);
       
@@ -701,14 +725,14 @@ Deno.serve(async (req) => {
     }
 
     // Insertion des nouveaux résultats
-    console.log(`📝 Insertion de ${validResults.length} nouveau(x) résultat(s)...`);
+    console.log(`📝 Insertion de ${sanitizedResults.length} nouveau(x) résultat(s)...`);
     const { error: insertError } = await supabaseClient
       .from('race_results')
-      .insert(validResults);
+      .insert(sanitizedResults);
 
     if (insertError) throw insertError;
     
-    console.log(`✅ ${validResults.length} résultats insérés avec succès`);
+    console.log(`✅ ${sanitizedResults.length} résultats insérés avec succès`);
 
     // Recalculer les points pour chaque course affectée
     const courseIds = Array.from(courseIdsSet);
@@ -751,7 +775,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        imported: validResults.length,
+        imported: sanitizedResults.length,
         errors,
         warnings,
         errorsByType: {
