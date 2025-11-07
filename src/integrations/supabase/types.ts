@@ -4602,6 +4602,7 @@ export type Database = {
       results_courses_with_entries:
         | {
             Args: {
+              p_league_id?: string
               p_limit?: number
               p_offset?: number
               p_phase_id?: string

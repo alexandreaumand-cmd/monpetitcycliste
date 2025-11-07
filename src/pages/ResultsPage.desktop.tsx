@@ -89,7 +89,8 @@ export const ResultsPage = () => {
           limit: 24,
           offset: currentOffset,
           phase_id: selectedPhaseId === "global" ? null : selectedPhaseId,
-          saison_id: selectedSeason?.id
+          saison_id: selectedSeason?.id,
+          league_id: leagueId
         }
       });
 
