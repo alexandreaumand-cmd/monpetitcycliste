@@ -636,12 +636,19 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
       // If cancelled, delete all results and return
       if (isCancelled) {
-        await leagueClient
+        let query = leagueClient
           .from('race_results')
           .delete()
           .eq('course_id', course.course_id)
-          .eq('type_classement', classementType)
-          .eq('etape_numero', etapeNumeroValue);
+          .eq('type_classement', classementType);
+        
+        if (etapeNumeroValue === null) {
+          query = query.is('etape_numero', null);
+        } else {
+          query = query.eq('etape_numero', etapeNumeroValue);
+        }
+        
+        await query;
         
         return { success: true, message: 'Annulation enregistrée' };
       }
@@ -887,32 +894,53 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
       
       // Delete race_results for this specific classification
-      const { error: resultsError } = await supabase
+      let query1 = supabase
         .from('race_results')
         .delete()
         .eq('course_id', course.course_id)
-        .eq('type_classement', classementType)
-        .eq('etape_numero', etapeNumeroValue);
+        .eq('type_classement', classementType);
+      
+      if (etapeNumeroValue === null) {
+        query1 = query1.is('etape_numero', null);
+      } else {
+        query1 = query1.eq('etape_numero', etapeNumeroValue);
+      }
+      
+      const { error: resultsError } = await query1;
 
       if (resultsError) throw resultsError;
 
       // Delete points_ledger for this specific classification
-      const { error: pointsError } = await supabase
+      let query2 = supabase
         .from('points_ledger')
         .delete()
         .eq('course_id', course.course_id)
-        .eq('type_classement', classementType)
-        .eq('etape_numero', etapeNumeroValue);
+        .eq('type_classement', classementType);
+      
+      if (etapeNumeroValue === null) {
+        query2 = query2.is('etape_numero', null);
+      } else {
+        query2 = query2.eq('etape_numero', etapeNumeroValue);
+      }
+      
+      const { error: pointsError } = await query2;
 
       if (pointsError) throw pointsError;
 
       // Update race_result_sets to mark as not cancelled
-      await supabase
+      let query3 = supabase
         .from('race_result_sets')
         .update({ is_cancelled: false })
         .eq('course_id', course.course_id)
-        .eq('type_classement', classementType)
-        .eq('etape_numero', etapeNumeroValue);
+        .eq('type_classement', classementType);
+      
+      if (etapeNumeroValue === null) {
+        query3 = query3.is('etape_numero', null);
+      } else {
+        query3 = query3.eq('etape_numero', etapeNumeroValue);
+      }
+      
+      await query3;
 
       return { success: true };
     },
