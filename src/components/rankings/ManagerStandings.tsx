@@ -181,6 +181,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
               const isBottomThree = standings && idx >= standings.length - 3;
               const gapToPrevious = idx > 0 ? standings[idx - 1].total_points - standing.total_points : 0;
               const percentage = ((standing.total_points / totalPoints) * 100).toFixed(1);
+              const bonusPoints = (standing.manager_bonus || 0) + (standing.rider_bonus || 0);
               
               // Calculate evolution - ONLY for global view
               let evolution: number | null = null;
@@ -248,11 +249,11 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
                   <TableCell 
                     className={cn(
                       "text-right py-2 transition-colors",
-                      standing.bonus_points !== 0 && "cursor-pointer hover:bg-muted/50"
+                      bonusPoints !== 0 && "cursor-pointer hover:bg-muted/50"
                     )}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (standing.bonus_points !== 0) {
+                      if (bonusPoints !== 0) {
                         setSelectedBonusManager({
                           id: standing.manager_id,
                           name: standing.manager_nom
@@ -261,17 +262,17 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
                       }
                     }}
                   >
-                    {standing.bonus_points !== 0 ? (
+                    {bonusPoints !== 0 ? (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Badge 
                               className={cn(
                                 "bg-[#FFF4CC] border text-xs font-semibold px-2 py-0.5 cursor-pointer",
-                                standing.bonus_points > 0 ? "text-green-700 border-green-300" : "text-red-700 border-red-300"
+                                bonusPoints > 0 ? "text-green-700 border-green-300" : "text-red-700 border-red-300"
                               )}
                             >
-                              {standing.bonus_points > 0 ? `+${standing.bonus_points}` : standing.bonus_points}
+                              {bonusPoints > 0 ? `+${bonusPoints}` : bonusPoints}
                             </Badge>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -285,12 +286,12 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
                   </TableCell>
                   <TableCell className="text-right py-2">
                     <span className="text-sm font-mono text-muted-foreground">
-                      {standing.scoreurs_count ?? 0}
+                      {standing.nb_scoreurs ?? 0}
                     </span>
                   </TableCell>
                   <TableCell className="text-right py-2">
                     <span className="text-sm font-mono text-muted-foreground">
-                      {standing.victories_count ?? 0}
+                      {standing.nb_victoires ?? 0}
                     </span>
                   </TableCell>
                   <TableCell className="text-right py-2">
