@@ -367,7 +367,7 @@ export const ResultsEntryDrawer = ({
       const { error: resultsError } = await supabase
         .from('race_results')
         .upsert(resultsToUpsert, {
-          onConflict: 'course_id,coureur_id,type_classement,etape_numero',
+          onConflict: 'course_id,type_classement,etape_numero,coureur_id',
         });
 
       if (resultsError) throw resultsError;
