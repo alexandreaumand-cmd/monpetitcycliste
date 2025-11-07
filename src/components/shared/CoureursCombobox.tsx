@@ -66,7 +66,8 @@ export const CoureursCombobox = ({
       if (error) return null;
       return data;
     },
-    enabled: !!value && open,
+    enabled: !!value,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   // Fetch coureurs using edge function with pagination

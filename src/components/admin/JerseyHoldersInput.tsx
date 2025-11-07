@@ -42,6 +42,7 @@ export const JerseyHoldersInput = ({ phaseId, jerseyHolders, onChange }: JerseyH
                 onChange(type, coureur ? coureur.coureur_id : null);
               }}
               showTakenRiders={true}
+              context="super-admin"
             />
           </div>
         ))}
