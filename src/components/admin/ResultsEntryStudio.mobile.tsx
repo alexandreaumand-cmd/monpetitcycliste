@@ -423,9 +423,7 @@ export const ResultsEntryStudioMobile = ({
 
         const { error: resultsError } = await leagueClient
           .from('race_results')
-          .upsert(resultsToUpsert, {
-            onConflict: 'course_id,type_classement,etape_numero,coureur_id',
-          });
+          .insert(resultsToUpsert);
 
         if (resultsError) throw resultsError;
       }
@@ -452,7 +450,7 @@ export const ResultsEntryStudioMobile = ({
             .eq('coureur_id', coureurId)
             .maybeSingle();
 
-          await leagueClient.from('race_results').upsert({
+          await leagueClient.from('race_results').insert({
             course_id: course.course_id,
             coureur_id: coureurId,
             type_classement: type as any,
@@ -463,9 +461,7 @@ export const ResultsEntryStudioMobile = ({
             manager_id: roster?.manager_id || null,
             points: 0,
             saison_id: phaseData.saison_id,
-          } as any, {
-            onConflict: 'course_id,type_classement,etape_numero,coureur_id',
-          });
+          } as any);
         }
       }
 
