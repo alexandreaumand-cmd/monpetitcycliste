@@ -316,8 +316,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               .in('type_classement', ['Porteur Général', 'Porteur Vert', 'Porteur Montagne', 'Porteur Jeune', 'Porteur Combattif'])
               .eq('etape_numero', currentStage)
               .eq('position', 1)
-              .gte('date_classement', course.date_debut)
-              .lte('date_classement', course.date_fin)
           : Promise.resolve({ data: [] }),
         
         // 4. Load Combatif winner (if needed)
