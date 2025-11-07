@@ -102,9 +102,7 @@ export const RecentResultsMobile = () => {
         const { data, error } = await supabase
           .from('race_results')
           .select('type_classement, coureur_id, etape_numero')
-          .eq('course_id', course.course_id)
-          .gte('date_classement', course.date_debut)
-          .lte('date_classement', course.date_fin);
+          .eq('course_id', course.course_id);
         
         if (error) {
           console.error('Error fetching status:', error);
