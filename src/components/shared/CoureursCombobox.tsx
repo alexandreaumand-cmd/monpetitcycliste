@@ -52,19 +52,33 @@ export const CoureursCombobox = ({
 
   // Fetch selected coureur by ID
   const { data: selectedCoureurData } = useQuery({
-    queryKey: ['coureur-by-id', phaseId, value],
+    queryKey: ['coureur-by-id', phaseId, value, context],
     queryFn: async () => {
       if (!value) return null;
-      
-      const { data, error } = await supabase
+
+      let query = supabase
         .from('coureurs_disponibilite')
-        .select('id, nom, uci_id, equipe, equipe_id, prix_initial, saison_id, phase_id, is_taken, taken_by_manager_nom')
-        .eq('phase_id', phaseId)
-        .eq('id', value)
-        .single();
-      
-      if (error) return null;
-      return data;
+        .select('id, nom, uci_id, equipe, prix_initial, saison_id, phase_id, is_taken, taken_by_manager_nom')
+        .eq('id', value);
+
+      if (context !== 'super-admin') {
+        query = query.eq('phase_id', phaseId);
+      }
+
+      const { data, error } = await query.maybeSingle();
+      if (error || !data) return null;
+
+      return {
+        coureur_id: data.id,
+        coureur_nom: data.nom,
+        coureur_equipe: data.equipe,
+        is_taken: data.is_taken,
+        taken_by_manager_nom: data.taken_by_manager_nom,
+        // compatibility fields
+        id: data.id,
+        nom: data.nom,
+        equipe: data.equipe,
+      };
     },
     enabled: !!value,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -153,7 +167,7 @@ export const CoureursCombobox = ({
           disabled={disabled}
         >
           {selectedCoureur ? (
-            <span className="truncate">{selectedCoureur.coureur_nom}</span>
+            <span className="truncate">{selectedCoureur.coureur_nom || selectedCoureur.nom}</span>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}
