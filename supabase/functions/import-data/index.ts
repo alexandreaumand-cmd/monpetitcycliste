@@ -116,7 +116,7 @@ function mapToTableFormat(
   }
 
   switch (table) {
-    case 'coureurs':
+    case 'coureurs': {
       // Use getVal for flexible column lookup (handles various formats and case)
       const coureurNom = getVal(obj, 'coureur', 'nom', 'name', 'Coureur') || '';
       const equipe = getVal(obj, 'equipe', 'team', 'équipe', 'Equipe');
@@ -130,8 +130,9 @@ function mapToTableFormat(
         prix_initial: parseFloat(prixInitial) || 10,
         uci_id: uciId || null
       }
+    }
     
-    case 'scoring_rules':
+    case 'scoring_rules': {
       const rawTypeClassement = getVal(obj, 'type_classement', 'Type classement', 'type classement');
       const typeClassement = normalizeTypeClassement(rawTypeClassement || '');
       if (!typeClassement) {
@@ -156,8 +157,9 @@ function mapToTableFormat(
         points: points,
         type: typeCourse || null
       }
+    }
     
-    case 'courses':
+    case 'courses': {
       // Support both old format (Course, Race Type, Race Category) and new format (all fields)
       const hasNewFormat = headers.includes('nom') || headers.includes('date_debut')
       
@@ -197,16 +199,18 @@ function mapToTableFormat(
           pays: null
         }
       }
+    }
     
-    case 'managers':
+    case 'managers': {
       return {
         nom: obj['Nom manager'],
         sponsor: obj['Sponsor'],
         email: null,
         user_id: null
       }
+    }
     
-    case 'equipes':
+    case 'equipes': {
       const codeCourt = getVal(obj, 'code_court', 'code', 'Code court') || '';
       const nomComplet = getVal(obj, 'nom_complet', 'nom', 'Nom complet') || '';
       const nomAffiche = getVal(obj, 'nom_affiche', 'nom_affiche', 'Nom affiché', 'display_name') || nomComplet;
@@ -222,9 +226,11 @@ function mapToTableFormat(
         pays: pays || null,
         logo_url: logoUrl || null
       }
+    }
     
-    default:
+    default: {
       return null
+    }
   }
 }
 
