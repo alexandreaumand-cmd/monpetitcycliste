@@ -5,6 +5,7 @@ import { BaremesImportSection } from "./import/BaremesImportSection";
 import { RostersImportSection } from "./import/RostersImportSection";
 import { ResultatsImportSection } from "./import/ResultatsImportSection";
 import { MattLImportSection } from "./import/MattLImportSection";
+import { EquipesImportSection } from "./import/EquipesImportSection";
 
 export const DataImportManager = () => {
   return (
@@ -16,6 +17,7 @@ export const DataImportManager = () => {
       <Accordion type="single" collapsible className="space-y-2">
         <CoursesImportSection />
         <CoureursImportSection />
+        <EquipesImportSection />
         <BaremesImportSection />
         <RostersImportSection />
         <ResultatsImportSection />

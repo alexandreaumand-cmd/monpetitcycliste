@@ -6,9 +6,9 @@ const corsHeaders = {
 }
 
 interface ImportRequest {
-  table: 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates' | 'rosters' | 'resultats'
+  table: 'coureurs' | 'scoring_rules' | 'courses' | 'managers' | 'course_dates' | 'rosters' | 'resultats' | 'equipes'
   data: string // CSV content
-  saison_id?: string // Required for coureurs, scoring_rules, and resultats
+  saison_id?: string // Required for coureurs, scoring_rules, resultats, and equipes
   phase_id?: string // Required for courses and rosters
 }
 
@@ -204,6 +204,23 @@ function mapToTableFormat(
         sponsor: obj['Sponsor'],
         email: null,
         user_id: null
+      }
+    
+    case 'equipes':
+      const codeCourt = getVal(obj, 'code_court', 'code', 'Code court') || '';
+      const nomComplet = getVal(obj, 'nom_complet', 'nom', 'Nom complet') || '';
+      const nomAffiche = getVal(obj, 'nom_affiche', 'nom_affiche', 'Nom affiché', 'display_name') || nomComplet;
+      const categorie = getVal(obj, 'categorie', 'category', 'Catégorie');
+      const pays = getVal(obj, 'pays', 'country', 'Pays');
+      const logoUrl = getVal(obj, 'logo_url', 'logo', 'Logo URL');
+      
+      return {
+        code_court: codeCourt,
+        nom_complet: nomComplet,
+        nom_affiche: nomAffiche,
+        categorie: categorie?.toUpperCase() || null,
+        pays: pays || null,
+        logo_url: logoUrl || null
       }
     
     default:
@@ -1117,6 +1134,125 @@ Deno.serve(async (req) => {
       }
       
       console.log(`✅ Imported ${imported} scoring_rules, ${errors} errors`);
+    } else if (table === 'equipes') {
+      if (!saison_id) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'saison_id is required for equipes import',
+            details: 'Veuillez sélectionner une saison avant d\'importer les équipes'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+
+      console.log('🏢 Processing equipes import for saison:', saison_id);
+      
+      // 1. Charger toutes les équipes existantes pour déduplication
+      const existingEquipes = await fetchAllRows(supabaseClient, 'equipes', 'id, code_court');
+      const equipesByCode = new Map(existingEquipes.map((e: any) => [e.code_court.toLowerCase(), e.id]));
+      
+      console.log(`📦 Found ${existingEquipes.length} existing equipes`);
+
+      let importedCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+      const equipesToUpsert: any[] = [];
+      const equipesSaisonsToUpsert: any[] = [];
+
+      // 2. Parser les lignes et préparer les upserts
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = parseCSVLine(lines[i], separator);
+          if (values.length === 0 || !values.some(v => v.trim())) continue;
+
+          const mapped = mapToTableFormat(table, headers, values);
+          
+          // Validation des champs requis
+          if (!mapped.code_court || !mapped.nom_complet) {
+            errors.push(`Ligne ${i + 1}: Code court et Nom complet sont obligatoires`);
+            errorCount++;
+            continue;
+          }
+
+          const codeCourtLower = mapped.code_court.toLowerCase();
+          let equipeId = equipesByCode.get(codeCourtLower);
+
+          // Si l'équipe n'existe pas, préparer l'insertion
+          if (!equipeId) {
+            equipeId = crypto.randomUUID();
+            equipesToUpsert.push({
+              id: equipeId,
+              code_court: mapped.code_court,
+              nom_complet: mapped.nom_complet,
+              pays: mapped.pays || null,
+              logo_url: mapped.logo_url || null
+            });
+            equipesByCode.set(codeCourtLower, equipeId);
+          }
+
+          // Préparer l'association équipe-saison
+          equipesSaisonsToUpsert.push({
+            equipe_id: equipeId,
+            saison_id: saison_id,
+            nom_affiche: mapped.nom_affiche,
+            categorie: mapped.categorie || null,
+            actif: true
+          });
+
+          importedCount++;
+        } catch (err: any) {
+          console.error(`Error processing equipe row ${i + 1}:`, err);
+          errors.push(`Ligne ${i + 1}: ${err.message}`);
+          errorCount++;
+        }
+      }
+
+      // 3. Upsert des équipes (table de base)
+      if (equipesToUpsert.length > 0) {
+        console.log(`📝 Upserting ${equipesToUpsert.length} new equipes...`);
+        const { error: equipeError } = await supabaseClient
+          .from('equipes')
+          .upsert(equipesToUpsert, { 
+            onConflict: 'code_court',
+            ignoreDuplicates: false 
+          });
+
+        if (equipeError) {
+          console.error('Error upserting equipes:', equipeError);
+          throw equipeError;
+        }
+      }
+
+      // 4. Upsert des associations équipe-saison
+      if (equipesSaisonsToUpsert.length > 0) {
+        console.log(`📝 Upserting ${equipesSaisonsToUpsert.length} equipes_saisons entries...`);
+        const { error: saisonError } = await supabaseClient
+          .from('equipes_saisons')
+          .upsert(equipesSaisonsToUpsert, {
+            onConflict: 'equipe_id,saison_id',
+            ignoreDuplicates: false
+          });
+
+        if (saisonError) {
+          console.error('Error upserting equipes_saisons:', saisonError);
+          throw saisonError;
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          imported: importedCount,
+          details: {
+            imported_count: importedCount,
+            error_count: errorCount,
+            total_rows: lines.length - 1,
+            new_equipes: equipesToUpsert.length,
+            errors: errors.slice(0, 10) // Limiter à 10 premières erreurs
+          }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     } else {
       // For other tables (managers)
       for (let i = 1; i < lines.length; i++) {

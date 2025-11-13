@@ -81,6 +81,16 @@ P1R1,VIN001,Etape,1,2,finished,2025-01-21,2025`;
 };
 
 /**
+ * Generate CSV template for equipes
+ */
+export const generateEquipesTemplate = (): string => {
+  return `Code court;Nom complet;Nom affiché;Catégorie;Pays;Logo URL
+UAD;UAE Team Emirates;UAE Emirates;WT;UAE;https://example.com/uad.png
+SKA;Soudal Quick-Step;Soudal QS;WT;BEL;https://example.com/ska.png
+VIS;Visma-Lease a Bike;Visma;WT;NED;https://example.com/vis.png`;
+};
+
+/**
  * Helper to trigger download of a CSV file
  */
 export const downloadCSV = (content: string, filename: string): void => {
