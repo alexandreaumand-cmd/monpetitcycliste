@@ -71,7 +71,8 @@ Deno.serve(async (req) => {
     let rostersQuery = supabase
       .from('rosters')
       .select('coureur_id, manager_id, phase_id')
-      .in('phase_id', Array.from(phaseIds));
+      .in('phase_id', Array.from(phaseIds))
+      .limit(10000);
 
     if (league_id) {
       rostersQuery = rostersQuery.eq('league_id', league_id);
@@ -98,7 +99,8 @@ Deno.serve(async (req) => {
       .from('points_ledger')
       .select('course_id, coureur_id, points, phase_id')
       .in('course_id', course_ids)
-      .in('phase_id', Array.from(phaseIds));
+      .in('phase_id', Array.from(phaseIds))
+      .limit(10000);
 
     if (pointsError) {
       console.error('[courses-leaderboard-podiums] Error fetching points:', pointsError);

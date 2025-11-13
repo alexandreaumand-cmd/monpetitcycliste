@@ -71,7 +71,8 @@ Deno.serve(async (req) => {
         .from('rosters')
         .select('manager_id, coureur_id, phase_id')
         .eq('league_id', league_id)
-        .in('phase_id', phaseIds);
+        .in('phase_id', phaseIds)
+        .limit(10000);
       
       if (rostersError) throw rostersError;
       
@@ -97,7 +98,8 @@ Deno.serve(async (req) => {
     const { data: allPoints, error: pointsError } = await supabase
       .from('points_ledger')
       .select('course_id, coureur_id, points')
-      .in('course_id', course_ids);
+      .in('course_id', course_ids)
+      .limit(10000);
     
     if (pointsError) throw pointsError;
 
