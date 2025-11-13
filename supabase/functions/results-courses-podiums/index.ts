@@ -5,6 +5,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const PAGE_SIZE = 1000;
+async function fetchAll<T>(makeQuery: () => any): Promise<T[]> {
+  let from = 0;
+  const all: T[] = [];
+  while (true) {
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await makeQuery().range(from, to);
+    if (error) throw error;
+    const batch = (data as T[]) || [];
+    all.push(...batch);
+    if (batch.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return all;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -67,16 +83,15 @@ Deno.serve(async (req) => {
     let managersByCoureur = new Map<string, Set<string>>(); 
     
     if (league_id && phaseIds.length > 0) {
-      const { data: rostersData, error: rostersError } = await supabase
-        .from('rosters')
-        .select('manager_id, coureur_id, phase_id')
-        .eq('league_id', league_id)
-        .in('phase_id', phaseIds)
-        .limit(10000);
+      const rostersData = await fetchAll<{ manager_id: string; coureur_id: string; phase_id: string }>(() =>
+        supabase
+          .from('rosters')
+          .select('manager_id, coureur_id, phase_id')
+          .eq('league_id', league_id)
+          .in('phase_id', phaseIds)
+      );
       
-      if (rostersError) throw rostersError;
-      
-      console.log('Rosters loaded:', rostersData?.length || 0);
+      console.log('Rosters loaded (paged):', rostersData.length);
       
       rostersData?.forEach(r => {
         const key = `${r.phase_id}:${r.coureur_id}`;
@@ -95,15 +110,15 @@ Deno.serve(async (req) => {
     }
 
     // 3. Load points_ledger for courses (NO phase_id filter to include all points)
-    const { data: allPoints, error: pointsError } = await supabase
-      .from('points_ledger')
-      .select('course_id, coureur_id, points')
-      .in('course_id', course_ids)
-      .limit(10000);
+    const allPoints = await fetchAll<{ course_id: string; coureur_id: string; points: number; phase_id: string }>(() =>
+      supabase
+        .from('points_ledger')
+        .select('course_id, coureur_id, points, phase_id')
+        .in('course_id', course_ids)
+        .in('phase_id', phaseIds)
+    );
     
-    if (pointsError) throw pointsError;
-
-    console.log('Points ledger loaded:', allPoints?.length || 0);
+    console.log('Points ledger loaded (paged):', allPoints.length);
 
     // 4. Aggregate points by course and manager using course's phase_id
     const aggregated: Record<string, Record<string, number>> = {}; // { course_id: { manager_id: total_points } }

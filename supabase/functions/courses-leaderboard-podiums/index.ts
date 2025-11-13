@@ -17,6 +17,22 @@ interface ManagerPodium {
   rank: number;
 }
 
+const PAGE_SIZE = 1000;
+async function fetchAll<T>(makeQuery: () => any): Promise<T[]> {
+  let from = 0;
+  const all: T[] = [];
+  while (true) {
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await makeQuery().range(from, to);
+    if (error) throw error;
+    const batch = (data as T[]) || [];
+    all.push(...batch);
+    if (batch.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return all;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -67,23 +83,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Load rosters for these phases and league
-    let rostersQuery = supabase
-      .from('rosters')
-      .select('coureur_id, manager_id, phase_id')
-      .in('phase_id', Array.from(phaseIds))
-      .limit(10000);
-
-    if (league_id) {
-      rostersQuery = rostersQuery.eq('league_id', league_id);
-    }
-
-    const { data: rostersData, error: rostersError } = await rostersQuery;
-
-    if (rostersError) {
-      console.error('[courses-leaderboard-podiums] Error fetching rosters:', rostersError);
-      throw rostersError;
-    }
+    // 2. Load rosters for these phases and league (paged)
+    const rostersData = await fetchAll<{ coureur_id: string; manager_id: string; phase_id: string }>(() => {
+      let q = supabase
+        .from('rosters')
+        .select('coureur_id, manager_id, phase_id')
+        .in('phase_id', Array.from(phaseIds));
+      return league_id ? q.eq('league_id', league_id) : q;
+    });
 
     // Build map: phase_id:coureur_id -> manager_id
     const rosterMap = new Map<string, string>();
@@ -95,19 +102,15 @@ Deno.serve(async (req) => {
     console.log(`[courses-leaderboard-podiums] Loaded ${rosterMap.size} roster entries`);
 
     // 3. Load points_ledger for these courses and phases
-    const { data: pointsData, error: pointsError } = await supabase
-      .from('points_ledger')
-      .select('course_id, coureur_id, points, phase_id')
-      .in('course_id', course_ids)
-      .in('phase_id', Array.from(phaseIds))
-      .limit(10000);
+    const pointsData = await fetchAll<{ course_id: string; coureur_id: string; points: number; phase_id: string }>(() =>
+      supabase
+        .from('points_ledger')
+        .select('course_id, coureur_id, points, phase_id')
+        .in('course_id', course_ids)
+        .in('phase_id', Array.from(phaseIds))
+    );
 
-    if (pointsError) {
-      console.error('[courses-leaderboard-podiums] Error fetching points:', pointsError);
-      throw pointsError;
-    }
-
-    console.log(`[courses-leaderboard-podiums] Loaded ${pointsData?.length || 0} points entries`);
+    console.log(`[courses-leaderboard-podiums] Loaded ${pointsData.length} points entries (paged)`);
 
     // 4. Aggregate points by course_id and manager_id
     const courseManagerPoints = new Map<string, Map<string, number>>();
