@@ -1011,6 +1011,69 @@ Deno.serve(async (req) => {
     // For other tables (coureurs, scoring_rules, managers)
     if (table === 'coureurs') {
       // Import coureurs with season historization
+      
+      // 🔧 Load all equipes for the season to resolve equipe_id
+      console.log(`📦 Loading equipes for saison ${saison_id}...`);
+      const { data: equipesData, error: equipesError } = await supabaseClient
+        .from('equipes_saisons')
+        .select(`
+          equipe_id,
+          equipes!inner(code_court, nom_complet)
+        `)
+        .eq('saison_id', saison_id);
+
+      if (equipesError) {
+        console.error('❌ Error loading equipes for season:', equipesError);
+        throw equipesError;
+      }
+
+      // Create mappings for flexible resolution
+      const equipesByCode = new Map<string, string>(); // code_court → equipe_id
+      const equipesByNom = new Map<string, string>();  // nom_complet → equipe_id
+
+      equipesData?.forEach((es: any) => {
+        const equipeId = es.equipe_id;
+        const codeCourt = es.equipes.code_court?.toUpperCase();
+        const nomComplet = es.equipes.nom_complet?.toLowerCase();
+        
+        if (codeCourt) equipesByCode.set(codeCourt, equipeId);
+        if (nomComplet) equipesByNom.set(nomComplet, equipeId);
+      });
+
+      console.log(`✅ Loaded ${equipesByCode.size} equipes for season ${saison_id}`);
+
+      // Function to resolve equipe text to equipe_id
+      function resolveEquipeId(equipeText: string | null): string | null {
+        if (!equipeText) return null;
+        
+        // Try by code court (exact match, case-insensitive)
+        const upperText = equipeText.toUpperCase().trim();
+        if (equipesByCode.has(upperText)) {
+          return equipesByCode.get(upperText)!;
+        }
+        
+        // Try by nom complet (exact match)
+        const lowerText = equipeText.toLowerCase().trim();
+        if (equipesByNom.has(lowerText)) {
+          return equipesByNom.get(lowerText)!;
+        }
+        
+        // Try partial match on nom
+        for (const [nom, id] of equipesByNom.entries()) {
+          if (nom.includes(lowerText) || lowerText.includes(nom)) {
+            return id;
+          }
+        }
+        
+        console.warn(`⚠️ Équipe non trouvée: "${equipeText}"`);
+        return null;
+      }
+
+      // Import statistics
+      let coureursImported = 0;
+      let coureursSaisonsImported = 0;
+      let coureursWithoutTeam = 0;
+
       for (let i = 1; i < lines.length; i++) {
         const values = parseCSVLine(lines[i], separator)
         
@@ -1052,29 +1115,53 @@ Deno.serve(async (req) => {
               continue
             }
             
-            // 2. Upsert dans coureurs_saisons (historisation)
+            // 2. Resolve equipe_id from team name
+            const equipeId = resolveEquipeId(record.equipe);
+
+            if (!equipeId) {
+              console.warn(`⚠️ Row ${i}: Équipe inconnue "${record.equipe}" pour ${record.nom} - skipping coureurs_saisons`);
+              coureursImported++;
+              coureursWithoutTeam++;
+              imported++;
+              continue;
+            }
+
+            // 3. Upsert dans coureurs_saisons avec equipe_id
             const { error: saisonError } = await supabaseClient
               .from('coureurs_saisons')
               .upsert({
                 coureur_id: record.id,
                 saison_id: saison_id,
-                equipe: record.equipe,
-                prix_initial: record.prix_initial
-              }, { onConflict: 'coureur_id,saison_id' })
+                equipe_id: equipeId,  // ✅ UUID instead of text
+                prix_initial: record.prix_initial,
+                actif: true
+              }, { onConflict: 'coureur_id,saison_id' });
             
             if (saisonError) {
-              console.error(`Error upserting coureur_saison for ${record.nom}:`, saisonError)
-              errors++
-              continue
+              console.error(`❌ Error upserting coureur_saison for ${record.nom}:`, saisonError);
+              errors++;
+              continue;
             }
             
-            imported++
+            coureursImported++;
+            coureursSaisonsImported++;
+            imported++;
           }
         } catch (err) {
           console.error(`Error processing row ${i}:`, err)
-          errors++
+          errors++;
         }
       }
+
+      // 📊 Import summary for coureurs
+      console.log(`
+📊 Import coureurs summary:
+  - Coureurs imported (base table): ${coureursImported}
+  - Coureurs_saisons imported (with team): ${coureursSaisonsImported}
+  - Coureurs without recognized team: ${coureursWithoutTeam}
+  - Errors: ${errors}
+      `);
+
     } else if (table === 'scoring_rules') {
       // Import scoring_rules with season historization
       console.log(`📋 Processing ${lines.length - 1} scoring_rules rows...`);
