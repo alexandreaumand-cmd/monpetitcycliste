@@ -1229,18 +1229,44 @@ Deno.serve(async (req) => {
         }
       }
 
-      // 4. Upsert des associations équipe-saison
+      // 4. Dédupliquer les associations équipe-saison avant upsert
       if (equipesSaisonsToUpsert.length > 0) {
-        console.log(`📝 Upserting ${equipesSaisonsToUpsert.length} equipes_saisons entries...`);
+        const originalCount = equipesSaisonsToUpsert.length;
+        
+        // Créer un Set pour déduplication basé sur equipe_id + saison_id
+        const uniqueKeys = new Set<string>();
+        const dedupedEquipesSaisons: any[] = [];
+        
+        for (const entry of equipesSaisonsToUpsert) {
+          const key = `${entry.equipe_id}:${entry.saison_id}`;
+          if (!uniqueKeys.has(key)) {
+            uniqueKeys.add(key);
+            dedupedEquipesSaisons.push(entry);
+          }
+        }
+        
+        console.log(`🧹 Dedup: kept ${dedupedEquipesSaisons.length}/${originalCount} equipes_saisons entries`);
+        console.log(`📝 Upserting ${dedupedEquipesSaisons.length} equipes_saisons entries...`);
+        
         const { error: saisonError } = await supabaseClient
           .from('equipes_saisons')
-          .upsert(equipesSaisonsToUpsert, {
+          .upsert(dedupedEquipesSaisons, {
             onConflict: 'equipe_id,saison_id',
             ignoreDuplicates: false
           });
 
         if (saisonError) {
           console.error('Error upserting equipes_saisons:', saisonError);
+          if (saisonError.code === '21000') {
+            return new Response(
+              JSON.stringify({ 
+                error: 'Doublons détectés dans l\'import',
+                details: 'Le fichier CSV contient des doublons pour la même équipe dans la même saison. Code: 21000',
+                technical: saisonError.message
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            );
+          }
           throw saisonError;
         }
       }
