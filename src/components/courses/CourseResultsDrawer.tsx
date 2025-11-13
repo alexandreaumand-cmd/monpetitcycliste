@@ -202,9 +202,21 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
         const types = (data.meta.types_disponibles || [])
           .filter((type: string) => !type.startsWith('Porteur'));
         
-        // Always default to General classification
-        setSelectedType('General');
-        setSelectedEtape(null);
+        // Detect if this is a stage race
+        const isStageRace = data.meta.etapes_disponibles?.length > 0;
+        
+        if (isStageRace) {
+          // For stage races: start on "Classements Finaux" tab with "General"
+          setActiveTab('finals');
+          setSelectedType('General');
+          setSelectedEtape(null);
+        } else {
+          // For simple races: start on "results" tab
+          setActiveTab('results');
+          const types = (data.meta.types_disponibles || []).filter((type: string) => !type.startsWith('Porteur'));
+          const defaultType = types.includes('General') ? 'General' : types[0];
+          setSelectedType(defaultType);
+        }
       }
     } catch (error) {
       console.error('Error loading course meta:', error);
@@ -437,15 +449,395 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
 
         <div className="px-4 pb-4 space-y-4 overflow-y-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="results">Résultats</TabsTrigger>
-              <TabsTrigger value="leaderboard">Classement Managers</TabsTrigger>
-            </TabsList>
+            {/* Conditional tabs based on race type */}
+            {meta?.etapes_disponibles && meta.etapes_disponibles.length > 0 ? (
+              // Stage race: 3 tabs
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="finals">Classements Finaux</TabsTrigger>
+                <TabsTrigger value="stages">Classements Étapes</TabsTrigger>
+                <TabsTrigger value="leaderboard">Classement Managers</TabsTrigger>
+              </TabsList>
+            ) : (
+              // Simple race: 2 tabs
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="results">Résultats</TabsTrigger>
+                <TabsTrigger value="leaderboard">Classement Managers</TabsTrigger>
+              </TabsList>
+            )}
 
+            {/* Tab: Classements Finaux (for stage races only) */}
+            <TabsContent value="finals" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                {/* Dropdown for final classifications */}
+                <Select value={selectedType} onValueChange={handleTypeChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Sélectionner un classement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="General">Général</SelectItem>
+                    {meta?.types_disponibles?.includes('Points') && (
+                      <SelectItem value="Points">Points (Vert)</SelectItem>
+                    )}
+                    {meta?.types_disponibles?.includes('Montagne') && (
+                      <SelectItem value="Montagne">Montagne (Pois)</SelectItem>
+                    )}
+                    {meta?.types_disponibles?.includes('Jeune') && (
+                      <SelectItem value="Jeune">Jeune (Blanc)</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+
+                {/* Results display */}
+                {loading ? (
+                  <Skeleton className="h-96 w-full" />
+                ) : displayedResults.length > 0 ? (
+                  selectedType === 'Total' ? (
+                    // Total riders table
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12"></TableHead>
+                            <TableHead>Coureur</TableHead>
+                            <TableHead className="hidden md:table-cell">Manager</TableHead>
+                            <TableHead className="hidden lg:table-cell">Équipe</TableHead>
+                            <TableHead className="text-right">Points</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {totalRiders.map((rider) => {
+                            const breakdown = getRiderBreakdown(rider.coureur_id);
+                            const isExpanded = expandedRiders.has(rider.coureur_id);
+                            
+                            return (
+                              <Collapsible 
+                                key={rider.coureur_id} 
+                                asChild 
+                                open={isExpanded}
+                                onOpenChange={() => toggleRider(rider.coureur_id)}
+                              >
+                                <>
+                                  <CollapsibleTrigger asChild>
+                                    <TableRow className="cursor-pointer hover:bg-muted/50 touch-manipulation">
+                                      <TableCell>
+                                        {isExpanded ? (
+                                          <ChevronDown className="h-4 w-4" />
+                                        ) : (
+                                          <ChevronRight className="h-4 w-4" />
+                                        )}
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-lg">
+                                            {rider.rank === 1 && '🥇'}
+                                            {rider.rank === 2 && '🥈'}
+                                            {rider.rank === 3 && '🥉'}
+                                          </span>
+                                          <div className="flex flex-col">
+                                            <span className="font-semibold">{rider.coureur_nom}</span>
+                                            <span className="text-xs text-muted-foreground md:hidden">
+                                              {rider.manager_nom && `${rider.manager_nom} • `}{rider.equipe}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="hidden md:table-cell">
+                                        {rider.manager_nom && (
+                                          <Badge variant="secondary" className="text-xs">
+                                            {rider.manager_nom}
+                                          </Badge>
+                                        )}
+                                      </TableCell>
+                                      <TableCell className="hidden lg:table-cell">
+                                        {rider.equipe && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {rider.equipe}
+                                          </Badge>
+                                        )}
+                                      </TableCell>
+                                      <TableCell className="text-right font-bold">
+                                        {rider.total_points}
+                                      </TableCell>
+                                    </TableRow>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent asChild>
+                                    <TableRow className="bg-muted/20">
+                                      <TableCell colSpan={5}>
+                                        <div className="p-2 space-y-1 text-sm">
+                                          {breakdown.map((item, idx) => (
+                                            <div key={idx} className="flex justify-between">
+                                              <span className="text-muted-foreground">
+                                                {item.type_classement} {item.etape_numero && `(Étape ${item.etape_numero})`}
+                                              </span>
+                                              <span className="font-semibold">{item.points} pts</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  </CollapsibleContent>
+                                </>
+                              </Collapsible>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    // Regular results table
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-20">Pos./Statut</TableHead>
+                            <TableHead>Coureur</TableHead>
+                            <TableHead className="hidden md:table-cell">Équipe</TableHead>
+                            <TableHead className="text-right">Points</TableHead>
+                            <TableHead>Manager</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {displayedResults.map((row) => {
+                            const isTeamHeader = row.isTeamHeader;
+                            const isFinished = row.statut === 'finished' && (row.row_position !== null || row.position_decimal !== null);
+                            const statutBadge = getStatutBadge(row.statut);
+                            const points = row.points_theoriques;
+                            const displayPosition = row.position_decimal || row.row_position;
+                            
+                            return (
+                              <TableRow
+                                key={row.race_result_id}
+                                className={
+                                  isTeamHeader 
+                                    ? "bg-muted/50 font-bold" 
+                                    : row.is_my_rider 
+                                      ? "bg-primary/5 border-l-2 border-l-primary" 
+                                      : ""
+                                }
+                              >
+                                <TableCell className="font-medium">
+                                  {isFinished ? (
+                                    <div className="flex items-center gap-2">
+                                      {isTeamHeader ? (
+                                        <>
+                                          {displayPosition <= 3 && (
+                                            <span className={`text-lg ${
+                                              displayPosition === 1 ? "text-yellow-500" :
+                                              displayPosition === 2 ? "text-gray-400" :
+                                              "text-amber-600"
+                                            }`}>
+                                              {displayPosition === 1 ? "🥇" : 
+                                               displayPosition === 2 ? "🥈" : "🥉"}
+                                            </span>
+                                          )}
+                                          <span>{displayPosition}</span>
+                                        </>
+                                      ) : (
+                                        <span className="text-muted-foreground ml-6">
+                                          {displayPosition}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : statutBadge ? (
+                                    <Badge variant={statutBadge.variant}>
+                                      {statutBadge.label}
+                                    </Badge>
+                                  ) : (
+                                    "—"
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {isTeamHeader ? (
+                                    <span className="font-bold">{row.coureur_nom}</span>
+                                  ) : (
+                                    <div className="flex flex-col">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-semibold">{row.coureur_nom}</span>
+                                        {row.is_my_rider && (
+                                          <Badge variant="default" className="text-xs">Mon équipe</Badge>
+                                        )}
+                                      </div>
+                                      <span className="text-xs text-muted-foreground md:hidden">{row.equipe}</span>
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="hidden md:table-cell">
+                                  {!isTeamHeader && row.equipe && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {row.equipe}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right font-bold">
+                                  {points > 0 ? points : "—"}
+                                </TableCell>
+                                <TableCell>
+                                  {row.manager_nom && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {row.manager_nom}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    Aucun résultat disponible pour ce classement
+                  </p>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* Tab: Classements Étapes (for stage races only) */}
+            <TabsContent value="stages" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                {/* Dropdown for stages */}
+                <Select
+                  value={selectedEtape?.toString() || ""}
+                  onValueChange={(value) => {
+                    setSelectedType('Etape');
+                    setSelectedEtape(parseInt(value));
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Sélectionner une étape" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {meta?.etapes_disponibles?.map((etape) => (
+                      <SelectItem key={etape} value={etape.toString()}>
+                        Étape {etape}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Jersey holders for selected stage */}
+                {selectedEtape && (
+                  <JerseyHoldersBar courseId={courseId} etapeNumero={selectedEtape} />
+                )}
+
+                {/* Results display */}
+                {loading ? (
+                  <Skeleton className="h-96 w-full" />
+                ) : displayedResults.length > 0 ? (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-20">Pos./Statut</TableHead>
+                          <TableHead>Coureur</TableHead>
+                          <TableHead className="hidden md:table-cell">Équipe</TableHead>
+                          <TableHead className="text-right">Points</TableHead>
+                          <TableHead>Manager</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {displayedResults.map((row) => {
+                          const isTeamHeader = row.isTeamHeader;
+                          const isFinished = row.statut === 'finished' && (row.row_position !== null || row.position_decimal !== null);
+                          const statutBadge = getStatutBadge(row.statut);
+                          const points = row.points_theoriques;
+                          const displayPosition = row.position_decimal || row.row_position;
+                          
+                          return (
+                            <TableRow
+                              key={row.race_result_id}
+                              className={
+                                isTeamHeader 
+                                  ? "bg-muted/50 font-bold" 
+                                  : row.is_my_rider 
+                                    ? "bg-primary/5 border-l-2 border-l-primary" 
+                                    : ""
+                              }
+                            >
+                              <TableCell className="font-medium">
+                                {isFinished ? (
+                                  <div className="flex items-center gap-2">
+                                    {isTeamHeader ? (
+                                      <>
+                                        {displayPosition <= 3 && (
+                                          <span className={`text-lg ${
+                                            displayPosition === 1 ? "text-yellow-500" :
+                                            displayPosition === 2 ? "text-gray-400" :
+                                            "text-amber-600"
+                                          }`}>
+                                            {displayPosition === 1 ? "🥇" : 
+                                             displayPosition === 2 ? "🥈" : "🥉"}
+                                          </span>
+                                        )}
+                                        <span>{displayPosition}</span>
+                                      </>
+                                    ) : (
+                                      <span className="text-muted-foreground ml-6">
+                                        {displayPosition}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : statutBadge ? (
+                                  <Badge variant={statutBadge.variant}>
+                                    {statutBadge.label}
+                                  </Badge>
+                                ) : (
+                                  "—"
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {isTeamHeader ? (
+                                  <span className="font-bold">{row.coureur_nom}</span>
+                                ) : (
+                                  <div className="flex flex-col">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-semibold">{row.coureur_nom}</span>
+                                      {row.is_my_rider && (
+                                        <Badge variant="default" className="text-xs">Mon équipe</Badge>
+                                      )}
+                                    </div>
+                                    <span className="text-xs text-muted-foreground md:hidden">{row.equipe}</span>
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">
+                                {!isTeamHeader && row.equipe && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {row.equipe}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right font-bold">
+                                {points > 0 ? points : "—"}
+                              </TableCell>
+                              <TableCell>
+                                {row.manager_nom && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {row.manager_nom}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    {selectedEtape 
+                      ? "Aucun résultat disponible pour cette étape" 
+                      : "Veuillez sélectionner une étape"}
+                  </p>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* Tab: Résultats (for simple races only) */}
             <TabsContent value="results" className="space-y-4 mt-4">
               {/* Type selector pills */}
               <div className="flex gap-2 flex-wrap">
-                {/* Add Total as first option */}
                 <Button
                   variant={selectedType === 'Total' ? "default" : "outline"}
                   size="sm"
@@ -466,30 +858,6 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                     </Button>
                   ))}
               </div>
-
-              {/* Etape selector if applicable */}
-              {selectedType === 'Etape' && meta?.etapes_disponibles && (
-                <Select
-                  value={selectedEtape?.toString() || ""}
-                  onValueChange={(value) => setSelectedEtape(parseInt(value))}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Sélectionner étape" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {meta.etapes_disponibles.map((etape) => (
-                      <SelectItem key={etape} value={etape.toString()}>
-                        Étape {etape}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-              {/* Jersey holders - only show for stage results */}
-              {selectedType === 'Etape' && selectedEtape && (
-                <JerseyHoldersBar courseId={courseId} etapeNumero={selectedEtape} />
-              )}
 
               {/* Total riders table */}
               {selectedType === 'Total' && !loading && totalRiders.length > 0 && (
