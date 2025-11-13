@@ -133,12 +133,18 @@ export const ResultsPage = () => {
             setWinners(prev => reset ? (winnersResp.data.winners || {}) : { ...prev, ...(winnersResp.data.winners || {}) });
           }
           
+          // Merge podiums from both sources
+          const winnersPodiums = winnersResp.data?.podiums || {};
+          const leaderboardPodiums = podiumsResp.data?.podiums || {};
+          const mergedPodiums = { ...leaderboardPodiums, ...winnersPodiums };
+          
           if (podiumsResp.error) {
-            console.error('Error loading podiums:', podiumsResp.error);
-          } else if (podiumsResp.data) {
-            setPodiums(prev => reset ? (podiumsResp.data.podiums || {}) : { ...prev, ...(podiumsResp.data.podiums || {}) });
-            console.log(`Loaded podiums for ${Object.keys(podiumsResp.data.podiums || {}).length} courses`);
+            console.error('Error loading podiums from courses-leaderboard-podiums:', podiumsResp.error);
           }
+          
+          setPodiums(prev => reset ? mergedPodiums : { ...prev, ...mergedPodiums });
+          console.log(`Loaded podiums for ${Object.keys(mergedPodiums).length} courses (merged from both sources)`);
+
         } catch (error) {
           console.error('Failed to load podiums/winners:', error);
         }
@@ -285,6 +291,12 @@ export const ResultsPage = () => {
                           </span>
                         </div>
                       ))}
+                    </div>
+                  )}
+                  
+                  {winners[race.course_id] && (!podiums[race.course_id] || podiums[race.course_id].length === 0) && (
+                    <div className="text-xs text-muted-foreground pt-2 border-t">
+                      Aucun manager n'a marqué sur cette course (pour votre ligue)
                     </div>
                   )}
                 </CardContent>
