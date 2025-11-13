@@ -129,7 +129,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [results, setResults] = useState<ResultRow[]>([]);
   const [selectedType, setSelectedType] = useState<string>("");
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("results");
   const [expandedManagers, setExpandedManagers] = useState<Set<string>>(new Set());
@@ -202,14 +202,9 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
         const types = (data.meta.types_disponibles || [])
           .filter((type: string) => !type.startsWith('Porteur'));
         
-        // Set default type (prefer General, otherwise first available)
-        const defaultType = types.includes('General') ? 'General' : types[0];
-        setSelectedType(defaultType);
-
-        // Set default etape if Etape type
-        if (defaultType === 'Etape' && data.meta.etapes_disponibles?.length > 0) {
-          setSelectedEtape(data.meta.etapes_disponibles[data.meta.etapes_disponibles.length - 1]);
-        }
+        // Always default to General classification
+        setSelectedType('General');
+        setSelectedEtape(null);
       }
     } catch (error) {
       console.error('Error loading course meta:', error);
@@ -332,16 +327,8 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   };
 
 
-  // Client-side filtering
-  const filteredResults = results.filter(r => {
-    if (!searchQuery) return true;
-    const search = searchQuery.toLowerCase();
-    return r.coureur_nom.toLowerCase().includes(search) || 
-           r.equipe?.toLowerCase().includes(search);
-  });
-
   // Split finished (with points) and non-finished
-  const finishedResults = filteredResults
+  const finishedResults = results
     .filter(r => {
       if (r.statut !== 'finished' || r.row_position === null) return false;
       const points = (r.points_officiels !== null && r.points_officiels > 0) 
@@ -350,7 +337,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
       return points > 0;
     });
   
-  const nonFinishedResults = filteredResults
+  const nonFinishedResults = results
     .filter(r => r.statut !== 'finished' || r.row_position === null);
 
   const displayedResults = [...finishedResults, ...nonFinishedResults];
@@ -499,31 +486,9 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                 </Select>
               )}
 
-              {/* Search box */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher coureur ou équipe..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-
-              {/* Jersey holders for Etape type */}
-              {selectedType === 'Etape' && !loading && (
-                <JerseyHoldersBar 
-                  courseId={courseId} 
-                  etapeNumero={selectedEtape} 
-                />
-              )}
-
-              {/* Results count */}
-              {!loading && selectedType !== 'Total' && displayedResults.length > 0 && (
-                <div className="text-sm text-muted-foreground">
-                  Affichage de {displayedResults.length} résultat{displayedResults.length > 1 ? 's' : ''}
-                  {searchQuery && ` sur ${results.length} total`}
-                </div>
+              {/* Jersey holders - only show for stage results */}
+              {selectedType === 'Etape' && selectedEtape && (
+                <JerseyHoldersBar courseId={courseId} etapeNumero={selectedEtape} />
               )}
 
               {/* Total riders table */}
