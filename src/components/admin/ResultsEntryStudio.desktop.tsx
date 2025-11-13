@@ -1119,7 +1119,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               <Button
                 variant={activeTab === "finals" ? "default" : "outline"}
                 onClick={() => setActiveTab("finals")}
-                disabled={!allStagesCompleted}
               >
                 Classements finaux
               </Button>
