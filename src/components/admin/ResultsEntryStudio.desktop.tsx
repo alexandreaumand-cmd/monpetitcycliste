@@ -632,21 +632,37 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           });
       }
 
-      // If cancelled, delete all results and return
+      // If cancelled, delete all results AND points and return
       if (isCancelled) {
-        let query = leagueClient
+        // 1. Delete race_results
+        let query1 = leagueClient
           .from('race_results')
           .delete()
           .eq('course_id', course.course_id)
           .eq('type_classement', classementType);
         
         if (etapeNumeroValue === null) {
-          query = query.is('etape_numero', null);
+          query1 = query1.is('etape_numero', null);
         } else {
-          query = query.eq('etape_numero', etapeNumeroValue);
+          query1 = query1.eq('etape_numero', etapeNumeroValue);
         }
         
-        await query;
+        await query1;
+        
+        // 2. Delete points_ledger
+        let query2 = leagueClient
+          .from('points_ledger')
+          .delete()
+          .eq('course_id', course.course_id)
+          .eq('type_classement', classementType);
+        
+        if (etapeNumeroValue === null) {
+          query2 = query2.is('etape_numero', null);
+        } else {
+          query2 = query2.eq('etape_numero', etapeNumeroValue);
+        }
+        
+        await query2;
         
         return { success: true, message: 'Annulation enregistrée' };
       }

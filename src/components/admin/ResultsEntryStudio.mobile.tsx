@@ -309,10 +309,19 @@ export const ResultsEntryStudioMobile = ({
         .eq('type_classement', currentClassement)
         .eq('etape_numero', etapeNumeroValue);
 
-      // If cancelled, delete all results and return
+      // If cancelled, delete all results AND points and return
       if (isCancelled) {
+        // 1. Delete race_results
         await leagueClient
           .from('race_results')
+          .delete()
+          .eq('course_id', course.course_id)
+          .eq('type_classement', currentClassement)
+          .eq('etape_numero', etapeNumeroValue);
+        
+        // 2. Delete points_ledger
+        await leagueClient
+          .from('points_ledger')
           .delete()
           .eq('course_id', course.course_id)
           .eq('type_classement', currentClassement)
