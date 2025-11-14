@@ -17,7 +17,7 @@ interface RiderBonusFormProps {
     manager_id: string | null;
     points: number;
     commentaire?: string;
-  }) => void;
+  }) => Promise<boolean>;
   isSubmitting: boolean;
 }
 
@@ -32,23 +32,25 @@ export const RiderBonusForm = ({ bonusType, phaseId, onBack, onSubmit, isSubmitt
   const [points, setPoints] = useState<string>('');
   const [commentaire, setCommentaire] = useState('');
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedCoureur || !points) return;
     
     // Pour "coureur_bonuse", on requiert un manager spécifique
     if (bonusType === 'coureur_bonuse' && !selectedCoureur.manager_id) return;
 
-    onSubmit({
+    const success = await onSubmit({
       coureur_id: selectedCoureur.id,
       manager_id: bonusType === 'coureur_bonuse' ? selectedCoureur.manager_id : null,
       points: parseInt(points),
       commentaire: commentaire || undefined,
     });
 
-    // Reset form
-    setSelectedCoureur(null);
-    setPoints('');
-    setCommentaire('');
+    // Reset form only on success
+    if (success) {
+      setSelectedCoureur(null);
+      setPoints('');
+      setCommentaire('');
+    }
   };
 
   const canSubmit = selectedCoureur && points && 
