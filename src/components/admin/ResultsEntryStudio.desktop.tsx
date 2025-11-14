@@ -908,7 +908,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       const etapeNumeroValue = classementType === "Etape" && etapeNumero ? Number(etapeNumero) : null;
       
       // Delete race_results for this specific classification
-      let query1 = supabase
+      let query1 = leagueClient
         .from('race_results')
         .delete()
         .eq('course_id', course.course_id)
@@ -925,7 +925,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       if (resultsError) throw resultsError;
 
       // Delete points_ledger for this specific classification
-      let query2 = supabase
+      let query2 = leagueClient
         .from('points_ledger')
         .delete()
         .eq('course_id', course.course_id)
@@ -942,7 +942,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       if (pointsError) throw pointsError;
 
       // Update race_result_sets to mark as not cancelled
-      let query3 = supabase
+      let query3 = leagueClient
         .from('race_result_sets')
         .update({ is_cancelled: false })
         .eq('course_id', course.course_id)
