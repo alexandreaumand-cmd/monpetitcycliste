@@ -118,8 +118,8 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
     manager_id: string | null;
     points: number;
     commentaire?: string;
-  }) => {
-    if (!selectedBonus) return;
+  }): Promise<boolean> => {
+    if (!selectedBonus) return false;
 
     setIsSubmitting(true);
     try {
@@ -152,7 +152,7 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
             variant: "destructive",
           });
           setIsSubmitting(false);
-          return;
+          return false;
         }
 
         // Créer un bonus pour chaque manager
@@ -206,6 +206,7 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
 
       // Refresh data
       queryClient.invalidateQueries({ queryKey: ['bonus-points', phaseId] });
+      return true;
       
     } catch (error: any) {
       console.error('Error saving bonus:', error);
@@ -214,6 +215,7 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
         description: error.message || "Impossible d'enregistrer le bonus",
         variant: "destructive",
       });
+      return false;
     } finally {
       setIsSubmitting(false);
     }
