@@ -498,7 +498,7 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
-          league_id: string
+          league_id: string | null
           manager_id: string | null
           phase_id: string
           points: number
@@ -512,7 +512,7 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
-          league_id: string
+          league_id?: string | null
           manager_id?: string | null
           phase_id: string
           points: number
@@ -526,7 +526,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
-          league_id?: string
+          league_id?: string | null
           manager_id?: string | null
           phase_id?: string
           points?: number
