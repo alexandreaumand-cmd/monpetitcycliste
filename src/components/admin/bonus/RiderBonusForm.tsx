@@ -14,7 +14,7 @@ interface RiderBonusFormProps {
   onBack: () => void;
   onSubmit: (data: {
     coureur_id: string;
-    manager_id: string;
+    manager_id: string | null;
     points: number;
     commentaire?: string;
   }) => void;
@@ -33,11 +33,14 @@ export const RiderBonusForm = ({ bonusType, phaseId, onBack, onSubmit, isSubmitt
   const [commentaire, setCommentaire] = useState('');
 
   const handleSubmit = () => {
-    if (!selectedCoureur || !points || !selectedCoureur.manager_id) return;
+    if (!selectedCoureur || !points) return;
+    
+    // Pour "coureur_bonuse", on requiert un manager spécifique
+    if (bonusType === 'coureur_bonuse' && !selectedCoureur.manager_id) return;
 
     onSubmit({
       coureur_id: selectedCoureur.id,
-      manager_id: selectedCoureur.manager_id,
+      manager_id: bonusType === 'coureur_bonuse' ? selectedCoureur.manager_id : null,
       points: parseInt(points),
       commentaire: commentaire || undefined,
     });
@@ -48,7 +51,8 @@ export const RiderBonusForm = ({ bonusType, phaseId, onBack, onSubmit, isSubmitt
     setCommentaire('');
   };
 
-  const canSubmit = selectedCoureur && points && selectedCoureur.manager_id;
+  const canSubmit = selectedCoureur && points && 
+    (bonusType === 'coureur_bonuse' ? selectedCoureur.manager_id : true);
 
   return (
     <div className="space-y-6">
@@ -66,13 +70,16 @@ export const RiderBonusForm = ({ bonusType, phaseId, onBack, onSubmit, isSubmitt
             phaseId={phaseId}
             value={selectedCoureur?.id}
             onSelect={setSelectedCoureur}
-            showManager={true}
+            showManager={bonusType === 'coureur_bonuse'}
           />
           {selectedCoureur && (
             <p className="text-sm text-muted-foreground">
               → {selectedCoureur.nom} ({selectedCoureur.equipe})
-              {selectedCoureur.manager_nom && (
+              {bonusType === 'coureur_bonuse' && selectedCoureur.manager_nom && (
                 <span className="ml-2">• Manager: {selectedCoureur.manager_nom}</span>
+              )}
+              {(bonusType === 'first_win' || bonusType === 'itt') && (
+                <span className="ml-2 text-blue-600 font-medium">• Sera attribué à tous les managers possesseurs</span>
               )}
             </p>
           )}

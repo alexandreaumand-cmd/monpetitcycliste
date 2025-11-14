@@ -115,7 +115,7 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
 
   const handleSubmitRiderBonus = async (data: {
     coureur_id: string;
-    manager_id: string;
+    manager_id: string | null;
     points: number;
     commentaire?: string;
   }) => {
@@ -131,30 +131,82 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
         .eq('user_id', user?.id)
         .single();
 
-      const { error } = await supabase
-        .from('bonus_points')
-        .insert([{
+      const bonusType = selectedBonus.type;
+      const isMultiManagerBonus = bonusType === 'first_win' || bonusType === 'itt';
+
+      if (isMultiManagerBonus) {
+        // Pour first_win et itt: récupérer tous les managers qui ont ce coureur dans cette phase
+        const { data: rostersData, error: rostersError } = await supabase
+          .from('rosters')
+          .select('manager_id, managers(nom)')
+          .eq('phase_id', phaseId)
+          .eq('coureur_id', data.coureur_id)
+          .eq('league_id', leagueId!);
+
+        if (rostersError) throw rostersError;
+
+        if (!rostersData || rostersData.length === 0) {
+          toast({
+            title: "Aucun manager trouvé",
+            description: "Ce coureur n'est possédé par aucun manager dans cette phase",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Créer un bonus pour chaque manager
+        const bonusInserts = rostersData.map(roster => ({
           phase_id: phaseId,
-          bonus_type: selectedBonus.type,
+          bonus_type: bonusType,
           coureur_id: data.coureur_id,
-          manager_id: data.manager_id,
+          manager_id: roster.manager_id,
           points: data.points,
           commentaire: data.commentaire || null,
           created_by: managerData?.id,
           league_id: leagueId!
-        }]);
+        }));
 
-      if (error) throw error;
+        const { error } = await supabase
+          .from('bonus_points')
+          .insert(bonusInserts);
 
-      toast({
-        title: "Bonus enregistré",
-        description: "Le bonus a été attribué avec succès",
-      });
+        if (error) throw error;
+
+        toast({
+          title: "Bonus enregistré",
+          description: `Le bonus a été attribué à ${rostersData.length} manager(s)`,
+        });
+      } else {
+        // Pour coureur_bonuse: attribution à un seul manager
+        if (!data.manager_id) {
+          throw new Error("Manager ID requis pour ce type de bonus");
+        }
+
+        const { error } = await supabase
+          .from('bonus_points')
+          .insert([{
+            phase_id: phaseId,
+            bonus_type: bonusType,
+            coureur_id: data.coureur_id,
+            manager_id: data.manager_id,
+            points: data.points,
+            commentaire: data.commentaire || null,
+            created_by: managerData?.id,
+            league_id: leagueId!
+          }]);
+
+        if (error) throw error;
+
+        toast({
+          title: "Bonus enregistré",
+          description: "Le bonus a été attribué avec succès",
+        });
+      }
 
       // Refresh data
       queryClient.invalidateQueries({ queryKey: ['bonus-points', phaseId] });
       
-      // Stay on the form to allow adding more
     } catch (error: any) {
       console.error('Error saving bonus:', error);
       toast({
