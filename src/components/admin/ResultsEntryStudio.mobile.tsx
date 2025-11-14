@@ -500,6 +500,22 @@ export const ResultsEntryStudioMobile = ({
         });
       }
 
+      // Delete existing points from points_ledger for this classification
+      let deletePointsQuery = leagueClient
+        .from('points_ledger')
+        .delete()
+        .eq('course_id', course.course_id)
+        .eq('type_classement', currentClassement);
+      
+      if (currentClassement === 'Etape') {
+        deletePointsQuery = deletePointsQuery.eq('etape_numero', currentStage);
+      } else {
+        deletePointsQuery = deletePointsQuery.is('etape_numero', null);
+      }
+
+      const { error: deletePointsError } = await deletePointsQuery;
+      if (deletePointsError) throw deletePointsError;
+
       // Delete and reinsert points
       let deleteQuery = leagueClient
         .from('points_ledger')
