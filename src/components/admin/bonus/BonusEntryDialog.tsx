@@ -125,11 +125,28 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
     try {
       // Get current user's manager_id for created_by
       const { data: { user } } = await supabase.auth.getUser();
-      const { data: managerData } = await supabase
+      
+      if (!user) {
+        throw new Error("Utilisateur non authentifié");
+      }
+
+      const { data: managerData, error: managerError } = await supabase
         .from('managers')
         .select('id')
-        .eq('user_id', user?.id)
-        .single();
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (managerError) {
+        throw new Error(`Erreur récupération manager: ${managerError.message}`);
+      }
+
+      if (!managerData?.id) {
+        throw new Error("Aucun profil manager trouvé pour cet utilisateur");
+      }
+
+      if (!leagueId) {
+        throw new Error("League ID manquant");
+      }
 
       const bonusType = selectedBonus.type;
       const isMultiManagerBonus = bonusType === 'first_win' || bonusType === 'itt';
