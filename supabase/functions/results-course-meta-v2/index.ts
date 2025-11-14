@@ -32,23 +32,6 @@ Deno.serve(async (req) => {
 
     const meta = data && data.length > 0 ? data[0] : null;
 
-    // Filter out cancelled stages from etapes_disponibles
-    if (meta && meta.etapes_disponibles && meta.etapes_disponibles.length > 0) {
-      const { data: cancelledStages } = await supabase
-        .from('race_result_sets')
-        .select('etape_numero')
-        .eq('course_id', course_id)
-        .eq('type_classement', 'Etape')
-        .eq('is_cancelled', true);
-
-      if (cancelledStages && cancelledStages.length > 0) {
-        const cancelledNums = cancelledStages.map(s => s.etape_numero);
-        meta.etapes_disponibles = meta.etapes_disponibles.filter(
-          (num: number) => !cancelledNums.includes(num)
-        );
-      }
-    }
-
     return new Response(JSON.stringify({ meta }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
