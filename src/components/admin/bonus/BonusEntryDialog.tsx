@@ -144,10 +144,6 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
         throw new Error("Aucun profil manager trouvé pour cet utilisateur");
       }
 
-      if (!leagueId) {
-        throw new Error("League ID manquant");
-      }
-
       const bonusType = selectedBonus.type;
       const isMultiManagerBonus = bonusType === 'first_win' || bonusType === 'itt';
 
@@ -157,8 +153,7 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
           .from('rosters')
           .select('manager_id, managers(nom)')
           .eq('phase_id', phaseId)
-          .eq('coureur_id', data.coureur_id)
-          .eq('league_id', leagueId!);
+          .eq('coureur_id', data.coureur_id);
 
         if (rostersError) throw rostersError;
 
@@ -181,7 +176,7 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
           points: data.points,
           commentaire: data.commentaire || null,
           created_by: managerData?.id,
-          league_id: leagueId!
+          // Les bonus coureurs ne sont pas liés à une league
         }));
 
         const { error } = await supabase
@@ -210,7 +205,7 @@ export const BonusEntryDialog = ({ open, onOpenChange, phaseId }: BonusEntryDial
             points: data.points,
             commentaire: data.commentaire || null,
             created_by: managerData?.id,
-            league_id: leagueId!
+            // Les bonus coureurs ne sont pas liés à une league
           }]);
 
         if (error) throw error;
