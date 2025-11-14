@@ -24,23 +24,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check if the stage is cancelled
-    if (etape_numero !== null && etape_numero !== undefined) {
-      const { data: resultSet } = await supabase
-        .from('race_result_sets')
-        .select('is_cancelled')
-        .eq('course_id', course_id)
-        .eq('type_classement', type_classement)
-        .eq('etape_numero', etape_numero)
-        .maybeSingle();
-
-      if (resultSet?.is_cancelled) {
-        return new Response(JSON.stringify({ rows: [] }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
     // Try to get the current user, but don't block if it fails
     let managerId = null;
     try {
