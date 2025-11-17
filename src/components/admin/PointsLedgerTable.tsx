@@ -469,6 +469,7 @@ export const PointsLedgerTable = () => {
               </CardHeader>
               <CardContent className="text-sm space-y-1">
                 <p><strong>Course:</strong> {row.course_nom || "—"}</p>
+                <p><strong>Phase:</strong> {row.phase_index ? `Phase ${row.phase_index}` : "—"} • <strong>Saison:</strong> {row.saison_annee || "—"}</p>
                 <p><strong>Type:</strong> {row.type_classement}</p>
                 {row.etape_numero && <p><strong>Étape:</strong> {row.etape_numero}</p>}
                 {row.manager_nom && <p><strong>Manager:</strong> {row.manager_nom}</p>}
@@ -750,6 +751,7 @@ export const PointsLedgerTable = () => {
                   <TableHead>Coureur</TableHead>
                   <TableHead>Manager</TableHead>
                   <TableHead>Phase</TableHead>
+                  <TableHead>Saison</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Étape</TableHead>
                   <TableHead className="text-right">Points</TableHead>
@@ -773,14 +775,17 @@ export const PointsLedgerTable = () => {
                       </div>
                     </TableCell>
                     <TableCell>{row.manager_nom || "—"}</TableCell>
-                    <TableCell>
-                      {row.phase_index ? `Phase ${row.phase_index}` : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getTypeColor(row.type_classement)}>
-                        {row.type_classement}
-                      </Badge>
-                    </TableCell>
+                <TableCell>
+                  {row.phase_index ? `Phase ${row.phase_index}` : "—"}
+                </TableCell>
+                <TableCell>
+                  {row.saison_annee || "—"}
+                </TableCell>
+                <TableCell>
+                  <Badge className={getTypeColor(row.type_classement)}>
+                    {row.type_classement}
+                  </Badge>
+                </TableCell>
                     <TableCell>{row.etape_numero || "—"}</TableCell>
                     <TableCell className="text-right font-bold">{row.points}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
