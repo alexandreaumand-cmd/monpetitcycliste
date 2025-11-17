@@ -1,18 +1,30 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, Search, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Database } from "@/integrations/supabase/types";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const PAGE_SIZE = 50;
 
@@ -67,6 +79,7 @@ const getTypeBadgeVariant = (type: TypeClassement | null) => {
 
 export const RaceResultsTable = () => {
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
   const [courseFilter, setCourseFilter] = useState("all");
@@ -78,6 +91,26 @@ export const RaceResultsTable = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   const debouncedSearch = useDebouncedValue(search, 500);
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (resultId: string) => {
+      const { error } = await supabase
+        .from('race_results')
+        .delete()
+        .eq('id', resultId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['race-results-table'] });
+      toast.success('Résultat supprimé avec succès');
+    },
+    onError: (error) => {
+      toast.error('Erreur lors de la suppression');
+      console.error('Delete error:', error);
+    }
+  });
 
   // Fetch saisons for filter
   const { data: saisons } = useQuery({
@@ -351,16 +384,59 @@ export const RaceResultsTable = () => {
             results?.data.map((result) => (
               <Card key={result.id}>
                 <CardContent className="p-4 space-y-2">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 space-y-1">
                       <p className="font-semibold">{result.coureur_nom}</p>
                       <p className="text-sm text-muted-foreground">
                         {result.coureur_equipe}
                       </p>
                     </div>
-                    {result.position && (
-                      <Badge variant="outline">#{result.position}</Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {result.position && (
+                        <Badge variant="outline">#{result.position}</Badge>
+                      )}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Supprimer ce résultat ?</AlertDialogTitle>
+                            <AlertDialogDescription className="space-y-2">
+                              <p>Cette action va supprimer :</p>
+                              <ul className="list-disc list-inside space-y-1 text-sm">
+                                <li><strong>Coureur:</strong> {result.coureur_nom}</li>
+                                <li><strong>Course:</strong> {result.course_id}</li>
+                                <li><strong>Type:</strong> {result.type_classement}</li>
+                                {result.etape_numero && <li><strong>Étape:</strong> {result.etape_numero}</li>}
+                                <li><strong>Position:</strong> {result.position || "N/A"}</li>
+                                {result.points !== null && result.points > 0 && (
+                                  <li><strong>Points:</strong> {result.points}</li>
+                                )}
+                              </ul>
+                              <p className="text-destructive font-semibold mt-3">
+                                ⚠️ Les points associés dans le ledger seront aussi supprimés.
+                              </p>
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteMutation.mutate(result.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
@@ -438,18 +514,19 @@ export const RaceResultsTable = () => {
                 >
                   Points {sortColumn === "points" && (sortDirection === "asc" ? "↑" : "↓")}
                 </TableHead>
+                <TableHead className="w-[80px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center">
+                  <TableCell colSpan={11} className="text-center">
                     Chargement...
                   </TableCell>
                 </TableRow>
               ) : results?.data.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-muted-foreground">
+                  <TableCell colSpan={11} className="text-center text-muted-foreground">
                     Aucun résultat trouvé
                   </TableCell>
                 </TableRow>
@@ -496,6 +573,49 @@ export const RaceResultsTable = () => {
                       {result.points !== null && result.points > 0 && (
                         <span className="font-semibold">{result.points}</span>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Supprimer ce résultat ?</AlertDialogTitle>
+                            <AlertDialogDescription className="space-y-2">
+                              <p>Cette action va supprimer :</p>
+                              <ul className="list-disc list-inside space-y-1 text-sm">
+                                <li><strong>Coureur:</strong> {result.coureur_nom}</li>
+                                <li><strong>Course:</strong> {result.course_id}</li>
+                                <li><strong>Type:</strong> {result.type_classement}</li>
+                                {result.etape_numero && <li><strong>Étape:</strong> {result.etape_numero}</li>}
+                                <li><strong>Position:</strong> {result.position || "N/A"}</li>
+                                {result.points !== null && result.points > 0 && (
+                                  <li><strong>Points:</strong> {result.points}</li>
+                                )}
+                              </ul>
+                              <p className="text-destructive font-semibold mt-3">
+                                ⚠️ Les points associés dans le ledger seront aussi supprimés.
+                              </p>
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteMutation.mutate(result.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </TableCell>
                   </TableRow>
                 ))
