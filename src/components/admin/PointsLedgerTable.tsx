@@ -158,9 +158,24 @@ export const PointsLedgerTable = () => {
           *,
           coureurs!points_ledger_coureur_id_fkey (nom),
           courses!points_ledger_course_id_fkey (nom, categorie),
-          phases!points_ledger_phase_id_fkey (index_dans_saison, saison_id)
+          phases!points_ledger_phase_id_fkey (
+            index_dans_saison,
+            saison_id,
+            saisons!phases_saison_id_fkey (id, annee)
+          )
         `)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(50000);
+
+      // Filtre par saison (via phase_id)
+      if (saisonFilter) {
+        const phaseIds = phases?.filter(p => p.saison_id === saisonFilter).map(p => p.id) || [];
+        if (phaseIds.length > 0) {
+          query = query.in("phase_id", phaseIds);
+        } else {
+          return []; // Aucune phase pour cette saison
+        }
+      }
 
       if (phaseFilter) query = query.eq("phase_id", phaseFilter);
       if (courseFilter) query = query.eq("course_id", courseFilter);
@@ -185,7 +200,8 @@ export const PointsLedgerTable = () => {
         course_nom: row.courses?.nom,
         course_categorie: row.courses?.categorie,
         phase_index: row.phases?.index_dans_saison,
-        saison_annee: row.phases?.saison_id,
+        saison_id: row.phases?.saisons?.id,
+        saison_annee: row.phases?.saisons?.annee,
       }));
 
       // Client-side filtering for coureur search and global search
