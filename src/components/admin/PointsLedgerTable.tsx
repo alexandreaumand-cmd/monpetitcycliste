@@ -393,7 +393,6 @@ export const PointsLedgerTable = () => {
                   <SelectValue placeholder="Toutes saisons" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Toutes saisons</SelectItem>
                   {saisons.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.annee}</SelectItem>
                   ))}
@@ -658,7 +657,6 @@ export const PointsLedgerTable = () => {
                     <SelectValue placeholder="Toutes saisons" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Toutes saisons</SelectItem>
                     {saisons.map((s) => (
                       <SelectItem key={s.id} value={s.id}>{s.annee}</SelectItem>
                     ))}
@@ -684,7 +682,6 @@ export const PointsLedgerTable = () => {
                     <SelectValue placeholder="Tous managers" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tous managers</SelectItem>
                     {managers.map((m) => (
                       <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
                     ))}
