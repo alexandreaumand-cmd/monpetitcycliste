@@ -16,6 +16,7 @@ import { CoursesManager } from "@/components/admin/CoursesManager";
 import { CoureursManager } from "@/components/admin/CoureursManager";
 import { EquipesSaisonsManager } from "@/components/admin/EquipesSaisonsManager";
 import { BaremesManager } from "@/components/admin/BaremesManager";
+import { PointsLedgerTable } from "@/components/admin/PointsLedgerTable";
 import mpcLogo from "@/assets/mpc-logo-horizontal.png";
 
 const superAdminNavItems = [
@@ -24,6 +25,7 @@ const superAdminNavItems = [
   { label: 'Coureurs', path: 'coureurs', icon: UserCircle },
   { label: 'Équipes', path: 'equipes', icon: Users },
   { label: 'Barèmes', path: 'baremes', icon: BarChart },
+  { label: 'Points Ledger', path: 'points-ledger', icon: Database },
   { label: 'Startlists', path: 'startlists', icon: FileText },
   { label: 'Données', path: 'data', icon: Database },
   { label: 'Ligues', path: 'leagues', icon: Users },
@@ -181,8 +183,9 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
             <Route path="courses" element={<CoursesManager />} />
             <Route path="coureurs" element={<CoureursManager />} />
             <Route path="equipes" element={<EquipesSaisonsManager />} />
-            <Route path="baremes" element={<BaremesManager />} />
-            <Route path="startlists" element={<StartlistImportManager />} />
+              <Route path="baremes" element={<BaremesManager />} />
+              <Route path="points-ledger" element={<PointsLedgerTable />} />
+              <Route path="startlists" element={<StartlistImportManager />} />
             <Route path="data" element={<DataManagementTabs />} />
             <Route path="leagues" element={<SuperAdminLeaguesPage />} />
             <Route path="leagues/:id" element={<LeagueDetailPage />} />
