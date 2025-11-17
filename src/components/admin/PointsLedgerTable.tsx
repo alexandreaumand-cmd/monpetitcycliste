@@ -58,8 +58,6 @@ interface PointsLedgerRow {
   course_categorie?: string;
   phase_index?: number;
   saison_annee?: number;
-  manager_id?: string;
-  manager_nom?: string;
   equipe_nom?: string;
 }
 
@@ -73,7 +71,6 @@ export const PointsLedgerTable = () => {
   const [courseFilter, setCourseFilter] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [coureurSearch, setCoureurSearch] = useState("");
-  const [managerFilter, setManagerFilter] = useState<string>("");
   const [minPoints, setMinPoints] = useState("");
   const [maxPoints, setMaxPoints] = useState("");
   const [globalSearch, setGlobalSearch] = useState("");
@@ -124,18 +121,6 @@ export const PointsLedgerTable = () => {
     enabled: !!saisonFilter,
   });
 
-  // Fetch managers for filter
-  const { data: managers } = useQuery({
-    queryKey: ["managers-list"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("managers")
-        .select("id, nom")
-        .order("nom");
-      if (error) throw error;
-      return data || [];
-    },
-  });
 
   // Fetch points ledger data
   const { data: rawData, isLoading } = useQuery({
@@ -146,7 +131,6 @@ export const PointsLedgerTable = () => {
       courseFilter,
       typeFilter,
       coureurSearch,
-      managerFilter,
       minPoints,
       maxPoints,
       globalSearch,
@@ -216,8 +200,7 @@ export const PointsLedgerTable = () => {
         const search = globalSearch.toLowerCase();
         results = results.filter((r: any) => 
           r.coureur_nom?.toLowerCase().includes(search) ||
-          r.course_nom?.toLowerCase().includes(search) ||
-          r.manager_nom?.toLowerCase().includes(search)
+          r.course_nom?.toLowerCase().includes(search)
         );
       }
 
@@ -320,7 +303,6 @@ export const PointsLedgerTable = () => {
     setCourseFilter("");
     setTypeFilter("");
     setCoureurSearch("");
-    setManagerFilter("");
     setMinPoints("");
     setMaxPoints("");
     setGlobalSearch("");
@@ -330,11 +312,10 @@ export const PointsLedgerTable = () => {
   const exportToCSV = () => {
     if (!rawData) return;
     
-    const headers = ["Course", "Coureur", "Manager", "Phase", "Saison", "Type", "Étape", "Points", "Date"];
+    const headers = ["Course", "Coureur", "Phase", "Saison", "Type", "Étape", "Points", "Date"];
     const rows = rawData.map(row => [
       row.course_nom || "",
       row.coureur_nom || "",
-      row.manager_nom || "",
       row.phase_index || "",
       row.saison_annee || "",
       row.type_classement || "",
@@ -472,7 +453,6 @@ export const PointsLedgerTable = () => {
                 <p><strong>Phase:</strong> {row.phase_index ? `Phase ${row.phase_index}` : "—"} • <strong>Saison:</strong> {row.saison_annee || "—"}</p>
                 <p><strong>Type:</strong> {row.type_classement}</p>
                 {row.etape_numero && <p><strong>Étape:</strong> {row.etape_numero}</p>}
-                {row.manager_nom && <p><strong>Manager:</strong> {row.manager_nom}</p>}
                 <p className="text-muted-foreground text-xs">
                   {new Date(row.created_at).toLocaleDateString("fr-FR")}
                 </p>
@@ -520,7 +500,6 @@ export const PointsLedgerTable = () => {
                   <div><strong>Course:</strong> {selectedEntry.course_nom}</div>
                   <div><strong>Type:</strong> {selectedEntry.type_classement}</div>
                   {selectedEntry.etape_numero && <div><strong>Étape:</strong> {selectedEntry.etape_numero}</div>}
-                  {selectedEntry.manager_nom && <div><strong>Manager:</strong> {selectedEntry.manager_nom}</div>}
                 </div>
 
                 <Separator />
@@ -691,21 +670,6 @@ export const PointsLedgerTable = () => {
               />
             </div>
 
-            {managers && (
-              <div className="space-y-2">
-                <Label>Manager</Label>
-                <Select value={managerFilter} onValueChange={setManagerFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tous managers" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {managers.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </div>
 
           <div className="grid grid-cols-4 gap-4">
@@ -749,7 +713,6 @@ export const PointsLedgerTable = () => {
                 <TableRow>
                   <TableHead>Course</TableHead>
                   <TableHead>Coureur</TableHead>
-                  <TableHead>Manager</TableHead>
                   <TableHead>Phase</TableHead>
                   <TableHead>Saison</TableHead>
                   <TableHead>Type</TableHead>
@@ -774,18 +737,17 @@ export const PointsLedgerTable = () => {
                         <p className="text-xs text-muted-foreground">{row.equipe_nom}</p>
                       </div>
                     </TableCell>
-                    <TableCell>{row.manager_nom || "—"}</TableCell>
-                <TableCell>
-                  {row.phase_index ? `Phase ${row.phase_index}` : "—"}
-                </TableCell>
-                <TableCell>
-                  {row.saison_annee || "—"}
-                </TableCell>
-                <TableCell>
-                  <Badge className={getTypeColor(row.type_classement)}>
-                    {row.type_classement}
-                  </Badge>
-                </TableCell>
+                    <TableCell>
+                      {row.phase_index ? `Phase ${row.phase_index}` : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {row.saison_annee || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getTypeColor(row.type_classement)}>
+                        {row.type_classement}
+                      </Badge>
+                    </TableCell>
                     <TableCell>{row.etape_numero || "—"}</TableCell>
                     <TableCell className="text-right font-bold">{row.points}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
@@ -857,7 +819,6 @@ export const PointsLedgerTable = () => {
                 <div><strong>Course:</strong> {selectedEntry.course_nom}</div>
                 <div><strong>Type:</strong> {selectedEntry.type_classement}</div>
                 {selectedEntry.etape_numero && <div><strong>Étape:</strong> {selectedEntry.etape_numero}</div>}
-                {selectedEntry.manager_nom && <div><strong>Manager:</strong> {selectedEntry.manager_nom}</div>}
                 <div className="text-xs text-muted-foreground">
                   Créé le {new Date(selectedEntry.created_at).toLocaleDateString("fr-FR")}
                 </div>
@@ -922,7 +883,6 @@ export const PointsLedgerTable = () => {
                   <p><strong>Type:</strong> {entryToDelete.type_classement}</p>
                   {entryToDelete.etape_numero && <p><strong>Étape:</strong> {entryToDelete.etape_numero}</p>}
                   <p><strong>Points:</strong> {entryToDelete.points}</p>
-                  {entryToDelete.manager_nom && <p><strong>Manager:</strong> {entryToDelete.manager_nom}</p>}
                   <p className="text-destructive font-semibold mt-4">
                     ⚠️ Cela supprimera définitivement ces points du classement
                   </p>
