@@ -70,6 +70,7 @@ export const RaceResultsTable = () => {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
   const [courseFilter, setCourseFilter] = useState("all");
+  const [saisonFilter, setSaisonFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statutFilter, setStatutFilter] = useState("all");
   const [etapeFilter, setEtapeFilter] = useState("");
@@ -78,14 +79,33 @@ export const RaceResultsTable = () => {
 
   const debouncedSearch = useDebouncedValue(search, 500);
 
-  // Fetch courses for filter
-  const { data: courses } = useQuery({
-    queryKey: ["courses-for-filter"],
+  // Fetch saisons for filter
+  const { data: saisons } = useQuery({
+    queryKey: ["saisons-for-filter"],
     queryFn: async () => {
       const { data, error } = await supabase
+        .from("saisons")
+        .select("id, annee")
+        .order("annee", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch courses for filter
+  const { data: courses } = useQuery({
+    queryKey: ["courses-for-filter", saisonFilter],
+    queryFn: async () => {
+      let query = supabase
         .from("courses")
-        .select("id, nom")
+        .select("id, nom, phase_id, phases(saison_id)")
         .order("nom");
+      
+      if (saisonFilter !== "all") {
+        query = query.eq("phases.saison_id", saisonFilter);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -98,6 +118,7 @@ export const RaceResultsTable = () => {
       page,
       debouncedSearch,
       courseFilter,
+      saisonFilter,
       typeFilter,
       statutFilter,
       etapeFilter,
@@ -105,6 +126,20 @@ export const RaceResultsTable = () => {
       sortDirection,
     ],
     queryFn: async () => {
+      // First, get course_ids if saison filter is applied
+      let courseIds: string[] | null = null;
+      if (saisonFilter !== "all") {
+        const { data: coursesData } = await supabase
+          .from("courses")
+          .select("id, phases!inner(saison_id)")
+          .eq("phases.saison_id", saisonFilter);
+        
+        courseIds = coursesData?.map(c => c.id) || [];
+        if (courseIds.length === 0) {
+          return { data: [], count: 0 };
+        }
+      }
+
       let query = supabase
         .from("v_race_results_editable")
         .select("*", { count: "exact" });
@@ -114,6 +149,9 @@ export const RaceResultsTable = () => {
         query = query.or(
           `coureur_nom.ilike.%${debouncedSearch}%,course_id.ilike.%${debouncedSearch}%`
         );
+      }
+      if (courseIds) {
+        query = query.in("course_id", courseIds);
       }
       if (courseFilter !== "all") {
         query = query.eq("course_id", courseFilter);
@@ -212,7 +250,7 @@ export const RaceResultsTable = () => {
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
         <div className="relative">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -222,6 +260,20 @@ export const RaceResultsTable = () => {
             className="pl-8"
           />
         </div>
+
+        <Select value={saisonFilter} onValueChange={setSaisonFilter}>
+          <SelectTrigger>
+            <SelectValue placeholder="Saison" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toutes les saisons</SelectItem>
+            {saisons?.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.annee}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <Select value={courseFilter} onValueChange={setCourseFilter}>
           <SelectTrigger>
@@ -274,6 +326,7 @@ export const RaceResultsTable = () => {
           variant="outline"
           onClick={() => {
             setSearch("");
+            setSaisonFilter("all");
             setCourseFilter("all");
             setTypeFilter("all");
             setStatutFilter("all");
