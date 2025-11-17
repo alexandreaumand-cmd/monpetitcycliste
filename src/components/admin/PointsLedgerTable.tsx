@@ -101,7 +101,7 @@ export const PointsLedgerTable = () => {
     },
   });
 
-  // Fetch phases for filter (depends on selected saison)
+  // Fetch phases for filter
   const { data: phases } = useQuery({
     queryKey: ["phases-list", saisonFilter],
     queryFn: async () => {
@@ -121,6 +121,31 @@ export const PointsLedgerTable = () => {
     enabled: !!saisonFilter,
   });
 
+  // Fetch courses for filter
+  const { data: courses } = useQuery({
+    queryKey: ["courses-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("courses")
+        .select("id, nom")
+        .order("nom");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Types de classement disponibles
+  const typesClassement = [
+    "General",
+    "Etape",
+    "Points",
+    "Montagne",
+    "Jeunes",
+    "Porteur Maillot Vert",
+    "Porteur Maillot à Pois",
+    "Porteur Maillot Blanc",
+    "Porteur Maillot Jaune",
+  ];
 
   // Fetch points ledger data
   const { data: rawData, isLoading } = useQuery({
@@ -148,8 +173,7 @@ export const PointsLedgerTable = () => {
             saisons!phases_saison_id_fkey (id, annee)
           )
         `)
-        .order("created_at", { ascending: false })
-        .limit(50000);
+        .order("created_at", { ascending: false });
 
       // Filtre par saison (via phase_id)
       if (saisonFilter) {
@@ -157,7 +181,7 @@ export const PointsLedgerTable = () => {
         if (phaseIds.length > 0) {
           query = query.in("phase_id", phaseIds);
         } else {
-          return []; // Aucune phase pour cette saison
+          return [];
         }
       }
 
@@ -166,6 +190,9 @@ export const PointsLedgerTable = () => {
       if (typeFilter) query = query.eq("type_classement", typeFilter as any);
       if (minPoints) query = query.gte("points", parseInt(minPoints));
       if (maxPoints) query = query.lte("points", parseInt(maxPoints));
+
+      // Apply limit at the end
+      query = query.limit(50000);
 
       const { data: directData, error: directError } = await query;
       if (directError) throw directError;
@@ -208,14 +235,12 @@ export const PointsLedgerTable = () => {
     },
   });
 
-  // Paginated data
   const paginatedData = useMemo(() => {
     if (!rawData) return [];
     const start = page * pageSize;
     return rawData.slice(start, start + pageSize);
   }, [rawData, page, pageSize]);
 
-  // Statistics
   const stats = useMemo(() => {
     if (!rawData) return { totalPoints: 0, totalEntries: 0, uniqueRiders: 0, uniqueCourses: 0 };
     
@@ -231,7 +256,6 @@ export const PointsLedgerTable = () => {
     };
   }, [rawData]);
 
-  // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, points }: { id: string; points: number }) => {
       const { error } = await supabase
@@ -245,7 +269,6 @@ export const PointsLedgerTable = () => {
       queryClient.invalidateQueries({ queryKey: ["points-ledger-table"] });
       toast.success("Points mis à jour avec succès");
       setEditDialogOpen(false);
-      setSelectedEntry(null);
     },
     onError: (error) => {
       toast.error("Erreur lors de la mise à jour");
@@ -253,7 +276,6 @@ export const PointsLedgerTable = () => {
     },
   });
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -267,7 +289,6 @@ export const PointsLedgerTable = () => {
       queryClient.invalidateQueries({ queryKey: ["points-ledger-table"] });
       toast.success("Entrée supprimée avec succès");
       setDeleteDialogOpen(false);
-      setEntryToDelete(null);
     },
     onError: (error) => {
       toast.error("Erreur lors de la suppression");
@@ -320,35 +341,45 @@ export const PointsLedgerTable = () => {
       row.saison_annee || "",
       row.type_classement || "",
       row.etape_numero || "",
-      row.points || 0,
-      new Date(row.created_at).toLocaleDateString("fr-FR"),
+      row.points || "",
+      new Date(row.created_at).toLocaleDateString(),
     ]);
-    
-    const csv = [headers, ...rows].map(row => row.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `points-ledger-${new Date().toISOString()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Export CSV réussi");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `points_ledger_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
-      "Général": "bg-primary",
-      "Étape": "bg-blue-500",
-      "Points": "bg-green-500",
-      "Montagne": "bg-orange-500",
-      "Jeunes": "bg-yellow-500",
+      "General": "bg-blue-100 text-blue-800",
+      "Etape": "bg-green-100 text-green-800",
+      "Points": "bg-purple-100 text-purple-800",
+      "Montagne": "bg-orange-100 text-orange-800",
+      "Jeunes": "bg-yellow-100 text-yellow-800",
+      "Porteur Maillot Vert": "bg-emerald-100 text-emerald-800",
+      "Porteur Maillot à Pois": "bg-red-100 text-red-800",
+      "Porteur Maillot Blanc": "bg-gray-100 text-gray-800",
+      "Porteur Maillot Jaune": "bg-amber-100 text-amber-800",
     };
-    return colors[type] || "bg-muted";
+    return colors[type] || "bg-gray-100 text-gray-800";
   };
 
+  // Mobile view
   if (isMobile) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 p-4">
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
           <Card>
@@ -513,28 +544,13 @@ export const PointsLedgerTable = () => {
                         type="number"
                         value={newPoints}
                         onChange={(e) => setNewPoints(parseInt(e.target.value) || 0)}
-                        min={0}
-                        required
                       />
-                      <p className="text-sm text-muted-foreground">
-                        Points actuels : <strong>{selectedEntry.points}</strong>
-                        {newPoints !== selectedEntry.points && (
-                          <span className={newPoints > selectedEntry.points ? "text-green-600" : "text-red-600"}>
-                            {" "}({newPoints > selectedEntry.points ? "+" : ""}{newPoints - selectedEntry.points})
-                          </span>
-                        )}
-                      </p>
                     </div>
-                  </div>
 
-                  <DialogFooter className="mt-6">
-                    <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-                      Annuler
-                    </Button>
-                    <Button type="submit" disabled={updateMutation.isPending}>
-                      {updateMutation.isPending ? "Mise à jour..." : "Sauvegarder"}
-                    </Button>
-                  </DialogFooter>
+                    <DialogFooter>
+                      <Button type="submit">Enregistrer</Button>
+                    </DialogFooter>
+                  </div>
                 </form>
               </>
             )}
@@ -545,30 +561,14 @@ export const PointsLedgerTable = () => {
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Supprimer cette entrée ?</AlertDialogTitle>
+              <AlertDialogTitle>Êtes-vous sûr(e) ?</AlertDialogTitle>
               <AlertDialogDescription>
-                {entryToDelete && (
-                  <div className="space-y-2 mt-2">
-                    <p><strong>Coureur:</strong> {entryToDelete.coureur_nom}</p>
-                    <p><strong>Course:</strong> {entryToDelete.course_nom}</p>
-                    <p><strong>Type:</strong> {entryToDelete.type_classement}</p>
-                    <p><strong>Points:</strong> {entryToDelete.points}</p>
-                    <p className="text-destructive font-semibold mt-4">
-                      ⚠️ Cela supprimera définitivement ces points du classement
-                    </p>
-                  </div>
-                )}
+                Êtes-vous sûr de vouloir supprimer cette entrée ? Cette action est irréversible.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Annuler</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleConfirmDelete}
-                className="bg-destructive text-destructive-foreground"
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? "Suppression..." : "Supprimer"}
-              </AlertDialogAction>
+              <AlertDialogAction onClick={handleConfirmDelete}>Supprimer</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -576,21 +576,18 @@ export const PointsLedgerTable = () => {
     );
   }
 
+  // Desktop view
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Points Ledger</h1>
-          <p className="text-muted-foreground">Gestion des points attribués</p>
-        </div>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Registre des Points</h2>
         <Button onClick={exportToCSV} variant="outline">
           <Download className="h-4 w-4 mr-2" />
-          Export CSV
+          Exporter CSV
         </Button>
       </div>
 
-      {/* Stats */}
+      {/* Statistics Cards */}
       <div className="grid grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-3">
@@ -610,7 +607,7 @@ export const PointsLedgerTable = () => {
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Coureurs</CardTitle>
+            <CardTitle className="text-sm">Coureurs Uniques</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{stats.uniqueRiders}</p>
@@ -618,7 +615,7 @@ export const PointsLedgerTable = () => {
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Courses</CardTitle>
+            <CardTitle className="text-sm">Courses Uniques</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{stats.uniqueCourses}</p>
@@ -626,7 +623,7 @@ export const PointsLedgerTable = () => {
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Filters Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -635,6 +632,7 @@ export const PointsLedgerTable = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Ligne 1: Recherche, Saison, Phase, Course */}
           <div className="grid grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>Recherche</Label>
@@ -654,12 +652,69 @@ export const PointsLedgerTable = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {saisons.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.annee}</SelectItem>
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.annee}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
+
+            {phases && phases.length > 0 && (
+              <div className="space-y-2">
+                <Label>Phase</Label>
+                <Select value={phaseFilter} onValueChange={setPhaseFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Toutes phases" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {phases.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        Phase {p.index_dans_saison}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {courses && (
+              <div className="space-y-2">
+                <Label>Course</Label>
+                <Select value={courseFilter} onValueChange={setCourseFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Toutes courses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          {/* Ligne 2: Type, Coureur, Points min, Points max */}
+          <div className="grid grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label>Type classement</Label>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tous types" />
+                </SelectTrigger>
+                <SelectContent>
+                  {typesClassement.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="space-y-2">
               <Label>Coureur</Label>
@@ -670,9 +725,6 @@ export const PointsLedgerTable = () => {
               />
             </div>
 
-          </div>
-
-          <div className="grid grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>Points min</Label>
               <Input
@@ -682,6 +734,7 @@ export const PointsLedgerTable = () => {
                 onChange={(e) => setMinPoints(e.target.value)}
               />
             </div>
+
             <div className="space-y-2">
               <Label>Points max</Label>
               <Input
@@ -691,108 +744,84 @@ export const PointsLedgerTable = () => {
                 onChange={(e) => setMaxPoints(e.target.value)}
               />
             </div>
-            <div className="col-span-2 flex items-end">
-              <Button onClick={resetFilters} variant="outline" className="w-full">
-                Réinitialiser les filtres
-              </Button>
-            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={resetFilters} variant="outline">
+              Réinitialiser les filtres
+            </Button>
           </div>
         </CardContent>
       </Card>
 
       {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground">Chargement...</div>
-          ) : paginatedData.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">Aucune entrée trouvée</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Course</TableHead>
-                  <TableHead>Coureur</TableHead>
-                  <TableHead>Phase</TableHead>
-                  <TableHead>Saison</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Étape</TableHead>
-                  <TableHead className="text-right">Points</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedData.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{row.course_nom || "—"}</p>
-                        <p className="text-xs text-muted-foreground">{row.course_categorie}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{row.coureur_nom || "—"}</p>
-                        <p className="text-xs text-muted-foreground">{row.equipe_nom}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {row.phase_index ? `Phase ${row.phase_index}` : "—"}
-                    </TableCell>
-                    <TableCell>
-                      {row.saison_annee || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getTypeColor(row.type_classement)}>
-                        {row.type_classement}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{row.etape_numero || "—"}</TableCell>
-                    <TableCell className="text-right font-bold">{row.points}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(row.created_at).toLocaleDateString("fr-FR")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEdit(row)}
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(row)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Course</TableHead>
+              <TableHead>Coureur</TableHead>
+              <TableHead>Phase</TableHead>
+              <TableHead>Saison</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Étape</TableHead>
+              <TableHead className="text-right">Points</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.map((row) => (
+              <TableRow key={row.id}>
+                <TableCell>{row.course_nom || "—"}</TableCell>
+                <TableCell>{row.coureur_nom || "—"}</TableCell>
+                <TableCell>Phase {row.phase_index || "—"}</TableCell>
+                <TableCell>{row.saison_annee || "—"}</TableCell>
+                <TableCell>
+                  <Badge className={getTypeColor(row.type_classement)}>
+                    {row.type_classement}
+                  </Badge>
+                </TableCell>
+                <TableCell>{row.etape_numero || "—"}</TableCell>
+                <TableCell className="text-right">{row.points}</TableCell>
+                <TableCell>{new Date(row.created_at).toLocaleDateString("fr-FR")}</TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(row)}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDelete(row)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Pagination */}
       {rawData && rawData.length > pageSize && (
         <div className="flex justify-center gap-2">
           <Button
+            size="sm"
             variant="outline"
             disabled={page === 0}
             onClick={() => setPage(p => p - 1)}
           >
             Précédent
           </Button>
-          <span className="flex items-center px-4 text-sm text-muted-foreground">
-            Page {page + 1} / {Math.ceil(rawData.length / pageSize)}
-          </span>
           <Button
+            size="sm"
             variant="outline"
             disabled={(page + 1) * pageSize >= rawData.length}
             onClick={() => setPage(p => p + 1)}
@@ -804,7 +833,7 @@ export const PointsLedgerTable = () => {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Modifier les points</DialogTitle>
             <DialogDescription>
@@ -819,9 +848,6 @@ export const PointsLedgerTable = () => {
                 <div><strong>Course:</strong> {selectedEntry.course_nom}</div>
                 <div><strong>Type:</strong> {selectedEntry.type_classement}</div>
                 {selectedEntry.etape_numero && <div><strong>Étape:</strong> {selectedEntry.etape_numero}</div>}
-                <div className="text-xs text-muted-foreground">
-                  Créé le {new Date(selectedEntry.created_at).toLocaleDateString("fr-FR")}
-                </div>
               </div>
 
               <Separator />
@@ -835,35 +861,13 @@ export const PointsLedgerTable = () => {
                       type="number"
                       value={newPoints}
                       onChange={(e) => setNewPoints(parseInt(e.target.value) || 0)}
-                      min={0}
-                      required
                     />
-                    <p className="text-sm text-muted-foreground">
-                      Points actuels : <strong>{selectedEntry.points}</strong>
-                      {newPoints !== selectedEntry.points && (
-                        <>
-                          {" • "}
-                          <span className={newPoints > selectedEntry.points ? "text-green-600" : "text-red-600"}>
-                            Différence: {newPoints > selectedEntry.points ? "+" : ""}{newPoints - selectedEntry.points}
-                            {" "}({((newPoints - selectedEntry.points) / selectedEntry.points * 100).toFixed(1)}%)
-                          </span>
-                        </>
-                      )}
-                    </p>
                   </div>
-                </div>
 
-                <DialogFooter className="mt-6">
-                  <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-                    Annuler
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={updateMutation.isPending || newPoints === selectedEntry.points}
-                  >
-                    {updateMutation.isPending ? "Mise à jour..." : "Sauvegarder"}
-                  </Button>
-                </DialogFooter>
+                  <DialogFooter>
+                    <Button type="submit">Enregistrer</Button>
+                  </DialogFooter>
+                </div>
               </form>
             </>
           )}
@@ -874,31 +878,14 @@ export const PointsLedgerTable = () => {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer cette entrée de points ?</AlertDialogTitle>
+            <AlertDialogTitle>Êtes-vous sûr(e) ?</AlertDialogTitle>
             <AlertDialogDescription>
-              {entryToDelete && (
-                <div className="space-y-2 mt-2">
-                  <p><strong>Coureur:</strong> {entryToDelete.coureur_nom}</p>
-                  <p><strong>Course:</strong> {entryToDelete.course_nom}</p>
-                  <p><strong>Type:</strong> {entryToDelete.type_classement}</p>
-                  {entryToDelete.etape_numero && <p><strong>Étape:</strong> {entryToDelete.etape_numero}</p>}
-                  <p><strong>Points:</strong> {entryToDelete.points}</p>
-                  <p className="text-destructive font-semibold mt-4">
-                    ⚠️ Cela supprimera définitivement ces points du classement
-                  </p>
-                </div>
-              )}
+              Êtes-vous sûr de vouloir supprimer cette entrée ? Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? "Suppression..." : "Supprimer"}
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleConfirmDelete}>Supprimer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
