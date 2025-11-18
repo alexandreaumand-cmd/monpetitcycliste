@@ -29,20 +29,11 @@ export const EquipesSaisonsTable = ({ equipesSaisons, isLoading, onSave, onDelet
 
   const handleSave = async () => {
     setIsSaving(true);
-    const updates = Array.from(editedEquipes.entries()).map(([id, changes]) => ({
-      id,
-      changes,
-    }));
+    const updates = Array.from(editedEquipes.entries()).map(([id, changes]) => ({ id, changes }));
     await onSave(updates);
     setEditedEquipes(new Map());
     setIsSaving(false);
   };
-
-  const handleCancel = () => {
-    setEditedEquipes(new Map());
-  };
-
-  const hasChanges = editedEquipes.size > 0;
 
   const getCellValue = (equipe: any, field: string) => {
     return editedEquipes.get(equipe.id)?.[field] ?? equipe[field];
@@ -59,22 +50,15 @@ export const EquipesSaisonsTable = ({ equipesSaisons, isLoading, onSave, onDelet
 
   return (
     <div className="space-y-4">
-      {hasChanges && (
+      {editedEquipes.size > 0 && (
         <div className="flex items-center justify-between bg-muted p-4 rounded-lg">
-          <p className="text-sm font-medium">
-            {editedEquipes.size} équipe{editedEquipes.size > 1 ? 's' : ''} modifiée{editedEquipes.size > 1 ? 's' : ''}
-          </p>
+          <p className="text-sm font-medium">{editedEquipes.size} équipe(s) modifiée(s)</p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleCancel}>
-              <X className="h-4 w-4 mr-2" />
-              Annuler
+            <Button variant="outline" size="sm" onClick={() => setEditedEquipes(new Map())}>
+              <X className="h-4 w-4 mr-2" />Annuler
             </Button>
             <Button size="sm" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
+              {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Sauvegarder
             </Button>
           </div>
@@ -85,103 +69,63 @@ export const EquipesSaisonsTable = ({ equipesSaisons, isLoading, onSave, onDelet
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[15%]">Saison</TableHead>
-              <TableHead className="w-[40%]">Nom</TableHead>
-              <TableHead className="w-[15%]">Nb Coureurs</TableHead>
-              <TableHead className="w-[15%]">Catégorie</TableHead>
-              <TableHead className="w-[15%]">Actions</TableHead>
+              <TableHead className="w-[12%]">Saison</TableHead>
+              <TableHead className="w-[30%]">Nom</TableHead>
+              <TableHead className="w-[12%]">Trigramme</TableHead>
+              <TableHead className="w-[12%]">Nb Coureurs</TableHead>
+              <TableHead className="w-[20%]">Catégorie</TableHead>
+              <TableHead className="w-[14%]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {equipesSaisons.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                  Aucune équipe trouvée
-                </TableCell>
+                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">Aucune équipe trouvée</TableCell>
               </TableRow>
             ) : (
-              equipesSaisons.map((equipe) => {
-                const isEdited = editedEquipes.has(equipe.id);
-                
-                return (
-                  <TableRow key={equipe.id} className={isEdited ? "bg-blue-50/50" : ""}>
-                    {/* Saison (read-only) */}
-                    <TableCell className="font-medium">
-                      {equipe.saisons?.annee || 'N/A'}
-                    </TableCell>
-
-                    {/* Nom (éditable) */}
-                    <TableCell>
-                      <Input
-                        type="text"
-                        value={getCellValue(equipe, 'nom_affiche')}
-                        onChange={(e) => handleCellEdit(equipe.id, 'nom_affiche', e.target.value)}
-                        className="h-8"
-                      />
-                    </TableCell>
-
-                    {/* Nb Coureurs (read-only) */}
-                    <TableCell>
-                      <div className="text-sm text-muted-foreground">
-                        {equipe.nb_coureurs || 0}
-                      </div>
-                    </TableCell>
-
-                    {/* Catégorie (éditable) */}
-                    <TableCell>
-                      <Select
-                        value={getCellValue(equipe, 'categorie') || 'none'}
-                        onValueChange={(value) => handleCellEdit(equipe.id, 'categorie', value === 'none' ? null : value)}
-                      >
-                        <SelectTrigger className="h-8">
-                          <SelectValue placeholder="Aucune" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Aucune</SelectItem>
-                          <SelectItem value="WT">WorldTeam</SelectItem>
-                          <SelectItem value="PT">ProTeam</SelectItem>
-                          <SelectItem value="CT">Continental</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-
-                    {/* Actions */}
-                    <TableCell>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Supprimer cette équipe ?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Cette action est irréversible. L'équipe "{equipe.nom_affiche}" sera supprimée de la saison {equipe.saisons?.annee}.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => onDelete(equipe.id)}>
-                              Supprimer
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+              equipesSaisons.map((equipe) => (
+                <TableRow key={equipe.id} className={editedEquipes.has(equipe.id) ? "bg-muted/30" : ""}>
+                  <TableCell className="font-medium">{equipe.saisons?.annee || 'N/A'}</TableCell>
+                  <TableCell>
+                    <Input value={getCellValue(equipe, 'nom_affiche')} onChange={(e) => handleCellEdit(equipe.id, 'nom_affiche', e.target.value)} className="h-8" />
+                  </TableCell>
+                  <TableCell>
+                    <Input value={getCellValue(equipe, 'trigramme') || ''} onChange={(e) => handleCellEdit(equipe.id, 'trigramme', e.target.value.toUpperCase())} placeholder="Ex: UAD" className="h-8 max-w-[100px]" maxLength={5} />
+                  </TableCell>
+                  <TableCell><div className="text-sm text-muted-foreground">{equipe.nb_coureurs || 0}</div></TableCell>
+                  <TableCell>
+                    <Select value={getCellValue(equipe, 'categorie') || ''} onValueChange={(value) => handleCellEdit(equipe.id, 'categorie', value)}>
+                      <SelectTrigger className="h-8"><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="WT">WorldTour</SelectItem>
+                        <SelectItem value="PT">ProTeam</SelectItem>
+                        <SelectItem value="CT">Continental</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                          <AlertDialogDescription>Êtes-vous sûr de vouloir supprimer cette équipe ?</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annuler</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => onDelete(equipe.id)}>Supprimer</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
       </Card>
-
-      {equipesSaisons.length > 0 && (
-        <p className="text-sm text-muted-foreground text-center">
-          {equipesSaisons.length} équipe{equipesSaisons.length > 1 ? 's' : ''} affichée{equipesSaisons.length > 1 ? 's' : ''}
-        </p>
-      )}
     </div>
   );
 };
