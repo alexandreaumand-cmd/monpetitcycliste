@@ -59,7 +59,7 @@ export const StartlistDataManager = () => {
       if (filters.unmatchedOnly) {
         query = query.is('coureur_id', null);
       }
-      if (filters.saison_id) {
+      if (filters.saison_id && filters.saison_id !== 'all') {
         query = query.eq('startlist_imports.courses.phases.saison_id', filters.saison_id);
       }
 
@@ -96,7 +96,7 @@ export const StartlistDataManager = () => {
                   <SelectValue placeholder="Toutes les saisons" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Toutes</SelectItem>
+                  <SelectItem value="all">Toutes</SelectItem>
                   {saisons?.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.annee}
