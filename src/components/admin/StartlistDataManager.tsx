@@ -34,18 +34,13 @@ export const StartlistDataManager = () => {
     },
   });
 
-  const { data: courses } = useQuery({
-    queryKey: ['courses-for-startlist', filters.saison_id],
+  const { data: allCourses } = useQuery({
+    queryKey: ['courses-for-startlist'],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('startlist_imports')
-        .select('race_id, courses(id, nom)');
+        .select('race_id, courses(id, nom, phase_id, phases(saison_id))');
       
-      if (filters.saison_id && filters.saison_id !== 'all') {
-        query = query.eq('courses.phases.saison_id', filters.saison_id);
-      }
-      
-      const { data, error } = await query;
       if (error) throw error;
       
       // Dédupliquer les courses et extraire uniquement les objets course
@@ -62,8 +57,16 @@ export const StartlistDataManager = () => {
     },
   });
 
-  const { data: entries, isLoading: loadingEntries, refetch } = useQuery({
-    queryKey: ['startlist-entries', filters],
+  // Client-side filtering for courses by season
+  const courses = allCourses?.filter(course => {
+    if (filters.saison_id && filters.saison_id !== 'all') {
+      return course.phases?.saison_id === filters.saison_id;
+    }
+    return true;
+  });
+
+  const { data: allEntries, isLoading: loadingEntries, refetch } = useQuery({
+    queryKey: ['startlist-entries', filters.status, filters.startlist_id, filters.source_name, filters.unmatchedOnly],
     queryFn: async () => {
       let query = supabase
         .from('startlist_entries')
@@ -88,17 +91,28 @@ export const StartlistDataManager = () => {
       if (filters.unmatchedOnly) {
         query = query.is('coureur_id', null);
       }
-      if (filters.saison_id && filters.saison_id !== 'all') {
-        query = query.eq('startlist_imports.courses.phases.saison_id', filters.saison_id);
-      }
-      if (filters.course_name && filters.course_name !== 'all') {
-        query = query.eq('startlist_imports.courses.nom', filters.course_name);
-      }
 
       const { data, error } = await query.order('source_name');
       if (error) throw error;
       return data;
     },
+  });
+
+  // Client-side filtering for season and course
+  const entries = allEntries?.filter(entry => {
+    // Filter by season
+    if (filters.saison_id && filters.saison_id !== 'all') {
+      const saisonId = entry.startlist_imports?.courses?.phases?.saison_id;
+      if (saisonId !== filters.saison_id) return false;
+    }
+    
+    // Filter by course name
+    if (filters.course_name && filters.course_name !== 'all') {
+      const courseName = entry.startlist_imports?.courses?.nom;
+      if (courseName !== filters.course_name) return false;
+    }
+    
+    return true;
   });
 
   return (
