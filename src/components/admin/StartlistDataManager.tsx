@@ -17,6 +17,7 @@ export const StartlistDataManager = () => {
     status: 'all',
     startlist_id: '',
     source_name: '',
+    course_name: 'all',
     unmatchedOnly: false,
     saison_id: '',
   });
@@ -30,6 +31,34 @@ export const StartlistDataManager = () => {
         .order('annee', { ascending: false });
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { data: courses } = useQuery({
+    queryKey: ['courses-for-startlist', filters.saison_id],
+    queryFn: async () => {
+      let query = supabase
+        .from('startlist_imports')
+        .select('race_id, courses(id, nom)');
+      
+      if (filters.saison_id && filters.saison_id !== 'all') {
+        query = query.eq('courses.phases.saison_id', filters.saison_id);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      // Dédupliquer les courses et extraire uniquement les objets course
+      const coursesMap = new Map();
+      data?.forEach(item => {
+        if (item.courses && !coursesMap.has(item.courses.id)) {
+          coursesMap.set(item.courses.id, item.courses);
+        }
+      });
+      
+      return Array.from(coursesMap.values()).sort((a, b) => 
+        a.nom.localeCompare(b.nom)
+      );
     },
   });
 
@@ -62,6 +91,9 @@ export const StartlistDataManager = () => {
       if (filters.saison_id && filters.saison_id !== 'all') {
         query = query.eq('startlist_imports.courses.phases.saison_id', filters.saison_id);
       }
+      if (filters.course_name && filters.course_name !== 'all') {
+        query = query.eq('startlist_imports.courses.nom', filters.course_name);
+      }
 
       const { data, error } = await query.order('source_name');
       if (error) throw error;
@@ -85,7 +117,7 @@ export const StartlistDataManager = () => {
           <CardTitle>Filtres</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>Saison</Label>
               <Select
@@ -136,6 +168,26 @@ export const StartlistDataManager = () => {
                   className="pl-8"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Course</Label>
+              <Select
+                value={filters.course_name}
+                onValueChange={(value) => setFilters({ ...filters, course_name: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Toutes les courses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes</SelectItem>
+                  {courses?.map((c) => (
+                    <SelectItem key={c.id} value={c.nom}>
+                      {c.nom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
