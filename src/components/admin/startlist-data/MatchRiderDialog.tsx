@@ -1,0 +1,152 @@
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { useQuery } from "@tanstack/react-query";
+
+interface MatchRiderDialogProps {
+  entry: any;
+  saisonId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export const MatchRiderDialog = ({ entry, saisonId, onClose, onSuccess }: MatchRiderDialogProps) => {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(entry.source_name || '');
+  const [selectedRiderId, setSelectedRiderId] = useState<string | null>(null);
+
+  const { data: riders, isLoading: searchLoading } = useQuery({
+    queryKey: ['search-riders-for-match', searchQuery, saisonId],
+    queryFn: async () => {
+      if (searchQuery.length < 2) return [];
+
+      const { data, error } = await supabase
+        .from('coureurs')
+        .select('*, coureurs_saisons!inner(equipe_id, equipes_saisons!inner(nom_affiche))')
+        .eq('coureurs_saisons.saison_id', saisonId)
+        .ilike('nom', `%${searchQuery}%`)
+        .limit(20);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: searchQuery.length >= 2,
+  });
+
+  const handleMatch = async () => {
+    if (!selectedRiderId) {
+      toast({
+        variant: "destructive",
+        title: "Sélection requise",
+        description: "Veuillez sélectionner un coureur",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await supabase
+        .from('startlist_entries')
+        .update({
+          coureur_id: selectedRiderId,
+          status: 'confirmed',
+        })
+        .eq('id', entry.id);
+
+      if (searchQuery !== entry.source_name) {
+        await supabase.from('name_aliases').insert({
+          coureur_id: selectedRiderId,
+          alias_text: entry.source_name,
+        });
+      }
+
+      toast({
+        title: "Coureur matché",
+        description: "L'entrée a été associée avec succès",
+      });
+
+      onSuccess();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: error.message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Matcher avec un coureur existant</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Rechercher un coureur</Label>
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Nom du coureur..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+          </div>
+
+          <div className="border rounded-lg max-h-64 overflow-y-auto">
+            {searchLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : riders && riders.length > 0 ? (
+              <div className="divide-y">
+                {riders.map((rider: any) => (
+                  <button
+                    key={rider.id}
+                    className={`w-full text-left p-3 hover:bg-accent transition ${
+                      selectedRiderId === rider.id ? 'bg-accent' : ''
+                    }`}
+                    onClick={() => setSelectedRiderId(rider.id)}
+                  >
+                    <div className="font-medium">{rider.nom}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {rider.coureurs_saisons?.[0]?.equipes_saisons?.nom_affiche || rider.equipe || 'N/A'}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : searchQuery.length >= 2 ? (
+              <div className="text-center py-4 text-muted-foreground">Aucun coureur trouvé</div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                Tapez au moins 2 caractères pour rechercher
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+            Annuler
+          </Button>
+          <Button onClick={handleMatch} disabled={isLoading || !selectedRiderId}>
+            {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Matcher le coureur
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};

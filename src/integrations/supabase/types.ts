@@ -1097,6 +1097,7 @@ export type Database = {
           id: string
           nom_affiche: string
           saison_id: string
+          trigramme: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1107,6 +1108,7 @@ export type Database = {
           id?: string
           nom_affiche: string
           saison_id: string
+          trigramme?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1117,6 +1119,7 @@ export type Database = {
           id?: string
           nom_affiche?: string
           saison_id?: string
+          trigramme?: string | null
           updated_at?: string | null
         }
         Relationships: [
