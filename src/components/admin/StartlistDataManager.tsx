@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +33,19 @@ export const StartlistDataManager = () => {
       return data;
     },
   });
+
+  // Get active season
+  const activeSeason = saisons?.find(s => {
+    const currentYear = new Date().getFullYear();
+    return s.annee === currentYear;
+  });
+
+  // Set active season as default when loaded
+  useEffect(() => {
+    if (activeSeason && !filters.saison_id) {
+      setFilters(prev => ({ ...prev, saison_id: activeSeason.id }));
+    }
+  }, [activeSeason, filters.saison_id]);
 
   // Fetch all startlist_imports to identify latest per race
   const { data: allImports } = useQuery({
@@ -78,6 +91,11 @@ export const StartlistDataManager = () => {
   const { data: allEntries, isLoading: loadingEntries, refetch } = useQuery({
     queryKey: ['startlist-entries', filters.status, filters.startlist_id, filters.source_name, filters.unmatchedOnly, filters.saison_id, filters.course_name],
     queryFn: async () => {
+      // Don't query if no season selected
+      if (!filters.saison_id) {
+        return [];
+      }
+
       let query = supabase
         .from('startlist_entries')
         .select(`
@@ -104,8 +122,14 @@ export const StartlistDataManager = () => {
 
       const { data, error } = await query.order('source_name');
       if (error) throw error;
-      return data;
+      
+      // Filter by season server-side via the nested relation
+      return (data || []).filter(entry => {
+        const seasonId = entry.startlist_imports?.courses?.phases?.saison_id;
+        return seasonId === filters.saison_id;
+      });
     },
+    enabled: !!filters.saison_id, // Only run query when season is selected
   });
 
   // Client-side filtering for season, course, and latest imports only
@@ -152,13 +176,12 @@ export const StartlistDataManager = () => {
               <Label>Saison</Label>
               <Select
                 value={filters.saison_id}
-                onValueChange={(value) => setFilters({ ...filters, saison_id: value })}
+                onValueChange={(value) => setFilters({ ...filters, saison_id: value, course_name: 'all' })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Toutes les saisons" />
+                  <SelectValue placeholder="Sélectionner une saison" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Toutes</SelectItem>
                   {saisons?.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.annee}
