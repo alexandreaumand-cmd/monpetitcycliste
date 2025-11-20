@@ -120,7 +120,7 @@ export const StartlistDataManager = () => {
         query = query.is('coureur_id', null);
       }
 
-      const { data, error } = await query.order('source_name');
+      const { data, error } = await query.limit(10000).order('source_name');
       if (error) throw error;
       
       // Filter by season server-side via the nested relation
