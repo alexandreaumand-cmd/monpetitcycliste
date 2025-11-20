@@ -34,31 +34,41 @@ export const StartlistDataManager = () => {
     },
   });
 
-  const { data: allCourses } = useQuery({
-    queryKey: ['courses-for-startlist'],
+  // Fetch all startlist_imports to identify latest per race
+  const { data: allImports } = useQuery({
+    queryKey: ['all-startlist-imports'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('startlist_imports')
-        .select('race_id, courses(id, nom, phase_id, phases(saison_id))');
-      
+        .select('id, race_id, created_at, courses(id, nom, phase_id, phases(saison_id))')
+        .order('created_at', { ascending: false });
       if (error) throw error;
-      
-      // Dédupliquer les courses et extraire uniquement les objets course
-      const coursesMap = new Map();
-      data?.forEach(item => {
-        if (item.courses && !coursesMap.has(item.courses.id)) {
-          coursesMap.set(item.courses.id, item.courses);
-        }
-      });
-      
-      return Array.from(coursesMap.values()).sort((a, b) => 
-        a.nom.localeCompare(b.nom)
-      );
+      return data;
     },
   });
 
+  // Get latest import IDs per race
+  const latestImportIds = allImports?.reduce((acc, imp) => {
+    if (!acc.has(imp.race_id)) {
+      acc.set(imp.race_id, imp.id);
+    }
+    return acc;
+  }, new Map<string, string>());
+
+  // Get unique courses from latest imports only
+  const allCourses = allImports?.reduce((acc, imp) => {
+    if (imp.courses && latestImportIds?.get(imp.race_id) === imp.id && !acc.has(imp.courses.id)) {
+      acc.set(imp.courses.id, imp.courses);
+    }
+    return acc;
+  }, new Map());
+
+  const coursesArray = allCourses ? Array.from(allCourses.values()).sort((a, b) => 
+    a.nom.localeCompare(b.nom)
+  ) : [];
+
   // Client-side filtering for courses by season
-  const courses = allCourses?.filter(course => {
+  const courses = coursesArray?.filter(course => {
     if (filters.saison_id && filters.saison_id !== 'all') {
       return course.phases?.saison_id === filters.saison_id;
     }
@@ -98,8 +108,14 @@ export const StartlistDataManager = () => {
     },
   });
 
-  // Client-side filtering for season and course
+  // Client-side filtering for season, course, and latest imports only
   const entries = allEntries?.filter(entry => {
+    // Only show entries from latest imports
+    const raceId = entry.startlist_imports?.race_id;
+    if (raceId && latestImportIds?.get(raceId) !== entry.startlist_id) {
+      return false;
+    }
+
     // Filter by season
     if (filters.saison_id && filters.saison_id !== 'all') {
       const saisonId = entry.startlist_imports?.courses?.phases?.saison_id;
