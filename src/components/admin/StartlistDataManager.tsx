@@ -60,16 +60,26 @@ export const StartlistDataManager = () => {
     },
   });
 
-  // Get latest import IDs per race
+  // Get latest import IDs per race (only for selected season)
   const latestImportIds = allImports?.reduce((acc, imp) => {
+    // Only consider imports from the selected season
+    if (filters.saison_id && imp.saison_id !== filters.saison_id) {
+      return acc;
+    }
+    
     if (!acc.has(imp.race_id)) {
       acc.set(imp.race_id, imp.id);
     }
     return acc;
   }, new Map<string, string>());
 
-  // Also build a map of latest imports by race_id for season filtering
+  // Also build a map of latest imports by race_id for season filtering (only for selected season)
   const latestImportsByRace = allImports?.reduce((acc, imp) => {
+    // Only consider imports from the selected season
+    if (filters.saison_id && imp.saison_id !== filters.saison_id) {
+      return acc;
+    }
+    
     if (latestImportIds?.get(imp.race_id) === imp.id) {
       acc.set(imp.race_id, imp);
     }
