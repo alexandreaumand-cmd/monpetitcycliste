@@ -76,7 +76,7 @@ export const StartlistDataManager = () => {
   });
 
   const { data: allEntries, isLoading: loadingEntries, refetch } = useQuery({
-    queryKey: ['startlist-entries', filters.status, filters.startlist_id, filters.source_name, filters.unmatchedOnly],
+    queryKey: ['startlist-entries', filters.status, filters.startlist_id, filters.source_name, filters.unmatchedOnly, filters.saison_id, filters.course_name],
     queryFn: async () => {
       let query = supabase
         .from('startlist_entries')
