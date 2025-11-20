@@ -53,7 +53,7 @@ export const StartlistDataManager = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('startlist_imports')
-        .select('id, race_id, created_at, courses(id, nom, phase_id, phases(saison_id))')
+        .select('id, race_id, saison_id, created_at, courses(id, nom, phase_id)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -68,6 +68,14 @@ export const StartlistDataManager = () => {
     return acc;
   }, new Map<string, string>());
 
+  // Also build a map of latest imports by race_id for season filtering
+  const latestImportsByRace = allImports?.reduce((acc, imp) => {
+    if (latestImportIds?.get(imp.race_id) === imp.id) {
+      acc.set(imp.race_id, imp);
+    }
+    return acc;
+  }, new Map());
+
   // Get unique courses from latest imports only
   const allCourses = allImports?.reduce((acc, imp) => {
     if (imp.courses && latestImportIds?.get(imp.race_id) === imp.id && !acc.has(imp.courses.id)) {
@@ -80,10 +88,11 @@ export const StartlistDataManager = () => {
     a.nom.localeCompare(b.nom)
   ) : [];
 
-  // Client-side filtering for courses by season
+  // Client-side filtering for courses by season using denormalized saison_id
   const courses = coursesArray?.filter(course => {
     if (filters.saison_id && filters.saison_id !== 'all') {
-      return course.phases?.saison_id === filters.saison_id;
+      const latestImport = latestImportsByRace?.get(course.id);
+      return latestImport && latestImport.saison_id === filters.saison_id;
     }
     return true;
   });
@@ -103,9 +112,15 @@ export const StartlistDataManager = () => {
           coureurs(nom, equipe),
           startlist_imports!inner(
             race_id,
-            courses(nom, phase_id, phases(saison_id))
+            saison_id,
+            courses(nom, phase_id)
           )
         `);
+
+      // Filter by season server-side using denormalized saison_id
+      if (filters.saison_id && filters.saison_id !== 'all') {
+        query = query.eq('startlist_imports.saison_id', filters.saison_id);
+      }
 
       if (filters.status !== 'all' && filters.status) {
         query = query.eq('status', filters.status as 'parsed' | 'confirmed' | 'unmatched');
@@ -123,27 +138,17 @@ export const StartlistDataManager = () => {
       const { data, error } = await query.limit(10000).order('source_name');
       if (error) throw error;
       
-      // Filter by season server-side via the nested relation
-      return (data || []).filter(entry => {
-        const seasonId = entry.startlist_imports?.courses?.phases?.saison_id;
-        return seasonId === filters.saison_id;
-      });
+      return data || [];
     },
     enabled: !!filters.saison_id, // Only run query when season is selected
   });
 
-  // Client-side filtering for season, course, and latest imports only
+  // Client-side filtering for course and latest imports only (season is now server-side)
   const entries = allEntries?.filter(entry => {
     // Only show entries from latest imports
     const raceId = entry.startlist_imports?.race_id;
     if (raceId && latestImportIds?.get(raceId) !== entry.startlist_id) {
       return false;
-    }
-
-    // Filter by season
-    if (filters.saison_id && filters.saison_id !== 'all') {
-      const saisonId = entry.startlist_imports?.courses?.phases?.saison_id;
-      if (saisonId !== filters.saison_id) return false;
     }
     
     // Filter by course name
