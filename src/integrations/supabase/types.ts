@@ -2847,6 +2847,7 @@ export type Database = {
           race_id: string
           raw_text: string | null
           route_image_url: string | null
+          saison_id: string
           startlisteur_note: string | null
         }
         Insert: {
@@ -2863,6 +2864,7 @@ export type Database = {
           race_id: string
           raw_text?: string | null
           route_image_url?: string | null
+          saison_id: string
           startlisteur_note?: string | null
         }
         Update: {
@@ -2879,6 +2881,7 @@ export type Database = {
           race_id?: string
           raw_text?: string | null
           route_image_url?: string | null
+          saison_id?: string
           startlisteur_note?: string | null
         }
         Relationships: [
@@ -2993,6 +2996,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_home_recent_results"
             referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "startlist_imports_saison_id_fkey"
+            columns: ["saison_id"]
+            isOneToOne: false
+            referencedRelation: "saisons"
+            referencedColumns: ["id"]
           },
         ]
       }
