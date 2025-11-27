@@ -1,7 +1,8 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -12,9 +13,10 @@ interface EquipesSaisonsFiltersProps {
     categorie: string;
   };
   onFiltersChange: (filters: any) => void;
+  onCreateClick: () => void;
 }
 
-export const EquipesSaisonsFilters = ({ filters, onFiltersChange }: EquipesSaisonsFiltersProps) => {
+export const EquipesSaisonsFilters = ({ filters, onFiltersChange, onCreateClick }: EquipesSaisonsFiltersProps) => {
   const { data: saisons } = useQuery({
     queryKey: ['saisons-for-filter'],
     queryFn: async () => {
@@ -29,6 +31,14 @@ export const EquipesSaisonsFilters = ({ filters, onFiltersChange }: EquipesSaiso
   return (
     <Card>
       <CardContent className="pt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-medium text-muted-foreground">Filtres</h3>
+          <Button onClick={onCreateClick} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Créer une équipe
+          </Button>
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Saison */}
           <Select

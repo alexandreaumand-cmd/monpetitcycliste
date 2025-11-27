@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Shield } from "lucide-react";
 import { EquipesSaisonsTable } from "./equipes/EquipesSaisonsTable";
 import { EquipesSaisonsFilters } from "./equipes/EquipesSaisonsFilters";
+import { CreateEquipeDialog } from "./equipes/CreateEquipeDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 
@@ -14,6 +15,7 @@ export const EquipesSaisonsManager = () => {
     search: "",
     categorie: "all",
   });
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -138,7 +140,17 @@ export const EquipesSaisonsManager = () => {
         subtitle="Éditer les noms et catégories des équipes"
       />
 
-      <EquipesSaisonsFilters filters={filters} onFiltersChange={setFilters} />
+      <EquipesSaisonsFilters 
+        filters={filters} 
+        onFiltersChange={setFilters}
+        onCreateClick={() => setShowCreateDialog(true)}
+      />
+
+      <CreateEquipeDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        defaultSaisonId={filters.saison_id}
+      />
 
       {filters.saison_id ? (
         <EquipesSaisonsTable
