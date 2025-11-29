@@ -619,13 +619,15 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         });
 
       // Save TTT config to course_stage_config for points calculation
-      if (isTTT && etapeNumeroValue && tttRidersCount) {
+      // Allow etapeNumeroValue to be null for one-day races
+      if (isTTT && tttRidersCount) {
         await supabase
           .from('course_stage_config')
           .upsert({
             course_id: course.course_id,
-            etape_numero: etapeNumeroValue,
-            ttt_riders_per_team: tttRidersCount
+            etape_numero: etapeNumeroValue, // null for one-day races
+            ttt_riders_per_team: tttRidersCount,
+            is_ttt: true
           }, {
             onConflict: 'course_id,etape_numero',
             ignoreDuplicates: false
@@ -1208,8 +1210,8 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               })()}
             </div>
             <div className="flex items-center gap-3">
-              {/* TTT Mode Checkbox - Only for Stages */}
-              {activeTab === "stages" && !isOneDay && (
+              {/* TTT Mode Checkbox - For Stages and One-Day races */}
+              {(activeTab === "stages" || (isOneDay && activeTab === "finals")) && (
                 <div className="flex items-center gap-2">
                   <Checkbox
                     id="ttt-checkbox"
@@ -1231,7 +1233,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               )}
               
               {/* TTT Riders Count Input */}
-              {isTTT && activeTab === "stages" && !isOneDay && (
+              {isTTT && (activeTab === "stages" || (isOneDay && activeTab === "finals")) && (
                 <div className="flex items-center gap-2">
                   <label className="text-sm text-muted-foreground">Nb coureurs:</label>
                   <Input
