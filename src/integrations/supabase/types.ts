@@ -935,24 +935,27 @@ export type Database = {
         Row: {
           course_id: string
           created_at: string | null
-          etape_numero: number
+          etape_numero: number | null
           id: string
+          is_ttt: boolean | null
           ttt_riders_per_team: number | null
           updated_at: string | null
         }
         Insert: {
           course_id: string
           created_at?: string | null
-          etape_numero: number
+          etape_numero?: number | null
           id?: string
+          is_ttt?: boolean | null
           ttt_riders_per_team?: number | null
           updated_at?: string | null
         }
         Update: {
           course_id?: string
           created_at?: string | null
-          etape_numero?: number
+          etape_numero?: number | null
           id?: string
+          is_ttt?: boolean | null
           ttt_riders_per_team?: number | null
           updated_at?: string | null
         }

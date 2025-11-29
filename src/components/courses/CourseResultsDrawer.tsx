@@ -243,8 +243,8 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
 
       const rows = data?.rows || [];
       
-      // Check if this is a TTT (has position_decimal)
-      const isTTT = selectedType === 'Etape' && rows.some((r: any) => r.position_decimal !== null);
+      // Check if this is a TTT (has position_decimal) - works for both Etape and General (one-day)
+      const isTTT = (selectedType === 'Etape' || selectedType === 'General') && rows.some((r: any) => r.position_decimal !== null);
       
     if (isTTT) {
       // Group results by team (using equipe_id_uci for accurate grouping)
