@@ -14,6 +14,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useMemo } from "react";
 
 type ManagerBreakdownProps = {
   managerId: string;
@@ -47,6 +48,37 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
     },
     enabled: !leagueLoading && !!leagueId,
   });
+
+  // Fetch TTT info for courses
+  const courseIds = useMemo(() => {
+    if (!breakdown) return [];
+    return [...new Set(breakdown.map((item: any) => item.course_id).filter(Boolean))];
+  }, [breakdown]);
+
+  const { data: tttData } = useQuery({
+    queryKey: ["ttt-status", courseIds],
+    queryFn: async () => {
+      if (courseIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("race_result_sets")
+        .select("course_id, type_classement, etape_numero, is_ttt")
+        .in("course_id", courseIds)
+        .eq("is_ttt", true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: courseIds.length > 0,
+  });
+
+  // Create TTT lookup map
+  const tttMap = useMemo(() => {
+    const map = new Map<string, boolean>();
+    tttData?.forEach((rrs: any) => {
+      const key = `${rrs.course_id}_${rrs.type_classement}_${rrs.etape_numero || 'null'}`;
+      map.set(key, true);
+    });
+    return map;
+  }, [tttData]);
 
   // Grouper les points par course
   const groupedByCourse = breakdown?.reduce((acc: any, item: any) => {
@@ -134,6 +166,8 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
                       {course.points.map((item: any, idx: number) => {
                         const typeLabel = item.type_classement;
                         const etapeInfo = item.etape_numero > 0 ? ` #${item.etape_numero}` : "";
+                        const tttKey = `${item.course_id}_${item.type_classement}_${item.etape_numero || 'null'}`;
+                        const isTtt = tttMap.get(tttKey) || false;
                         
                         return (
                           <div key={idx} className="flex items-center justify-between py-2 border-b last:border-0">
@@ -141,6 +175,11 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
                               <Badge variant="outline" className="text-xs shrink-0">
                                 {typeLabel}{etapeInfo}
                               </Badge>
+                              {isTtt && (
+                                <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 border-blue-300 shrink-0">
+                                  TTT
+                                </Badge>
+                              )}
                               <span className="text-sm">{item.coureur_nom}</span>
                             </div>
                             <Badge variant={item.points > 0 ? "secondary" : "outline"} className="text-xs">
