@@ -30,7 +30,7 @@ export const EquipesSaisonsManager = () => {
         .select(`
           *,
           saisons!inner(annee),
-          equipes!inner(code_court, nom_complet)
+          equipes!inner(nom_complet)
         `)
         .eq('saison_id', filters.saison_id);
 
