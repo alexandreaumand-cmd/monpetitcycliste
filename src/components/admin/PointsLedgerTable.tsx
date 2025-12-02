@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Pencil, Trash2, Download, Search, Filter } from "lucide-react";
+import { Pencil, Trash2, Download, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,6 +73,7 @@ export const PointsLedgerTable = () => {
   const [coureurSearch, setCoureurSearch] = useState("");
   const [minPoints, setMinPoints] = useState("");
   const [maxPoints, setMaxPoints] = useState("");
+  const [pointsSort, setPointsSort] = useState<"asc" | "desc" | null>(null);
   const [globalSearch, setGlobalSearch] = useState("");
 
   // Pagination
@@ -235,11 +236,19 @@ export const PointsLedgerTable = () => {
     },
   });
 
-  const paginatedData = useMemo(() => {
+  const sortedData = useMemo(() => {
     if (!rawData) return [];
+    if (!pointsSort) return rawData;
+    return [...rawData].sort((a, b) => 
+      pointsSort === "asc" ? a.points - b.points : b.points - a.points
+    );
+  }, [rawData, pointsSort]);
+
+  const paginatedData = useMemo(() => {
+    if (!sortedData) return [];
     const start = page * pageSize;
-    return rawData.slice(start, start + pageSize);
-  }, [rawData, page, pageSize]);
+    return sortedData.slice(start, start + pageSize);
+  }, [sortedData, page, pageSize]);
 
   const stats = useMemo(() => {
     if (!rawData) return { totalPoints: 0, totalEntries: 0, uniqueRiders: 0, uniqueCourses: 0 };
@@ -765,7 +774,21 @@ export const PointsLedgerTable = () => {
               <TableHead>Saison</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Étape</TableHead>
-              <TableHead className="text-right">Points</TableHead>
+              <TableHead className="text-right">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 -mr-2"
+                  onClick={() => setPointsSort(current => 
+                    current === null ? "desc" : current === "desc" ? "asc" : null
+                  )}
+                >
+                  Points
+                  {pointsSort === null && <ArrowUpDown className="ml-1 h-4 w-4" />}
+                  {pointsSort === "asc" && <ArrowUp className="ml-1 h-4 w-4" />}
+                  {pointsSort === "desc" && <ArrowDown className="ml-1 h-4 w-4" />}
+                </Button>
+              </TableHead>
               <TableHead>Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
