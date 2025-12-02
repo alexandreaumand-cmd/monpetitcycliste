@@ -28,7 +28,7 @@ export const EquipeSelect = ({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('equipes_saisons')
-        .select('equipe_id, nom_affiche, equipes!inner(code_court, nom_complet)')
+        .select('equipe_id, nom_affiche, trigramme, equipes!inner(code_court, nom_complet)')
         .eq('saison_id', saisonId)
         .order('nom_affiche');
       
@@ -59,9 +59,9 @@ export const EquipeSelect = ({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        {equipes?.map((eq) => (
+        {equipes?.map((eq: any) => (
           <SelectItem key={eq.equipe_id} value={eq.equipe_id}>
-            {eq.nom_affiche} ({eq.equipes.code_court})
+            {eq.nom_affiche} ({eq.trigramme || eq.equipes.code_court})
           </SelectItem>
         ))}
       </SelectContent>

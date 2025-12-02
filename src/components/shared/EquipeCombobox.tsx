@@ -22,6 +22,7 @@ type EquipeSaison = {
   id: string;
   equipe_id: string;
   nom_affiche: string;
+  trigramme?: string | null;
   equipe?: {
     code_court: string;
   };
@@ -53,6 +54,7 @@ export function EquipeCombobox({
           id,
           equipe_id,
           nom_affiche,
+          trigramme,
           equipe:equipe_id (
             code_court
           )
@@ -70,7 +72,8 @@ export function EquipeCombobox({
   const selectedEquipe = equipes.find((e) => e.id === value);
 
   const getDisplayValue = (equipe: EquipeSaison) => {
-    const code = equipe.equipe?.code_court || "";
+    // Priorité au trigramme de equipes_saisons, fallback sur code_court de equipes
+    const code = equipe.trigramme || equipe.equipe?.code_court || "";
     return code ? `${code} - ${equipe.nom_affiche}` : equipe.nom_affiche;
   };
 
