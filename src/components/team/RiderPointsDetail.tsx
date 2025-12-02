@@ -168,7 +168,14 @@ export const RiderPointsDetail = ({
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium">{row.type_classement}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{row.type_classement}</p>
+                                {row.is_ttt && (
+                                  <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded">
+                                    TTT
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-muted-foreground">
                                 {row.etape_numero && `Étape ${row.etape_numero} - `}
                                 {row.position && `Position ${row.position}`}

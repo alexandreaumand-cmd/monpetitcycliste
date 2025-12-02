@@ -114,6 +114,20 @@ Deno.serve(async (req) => {
     
     const coursesMap = new Map(coursesData?.map(c => [c.id, c]) || []);
 
+    // Fetch race_result_sets to determine TTT status
+    const { data: resultSetsData } = await supabase
+      .from('race_result_sets')
+      .select('course_id, type_classement, etape_numero, is_ttt')
+      .in('course_id', courseIds)
+      .eq('is_ttt', true);
+    
+    // Build TTT lookup map
+    const tttMap = new Map<string, boolean>();
+    resultSetsData?.forEach((rrs: any) => {
+      const key = `${rrs.course_id}_${rrs.type_classement}_${rrs.etape_numero || 'null'}`;
+      tttMap.set(key, true);
+    });
+
     // Fetch phases separately - consolidate phase IDs from points and courses
     const phaseIdsFromPoints = [...new Set(pointsData?.map(p => p.phase_id).filter(Boolean) || [])];
     const phaseIdsFromCourses = [...new Set(coursesData?.map(c => c.phase_id).filter(Boolean) || [])];
@@ -175,6 +189,7 @@ Deno.serve(async (req) => {
       const key = `${point.course_id}_${point.type_classement}_${point.etape_numero || 'null'}`;
       const position = resultsMap.get(key) || null;
       const course = coursesMap.get(point.course_id);
+      const isTtt = tttMap.get(key) || false;
       
       // Determine effective phase_id from point or course
       const effectivePhaseId = point.phase_id || course?.phase_id || null;
@@ -193,6 +208,7 @@ Deno.serve(async (req) => {
         position,
         points: point.points || 0,
         is_bonus: false,
+        is_ttt: isTtt,
       };
     }) || [];
 
@@ -211,6 +227,7 @@ Deno.serve(async (req) => {
         points: bonus.points || 0,
         date_classement: bonus.created_at,
         is_bonus: true,
+        is_ttt: false,
       };
     }) || [];
 
