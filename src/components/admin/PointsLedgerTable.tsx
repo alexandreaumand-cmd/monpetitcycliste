@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -122,18 +122,35 @@ export const PointsLedgerTable = () => {
     enabled: !!saisonFilter,
   });
 
-  // Fetch courses for filter
+  // Fetch courses for filter - filtré par saison/phase
   const { data: courses } = useQuery({
-    queryKey: ["courses-list"],
+    queryKey: ["courses-list", saisonFilter, phaseFilter, phases],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("courses")
-        .select("id, nom")
+        .select("id, nom, phase_id")
         .order("nom");
+      
+      // Si une phase spécifique est sélectionnée
+      if (phaseFilter) {
+        query = query.eq("phase_id", phaseFilter);
+      } 
+      // Sinon, si une saison est sélectionnée, filtrer par les phases de cette saison
+      else if (saisonFilter && phases && phases.length > 0) {
+        const phaseIds = phases.map(p => p.id);
+        query = query.in("phase_id", phaseIds);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
   });
+
+  // Réinitialiser courseFilter quand saison ou phase change
+  useEffect(() => {
+    setCourseFilter("");
+  }, [saisonFilter, phaseFilter]);
 
   // Types de classement disponibles
   const typesClassement = [
