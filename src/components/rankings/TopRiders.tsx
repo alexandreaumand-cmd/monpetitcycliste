@@ -60,6 +60,7 @@ type RiderPointRow = {
   commentaire?: string;
   points: number;
   is_bonus: boolean;
+  is_ttt?: boolean;
 };
 
 type RiderPointsTableData = {
@@ -705,13 +706,18 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                                         key={idx}
                                         className="flex items-center justify-between py-2 px-3 bg-muted/30 rounded text-sm"
                                       >
-                                        <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-2">
                                           {result.type_classement === 'GC' && <Award className="h-3 w-3 text-primary" />}
                                           {result.type_classement?.includes('Porteur') && <Mountain className="h-3 w-3 text-orange-500" />}
                                           <span className="text-muted-foreground">
                                             {result.type_classement || 'N/A'}
                                             {result.etape_numero ? ` ${result.etape_numero}` : ''}
                                           </span>
+                                          {result.is_ttt && (
+                                            <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 border-blue-300">
+                                              TTT
+                                            </Badge>
+                                          )}
                                           {result.position && (
                                             <Badge variant="outline" className="text-xs">
                                               {result.position}ème
