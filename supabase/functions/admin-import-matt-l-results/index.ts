@@ -816,7 +816,7 @@ Deno.serve(async (req) => {
         recomputeResults.push({
           course_id: courseId,
           success: false,
-          error: err.message
+          error: err instanceof Error ? err.message : 'Erreur inconnue'
         });
       }
     }
@@ -864,7 +864,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message || 'Erreur inconnue'
+        error: error instanceof Error ? error.message : 'Erreur inconnue'
       }),
       { 
         status: 400,
