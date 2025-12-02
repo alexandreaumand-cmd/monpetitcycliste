@@ -95,7 +95,7 @@ export const CoureursManager = () => {
       
       const { data, error } = await supabase
         .from('equipes_saisons')
-        .select('equipe_id, saison_id, nom_affiche, categorie, equipes!inner(code_court, nom_complet)')
+        .select('equipe_id, saison_id, nom_affiche, trigramme, categorie, equipes!inner(code_court, nom_complet)')
         .in('saison_id', filters.saison_ids)
         .order('nom_affiche');
       

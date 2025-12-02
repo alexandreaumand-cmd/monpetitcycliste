@@ -36,7 +36,7 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
 
       const { data, error } = await supabase
         .from('equipes_saisons')
-        .select('equipe_id, nom_affiche, equipes!inner(code_court)')
+        .select('equipe_id, nom_affiche, trigramme, equipes!inner(code_court)')
         .in('saison_id', filters.saison_ids)
         .order('nom_affiche');
       
@@ -60,9 +60,9 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
     label: `Saison ${s.annee}`,
   })) || [];
 
-  const equipeOptions: MultiSelectOption[] = equipes?.map(eq => ({
+  const equipeOptions: MultiSelectOption[] = equipes?.map((eq: any) => ({
     value: eq.equipe_id,
-    label: `${eq.nom_affiche} (${eq.equipes.code_court})`,
+    label: `${eq.nom_affiche} (${eq.trigramme || eq.equipes.code_court})`,
   })) || [];
 
   const coteOptions: MultiSelectOption[] = [
