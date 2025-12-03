@@ -321,7 +321,10 @@ export const ResultsEntryDrawer = ({
         throw new Error('Impossible de trouver la saison pour cette course');
       }
 
-      const dateClassement = classementType === 'Etape'
+      // For Etape and Porteur types (which have etape_numero), use stage date
+      // For other types (General, Points, Montagne), use course end date
+      const isStageBasedType = classementType === 'Etape' || classementType.startsWith('Porteur');
+      const dateClassement = isStageBasedType && etapeNumero > 0
         ? new Date(new Date(course.date_debut).getTime() + (etapeNumero - 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         : course.date_fin;
 
