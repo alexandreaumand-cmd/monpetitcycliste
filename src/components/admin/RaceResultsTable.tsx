@@ -125,24 +125,36 @@ export const RaceResultsTable = () => {
     },
   });
 
-  // Fetch courses for filter
+  // Fetch courses for filter - filtered by selected season
   const { data: courses } = useQuery({
     queryKey: ["courses-for-filter", saisonFilter],
     queryFn: async () => {
-      let query = supabase
-        .from("courses")
-        .select("id, nom, phase_id, phases(saison_id)")
-        .order("nom");
-      
       if (saisonFilter !== "all") {
-        query = query.eq("phases.saison_id", saisonFilter);
+        // Use inner join to filter courses by season
+        const { data, error } = await supabase
+          .from("courses")
+          .select("id, nom, phases!inner(saison_id)")
+          .eq("phases.saison_id", saisonFilter)
+          .order("nom");
+        if (error) throw error;
+        return data;
+      } else {
+        const { data, error } = await supabase
+          .from("courses")
+          .select("id, nom")
+          .order("nom");
+        if (error) throw error;
+        return data;
       }
-      
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
     },
   });
+
+  // Reset course filter when season changes
+  const handleSaisonChange = (value: string) => {
+    setSaisonFilter(value);
+    setCourseFilter("all");
+    setPage(0);
+  };
 
   // Fetch race results
   const { data: results, isLoading } = useQuery({
@@ -294,7 +306,7 @@ export const RaceResultsTable = () => {
           />
         </div>
 
-        <Select value={saisonFilter} onValueChange={setSaisonFilter}>
+        <Select value={saisonFilter} onValueChange={handleSaisonChange}>
           <SelectTrigger>
             <SelectValue placeholder="Saison" />
           </SelectTrigger>
