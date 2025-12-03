@@ -53,12 +53,10 @@ export function SuperAdminBonusPage() {
     enabled: !!selectedSaisonId,
   });
 
-  // Auto-select first phase when season changes
+  // Auto-select "all phases" when season changes
   useMemo(() => {
     if (phases && phases.length > 0 && !selectedPhaseId) {
-      // Prioritize active phase, otherwise first
-      const activePhase = phases.find(p => p.statut === 'active');
-      setSelectedPhaseId(activePhase?.id || phases[0].id);
+      setSelectedPhaseId("all");
     }
   }, [phases, selectedPhaseId]);
 
@@ -131,6 +129,7 @@ export function SuperAdminBonusPage() {
                     <SelectValue placeholder="Sélectionner une phase" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">Toutes les phases</SelectItem>
                     {phases?.map((phase) => (
                       <SelectItem key={phase.id} value={phase.id}>
                         Phase {phase.index_dans_saison} {phase.statut === 'active' && "🔵"}
@@ -165,7 +164,7 @@ export function SuperAdminBonusPage() {
         </Card>
 
         {/* Tabs */}
-        {selectedPhaseId ? (
+        {selectedSaisonId && selectedPhaseId ? (
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="overview" className="flex items-center gap-2">
@@ -188,7 +187,7 @@ export function SuperAdminBonusPage() {
 
             <TabsContent value="overview" className="space-y-6 mt-6">
               <BonusOverviewTab 
-                phaseId={selectedPhaseId}
+                phaseId={selectedPhaseId === "all" ? undefined : selectedPhaseId}
                 leagueId={selectedLeagueId === "all" ? undefined : selectedLeagueId}
                 saisonId={selectedSaisonId}
               />
@@ -196,14 +195,14 @@ export function SuperAdminBonusPage() {
 
             <TabsContent value="rider" className="space-y-6 mt-6">
               <RiderBonusTab 
-                phaseId={selectedPhaseId}
+                phaseId={selectedPhaseId === "all" ? undefined : selectedPhaseId}
                 saisonId={selectedSaisonId}
               />
             </TabsContent>
 
             <TabsContent value="manager" className="space-y-6 mt-6">
               <ManagerBonusTab 
-                phaseId={selectedPhaseId}
+                phaseId={selectedPhaseId === "all" ? undefined : selectedPhaseId}
                 leagueId={selectedLeagueId === "all" ? undefined : selectedLeagueId}
                 saisonId={selectedSaisonId}
               />
@@ -211,7 +210,7 @@ export function SuperAdminBonusPage() {
 
             <TabsContent value="import" className="space-y-6 mt-6">
               <BonusImportTab 
-                phaseId={selectedPhaseId}
+                phaseId={selectedPhaseId === "all" ? undefined : selectedPhaseId}
                 saisonId={selectedSaisonId}
               />
             </TabsContent>
