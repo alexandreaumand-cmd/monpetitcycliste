@@ -238,42 +238,66 @@ export const ResultsPageMobile = () => {
               return (
                 <MobileCard
                   key={race.course_id}
-                  title={race.nom}
+                  title={
+                    <span className="text-base font-bold leading-snug line-clamp-2">
+                      {race.nom}
+                    </span>
+                  }
                   subtitle={
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      <span>
+                    <div className="flex items-center gap-2 text-muted-foreground mt-1">
+                      <Calendar className="h-4 w-4" />
+                      <span className="text-sm">
                         {new Date(race.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                         {' → '}
                         {new Date(race.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                       </span>
                     </div>
                   }
-                  badge={<Badge variant="secondary" className="text-xs">{race.categorie}</Badge>}
+                  badge={
+                    <Badge variant="secondary" className="text-xs font-semibold px-2.5 py-1">
+                      {race.categorie}
+                    </Badge>
+                  }
                   onClick={() => openRaceDrawer(race)}
                 >
+                  {/* Winner section - more prominent */}
                   {raceWinner && (
-                    <div className="flex items-center gap-1.5 text-xs mt-2 py-1.5 px-2 bg-muted/50 rounded-lg">
-                      <Trophy className="h-3 w-3 text-yellow-500" />
-                      <span className="font-medium">{raceWinner.coureur_nom}</span>
+                    <div className="flex items-center gap-2 mt-3 py-2.5 px-3 bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-950/30 dark:to-amber-950/30 rounded-xl border border-yellow-200/50 dark:border-yellow-800/50">
+                      <Trophy className="h-5 w-5 text-yellow-500 flex-shrink-0" />
+                      <span className="font-semibold text-sm text-foreground">{raceWinner.coureur_nom}</span>
                     </div>
                   )}
                   
+                  {/* Manager podium - cleaner layout */}
                   {racePodium.length > 0 && (
-                    <div className="mt-2 pt-2 border-t space-y-1">
+                    <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
+                      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                        Podium Managers
+                      </div>
                       {racePodium.slice(0, 3).map((manager, idx) => (
-                        <div key={manager.manager_nom} className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1.5">
-                            {jerseys[manager.manager_id] ? (
-                              <img src={jerseys[manager.manager_id]} alt="Maillot" className="h-4 w-4 object-contain rounded" />
-                            ) : (
-                              <span className="text-sm">
-                                {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
-                              </span>
-                            )}
-                            <span className="font-medium truncate">{manager.manager_nom}</span>
+                        <div 
+                          key={manager.manager_nom} 
+                          className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted/30 transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 flex items-center justify-center rounded-full bg-muted/50">
+                              {jerseys[manager.manager_id] ? (
+                                <img 
+                                  src={jerseys[manager.manager_id]} 
+                                  alt="Maillot" 
+                                  className="h-5 w-5 object-contain" 
+                                />
+                              ) : (
+                                <span className="text-base">
+                                  {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
+                                </span>
+                              )}
+                            </div>
+                            <span className="font-medium text-sm truncate max-w-[140px]">
+                              {manager.manager_nom}
+                            </span>
                           </div>
-                          <span className="text-muted-foreground">
+                          <span className="text-sm font-semibold text-primary tabular-nums">
                             {manager.points} pts
                           </span>
                         </div>
