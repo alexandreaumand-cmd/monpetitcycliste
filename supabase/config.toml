@@ -83,3 +83,6 @@ verify_jwt = false
 
 [functions.admin-reset-season-results]
 verify_jwt = true
+
+[functions.compute-bonus-scoreurs]
+verify_jwt = true
