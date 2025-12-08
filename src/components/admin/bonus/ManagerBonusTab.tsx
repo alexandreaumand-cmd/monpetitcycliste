@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Loader2, Users, Target } from "lucide-react";
+import { Plus, Trash2, Loader2, Users, Target, Calculator } from "lucide-react";
 
 interface ManagerBonusTabProps {
   phaseId: string;
@@ -31,6 +31,7 @@ export const ManagerBonusTab = ({ phaseId, leagueId, saisonId }: ManagerBonusTab
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bonusToDelete, setBonusToDelete] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   // Form state
   const [bonusType, setBonusType] = useState<string>("");
@@ -38,6 +39,35 @@ export const ManagerBonusTab = ({ phaseId, leagueId, saisonId }: ManagerBonusTab
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>(leagueId || "");
   const [points, setPoints] = useState<string>("");
   const [commentaire, setCommentaire] = useState("");
+
+  const handleAutoCalculate = async () => {
+    if (!phaseId) {
+      toast.error("Veuillez sélectionner une phase");
+      return;
+    }
+
+    setIsCalculating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('compute-bonus-scoreurs', {
+        body: { phase_id: phaseId },
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(data.message || "Bonus scoreurs calculés");
+        queryClient.invalidateQueries({ queryKey: ["manager-bonuses", phaseId] });
+        queryClient.invalidateQueries({ queryKey: ["manager-bonus-points-overview", phaseId] });
+      } else {
+        toast.info(data?.message || "Aucun bonus à attribuer");
+      }
+    } catch (error: any) {
+      console.error("Error computing bonus:", error);
+      toast.error(error.message || "Erreur lors du calcul");
+    } finally {
+      setIsCalculating(false);
+    }
+  };
 
   // Fetch leagues for selection
   const { data: leagues } = useQuery({
@@ -224,6 +254,34 @@ export const ManagerBonusTab = ({ phaseId, leagueId, saisonId }: ManagerBonusTab
 
   return (
     <div className="space-y-6">
+      {/* Auto-calculate Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Calculator className="h-4 w-4" />
+            Calcul automatique du bonus Scoreurs
+          </CardTitle>
+          <CardDescription>
+            Attribue 200 pts au(x) manager(s) avec le plus de coureurs ayant marqué des points dans la phase.
+            En cas d'égalité, tous les managers ex-aequo reçoivent le bonus.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={handleAutoCalculate} 
+            disabled={isCalculating || !phaseId}
+            variant="secondary"
+          >
+            {isCalculating ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Calculator className="h-4 w-4 mr-2" />
+            )}
+            Calculer le bonus Scoreurs
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Add Button */}
       <div className="flex justify-end">
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
