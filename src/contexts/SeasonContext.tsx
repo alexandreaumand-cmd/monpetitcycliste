@@ -32,7 +32,18 @@ const SeasonContext = createContext<SeasonContextType | undefined>(undefined);
 export const useSeasonContext = () => {
   const context = useContext(SeasonContext);
   if (!context) {
-    throw new Error("useSeasonContext must be used within a SeasonProvider");
+    // During HMR or edge cases, return safe defaults instead of crashing
+    console.warn("[SeasonContext] Context not available - returning default values");
+    return {
+      selectedSeason: null,
+      setSelectedSeason: () => {},
+      seasons: [],
+      phases: [],
+      activePhase: null,
+      isLoading: true,
+      isLeagueSeason: false,
+      lockedLeagueSeason: null,
+    } as SeasonContextType;
   }
   return context;
 };
