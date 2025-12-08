@@ -15,6 +15,7 @@ interface ManagerBonusSummary {
   manager_id: string;
   manager_nom: string;
   league_name: string | null;
+  phase_index: number | null;
   first_win: number;
   coureur_bonuse: number;
   itt: number;
@@ -36,7 +37,9 @@ export const BonusOverviewTab = ({ phaseId, leagueId, saisonId }: BonusOverviewT
           points,
           manager_id,
           target_manager_id,
-          manager:managers!bonus_points_manager_id_fkey(id, nom)
+          phase_id,
+          manager:managers!bonus_points_manager_id_fkey(id, nom),
+          phase:phases!bonus_points_phase_id_fkey(id, index_dans_saison)
         `)
         .eq("phase_id", phaseId);
       if (error) throw error;
@@ -60,8 +63,10 @@ export const BonusOverviewTab = ({ phaseId, leagueId, saisonId }: BonusOverviewT
           bonus_first_win,
           bonus_itt,
           league_id,
+          phase_id,
           manager:managers!manager_bonus_points_manager_id_fkey(id, nom),
-          league:leagues!fk_manager_bonus_points_league(id, name)
+          league:leagues!fk_manager_bonus_points_league(id, name),
+          phase:phases!manager_bonus_points_phase_id_fkey(id, index_dans_saison)
         `)
         .eq("phase_id", phaseId);
 
@@ -86,6 +91,7 @@ export const BonusOverviewTab = ({ phaseId, leagueId, saisonId }: BonusOverviewT
       if (!managerId) return;
 
       const managerName = (bonus.manager as any)?.nom || 'Inconnu';
+      const phaseIndex = (bonus.phase as any)?.index_dans_saison || null;
       const key = managerId;
 
       if (!managerMap.has(key)) {
@@ -93,6 +99,7 @@ export const BonusOverviewTab = ({ phaseId, leagueId, saisonId }: BonusOverviewT
           manager_id: managerId,
           manager_nom: managerName,
           league_name: null,
+          phase_index: phaseIndex,
           first_win: 0,
           coureur_bonuse: 0,
           itt: 0,
@@ -103,6 +110,7 @@ export const BonusOverviewTab = ({ phaseId, leagueId, saisonId }: BonusOverviewT
       }
 
       const entry = managerMap.get(key)!;
+      if (!entry.phase_index && phaseIndex) entry.phase_index = phaseIndex;
       
       switch (bonus.bonus_type) {
         case 'first_win':
@@ -129,6 +137,7 @@ export const BonusOverviewTab = ({ phaseId, leagueId, saisonId }: BonusOverviewT
       const managerId = bonus.manager_id;
       const managerName = (bonus.manager as any)?.nom || 'Inconnu';
       const leagueName = (bonus.league as any)?.name || null;
+      const phaseIndex = (bonus.phase as any)?.index_dans_saison || null;
       const key = `${managerId}-${bonus.league_id || 'global'}`;
 
       if (!managerMap.has(key)) {
@@ -136,6 +145,7 @@ export const BonusOverviewTab = ({ phaseId, leagueId, saisonId }: BonusOverviewT
           manager_id: managerId,
           manager_nom: managerName,
           league_name: leagueName,
+          phase_index: phaseIndex,
           first_win: 0,
           coureur_bonuse: 0,
           itt: 0,
@@ -147,6 +157,7 @@ export const BonusOverviewTab = ({ phaseId, leagueId, saisonId }: BonusOverviewT
 
       const entry = managerMap.get(key)!;
       entry.league_name = leagueName;
+      if (!entry.phase_index && phaseIndex) entry.phase_index = phaseIndex;
       entry.ttt += bonus.bonus_ttt || 0;
       entry.scoreurs += bonus.bonus_scoreurs || 0;
       entry.coureur_bonuse += bonus.bonus_coureurs || 0;
@@ -247,6 +258,7 @@ export const BonusOverviewTab = ({ phaseId, leagueId, saisonId }: BonusOverviewT
                 <TableHeader>
                   <TableRow>
                     <TableHead>Manager</TableHead>
+                    <TableHead>Phase</TableHead>
                     <TableHead>Ligue</TableHead>
                     <TableHead className="text-center">First Win</TableHead>
                     <TableHead className="text-center">Coureur Bonusé</TableHead>
@@ -260,6 +272,13 @@ export const BonusOverviewTab = ({ phaseId, leagueId, saisonId }: BonusOverviewT
                   {summary.map((row, idx) => (
                     <TableRow key={`${row.manager_id}-${idx}`}>
                       <TableCell className="font-medium">{row.manager_nom}</TableCell>
+                      <TableCell>
+                        {row.phase_index ? (
+                          <Badge variant="outline">Phase {row.phase_index}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {row.league_name ? (
                           <Badge variant="outline">{row.league_name}</Badge>
