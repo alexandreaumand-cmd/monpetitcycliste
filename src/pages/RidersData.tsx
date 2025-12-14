@@ -32,6 +32,7 @@ interface RiderWithPoints {
   coureur_nom: string;
   equipe_trigramme: string | null;
   equipe_id: string;
+  equipe_categorie: string | null;
   prix_initial: number;
   saison_id: string;
   saison_annee: number;
@@ -50,6 +51,7 @@ export default function RidersData() {
   // Filters
   const [search, setSearch] = useState("");
   const [selectedEquipe, setSelectedEquipe] = useState<string>("all");
+  const [selectedCategorie, setSelectedCategorie] = useState<string>("all");
   const [selectedCote, setSelectedCote] = useState<string>("all");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
@@ -96,15 +98,15 @@ export default function RidersData() {
 
       if (coureursError) throw coureursError;
 
-      // Get equipes_saisons for trigrammes
+      // Get equipes_saisons for trigrammes and categories
       const { data: equipesData } = await supabase
         .from("equipes_saisons")
-        .select("id, equipe_id, trigramme, nom_affiche")
+        .select("id, equipe_id, trigramme, nom_affiche, categorie")
         .eq("saison_id", selectedSeason.id);
 
-      const equipeMap = new Map<string, string>();
+      const equipeMap = new Map<string, { nom: string; categorie: string | null }>();
       equipesData?.forEach(eq => {
-        equipeMap.set(eq.equipe_id, eq.nom_affiche);
+        equipeMap.set(eq.equipe_id, { nom: eq.nom_affiche, categorie: eq.categorie });
       });
 
       // Get points for these riders in this season
@@ -141,17 +143,21 @@ export default function RidersData() {
       });
 
       // Combine data
-      const riders: RiderWithPoints[] = (coureursData || []).map((cs: any) => ({
-        coureur_id: cs.coureur_id,
-        coureur_nom: cs.coureurs?.nom || cs.coureur_id,
-        equipe_trigramme: equipeMap.get(cs.equipe_id) || null,
-        equipe_id: cs.equipe_id,
-        prix_initial: cs.prix_initial,
-        saison_id: cs.saison_id,
-        saison_annee: selectedSeason.annee,
-        total_points: pointsMap.get(cs.coureur_id) || 0,
-        is_favorite: favoritesSet.has(cs.coureur_id),
-      }));
+      const riders: RiderWithPoints[] = (coureursData || []).map((cs: any) => {
+        const equipeInfo = equipeMap.get(cs.equipe_id);
+        return {
+          coureur_id: cs.coureur_id,
+          coureur_nom: cs.coureurs?.nom || cs.coureur_id,
+          equipe_trigramme: equipeInfo?.nom || null,
+          equipe_id: cs.equipe_id,
+          equipe_categorie: equipeInfo?.categorie || null,
+          prix_initial: cs.prix_initial,
+          saison_id: cs.saison_id,
+          saison_annee: selectedSeason.annee,
+          total_points: pointsMap.get(cs.coureur_id) || 0,
+          is_favorite: favoritesSet.has(cs.coureur_id),
+        };
+      });
 
       return riders.sort((a, b) => b.total_points - a.total_points);
     },
@@ -214,6 +220,13 @@ export default function RidersData() {
     return cotes;
   }, [ridersData]);
 
+  // Get unique categories for filter
+  const categorieOptions = useMemo(() => {
+    if (!ridersData) return [];
+    const categories = [...new Set(ridersData.map(r => r.equipe_categorie).filter(Boolean))] as string[];
+    return categories.sort();
+  }, [ridersData]);
+
   // Filter riders
   const filteredRiders = useMemo(() => {
     if (!ridersData) return [];
@@ -227,6 +240,10 @@ export default function RidersData() {
       if (selectedEquipe !== "all" && rider.equipe_id !== selectedEquipe) {
         return false;
       }
+      // Category filter
+      if (selectedCategorie !== "all" && rider.equipe_categorie !== selectedCategorie) {
+        return false;
+      }
       // Cote filter
       if (selectedCote !== "all" && rider.prix_initial !== parseFloat(selectedCote)) {
         return false;
@@ -237,7 +254,7 @@ export default function RidersData() {
       }
       return true;
     });
-  }, [ridersData, search, selectedEquipe, selectedCote, showFavoritesOnly]);
+  }, [ridersData, search, selectedEquipe, selectedCategorie, selectedCote, showFavoritesOnly]);
 
   if (!selectedSeason) {
     return (
@@ -307,7 +324,7 @@ export default function RidersData() {
       <div className="container mx-auto px-4 py-8">
 
       {/* Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
         <div className="space-y-1.5">
           <Label htmlFor="search">Rechercher</Label>
           <div className="relative">
@@ -333,6 +350,23 @@ export default function RidersData() {
               {teamsData?.map((team) => (
                 <SelectItem key={team.id} value={team.equipe_id}>
                   {team.nom_affiche}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Catégorie</Label>
+          <Select value={selectedCategorie} onValueChange={setSelectedCategorie}>
+            <SelectTrigger>
+              <SelectValue placeholder="Toutes" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes les catégories</SelectItem>
+              {categorieOptions.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -375,6 +409,7 @@ export default function RidersData() {
             onClick={() => {
               setSearch("");
               setSelectedEquipe("all");
+              setSelectedCategorie("all");
               setSelectedCote("all");
               setShowFavoritesOnly(false);
             }}
@@ -407,6 +442,7 @@ export default function RidersData() {
                 <TableHead className="w-12">Fav</TableHead>
                 <TableHead>Nom</TableHead>
                 <TableHead>Équipe</TableHead>
+                <TableHead>Catégorie</TableHead>
                 <TableHead className="text-right">Cote</TableHead>
                 <TableHead className="text-right">Points</TableHead>
               </TableRow>
@@ -414,7 +450,7 @@ export default function RidersData() {
             <TableBody>
               {filteredRiders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     Aucun coureur trouvé
                   </TableCell>
                 </TableRow>
@@ -443,6 +479,7 @@ export default function RidersData() {
                     </TableCell>
                     <TableCell className="font-medium">{rider.coureur_nom}</TableCell>
                     <TableCell>{rider.equipe_trigramme || "-"}</TableCell>
+                    <TableCell>{rider.equipe_categorie || "-"}</TableCell>
                     <TableCell className="text-right">{rider.prix_initial}</TableCell>
                     <TableCell className="text-right font-semibold">
                       {rider.total_points}
