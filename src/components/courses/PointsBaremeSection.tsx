@@ -61,7 +61,7 @@ export const PointsBaremeSection = ({ courseId, typeClassement }: PointsBaremeSe
       const { data, error } = await supabase
         .from("scoring_rules_saisons")
         .select("place, points")
-        .eq("categorie", courseData.categorie)
+        .ilike("categorie", courseData.categorie)
         .eq("type_classement", typeClassement as TypeClassement)
         .eq("saison_id", courseData.saisonId)
         .order("place", { ascending: true });
