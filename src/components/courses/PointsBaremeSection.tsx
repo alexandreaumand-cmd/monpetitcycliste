@@ -22,66 +22,48 @@ interface BaremeEntry {
 export const PointsBaremeSection = ({ courseId, typeClassement }: PointsBaremeSectionProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // First, fetch the course category
+  // Fetch the course category AND its season via phase
   const { data: courseData } = useQuery({
-    queryKey: ["course-category", courseId],
+    queryKey: ["course-category-season", courseId],
     queryFn: async () => {
       if (!courseId) return null;
       
-      // Use the view that provides normalized category
-      const { data, error } = await supabase
+      // Fetch course with phase to get season
+      const { data: courseInfo, error: courseError } = await supabase
+        .from("courses")
+        .select("categorie, phase_id, phases(saison_id)")
+        .eq("id", courseId)
+        .single();
+      
+      if (courseError || !courseInfo) return null;
+      
+      // Get normalized category from view
+      const { data: normData } = await supabase
         .from("courses_for_points_norm")
         .select("cat_canon, cat_raw")
         .eq("id", courseId)
         .single();
       
-      if (error) {
-        // Fallback to courses table
-        const { data: fallbackData } = await supabase
-          .from("courses")
-          .select("categorie")
-          .eq("id", courseId)
-          .single();
-        
-        return fallbackData ? {
-          categorie: fallbackData.categorie
-        } : null;
-      }
+      const categorie = normData?.cat_canon || normData?.cat_raw || courseInfo.categorie;
+      const saisonId = (courseInfo.phases as any)?.saison_id;
       
-      return { categorie: data?.cat_canon || data?.cat_raw };
+      return { categorie, saisonId };
     },
     enabled: !!courseId && isOpen,
   });
 
-  // Fetch all seasons to find the active one (current year)
-  const { data: activeSeason } = useQuery({
-    queryKey: ["active-season-for-bareme"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("saisons")
-        .select("id, annee")
-        .order("annee", { ascending: false })
-        .limit(10);
-      
-      const currentYear = new Date().getFullYear();
-      const found = data?.find(s => s.annee === currentYear) || data?.[0];
-      return found as { id: string; annee: number } | null;
-    },
-    enabled: isOpen,
-  });
-
-  // Then fetch the barème for that category and type
+  // Then fetch the barème for that category and type using course's season
   const { data: bareme, isLoading } = useQuery({
-    queryKey: ["scoring-rules", courseData?.categorie, typeClassement, activeSeason?.id],
+    queryKey: ["scoring-rules", courseData?.categorie, typeClassement, courseData?.saisonId],
     queryFn: async () => {
-      if (!courseData?.categorie || !activeSeason?.id) return [];
+      if (!courseData?.categorie || !courseData?.saisonId) return [];
       
       const { data, error } = await supabase
         .from("scoring_rules_saisons")
         .select("place, points")
         .eq("categorie", courseData.categorie)
         .eq("type_classement", typeClassement as TypeClassement)
-        .eq("saison_id", activeSeason.id)
+        .eq("saison_id", courseData.saisonId)
         .order("place", { ascending: true });
       
       if (error) {
@@ -101,7 +83,7 @@ export const PointsBaremeSection = ({ courseId, typeClassement }: PointsBaremeSe
       
       return unique;
     },
-    enabled: !!courseData?.categorie && !!activeSeason?.id && isOpen,
+    enabled: !!courseData?.categorie && !!courseData?.saisonId && isOpen,
   });
 
   const getTypeLabel = (type: string): string => {
