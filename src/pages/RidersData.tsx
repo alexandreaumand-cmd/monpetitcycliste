@@ -115,7 +115,8 @@ export default function RidersData() {
           points,
           phases!inner(saison_id)
         `)
-        .eq("phases.saison_id", selectedSeason.id);
+        .eq("phases.saison_id", selectedSeason.id)
+        .limit(50000);
 
       if (pointsError) throw pointsError;
 
@@ -385,7 +386,10 @@ export default function RidersData() {
 
       {/* Results count */}
       <div className="text-sm text-muted-foreground mb-4">
-        {filteredRiders.length} coureur{filteredRiders.length > 1 ? "s" : ""} trouvé{filteredRiders.length > 1 ? "s" : ""}
+        {filteredRiders.length} coureur{filteredRiders.length > 1 ? "s" : ""} affiché{filteredRiders.length > 1 ? "s" : ""}
+        {ridersData && filteredRiders.length !== ridersData.length && (
+          <span> sur {ridersData.length} total</span>
+        )}
       </div>
 
       {/* Table */}
