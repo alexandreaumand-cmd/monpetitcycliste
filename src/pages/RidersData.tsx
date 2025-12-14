@@ -164,10 +164,10 @@ export default function RidersData() {
       
       const { data, error } = await supabase
         .from("equipes_saisons")
-        .select("id, trigramme, nom_affiche")
+        .select("id, equipe_id, nom_affiche")
         .eq("saison_id", selectedSeason.id)
         .eq("actif", true)
-        .order("trigramme");
+        .order("nom_affiche");
       
       if (error) throw error;
       return data || [];
@@ -329,8 +329,8 @@ export default function RidersData() {
             <SelectContent>
               <SelectItem value="all">Toutes les équipes</SelectItem>
               {teamsData?.map((team) => (
-                <SelectItem key={team.id} value={team.id}>
-                  {team.trigramme || team.nom_affiche}
+                <SelectItem key={team.id} value={team.equipe_id}>
+                  {team.nom_affiche}
                 </SelectItem>
               ))}
             </SelectContent>
