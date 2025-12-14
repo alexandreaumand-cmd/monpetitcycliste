@@ -521,6 +521,7 @@ export const MyTeamMobile = () => {
             : 'Mon équipe'
         }
         phaseId={selectedPhaseId}
+        leagueId={leagueId}
       />
 
       {/* Rider Points Detail */}

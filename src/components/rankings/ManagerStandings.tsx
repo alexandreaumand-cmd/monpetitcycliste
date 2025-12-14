@@ -348,6 +348,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
           managerId={selectedBonusManager.id}
           managerName={selectedBonusManager.name}
           phaseId={phaseId || null}
+          leagueId={leagueId}
         />
       )}
     </Card>
