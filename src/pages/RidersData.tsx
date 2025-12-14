@@ -103,7 +103,7 @@ export default function RidersData() {
 
       const equipeMap = new Map<string, string>();
       equipesData?.forEach(eq => {
-        equipeMap.set(eq.equipe_id, eq.trigramme || eq.nom_affiche);
+        equipeMap.set(eq.equipe_id, eq.nom_affiche);
       });
 
       // Get points for these riders in this season
