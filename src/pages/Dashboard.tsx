@@ -35,6 +35,7 @@ const Dashboard = () => {
   
   const isHomePage = location.pathname === '/dashboard/home' || location.pathname === '/dashboard';
   const isSuperAdminRoute = location.pathname.includes('/dashboard/super-admin');
+  const isDataRoute = location.pathname === '/dashboard/data';
 
   useEffect(() => {
     checkUser();
@@ -145,7 +146,7 @@ const Dashboard = () => {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full">
-        {!isHomePage && !isSuperAdminRoute && (
+        {!isHomePage && !isSuperAdminRoute && !isDataRoute && (
           <AppSidebar 
             isAdmin={isAnyAdmin} 
             isSuperAdmin={isSuperAdmin}
@@ -154,7 +155,7 @@ const Dashboard = () => {
         )}
         <SidebarInset className="flex-1 flex flex-col">
           <AnnouncementBanner />
-          {!isHomePage && !isSuperAdminRoute && (
+          {!isHomePage && !isSuperAdminRoute && !isDataRoute && (
             <TopBar 
               onSignOut={handleSignOut}
               manager={manager}

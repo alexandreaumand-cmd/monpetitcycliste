@@ -21,10 +21,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Star, Search, Database, ArrowLeft } from "lucide-react";
+import { Star, Search, Database, ArrowLeft, LogOut } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import mpcLogo from "@/assets/mpc-logo.png";
 
 interface RiderWithPoints {
   coureur_id: string;
@@ -42,8 +43,6 @@ export default function RidersData() {
   const { selectedSeason, seasons, setSelectedSeason } = useSeasonContext();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const currentLeagueId = searchParams.get('leagueId');
   
   // Manager state
   const [managerId, setManagerId] = useState<string | null>(null);
@@ -70,8 +69,9 @@ export default function RidersData() {
     fetchManager();
   }, []);
 
-  const buildNavUrl = (path: string) => {
-    return currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
   };
 
   // Fetch riders with points for selected season
@@ -230,51 +230,70 @@ export default function RidersData() {
 
   if (!selectedSeason) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-3 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate(buildNavUrl('/dashboard/home'))}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <Database className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">Données Coureurs</h1>
-        </div>
-        <div className="text-center py-12 text-muted-foreground">
-          Veuillez sélectionner une saison
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
+          <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/home')}>
+                <ArrowLeft className="h-5 w-5 text-white" />
+              </Button>
+              <img src={mpcLogo} alt="Logo" className="h-8 w-8 md:h-10 md:w-10" />
+              <h1 className="font-montserrat font-bold text-white text-sm md:text-xl">Données Coureurs</h1>
+            </div>
+            <Button variant="ghost" size="icon" onClick={handleSignOut}>
+              <LogOut className="h-5 w-5 text-white" />
+            </Button>
+          </div>
+        </header>
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-12 text-muted-foreground">
+            Veuillez sélectionner une saison
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(buildNavUrl('/dashboard/home'))}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <Database className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">Données Coureurs</h1>
+      <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
+        <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/home')}>
+              <ArrowLeft className="h-5 w-5 text-white" />
+            </Button>
+            <img src={mpcLogo} alt="Logo" className="h-8 w-8 md:h-10 md:w-10" />
+            <h1 className="font-montserrat font-bold text-white text-sm md:text-xl">Données Coureurs</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <Select
+              value={selectedSeason?.id || ""}
+              onValueChange={(value) => {
+                const season = seasons.find(s => s.id === value);
+                if (season) setSelectedSeason(season);
+              }}
+            >
+              <SelectTrigger className="w-[100px] md:w-[140px] border-yellow-500/50 text-white">
+                <SelectValue placeholder="Saison" />
+              </SelectTrigger>
+              <SelectContent>
+                {seasons.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.annee}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="ghost" size="icon" onClick={handleSignOut}>
+              <LogOut className="h-5 w-5 text-white" />
+            </Button>
+          </div>
         </div>
-        <Select
-          value={selectedSeason?.id || ""}
-          onValueChange={(value) => {
-            const season = seasons.find(s => s.id === value);
-            if (season) setSelectedSeason(season);
-          }}
-        >
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Saison" />
-          </SelectTrigger>
-          <SelectContent>
-            {seasons.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                {s.annee}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-8">
 
       {/* Filters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
@@ -421,6 +440,7 @@ export default function RidersData() {
           </Table>
         </div>
       )}
+      </div>
     </div>
   );
 }

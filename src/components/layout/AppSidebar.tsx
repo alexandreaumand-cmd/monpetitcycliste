@@ -32,7 +32,6 @@ const navItems = [
   { label: 'Startlist', href: '/dashboard/startlist', icon: ListChecks },
   { label: 'Statistiques', href: '/dashboard/statistiques', icon: LineChart },
   { label: 'Enchères', href: '/dashboard/encheres', icon: Trophy },
-  { label: 'Data', href: '/dashboard/data', icon: Database },
 ];
 
 export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = false }: AppSidebarProps) {

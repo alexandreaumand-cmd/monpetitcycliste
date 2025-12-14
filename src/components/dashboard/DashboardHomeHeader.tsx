@@ -58,7 +58,7 @@ export function DashboardHomeHeader({
           <Button
             variant="outline"
             size={isMobile ? "icon" : "sm"}
-            onClick={() => navigate(buildNavUrl('/dashboard/data'))}
+            onClick={() => navigate('/dashboard/data')}
             className={cn(
               "border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10",
               !isMobile && "gap-2"
