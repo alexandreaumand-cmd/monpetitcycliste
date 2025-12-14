@@ -91,7 +91,8 @@ export default function RidersData() {
           coureurs!inner(nom)
         `)
         .eq("saison_id", selectedSeason.id)
-        .eq("actif", true);
+        .eq("actif", true)
+        .limit(5000);
 
       if (coureursError) throw coureursError;
 
