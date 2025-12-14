@@ -320,10 +320,10 @@ export default function RidersData() {
                 if (season) setSelectedSeason(season);
               }}
             >
-              <SelectTrigger className="w-[100px] md:w-[140px] border-yellow-500/50 text-white">
+              <SelectTrigger className="w-[100px] md:w-[140px] border-yellow-500/50 bg-black/80 text-white">
                 <SelectValue placeholder="Saison" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-popover">
                 {seasons.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.annee}
