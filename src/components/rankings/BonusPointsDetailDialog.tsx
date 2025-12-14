@@ -19,6 +19,7 @@ interface BonusPointsDetailDialogProps {
   managerId: string;
   managerName: string;
   phaseId: string | null;
+  leagueId: string | null;
 }
 
 export const BonusPointsDetailDialog = ({
@@ -27,6 +28,7 @@ export const BonusPointsDetailDialog = ({
   managerId,
   managerName,
   phaseId,
+  leagueId,
 }: BonusPointsDetailDialogProps) => {
   // État pour gérer l'expansion des sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -43,8 +45,10 @@ export const BonusPointsDetailDialog = ({
 
   // Fetch all bonus points
   const { data: allBonuses, isLoading } = useQuery({
-    queryKey: ["bonus-points-detail", managerId, phaseId],
+    queryKey: ["bonus-points-detail", managerId, phaseId, leagueId],
     queryFn: async () => {
+      if (!leagueId) return [];
+      
       let query = supabase
         .from("bonus_points")
         .select(`
@@ -57,6 +61,7 @@ export const BonusPointsDetailDialog = ({
           coureurs(id, nom),
           phases!inner(index_dans_saison, saison_id)
         `)
+        .eq("league_id", leagueId)
         .or(`manager_id.eq.${managerId},target_manager_id.eq.${managerId}`)
         .order("phase_id", { ascending: true });
 
@@ -96,8 +101,10 @@ export const BonusPointsDetailDialog = ({
 
   // Fetch manager bonus points
   const { data: managerBonuses } = useQuery({
-    queryKey: ["manager-bonus-points", managerId, phaseId],
+    queryKey: ["manager-bonus-points", managerId, phaseId, leagueId],
     queryFn: async () => {
+      if (!leagueId) return [];
+      
       let query = supabase
         .from("manager_bonus_points")
         .select(`
@@ -111,7 +118,8 @@ export const BonusPointsDetailDialog = ({
           commentaire,
           phases!inner(index_dans_saison)
         `)
-        .eq("manager_id", managerId);
+        .eq("manager_id", managerId)
+        .eq("league_id", leagueId);
       
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
