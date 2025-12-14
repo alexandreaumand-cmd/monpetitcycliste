@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Loader2, Users, Target, Calculator } from "lucide-react";
+import { Plus, Trash2, Loader2, Users, Target, Calculator, XCircle } from "lucide-react";
 
 interface ManagerBonusTabProps {
   phaseId: string;
@@ -32,6 +32,8 @@ export const ManagerBonusTab = ({ phaseId, leagueId, saisonId }: ManagerBonusTab
   const [bonusToDelete, setBonusToDelete] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   // Form state
   const [bonusType, setBonusType] = useState<string>("");
@@ -66,6 +68,32 @@ export const ManagerBonusTab = ({ phaseId, leagueId, saisonId }: ManagerBonusTab
       toast.error(error.message || "Erreur lors du calcul");
     } finally {
       setIsCalculating(false);
+    }
+  };
+
+  const handleCancelBonusScoreurs = async () => {
+    if (!phaseId) return;
+
+    setIsCancelling(true);
+    try {
+      // Delete all bonus_scoreurs entries for this phase
+      const { error } = await supabase
+        .from("manager_bonus_points")
+        .update({ bonus_scoreurs: 0 })
+        .eq("phase_id", phaseId)
+        .gt("bonus_scoreurs", 0);
+
+      if (error) throw error;
+
+      toast.success("Bonus scoreurs annulés pour cette phase");
+      queryClient.invalidateQueries({ queryKey: ["manager-bonuses", phaseId] });
+      queryClient.invalidateQueries({ queryKey: ["manager-bonus-points-overview", phaseId] });
+    } catch (error: any) {
+      console.error("Error cancelling bonus:", error);
+      toast.error(error.message || "Erreur lors de l'annulation");
+    } finally {
+      setIsCancelling(false);
+      setCancelDialogOpen(false);
     }
   };
 
@@ -266,7 +294,7 @@ export const ManagerBonusTab = ({ phaseId, leagueId, saisonId }: ManagerBonusTab
             En cas d'égalité, tous les managers ex-aequo reçoivent le bonus.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex gap-3">
           <Button 
             onClick={handleAutoCalculate} 
             disabled={isCalculating || !phaseId}
@@ -278,6 +306,19 @@ export const ManagerBonusTab = ({ phaseId, leagueId, saisonId }: ManagerBonusTab
               <Calculator className="h-4 w-4 mr-2" />
             )}
             Calculer le bonus Scoreurs
+          </Button>
+          <Button 
+            onClick={() => setCancelDialogOpen(true)} 
+            disabled={isCancelling || !phaseId}
+            variant="outline"
+            className="text-destructive hover:text-destructive"
+          >
+            {isCancelling ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <XCircle className="h-4 w-4 mr-2" />
+            )}
+            Annuler le bonus Scoreurs
           </Button>
         </CardContent>
       </Card>
@@ -478,6 +519,25 @@ export const ManagerBonusTab = ({ phaseId, leagueId, saisonId }: ManagerBonusTab
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
               Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cancel Scoreurs Confirmation */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Annuler le bonus Scoreurs</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir annuler tous les bonus Scoreurs de cette phase ? 
+              Cette action remettra à zéro les bonus scoreurs de tous les managers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancelBonusScoreurs} className="bg-destructive text-destructive-foreground">
+              Confirmer l'annulation
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
