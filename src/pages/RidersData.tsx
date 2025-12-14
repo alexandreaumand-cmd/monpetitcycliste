@@ -52,7 +52,7 @@ export default function RidersData() {
   const [search, setSearch] = useState("");
   const [selectedEquipe, setSelectedEquipe] = useState<string>("all");
   const [selectedCategorie, setSelectedCategorie] = useState<string>("all");
-  const [selectedCote, setSelectedCote] = useState<string>("all");
+  const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   // Get current manager
@@ -172,7 +172,7 @@ export default function RidersData() {
       
       const { data, error } = await supabase
         .from("equipes_saisons")
-        .select("id, equipe_id, nom_affiche")
+        .select("id, equipe_id, nom_affiche, categorie")
         .eq("saison_id", selectedSeason.id)
         .eq("actif", true)
         .order("nom_affiche");
@@ -182,6 +182,23 @@ export default function RidersData() {
     },
     enabled: !!selectedSeason?.id,
   });
+
+  // Filtered teams based on selected category
+  const filteredTeamsData = useMemo(() => {
+    if (!teamsData) return [];
+    if (selectedCategorie === "all") return teamsData;
+    return teamsData.filter(team => team.categorie === selectedCategorie);
+  }, [teamsData, selectedCategorie]);
+
+  // Reset team filter when category changes and team is no longer valid
+  useEffect(() => {
+    if (selectedEquipe !== "all" && filteredTeamsData.length > 0) {
+      const teamStillValid = filteredTeamsData.some(t => t.equipe_id === selectedEquipe);
+      if (!teamStillValid) {
+        setSelectedEquipe("all");
+      }
+    }
+  }, [selectedCategorie, filteredTeamsData, selectedEquipe]);
 
   // Toggle favorite mutation
   const toggleFavorite = useMutation({
@@ -244,8 +261,8 @@ export default function RidersData() {
       if (selectedCategorie !== "all" && rider.equipe_categorie !== selectedCategorie) {
         return false;
       }
-      // Cote filter
-      if (selectedCote !== "all" && rider.prix_initial !== parseFloat(selectedCote)) {
+      // Cote filter (multi-select)
+      if (selectedCotes.length > 0 && !selectedCotes.includes(rider.prix_initial)) {
         return false;
       }
       // Favorites filter
@@ -254,7 +271,7 @@ export default function RidersData() {
       }
       return true;
     });
-  }, [ridersData, search, selectedEquipe, selectedCategorie, selectedCote, showFavoritesOnly]);
+  }, [ridersData, search, selectedEquipe, selectedCategorie, selectedCotes, showFavoritesOnly]);
 
   if (!selectedSeason) {
     return (
@@ -347,7 +364,7 @@ export default function RidersData() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes les équipes</SelectItem>
-              {teamsData?.map((team) => (
+              {filteredTeamsData?.map((team) => (
                 <SelectItem key={team.id} value={team.equipe_id}>
                   {team.nom_affiche}
                 </SelectItem>
@@ -374,20 +391,27 @@ export default function RidersData() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Cote</Label>
-          <Select value={selectedCote} onValueChange={setSelectedCote}>
-            <SelectTrigger>
-              <SelectValue placeholder="Toutes" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes les cotes</SelectItem>
-              {coteOptions.map((cote) => (
-                <SelectItem key={cote} value={cote.toString()}>
+          <Label>Cotes {selectedCotes.length > 0 && `(${selectedCotes.length})`}</Label>
+          <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
+            {coteOptions.map((cote) => (
+              <div key={cote} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`cote-${cote}`}
+                  checked={selectedCotes.includes(cote)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedCotes([...selectedCotes, cote]);
+                    } else {
+                      setSelectedCotes(selectedCotes.filter(c => c !== cote));
+                    }
+                  }}
+                />
+                <Label htmlFor={`cote-${cote}`} className="cursor-pointer text-sm">
                   {cote}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                </Label>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="flex items-end pb-1">
@@ -410,7 +434,7 @@ export default function RidersData() {
               setSearch("");
               setSelectedEquipe("all");
               setSelectedCategorie("all");
-              setSelectedCote("all");
+              setSelectedCotes([]);
               setShowFavoritesOnly(false);
             }}
           >
