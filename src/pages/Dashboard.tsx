@@ -19,6 +19,7 @@ import Startlist from "./Startlist";
 import Statistics from "./Statistics";
 import AccountPage from "./AccountPage";
 import DashboardHome from "./DashboardHome";
+import RidersData from "./RidersData";
 import { LeagueDetailPage } from "./admin/LeagueDetailPage";
 import { SuperAdminPage } from "./SuperAdminPage";
 import { SuperAdminGuard } from "@/components/guards/SuperAdminGuard";
@@ -113,6 +114,7 @@ const Dashboard = () => {
           <Routes>
             <Route index element={<Navigate to="/dashboard/home" replace />} />
             <Route path="home" element={<DashboardHome onSignOut={handleSignOut} manager={manager} />} />
+            <Route path="data" element={<RidersData />} />
             <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
             <Route path="mon-equipe" element={<MyTeam />} />
             <Route path="courses" element={<UpcomingCourses />} />
@@ -166,6 +168,7 @@ const Dashboard = () => {
             <Routes>
               <Route index element={<Navigate to="/dashboard/home" replace />} />
               <Route path="home" element={<DashboardHome onSignOut={handleSignOut} manager={manager} />} />
+              <Route path="data" element={<RidersData />} />
               <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
               <Route path="mon-equipe" element={<MyTeam />} />
               <Route path="courses" element={<UpcomingCourses />} />
