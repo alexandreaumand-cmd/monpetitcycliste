@@ -3,6 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Trophy, TrendingUp, Mountain, Award, Star } from "lucide-react";
 import { isStageRace } from "@/lib/courseType";
+import { PointsBaremeSection } from "./PointsBaremeSection";
+
+type TypeClassement = "Etape" | "General" | "Points" | "Montagne" | "Jeune";
 
 interface CourseData {
   course_id: string;
@@ -31,7 +34,15 @@ interface CoursePointsDrawerProps {
 export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsDrawerProps) => {
   if (!course) return null;
 
-  const pointsData = [
+  const pointsData: {
+    label: string;
+    points: number;
+    icon: typeof TrendingUp;
+    color: string;
+    bgColor: string;
+    detail: string | null;
+    typeClassement: TypeClassement;
+  }[] = [
     {
       label: "Étapes",
       points: course.points_etapes || 0,
@@ -40,7 +51,8 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       bgColor: "bg-blue-100",
       detail: isStageRace(course.type_course)
         ? `${course.nb_etapes_estimees} × ${course.points_etapes_unitaire} pts`
-        : null
+        : null,
+      typeClassement: "Etape"
     },
     {
       label: "Classement Général",
@@ -48,7 +60,8 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       icon: Trophy,
       color: "text-yellow-600",
       bgColor: "bg-yellow-100",
-      detail: null
+      detail: null,
+      typeClassement: "General"
     },
     {
       label: "Points (maillot vert)",
@@ -56,7 +69,8 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       icon: Award,
       color: "text-green-600",
       bgColor: "bg-green-100",
-      detail: null
+      detail: null,
+      typeClassement: "Points"
     },
     {
       label: "Montagne",
@@ -64,7 +78,8 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       icon: Mountain,
       color: "text-red-600",
       bgColor: "bg-red-100",
-      detail: null
+      detail: null,
+      typeClassement: "Montagne"
     },
     {
       label: "Jeune",
@@ -72,7 +87,8 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       icon: Star,
       color: "text-purple-600",
       bgColor: "bg-purple-100",
-      detail: null
+      detail: null,
+      typeClassement: "Jeune"
     }
   ];
 
@@ -135,6 +151,10 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
                     </span>
                   </div>
                   <Progress value={percentage} className="h-2" />
+                  <PointsBaremeSection 
+                    courseId={course.course_id} 
+                    typeClassement={item.typeClassement} 
+                  />
                 </div>
               );
             })}
