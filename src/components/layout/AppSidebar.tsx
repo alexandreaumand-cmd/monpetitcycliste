@@ -1,4 +1,4 @@
-import { BarChart3, Users, Calendar, ListChecks, LineChart, Trophy, Settings, Home, Shield } from "lucide-react";
+import { BarChart3, Users, Calendar, ListChecks, LineChart, Trophy, Settings, Home, Shield, Database } from "lucide-react";
 import { NavLink, useSearchParams } from "react-router-dom";
 import {
   Sidebar,
@@ -32,6 +32,7 @@ const navItems = [
   { label: 'Startlist', href: '/dashboard/startlist', icon: ListChecks },
   { label: 'Statistiques', href: '/dashboard/statistiques', icon: LineChart },
   { label: 'Enchères', href: '/dashboard/encheres', icon: Trophy },
+  { label: 'Data', href: '/dashboard/data', icon: Database },
 ];
 
 export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = false }: AppSidebarProps) {
