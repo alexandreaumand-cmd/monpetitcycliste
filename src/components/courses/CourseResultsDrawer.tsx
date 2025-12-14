@@ -15,6 +15,7 @@ import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { StageJerseyBonuses } from "./StageJerseyBonuses";
+import { PointsBaremeSection } from "./PointsBaremeSection";
 import { useLeague } from "@/contexts/LeagueContext";
 
 // Jersey holders compact bar component
@@ -487,6 +488,9 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                   </SelectContent>
                 </Select>
 
+                {/* Barème des points */}
+                <PointsBaremeSection courseId={courseId} typeClassement={selectedType} />
+
                 {/* Results display */}
                 {loading ? (
                   <Skeleton className="h-96 w-full" />
@@ -710,6 +714,9 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                 {selectedEtape && (
                   <JerseyHoldersBar courseId={courseId} etapeNumero={selectedEtape} />
                 )}
+
+                {/* Barème des points */}
+                <PointsBaremeSection courseId={courseId} typeClassement="Etape" />
 
                 {/* Results display */}
                 {loading ? (
