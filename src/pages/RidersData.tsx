@@ -88,14 +88,23 @@ export default function RidersData() {
           prix_initial,
           saison_id,
           equipe_id,
-          coureurs!inner(nom),
-          equipes_saisons!inner(trigramme),
-          saisons!inner(annee)
+          coureurs!inner(nom)
         `)
         .eq("saison_id", selectedSeason.id)
         .eq("actif", true);
 
       if (coureursError) throw coureursError;
+
+      // Get equipes_saisons for trigrammes
+      const { data: equipesData } = await supabase
+        .from("equipes_saisons")
+        .select("id, equipe_id, trigramme, nom_affiche")
+        .eq("saison_id", selectedSeason.id);
+
+      const equipeMap = new Map<string, string>();
+      equipesData?.forEach(eq => {
+        equipeMap.set(eq.equipe_id, eq.trigramme || eq.nom_affiche);
+      });
 
       // Get points for these riders in this season
       const { data: pointsData, error: pointsError } = await supabase
@@ -133,11 +142,11 @@ export default function RidersData() {
       const riders: RiderWithPoints[] = (coureursData || []).map((cs: any) => ({
         coureur_id: cs.coureur_id,
         coureur_nom: cs.coureurs?.nom || cs.coureur_id,
-        equipe_trigramme: cs.equipes_saisons?.trigramme,
+        equipe_trigramme: equipeMap.get(cs.equipe_id) || null,
         equipe_id: cs.equipe_id,
         prix_initial: cs.prix_initial,
         saison_id: cs.saison_id,
-        saison_annee: cs.saisons?.annee,
+        saison_annee: selectedSeason.annee,
         total_points: pointsMap.get(cs.coureur_id) || 0,
         is_favorite: favoritesSet.has(cs.coureur_id),
       }));
