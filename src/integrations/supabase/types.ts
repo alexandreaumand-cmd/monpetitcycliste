@@ -4617,25 +4617,6 @@ export type Database = {
       }
       results_courses_with_entries:
         | {
-            Args: {
-              p_league_id?: string
-              p_limit?: number
-              p_offset?: number
-              p_phase_id?: string
-              p_saison_id?: string
-              p_search?: string
-            }
-            Returns: {
-              categorie: string
-              course_id: string
-              date_debut: string
-              date_fin: string
-              last_result_at: string
-              nom: string
-              types: string[]
-            }[]
-          }
-        | {
             Args: { p_limit?: number; p_offset?: number; p_search?: string }
             Returns: {
               categorie: string
@@ -4652,6 +4633,25 @@ export type Database = {
               p_limit?: number
               p_offset?: number
               p_phase_id?: string
+              p_search?: string
+            }
+            Returns: {
+              categorie: string
+              course_id: string
+              date_debut: string
+              date_fin: string
+              last_result_at: string
+              nom: string
+              types: string[]
+            }[]
+          }
+        | {
+            Args: {
+              p_league_id?: string
+              p_limit?: number
+              p_offset?: number
+              p_phase_id?: string
+              p_saison_id?: string
               p_search?: string
             }
             Returns: {
