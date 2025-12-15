@@ -92,15 +92,21 @@ export default function RidersData() {
 
       if (coureursError) throw coureursError;
 
-      // Get rider names separately
+      // Get rider names separately (in batches to avoid query size limits)
       const coureurIds = coureursData?.map(cs => cs.coureur_id) || [];
-      const { data: coureursNoms } = await supabase
-        .from("coureurs")
-        .select("id, nom")
-        .in("id", coureurIds);
-
       const nomsMap = new Map<string, string>();
-      coureursNoms?.forEach(c => nomsMap.set(c.id, c.nom));
+      
+      // Process in batches of 500 to avoid Supabase limitations
+      const batchSize = 500;
+      for (let i = 0; i < coureurIds.length; i += batchSize) {
+        const batch = coureurIds.slice(i, i + batchSize);
+        const { data: coureursNoms } = await supabase
+          .from("coureurs")
+          .select("id, nom")
+          .in("id", batch);
+        
+        coureursNoms?.forEach(c => nomsMap.set(c.id, c.nom));
+      }
 
       // Get equipes_saisons for trigrammes and categories
       const { data: equipesData } = await supabase
