@@ -122,6 +122,7 @@ export default function RidersData() {
         .select("coureur_id, prix_initial, saison_id, equipe_id")
         .eq("saison_id", localSelectedSeason.id)
         .eq("actif", true)
+        .order("coureur_id", { ascending: true })
         .limit(10000);
 
       if (coureursError) throw coureursError;
@@ -137,7 +138,8 @@ export default function RidersData() {
         const { data: coureursNoms } = await supabase
           .from("coureurs")
           .select("id, nom")
-          .in("id", batch);
+          .in("id", batch)
+          .limit(500);
         
         coureursNoms?.forEach(c => nomsMap.set(c.id, c.nom));
       }
