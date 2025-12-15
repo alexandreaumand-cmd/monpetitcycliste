@@ -20,7 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Star, Search, Database, ArrowLeft, LogOut, Calendar, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Star, Search, Database, ArrowLeft, LogOut, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
@@ -596,19 +597,20 @@ export default function RidersData() {
                 <TableHead>Nom</TableHead>
                 <TableHead>Équipe</TableHead>
                 <TableHead>Catégorie</TableHead>
+                <TableHead className="w-20">Catégorie</TableHead>
                 <TableHead 
-                  className="text-right cursor-pointer hover:bg-muted/50 select-none"
+                  className="w-16 text-right cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('cote')}
                 >
                   Cote {getSortIcon('cote')}
                 </TableHead>
                 <TableHead 
-                  className="text-right cursor-pointer hover:bg-muted/50 select-none"
+                  className="w-20 text-right cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('points')}
                 >
                   Points {getSortIcon('points')}
                 </TableHead>
-                <TableHead>Programme</TableHead>
+                <TableHead className="min-w-[300px]">Programme</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -645,42 +647,29 @@ export default function RidersData() {
                       </TableCell>
                       <TableCell className="font-medium">{rider.coureur_nom}</TableCell>
                       <TableCell>{rider.equipe_trigramme || "-"}</TableCell>
-                      <TableCell>{rider.equipe_categorie || "-"}</TableCell>
-                      <TableCell className="text-right">{rider.prix_initial}</TableCell>
-                      <TableCell className="text-right font-semibold">
+                      <TableCell className="w-20">{rider.equipe_categorie || "-"}</TableCell>
+                      <TableCell className="w-16 text-right">{rider.prix_initial}</TableCell>
+                      <TableCell className="w-20 text-right font-semibold">
                         {rider.total_points}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="min-w-[300px]">
                         {upcomingRaces.length === 0 ? (
                           <span className="text-muted-foreground text-sm">-</span>
                         ) : (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center gap-1.5 cursor-help">
-                                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm">
-                                    {upcomingRaces.length} course{upcomingRaces.length > 1 ? "s" : ""}
-                                  </span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent side="left" className="max-w-xs">
-                                <div className="space-y-1">
-                                  {upcomingRaces.map((race) => (
-                                    <div key={race.race_id} className="flex items-center gap-2 text-sm">
-                                      <span className={race.is_confirmed ? "text-green-500" : "text-yellow-500"}>
-                                        {race.is_confirmed ? "✓" : "?"}
-                                      </span>
-                                      <span>{race.race_nom}</span>
-                                      <span className="text-muted-foreground text-xs">
-                                        ({new Date(race.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })})
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <div className="flex flex-wrap gap-1">
+                            {upcomingRaces.map((race) => (
+                              <Badge 
+                                key={race.race_id} 
+                                variant="outline"
+                                className={`text-xs ${race.is_confirmed ? "border-green-500/50" : "border-yellow-500/50"}`}
+                              >
+                                <span className={race.is_confirmed ? "text-green-500" : "text-yellow-500"}>
+                                  {race.is_confirmed ? "✓" : "?"}
+                                </span>
+                                <span className="ml-1 truncate max-w-[120px]">{race.race_nom}</span>
+                              </Badge>
+                            ))}
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>
