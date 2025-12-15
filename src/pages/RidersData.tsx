@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useSeasonContext } from "@/contexts/SeasonContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -41,9 +40,11 @@ interface RiderWithPoints {
 }
 
 export default function RidersData() {
-  const { selectedSeason, seasons, setSelectedSeason } = useSeasonContext();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  
+  // Local season state (autonomous from global context)
+  const [localSelectedSeason, setLocalSelectedSeason] = useState<{ id: string; annee: number } | null>(null);
   
   // Manager state
   const [managerId, setManagerId] = useState<string | null>(null);
@@ -54,6 +55,26 @@ export default function RidersData() {
   const [selectedCategorie, setSelectedCategorie] = useState<string>("all");
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  // Fetch all seasons directly (autonomous from context)
+  const { data: allSeasons } = useQuery({
+    queryKey: ["all-seasons-data-page"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("saisons")
+        .select("id, annee")
+        .order("annee", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Initialize local season with the most recent one
+  useEffect(() => {
+    if (allSeasons && allSeasons.length > 0 && !localSelectedSeason) {
+      setLocalSelectedSeason(allSeasons[0]);
+    }
+  }, [allSeasons, localSelectedSeason]);
 
   // Get current manager
   useEffect(() => {
@@ -78,15 +99,15 @@ export default function RidersData() {
 
   // Fetch riders with points for selected season
   const { data: ridersData, isLoading: ridersLoading } = useQuery({
-    queryKey: ["riders-data", selectedSeason?.id, managerId],
+    queryKey: ["riders-data", localSelectedSeason?.id, managerId],
     queryFn: async () => {
-      if (!selectedSeason?.id) return [];
+      if (!localSelectedSeason?.id) return [];
 
       // Get riders for the season (without inner join to avoid 1000 row limit)
       const { data: coureursData, error: coureursError } = await supabase
         .from("coureurs_saisons")
         .select("coureur_id, prix_initial, saison_id, equipe_id")
-        .eq("saison_id", selectedSeason.id)
+        .eq("saison_id", localSelectedSeason.id)
         .eq("actif", true)
         .limit(10000);
 
@@ -112,7 +133,7 @@ export default function RidersData() {
       const { data: equipesData } = await supabase
         .from("equipes_saisons")
         .select("id, equipe_id, trigramme, nom_affiche, categorie")
-        .eq("saison_id", selectedSeason.id);
+        .eq("saison_id", localSelectedSeason.id);
 
       const equipeMap = new Map<string, { nom: string; categorie: string | null }>();
       equipesData?.forEach(eq => {
@@ -123,7 +144,7 @@ export default function RidersData() {
       const { data: phasesData } = await supabase
         .from("phases")
         .select("id")
-        .eq("saison_id", selectedSeason.id);
+        .eq("saison_id", localSelectedSeason.id);
       
       const phaseIds = phasesData?.map(p => p.id) || [];
       
@@ -167,7 +188,7 @@ export default function RidersData() {
           equipe_categorie: equipeInfo?.categorie || null,
           prix_initial: cs.prix_initial,
           saison_id: cs.saison_id,
-          saison_annee: selectedSeason.annee,
+          saison_annee: localSelectedSeason.annee,
           total_points: pointsMap.get(cs.coureur_id) || 0,
           is_favorite: favoritesSet.has(cs.coureur_id),
         };
@@ -175,26 +196,26 @@ export default function RidersData() {
 
       return riders.sort((a, b) => b.total_points - a.total_points);
     },
-    enabled: !!selectedSeason?.id,
+    enabled: !!localSelectedSeason?.id,
   });
 
   // Fetch teams for filter
   const { data: teamsData } = useQuery({
-    queryKey: ["teams-filter", selectedSeason?.id],
+    queryKey: ["teams-filter", localSelectedSeason?.id],
     queryFn: async () => {
-      if (!selectedSeason?.id) return [];
+      if (!localSelectedSeason?.id) return [];
       
       const { data, error } = await supabase
         .from("equipes_saisons")
         .select("id, equipe_id, nom_affiche, categorie")
-        .eq("saison_id", selectedSeason.id)
+        .eq("saison_id", localSelectedSeason.id)
         .eq("actif", true)
         .order("nom_affiche");
       
       if (error) throw error;
       return data || [];
     },
-    enabled: !!selectedSeason?.id,
+    enabled: !!localSelectedSeason?.id,
   });
 
   // Filtered teams based on selected category
@@ -287,7 +308,7 @@ export default function RidersData() {
     });
   }, [ridersData, search, selectedEquipe, selectedCategorie, selectedCotes, showFavoritesOnly]);
 
-  if (!selectedSeason) {
+  if (!localSelectedSeason) {
     return (
       <div className="min-h-screen bg-background">
         {/* Header */}
@@ -307,7 +328,7 @@ export default function RidersData() {
         </header>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-12 text-muted-foreground">
-            Veuillez sélectionner une saison
+            Chargement des saisons...
           </div>
         </div>
       </div>
@@ -328,17 +349,17 @@ export default function RidersData() {
           </div>
           <div className="flex items-center gap-2">
             <Select
-              value={selectedSeason?.id || ""}
+              value={localSelectedSeason?.id || ""}
               onValueChange={(value) => {
-                const season = seasons.find(s => s.id === value);
-                if (season) setSelectedSeason(season);
+                const season = allSeasons?.find(s => s.id === value);
+                if (season) setLocalSelectedSeason(season);
               }}
             >
               <SelectTrigger className="w-[100px] md:w-[140px] border-yellow-500/50 bg-black/80 text-white">
                 <SelectValue placeholder="Saison" />
               </SelectTrigger>
               <SelectContent className="bg-popover">
-                {seasons.map((s) => (
+                {allSeasons?.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.annee}
                   </SelectItem>
