@@ -27,11 +27,11 @@ export const MatchRiderDialog = ({ entry, saisonId, onClose, onSuccess }: MatchR
       if (searchQuery.length < 2) return [];
 
       const { data, error } = await supabase
-        .from('coureurs')
-        .select('*, coureurs_saisons!inner(equipe_id, equipes_saisons!inner(nom_affiche))')
-        .eq('coureurs_saisons.saison_id', saisonId)
-        .ilike('nom', `%${searchQuery}%`)
-        .limit(20);
+        .rpc('search_riders_for_matching', {
+          p_saison_id: saisonId,
+          p_query: searchQuery,
+          p_limit: 20
+        });
 
       if (error) throw error;
       return data || [];
@@ -114,15 +114,15 @@ export const MatchRiderDialog = ({ entry, saisonId, onClose, onSuccess }: MatchR
               <div className="divide-y">
                 {riders.map((rider: any) => (
                   <button
-                    key={rider.id}
+                    key={rider.coureur_id}
                     className={`w-full text-left p-3 hover:bg-accent transition ${
-                      selectedRiderId === rider.id ? 'bg-accent' : ''
+                      selectedRiderId === rider.coureur_id ? 'bg-accent' : ''
                     }`}
-                    onClick={() => setSelectedRiderId(rider.id)}
+                    onClick={() => setSelectedRiderId(rider.coureur_id)}
                   >
-                    <div className="font-medium">{rider.nom}</div>
+                    <div className="font-medium">{rider.coureur_nom}</div>
                     <div className="text-sm text-muted-foreground">
-                      {rider.coureurs_saisons?.[0]?.equipes_saisons?.nom_affiche || rider.equipe || 'N/A'}
+                      {rider.equipe_nom || 'N/A'}
                     </div>
                   </button>
                 ))}
