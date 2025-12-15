@@ -110,67 +110,97 @@ export default function RidersData() {
     navigate("/");
   };
 
+  // Pagination helper (fetches all rows without an overall hard limit)
+  const fetchAllPages = async <T,>(
+    fetchPage: (from: number, to: number) => any,
+    pageSize = 1000
+  ): Promise<T[]> => {
+    const out: T[] = [];
+    let from = 0;
+
+    // Safety stop to avoid infinite loops in case of unexpected API behavior
+    const maxPages = 200;
+    for (let page = 0; page < maxPages; page++) {
+      const to = from + pageSize - 1;
+      const res = (await fetchPage(from, to)) as { data: T[] | null; error: any };
+      const { data, error } = res;
+      if (error) throw error;
+      const rows = (data || []) as T[];
+      out.push(...rows);
+      if (rows.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return out;
+  };
+
   // Fetch riders with points for selected season
   const { data: ridersData, isLoading: ridersLoading } = useQuery({
     queryKey: ["riders-data", localSelectedSeason?.id, managerId],
     queryFn: async () => {
       if (!localSelectedSeason?.id) return [];
 
-      // Get riders for the season (without inner join to avoid 1000 row limit)
-      const { data: coureursData, error: coureursError } = await supabase
-        .from("coureurs_saisons")
-        .select("coureur_id, prix_initial, saison_id, equipe_id")
-        .eq("saison_id", localSelectedSeason.id)
-        .eq("actif", true)
-        .order("coureur_id", { ascending: true })
-        .limit(10000);
-
-      if (coureursError) throw coureursError;
+      // Get riders for the season (paginate to avoid implicit row limits)
+      const coureursData = await fetchAllPages<any>((from, to) =>
+        supabase
+          .from("coureurs_saisons")
+          .select("coureur_id, prix_initial, saison_id, equipe_id")
+          .eq("saison_id", localSelectedSeason.id)
+          .eq("actif", true)
+          .order("coureur_id", { ascending: true })
+          .range(from, to)
+      );
 
       // Get rider names separately (in batches to avoid query size limits)
-      const coureurIds = coureursData?.map(cs => cs.coureur_id) || [];
+      const coureurIds = coureursData?.map((cs: any) => cs.coureur_id) || [];
       const nomsMap = new Map<string, string>();
-      
+
       // Process in batches of 500 to avoid Supabase limitations
       const batchSize = 500;
       for (let i = 0; i < coureurIds.length; i += batchSize) {
         const batch = coureurIds.slice(i, i + batchSize);
-        const { data: coureursNoms } = await supabase
+        const { data: coureursNoms, error: nomsError } = await supabase
           .from("coureurs")
           .select("id, nom")
-          .in("id", batch)
-          .limit(500);
-        
-        coureursNoms?.forEach(c => nomsMap.set(c.id, c.nom));
+          .in("id", batch);
+        if (nomsError) throw nomsError;
+
+        coureursNoms?.forEach((c) => nomsMap.set(c.id, c.nom));
       }
 
       // Get equipes_saisons for trigrammes and categories
-      const { data: equipesData } = await supabase
+      const { data: equipesData, error: equipesError } = await supabase
         .from("equipes_saisons")
         .select("id, equipe_id, trigramme, nom_affiche, categorie")
         .eq("saison_id", localSelectedSeason.id);
 
+      if (equipesError) throw equipesError;
+
       const equipeMap = new Map<string, { nom: string; categorie: string | null }>();
-      equipesData?.forEach(eq => {
+      equipesData?.forEach((eq) => {
         equipeMap.set(eq.equipe_id, { nom: eq.nom_affiche, categorie: eq.categorie });
       });
 
       // Get phases for this season first
-      const { data: phasesData } = await supabase
+      const { data: phasesData, error: phasesError } = await supabase
         .from("phases")
         .select("id")
         .eq("saison_id", localSelectedSeason.id);
-      
-      const phaseIds = phasesData?.map(p => p.id) || [];
-      
-      // Get points for these riders in this season
-      const { data: pointsData, error: pointsError } = await supabase
-        .from("points_ledger")
-        .select("coureur_id, points")
-        .in("phase_id", phaseIds)
-        .limit(50000);
 
-      if (pointsError) throw pointsError;
+      if (phasesError) throw phasesError;
+
+      const phaseIds = phasesData?.map((p) => p.id) || [];
+
+      // Get points for these riders in this season (paginate)
+      const pointsData = phaseIds.length
+        ? await fetchAllPages<any>((from, to) =>
+            supabase
+              .from("points_ledger")
+              .select("coureur_id, points")
+              .in("phase_id", phaseIds)
+              .range(from, to)
+          )
+        : [];
 
       // Get user's favorites
       let favoritesSet = new Set<string>();
@@ -222,31 +252,30 @@ export default function RidersData() {
 
       const today = new Date().toISOString().split('T')[0];
 
-      // Get startlist entries with upcoming races for this season
-      const { data: entries, error } = await supabase
-        .from("startlist_entries")
-        .select(`
-          coureur_id,
-          startlist_imports!inner(
-            pcs_validated,
-            created_at,
-            saison_id,
-            courses!inner(
-              id,
-              nom,
-              date_debut
+      // Get startlist entries with upcoming races for this season (paginate)
+      const entries = await fetchAllPages<any>((from, to) =>
+        supabase
+          .from("startlist_entries")
+          .select(
+            `
+            coureur_id,
+            startlist_imports!inner(
+              pcs_validated,
+              created_at,
+              saison_id,
+              courses!inner(
+                id,
+                nom,
+                date_debut
+              )
             )
+          `
           )
-        `)
-        .eq("startlist_imports.saison_id", localSelectedSeason.id)
-        .gte("startlist_imports.courses.date_debut", today)
-        .not("coureur_id", "is", null)
-        .limit(20000);
-
-      if (error) {
-        console.error("Error fetching program data:", error);
-        return new Map<string, UpcomingRace[]>();
-      }
+          .eq("startlist_imports.saison_id", localSelectedSeason.id)
+          .gte("startlist_imports.courses.date_debut", today)
+          .not("coureur_id", "is", null)
+          .range(from, to)
+      );
 
       // Build a map of coureur_id -> races (keeping only latest import per race)
       const riderRacesMap = new Map<string, Map<string, { race: UpcomingRace; created_at: string }>>();
