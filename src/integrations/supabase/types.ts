@@ -4860,6 +4860,14 @@ export type Database = {
           total_purchase_price: number
         }[]
       }
+      search_riders_for_matching: {
+        Args: { p_limit?: number; p_query?: string; p_saison_id: string }
+        Returns: {
+          coureur_id: string
+          coureur_nom: string
+          equipe_nom: string
+        }[]
+      }
       search_riders_for_results: {
         Args: { p_phase_id: string; p_query?: string }
         Returns: {
