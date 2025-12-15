@@ -68,6 +68,7 @@ export default function RidersData() {
   const [selectedCategorie, setSelectedCategorie] = useState<string>("all");
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [programFilter, setProgramFilter] = useState<"all" | "with" | "without">("all");
   
   // Sorting state
   const [sortColumn, setSortColumn] = useState<'cote' | 'points' | null>(null);
@@ -341,9 +342,15 @@ export default function RidersData() {
       if (showFavoritesOnly && !rider.is_favorite) {
         return false;
       }
+      // Program filter
+      if (programFilter !== "all") {
+        const hasProgram = programData?.has(rider.coureur_id) && (programData.get(rider.coureur_id)?.length || 0) > 0;
+        if (programFilter === "with" && !hasProgram) return false;
+        if (programFilter === "without" && hasProgram) return false;
+      }
       return true;
     });
-  }, [ridersData, search, selectedEquipe, selectedCategorie, selectedCotes, showFavoritesOnly]);
+  }, [ridersData, search, selectedEquipe, selectedCategorie, selectedCotes, showFavoritesOnly, programFilter, programData]);
 
   // Sort handlers
   const handleSort = (column: 'cote' | 'points') => {
@@ -521,6 +528,20 @@ export default function RidersData() {
           </div>
         </div>
 
+        <div className="space-y-1.5">
+          <Label>Programme</Label>
+          <Select value={programFilter} onValueChange={(v) => setProgramFilter(v as "all" | "with" | "without")}>
+            <SelectTrigger>
+              <SelectValue placeholder="Tous" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous</SelectItem>
+              <SelectItem value="with">Avec programme</SelectItem>
+              <SelectItem value="without">Sans programme</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="flex items-end pb-1">
           <div className="flex items-center space-x-2">
             <Checkbox
@@ -543,6 +564,7 @@ export default function RidersData() {
               setSelectedCategorie("all");
               setSelectedCotes([]);
               setShowFavoritesOnly(false);
+              setProgramFilter("all");
             }}
           >
             Réinitialiser
