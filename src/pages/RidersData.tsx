@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Star, Search, Database, ArrowLeft, LogOut, Calendar } from "lucide-react";
+import { Star, Search, Database, ArrowLeft, LogOut, Calendar, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -68,6 +68,10 @@ export default function RidersData() {
   const [selectedCategorie, setSelectedCategorie] = useState<string>("all");
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  
+  // Sorting state
+  const [sortColumn, setSortColumn] = useState<'cote' | 'points' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Fetch all seasons directly (autonomous from context)
   const { data: allSeasons } = useQuery({
@@ -341,6 +345,41 @@ export default function RidersData() {
     });
   }, [ridersData, search, selectedEquipe, selectedCategorie, selectedCotes, showFavoritesOnly]);
 
+  // Sort handlers
+  const handleSort = (column: 'cote' | 'points') => {
+    if (sortColumn === column) {
+      if (sortDirection === 'desc') {
+        setSortDirection('asc');
+      } else {
+        setSortColumn(null);
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
+
+  const getSortIcon = (column: 'cote' | 'points') => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 inline opacity-50" />;
+    }
+    return sortDirection === 'desc' 
+      ? <ArrowDown className="h-4 w-4 ml-1 inline" />
+      : <ArrowUp className="h-4 w-4 ml-1 inline" />;
+  };
+
+  // Sort filtered riders
+  const sortedRiders = useMemo(() => {
+    if (!sortColumn) return filteredRiders;
+    
+    return [...filteredRiders].sort((a, b) => {
+      const valueA = sortColumn === 'cote' ? a.prix_initial : a.total_points;
+      const valueB = sortColumn === 'cote' ? b.prix_initial : b.total_points;
+      
+      return sortDirection === 'desc' ? valueB - valueA : valueA - valueB;
+    });
+  }, [filteredRiders, sortColumn, sortDirection]);
+
   if (!localSelectedSeason) {
     return (
       <div className="min-h-screen bg-background">
@@ -535,20 +574,30 @@ export default function RidersData() {
                 <TableHead>Nom</TableHead>
                 <TableHead>Équipe</TableHead>
                 <TableHead>Catégorie</TableHead>
-                <TableHead className="text-right">Cote</TableHead>
-                <TableHead className="text-right">Points</TableHead>
+                <TableHead 
+                  className="text-right cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('cote')}
+                >
+                  Cote {getSortIcon('cote')}
+                </TableHead>
+                <TableHead 
+                  className="text-right cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('points')}
+                >
+                  Points {getSortIcon('points')}
+                </TableHead>
                 <TableHead>Programme</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRiders.length === 0 ? (
+              {sortedRiders.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     Aucun coureur trouvé
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRiders.map((rider) => {
+                sortedRiders.map((rider) => {
                   const upcomingRaces = programData?.get(rider.coureur_id) || [];
                   return (
                     <TableRow key={rider.coureur_id}>
