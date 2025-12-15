@@ -596,7 +596,6 @@ export default function RidersData() {
                 <TableHead className="w-12">Fav</TableHead>
                 <TableHead>Nom</TableHead>
                 <TableHead>Équipe</TableHead>
-                <TableHead>Catégorie</TableHead>
                 <TableHead className="w-20">Catégorie</TableHead>
                 <TableHead 
                   className="w-16 text-right cursor-pointer hover:bg-muted/50 select-none"
