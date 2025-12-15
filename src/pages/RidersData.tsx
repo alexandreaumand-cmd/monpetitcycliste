@@ -82,21 +82,25 @@ export default function RidersData() {
     queryFn: async () => {
       if (!selectedSeason?.id) return [];
 
-      // Get riders for the season with their team info
+      // Get riders for the season (without inner join to avoid 1000 row limit)
       const { data: coureursData, error: coureursError } = await supabase
         .from("coureurs_saisons")
-        .select(`
-          coureur_id,
-          prix_initial,
-          saison_id,
-          equipe_id,
-          coureurs!inner(nom)
-        `)
+        .select("coureur_id, prix_initial, saison_id, equipe_id")
         .eq("saison_id", selectedSeason.id)
         .eq("actif", true)
-        .limit(5000);
+        .limit(10000);
 
       if (coureursError) throw coureursError;
+
+      // Get rider names separately
+      const coureurIds = coureursData?.map(cs => cs.coureur_id) || [];
+      const { data: coureursNoms } = await supabase
+        .from("coureurs")
+        .select("id, nom")
+        .in("id", coureurIds);
+
+      const nomsMap = new Map<string, string>();
+      coureursNoms?.forEach(c => nomsMap.set(c.id, c.nom));
 
       // Get equipes_saisons for trigrammes and categories
       const { data: equipesData } = await supabase
@@ -151,7 +155,7 @@ export default function RidersData() {
         const equipeInfo = equipeMap.get(cs.equipe_id);
         return {
           coureur_id: cs.coureur_id,
-          coureur_nom: cs.coureurs?.nom || cs.coureur_id,
+          coureur_nom: nomsMap.get(cs.coureur_id) || cs.coureur_id,
           equipe_trigramme: equipeInfo?.nom || null,
           equipe_id: cs.equipe_id,
           equipe_categorie: equipeInfo?.categorie || null,
