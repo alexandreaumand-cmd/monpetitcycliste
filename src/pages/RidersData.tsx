@@ -20,7 +20,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Star, Search, Database, ArrowLeft, LogOut } from "lucide-react";
+import { Star, Search, Database, ArrowLeft, LogOut, Calendar } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -37,6 +43,13 @@ interface RiderWithPoints {
   saison_annee: number;
   total_points: number;
   is_favorite: boolean;
+}
+
+interface UpcomingRace {
+  race_id: string;
+  race_nom: string;
+  date_debut: string;
+  is_confirmed: boolean;
 }
 
 export default function RidersData() {
@@ -195,6 +208,86 @@ export default function RidersData() {
       });
 
       return riders.sort((a, b) => b.total_points - a.total_points);
+    },
+    enabled: !!localSelectedSeason?.id,
+  });
+
+  // Fetch upcoming races program from startlists
+  const { data: programData } = useQuery({
+    queryKey: ["riders-program", localSelectedSeason?.id],
+    queryFn: async () => {
+      if (!localSelectedSeason?.id) return new Map<string, UpcomingRace[]>();
+
+      const today = new Date().toISOString().split('T')[0];
+
+      // Get startlist entries with upcoming races for this season
+      const { data: entries, error } = await supabase
+        .from("startlist_entries")
+        .select(`
+          coureur_id,
+          startlist_imports!inner(
+            pcs_validated,
+            created_at,
+            saison_id,
+            courses!inner(
+              id,
+              nom,
+              date_debut
+            )
+          )
+        `)
+        .eq("startlist_imports.saison_id", localSelectedSeason.id)
+        .gte("startlist_imports.courses.date_debut", today)
+        .not("coureur_id", "is", null)
+        .limit(20000);
+
+      if (error) {
+        console.error("Error fetching program data:", error);
+        return new Map<string, UpcomingRace[]>();
+      }
+
+      // Build a map of coureur_id -> races (keeping only latest import per race)
+      const riderRacesMap = new Map<string, Map<string, { race: UpcomingRace; created_at: string }>>();
+
+      entries?.forEach((entry: any) => {
+        if (!entry.coureur_id || !entry.startlist_imports?.courses) return;
+        
+        const coureurId = entry.coureur_id;
+        const course = entry.startlist_imports.courses;
+        const raceId = course.id;
+        const createdAt = entry.startlist_imports.created_at;
+
+        if (!riderRacesMap.has(coureurId)) {
+          riderRacesMap.set(coureurId, new Map());
+        }
+
+        const riderMap = riderRacesMap.get(coureurId)!;
+        const existing = riderMap.get(raceId);
+
+        // Keep only the most recent import for each race
+        if (!existing || new Date(createdAt) > new Date(existing.created_at)) {
+          riderMap.set(raceId, {
+            race: {
+              race_id: raceId,
+              race_nom: course.nom,
+              date_debut: course.date_debut,
+              is_confirmed: entry.startlist_imports.pcs_validated || false,
+            },
+            created_at: createdAt,
+          });
+        }
+      });
+
+      // Convert to final map with sorted races
+      const resultMap = new Map<string, UpcomingRace[]>();
+      riderRacesMap.forEach((racesMap, coureurId) => {
+        const races = Array.from(racesMap.values())
+          .map(r => r.race)
+          .sort((a, b) => new Date(a.date_debut).getTime() - new Date(b.date_debut).getTime());
+        resultMap.set(coureurId, races);
+      });
+
+      return resultMap;
     },
     enabled: !!localSelectedSeason?.id,
   });
@@ -504,47 +597,84 @@ export default function RidersData() {
                 <TableHead>Catégorie</TableHead>
                 <TableHead className="text-right">Cote</TableHead>
                 <TableHead className="text-right">Points</TableHead>
+                <TableHead>Programme</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredRiders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     Aucun coureur trouvé
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRiders.map((rider) => (
-                  <TableRow key={rider.coureur_id}>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => toggleFavorite.mutate({
-                          coureurId: rider.coureur_id,
-                          isFavorite: rider.is_favorite,
-                        })}
-                        disabled={!managerId}
-                      >
-                        <Star
-                          className={`h-4 w-4 ${
-                            rider.is_favorite
-                              ? "fill-yellow-400 text-yellow-400"
-                              : "text-muted-foreground"
-                          }`}
-                        />
-                      </Button>
-                    </TableCell>
-                    <TableCell className="font-medium">{rider.coureur_nom}</TableCell>
-                    <TableCell>{rider.equipe_trigramme || "-"}</TableCell>
-                    <TableCell>{rider.equipe_categorie || "-"}</TableCell>
-                    <TableCell className="text-right">{rider.prix_initial}</TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {rider.total_points}
-                    </TableCell>
-                  </TableRow>
-                ))
+                filteredRiders.map((rider) => {
+                  const upcomingRaces = programData?.get(rider.coureur_id) || [];
+                  return (
+                    <TableRow key={rider.coureur_id}>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => toggleFavorite.mutate({
+                            coureurId: rider.coureur_id,
+                            isFavorite: rider.is_favorite,
+                          })}
+                          disabled={!managerId}
+                        >
+                          <Star
+                            className={`h-4 w-4 ${
+                              rider.is_favorite
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-muted-foreground"
+                            }`}
+                          />
+                        </Button>
+                      </TableCell>
+                      <TableCell className="font-medium">{rider.coureur_nom}</TableCell>
+                      <TableCell>{rider.equipe_trigramme || "-"}</TableCell>
+                      <TableCell>{rider.equipe_categorie || "-"}</TableCell>
+                      <TableCell className="text-right">{rider.prix_initial}</TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {rider.total_points}
+                      </TableCell>
+                      <TableCell>
+                        {upcomingRaces.length === 0 ? (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        ) : (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1.5 cursor-help">
+                                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm">
+                                    {upcomingRaces.length} course{upcomingRaces.length > 1 ? "s" : ""}
+                                  </span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="left" className="max-w-xs">
+                                <div className="space-y-1">
+                                  {upcomingRaces.map((race) => (
+                                    <div key={race.race_id} className="flex items-center gap-2 text-sm">
+                                      <span className={race.is_confirmed ? "text-green-500" : "text-yellow-500"}>
+                                        {race.is_confirmed ? "✓" : "?"}
+                                      </span>
+                                      <span>{race.race_nom}</span>
+                                      <span className="text-muted-foreground text-xs">
+                                        ({new Date(race.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })})
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
