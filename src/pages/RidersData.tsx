@@ -109,15 +109,19 @@ export default function RidersData() {
         equipeMap.set(eq.equipe_id, { nom: eq.nom_affiche, categorie: eq.categorie });
       });
 
+      // Get phases for this season first
+      const { data: phasesData } = await supabase
+        .from("phases")
+        .select("id")
+        .eq("saison_id", selectedSeason.id);
+      
+      const phaseIds = phasesData?.map(p => p.id) || [];
+      
       // Get points for these riders in this season
       const { data: pointsData, error: pointsError } = await supabase
         .from("points_ledger")
-        .select(`
-          coureur_id,
-          points,
-          phases!inner(saison_id)
-        `)
-        .eq("phases.saison_id", selectedSeason.id)
+        .select("coureur_id, points")
+        .in("phase_id", phaseIds)
         .limit(50000);
 
       if (pointsError) throw pointsError;
