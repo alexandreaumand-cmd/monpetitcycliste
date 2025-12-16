@@ -1018,6 +1018,8 @@ Deno.serve(async (req) => {
         .from('equipes_saisons')
         .select(`
           equipe_id,
+          nom_affiche,
+          trigramme,
           equipes!inner(code_court, nom_complet)
         `)
         .eq('saison_id', saison_id);
@@ -1030,35 +1032,59 @@ Deno.serve(async (req) => {
       // Create mappings for flexible resolution
       const equipesByCode = new Map<string, string>(); // code_court → equipe_id
       const equipesByNom = new Map<string, string>();  // nom_complet → equipe_id
+      const equipesByNomAffiche = new Map<string, string>(); // nom_affiche → equipe_id
+      const equipesByTrigramme = new Map<string, string>(); // trigramme → equipe_id
 
       equipesData?.forEach((es: any) => {
         const equipeId = es.equipe_id;
         const codeCourt = es.equipes.code_court?.toUpperCase();
         const nomComplet = es.equipes.nom_complet?.toLowerCase();
+        const nomAffiche = es.nom_affiche?.toLowerCase();
+        const trigramme = es.trigramme?.toUpperCase();
         
         if (codeCourt) equipesByCode.set(codeCourt, equipeId);
         if (nomComplet) equipesByNom.set(nomComplet, equipeId);
+        if (nomAffiche) equipesByNomAffiche.set(nomAffiche, equipeId);
+        if (trigramme) equipesByTrigramme.set(trigramme, equipeId);
       });
 
-      console.log(`✅ Loaded ${equipesByCode.size} equipes for season ${saison_id}`);
+      console.log(`✅ Loaded ${equipesByCode.size} equipes for season ${saison_id} (${equipesByNomAffiche.size} nom_affiche, ${equipesByTrigramme.size} trigrammes)`);
 
       // Function to resolve equipe text to equipe_id
       function resolveEquipeId(equipeText: string | null): string | null {
         if (!equipeText) return null;
         
-        // Try by code court (exact match, case-insensitive)
         const upperText = equipeText.toUpperCase().trim();
+        const lowerText = equipeText.toLowerCase().trim();
+        
+        // 1. Try by code_court (exact match)
         if (equipesByCode.has(upperText)) {
           return equipesByCode.get(upperText)!;
         }
         
-        // Try by nom complet (exact match)
-        const lowerText = equipeText.toLowerCase().trim();
+        // 2. Try by trigramme (exact match)
+        if (equipesByTrigramme.has(upperText)) {
+          return equipesByTrigramme.get(upperText)!;
+        }
+        
+        // 3. Try by nom_affiche (exact match) - priorité pour noms saisonniers
+        if (equipesByNomAffiche.has(lowerText)) {
+          return equipesByNomAffiche.get(lowerText)!;
+        }
+        
+        // 4. Try by nom_complet (exact match)
         if (equipesByNom.has(lowerText)) {
           return equipesByNom.get(lowerText)!;
         }
         
-        // Try partial match on nom
+        // 5. Try partial match on nom_affiche
+        for (const [nom, id] of equipesByNomAffiche.entries()) {
+          if (nom.includes(lowerText) || lowerText.includes(nom)) {
+            return id;
+          }
+        }
+        
+        // 6. Try partial match on nom_complet
         for (const [nom, id] of equipesByNom.entries()) {
           if (nom.includes(lowerText) || lowerText.includes(nom)) {
             return id;
