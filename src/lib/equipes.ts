@@ -1,7 +1,8 @@
 export const EQUIPE_CATEGORIES = {
   WT: 'WorldTeam',
   PT: 'ProTeam',
-  CT: 'Continental'
+  CT: 'Continental',
+  OT: 'Autres'
 } as const;
 
 export type EquipeCategorie = keyof typeof EQUIPE_CATEGORIES;
