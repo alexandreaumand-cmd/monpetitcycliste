@@ -13,6 +13,7 @@ interface CoureursFiltersProps {
     search: string;
     equipe_ids: string[];
     cote_ranges: string[];
+    equipe_categories: string[];
   };
   onFiltersChange: (filters: any) => void;
 }
@@ -30,15 +31,22 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
   });
 
   const { data: equipes } = useQuery({
-    queryKey: ['equipes-saisons-filter', filters.saison_ids],
+    queryKey: ['equipes-saisons-filter', filters.saison_ids, filters.equipe_categories],
     queryFn: async () => {
       if (filters.saison_ids.length === 0) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('equipes_saisons')
-        .select('equipe_id, nom_affiche, trigramme, equipes!inner(code_court)')
+        .select('equipe_id, nom_affiche, trigramme, categorie, equipes!inner(code_court)')
         .in('saison_id', filters.saison_ids)
         .order('nom_affiche');
+      
+      // Filtrer par catégorie si sélectionnée
+      if (filters.equipe_categories.length > 0) {
+        query = query.in('categorie', filters.equipe_categories);
+      }
+
+      const { data, error } = await query;
       
       if (error) throw error;
       
@@ -74,12 +82,19 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
     { value: "150+", label: "150+ (Super-stars)" },
   ];
 
+  const categorieOptions: MultiSelectOption[] = [
+    { value: "WT", label: "WorldTeam" },
+    { value: "PT", label: "ProTeam" },
+    { value: "CT", label: "Continental" },
+  ];
+
   const handleReset = () => {
     onFiltersChange({
       saison_ids: [],
       search: "",
       equipe_ids: [],
       cote_ranges: [],
+      equipe_categories: [],
     });
   };
 
@@ -87,12 +102,13 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
     filters.saison_ids.length + 
     filters.equipe_ids.length + 
     filters.cote_ranges.length +
+    filters.equipe_categories.length +
     (filters.search ? 1 : 0);
 
   return (
     <Card>
       <CardContent className="pt-6 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Saisons */}
           <MultiSelect
             options={saisonOptions}
@@ -111,6 +127,14 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
               className="pl-9"
             />
           </div>
+
+          {/* Catégorie d'équipe */}
+          <MultiSelect
+            options={categorieOptions}
+            selected={filters.equipe_categories}
+            onChange={(selected) => onFiltersChange({ ...filters, equipe_categories: selected, equipe_ids: [] })}
+            placeholder="Toutes les catégories"
+          />
 
           {/* Équipes */}
           <MultiSelect
@@ -137,6 +161,11 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
               {filters.saison_ids.length > 0 && (
                 <Badge variant="secondary">
                   {filters.saison_ids.length} saison{filters.saison_ids.length > 1 ? 's' : ''}
+                </Badge>
+              )}
+              {filters.equipe_categories.length > 0 && (
+                <Badge variant="secondary">
+                  {filters.equipe_categories.length} catégorie{filters.equipe_categories.length > 1 ? 's' : ''}
                 </Badge>
               )}
               {filters.equipe_ids.length > 0 && (
