@@ -53,19 +53,26 @@ export const CoureursTable = ({ coureurs, isLoading, onSave, onDelete, onBulkDel
     }
   };
 
+  // Helper pour obtenir le nom d'équipe correct (enrichi avec equipes_saisons)
+  const getEquipeNom = (coureur: any) => 
+    coureur.equipes_saisons?.nom_affiche || coureur.equipe_nom || '';
+
   const sortedCoureurs = useMemo(() => {
     if (!sortField || !sortDirection) return coureurs;
     
     return [...coureurs].sort((a, b) => {
-      let aVal = a[sortField];
-      let bVal = b[sortField];
+      let aVal: any;
+      let bVal: any;
       
-      if (sortField === 'prix_initial') {
-        aVal = Number(aVal) || 0;
-        bVal = Number(bVal) || 0;
+      if (sortField === 'equipe_nom') {
+        aVal = getEquipeNom(a).toLowerCase();
+        bVal = getEquipeNom(b).toLowerCase();
+      } else if (sortField === 'prix_initial') {
+        aVal = Number(a[sortField]) || 0;
+        bVal = Number(b[sortField]) || 0;
       } else {
-        aVal = (aVal || '').toString().toLowerCase();
-        bVal = (bVal || '').toString().toLowerCase();
+        aVal = (a[sortField] || '').toString().toLowerCase();
+        bVal = (b[sortField] || '').toString().toLowerCase();
       }
       
       if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
@@ -298,16 +305,16 @@ export const CoureursTable = ({ coureurs, isLoading, onSave, onDelete, onBulkDel
                             saisonId={coureur.saison_id}
                             value={getCellValue(coureur, 'equipe_id')}
                             onChange={(equipeId) => handleCellEdit(coureur.id, 'equipe_id', equipeId)}
-                            placeholder={coureur.equipe_nom || 'Sélectionner une équipe'}
+                            placeholder={getEquipeNom(coureur) || 'Sélectionner une équipe'}
                             preloadedEquipes={preloadedEquipes}
                           />
                           <span className="text-xs text-muted-foreground mt-1 block">
-                            Actuel: {coureur.equipe_nom || 'N/A'}
+                            Actuel: {getEquipeNom(coureur) || 'N/A'}
                           </span>
                         </>
                       ) : (
                         <div className="text-sm">
-                          {coureur.equipe_nom || 'Aucune équipe'}
+                          {getEquipeNom(coureur) || 'Aucune équipe'}
                         </div>
                       )}
                     </TableCell>
