@@ -23,6 +23,14 @@ export const EquipeSelect = ({
   placeholder = "Sélectionner une équipe",
   preloadedEquipes
 }: EquipeSelectProps) => {
+  // Filtrer les équipes préchargées par saison AVANT de décider si on doit fetch
+  const filteredPreloadedEquipes = preloadedEquipes?.filter(
+    e => e.saison_id === saisonId
+  );
+  
+  // Seulement utiliser les données préchargées si elles contiennent des équipes pour cette saison
+  const hasPreloadedData = filteredPreloadedEquipes && filteredPreloadedEquipes.length > 0;
+
   const { data: fetchedEquipes, isLoading } = useQuery({
     queryKey: ['equipes-saisons-select', saisonId],
     queryFn: async () => {
@@ -35,15 +43,13 @@ export const EquipeSelect = ({
       if (error) throw error;
       return data || [];
     },
-    enabled: !!saisonId && !preloadedEquipes,
+    enabled: !!saisonId && !hasPreloadedData,
   });
 
-  // Utiliser le cache si disponible, sinon les données fetchées
-  const equipes = preloadedEquipes 
-    ? preloadedEquipes.filter(e => e.saison_id === saisonId)
-    : fetchedEquipes;
+  // Utiliser les données préchargées filtrées, sinon les données fetchées
+  const equipes = hasPreloadedData ? filteredPreloadedEquipes : fetchedEquipes;
 
-  if (isLoading) {
+  if (isLoading && !hasPreloadedData) {
     return (
       <Select disabled>
         <SelectTrigger>
