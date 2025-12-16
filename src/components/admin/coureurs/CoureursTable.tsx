@@ -157,20 +157,21 @@ export const CoureursTable = ({ coureurs, isLoading, onSave, onDelete, onBulkDel
                   onCheckedChange={toggleSelectAll}
                 />
               </TableHead>
-              <TableHead className="w-[8%]">ID</TableHead>
-              <TableHead className="w-[8%]">Saison</TableHead>
-              <TableHead className="w-[15%]">Coureur</TableHead>
-              <TableHead className="w-[22%]">Équipe</TableHead>
-              <TableHead className="w-[8%]">Cote</TableHead>
-              <TableHead className="w-[12%]">Created At</TableHead>
-              <TableHead className="w-[12%]">Updated At</TableHead>
-              <TableHead className="w-[15%]">Actions</TableHead>
+              <TableHead className="w-[7%]">ID</TableHead>
+              <TableHead className="w-[7%]">Saison</TableHead>
+              <TableHead className="w-[14%]">Coureur</TableHead>
+              <TableHead className="w-[18%]">Équipe</TableHead>
+              <TableHead className="w-[8%]">Catégorie</TableHead>
+              <TableHead className="w-[7%]">Cote</TableHead>
+              <TableHead className="w-[11%]">Created At</TableHead>
+              <TableHead className="w-[11%]">Updated At</TableHead>
+              <TableHead className="w-[14%]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {coureurs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                   Aucun coureur trouvé
                 </TableCell>
               </TableRow>
@@ -239,6 +240,18 @@ export const CoureursTable = ({ coureurs, isLoading, onSave, onDelete, onBulkDel
                           {coureur.equipe_nom || 'Aucune équipe'}
                         </div>
                       )}
+                    </TableCell>
+
+                    {/* Catégorie d'équipe */}
+                    <TableCell>
+                      <span className={`text-xs font-medium px-2 py-1 rounded ${
+                        coureur.equipe_categorie === 'WT' ? 'bg-blue-100 text-blue-800' :
+                        coureur.equipe_categorie === 'PT' ? 'bg-green-100 text-green-800' :
+                        coureur.equipe_categorie === 'CT' ? 'bg-orange-100 text-orange-800' :
+                        'bg-muted text-muted-foreground'
+                      }`}>
+                        {coureur.equipe_categorie || '-'}
+                      </span>
                     </TableCell>
 
                     {/* Prix initial (numeric, modifiable) */}

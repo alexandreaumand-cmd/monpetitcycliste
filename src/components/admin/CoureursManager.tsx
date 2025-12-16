@@ -16,6 +16,7 @@ export const CoureursManager = () => {
     search: "",
     equipe_ids: [] as string[],
     cote_ranges: [] as string[],
+    equipe_categories: [] as string[],
   });
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -106,15 +107,22 @@ export const CoureursManager = () => {
     staleTime: 5 * 60 * 1000, // Cache 5 minutes
   });
 
-  // Enrichir les coureurs avec les infos d'équipe
+  // Enrichir les coureurs avec les infos d'équipe et filtrer par catégorie
   const enrichedCoureurs = coureurs?.map(cs => {
     const equipeInfo = preloadedEquipes?.find(
       eq => eq.equipe_id === cs.equipe_id && eq.saison_id === cs.saison_id
     );
     return {
       ...cs,
-      equipes_saisons: equipeInfo || null
+      equipes_saisons: equipeInfo || null,
+      equipe_categorie: equipeInfo?.categorie || null
     };
+  }).filter(c => {
+    // Filtre par catégorie d'équipe (côté client)
+    if (filters.equipe_categories.length > 0) {
+      return filters.equipe_categories.includes(c.equipe_categorie);
+    }
+    return true;
   }) || [];
 
   // Mutation pour update coureurs_saisons
