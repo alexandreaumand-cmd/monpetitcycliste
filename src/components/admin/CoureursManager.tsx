@@ -167,6 +167,32 @@ export const CoureursManager = () => {
     },
   });
 
+  // Mutation pour désactiver plusieurs coureurs en masse
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from('coureurs_saisons')
+        .update({ actif: false })
+        .in('id', ids);
+      
+      if (error) throw error;
+    },
+    onSuccess: (_, ids) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-coureurs'] });
+      toast({
+        title: "✅ Coureurs désactivés",
+        description: `${ids.length} coureur${ids.length > 1 ? 's ont' : ' a'} été marqué${ids.length > 1 ? 's' : ''} comme inactif${ids.length > 1 ? 's' : ''}`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "❌ Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -195,6 +221,7 @@ export const CoureursManager = () => {
           isLoading={isLoading}
           onSave={(updates) => updateCoureursMutation.mutate(updates)}
           onDelete={(id) => deleteCoureursMutation.mutate(id)}
+          onBulkDelete={(ids) => bulkDeleteMutation.mutate(ids)}
           preloadedEquipes={preloadedEquipes || []}
         />
       ) : (
