@@ -132,6 +132,32 @@ export const EquipesSaisonsManager = () => {
     },
   });
 
+  // Mutation pour suppression en masse
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from('equipes_saisons')
+        .delete()
+        .in('id', ids);
+      
+      if (error) throw error;
+    },
+    onSuccess: (_, ids) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-equipes-saisons'] });
+      toast({
+        title: "✅ Équipes supprimées",
+        description: `${ids.length} équipe(s) supprimée(s) de la saison`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "❌ Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -158,6 +184,7 @@ export const EquipesSaisonsManager = () => {
           isLoading={isLoading}
           onSave={(updates) => updateMutation.mutate(updates)}
           onDelete={(id) => deleteMutation.mutate(id)}
+          onBulkDelete={(ids) => bulkDeleteMutation.mutate(ids)}
         />
       ) : (
         <Card className="p-12 text-center">
