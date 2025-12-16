@@ -36,6 +36,7 @@ export function AuctionSearchFilters({
     { value: "WT", label: "WT" },
     { value: "PT", label: "PT" },
     { value: "CT", label: "CT" },
+    { value: "OT", label: "OT" },
   ];
 
   const toggleTeam = (teamId: string) => {

@@ -86,6 +86,7 @@ export const CoureursFilters = ({ filters, onFiltersChange }: CoureursFiltersPro
     { value: "WT", label: "WorldTeam" },
     { value: "PT", label: "ProTeam" },
     { value: "CT", label: "Continental" },
+    { value: "OT", label: "Autres" },
   ];
 
   const handleReset = () => {

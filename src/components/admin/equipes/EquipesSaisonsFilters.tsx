@@ -84,6 +84,7 @@ export const EquipesSaisonsFilters = ({ filters, onFiltersChange, onCreateClick 
               <SelectItem value="WT">WorldTeam</SelectItem>
               <SelectItem value="PT">ProTeam</SelectItem>
               <SelectItem value="CT">Continental</SelectItem>
+              <SelectItem value="OT">Autres</SelectItem>
             </SelectContent>
           </Select>
         </div>

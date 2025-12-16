@@ -180,6 +180,7 @@ export const CreateEquipeDialog = ({ open, onOpenChange, defaultSaisonId }: Crea
                   <SelectItem value="WT">WorldTeam (WT)</SelectItem>
                   <SelectItem value="PT">ProTeam (PT)</SelectItem>
                   <SelectItem value="CT">Continental (CT)</SelectItem>
+                  <SelectItem value="OT">Autres (OT)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
