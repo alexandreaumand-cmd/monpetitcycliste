@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Save, X, Loader2, Trash2 } from "lucide-react";
+import { Save, X, Loader2, Trash2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 
 interface EquipesSaisonsTableProps {
   equipesSaisons: any[];
@@ -16,10 +16,58 @@ interface EquipesSaisonsTableProps {
   onBulkDelete: (ids: string[]) => void;
 }
 
+type SortField = 'nom_affiche' | 'trigramme' | 'nb_coureurs' | null;
+type SortDirection = 'asc' | 'desc' | null;
+
 export const EquipesSaisonsTable = ({ equipesSaisons, isLoading, onSave, onDelete, onBulkDelete }: EquipesSaisonsTableProps) => {
   const [editedEquipes, setEditedEquipes] = useState<Map<string, any>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'desc') {
+        setSortDirection('asc');
+      } else if (sortDirection === 'asc') {
+        setSortField(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  const sortedEquipes = useMemo(() => {
+    if (!sortField || !sortDirection) return equipesSaisons;
+    
+    return [...equipesSaisons].sort((a, b) => {
+      let aVal = a[sortField];
+      let bVal = b[sortField];
+      
+      if (sortField === 'nb_coureurs') {
+        aVal = aVal || 0;
+        bVal = bVal || 0;
+        return sortDirection === 'desc' ? bVal - aVal : aVal - bVal;
+      }
+      
+      aVal = (aVal || '').toString().toLowerCase();
+      bVal = (bVal || '').toString().toLowerCase();
+      
+      if (sortDirection === 'desc') {
+        return bVal.localeCompare(aVal);
+      }
+      return aVal.localeCompare(bVal);
+    });
+  }, [equipesSaisons, sortField, sortDirection]);
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    if (sortDirection === 'desc') return <ArrowDown className="h-4 w-4 ml-1" />;
+    return <ArrowUp className="h-4 w-4 ml-1" />;
+  };
 
   const handleCellEdit = (equipeId: string, field: string, value: any) => {
     setEditedEquipes((prev) => {
@@ -138,20 +186,26 @@ export const EquipesSaisonsTable = ({ equipesSaisons, isLoading, onSave, onDelet
                 />
               </TableHead>
               <TableHead className="w-[10%]">Saison</TableHead>
-              <TableHead className="w-[28%]">Nom</TableHead>
-              <TableHead className="w-[10%]">Trigramme</TableHead>
-              <TableHead className="w-[10%]">Nb Coureurs</TableHead>
+              <TableHead className="w-[28%] cursor-pointer hover:bg-muted/50" onClick={() => handleSort('nom_affiche')}>
+                <div className="flex items-center">Nom<SortIcon field="nom_affiche" /></div>
+              </TableHead>
+              <TableHead className="w-[10%] cursor-pointer hover:bg-muted/50" onClick={() => handleSort('trigramme')}>
+                <div className="flex items-center">Trigramme<SortIcon field="trigramme" /></div>
+              </TableHead>
+              <TableHead className="w-[10%] cursor-pointer hover:bg-muted/50" onClick={() => handleSort('nb_coureurs')}>
+                <div className="flex items-center">Nb Coureurs<SortIcon field="nb_coureurs" /></div>
+              </TableHead>
               <TableHead className="w-[18%]">Catégorie</TableHead>
               <TableHead className="w-[10%]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {equipesSaisons.length === 0 ? (
+            {sortedEquipes.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Aucune équipe trouvée</TableCell>
               </TableRow>
             ) : (
-              equipesSaisons.map((equipe) => (
+              sortedEquipes.map((equipe) => (
                 <TableRow 
                   key={equipe.id} 
                   className={`${editedEquipes.has(equipe.id) ? "bg-muted/30" : ""} ${selectedIds.has(equipe.id) ? "bg-destructive/5" : ""}`}
