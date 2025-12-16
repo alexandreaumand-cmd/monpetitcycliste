@@ -60,7 +60,14 @@ export const CoureursImportSection = () => {
     setImporting(true);
 
     try {
-      const csvData = await file.text();
+      // Read file with explicit UTF-8 decoding to handle special characters
+      const arrayBuffer = await file.arrayBuffer();
+      let csvData = new TextDecoder('utf-8').decode(arrayBuffer);
+      
+      // Remove BOM if present (common in Excel exports)
+      if (csvData.charCodeAt(0) === 0xFEFF) {
+        csvData = csvData.slice(1);
+      }
       
       const { data, error } = await supabase.functions.invoke('import-data', {
         body: {
