@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Save, X, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Save, X, Loader2, Pencil, Trash2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { EquipeSelect } from "@/components/shared/EquipeSelect";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -17,6 +17,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
+type SortField = 'coureur_nom' | 'equipe_nom' | 'prix_initial' | null;
+type SortDirection = 'asc' | 'desc' | null;
 
 interface CoureursTableProps {
   coureurs: any[];
@@ -33,6 +36,49 @@ export const CoureursTable = ({ coureurs, isLoading, onSave, onDelete, onBulkDel
   const [isSaving, setIsSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'desc') {
+        setSortDirection('asc');
+      } else if (sortDirection === 'asc') {
+        setSortField(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  const sortedCoureurs = useMemo(() => {
+    if (!sortField || !sortDirection) return coureurs;
+    
+    return [...coureurs].sort((a, b) => {
+      let aVal = a[sortField];
+      let bVal = b[sortField];
+      
+      if (sortField === 'prix_initial') {
+        aVal = Number(aVal) || 0;
+        bVal = Number(bVal) || 0;
+      } else {
+        aVal = (aVal || '').toString().toLowerCase();
+        bVal = (bVal || '').toString().toLowerCase();
+      }
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [coureurs, sortField, sortDirection]);
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    if (sortDirection === 'desc') return <ArrowDown className="h-4 w-4 ml-1" />;
+    return <ArrowUp className="h-4 w-4 ml-1" />;
+  };
 
   const handleCellEdit = (coureurSaisonId: string, field: string, value: any) => {
     setEditedCoureurs((prev) => {
@@ -159,24 +205,48 @@ export const CoureursTable = ({ coureurs, isLoading, onSave, onDelete, onBulkDel
               </TableHead>
               <TableHead className="w-[7%]">ID</TableHead>
               <TableHead className="w-[7%]">Saison</TableHead>
-              <TableHead className="w-[14%]">Coureur</TableHead>
-              <TableHead className="w-[18%]">Équipe</TableHead>
+              <TableHead className="w-[14%]">
+                <button 
+                  className="flex items-center hover:text-foreground transition-colors"
+                  onClick={() => handleSort('coureur_nom')}
+                >
+                  Coureur
+                  <SortIcon field="coureur_nom" />
+                </button>
+              </TableHead>
+              <TableHead className="w-[18%]">
+                <button 
+                  className="flex items-center hover:text-foreground transition-colors"
+                  onClick={() => handleSort('equipe_nom')}
+                >
+                  Équipe
+                  <SortIcon field="equipe_nom" />
+                </button>
+              </TableHead>
               <TableHead className="w-[8%]">Catégorie</TableHead>
-              <TableHead className="w-[7%]">Cote</TableHead>
+              <TableHead className="w-[7%]">
+                <button 
+                  className="flex items-center hover:text-foreground transition-colors"
+                  onClick={() => handleSort('prix_initial')}
+                >
+                  Cote
+                  <SortIcon field="prix_initial" />
+                </button>
+              </TableHead>
               <TableHead className="w-[11%]">Created At</TableHead>
               <TableHead className="w-[11%]">Updated At</TableHead>
               <TableHead className="w-[14%]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {coureurs.length === 0 ? (
+            {sortedCoureurs.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                   Aucun coureur trouvé
                 </TableCell>
               </TableRow>
             ) : (
-              coureurs.map((coureur) => {
+              sortedCoureurs.map((coureur) => {
                 const editing = isEditing(coureur.id);
                 
                 return (
