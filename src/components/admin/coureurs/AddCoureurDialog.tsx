@@ -64,18 +64,34 @@ export const AddCoureurDialog = ({ open, onOpenChange, defaultSaisonId }: AddCou
         throw new Error("Veuillez sélectionner un coureur et une saison");
       }
 
-      // Vérifier si le coureur n'est pas déjà dans cette saison
+      // Vérifier si le coureur existe déjà dans cette saison (actif ou non)
       const { data: existing } = await supabase
         .from('coureurs_saisons')
-        .select('id')
+        .select('id, actif')
         .eq('coureur_id', selectedCoureurId)
         .eq('saison_id', saisonId)
         .maybeSingle();
 
       if (existing) {
-        throw new Error("Ce coureur existe déjà pour cette saison");
+        if (existing.actif) {
+          throw new Error("Ce coureur existe déjà pour cette saison");
+        }
+        
+        // Réactiver le coureur inactif avec les nouvelles valeurs
+        const { error } = await supabase
+          .from('coureurs_saisons')
+          .update({
+            actif: true,
+            equipe_id: equipeId || null,
+            prix_initial: prixInitial,
+          })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+        return { reactivated: true };
       }
 
+      // Créer une nouvelle entrée
       const { error } = await supabase
         .from('coureurs_saisons')
         .insert({
@@ -86,12 +102,15 @@ export const AddCoureurDialog = ({ open, onOpenChange, defaultSaisonId }: AddCou
         });
 
       if (error) throw error;
+      return { reactivated: false };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-coureurs'] });
       toast({
         title: "✅ Coureur ajouté",
-        description: "Le coureur a été ajouté à la saison",
+        description: data?.reactivated 
+          ? "Le coureur a été réactivé pour cette saison" 
+          : "Le coureur a été ajouté à la saison",
       });
       resetForm();
       onOpenChange(false);
