@@ -177,6 +177,7 @@ export const EquipesSaisonsTable = ({ equipesSaisons, isLoading, onSave, onDelet
                         <SelectItem value="WT">WorldTour</SelectItem>
                         <SelectItem value="PT">ProTeam</SelectItem>
                         <SelectItem value="CT">Continental</SelectItem>
+                        <SelectItem value="OT">Autres</SelectItem>
                       </SelectContent>
                     </Select>
                   </TableCell>
