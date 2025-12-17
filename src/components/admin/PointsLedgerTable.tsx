@@ -177,6 +177,7 @@ export const PointsLedgerTable = () => {
       minPoints,
       maxPoints,
       globalSearch,
+      phases,
     ],
     queryFn: async () => {
       let query = supabase
@@ -251,6 +252,7 @@ export const PointsLedgerTable = () => {
 
       return results as PointsLedgerRow[];
     },
+    enabled: !saisonFilter || (!!saisonFilter && !!phases && phases.length > 0),
   });
 
   const sortedData = useMemo(() => {
