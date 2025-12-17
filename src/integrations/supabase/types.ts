@@ -3799,6 +3799,7 @@ export type Database = {
           points_mont: number | null
           points_pts: number | null
           points_total: number | null
+          saison_id: string | null
           type_course: string | null
           wt_tier: Database["public"]["Enums"]["wt_tier_type"] | null
         }
@@ -3829,6 +3830,13 @@ export type Database = {
             columns: ["phase_id"]
             isOneToOne: false
             referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phases_saison_id_fkey"
+            columns: ["saison_id"]
+            isOneToOne: false
+            referencedRelation: "saisons"
             referencedColumns: ["id"]
           },
         ]
