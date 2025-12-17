@@ -98,7 +98,7 @@ export default function CalendarPage() {
     enabled: !!localSelectedSeason?.id,
   });
 
-  // Fetch courses with points for selected season
+  // Fetch courses with theoretical points for selected season
   const { data: coursesData, isLoading } = useQuery({
     queryKey: ["calendar-courses", localSelectedSeason?.id],
     queryFn: async () => {
@@ -115,49 +115,28 @@ export default function CalendarPage() {
       const phaseIds = phases?.map(p => p.id) || [];
       if (phaseIds.length === 0) return [];
 
-      // Get courses for these phases
-      const { data: courses, error: coursesError } = await supabase
-        .from("courses")
-        .select("id, nom, categorie, date_debut, date_fin, phase_id")
+      // Get courses with theoretical points from the view
+      const { data: coursesWithPoints, error: coursesError } = await supabase
+        .from("v_course_points_theoriques")
+        .select("course_id, nom, categorie, date_debut, date_fin, phase_id, phase_index, points_total")
         .in("phase_id", phaseIds)
         .order("date_debut", { ascending: true });
 
       if (coursesError) throw coursesError;
 
-      // Get points per course
-      const { data: pointsData, error: pointsError } = await supabase
-        .from("points_ledger")
-        .select("course_id, points")
-        .in("phase_id", phaseIds);
-
-      if (pointsError) throw pointsError;
-
-      // Sum points by course
-      const pointsMap = new Map<string, number>();
-      pointsData?.forEach(p => {
-        const current = pointsMap.get(p.course_id || '') || 0;
-        pointsMap.set(p.course_id || '', current + (p.points || 0));
-      });
-
-      // Build phase map
-      const phaseMap = new Map(phases?.map(p => [p.id, p]) || []);
-
       // Build final data
-      const result: CourseWithPoints[] = (courses || []).map(course => {
-        const phase = phaseMap.get(course.phase_id || '');
-        return {
-          course_id: course.id,
-          nom: course.nom,
-          categorie: course.categorie,
-          date_debut: course.date_debut,
-          date_fin: course.date_fin,
-          phase_id: course.phase_id,
-          phase_index: phase?.index_dans_saison || null,
-          saison_id: localSelectedSeason.id,
-          saison_annee: localSelectedSeason.annee,
-          total_points: pointsMap.get(course.id) || 0,
-        };
-      });
+      const result: CourseWithPoints[] = (coursesWithPoints || []).map(course => ({
+        course_id: course.course_id || '',
+        nom: course.nom || '',
+        categorie: course.categorie,
+        date_debut: course.date_debut,
+        date_fin: course.date_fin,
+        phase_id: course.phase_id,
+        phase_index: course.phase_index,
+        saison_id: localSelectedSeason.id,
+        saison_annee: localSelectedSeason.annee,
+        total_points: course.points_total || 0,
+      }));
 
       return result;
     },
