@@ -20,6 +20,7 @@ import Statistics from "./Statistics";
 import AccountPage from "./AccountPage";
 import DashboardHome from "./DashboardHome";
 import RidersData from "./RidersData";
+import CalendarPage from "./CalendarPage";
 import { LeagueDetailPage } from "./admin/LeagueDetailPage";
 import { SuperAdminPage } from "./SuperAdminPage";
 import { SuperAdminGuard } from "@/components/guards/SuperAdminGuard";
@@ -36,6 +37,7 @@ const Dashboard = () => {
   const isHomePage = location.pathname === '/dashboard/home' || location.pathname === '/dashboard';
   const isSuperAdminRoute = location.pathname.includes('/dashboard/super-admin');
   const isDataRoute = location.pathname === '/dashboard/data';
+  const isCalendarRoute = location.pathname === '/dashboard/calendar';
 
   useEffect(() => {
     checkUser();
@@ -116,6 +118,7 @@ const Dashboard = () => {
             <Route index element={<Navigate to="/dashboard/home" replace />} />
             <Route path="home" element={<DashboardHome onSignOut={handleSignOut} manager={manager} />} />
             <Route path="data" element={<RidersData />} />
+            <Route path="calendar" element={<CalendarPage />} />
             <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
             <Route path="mon-equipe" element={<MyTeam />} />
             <Route path="courses" element={<UpcomingCourses />} />
@@ -146,7 +149,7 @@ const Dashboard = () => {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full">
-        {!isHomePage && !isSuperAdminRoute && !isDataRoute && (
+        {!isHomePage && !isSuperAdminRoute && !isDataRoute && !isCalendarRoute && (
           <AppSidebar 
             isAdmin={isAnyAdmin} 
             isSuperAdmin={isSuperAdmin}
@@ -155,7 +158,7 @@ const Dashboard = () => {
         )}
         <SidebarInset className="flex-1 flex flex-col">
           <AnnouncementBanner />
-          {!isHomePage && !isSuperAdminRoute && !isDataRoute && (
+          {!isHomePage && !isSuperAdminRoute && !isDataRoute && !isCalendarRoute && (
             <TopBar 
               onSignOut={handleSignOut}
               manager={manager}
@@ -170,6 +173,7 @@ const Dashboard = () => {
               <Route index element={<Navigate to="/dashboard/home" replace />} />
               <Route path="home" element={<DashboardHome onSignOut={handleSignOut} manager={manager} />} />
               <Route path="data" element={<RidersData />} />
+              <Route path="calendar" element={<CalendarPage />} />
               <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
               <Route path="mon-equipe" element={<MyTeam />} />
               <Route path="courses" element={<UpcomingCourses />} />
