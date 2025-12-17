@@ -19,13 +19,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ArrowLeft, LogOut, ArrowUpDown, ArrowUp, ArrowDown, Calendar } from "lucide-react";
+import { Search, ArrowLeft, LogOut, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import mpcLogo from "@/assets/mpc-logo.png";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import { CalendarCourseDrawer } from "@/components/calendar/CalendarCourseDrawer";
 
 interface CourseWithPoints {
   course_id: string;
@@ -57,6 +58,9 @@ export default function CalendarPage() {
   // Sorting state
   const [sortColumn, setSortColumn] = useState<SortColumn | null>('date_debut');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Selected course for drawer
+  const [selectedCourse, setSelectedCourse] = useState<CourseWithPoints | null>(null);
 
   // Fetch all seasons
   const { data: allSeasons } = useQuery({
@@ -541,7 +545,11 @@ export default function CalendarPage() {
                   </TableRow>
                 ) : (
                   sortedCourses.map((course) => (
-                    <TableRow key={course.course_id}>
+                    <TableRow 
+                      key={course.course_id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => setSelectedCourse(course)}
+                    >
                       <TableCell className="font-medium">{course.nom}</TableCell>
                       <TableCell>
                         {course.categorie ? (
@@ -587,6 +595,13 @@ export default function CalendarPage() {
           </div>
         )}
       </div>
+
+      {/* Course Details Drawer */}
+      <CalendarCourseDrawer 
+        course={selectedCourse}
+        open={!!selectedCourse}
+        onOpenChange={(open) => !open && setSelectedCourse(null)}
+      />
     </div>
   );
 }
