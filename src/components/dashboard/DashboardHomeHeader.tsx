@@ -1,4 +1,4 @@
-import { Settings, Database } from "lucide-react";
+import { Settings, Database, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ManagerDropdown } from "@/components/layout/ManagerDropdown";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
@@ -54,6 +54,20 @@ export function DashboardHomeHeader({
 
         {/* Actions */}
         <div className="flex items-center gap-2">
+          {/* Calendar Button */}
+          <Button
+            variant="outline"
+            size={isMobile ? "icon" : "sm"}
+            onClick={() => navigate('/dashboard/calendar')}
+            className={cn(
+              "border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10",
+              !isMobile && "gap-2"
+            )}
+          >
+            <Calendar className="h-4 w-4" />
+            {!isMobile && "Calendrier"}
+          </Button>
+
           {/* Data Button */}
           <Button
             variant="outline"
