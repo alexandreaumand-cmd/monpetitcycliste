@@ -38,9 +38,10 @@ interface CourseWithPoints {
   saison_id: string | null;
   saison_annee: number | null;
   total_points: number;
+  startlist_count: number;
 }
 
-type SortColumn = 'nom' | 'categorie' | 'days_until' | 'date_debut' | 'date_fin' | 'phase' | 'points';
+type SortColumn = 'nom' | 'categorie' | 'days_until' | 'date_debut' | 'date_fin' | 'phase' | 'points' | 'startlist';
 
 export default function CalendarPage() {
   const navigate = useNavigate();
@@ -124,6 +125,60 @@ export default function CalendarPage() {
 
       if (coursesError) throw coursesError;
 
+      const courseIds = coursesWithPoints?.map(c => c.course_id).filter(Boolean) || [];
+
+      // Get latest startlist import per course and count entries
+      let startlistCountMap = new Map<string, number>();
+      
+      if (courseIds.length > 0) {
+        // Get all imports for these courses (race_id = course_id)
+        const { data: imports, error: importsError } = await supabase
+          .from("startlist_imports")
+          .select("id, race_id, created_at")
+          .in("race_id", courseIds);
+        
+        if (!importsError && imports) {
+          // Find latest import per course
+          const latestImportMap = new Map<string, string>();
+          imports.forEach(imp => {
+            const existing = latestImportMap.get(imp.race_id);
+            if (!existing) {
+              latestImportMap.set(imp.race_id, imp.id);
+            } else {
+              const existingImport = imports.find(i => i.id === existing);
+              if (existingImport && new Date(imp.created_at || '') > new Date(existingImport.created_at || '')) {
+                latestImportMap.set(imp.race_id, imp.id);
+              }
+            }
+          });
+          
+          const latestImportIds = Array.from(latestImportMap.values());
+          
+          if (latestImportIds.length > 0) {
+            // Count entries per import (startlist_id = import id)
+            const { data: entries, error: entriesError } = await supabase
+              .from("startlist_entries")
+              .select("startlist_id")
+              .in("startlist_id", latestImportIds);
+            
+            if (!entriesError && entries) {
+              // Map startlist_id to course_id and count
+              const importToCourse = new Map<string, string>();
+              latestImportMap.forEach((importId, courseId) => {
+                importToCourse.set(importId, courseId);
+              });
+              
+              entries.forEach(entry => {
+                const courseId = importToCourse.get(entry.startlist_id);
+                if (courseId) {
+                  startlistCountMap.set(courseId, (startlistCountMap.get(courseId) || 0) + 1);
+                }
+              });
+            }
+          }
+        }
+      }
+
       // Build final data
       const result: CourseWithPoints[] = (coursesWithPoints || []).map(course => ({
         course_id: course.course_id || '',
@@ -136,6 +191,7 @@ export default function CalendarPage() {
         saison_id: localSelectedSeason.id,
         saison_annee: localSelectedSeason.annee,
         total_points: course.points_total || 0,
+        startlist_count: startlistCountMap.get(course.course_id || '') || 0,
       }));
 
       return result;
@@ -235,6 +291,10 @@ export default function CalendarPage() {
         case 'phase':
           valueA = a.phase_index ?? Infinity;
           valueB = b.phase_index ?? Infinity;
+          break;
+        case 'startlist':
+          valueA = a.startlist_count;
+          valueB = b.startlist_count;
           break;
         case 'points':
           valueA = a.total_points;
@@ -464,12 +524,18 @@ export default function CalendarPage() {
                   >
                     Points {getSortIcon('points')}
                   </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 text-center"
+                    onClick={() => handleSort('startlist')}
+                  >
+                    Startlist {getSortIcon('startlist')}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sortedCourses.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       Aucune course trouvée
                     </TableCell>
                   </TableRow>
@@ -504,6 +570,13 @@ export default function CalendarPage() {
                           <span className="font-semibold text-primary">{course.total_points.toLocaleString()}</span>
                         ) : (
                           <span className="text-muted-foreground">0</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {course.startlist_count > 0 ? (
+                          <Badge variant="outline">{course.startlist_count}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                     </TableRow>
