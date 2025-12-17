@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Save, X, Loader2, Trash2 } from "lucide-react";
+import { Save, X, Loader2, Trash2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,9 +16,14 @@ interface CoursesTableProps {
   onDelete: (courseId: string, courseName: string) => void;
 }
 
+type SortField = 'nom' | 'date_debut' | 'date_fin' | 'categorie' | 'phase' | null;
+type SortDirection = 'asc' | 'desc' | null;
+
 export const CoursesTable = ({ courses, isLoading, onSave, onDelete }: CoursesTableProps) => {
   const [editedCourses, setEditedCourses] = useState<Map<string, any>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   // Fetch phases pour le dropdown
   const { data: phases } = useQuery({
@@ -31,6 +36,66 @@ export const CoursesTable = ({ courses, isLoading, onSave, onDelete }: CoursesTa
       return data || [];
     },
   });
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      if (sortDirection === 'desc') {
+        setSortDirection('asc');
+      } else if (sortDirection === 'asc') {
+        setSortField(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  const getPhaseLabel = (phaseId: string | null) => {
+    if (!phaseId || !phases) return '';
+    const phase = phases.find(p => p.id === phaseId);
+    if (!phase) return '';
+    return `P${phase.index_dans_saison} - ${phase.saisons?.annee || ''}`;
+  };
+
+  const sortedCourses = useMemo(() => {
+    if (!sortField || !sortDirection) return courses;
+
+    return [...courses].sort((a, b) => {
+      let aVal: any;
+      let bVal: any;
+
+      if (sortField === 'phase') {
+        aVal = getPhaseLabel(a.phase_id);
+        bVal = getPhaseLabel(b.phase_id);
+      } else {
+        aVal = a[sortField];
+        bVal = b[sortField];
+      }
+
+      // Handle null/undefined values
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return sortDirection === 'asc' ? -1 : 1;
+      if (bVal == null) return sortDirection === 'asc' ? 1 : -1;
+
+      // String comparison
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        const comparison = aVal.localeCompare(bVal, 'fr', { sensitivity: 'base' });
+        return sortDirection === 'asc' ? comparison : -comparison;
+      }
+
+      // Numeric/date comparison
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [courses, sortField, sortDirection, phases]);
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    if (sortDirection === 'desc') return <ArrowDown className="h-4 w-4 ml-1" />;
+    return <ArrowUp className="h-4 w-4 ml-1" />;
+  };
 
   const handleCellEdit = (courseId: string, field: string, value: any) => {
     setEditedCourses((prev) => {
@@ -99,11 +164,51 @@ export const CoursesTable = ({ courses, isLoading, onSave, onDelete }: CoursesTa
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[27%]">Nom</TableHead>
-              <TableHead className="w-[11%]">Date début</TableHead>
-              <TableHead className="w-[11%]">Date fin</TableHead>
-              <TableHead className="w-[14%]">Catégorie</TableHead>
-              <TableHead className="w-[17%]">Phase</TableHead>
+              <TableHead 
+                className="w-[27%] cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSort('nom')}
+              >
+                <div className="flex items-center">
+                  Nom
+                  {getSortIcon('nom')}
+                </div>
+              </TableHead>
+              <TableHead 
+                className="w-[11%] cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSort('date_debut')}
+              >
+                <div className="flex items-center">
+                  Date début
+                  {getSortIcon('date_debut')}
+                </div>
+              </TableHead>
+              <TableHead 
+                className="w-[11%] cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSort('date_fin')}
+              >
+                <div className="flex items-center">
+                  Date fin
+                  {getSortIcon('date_fin')}
+                </div>
+              </TableHead>
+              <TableHead 
+                className="w-[14%] cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSort('categorie')}
+              >
+                <div className="flex items-center">
+                  Catégorie
+                  {getSortIcon('categorie')}
+                </div>
+              </TableHead>
+              <TableHead 
+                className="w-[17%] cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSort('phase')}
+              >
+                <div className="flex items-center">
+                  Phase
+                  {getSortIcon('phase')}
+                </div>
+              </TableHead>
               <TableHead className="w-[12%]">Statut</TableHead>
               <TableHead className="w-[8%]">Actions</TableHead>
             </TableRow>
@@ -116,7 +221,7 @@ export const CoursesTable = ({ courses, isLoading, onSave, onDelete }: CoursesTa
                 </TableCell>
               </TableRow>
             ) : (
-              courses.map((course) => {
+              sortedCourses.map((course) => {
                 const isEdited = editedCourses.has(course.id);
                 
                 return (
