@@ -796,10 +796,12 @@ Deno.serve(async (req) => {
         
         allPhases = phasesData
         
-        // Construire le mapping "Phase 1" → UUID, "phase 1" → UUID, "1" → UUID
+        // Construire le mapping "Phase 1" → UUID, "phase 1" → UUID, "P1" → UUID, "1" → UUID
         allPhases.forEach(p => {
           phaseMapping.set(`Phase ${p.index_dans_saison}`, p.id)
           phaseMapping.set(`phase ${p.index_dans_saison}`, p.id)
+          phaseMapping.set(`P${p.index_dans_saison}`, p.id)
+          phaseMapping.set(`p${p.index_dans_saison}`, p.id)
           phaseMapping.set(`${p.index_dans_saison}`, p.id)
         })
         
