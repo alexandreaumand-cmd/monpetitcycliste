@@ -112,16 +112,19 @@ export const CoureursManager = () => {
     const equipeInfo = preloadedEquipes?.find(
       eq => eq.equipe_id === cs.equipe_id && eq.saison_id === cs.saison_id
     );
+
+    // IMPORTANT: la vue v_coureurs_saisons_admin fournit déjà equipe_categorie.
+    // On ne doit jamais l'écraser par null si le cache d'équipes n'a pas la ligne.
+    const equipeCategorie = equipeInfo?.categorie ?? (cs as any).equipe_categorie ?? null;
+
     return {
       ...cs,
       equipes_saisons: equipeInfo || null,
-      equipe_categorie: equipeInfo?.categorie || null
+      equipe_categorie: equipeCategorie,
     };
   }).filter(c => {
-    // Filtre par catégorie d'équipe (côté client)
-    // Attendre que preloadedEquipes soit chargé avant de filtrer
-    if (filters.equipe_categories.length > 0 && preloadedEquipes && preloadedEquipes.length > 0) {
-      // Comparaison insensible à la casse pour gérer les variations
+    // Filtre par catégorie d'équipe (CT/WT/PT/OT)
+    if (filters.equipe_categories.length > 0) {
       return filters.equipe_categories.some(
         cat => cat.toUpperCase() === (c.equipe_categorie || '').toUpperCase()
       );
