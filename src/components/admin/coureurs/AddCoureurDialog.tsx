@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { EquipeSelect } from "@/components/shared/EquipeSelect";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
+import { CoureurSearchCombobox } from "./CoureurSearchCombobox";
 
 interface AddCoureurDialogProps {
   open: boolean;
@@ -44,18 +45,7 @@ export const AddCoureurDialog = ({ open, onOpenChange, defaultSaisonId }: AddCou
     },
   });
 
-  // Charger tous les coureurs existants
-  const { data: existingCoureurs } = useQuery({
-    queryKey: ['all-coureurs'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('coureurs')
-        .select('id, nom, uci_id, prix_initial')
-        .order('nom');
-      if (error) throw error;
-      return data;
-    },
-  });
+  // Note: La recherche des coureurs existants est maintenant gérée par CoureurSearchCombobox
 
   // Mutation pour ajouter un coureur existant à une saison
   const addExistingCoureurMutation = useMutation({
@@ -231,18 +221,11 @@ export const AddCoureurDialog = ({ open, onOpenChange, defaultSaisonId }: AddCou
           <TabsContent value="existing" className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label>Coureur</Label>
-              <Select value={selectedCoureurId} onValueChange={setSelectedCoureurId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un coureur..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {existingCoureurs?.map((coureur) => (
-                    <SelectItem key={coureur.id} value={coureur.id}>
-                      {coureur.nom} {coureur.uci_id && `(UCI: ${coureur.uci_id})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CoureurSearchCombobox
+                value={selectedCoureurId}
+                onSelect={setSelectedCoureurId}
+                placeholder="Sélectionner un coureur..."
+              />
             </div>
           </TabsContent>
 
