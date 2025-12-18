@@ -49,17 +49,41 @@ export const CoureursManager = () => {
     queryFn: async () => {
       if (filters.saison_ids.length === 0) return [];
 
+      // Filtre Catégorie d'équipe (WT/PT/CT/OT) => on résout d'abord les équipes concernées
+      // puis on filtre les coureurs par equipe_id.
+      let equipeIdsForCategories: string[] | null = null;
+      if (filters.equipe_categories.length > 0) {
+        const { data: eqData, error: eqError } = await supabase
+          .from('equipes_saisons')
+          .select('equipe_id')
+          .in('saison_id', filters.saison_ids)
+          .in('categorie', filters.equipe_categories);
+
+        if (eqError) throw eqError;
+
+        equipeIdsForCategories = Array.from(
+          new Set((eqData || []).map((r: any) => r.equipe_id).filter(Boolean))
+        );
+
+        if (equipeIdsForCategories.length === 0) return [];
+      }
+
       let query = supabase
         .from('v_coureurs_saisons_admin')
         .select('*')
         .in('saison_id', filters.saison_ids)
-        .eq('actif', true);
+        .eq('actif', true)
+        // éviter la limite implicite à 1000 lignes
+        .limit(10000);
 
       if (filters.search) {
         query = query.ilike('coureur_nom', `%${filters.search}%`);
       }
+
       if (filters.equipe_ids.length > 0) {
         query = query.in('equipe_id', filters.equipe_ids);
+      } else if (equipeIdsForCategories) {
+        query = query.in('equipe_id', equipeIdsForCategories);
       }
 
       if (filters.cote_ranges.length > 0) {
@@ -77,11 +101,11 @@ export const CoureursManager = () => {
             .join(',')
         );
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
-      
-      return data?.sort((a, b) => 
+
+      return data?.sort((a, b) =>
         (a.coureur_nom || '').localeCompare(b.coureur_nom || '')
       ) || [];
     },
@@ -113,8 +137,8 @@ export const CoureursManager = () => {
       eq => eq.equipe_id === cs.equipe_id && eq.saison_id === cs.saison_id
     );
 
-    // IMPORTANT: la vue v_coureurs_saisons_admin fournit déjà equipe_categorie.
-    // On ne doit jamais l'écraser par null si le cache d'équipes n'a pas la ligne.
+    // On préfère la catégorie venant de equipes_saisons (cache) si dispo.
+    // Et on évite d'écraser avec null si la vue a déjà une valeur.
     const equipeCategorie = equipeInfo?.categorie ?? (cs as any).equipe_categorie ?? null;
 
     return {
@@ -122,14 +146,6 @@ export const CoureursManager = () => {
       equipes_saisons: equipeInfo || null,
       equipe_categorie: equipeCategorie,
     };
-  }).filter(c => {
-    // Filtre par catégorie d'équipe (CT/WT/PT/OT)
-    if (filters.equipe_categories.length > 0) {
-      return filters.equipe_categories.some(
-        cat => cat.toUpperCase() === (c.equipe_categorie || '').toUpperCase()
-      );
-    }
-    return true;
   }) || [];
 
   // Mutation pour update coureurs_saisons
