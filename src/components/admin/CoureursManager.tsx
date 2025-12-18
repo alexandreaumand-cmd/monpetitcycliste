@@ -119,8 +119,12 @@ export const CoureursManager = () => {
     };
   }).filter(c => {
     // Filtre par catégorie d'équipe (côté client)
-    if (filters.equipe_categories.length > 0) {
-      return filters.equipe_categories.includes(c.equipe_categorie);
+    // Attendre que preloadedEquipes soit chargé avant de filtrer
+    if (filters.equipe_categories.length > 0 && preloadedEquipes && preloadedEquipes.length > 0) {
+      // Comparaison insensible à la casse pour gérer les variations
+      return filters.equipe_categories.some(
+        cat => cat.toUpperCase() === (c.equipe_categorie || '').toUpperCase()
+      );
     }
     return true;
   }) || [];
