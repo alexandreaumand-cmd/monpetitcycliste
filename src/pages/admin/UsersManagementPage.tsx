@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { UserPlus, Key, Ban, CheckCircle, Mail, Shield, Users, Activity, Copy, Eye, Clock, Calendar } from "lucide-react";
+import { UserPlus, Key, Ban, CheckCircle, Mail, Shield, Users, Activity, Copy, Eye, Clock, Calendar, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -76,6 +76,9 @@ export default function UsersManagementPage() {
   const [banConfirmDialogOpen, setBanConfirmDialogOpen] = useState(false);
   const [banTargetUser, setBanTargetUser] = useState<UserData | null>(null);
   const [banAction, setBanAction] = useState<boolean>(false);
+  
+  // Sorting state
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
 
   // Fetch users
   const { data: users, isLoading, isError, error, refetch, isFetching } = useQuery({
@@ -273,6 +276,38 @@ export default function UsersManagementPage() {
         return true;
     }
   });
+
+  // Sort users by last activity
+  const sortedUsers = filteredUsers ? [...filteredUsers].sort((a, b) => {
+    if (!sortDirection) return 0;
+    
+    const getLastActivityDate = (user: UserData) => {
+      const activityDate = user.activity?.last_activity_at;
+      const signInDate = user.last_sign_in_at;
+      return activityDate || signInDate || null;
+    };
+    
+    const dateA = getLastActivityDate(a);
+    const dateB = getLastActivityDate(b);
+    
+    // Null dates go to the end
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    
+    const comparison = new Date(dateA).getTime() - new Date(dateB).getTime();
+    return sortDirection === 'asc' ? comparison : -comparison;
+  }) : [];
+
+  const handleSortByLastConnection = () => {
+    if (!sortDirection) {
+      setSortDirection('desc');
+    } else if (sortDirection === 'desc') {
+      setSortDirection('asc');
+    } else {
+      setSortDirection(null);
+    }
+  };
 
   const stats = {
     total: users?.length || 0,
@@ -483,12 +518,22 @@ export default function UsersManagementPage() {
                     <th className="px-4 py-3 text-left text-sm font-medium">Rôle</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Ligues</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Activité</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Dernière connexion</th>
+                    <th 
+                      className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80 select-none"
+                      onClick={handleSortByLastConnection}
+                    >
+                      <div className="flex items-center gap-1">
+                        Dernière connexion
+                        {sortDirection === null && <ArrowUpDown className="h-4 w-4 text-muted-foreground" />}
+                        {sortDirection === 'desc' && <ArrowDown className="h-4 w-4" />}
+                        {sortDirection === 'asc' && <ArrowUp className="h-4 w-4" />}
+                      </div>
+                    </th>
                     <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {filteredUsers?.map((user) => {
+                  {sortedUsers?.map((user) => {
                     const status = getUserStatus(user);
                     const activity = user.activity;
                     const formatDuration = (seconds: number) => {
