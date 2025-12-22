@@ -624,9 +624,11 @@ export default function UsersManagementPage() {
                           </HoverCard>
                         </td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">
-                          {user.last_sign_in_at 
-                            ? format(new Date(user.last_sign_in_at), 'dd MMM yyyy', { locale: fr })
-                            : 'Jamais'}
+                          {activity?.last_activity_at
+                            ? format(new Date(activity.last_activity_at), 'dd MMM yyyy', { locale: fr })
+                            : user.last_sign_in_at 
+                              ? format(new Date(user.last_sign_in_at), 'dd MMM yyyy', { locale: fr })
+                              : 'Jamais'}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2">
