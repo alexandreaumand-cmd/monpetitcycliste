@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Star, Search, Database, ArrowLeft, LogOut, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Star, Search, Database, ArrowLeft, LogOut, ArrowUpDown, ArrowUp, ArrowDown, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -32,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import mpcLogo from "@/assets/mpc-logo.png";
+import * as XLSX from "xlsx";
 
 interface RiderWithPoints {
   coureur_id: string;
@@ -436,6 +437,42 @@ export default function RidersData() {
     });
   }, [filteredRiders, sortColumn, sortDirection]);
 
+  // Excel export function
+  const handleExportExcel = useCallback(() => {
+    if (!sortedRiders || sortedRiders.length === 0) {
+      toast.error("Aucune donnée à exporter");
+      return;
+    }
+
+    const exportData = sortedRiders.map((rider) => ({
+      Nom: rider.coureur_nom,
+      Équipe: rider.equipe_trigramme || "",
+      Catégorie: rider.equipe_categorie || "",
+      Cote: rider.prix_initial,
+      Points: rider.total_points,
+      Favori: rider.is_favorite ? "Oui" : "Non",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Coureurs");
+
+    // Auto-size columns
+    const colWidths = [
+      { wch: 30 }, // Nom
+      { wch: 15 }, // Équipe
+      { wch: 12 }, // Catégorie
+      { wch: 8 },  // Cote
+      { wch: 10 }, // Points
+      { wch: 8 },  // Favori
+    ];
+    worksheet["!cols"] = colWidths;
+
+    const fileName = `coureurs_${localSelectedSeason?.annee || "export"}_${new Date().toISOString().split("T")[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+    toast.success(`Export réussi: ${fileName}`);
+  }, [sortedRiders, localSelectedSeason]);
+
   if (!localSelectedSeason) {
     return (
       <div className="min-h-screen bg-background">
@@ -604,7 +641,7 @@ export default function RidersData() {
           </div>
         </div>
 
-        <div className="flex items-end">
+        <div className="flex items-end gap-2">
           <Button
             variant="outline"
             onClick={() => {
@@ -617,6 +654,14 @@ export default function RidersData() {
             }}
           >
             Réinitialiser
+          </Button>
+          <Button
+            variant="default"
+            onClick={handleExportExcel}
+            disabled={!sortedRiders || sortedRiders.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Excel
           </Button>
         </div>
       </div>
