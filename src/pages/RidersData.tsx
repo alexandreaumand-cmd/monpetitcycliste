@@ -122,9 +122,10 @@ export default function RidersData() {
     queryFn: async () => {
       if (!localSelectedSeason?.id) return [];
 
-      // Use RPC function to get ALL riders without row limits
+      // Use RPC function to get ALL riders - bypass default 1000 row limit
       const { data: rpcData, error: rpcError } = await supabase
-        .rpc("get_riders_data_for_season", { p_saison_id: localSelectedSeason.id });
+        .rpc("get_riders_data_for_season", { p_saison_id: localSelectedSeason.id })
+        .limit(10000);
 
       if (rpcError) throw rpcError;
 
