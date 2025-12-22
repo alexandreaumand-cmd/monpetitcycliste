@@ -3163,6 +3163,36 @@ export type Database = {
           },
         ]
       }
+      user_activity_logs: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          page_path: string
+          page_title: string | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          page_path: string
+          page_title?: string | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          page_path?: string
+          page_title?: string | null
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -4567,6 +4597,10 @@ export type Database = {
         Returns: {
           team_name: string
         }[]
+      }
+      get_user_activity_stats: {
+        Args: { target_user_id: string }
+        Returns: Json
       }
       has_role: {
         Args: {

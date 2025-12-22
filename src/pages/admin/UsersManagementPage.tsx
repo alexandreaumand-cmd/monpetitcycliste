@@ -13,10 +13,23 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { UserPlus, Key, Ban, CheckCircle, Mail, Shield, Users, Activity, Copy } from "lucide-react";
+import { UserPlus, Key, Ban, CheckCircle, Mail, Shield, Users, Activity, Copy, Eye, Clock, Calendar } from "lucide-react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+
+interface UserActivity {
+  total_page_views: number;
+  total_sessions: number;
+  pages_today: number;
+  pages_last_7_days: number;
+  pages_last_30_days: number;
+  sessions_today: number;
+  sessions_last_7_days: number;
+  last_page_path: string | null;
+  last_activity_at: string | null;
+  avg_session_duration_seconds: number;
+}
 
 interface UserData {
   user_id: string;
@@ -35,6 +48,7 @@ interface UserData {
   email_confirmed_at: string | null;
   banned_until: string | null;
   created_at: string;
+  activity: UserActivity;
 }
 
 type FilterStatus = 'all' | 'active' | 'unconfirmed' | 'banned' | 'superadmins' | 'leagueadmins';
@@ -467,7 +481,8 @@ export default function UsersManagementPage() {
                     <th className="px-4 py-3 text-left text-sm font-medium">Manager</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Statut</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Rôle</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Ligues / Rôles</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Ligues</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Activité</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Dernière connexion</th>
                     <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
                   </tr>
@@ -475,6 +490,12 @@ export default function UsersManagementPage() {
                 <tbody className="divide-y">
                   {filteredUsers?.map((user) => {
                     const status = getUserStatus(user);
+                    const activity = user.activity;
+                    const formatDuration = (seconds: number) => {
+                      if (seconds < 60) return `${Math.round(seconds)}s`;
+                      if (seconds < 3600) return `${Math.round(seconds / 60)}min`;
+                      return `${Math.round(seconds / 3600)}h`;
+                    };
                     return (
                       <tr key={user.user_id} className="hover:bg-muted/50">
                         <td className="px-4 py-3 text-sm">{user.email}</td>
@@ -523,6 +544,80 @@ export default function UsersManagementPage() {
                                   ))}
                                 {user.league_admin_count === 0 && (
                                   <p className="text-sm text-muted-foreground">Aucune ligue administrée</p>
+                                )}
+                              </div>
+                            </HoverCardContent>
+                          </HoverCard>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <HoverCard>
+                            <HoverCardTrigger asChild>
+                              <div className="flex flex-col gap-1 cursor-pointer">
+                                <div className="flex items-center gap-1">
+                                  <Eye className="h-3 w-3 text-muted-foreground" />
+                                  <span>{activity?.pages_today || 0} pages auj.</span>
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  {activity?.sessions_last_7_days || 0} sessions / 7j
+                                </span>
+                              </div>
+                            </HoverCardTrigger>
+                            <HoverCardContent className="w-80">
+                              <div className="space-y-3">
+                                <h4 className="text-sm font-semibold flex items-center gap-2">
+                                  <Activity className="h-4 w-4" />
+                                  Statistiques d'activité
+                                </h4>
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <Eye className="h-3 w-3 text-muted-foreground" />
+                                    <span>Pages vues total:</span>
+                                  </div>
+                                  <span className="font-medium">{activity?.total_page_views || 0}</span>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                                    <span>Sessions total:</span>
+                                  </div>
+                                  <span className="font-medium">{activity?.total_sessions || 0}</span>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <Eye className="h-3 w-3 text-muted-foreground" />
+                                    <span>Pages aujourd'hui:</span>
+                                  </div>
+                                  <span className="font-medium">{activity?.pages_today || 0}</span>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <Eye className="h-3 w-3 text-muted-foreground" />
+                                    <span>Pages 7 derniers jours:</span>
+                                  </div>
+                                  <span className="font-medium">{activity?.pages_last_7_days || 0}</span>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <Eye className="h-3 w-3 text-muted-foreground" />
+                                    <span>Pages 30 derniers jours:</span>
+                                  </div>
+                                  <span className="font-medium">{activity?.pages_last_30_days || 0}</span>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-3 w-3 text-muted-foreground" />
+                                    <span>Durée moy. session:</span>
+                                  </div>
+                                  <span className="font-medium">
+                                    {formatDuration(activity?.avg_session_duration_seconds || 0)}
+                                  </span>
+                                </div>
+                                
+                                {activity?.last_page_path && (
+                                  <div className="pt-2 border-t">
+                                    <p className="text-xs text-muted-foreground">Dernière page visitée:</p>
+                                    <p className="text-sm font-mono truncate">{activity.last_page_path}</p>
+                                    {activity.last_activity_at && (
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        {formatDistanceToNow(new Date(activity.last_activity_at), { addSuffix: true, locale: fr })}
+                                      </p>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             </HoverCardContent>
