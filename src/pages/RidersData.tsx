@@ -122,12 +122,59 @@ export default function RidersData() {
     queryFn: async () => {
       if (!localSelectedSeason?.id) return [];
 
-      // Use RPC function to get ALL riders - bypass default 1000 row limit
-      const { data: rpcData, error: rpcError } = await supabase
-        .rpc("get_riders_data_for_season", { p_saison_id: localSelectedSeason.id })
-        .limit(10000);
+      // Fetch riders using RPC with pagination (PostgREST caps responses to 1000 rows)
+      const pageSize = 1000;
 
-      if (rpcError) throw rpcError;
+      const firstPage = await supabase
+        .rpc(
+          "get_riders_data_for_season",
+          { p_saison_id: localSelectedSeason.id },
+          { count: "exact" }
+        )
+        .range(0, pageSize - 1);
+
+      if (firstPage.error) throw firstPage.error;
+
+      const totalCount = firstPage.count ?? null;
+      const allRpcRows: any[] = [...(firstPage.data ?? [])];
+
+      if (totalCount && totalCount > pageSize) {
+        const pageCount = Math.ceil(totalCount / pageSize);
+        const restPages = await Promise.all(
+          Array.from({ length: pageCount - 1 }, (_, idx) => {
+            const from = (idx + 1) * pageSize;
+            const to = from + pageSize - 1;
+            return supabase
+              .rpc("get_riders_data_for_season", { p_saison_id: localSelectedSeason.id })
+              .range(from, to);
+          })
+        );
+
+        for (const page of restPages) {
+          if (page.error) throw page.error;
+          allRpcRows.push(...(page.data ?? []));
+        }
+      } else if (!totalCount) {
+        // Fallback if count isn't available
+        let from = pageSize;
+        let lastBatchSize = firstPage.data?.length ?? 0;
+        while (lastBatchSize === pageSize) {
+          const page = await supabase
+            .rpc("get_riders_data_for_season", { p_saison_id: localSelectedSeason.id })
+            .range(from, from + pageSize - 1);
+          if (page.error) throw page.error;
+
+          const batch = page.data ?? [];
+          allRpcRows.push(...batch);
+          lastBatchSize = batch.length;
+          from += pageSize;
+
+          // hard safety stop
+          if (from > 50000) break;
+        }
+      }
+
+      const rpcData = allRpcRows;
 
       // Get user's favorites
       let favoritesSet = new Set<string>();
