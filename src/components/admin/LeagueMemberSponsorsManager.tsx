@@ -19,18 +19,22 @@ export const LeagueMemberSponsorsManager = ({ leagueId }: LeagueMemberSponsorsMa
   const [pendingChanges, setPendingChanges] = useState<Record<string, string>>({});
 
   // Get the season associated with this league
-  const { data: leagueScope } = useQuery({
+  const { data: leagueScope, isLoading: scopeLoading } = useQuery({
     queryKey: ['league-scope', leagueId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('league_scopes')
         .select('season_id, saisons:season_id(id, annee)')
         .eq('league_id', leagueId)
-        .single();
+        .maybeSingle();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching league scope:', error);
+        throw error;
+      }
       return data;
     },
+    enabled: !!leagueId,
   });
 
   const seasonId = leagueScope?.season_id;
@@ -125,6 +129,21 @@ export const LeagueMemberSponsorsManager = ({ leagueId }: LeagueMemberSponsorsMa
       });
     }
   };
+
+  if (scopeLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Sponsors des membres</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center p-4">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!seasonId) {
     return (
