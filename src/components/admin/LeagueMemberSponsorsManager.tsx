@@ -19,17 +19,22 @@ export const LeagueMemberSponsorsManager = ({ leagueId }: LeagueMemberSponsorsMa
   const [pendingChanges, setPendingChanges] = useState<Record<string, string>>({});
 
   // Get the season associated with this league
-  const { data: leagueScope, isLoading: scopeLoading } = useQuery({
-    queryKey: ['league-scope', leagueId],
+  const {
+    data: leagueScope,
+    isLoading: scopeLoading,
+    isError: scopeIsError,
+    error: scopeError,
+  } = useQuery({
+    queryKey: ["league-scope", leagueId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('league_scopes')
-        .select('season_id, saisons:season_id(id, annee)')
-        .eq('league_id', leagueId)
+        .from("league_scopes")
+        .select("season_id")
+        .eq("league_id", leagueId)
         .maybeSingle();
-      
+
       if (error) {
-        console.error('Error fetching league scope:', error);
+        console.error("Error fetching league scope:", error);
         throw error;
       }
       return data;
@@ -37,8 +42,30 @@ export const LeagueMemberSponsorsManager = ({ leagueId }: LeagueMemberSponsorsMa
     enabled: !!leagueId,
   });
 
-  const seasonId = leagueScope?.season_id;
-  const seasonYear = (leagueScope?.saisons as any)?.annee;
+  const seasonId = leagueScope?.season_id ?? null;
+
+  // Fetch season label (year)
+  const {
+    data: seasonMeta,
+    isLoading: seasonLoading,
+    isError: seasonIsError,
+    error: seasonError,
+  } = useQuery({
+    queryKey: ["season-meta", seasonId],
+    queryFn: async () => {
+      if (!seasonId) return null;
+      const { data, error } = await supabase
+        .from("saisons")
+        .select("annee")
+        .eq("id", seasonId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!seasonId,
+  });
+
+  const seasonYear = seasonMeta?.annee ?? null;
 
   // Get league members with their managers and sponsors for this season
   const { data: membersWithSponsors, isLoading } = useQuery({
@@ -130,7 +157,7 @@ export const LeagueMemberSponsorsManager = ({ leagueId }: LeagueMemberSponsorsMa
     }
   };
 
-  if (scopeLoading) {
+  if (scopeLoading || seasonLoading) {
     return (
       <Card>
         <CardHeader>
@@ -140,6 +167,24 @@ export const LeagueMemberSponsorsManager = ({ leagueId }: LeagueMemberSponsorsMa
           <div className="flex items-center justify-center p-4">
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (scopeIsError || seasonIsError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Sponsors des membres</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-destructive">
+            Impossible de charger la saison de la ligue.
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {(scopeError as any)?.message || (seasonError as any)?.message || "Erreur inconnue"}
+          </p>
         </CardContent>
       </Card>
     );
