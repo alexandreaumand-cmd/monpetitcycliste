@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { LeagueAdminGuard } from "@/components/guards/LeagueAdminGuard";
 import { LeagueInvitesManager } from "@/components/admin/LeagueInvitesManager";
 import { LeagueDeleteManager } from "@/components/admin/LeagueDeleteManager";
+import { LeagueMemberSponsorsManager } from "@/components/admin/LeagueMemberSponsorsManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -198,6 +199,9 @@ export function LeagueDetailPage() {
 
         {/* Invitations */}
         <LeagueInvitesManager leagueId={leagueId} />
+
+        {/* Member Sponsors */}
+        <LeagueMemberSponsorsManager leagueId={leagueId} />
 
         {/* Members Management */}
         <Card>
