@@ -116,6 +116,17 @@ serve(async (req) => {
       return acc;
     }, {});
 
+    // Récupération des stats d'activité pour tous les utilisateurs
+    const userActivityStats: Record<string, any> = {};
+    for (const user of allUsers) {
+      const { data: stats, error: statsError } = await supabaseAdmin.rpc('get_user_activity_stats', {
+        target_user_id: user.id
+      });
+      if (!statsError && stats) {
+        userActivityStats[user.id] = stats;
+      }
+    }
+
     // Construction du payload
     const users = allUsers.map((user: any) => {
       const manager = managers?.find((m) => m.user_id === user.id);
@@ -127,6 +138,20 @@ serve(async (req) => {
       const leagueAdminCount = userLeaguesData.filter(
         (l: any) => l.role === 'owner' || l.role === 'admin'
       ).length;
+
+      // Récupérer les stats d'activité
+      const activityStats = userActivityStats[user.id] || {
+        total_page_views: 0,
+        total_sessions: 0,
+        pages_today: 0,
+        pages_last_7_days: 0,
+        pages_last_30_days: 0,
+        sessions_today: 0,
+        sessions_last_7_days: 0,
+        last_page_path: null,
+        last_activity_at: null,
+        avg_session_duration_seconds: 0
+      };
 
       return {
         user_id: user.id,
@@ -141,6 +166,8 @@ serve(async (req) => {
         email_confirmed_at: user.email_confirmed_at || null,
         banned_until: (user as any)?.banned_until || null,
         created_at: user.created_at || null,
+        // Nouvelles données d'activité
+        activity: activityStats,
       };
     });
 

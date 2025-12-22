@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { MobileLayout } from "@/components/mobile/MobileLayout";
 import { AppSidebar } from "@/components/layout/AppSidebar";
@@ -33,6 +34,9 @@ const Dashboard = () => {
   const [manager, setManager] = useState<any>(null);
   const { isSuperAdmin, isLeagueAdminOnly, loading: roleLoading } = useUserRole();
   const isAnyAdmin = isSuperAdmin || isLeagueAdminOnly;
+  
+  // Track user activity on all dashboard pages
+  useActivityTracker();
   
   const isHomePage = location.pathname === '/dashboard/home' || location.pathname === '/dashboard';
   const isSuperAdminRoute = location.pathname.includes('/dashboard/super-admin');
