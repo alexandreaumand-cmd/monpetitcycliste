@@ -73,8 +73,8 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
               </Button>
             </SheetTrigger>
 
-            <SheetContent side="left" className="w-[280px] p-0">
-              <SheetHeader className="p-6 border-b">
+            <SheetContent side="left" className="w-[280px] p-0 flex flex-col h-full">
+              <SheetHeader className="p-6 border-b flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <Shield className="h-6 w-6 text-primary" />
                   <SheetTitle>Super Admin</SheetTitle>
@@ -83,7 +83,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
               </SheetHeader>
 
               {/* Manager Info */}
-              <div className="p-4 border-b bg-muted/30">
+              <div className="p-4 border-b bg-muted/30 flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={manager?.avatar_url} />
@@ -102,53 +102,53 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
                 </div>
               </div>
 
-              {/* Navigation */}
-              <nav className="p-3 space-y-1">
+              {/* Navigation - scrollable area */}
+              <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
                 {superAdminNavItems.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <Button
+                    <button
                       key={item.path}
-                      variant="ghost"
+                      type="button"
                       className={cn(
-                        "w-full justify-start gap-3 h-11",
+                        "w-full flex items-center justify-start gap-3 h-11 px-3 rounded-md text-sm font-medium transition-colors",
                         isActive(item.path)
                           ? "bg-primary text-primary-foreground"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                       onClick={() => handleNavigate(item.path)}
                     >
-                      <Icon className="h-4 w-4" />
-                      {item.label}
-                    </Button>
+                      <Icon className="h-4 w-4 flex-shrink-0" />
+                      <span>{item.label}</span>
+                    </button>
                   );
                 })}
               </nav>
 
-              {/* Back to Dashboard & Logout */}
-              <div className="absolute bottom-0 left-0 right-0 p-3 border-t bg-background space-y-2">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start gap-2"
+              {/* Back to Dashboard & Logout - fixed at bottom */}
+              <div className="p-3 border-t bg-background space-y-2 flex-shrink-0">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-start gap-2 h-10 px-3 rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
                   onClick={() => {
-                    navigate("/dashboard");
                     setSheetOpen(false);
+                    setTimeout(() => navigate("/dashboard"), 150);
                   }}
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Retour au Dashboard
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                </button>
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-start gap-2 h-10 px-3 rounded-md text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
                   onClick={() => {
-                    onSignOut();
                     setSheetOpen(false);
+                    setTimeout(() => onSignOut(), 150);
                   }}
                 >
                   <LogOut className="h-4 w-4" />
                   Déconnexion
-                </Button>
+                </button>
               </div>
             </SheetContent>
           </Sheet>
