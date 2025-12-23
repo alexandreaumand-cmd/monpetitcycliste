@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle, AlertCircle } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { isStageRace } from "@/lib/courseType";
 import { PointsBaremeSection } from "@/components/courses/PointsBaremeSection";
 
@@ -39,6 +40,7 @@ interface StartlistEntry {
 
 export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCourseDrawerProps) => {
   const [imageError, setImageError] = useState(false);
+  const [pointsBreakdownOpen, setPointsBreakdownOpen] = useState(true);
 
   // Fetch detailed course data from v_course_points_theoriques
   const { data: courseDetails, isLoading: loadingDetails } = useQuery({
@@ -92,6 +94,16 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
     },
     enabled: open && !!startlistImport?.id,
   });
+
+  // Sort startlist entries by team trigramme
+  const sortedStartlistEntries = useMemo(() => {
+    if (!startlistData?.entries) return [];
+    return [...startlistData.entries].sort((a, b) => {
+      const teamA = (a.equipe?.nom_affiche || a.source_team || "").toLowerCase();
+      const teamB = (b.equipe?.nom_affiche || b.source_team || "").toLowerCase();
+      return teamA.localeCompare(teamB);
+    });
+  }, [startlistData?.entries]);
 
   if (!course) return null;
 
@@ -196,41 +208,52 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
                 ))}
               </div>
             ) : pointsData.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="font-semibold">Répartition par classement</h3>
-                {pointsData.map((item, index) => {
-                  const Icon = item.icon;
-                  const percentage = maxPoints > 0 ? (item.points / maxPoints) * 100 : 0;
+              <Collapsible open={pointsBreakdownOpen} onOpenChange={setPointsBreakdownOpen}>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between py-2 hover:bg-muted/50 rounded-md px-2 -mx-2 transition-colors">
+                    <h3 className="font-semibold">Répartition par classement</h3>
+                    {pointsBreakdownOpen ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 pt-2">
+                  {pointsData.map((item, index) => {
+                    const Icon = item.icon;
+                    const percentage = maxPoints > 0 ? (item.points / maxPoints) * 100 : 0;
 
-                  if (item.points === 0) return null;
+                    if (item.points === 0) return null;
 
-                  return (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`p-1.5 rounded ${item.bgColor}`}>
-                            <Icon className={`h-4 w-4 ${item.color}`} />
+                    return (
+                      <div key={index} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className={`p-1.5 rounded ${item.bgColor}`}>
+                              <Icon className={`h-4 w-4 ${item.color}`} />
+                            </div>
+                            <span className="font-medium text-sm">{item.label}</span>
                           </div>
-                          <span className="font-medium text-sm">{item.label}</span>
+                          <div className="text-right">
+                            <span className="font-bold">{item.points}</span>
+                            {item.detail && (
+                              <span className="text-xs text-muted-foreground ml-2">
+                                ({item.detail})
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <span className="font-bold">{item.points}</span>
-                          {item.detail && (
-                            <span className="text-xs text-muted-foreground ml-2">
-                              ({item.detail})
-                            </span>
-                          )}
-                        </div>
+                        <Progress value={percentage} className="h-2" />
+                        <PointsBaremeSection 
+                          courseId={course.course_id} 
+                          typeClassement={item.typeClassement}
+                        />
                       </div>
-                      <Progress value={percentage} className="h-2" />
-                      <PointsBaremeSection 
-                        courseId={course.course_id} 
-                        typeClassement={item.typeClassement}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </CollapsibleContent>
+              </Collapsible>
             )}
 
             {/* Route Image */}
@@ -274,15 +297,15 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
                     <Skeleton key={i} className="h-8 w-full" />
                   ))}
                 </div>
-              ) : startlistData?.entries && startlistData.entries.length > 0 ? (
+              ) : sortedStartlistEntries.length > 0 ? (
                 <>
                   {/* Stats */}
                   <div className="flex gap-4 text-sm">
                     <div className="flex items-center gap-1 text-green-600">
                       <CheckCircle className="h-4 w-4" />
-                      <span>{startlistData.stats.matched} matchés</span>
+                      <span>{startlistData?.stats.matched} matchés</span>
                     </div>
-                    {startlistData.stats.unmatched > 0 && (
+                    {startlistData?.stats.unmatched && startlistData.stats.unmatched > 0 && (
                       <div className="flex items-center gap-1 text-yellow-600">
                         <AlertCircle className="h-4 w-4" />
                         <span>{startlistData.stats.unmatched} non matchés</span>
@@ -292,7 +315,7 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
 
                   {/* Entries List */}
                   <div className="space-y-1 max-h-[300px] overflow-y-auto">
-                    {startlistData.entries.map((entry, idx) => (
+                    {sortedStartlistEntries.map((entry, idx) => (
                       <div 
                         key={idx}
                         className="flex items-center gap-3 text-sm py-1.5 px-2 rounded hover:bg-muted/50"
