@@ -126,6 +126,7 @@ export const CreateTeamDialog = ({ sourceTeam, saisonId, onClose, onSuccess }: C
                 <SelectItem value="WT">WorldTour (WT)</SelectItem>
                 <SelectItem value="PT">ProTeam (PT)</SelectItem>
                 <SelectItem value="CT">Continental (CT)</SelectItem>
+                <SelectItem value="OT">Autres</SelectItem>
               </SelectContent>
             </Select>
           </div>
