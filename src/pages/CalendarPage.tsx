@@ -19,7 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ArrowLeft, LogOut, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, ArrowLeft, LogOut, ArrowUpDown, ArrowUp, ArrowDown, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
@@ -320,6 +321,27 @@ export default function CalendarPage() {
     setSelectedPhase("all");
   };
 
+  // Export to Excel
+  const handleExportExcel = () => {
+    const exportData = sortedCourses.map(course => ({
+      "Nom": course.nom,
+      "Catégorie": course.categorie || "",
+      "Date début": course.date_debut || "",
+      "Date fin": course.date_fin || "",
+      "Phase": course.phase_index !== null ? `Phase ${course.phase_index}` : "",
+      "Saison": course.saison_annee || "",
+      "Points": course.total_points,
+      "Startlist": course.startlist_count,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Calendrier");
+    
+    const filename = `calendrier_${localSelectedSeason?.annee || "export"}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+  };
+
   // Format date
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
@@ -466,11 +488,20 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {/* Results count */}
+        {/* Results count and export */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground">
             {sortedCourses.length} course{sortedCourses.length !== 1 ? 's' : ''} trouvée{sortedCourses.length !== 1 ? 's' : ''}
           </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleExportExcel}
+            disabled={sortedCourses.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export Excel
+          </Button>
         </div>
 
         {/* Table */}
