@@ -135,6 +135,8 @@ export const CoursesFilters = ({ filters, onFiltersChange }: CoursesFiltersProps
               
               {/* Championnats */}
               <SelectItem value="CN">CN</SelectItem>
+              <SelectItem value="CN_RR">CN RR</SelectItem>
+              <SelectItem value="CN_ITT">CN ITT</SelectItem>
               <SelectItem value="EC ITT">EC ITT</SelectItem>
               <SelectItem value="EC RR">EC RR</SelectItem>
               <SelectItem value="WC ITT">WC ITT</SelectItem>
