@@ -35,8 +35,10 @@ interface AuctionTabsProps {
   handleUpdateAmount: (bidId: string, coureurId: string, amount: number) => void;
   handleRemoveBid: (bidId: string) => void;
   handleSubmitAll: () => void;
+  handleImportFavorites?: () => void;
   isUpdating: boolean;
   isSubmitting: boolean;
+  isImportingFavorites?: boolean;
   // Sort
   sortOrder: 'nom' | 'cote';
   setSortOrder: (order: 'nom' | 'cote') => void;
@@ -63,8 +65,10 @@ export const AuctionTabs = ({
   handleUpdateAmount,
   handleRemoveBid,
   handleSubmitAll,
+  handleImportFavorites,
   isUpdating,
   isSubmitting,
+  isImportingFavorites = false,
   sortOrder,
   setSortOrder,
 }: AuctionTabsProps) => {
@@ -209,6 +213,8 @@ export const AuctionTabs = ({
               selectedCategories={selectedCategories}
               onCategoriesChange={setSelectedCategories}
               availableTeams={availableTeams}
+              onImportFavorites={handleImportFavorites}
+              isImportingFavorites={isImportingFavorites}
             />
           </div>
 

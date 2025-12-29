@@ -276,6 +276,93 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     },
   });
 
+  // Import favorites mutation
+  const importFavoritesMutation = useMutation({
+    mutationFn: async () => {
+      // 1. Get user's favorites
+      const { data: favorites, error: favError } = await supabase
+        .from("rider_favorites")
+        .select("coureur_id")
+        .eq("manager_id", managerId);
+      
+      if (favError) throw favError;
+      if (!favorites || favorites.length === 0) {
+        throw new Error("Aucun favori à importer");
+      }
+
+      const favoriteIds = favorites.map(f => f.coureur_id);
+
+      // 2. Get riders already in roster (taken by any manager in this phase/league)
+      let rosterQuery = supabase
+        .from("rosters")
+        .select("coureur_id")
+        .eq("phase_id", phaseId);
+      
+      if (leagueId) {
+        rosterQuery = rosterQuery.eq("league_id", leagueId);
+      }
+
+      const { data: takenRiders } = await rosterQuery;
+      const takenIds = new Set((takenRiders || []).map(r => r.coureur_id));
+
+      // 3. Get current draft bids to avoid duplicates
+      const currentDraftIds = new Set(
+        (context?.my_bids || []).map((b: any) => b.coureur_id)
+      );
+
+      // 4. Filter favorites: exclude taken and already in draft
+      const availableFavorites = favoriteIds.filter(
+        id => !takenIds.has(id) && !currentDraftIds.has(id)
+      );
+
+      if (availableFavorites.length === 0) {
+        throw new Error("Tous les favoris sont déjà pris ou dans vos enchères");
+      }
+
+      // 5. Get price info for available favorites
+      const { data: ridersInfo, error: ridersError } = await supabase
+        .from("coureurs_saisons")
+        .select("coureur_id, prix_initial")
+        .in("coureur_id", availableFavorites);
+      
+      if (ridersError) throw ridersError;
+
+      // 6. Create bids for each favorite at initial price
+      const results = [];
+      for (const rider of ridersInfo || []) {
+        const { data, error } = await supabase.functions.invoke("auction-upsert-bid", {
+          body: { 
+            phase_id: phaseId, 
+            rider_id: rider.coureur_id, 
+            amount: rider.prix_initial || 10,
+            league_id: leagueId 
+          },
+        });
+        if (error) {
+          console.warn(`Failed to import favorite ${rider.coureur_id}:`, error);
+        } else {
+          results.push(data);
+        }
+      }
+
+      return { imported: results.length, total: availableFavorites.length };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId, leagueId] });
+      toast({ 
+        title: "Favoris importés", 
+        description: `${data.imported} coureur${data.imported > 1 ? 's' : ''} ajouté${data.imported > 1 ? 's' : ''} à vos enchères` 
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Import impossible",
+        description: error.message || "Erreur lors de l'import des favoris",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handlers
   const handleAddRider = (rider: any) => {
     setSelectedRider(rider);
@@ -301,6 +388,10 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
 
   const handleSubmitAll = () => {
     setShowSubmitDialog(true);
+  };
+
+  const handleImportFavorites = () => {
+    importFavoritesMutation.mutate();
   };
 
   if (contextLoading) {
@@ -462,17 +553,31 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         </TabsContent>
 
         <TabsContent value="search" className="flex-1 mt-0 flex flex-col">
-          {/* Search bar - Sticky at top */}
-          <div className="px-3 py-2 border-b bg-background sticky top-0 z-10">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Rechercher un coureur…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-9 pl-9 pr-10 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+          {/* Search bar with import button - Sticky at top */}
+          <div className="px-3 py-2 border-b bg-background sticky top-0 z-10 space-y-2">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Rechercher un coureur…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-9 pl-9 pr-10 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+              </div>
+              <button
+                onClick={handleImportFavorites}
+                disabled={importFavoritesMutation.isPending}
+                className="h-9 px-3 rounded-md border border-yellow-500 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-950 flex items-center gap-1 text-sm font-medium disabled:opacity-50"
+              >
+                {importFavoritesMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <svg className="h-4 w-4 fill-yellow-400 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" /></svg>
+                )}
+                <span className="hidden sm:inline">Favoris</span>
+              </button>
             </div>
           </div>
           
