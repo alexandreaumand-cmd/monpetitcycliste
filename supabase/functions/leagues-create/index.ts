@@ -11,7 +11,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
+    // Client pour authentification (avec JWT utilisateur)
+    const supabaseAuth = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
@@ -21,8 +22,14 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Authenticate user
-    const { data: { user } } = await supabase.auth.getUser();
+    // Client admin pour les opérations DB (bypass RLS)
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Authenticate user with JWT client
+    const { data: { user } } = await supabaseAuth.auth.getUser();
     if (!user) {
       return new Response(JSON.stringify({ error: 'Non authentifié' }), {
         status: 401,
@@ -30,7 +37,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get manager
+    console.log('User authenticated:', user.id);
+
+    // Get manager using admin client
     const { data: manager, error: managerError } = await supabase
       .from('managers')
       .select('id')
@@ -38,11 +47,14 @@ Deno.serve(async (req) => {
       .single();
 
     if (managerError || !manager) {
+      console.error('Manager error:', managerError);
       return new Response(JSON.stringify({ error: 'Manager introuvable' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('Manager found:', manager.id);
 
     const { 
       name, 
