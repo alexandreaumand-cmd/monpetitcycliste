@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
         owner_manager_id: manager.id,
         game_mode: gameMode,
         max_players: maxPlayers,
-        current_player_count: 1,
+        current_player_count: 0,
         bonuses_enabled: bonusesEnabled ?? true,
         status: 'pending',
         first_auction_starts_at: firstAuctionStartsAt,
