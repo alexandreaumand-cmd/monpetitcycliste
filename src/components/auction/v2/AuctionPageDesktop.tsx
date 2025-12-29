@@ -275,6 +275,93 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     },
   });
 
+  // Import favorites mutation
+  const importFavoritesMutation = useMutation({
+    mutationFn: async () => {
+      // 1. Get user's favorites
+      const { data: favorites, error: favError } = await supabase
+        .from("rider_favorites")
+        .select("coureur_id")
+        .eq("manager_id", managerId);
+      
+      if (favError) throw favError;
+      if (!favorites || favorites.length === 0) {
+        throw new Error("Aucun favori à importer");
+      }
+
+      const favoriteIds = favorites.map(f => f.coureur_id);
+
+      // 2. Get riders already in roster (taken by any manager in this phase/league)
+      let rosterQuery = supabase
+        .from("rosters")
+        .select("coureur_id")
+        .eq("phase_id", phaseId);
+      
+      if (leagueId) {
+        rosterQuery = rosterQuery.eq("league_id", leagueId);
+      }
+
+      const { data: takenRiders } = await rosterQuery;
+      const takenIds = new Set((takenRiders || []).map(r => r.coureur_id));
+
+      // 3. Get current draft bids to avoid duplicates
+      const currentDraftIds = new Set(
+        (context?.my_bids || []).map((b: any) => b.coureur_id)
+      );
+
+      // 4. Filter favorites: exclude taken and already in draft
+      const availableFavorites = favoriteIds.filter(
+        id => !takenIds.has(id) && !currentDraftIds.has(id)
+      );
+
+      if (availableFavorites.length === 0) {
+        throw new Error("Tous les favoris sont déjà pris ou dans vos enchères");
+      }
+
+      // 5. Get price info for available favorites
+      const { data: ridersInfo, error: ridersError } = await supabase
+        .from("coureurs_saisons")
+        .select("coureur_id, prix_initial")
+        .in("coureur_id", availableFavorites);
+      
+      if (ridersError) throw ridersError;
+
+      // 6. Create bids for each favorite at initial price
+      const results = [];
+      for (const rider of ridersInfo || []) {
+        const { data, error } = await supabase.functions.invoke("auction-upsert-bid", {
+          body: { 
+            phase_id: phaseId, 
+            rider_id: rider.coureur_id, 
+            amount: rider.prix_initial || 10,
+            league_id: leagueId 
+          },
+        });
+        if (error) {
+          console.warn(`Failed to import favorite ${rider.coureur_id}:`, error);
+        } else {
+          results.push(data);
+        }
+      }
+
+      return { imported: results.length, total: availableFavorites.length };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId] });
+      toast({ 
+        title: "Favoris importés", 
+        description: `${data.imported} coureur${data.imported > 1 ? 's' : ''} ajouté${data.imported > 1 ? 's' : ''} à vos enchères` 
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Import impossible",
+        description: error.message || "Erreur lors de l'import des favoris",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handlers
   const handleSubmitBid = (amount: number, rider_id: string) => {
     upsertBidMutation.mutate({ rider_id, amount });
@@ -290,6 +377,10 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
 
   const handleSubmitAll = () => {
     setShowSubmitDialog(true);
+  };
+
+  const handleImportFavorites = () => {
+    importFavoritesMutation.mutate();
   };
 
   if (contextLoading) {
@@ -454,8 +545,10 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
           handleUpdateAmount={handleUpdateAmount}
           handleRemoveBid={handleRemoveBid}
           handleSubmitAll={handleSubmitAll}
+          handleImportFavorites={handleImportFavorites}
           isUpdating={upsertBidMutation.isPending || removeBidMutation.isPending}
           isSubmitting={submitAllMutation.isPending}
+          isImportingFavorites={importFavoritesMutation.isPending}
           sortOrder={sortOrder}
           setSortOrder={setSortOrder}
         />

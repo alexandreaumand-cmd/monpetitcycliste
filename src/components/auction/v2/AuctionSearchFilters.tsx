@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 
-import { Search, X, ChevronDown } from "lucide-react";
+import { Search, X, ChevronDown, Star, Loader2 } from "lucide-react";
 
 interface AuctionSearchFiltersProps {
   searchQuery: string;
@@ -17,6 +17,8 @@ interface AuctionSearchFiltersProps {
   selectedCategories: string[];
   onCategoriesChange: (categories: string[]) => void;
   availableTeams: Array<{ id: string; name: string; categorie?: string }>;
+  onImportFavorites?: () => void;
+  isImportingFavorites?: boolean;
 }
 
 export function AuctionSearchFilters({
@@ -29,6 +31,8 @@ export function AuctionSearchFilters({
   selectedCategories,
   onCategoriesChange,
   availableTeams,
+  onImportFavorites,
+  isImportingFavorites = false,
 }: AuctionSearchFiltersProps) {
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
 
@@ -96,8 +100,26 @@ export function AuctionSearchFilters({
 
   return (
     <div className="space-y-3">
-      {/* First row: Search + Category + Team filters */}
+      {/* First row: Search + Category + Team filters + Import Favorites */}
       <div className="flex items-center gap-3 flex-wrap">
+        {/* Import Favorites Button */}
+        {onImportFavorites && (
+          <Button
+            variant="outline"
+            size="default"
+            onClick={onImportFavorites}
+            disabled={isImportingFavorites}
+            className="gap-2 border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-950"
+          >
+            {isImportingFavorites ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+            )}
+            Importer favoris
+          </Button>
+        )}
+
         {/* Search bar */}
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
