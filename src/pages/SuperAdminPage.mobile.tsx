@@ -11,6 +11,7 @@ import { SuperAdminLeaguesPage } from "@/pages/admin/SuperAdminLeaguesPage";
 import { LeagueDetailPage } from "@/pages/admin/LeagueDetailPage";
 import UsersManagementPage from "@/pages/admin/UsersManagementPage";
 import { StartlistImportManager } from "@/components/admin/StartlistImportManager";
+import { StartlistDataManager } from "@/components/admin/StartlistDataManager";
 import { CourseManagementTabs } from "@/components/admin/CourseManagementTabs";
 import { CoursesManager } from "@/components/admin/CoursesManager";
 import { CoureursManager } from "@/components/admin/CoureursManager";
@@ -27,6 +28,7 @@ const superAdminNavItems = [
   { label: 'Barèmes', path: 'baremes', icon: BarChart },
   { label: 'Points Ledger', path: 'points-ledger', icon: Database },
   { label: 'Startlists', path: 'startlists', icon: FileText },
+  { label: 'Données Startlists', path: 'startlist-data', icon: FileText },
   { label: 'Données', path: 'data', icon: Database },
   { label: 'Ligues', path: 'leagues', icon: Users },
   { label: 'Utilisateurs', path: 'users', icon: Shield },
@@ -186,6 +188,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
               <Route path="baremes" element={<BaremesManager />} />
               <Route path="points-ledger" element={<PointsLedgerTable />} />
               <Route path="startlists" element={<StartlistImportManager />} />
+              <Route path="startlist-data" element={<StartlistDataManager />} />
             <Route path="data" element={<DataManagementTabs />} />
             <Route path="leagues" element={<SuperAdminLeaguesPage />} />
             <Route path="leagues/:id" element={<LeagueDetailPage />} />
