@@ -102,7 +102,66 @@ Deno.serve(async (req) => {
       console.log('Fallback admin check passed via league_members for user:', user.id);
     }
 
-    // Get last auction for this phase and league (use maybeSingle to handle no results)
+    // STEP 1: Check if there's an existing scheduled auction to reuse
+    const { data: scheduledAuction, error: scheduledError } = await supabase
+      .from('auctions')
+      .select('*')
+      .eq('phase_id', phase_id)
+      .eq('league_id', league_id)
+      .eq('statut', 'scheduled')
+      .order('round_number', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (scheduledError) throw scheduledError;
+
+    // If a scheduled round exists, start it early instead of creating a new one
+    if (scheduledAuction) {
+      console.log('Found scheduled auction to reuse:', scheduledAuction.id, 'round:', scheduledAuction.round_number);
+      
+      const { data: updatedAuction, error: updateError } = await supabase
+        .from('auctions')
+        .update({
+          deadline_at,
+          statut: 'open',
+        })
+        .eq('id', scheduledAuction.id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+      
+      console.log('Started scheduled auction early:', updatedAuction);
+      
+      // Notify league members
+      await notifyLeagueMembers(supabase, league_id, {
+        type: 'auction_opened',
+        title: auto_launched 
+          ? `🤖 Round ${scheduledAuction.round_number} lancé automatiquement` 
+          : `🎯 Round ${scheduledAuction.round_number} lancé !`,
+        message: auto_launched
+          ? `Le round ${scheduledAuction.round_number} a été lancé automatiquement. Deadline : ${new Date(deadline_at).toLocaleString('fr-FR')}. Placez vos enchères !`
+          : `Le round ${scheduledAuction.round_number} est maintenant ouvert. Placez vos enchères avant la deadline !`,
+        metadata: {
+          auction_id: updatedAuction.id,
+          round_number: scheduledAuction.round_number,
+          phase_id: phase_id,
+          league_id: league_id,
+          deadline_at: deadline_at,
+          auto_launched: auto_launched || false
+        }
+      });
+
+      return new Response(
+        JSON.stringify({ success: true, auction: updatedAuction }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // STEP 2: No scheduled auction exists, create a new one
+    console.log('No scheduled auction found, creating new round');
+
+    // Get last auction for this phase and league
     const { data: lastAuction, error: auctionError } = await supabase
       .from('auctions')
       .select('round_number')
@@ -112,53 +171,26 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
+    if (auctionError) throw auctionError;
+
     const newRoundNumber = lastAuction ? lastAuction.round_number + 1 : 1;
+    console.log('Creating new round number:', newRoundNumber);
 
-    // Check if auction already exists for this round (open or scheduled)
-    const { data: existingAuction } = await supabase
+    // Create new auction
+    const { data: newAuction, error: insertError } = await supabase
       .from('auctions')
-      .select('*')
-      .eq('phase_id', phase_id)
-      .eq('league_id', league_id)
-      .eq('round_number', newRoundNumber)
-      .in('statut', ['open', 'scheduled'])
-      .maybeSingle();
+      .insert({
+        phase_id,
+        league_id,
+        round_number: newRoundNumber,
+        deadline_at,
+        statut: 'open',
+      })
+      .select()
+      .single();
 
-    let newAuction;
-
-    if (existingAuction) {
-      // Update existing auction
-      const { data: updatedAuction, error } = await supabase
-        .from('auctions')
-        .update({
-          deadline_at,
-          statut: 'open',
-        })
-        .eq('id', existingAuction.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      newAuction = updatedAuction;
-      console.log('Auction updated:', newAuction);
-    } else {
-      // Create new auction
-      const { data: insertedAuction, error } = await supabase
-        .from('auctions')
-        .insert({
-          phase_id,
-          league_id,
-          round_number: newRoundNumber,
-          deadline_at,
-          statut: 'open',
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      newAuction = insertedAuction;
-      console.log('New round created:', newAuction);
-    }
+    if (insertError) throw insertError;
+    console.log('New round created:', newAuction);
 
     // Notify all league members
     await notifyLeagueMembers(supabase, league_id, {
