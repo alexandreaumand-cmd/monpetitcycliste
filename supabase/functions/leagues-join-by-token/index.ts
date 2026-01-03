@@ -94,33 +94,36 @@ Deno.serve(async (req) => {
 
     const leagueId = invite.league_id;
 
-    // Ensure manager profile exists
-    const { data: existingManager } = await serviceClient
-      .from('managers')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    // Check if manager profile exists (with retry for race condition with signup)
+    let existingManager = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data: manager } = await serviceClient
+        .from('managers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (manager) {
+        existingManager = manager;
+        console.log('[JOIN] Manager profile found:', manager.id, 'after', attempt + 1, 'attempt(s)');
+        break;
+      }
+      
+      if (attempt < 4) {
+        console.log('[JOIN] Manager not found, waiting... attempt', attempt + 1, '/ 5');
+        await new Promise(r => setTimeout(r, 400));
+      }
+    }
 
     if (!existingManager) {
-      console.log('[JOIN] Creating manager profile for user', user.id);
-      const { error: managerError } = await serviceClient
-        .from('managers')
-        .insert({
-          user_id: user.id,
-          nom: user.email?.split('@')[0] || 'Manager',
-          email: user.email,
-        });
-
-      if (managerError) {
-        console.error('[JOIN] Error creating manager:', managerError);
-        return new Response(JSON.stringify({ error: 'Failed to create manager profile', details: managerError.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      console.log('[JOIN] Manager profile created successfully');
-    } else {
-      console.log('[JOIN] Manager profile already exists:', existingManager.id);
+      console.error('[JOIN] Manager profile not found after retries for user', user.id);
+      return new Response(JSON.stringify({ 
+        error: 'MANAGER_NOT_FOUND', 
+        details: 'Votre profil manager n\'est pas encore créé. Veuillez réessayer.' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Optional: Set the token in session for the trigger (if RPC exists)
