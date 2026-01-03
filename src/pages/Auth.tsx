@@ -37,49 +37,69 @@ const Auth = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
-        // If coming from invite, handle join process with delay to ensure JWT is valid
+        // If coming from invite, handle join process
         if (inviteToken) {
-          setTimeout(async () => {
-            try {
-              console.log('Attempting to join league with token:', inviteToken.slice(0, 8) + '...');
+          try {
+            console.log('Attempting to join league with token:', inviteToken.slice(0, 8) + '...');
+            
+            // Wait for manager to be created (retry up to 6 times with 500ms delay)
+            let managerExists = false;
+            for (let i = 0; i < 6; i++) {
+              const { data: manager } = await supabase
+                .from('managers')
+                .select('id')
+                .eq('user_id', session.user.id)
+                .maybeSingle();
               
-              const { data, error } = await supabase.functions.invoke('leagues-join-by-token', {
-                body: { token: inviteToken },
-              });
-
-              if (error) {
-                console.error('Join league error:', error);
-                toast({
-                  title: "Erreur",
-                  description: "Impossible de rejoindre la ligue automatiquement. Redirection...",
-                  variant: "destructive",
-                });
-                navigate(`/invite?token=${inviteToken}`);
-                return;
+              if (manager) {
+                managerExists = true;
+                console.log('Manager found after', i + 1, 'attempt(s)');
+                break;
               }
+              console.log('Manager not found yet, attempt', i + 1, '/ 6');
+              await new Promise(r => setTimeout(r, 500));
+            }
+            
+            if (!managerExists) {
+              console.warn('Manager not created in time, proceeding anyway');
+            }
+            
+            const { data, error } = await supabase.functions.invoke('leagues-join-by-token', {
+              body: { token: inviteToken },
+            });
 
-              if (data?.ok) {
-                toast({
-                  title: "Bienvenue !",
-                  description: `Vous avez rejoint la ligue "${data.league_name}"`,
-                });
-                navigate(`/?leagueId=${data.league_id}`);
-                return;
-              } else {
-                console.error('Join league failed:', data);
-                navigate(`/invite?token=${inviteToken}`);
-                return;
-              }
-            } catch (err) {
-              console.error('Auto-join exception:', err);
+            if (error) {
+              console.error('Join league error:', error);
               toast({
                 title: "Erreur",
-                description: "Une erreur est survenue. Veuillez réessayer.",
+                description: "Impossible de rejoindre la ligue automatiquement. Redirection...",
                 variant: "destructive",
               });
               navigate(`/invite?token=${inviteToken}`);
+              return;
             }
-          }, 1500); // Delay to ensure JWT is fully valid
+
+            if (data?.ok) {
+              toast({
+                title: "Bienvenue !",
+                description: `Vous avez rejoint la ligue "${data.league_name}"`,
+              });
+              navigate(`/?leagueId=${data.league_id}`);
+              return;
+            } else {
+              console.error('Join league failed:', data);
+              navigate(`/invite?token=${inviteToken}`);
+              return;
+            }
+          } catch (err) {
+            console.error('Auto-join exception:', err);
+            toast({
+              title: "Erreur",
+              description: "Une erreur est survenue. Veuillez réessayer.",
+              variant: "destructive",
+            });
+            navigate(`/invite?token=${inviteToken}`);
+          }
           return;
         }
         navigate(nextUrl);
