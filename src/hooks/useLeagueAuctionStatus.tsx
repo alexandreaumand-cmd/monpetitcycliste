@@ -9,6 +9,7 @@ interface AuctionStatus {
   totalManagers: number;
   deadlineAt: string;
   isScheduled?: boolean;
+  isAnnouncementsPending?: boolean;
 }
 
 export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean = true) {
@@ -68,7 +69,44 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
         };
       }
 
-      // 2. Si aucune enchère ouverte, chercher une enchère SCHEDULED (sur la phase active si définie)
+      // 2. Si aucune enchère ouverte, chercher une enchère FERMÉE avec annonces non publiées
+      let closedAuctionQuery = supabase
+        .from('auctions')
+        .select('id, round_number, closed_at, phase_id')
+        .eq('league_id', leagueId)
+        .eq('statut', 'closed');
+
+      if (activePhaseId) {
+        closedAuctionQuery = closedAuctionQuery.eq('phase_id', activePhaseId);
+      }
+
+      const { data: closedAuction } = await closedAuctionQuery
+        .order('closed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (closedAuction) {
+        // Vérifier s'il reste des annonces non publiées
+        const { count } = await supabase
+          .from('annonces')
+          .select('*', { count: 'exact', head: true })
+          .eq('auction_id', closedAuction.id)
+          .eq('published', false);
+
+        if (count && count > 0) {
+          return {
+            auctionId: closedAuction.id,
+            phaseId: closedAuction.phase_id,
+            roundNumber: closedAuction.round_number,
+            validatedCount: 0,
+            totalManagers: 0,
+            deadlineAt: closedAuction.closed_at || new Date().toISOString(),
+            isAnnouncementsPending: true,
+          };
+        }
+      }
+
+      // 3. Si aucune enchère fermée avec annonces, chercher une enchère SCHEDULED (sur la phase active si définie)
       let scheduledAuctionQuery = supabase
         .from('auctions')
         .select('id, round_number, opens_at, phase_id')

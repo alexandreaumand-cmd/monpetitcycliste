@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus, CheckCircle, Lock, Globe, Gavel, CheckCircle2, Clock } from "lucide-react";
+import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus, CheckCircle, Lock, Globe, Gavel, CheckCircle2, Clock, PartyPopper } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -299,17 +299,27 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               <p className="text-sm text-muted-foreground text-center py-4">Aucune donnée disponible</p>
             )}
 
-            {/* Section enchères (en cours OU programmées) */}
+            {/* Section enchères (en cours, résultats OU programmées) */}
             {auctionStatus && !loadingAuction && (
               <div 
                 onClick={() => onViewDetails(true)}
-                className={auctionStatus.isScheduled 
-                  ? "bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-400 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
-                  : "bg-gradient-to-br from-[#FFF4CC] to-[#FFE999] border-2 border-[#FFD500] rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+                className={
+                  auctionStatus.isAnnouncementsPending 
+                    ? "bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-400 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+                    : auctionStatus.isScheduled 
+                      ? "bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-400 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+                      : "bg-gradient-to-br from-[#FFF4CC] to-[#FFE999] border-2 border-[#FFD500] rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
                 }
               >
                 <div className="flex items-center gap-2">
-                  {auctionStatus.isScheduled ? (
+                  {auctionStatus.isAnnouncementsPending ? (
+                    <>
+                      <PartyPopper className="h-5 w-5 text-orange-600" />
+                      <h3 className="font-montserrat font-bold text-orange-900">
+                        Résultats en cours
+                      </h3>
+                    </>
+                  ) : auctionStatus.isScheduled ? (
                     <>
                       <Clock className="h-5 w-5 text-blue-600" />
                       <h3 className="font-montserrat font-bold text-blue-900">
@@ -329,16 +339,36 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                 <div className="space-y-2">
                   {/* Round number */}
                   <div className="flex items-center justify-between">
-                    <span className={`text-sm font-poppins ${auctionStatus.isScheduled ? 'text-blue-800' : 'text-gray-900'}`}>
+                    <span className={`text-sm font-poppins ${
+                      auctionStatus.isAnnouncementsPending ? 'text-orange-800' 
+                        : auctionStatus.isScheduled ? 'text-blue-800' 
+                        : 'text-gray-900'
+                    }`}>
                       Tour d'enchères
                     </span>
-                    <span className={`text-lg font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
+                    <span className={`text-lg font-montserrat font-bold ${
+                      auctionStatus.isAnnouncementsPending ? 'text-orange-900' 
+                        : auctionStatus.isScheduled ? 'text-blue-900' 
+                        : 'text-black'
+                    }`}>
                       Round {auctionStatus.roundNumber}
                     </span>
                   </div>
                   
+                  {/* Message résultats en cours */}
+                  {auctionStatus.isAnnouncementsPending && (
+                    <div className="bg-orange-50/80 rounded-lg p-3 border border-orange-200 mt-3">
+                      <p className="text-sm text-orange-800 text-center">
+                        🎬 Les résultats sont en train d'être révélés...
+                      </p>
+                      <p className="text-xs text-orange-600 text-center mt-1">
+                        Cliquez pour voir les annonces
+                      </p>
+                    </div>
+                  )}
+                  
                   {/* Validation status - seulement pour enchères ouvertes */}
-                  {!auctionStatus.isScheduled && (
+                  {!auctionStatus.isScheduled && !auctionStatus.isAnnouncementsPending && (
                     <>
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-poppins text-gray-900 flex items-center gap-1">
@@ -362,53 +392,55 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                     </>
                   )}
 
-                  {/* Countdown */}
-                  <div className={`${auctionStatus.isScheduled ? 'bg-blue-50/80' : 'bg-white/80'} rounded-lg p-3 border ${auctionStatus.isScheduled ? 'border-blue-200' : 'border-black/10'} mt-3`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className={`h-4 w-4 ${auctionStatus.isScheduled ? 'text-blue-600' : 'text-black'}`} />
-                      <span className={`text-xs font-poppins font-medium ${auctionStatus.isScheduled ? 'text-blue-800' : 'text-gray-900'}`}>
-                        {auctionStatus.isScheduled ? "Ouverture dans" : "Temps restant"}
-                      </span>
-                    </div>
-                    
-                    {countdown.isExpired ? (
-                      <p className="text-sm font-montserrat font-bold text-red-600">
-                        {auctionStatus.isScheduled ? 'Ouverture en cours...' : 'Clôture en cours...'}
-                      </p>
-                    ) : (
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="text-center">
-                          <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
-                            {String(countdown.days).padStart(2, '0')}
-                          </div>
-                          <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>
-                            jour{countdown.days > 1 ? 's' : ''}
-                          </div>
-                        </div>
-                        <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>:</div>
-                        <div className="text-center">
-                          <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
-                            {String(countdown.hours).padStart(2, '0')}
-                          </div>
-                          <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>h</div>
-                        </div>
-                        <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>:</div>
-                        <div className="text-center">
-                          <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
-                            {String(countdown.minutes).padStart(2, '0')}
-                          </div>
-                          <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>min</div>
-                        </div>
-                        <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>:</div>
-                        <div className="text-center">
-                          <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
-                            {String(countdown.seconds).padStart(2, '0')}
-                          </div>
-                          <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>sec</div>
-                        </div>
+                  {/* Countdown - seulement pour open et scheduled */}
+                  {!auctionStatus.isAnnouncementsPending && (
+                    <div className={`${auctionStatus.isScheduled ? 'bg-blue-50/80' : 'bg-white/80'} rounded-lg p-3 border ${auctionStatus.isScheduled ? 'border-blue-200' : 'border-black/10'} mt-3`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className={`h-4 w-4 ${auctionStatus.isScheduled ? 'text-blue-600' : 'text-black'}`} />
+                        <span className={`text-xs font-poppins font-medium ${auctionStatus.isScheduled ? 'text-blue-800' : 'text-gray-900'}`}>
+                          {auctionStatus.isScheduled ? "Ouverture dans" : "Temps restant"}
+                        </span>
                       </div>
-                    )}
-                  </div>
+                      
+                      {countdown.isExpired ? (
+                        <p className="text-sm font-montserrat font-bold text-red-600">
+                          {auctionStatus.isScheduled ? 'Ouverture en cours...' : 'Clôture en cours...'}
+                        </p>
+                      ) : (
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="text-center">
+                            <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
+                              {String(countdown.days).padStart(2, '0')}
+                            </div>
+                            <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>
+                              jour{countdown.days > 1 ? 's' : ''}
+                            </div>
+                          </div>
+                          <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>:</div>
+                          <div className="text-center">
+                            <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
+                              {String(countdown.hours).padStart(2, '0')}
+                            </div>
+                            <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>h</div>
+                          </div>
+                          <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>:</div>
+                          <div className="text-center">
+                            <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
+                              {String(countdown.minutes).padStart(2, '0')}
+                            </div>
+                            <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>min</div>
+                          </div>
+                          <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>:</div>
+                          <div className="text-center">
+                            <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>
+                              {String(countdown.seconds).padStart(2, '0')}
+                            </div>
+                            <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>sec</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
