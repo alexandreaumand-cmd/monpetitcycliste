@@ -17,13 +17,28 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
     queryFn: async (): Promise<AuctionStatus | null> => {
       if (!leagueId) return null;
 
-      // 1. Chercher une enchère OUVERTE
-      const { data: openAuction } = await supabase
+      // 0. Récupérer la phase active de la ligue
+      const { data: leagueData } = await supabase
+        .from('leagues')
+        .select('settings')
+        .eq('id', leagueId)
+        .single();
+
+      const activePhaseId = (leagueData?.settings as { activePhaseId?: string })?.activePhaseId;
+
+      // 1. Chercher une enchère OUVERTE (sur la phase active si définie)
+      let openAuctionQuery = supabase
         .from('auctions')
         .select('id, round_number, deadline_at, phase_id')
         .eq('league_id', leagueId)
         .eq('statut', 'open')
-        .not('phase_id', 'is', null)  // ✅ Filtrer les enchères fantômes
+        .not('phase_id', 'is', null);
+
+      if (activePhaseId) {
+        openAuctionQuery = openAuctionQuery.eq('phase_id', activePhaseId);
+      }
+
+      const { data: openAuction } = await openAuctionQuery
         .order('round_number', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(1)
@@ -53,13 +68,19 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
         };
       }
 
-      // 2. Si aucune enchère ouverte, chercher une enchère SCHEDULED (future uniquement)
-      const { data: scheduledAuction } = await supabase
+      // 2. Si aucune enchère ouverte, chercher une enchère SCHEDULED (sur la phase active si définie)
+      let scheduledAuctionQuery = supabase
         .from('auctions')
         .select('id, round_number, opens_at, phase_id')
         .eq('league_id', leagueId)
         .eq('statut', 'scheduled')
-        .gt('opens_at', new Date().toISOString())
+        .gt('opens_at', new Date().toISOString());
+
+      if (activePhaseId) {
+        scheduledAuctionQuery = scheduledAuctionQuery.eq('phase_id', activePhaseId);
+      }
+
+      const { data: scheduledAuction } = await scheduledAuctionQuery
         .order('opens_at', { ascending: true })
         .limit(1)
         .maybeSingle();
