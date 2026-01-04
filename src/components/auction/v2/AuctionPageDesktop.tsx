@@ -63,7 +63,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
       if (error) throw error;
       return data;
     },
-    refetchInterval: 5000,
+    refetchInterval: 10000,
   });
 
   // Get last closed auction if no active auction

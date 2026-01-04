@@ -190,43 +190,46 @@ Deno.serve(async (req) => {
     
     const { data: existingRoster } = await rosterQuery;
 
-    // Enrich roster with coureurs_saisons data - handle duplicates with limit(1)
+    // Enrich roster with coureurs_saisons data - BATCH QUERIES for performance
     const rosterCoureurIds = (existingRoster || []).map(r => r.coureur_id);
     const rosterCoureursMap = new Map();
     
     if (rosterCoureurIds.length > 0) {
-      // Fetch each rider individually to handle duplicates
-      for (const coureurId of rosterCoureurIds) {
-        const { data: coureurData } = await supabase
-          .from('coureurs_saisons')
-          .select('coureur_id, coureurs!inner(id, nom), equipe_id, prix_initial')
-          .eq('saison_id', phase.saison_id)
-          .eq('coureur_id', coureurId)
-          .limit(1);
+      // Batch fetch all coureurs_saisons at once
+      const { data: allCoureursSaisons } = await supabase
+        .from('coureurs_saisons')
+        .select('coureur_id, coureurs!inner(id, nom), equipe_id, prix_initial')
+        .eq('saison_id', phase.saison_id)
+        .in('coureur_id', rosterCoureurIds);
 
-        if (coureurData && coureurData.length > 0) {
-          const cs = coureurData[0];
-          const coureurInfo = cs.coureurs as any;
-          
-          // Fetch equipe name separately using equipe_id
-          let equipeName = '';
-          if (cs.equipe_id) {
-            const { data: equipeData } = await supabase
-              .from('equipes_saisons')
-              .select('nom_affiche')
-              .eq('equipe_id', cs.equipe_id)
-              .eq('saison_id', phase.saison_id)
-              .limit(1);
-            equipeName = equipeData?.[0]?.nom_affiche || '';
-          }
-          
-          rosterCoureursMap.set(coureurId, {
-            id: coureurInfo?.id || cs.coureur_id,
-            nom: coureurInfo?.nom || '',
-            equipe: equipeName,
-            prix_initial: cs.prix_initial
-          });
-        }
+      // Collect unique equipe_ids for batch fetch
+      const uniqueEquipeIds = [...new Set(
+        (allCoureursSaisons || [])
+          .map(cs => cs.equipe_id)
+          .filter(Boolean)
+      )] as string[];
+
+      // Batch fetch all equipes at once
+      let equipesMap = new Map<string, string>();
+      if (uniqueEquipeIds.length > 0) {
+        const { data: allEquipes } = await supabase
+          .from('equipes_saisons')
+          .select('equipe_id, nom_affiche')
+          .eq('saison_id', phase.saison_id)
+          .in('equipe_id', uniqueEquipeIds);
+        
+        equipesMap = new Map((allEquipes || []).map(e => [e.equipe_id, e.nom_affiche]));
+      }
+
+      // Build the map in memory (no more DB queries)
+      for (const cs of allCoureursSaisons || []) {
+        const coureurInfo = cs.coureurs as any;
+        rosterCoureursMap.set(cs.coureur_id, {
+          id: coureurInfo?.id || cs.coureur_id,
+          nom: coureurInfo?.nom || '',
+          equipe: cs.equipe_id ? (equipesMap.get(cs.equipe_id) || '') : '',
+          prix_initial: cs.prix_initial
+        });
       }
     }
 
@@ -255,75 +258,75 @@ Deno.serve(async (req) => {
       };
     });
 
-    // Get coureur details for bids from coureurs_saisons - handle duplicates with limit(1)
+    // Get coureur details for bids from coureurs_saisons - BATCH QUERIES for performance
     const coureur_ids = [...my_bids, ...submitted_bids].map(b => b.coureur_id);
     const coureursMap = new Map();
     
-    console.log('Enriching bids for coureur_ids:', coureur_ids);
-    console.log('Using saison_id:', phase.saison_id);
-    
     if (coureur_ids.length > 0) {
-      // Fetch each rider individually to handle duplicates
-      for (const coureurId of coureur_ids) {
-        console.log(`Fetching coureur ${coureurId}...`);
-        const { data: coureurData, error: coureurError } = await supabase
-          .from('coureurs_saisons')
-          .select('coureur_id, coureurs!inner(id, nom), equipe_id, prix_initial')
+      // Batch fetch all coureurs_saisons at once
+      const { data: allBidsCoureurs } = await supabase
+        .from('coureurs_saisons')
+        .select('coureur_id, coureurs!inner(id, nom), equipe_id, prix_initial')
+        .eq('saison_id', phase.saison_id)
+        .in('coureur_id', coureur_ids);
+
+      // Identify missing coureurs for fallback
+      const foundIds = new Set((allBidsCoureurs || []).map(c => c.coureur_id));
+      const missingIds = coureur_ids.filter(id => !foundIds.has(id));
+
+      // Batch fallback for missing coureurs
+      let fallbackMap = new Map<string, { id: string; nom: string; prix_initial: number }>();
+      if (missingIds.length > 0) {
+        const { data: fallbackData } = await supabase
+          .from('coureurs')
+          .select('id, nom, prix_initial')
+          .in('id', missingIds);
+        
+        fallbackMap = new Map((fallbackData || []).map(c => [c.id, c]));
+      }
+
+      // Collect unique equipe_ids for batch fetch
+      const uniqueBidsEquipeIds = [...new Set(
+        (allBidsCoureurs || [])
+          .map(cs => cs.equipe_id)
+          .filter(Boolean)
+      )] as string[];
+
+      // Batch fetch all equipes at once
+      let bidsEquipesMap = new Map<string, string>();
+      if (uniqueBidsEquipeIds.length > 0) {
+        const { data: allBidsEquipes } = await supabase
+          .from('equipes_saisons')
+          .select('equipe_id, nom_affiche')
           .eq('saison_id', phase.saison_id)
-          .eq('coureur_id', coureurId)
-          .limit(1);
+          .in('equipe_id', uniqueBidsEquipeIds);
         
-        console.log(`Coureur ${coureurId} result:`, coureurData, 'error:', coureurError);
-        
-        if (coureurData && coureurData.length > 0) {
-          const cs = coureurData[0];
-          const coureurInfo = cs.coureurs as any;
-          
-          // Fetch equipe name separately using equipe_id
-          let equipeName = '';
-          if (cs.equipe_id) {
-            const { data: equipeData } = await supabase
-              .from('equipes_saisons')
-              .select('nom_affiche')
-              .eq('equipe_id', cs.equipe_id)
-              .eq('saison_id', phase.saison_id)
-              .limit(1);
-            equipeName = equipeData?.[0]?.nom_affiche || '';
-          }
-          
-          coureursMap.set(coureurId, {
-            id: coureurInfo?.id || cs.coureur_id,
-            nom: coureurInfo?.nom || '',
-            equipe: equipeName,
-            prix_initial: cs.prix_initial
+        bidsEquipesMap = new Map((allBidsEquipes || []).map(e => [e.equipe_id, e.nom_affiche]));
+      }
+
+      // Build the map from coureurs_saisons data
+      for (const cs of allBidsCoureurs || []) {
+        const coureurInfo = cs.coureurs as any;
+        coureursMap.set(cs.coureur_id, {
+          id: coureurInfo?.id || cs.coureur_id,
+          nom: coureurInfo?.nom || '',
+          equipe: cs.equipe_id ? (bidsEquipesMap.get(cs.equipe_id) || '') : '',
+          prix_initial: cs.prix_initial
+        });
+      }
+
+      // Add fallback coureurs
+      for (const [id, coureur] of fallbackMap) {
+        if (!coureursMap.has(id)) {
+          coureursMap.set(id, {
+            id: coureur.id,
+            nom: coureur.nom,
+            equipe: '',
+            prix_initial: coureur.prix_initial
           });
-          console.log(`✅ Enriched coureur ${coureurId} with nom: ${coureurInfo?.nom}`);
-        } else {
-          console.log(`⚠️ No coureurs_saisons found for ${coureurId}, trying coureurs table...`);
-          // Fallback to coureurs table if not in coureurs_saisons
-          const { data: baseData } = await supabase
-            .from('coureurs')
-            .select('id, nom, prix_initial')
-            .eq('id', coureurId)
-            .limit(1);
-          
-          if (baseData && baseData.length > 0) {
-            const base = baseData[0];
-            coureursMap.set(coureurId, {
-              id: base.id,
-              nom: base.nom,
-              equipe: '',
-              prix_initial: base.prix_initial
-            });
-            console.log(`✅ Fallback enriched coureur ${coureurId} with nom: ${base.nom}`);
-          } else {
-            console.error(`❌ Could not find coureur ${coureurId} in any table`);
-          }
         }
       }
     }
-    
-    console.log('Final coureursMap:', Array.from(coureursMap.entries()));
 
     // Enrich bids with coureur info
     const enriched_my_bids = my_bids.map(b => ({
