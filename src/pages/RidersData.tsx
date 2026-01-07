@@ -72,9 +72,10 @@ export default function RidersData() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [programFilter, setProgramFilter] = useState<"all" | "with" | "without">("all");
   
-  // Sorting state
-  const [sortColumn, setSortColumn] = useState<'cote' | 'points' | 'equipe' | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  // Sorting state - primary and secondary sort
+  type SortColumn = 'cote' | 'points' | 'equipe';
+  const [primarySort, setPrimarySort] = useState<{ column: SortColumn; direction: 'asc' | 'desc' } | null>(null);
+  const [secondarySort, setSecondarySort] = useState<{ column: SortColumn; direction: 'asc' | 'desc' } | null>(null);
 
   // Fetch all seasons directly (autonomous from context)
   const { data: allSeasons } = useQuery({
@@ -403,46 +404,89 @@ export default function RidersData() {
   }, [ridersData, search, selectedEquipe, selectedCategorie, selectedCotes, showFavoritesOnly, programFilter, programData]);
 
   // Sort handlers
-  const handleSort = (column: 'cote' | 'points' | 'equipe') => {
-    if (sortColumn === column) {
-      if (sortDirection === 'desc') {
-        setSortDirection('asc');
+  const handleSort = (column: SortColumn) => {
+    // If clicking on primary sort column
+    if (primarySort?.column === column) {
+      if (primarySort.direction === 'desc') {
+        setPrimarySort({ column, direction: 'asc' });
       } else {
-        setSortColumn(null);
+        // Clear primary, promote secondary to primary
+        setPrimarySort(secondarySort);
+        setSecondarySort(null);
       }
+      return;
+    }
+    
+    // If clicking on secondary sort column
+    if (secondarySort?.column === column) {
+      if (secondarySort.direction === 'desc') {
+        setSecondarySort({ column, direction: 'asc' });
+      } else {
+        setSecondarySort(null);
+      }
+      return;
+    }
+    
+    // Clicking on a new column
+    if (!primarySort) {
+      // No sort active, set as primary
+      setPrimarySort({ column, direction: 'desc' });
     } else {
-      setSortColumn(column);
-      setSortDirection('desc');
+      // Primary exists, set as secondary
+      setSecondarySort({ column, direction: 'desc' });
     }
   };
 
-  const getSortIcon = (column: 'cote' | 'points' | 'equipe') => {
-    if (sortColumn !== column) {
+  const getSortIcon = (column: SortColumn) => {
+    const isPrimary = primarySort?.column === column;
+    const isSecondary = secondarySort?.column === column;
+    
+    if (!isPrimary && !isSecondary) {
       return <ArrowUpDown className="h-4 w-4 ml-1 inline opacity-50" />;
     }
-    return sortDirection === 'desc' 
-      ? <ArrowDown className="h-4 w-4 ml-1 inline" />
-      : <ArrowUp className="h-4 w-4 ml-1 inline" />;
+    
+    const direction = isPrimary ? primarySort.direction : secondarySort!.direction;
+    const badge = isPrimary ? '1' : '2';
+    
+    return (
+      <span className="inline-flex items-center ml-1">
+        <span className="text-xs text-muted-foreground mr-0.5">{badge}</span>
+        {direction === 'desc' 
+          ? <ArrowDown className="h-4 w-4 inline" />
+          : <ArrowUp className="h-4 w-4 inline" />
+        }
+      </span>
+    );
   };
 
-  // Sort filtered riders
+  // Sort filtered riders with primary and secondary sort
   const sortedRiders = useMemo(() => {
-    if (!sortColumn) return filteredRiders;
+    if (!primarySort) return filteredRiders;
     
-    return [...filteredRiders].sort((a, b) => {
-      if (sortColumn === 'equipe') {
+    const compareByColumn = (a: typeof filteredRiders[0], b: typeof filteredRiders[0], column: SortColumn, direction: 'asc' | 'desc') => {
+      if (column === 'equipe') {
         const valueA = (a.equipe_trigramme || '').toLowerCase();
         const valueB = (b.equipe_trigramme || '').toLowerCase();
-        return sortDirection === 'desc' 
+        return direction === 'desc' 
           ? valueB.localeCompare(valueA) 
           : valueA.localeCompare(valueB);
       }
-      const valueA = sortColumn === 'cote' ? a.prix_initial : a.total_points;
-      const valueB = sortColumn === 'cote' ? b.prix_initial : b.total_points;
+      const valueA = column === 'cote' ? a.prix_initial : a.total_points;
+      const valueB = column === 'cote' ? b.prix_initial : b.total_points;
+      return direction === 'desc' ? valueB - valueA : valueA - valueB;
+    };
+    
+    return [...filteredRiders].sort((a, b) => {
+      const primaryResult = compareByColumn(a, b, primarySort.column, primarySort.direction);
       
-      return sortDirection === 'desc' ? valueB - valueA : valueA - valueB;
+      // If primary sort gives equal values and secondary sort exists, use secondary
+      if (primaryResult === 0 && secondarySort) {
+        return compareByColumn(a, b, secondarySort.column, secondarySort.direction);
+      }
+      
+      return primaryResult;
     });
-  }, [filteredRiders, sortColumn, sortDirection]);
+  }, [filteredRiders, primarySort, secondarySort]);
 
   // Excel export function
   const handleExportExcel = useCallback(() => {
