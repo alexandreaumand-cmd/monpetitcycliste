@@ -73,7 +73,7 @@ export default function RidersData() {
   const [programFilter, setProgramFilter] = useState<"all" | "with" | "without">("all");
   
   // Sorting state
-  const [sortColumn, setSortColumn] = useState<'cote' | 'points' | null>(null);
+  const [sortColumn, setSortColumn] = useState<'cote' | 'points' | 'equipe' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Fetch all seasons directly (autonomous from context)
@@ -403,7 +403,7 @@ export default function RidersData() {
   }, [ridersData, search, selectedEquipe, selectedCategorie, selectedCotes, showFavoritesOnly, programFilter, programData]);
 
   // Sort handlers
-  const handleSort = (column: 'cote' | 'points') => {
+  const handleSort = (column: 'cote' | 'points' | 'equipe') => {
     if (sortColumn === column) {
       if (sortDirection === 'desc') {
         setSortDirection('asc');
@@ -416,7 +416,7 @@ export default function RidersData() {
     }
   };
 
-  const getSortIcon = (column: 'cote' | 'points') => {
+  const getSortIcon = (column: 'cote' | 'points' | 'equipe') => {
     if (sortColumn !== column) {
       return <ArrowUpDown className="h-4 w-4 ml-1 inline opacity-50" />;
     }
@@ -430,6 +430,13 @@ export default function RidersData() {
     if (!sortColumn) return filteredRiders;
     
     return [...filteredRiders].sort((a, b) => {
+      if (sortColumn === 'equipe') {
+        const valueA = (a.equipe_trigramme || '').toLowerCase();
+        const valueB = (b.equipe_trigramme || '').toLowerCase();
+        return sortDirection === 'desc' 
+          ? valueB.localeCompare(valueA) 
+          : valueA.localeCompare(valueB);
+      }
       const valueA = sortColumn === 'cote' ? a.prix_initial : a.total_points;
       const valueB = sortColumn === 'cote' ? b.prix_initial : b.total_points;
       
@@ -688,7 +695,12 @@ export default function RidersData() {
               <TableRow>
                 <TableHead className="w-12">Fav</TableHead>
                 <TableHead>Nom</TableHead>
-                <TableHead>Équipe</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-muted/50 select-none"
+                  onClick={() => handleSort('equipe')}
+                >
+                  Équipe {getSortIcon('equipe')}
+                </TableHead>
                 <TableHead className="w-20">Catégorie</TableHead>
                 <TableHead 
                   className="w-16 text-right cursor-pointer hover:bg-muted/50 select-none"
