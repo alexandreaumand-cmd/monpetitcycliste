@@ -4517,8 +4517,9 @@ export type Database = {
           points_mont: number
           points_pts: number
           points_total: number
+          saison_id: string
           type_course: string
-          wt_tier: Database["public"]["Enums"]["wt_tier_type"]
+          wt_tier: string
         }[]
       }
       get_my_roles: {
