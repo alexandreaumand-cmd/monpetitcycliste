@@ -139,14 +139,25 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
         if (error) throw error;
         setPhases(phasesData || []);
 
-        // Find active phase for this season
-        const active = phasesData?.find(p => p.statut === "active") || null;
+        // Trouver la phase active basée sur le calendrier
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
         
-        // If no active phase, use most recent
-        if (!active && phasesData && phasesData.length > 0) {
-          setActivePhase(phasesData[phasesData.length - 1]);
+        // Phase en cours (today entre date_debut et date_fin)
+        const currentPhase = phasesData?.find(p => 
+          p.date_debut <= today && today <= p.date_fin
+        );
+        
+        if (currentPhase) {
+          setActivePhase(currentPhase);
         } else {
-          setActivePhase(active);
+          // Sinon, prochaine phase à venir
+          const nextPhase = phasesData?.find(p => p.date_debut > today);
+          if (nextPhase) {
+            setActivePhase(nextPhase);
+          } else {
+            // Sinon, dernière phase (saison terminée)
+            setActivePhase(phasesData?.[phasesData.length - 1] || null);
+          }
         }
       } catch (error) {
         console.error("Error loading phases:", error);

@@ -18,14 +18,46 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
     queryFn: async (): Promise<AuctionStatus | null> => {
       if (!leagueId) return null;
 
-      // 0. Récupérer la phase active de la ligue
-      const { data: leagueData } = await supabase
-        .from('leagues')
-        .select('settings')
-        .eq('id', leagueId)
+      // 0. Déterminer la phase active basée sur le calendrier
+      // 0a. Récupérer la saison de la ligue via league_scopes
+      const { data: scopeData } = await supabase
+        .from('league_scopes')
+        .select('season_id')
+        .eq('league_id', leagueId)
         .single();
 
-      const activePhaseId = (leagueData?.settings as { activePhaseId?: string })?.activePhaseId;
+      let activePhaseId: string | null = null;
+
+      if (scopeData?.season_id) {
+        // 0b. Charger toutes les phases de cette saison
+        const { data: phases } = await supabase
+          .from('phases')
+          .select('id, date_debut, date_fin, index_dans_saison')
+          .eq('saison_id', scopeData.season_id)
+          .order('index_dans_saison', { ascending: true });
+
+        if (phases && phases.length > 0) {
+          const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+          // Phase en cours (today entre date_debut et date_fin)
+          const currentPhase = phases.find(p => 
+            p.date_debut <= today && today <= p.date_fin
+          );
+
+          if (currentPhase) {
+            activePhaseId = currentPhase.id;
+          } else {
+            // Sinon, prochaine phase à venir
+            const nextPhase = phases.find(p => p.date_debut > today);
+            if (nextPhase) {
+              activePhaseId = nextPhase.id;
+            } else {
+              // Sinon, dernière phase (saison terminée)
+              activePhaseId = phases[phases.length - 1].id;
+            }
+          }
+        }
+      }
 
       // 1. Chercher une enchère OUVERTE (sur la phase active si définie)
       let openAuctionQuery = supabase
