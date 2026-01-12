@@ -197,8 +197,12 @@ export const RoundManager = () => {
             <CardTitle className="flex items-center justify-between">
               <span>Round en cours</span>
               {currentAuction && (
-                <Badge variant={currentAuction.statut === 'open' ? 'default' : 'secondary'}>
-                  {currentAuction.statut === 'open' ? 'Ouvert' : 'Fermé'}
+                <Badge variant={
+                  currentAuction.statut === 'open' ? 'default' : 
+                  currentAuction.statut === 'scheduled' ? 'outline' : 'secondary'
+                }>
+                  {currentAuction.statut === 'open' ? 'Ouvert' : 
+                   currentAuction.statut === 'scheduled' ? 'Programmé' : 'Fermé'}
                 </Badge>
               )}
             </CardTitle>
