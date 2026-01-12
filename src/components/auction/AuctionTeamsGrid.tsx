@@ -89,7 +89,9 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
         .from('phases')
         .select('saison_id')
         .eq('id', phaseId)
-        .maybeSingle();
+        .single();
+      
+      console.log('[AuctionTeamsGrid] phaseId:', phaseId, 'saison_id:', phaseResult.data?.saison_id);
 
       // Récupérer les rosters avec les infos de base
       const rostersResult = await supabase
@@ -128,6 +130,8 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
             .eq('coureur_id', roster.coureur_id)
             .eq('saison_id', saisonId)
             .maybeSingle();
+          
+          console.log('[AuctionTeamsGrid] coureur:', roster.coureur_id, 'coureurSaisonResult:', coureurSaisonResult.data);
 
           // Nom de l'équipe depuis equipes_saisons
           let equipeNom = 'N/A';
@@ -138,6 +142,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
               .eq('equipe_id', coureurSaisonResult.data.equipe_id)
               .eq('saison_id', saisonId)
               .maybeSingle();
+            console.log('[AuctionTeamsGrid] coureur:', roster.coureur_id, 'equipeResult:', equipeResult.data);
             equipeNom = equipeResult.data?.nom_affiche || 'N/A';
           }
 
