@@ -4570,6 +4570,7 @@ export type Database = {
       get_team_options_for_phase: {
         Args: { p_phase_id: string }
         Returns: {
+          categorie: string
           equipe_id: string
           nom_affiche: string
         }[]
