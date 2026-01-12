@@ -139,12 +139,13 @@ export const AnnouncementsLive = ({
               <div className="space-y-2 pr-4">
                 {(() => {
                   const totalCount = announcements.length;
-                  const shouldShowTop10 = totalCount > 10;
-                  // Le message doit apparaître à l'index 9 (avant la 10ème annonce en partant de la fin)
-                  const top10Position = 9;
+                  // Afficher le message quand il reste exactement 10 annonces à publier
+                  const unpublishedCount = unpublished.length;
+                  const shouldShowTop10 = totalCount > 10 && unpublishedCount === 10;
 
                   return published.map((annonce, idx) => {
-                    const showTop10Before = shouldShowTop10 && idx === top10Position;
+                    // Le message apparaît en haut de la liste (avant la dernière annonce publiée)
+                    const showTop10Before = shouldShowTop10 && idx === 0;
 
                     return (
                       <div key={`wrapper-${annonce.id}`}>

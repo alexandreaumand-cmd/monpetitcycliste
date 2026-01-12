@@ -156,12 +156,13 @@ export function AuctionLiveAnnouncements({
                     </p>
                   ) : (
                     (() => {
-        const shouldShowTop10Message = totalAnnonces > 10;
-        // Le message doit apparaître à l'index 9 (avant la 10ème annonce)
-        const top10Position = 9;
+        // Afficher le message quand il reste exactement 10 annonces à publier
+        const unpublishedCount = totalAnnonces - liveAnnonces.length;
+        const shouldShowTop10Message = totalAnnonces > 10 && unpublishedCount === 10;
 
         return liveAnnonces.map((annonce, idx) => {
-          const showTop10Before = shouldShowTop10Message && idx === top10Position;
+          // Le message apparaît en haut de la liste (avant la dernière annonce publiée)
+          const showTop10Before = shouldShowTop10Message && idx === 0;
 
                         return (
                           <div key={`wrapper-${annonce.id}`}>
