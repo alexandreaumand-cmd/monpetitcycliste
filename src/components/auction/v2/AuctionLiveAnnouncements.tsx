@@ -192,7 +192,10 @@ export function AuctionLiveAnnouncements({
                                       {annonce.coureur?.nom}
                                     </span>
                                     <Badge variant="outline" className="text-xs">
-                                      {(annonce.losers?.length || 0) + 1} enchère{((annonce.losers?.length || 0) + 1) > 1 ? 's' : ''}
+                                      {annonce.type === 'egalite' 
+                                        ? `${annonce.losers?.length || 0} enchère${(annonce.losers?.length || 0) > 1 ? 's' : ''}`
+                                        : `${(annonce.losers?.length || 0) + 1} enchère${((annonce.losers?.length || 0) + 1) > 1 ? 's' : ''}`
+                                      }
                                     </Badge>
                                     {idx === 0 && (
                                       <Badge variant="secondary" className="text-xs">
