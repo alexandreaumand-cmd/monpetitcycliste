@@ -247,20 +247,8 @@ Deno.serve(async (req) => {
     // But return warning for UI feedback
     const budgetExceeded = newTotal > phase.budget;
 
-    // Check max_bids (only if adding new bid)
+    // Track if this is a new bid (for slot counting)
     const isNewBid = !currentBids?.some(b => b.coureur_id === rider_id);
-    if (isNewBid && currentBids && currentBids.length >= phase.max_coureurs) {
-      console.warn('⚠️ Max riders limit reached:', { 
-        current_count: currentBids.length, 
-        max_coureurs: phase.max_coureurs 
-      });
-      return new Response(
-        JSON.stringify({ 
-          error: `Nombre maximum d'enchères atteint (${phase.max_coureurs}). Supprimez une enchère pour en ajouter une nouvelle.` 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // UPSERT bid (draft status) - FORCE league_id from auction to prevent FK violations
     const { error: upsertError } = await supabase
@@ -307,9 +295,14 @@ Deno.serve(async (req) => {
     const remaining_budget = phase.budget - draft_sum;
     const remaining_slots = phase.max_coureurs - draft_count;
 
-    const warnings = budgetExceeded 
-      ? [`Budget dépassé de ${draft_sum - phase.budget}. Réduisez vos enchères avant validation.`] 
-      : [];
+    // Build warnings array (non-blocking)
+    const warnings: string[] = [];
+    if (budgetExceeded) {
+      warnings.push(`Budget dépassé de ${draft_sum - phase.budget}. Réduisez vos enchères avant validation.`);
+    }
+    if (draft_count > phase.max_coureurs) {
+      warnings.push(`Tu as sélectionné ${draft_count} coureurs sur ${phase.max_coureurs} requis. Supprime ${draft_count - phase.max_coureurs} enchère(s) avant validation.`);
+    }
 
     console.log('📤 Returning context:', { 
       draft_sum, 
