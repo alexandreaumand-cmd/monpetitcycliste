@@ -47,6 +47,34 @@ Deno.serve(async (req) => {
       throw new Error('Phase not found');
     }
 
+    // Step 1b: Pre-filter by category at SQL level (BEFORE pagination)
+    let equipeIdsFromCategories: string[] | null = null;
+    if (categories && Array.isArray(categories) && categories.length > 0) {
+      const { data: equipesFiltered, error: catError } = await supabase
+        .from('equipes_saisons')
+        .select('equipe_id')
+        .eq('saison_id', phase.saison_id)
+        .in('categorie', categories);
+      
+      if (catError) {
+        console.error('[auction-search-riders] Error filtering by category:', catError);
+      } else {
+        equipeIdsFromCategories = equipesFiltered?.map((e: any) => e.equipe_id) || [];
+        console.log(`[auction-search-riders] Found ${equipeIdsFromCategories.length} teams for categories:`, categories);
+        
+        if (equipeIdsFromCategories.length === 0) {
+          console.log('[auction-search-riders] No teams found for categories, returning empty');
+          return new Response(
+            JSON.stringify({
+              items: [],
+              pagination: { limit, offset, has_more: false },
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+
     // Step 2: Build base query on coureurs_saisons
     let query = supabase
       .from('coureurs_saisons')
@@ -63,9 +91,13 @@ Deno.serve(async (req) => {
       query = query.ilike('coureurs.nom', `%${q.trim()}%`);
     }
 
-    // Filter by teams (now using equipe_id instead of equipe text)
+    // Filter by teams (user-selected teams filter)
     if (teams && Array.isArray(teams) && teams.length > 0) {
       query = query.in('equipe_id', teams);
+    } 
+    // Apply category filter (pre-computed equipe_ids)
+    else if (equipeIdsFromCategories && equipeIdsFromCategories.length > 0) {
+      query = query.in('equipe_id', equipeIdsFromCategories);
     }
 
     // Filter by cote (prix_initial)
@@ -203,17 +235,10 @@ Deno.serve(async (req) => {
       };
     });
 
-    // Step 6: Filter by available_only and categories after calculating league-specific is_taken
-    let filteredItems = available_only 
+    // Step 6: Filter by available_only (category filter already applied at SQL level)
+    const filteredItems = available_only 
       ? items.filter((i: any) => !i.is_taken)
       : items;
-
-    // Apply category filter if specified
-    if (categories && Array.isArray(categories) && categories.length > 0) {
-      filteredItems = filteredItems.filter((i: any) => 
-        i.rider_team_category && categories.includes(i.rider_team_category)
-      );
-    }
 
     console.log(`[auction-search-riders] Returning ${filteredItems.length} items (available_only: ${available_only})`);
 
