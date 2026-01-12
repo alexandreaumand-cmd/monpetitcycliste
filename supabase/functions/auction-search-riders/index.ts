@@ -47,16 +47,18 @@ Deno.serve(async (req) => {
       throw new Error('Phase not found');
     }
 
-    // Step 2: Build base query on coureurs_saisons
+    // Step 2: Build base query with team join for category filtering
     let query = supabase
       .from('coureurs_saisons')
       .select(`
         coureur_id,
         equipe_id,
         prix_initial,
-        coureurs!inner(id, nom)
+        coureurs!inner(id, nom),
+        equipes_saisons!inner(equipe_id, nom_affiche, categorie)
       `)
-      .eq('saison_id', phase.saison_id);
+      .eq('saison_id', phase.saison_id)
+      .eq('equipes_saisons.saison_id', phase.saison_id);
 
     // Search by name
     if (q && q.trim().length >= 2) {
@@ -66,6 +68,11 @@ Deno.serve(async (req) => {
     // Filter by teams (now using equipe_id instead of equipe text)
     if (teams && Array.isArray(teams) && teams.length > 0) {
       query = query.in('equipe_id', teams);
+    }
+
+    // Filter by category BEFORE pagination (critical fix)
+    if (categories && Array.isArray(categories) && categories.length > 0) {
+      query = query.in('equipes_saisons.categorie', categories);
     }
 
     // Filter by cote (prix_initial)
@@ -112,35 +119,7 @@ Deno.serve(async (req) => {
 
     console.log(`[auction-search-riders] Found ${coureursSaisons.length} riders`);
 
-    // Step 3: Get team names and categories for all riders
-    const equipeIds = [...new Set(coureursSaisons.map((cs: any) => cs.equipe_id).filter(Boolean))];
-    
-    console.log(`[auction-search-riders] saison_id=${phase.saison_id}, found ${equipeIds.length} unique teams`);
-    console.log('[auction-search-riders] Sample equipe_ids:', equipeIds.slice(0, 5));
-    
-    let equipesMap = new Map();
-    if (equipeIds.length > 0) {
-      const { data: equipesData, error: equipesError } = await supabase
-        .from('equipes_saisons')
-        .select('equipe_id, nom_affiche, categorie')
-        .eq('saison_id', phase.saison_id)
-        .in('equipe_id', equipeIds);
-      
-      if (equipesError) {
-        console.error('[auction-search-riders] Error fetching team names:', equipesError);
-      } else if (equipesData) {
-        console.log(`[auction-search-riders] Found ${equipesData.length} team names for ${equipeIds.length} unique teams`);
-        console.log('[auction-search-riders] Sample teams:', equipesData.slice(0, 3));
-        equipesData.forEach((eq: any) => {
-          equipesMap.set(eq.equipe_id, {
-            nom: eq.nom_affiche || 'N/A',
-            categorie: eq.categorie
-          });
-        });
-      } else {
-        console.log('[auction-search-riders] No team data returned');
-      }
-    }
+    // Step 3: Team data is now included in the query via join - no separate fetch needed
 
     // Step 4: Calculate is_taken per league
     const riderIds = coureursSaisons.map((cs: any) => cs.coureur_id);
@@ -188,14 +167,14 @@ Deno.serve(async (req) => {
       });
     });
 
-    // Step 5: Enrich riders with is_taken status and team name
+    // Step 5: Enrich riders with is_taken status - team data comes from joined query
     const items = coureursSaisons.map((cs: any) => {
       const taken = takenMap.get(cs.coureur_id) || { is_taken: false, taken_by_manager_nom: null };
-      const equipeInfo = equipesMap.get(cs.equipe_id) || { nom: 'N/A', categorie: null };
+      const equipeInfo = cs.equipes_saisons || { nom_affiche: 'N/A', categorie: null };
       return {
         rider_id: cs.coureur_id,
         rider_nom: cs.coureurs.nom,
-        rider_team: equipeInfo.nom,
+        rider_team: equipeInfo.nom_affiche || 'N/A',
         rider_team_category: equipeInfo.categorie,
         cote: cs.prix_initial,
         is_taken: taken.is_taken,
@@ -203,17 +182,10 @@ Deno.serve(async (req) => {
       };
     });
 
-    // Step 6: Filter by available_only and categories after calculating league-specific is_taken
-    let filteredItems = available_only 
+    // Step 6: Filter by available_only (category filter already applied at SQL level)
+    const filteredItems = available_only 
       ? items.filter((i: any) => !i.is_taken)
       : items;
-
-    // Apply category filter if specified
-    if (categories && Array.isArray(categories) && categories.length > 0) {
-      filteredItems = filteredItems.filter((i: any) => 
-        i.rider_team_category && categories.includes(i.rider_team_category)
-      );
-    }
 
     console.log(`[auction-search-riders] Returning ${filteredItems.length} items (available_only: ${available_only})`);
 
