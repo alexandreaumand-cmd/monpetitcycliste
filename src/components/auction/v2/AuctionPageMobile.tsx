@@ -305,9 +305,15 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       const { data: takenRiders } = await rosterQuery;
       const takenIds = new Set((takenRiders || []).map(r => r.coureur_id));
 
-      // 3. Get current draft bids to avoid duplicates
+      // 3. Get current draft bids directly from DB to avoid stale cache
+      const { data: existingDrafts } = await supabase
+        .from("bids")
+        .select("coureur_id")
+        .eq("manager_id", managerId)
+        .eq("statut", "draft");
+      
       const currentDraftIds = new Set(
-        (context?.my_bids || []).map((b: any) => b.coureur_id)
+        (existingDrafts || []).map((b) => b.coureur_id)
       );
 
       // 4. Filter favorites: exclude taken and already in draft
