@@ -89,22 +89,25 @@ const StartlistDesktop = () => {
       const raw = leagueCourses?.courses || [];
       const courses = raw.map((c: any) => ({ ...c, id: c.course_id }));
       
-      // Filter by tab mode
+      // Filter by tab mode - sort upcoming courses with next course first
       let filtered = courses;
       if (tabMode === 'history') {
+        // Past courses: most recent first
         filtered = courses.filter((c: any) => c.date_fin < today)
           .sort((a: any, b: any) => b.date_fin.localeCompare(a.date_fin));
-      } else if (tabMode === '30days') {
-        filtered = courses.filter((c: any) => 
-          c.date_fin >= today && c.date_debut <= in30Days
-        ).sort((a: any, b: any) => a.date_debut.localeCompare(b.date_debut));
-      } else if (tabMode === '90days') {
-        filtered = courses.filter((c: any) => 
-          c.date_fin >= today && c.date_debut <= in90Days
-        ).sort((a: any, b: any) => a.date_debut.localeCompare(b.date_debut));
-      } else if (tabMode === 'upcoming-year') {
-        filtered = courses.filter((c: any) => c.date_fin >= today)
-          .sort((a: any, b: any) => a.date_debut.localeCompare(b.date_debut));
+      } else {
+        // All upcoming modes: filter then sort by date_debut ascending (next course first)
+        let upcoming = courses.filter((c: any) => c.date_fin >= today);
+        
+        if (tabMode === '30days') {
+          upcoming = upcoming.filter((c: any) => c.date_debut <= in30Days);
+        } else if (tabMode === '90days') {
+          upcoming = upcoming.filter((c: any) => c.date_debut <= in90Days);
+        }
+        // 'upcoming-year' shows all upcoming, no additional filter
+        
+        // Sort by proximity to today: closest start date first
+        filtered = upcoming.sort((a: any, b: any) => a.date_debut.localeCompare(b.date_debut));
       }
       
       return filtered;
