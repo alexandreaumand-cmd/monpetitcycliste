@@ -10,6 +10,7 @@ interface RoundHeaderProps {
   roundNumber: number;
   deadline: string | null;
   isOpen: boolean;
+  isScheduled?: boolean;
 }
 
 export const RoundHeader = ({ 
@@ -17,7 +18,8 @@ export const RoundHeader = ({
   phaseIndex, 
   roundNumber, 
   deadline, 
-  isOpen 
+  isOpen,
+  isScheduled = false
 }: RoundHeaderProps) => {
   const hoursRemaining = deadline ? differenceInHours(new Date(deadline), new Date()) : null;
   const isUrgent = hoursRemaining !== null && hoursRemaining < 2;
@@ -30,9 +32,12 @@ export const RoundHeader = ({
             Phase {phaseIndex}
           </Badge>
           <h2 className="text-2xl font-bold">Round {roundNumber}</h2>
-          <Badge variant={isOpen ? "default" : "secondary"} className="gap-1">
+          <Badge 
+            variant={isOpen ? "default" : isScheduled ? "outline" : "secondary"} 
+            className="gap-1"
+          >
             <Circle className={`h-2 w-2 ${isOpen ? 'fill-current animate-pulse' : ''}`} />
-            {isOpen ? 'Ouvert' : 'Fermé'}
+            {isOpen ? 'Ouvert' : isScheduled ? 'Programmé' : 'Fermé'}
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">{phaseName}</p>

@@ -300,6 +300,7 @@ export const RoundControlCenter = () => {
             roundNumber={currentAuction.round_number}
             deadline={currentAuction.deadline_at}
             isOpen={currentAuction.statut === 'open'}
+            isScheduled={currentAuction.statut === 'scheduled'}
           />
 
           {/* Stats */}
