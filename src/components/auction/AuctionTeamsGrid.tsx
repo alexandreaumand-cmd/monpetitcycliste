@@ -116,20 +116,30 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
 
       const auctionIds = auctionsResult.data?.map(a => a.id) || [];
 
+      const saisonId = phaseResult.data?.saison_id || '';
+      
       // Enrichir avec équipe, prix initial, managers battus, et round
       const enrichedData: RosterData[] = await Promise.all(
         (rostersResult.data || []).map(async (roster: any) => {
-          // Équipe du coureur
-          const seasonResult = await supabase
+          // Données de saison du coureur (prix initial, equipe_id)
+          const coureurSaisonResult = await supabase
             .from('coureurs_saisons')
-            .select(`
-              equipe_id,
-              prix_initial,
-              equipes_saisons!coureurs_saisons_equipe_id_saison_id_fkey(nom_affiche)
-            `)
+            .select('equipe_id, prix_initial')
             .eq('coureur_id', roster.coureur_id)
-            .eq('saison_id', phaseResult.data?.saison_id || '')
+            .eq('saison_id', saisonId)
             .maybeSingle();
+
+          // Nom de l'équipe depuis equipes_saisons
+          let equipeNom = 'N/A';
+          if (coureurSaisonResult.data?.equipe_id && saisonId) {
+            const equipeResult = await supabase
+              .from('equipes_saisons')
+              .select('nom_affiche')
+              .eq('equipe_id', coureurSaisonResult.data.equipe_id)
+              .eq('saison_id', saisonId)
+              .maybeSingle();
+            equipeNom = equipeResult.data?.nom_affiche || 'N/A';
+          }
 
           // Enchères perdues pour ce coureur
           const lostBidsResult = await supabase
@@ -162,8 +172,8 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
             prix_signature: roster.prix_signature,
             coureurs: {
               ...roster.coureurs,
-              equipe: (seasonResult.data?.equipes_saisons as any)?.nom_affiche || 'N/A',
-              prix_initial: seasonResult.data?.prix_initial || 0
+              equipe: equipeNom,
+              prix_initial: coureurSaisonResult.data?.prix_initial || 0
             },
             managers: roster.managers,
             losing_bids: (lostBidsResult.data || []).map((bid: any) => ({
