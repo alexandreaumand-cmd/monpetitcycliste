@@ -58,7 +58,7 @@ export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
     <MobileEmptyState
       icon={<Trophy className="h-16 w-16" />}
       title="Aucune enchère active"
-      description="Aucune phase d'enchères n'est ouverte pour le moment"
+      description="Aucun tour d'enchères actif pour le moment"
     />
   );
 };

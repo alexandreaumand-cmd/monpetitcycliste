@@ -61,7 +61,7 @@ export const AuctionsList = ({ managerId }: AuctionsListProps) => {
       </CardHeader>
       <CardContent>
         <p className="text-muted-foreground text-center py-8">
-          Aucune phase active pour le moment
+          Aucun tour d'enchères actif pour le moment
         </p>
       </CardContent>
     </Card>
