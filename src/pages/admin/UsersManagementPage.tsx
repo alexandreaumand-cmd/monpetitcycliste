@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { UserPlus, Key, Ban, CheckCircle, Mail, Shield, Users, Activity, Copy, Eye, Clock, Calendar, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { UserPlus, Key, Ban, CheckCircle, Mail, Shield, Users, Activity, Copy, Eye, Clock, Calendar, ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -76,6 +76,10 @@ export default function UsersManagementPage() {
   const [banConfirmDialogOpen, setBanConfirmDialogOpen] = useState(false);
   const [banTargetUser, setBanTargetUser] = useState<UserData | null>(null);
   const [banAction, setBanAction] = useState<boolean>(false);
+  
+  // Delete confirmation dialog state
+  const [deleteConfirmDialogOpen, setDeleteConfirmDialogOpen] = useState(false);
+  const [deleteTargetUser, setDeleteTargetUser] = useState<UserData | null>(null);
   
   // Sorting state
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
@@ -192,6 +196,27 @@ export default function UsersManagementPage() {
     }
   });
 
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.functions.invoke('admin-user-delete', {
+        body: { user_id: userId }
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || "Utilisateur supprimé avec succès");
+      queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      setDeleteConfirmDialogOpen(false);
+      setDeleteTargetUser(null);
+    },
+    onError: (error: any) => {
+      toast.error(`Erreur: ${error.message}`);
+      setDeleteConfirmDialogOpen(false);
+    }
+  });
+
   const handleEditRole = (user: UserData) => {
     setSelectedUser(user);
     setNewRole(user.is_superadmin ? 'superadmin' : 'user');
@@ -239,6 +264,17 @@ export default function UsersManagementPage() {
         userId: banTargetUser.user_id,
         ban: banAction
       });
+    }
+  };
+
+  const handleDeleteUser = (user: UserData) => {
+    setDeleteTargetUser(user);
+    setDeleteConfirmDialogOpen(true);
+  };
+
+  const handleConfirmDeleteUser = () => {
+    if (deleteTargetUser) {
+      deleteUserMutation.mutate(deleteTargetUser.user_id);
     }
   };
 
@@ -715,6 +751,15 @@ export default function UsersManagementPage() {
                                 <Ban className="h-4 w-4 text-red-600" />
                               )}
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteUser(user)}
+                              title="Supprimer l'utilisateur"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -842,6 +887,41 @@ export default function UsersManagementPage() {
               className={banAction ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
             >
               {toggleBanMutation.isPending ? "Traitement..." : "Confirmer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmDialogOpen} onOpenChange={setDeleteConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer l'utilisateur</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer définitivement <strong>{deleteTargetUser?.email}</strong> ?
+              <br /><br />
+              <span className="text-destructive font-medium">
+                Cette action est irréversible. Toutes les données associées à cet utilisateur seront supprimées.
+              </span>
+              {deleteTargetUser?.manager_name && (
+                <span className="block mt-2">
+                  Manager associé : {deleteTargetUser.manager_name}
+                </span>
+              )}
+              {deleteTargetUser?.league_count && deleteTargetUser.league_count > 0 && (
+                <span className="block mt-1 text-amber-600">
+                  ⚠️ Cet utilisateur est membre de {deleteTargetUser.league_count} ligue(s)
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDeleteUser}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteUserMutation.isPending ? "Suppression..." : "Supprimer définitivement"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
