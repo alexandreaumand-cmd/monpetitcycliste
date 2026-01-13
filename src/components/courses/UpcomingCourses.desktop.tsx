@@ -92,12 +92,13 @@ export const UpcomingCourses = () => {
     enabled: !!leagueId && !isLoadingContext,
   });
 
-  const filteredCourses = courses?.filter(course => {
-    const matchesSearch = course.nom.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPhase = phaseFilter === "all" || course.phase_index?.toString() === phaseFilter;
-    
-    return matchesSearch && matchesPhase;
-  });
+  const filteredCourses = courses
+    ?.filter(course => {
+      const matchesSearch = course.nom.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesPhase = phaseFilter === "all" || course.phase_index?.toString() === phaseFilter;
+      return matchesSearch && matchesPhase;
+    })
+    ?.sort((a, b) => a.date_debut.localeCompare(b.date_debut));
 
   if (isLoading || isLoadingContext) {
     return (
