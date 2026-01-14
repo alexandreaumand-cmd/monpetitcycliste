@@ -210,16 +210,17 @@ export default function RidersData() {
     enabled: !!localSelectedSeason?.id,
   });
 
-  // Fetch upcoming races program from startlists
+  // Fetch upcoming races program from startlists (with pagination to handle >1000 entries)
   const { data: programData } = useQuery({
     queryKey: ["riders-program", localSelectedSeason?.id],
     queryFn: async () => {
       if (!localSelectedSeason?.id) return new Map<string, UpcomingRace[]>();
 
       const today = new Date().toISOString().split('T')[0];
+      const pageSize = 1000;
 
-      // Get startlist entries with upcoming races for this season
-      const { data: entries, error } = await supabase
+      // First page with count to know total
+      const firstPage = await supabase
         .from("startlist_entries")
         .select(
           `
@@ -234,18 +235,62 @@ export default function RidersData() {
               date_debut
             )
           )
-        `
+        `,
+          { count: "exact" }
         )
         .eq("startlist_imports.saison_id", localSelectedSeason.id)
         .gte("startlist_imports.courses.date_debut", today)
-        .not("coureur_id", "is", null);
+        .not("coureur_id", "is", null)
+        .order("coureur_id")
+        .range(0, pageSize - 1);
 
-      if (error) throw error;
+      if (firstPage.error) throw firstPage.error;
+
+      const allEntries: any[] = [...(firstPage.data ?? [])];
+      const totalCount = firstPage.count ?? 0;
+
+      // Fetch remaining pages if needed
+      if (totalCount > pageSize) {
+        const pageCount = Math.ceil(totalCount / pageSize);
+        const restPages = await Promise.all(
+          Array.from({ length: pageCount - 1 }, (_, idx) => {
+            const from = (idx + 1) * pageSize;
+            const to = from + pageSize - 1;
+            return supabase
+              .from("startlist_entries")
+              .select(
+                `
+                coureur_id,
+                startlist_imports!inner(
+                  pcs_validated,
+                  created_at,
+                  saison_id,
+                  courses!inner(
+                    id,
+                    nom,
+                    date_debut
+                  )
+                )
+              `
+              )
+              .eq("startlist_imports.saison_id", localSelectedSeason.id)
+              .gte("startlist_imports.courses.date_debut", today)
+              .not("coureur_id", "is", null)
+              .order("coureur_id")
+              .range(from, to);
+          })
+        );
+
+        for (const page of restPages) {
+          if (page.error) throw page.error;
+          allEntries.push(...(page.data ?? []));
+        }
+      }
 
       // Build a map of coureur_id -> races (keeping only latest import per race)
       const riderRacesMap = new Map<string, Map<string, { race: UpcomingRace; created_at: string }>>();
 
-      entries?.forEach((entry: any) => {
+      allEntries.forEach((entry: any) => {
         if (!entry.coureur_id || !entry.startlist_imports?.courses) return;
         
         const coureurId = entry.coureur_id;
