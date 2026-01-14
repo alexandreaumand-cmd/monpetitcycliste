@@ -112,20 +112,24 @@ Deno.serve(async (req) => {
       .single();
     
     if (phaseData?.saison_id) {
-      // Try coureurs_saisons - use limit(1) to get first result if duplicates exist
+      // Try coureurs_saisons with join to coureurs for nom (coureurs_saisons doesn't have nom column)
       const { data: coureurSaisonData } = await supabase
         .from('coureurs_saisons')
-        .select('coureur_id, nom, prix_initial')
+        .select('coureur_id, prix_initial, coureurs!inner(nom)')
         .eq('coureur_id', rider_id)
         .eq('saison_id', phaseData.saison_id)
         .limit(1);
       
       if (coureurSaisonData && coureurSaisonData.length > 0) {
+        const row = coureurSaisonData[0];
+        // coureurs is returned as object (not array) due to !inner join
+        const coureurNom = (row as any).coureurs?.nom || 'Inconnu';
         coureur = {
-          id: coureurSaisonData[0].coureur_id,
-          nom: coureurSaisonData[0].nom,
-          prix_initial: coureurSaisonData[0].prix_initial
+          id: row.coureur_id,
+          nom: coureurNom,
+          prix_initial: row.prix_initial
         };
+        console.log(`✅ [coureurs_saisons] Coureur ${rider_id}: prix_initial=${coureur.prix_initial}`);
       }
     }
     
