@@ -215,12 +215,12 @@ Deno.serve(async (req) => {
         validated_count: validatedManagersArray.length,
         waiting_count: waitingManagersArray.length,
         total_managers: totalManagers,
-        validated_managers: validatedManagersArray.sort((a, b) => 
-          a.manager_nom.localeCompare(b.manager_nom)
-        ),
-        waiting_managers: waitingManagersArray.sort((a, b) => 
-          a.manager_nom.localeCompare(b.manager_nom)
-        ),
+        validated_managers: validatedManagersArray
+          .sort((a, b) => a.manager_nom.localeCompare(b.manager_nom))
+          .map(m => m.manager_nom),
+        waiting_managers: waitingManagersArray
+          .sort((a, b) => a.manager_nom.localeCompare(b.manager_nom))
+          .map(m => m.manager_nom),
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
