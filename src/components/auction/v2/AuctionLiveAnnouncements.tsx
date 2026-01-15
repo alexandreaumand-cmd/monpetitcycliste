@@ -4,10 +4,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Trophy, Users, TrendingUp, PartyPopper, ArrowLeft } from "lucide-react";
+import { Trophy, Users, TrendingUp, PartyPopper, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { useLeague } from "@/contexts/LeagueContext";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+
+interface ManagerRecruit {
+  coureur_id: string;
+  nom: string;
+  equipe: string;
+  prix_signature: number;
+}
+
+interface ManagerRecruits {
+  manager_id: string;
+  manager_nom: string;
+  recruits: ManagerRecruit[];
+}
 
 interface AuctionLiveAnnouncementsProps {
   auctionId: string;
@@ -23,6 +40,8 @@ export function AuctionLiveAnnouncements({
   onBack,
 }: AuctionLiveAnnouncementsProps) {
   const [liveAnnonces, setLiveAnnonces] = useState<any[]>([]);
+  const [myRecruitsOpen, setMyRecruitsOpen] = useState(true);
+  const [openManagers, setOpenManagers] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
   const queryClient = useQueryClient();
@@ -83,11 +102,26 @@ export function AuctionLiveAnnouncements({
     };
   }, [auctionId, refetch]);
 
+  const toggleManager = (managerId: string) => {
+    setOpenManagers(prev => {
+      const next = new Set(prev);
+      if (next.has(managerId)) {
+        next.delete(managerId);
+      } else {
+        next.add(managerId);
+      }
+      return next;
+    });
+  };
+
   const totalAnnonces = liveStatus?.total_annonces || 0;
   const publishedCount = liveStatus?.published_count || 0;
   const unpublishedCount = liveStatus?.unpublished_count || 0;
   const isComplete = unpublishedCount === 0;
   const myWinsCount = liveAnnonces.filter(a => a.is_my_win).length;
+  const myNewRiders = liveStatus?.my_new_riders || [];
+  const allManagersRecruits: ManagerRecruits[] = liveStatus?.all_managers_recruits || [];
+  const recentlyAnnouncedManagerId = liveStatus?.recently_announced_manager_id;
 
   return (
     <div className="animate-fade-in">
@@ -156,13 +190,13 @@ export function AuctionLiveAnnouncements({
                     </p>
                   ) : (
                     (() => {
-        // Afficher le message quand il reste exactement 10 annonces à publier
-        const unpublishedCount = totalAnnonces - liveAnnonces.length;
-        const shouldShowTop10Message = totalAnnonces > 10 && unpublishedCount === 10;
+      // Afficher le message quand il reste exactement 10 annonces à publier
+      const unpublishedCount = totalAnnonces - liveAnnonces.length;
+      const shouldShowTop10Message = totalAnnonces > 10 && unpublishedCount === 10;
 
-        return liveAnnonces.map((annonce, idx) => {
-          // Le message apparaît en haut de la liste (avant la dernière annonce publiée)
-          const showTop10Before = shouldShowTop10Message && idx === 0;
+      return liveAnnonces.map((annonce, idx) => {
+        // Le message apparaît en haut de la liste (avant la dernière annonce publiée)
+        const showTop10Before = shouldShowTop10Message && idx === 0;
 
                         return (
                           <div key={`wrapper-${annonce.id}`}>
@@ -279,31 +313,137 @@ export function AuctionLiveAnnouncements({
           )}
         </div>
 
-        {/* Right column: My new riders */}
-        <div className="lg:col-span-1">
-          {liveStatus?.my_new_riders && liveStatus.my_new_riders.length > 0 && (
+        {/* Right column: My new riders + Other managers */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Mes nouvelles recrues - Collapsible */}
+          {myNewRiders.length > 0 && (
             <Card className="sticky top-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Mes nouvelles recrues ({liveStatus.my_new_riders.length})
+              <Collapsible open={myRecruitsOpen} onOpenChange={setMyRecruitsOpen}>
+                <CardHeader className="pb-2">
+                  <CollapsibleTrigger asChild>
+                    <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 -mx-2 px-2 py-1 rounded-lg transition-colors">
+                      <CardTitle className="flex items-center gap-2">
+                        <Users className="h-5 w-5" />
+                        Mes nouvelles recrues
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="default" className="text-lg px-3">
+                          {myNewRiders.length}
+                        </Badge>
+                        {myRecruitsOpen ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                  </CollapsibleTrigger>
+                </CardHeader>
+                <CollapsibleContent>
+                  <CardContent className="pt-2">
+                    <div className="space-y-2">
+                      {myNewRiders.map((rider: ManagerRecruit) => (
+                        <div
+                          key={rider.coureur_id}
+                          className="flex items-center justify-between p-3 rounded-lg border bg-card animate-slide-in-right"
+                        >
+                          <div>
+                            <p className="font-semibold">{rider.nom}</p>
+                            <p className="text-sm text-muted-foreground">{rider.equipe}</p>
+                          </div>
+                          <Badge variant="secondary">{rider.prix_signature}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Collapsible>
+            </Card>
+          )}
+
+          {/* Autres managers */}
+          {allManagersRecruits.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Trophy className="h-4 w-4" />
+                  Recrues des autres managers
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[calc(100vh-200px)]">
+                <ScrollArea className="h-[calc(100vh-400px)] min-h-[300px]">
                   <div className="space-y-2 pr-4">
-                    {liveStatus.my_new_riders.map((rider: any) => (
-                      <div
-                        key={rider.coureur_id}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-card animate-slide-in-right"
-                      >
-                        <div>
-                          <p className="font-semibold">{rider.nom}</p>
-                          <p className="text-sm text-muted-foreground">{rider.equipe}</p>
-                        </div>
-                        <Badge variant="secondary">{rider.prix_signature}</Badge>
-                      </div>
-                    ))}
+                    {allManagersRecruits.map((mgrData) => {
+                      const isRecentlyAnnounced = recentlyAnnouncedManagerId === mgrData.manager_id;
+                      const isOpen = openManagers.has(mgrData.manager_id);
+                      
+                      return (
+                        <Collapsible 
+                          key={mgrData.manager_id}
+                          open={isOpen}
+                          onOpenChange={() => toggleManager(mgrData.manager_id)}
+                        >
+                          <div 
+                            className={`rounded-lg border transition-all duration-500 ${
+                              isRecentlyAnnounced 
+                                ? 'border-yellow-500 bg-yellow-500/10 ring-2 ring-yellow-500/50 animate-pulse' 
+                                : 'bg-card'
+                            }`}
+                          >
+                            <CollapsibleTrigger asChild>
+                              <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  {isRecentlyAnnounced && (
+                                    <span className="text-yellow-500 animate-bounce">🎯</span>
+                                  )}
+                                  <span className={`font-medium ${isRecentlyAnnounced ? 'text-yellow-600 dark:text-yellow-400' : ''}`}>
+                                    {mgrData.manager_nom}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge 
+                                    variant={mgrData.recruits.length > 0 ? "default" : "outline"}
+                                    className={`min-w-[2.5rem] justify-center ${
+                                      isRecentlyAnnounced ? 'bg-yellow-500 text-yellow-950' : ''
+                                    }`}
+                                  >
+                                    {mgrData.recruits.length}
+                                  </Badge>
+                                  {mgrData.recruits.length > 0 && (
+                                    isOpen ? (
+                                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    )
+                                  )}
+                                </div>
+                              </div>
+                            </CollapsibleTrigger>
+                            
+                            {mgrData.recruits.length > 0 && (
+                              <CollapsibleContent>
+                                <div className="px-3 pb-3 space-y-1">
+                                  {mgrData.recruits.map((rider) => (
+                                    <div
+                                      key={rider.coureur_id}
+                                      className="flex items-center justify-between p-2 rounded bg-muted/50 text-sm"
+                                    >
+                                      <div>
+                                        <p className="font-medium">{rider.nom}</p>
+                                        <p className="text-xs text-muted-foreground">{rider.equipe}</p>
+                                      </div>
+                                      <Badge variant="outline" className="text-xs">
+                                        {rider.prix_signature}
+                                      </Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                              </CollapsibleContent>
+                            )}
+                          </div>
+                        </Collapsible>
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               </CardContent>

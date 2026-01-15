@@ -134,34 +134,84 @@ Deno.serve(async (req) => {
       };
     });
 
-    // Get my new riders from this auction
-    const myWinningCoureurIds = annonces
-      .filter(a => a.is_my_win)
-      .map(a => a.coureur?.id)
-      .filter(Boolean);
+    // Get all league managers
+    const { data: leagueManagers } = await supabase
+      .from('managers')
+      .select('id, nom')
+      .in('id', 
+        (await supabase
+          .from('league_members')
+          .select('user_id')
+          .eq('league_id', league_id)
+          .then(({ data }) => data?.map(m => m.user_id) || [])
+        ).length > 0 
+          ? (await supabase
+              .from('managers')
+              .select('id')
+              .in('user_id', 
+                (await supabase
+                  .from('league_members')
+                  .select('user_id')
+                  .eq('league_id', league_id)
+                ).data?.map(m => m.user_id) || []
+              )
+            ).data?.map(m => m.id) || []
+          : []
+      );
 
-    const my_new_riders = [];
-    if (myWinningCoureurIds.length > 0) {
-      const { data: newRiders } = await supabase
-        .from('rosters')
-        .select('coureur_id, prix_signature')
-        .eq('phase_id', phase_id)
-        .eq('manager_id', manager.id)
-        .eq('league_id', league_id)
-        .in('coureur_id', myWinningCoureurIds);
+    // Get all league members directly for cleaner query
+    const { data: leagueMembersData } = await supabase
+      .from('league_members')
+      .select('user_id')
+      .eq('league_id', league_id);
 
-      for (const r of (newRiders || [])) {
-        const coureur = coureursMap.get(r.coureur_id);
-        if (coureur) {
-          my_new_riders.push({
-            coureur_id: r.coureur_id,
-            nom: coureur.nom,
-            equipe: coureur.equipe,
-            prix_signature: r.prix_signature,
+    const userIds = leagueMembersData?.map(m => m.user_id) || [];
+    
+    const { data: allLeagueManagers } = await supabase
+      .from('managers')
+      .select('id, nom')
+      .in('user_id', userIds);
+
+    // Build managers recruits map from annonces
+    const managersRecruitsMap = new Map<string, { manager_id: string; manager_nom: string; recruits: any[] }>();
+
+    // Initialize all managers with empty recruits
+    for (const mgr of (allLeagueManagers || [])) {
+      managersRecruitsMap.set(mgr.id, {
+        manager_id: mgr.id,
+        manager_nom: mgr.nom,
+        recruits: []
+      });
+    }
+
+    // Fill recruits from annonces
+    for (const annonce of annonces) {
+      if (annonce.type === 'gain' && annonce.winning_manager?.id) {
+        const mgrData = managersRecruitsMap.get(annonce.winning_manager.id);
+        if (mgrData) {
+          mgrData.recruits.push({
+            coureur_id: annonce.coureur?.id,
+            nom: annonce.coureur?.nom,
+            equipe: annonce.coureur?.equipe,
+            prix_signature: annonce.winning_amount,
           });
         }
       }
     }
+
+    // Separate my recruits from others
+    const my_new_riders = managersRecruitsMap.get(manager.id)?.recruits || [];
+    
+    // Get other managers' data (excluding current manager)
+    const all_managers_recruits = Array.from(managersRecruitsMap.values())
+      .filter(m => m.manager_id !== manager.id)
+      .sort((a, b) => b.recruits.length - a.recruits.length);
+
+    // Find the most recently announced winner (for highlighting)
+    const latestAnnonce = annonces.length > 0 ? annonces[0] : null;
+    const recently_announced_manager_id = latestAnnonce?.type === 'gain' 
+      ? latestAnnonce.winning_manager?.id 
+      : null;
 
     return new Response(
       JSON.stringify({
@@ -176,6 +226,8 @@ Deno.serve(async (req) => {
         unpublished_count,
         annonces,
         my_new_riders,
+        all_managers_recruits,
+        recently_announced_manager_id,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
