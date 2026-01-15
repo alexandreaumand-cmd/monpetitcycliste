@@ -3,13 +3,23 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileBottomSheet } from "@/components/mobile";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { TrendingUp, TrendingDown, CheckCircle2, AlertCircle, Calendar } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+
+interface UpcomingRace {
+  race_id: string;
+  race_nom: string;
+  categorie: string;
+  date_debut: string;
+  date_fin: string;
+  is_confirmed: boolean;
+}
 
 interface RiderPointsDetailProps {
   isOpen: boolean;
@@ -45,6 +55,19 @@ export const RiderPointsDetail = ({
       
       if (error) throw error;
       return data;
+    },
+    enabled: isOpen && !!riderId,
+  });
+
+  const { data: upcomingRaces, isLoading: isLoadingUpcoming } = useQuery({
+    queryKey: ["rider-upcoming-races", riderId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('get-rider-upcoming-races', {
+        body: { rider_id: riderId }
+      });
+      
+      if (error) throw error;
+      return data?.races as UpcomingRace[] || [];
     },
     enabled: isOpen && !!riderId,
   });
@@ -205,6 +228,56 @@ export const RiderPointsDetail = ({
             Aucun point enregistré pour cette phase
           </p>
         )}
+
+        {/* Upcoming Races Section */}
+        <div className="space-y-4 pt-4 border-t">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-muted-foreground" />
+            <h4 className="font-semibold">Programme à venir</h4>
+          </div>
+          {isLoadingUpcoming ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : upcomingRaces && upcomingRaces.length > 0 ? (
+            <div className="space-y-2">
+              {upcomingRaces.map((race) => (
+                <div 
+                  key={race.race_id} 
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium truncate">{race.race_nom}</p>
+                      {race.is_confirmed ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-orange-500 shrink-0" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="outline" className="text-xs">
+                        {race.categorie}
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(race.date_debut).toLocaleDateString('fr-FR')}
+                        {race.date_debut !== race.date_fin && 
+                          ` - ${new Date(race.date_fin).toLocaleDateString('fr-FR')}`
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Aucune course programmée
+            </p>
+          )}
+        </div>
       </div>
     </MobileBottomSheet>
   );
