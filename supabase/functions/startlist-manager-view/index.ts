@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     let ratingAuthorName = null;
     if (startlist.admin_rating_author_id) {
       const { data: managerData } = await supabase
-        .from('managers')
+        .from('v_managers_public')
         .select('nom')
         .eq('id', startlist.admin_rating_author_id)
         .single();
@@ -161,18 +161,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get rosters for this phase with season sponsors
+    // Get rosters for this phase (without manager join due to RLS restrictions)
     let rostersQuery = supabase
       .from('rosters')
-      .select(`
-        manager_id,
-        coureur_id,
-        managers!inner(
-          id,
-          nom,
-          sponsor
-        )
-      `)
+      .select('manager_id, coureur_id')
       .eq('phase_id', phaseId);
     
     // Filter by league_id if provided
@@ -184,8 +176,18 @@ Deno.serve(async (req) => {
 
     if (rostersError) throw rostersError;
 
-    // Get season-specific sponsors for all managers
-    const managerIds = [...new Set(rosters.map(r => r.manager_id))];
+    // Fetch managers separately using the public view (bypasses RLS on managers table)
+    const managerIds = [...new Set((rosters || []).map(r => r.manager_id))];
+    const { data: managersData, error: managersError } = await supabase
+      .from('v_managers_public')
+      .select('id, nom, sponsor')
+      .in('id', managerIds);
+
+    if (managersError) throw managersError;
+
+    // Create a map of manager data
+    const managersMap = new Map();
+    managersData?.forEach(m => managersMap.set(m.id, m));
     const { data: seasonSponsors } = await supabase
       .from('manager_sponsors')
       .select('manager_id, sponsor, jersey_image_url')
@@ -299,8 +301,9 @@ Deno.serve(async (req) => {
     // Build manager map with standings
     const managerMap = new Map();
     
-    for (const roster of rosters) {
-      const managerData = Array.isArray(roster.managers) ? roster.managers[0] : roster.managers;
+    for (const roster of rosters || []) {
+      const managerData = managersMap.get(roster.manager_id);
+      if (!managerData) continue; // Skip if manager not found in public view
       if (!managerMap.has(roster.manager_id)) {
         // Find standings for this manager
         const phaseStanding = phaseStandings?.find(s => s.manager_id === roster.manager_id);
