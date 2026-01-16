@@ -30,8 +30,9 @@ export function FiltersDrawer({
 
   const categoryOptions = [
     { value: "WT", label: "WT" },
-    { value: "PCT", label: "PCT" },
+    { value: "PT", label: "PT" },
     { value: "CT", label: "CT" },
+    { value: "OT", label: "OT" },
   ];
 
   const toggleTeam = (teamId: string) => {
