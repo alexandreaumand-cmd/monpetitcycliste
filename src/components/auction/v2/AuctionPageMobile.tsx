@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AuctionHeaderMobile } from "./AuctionHeaderMobile";
 import { FiltersDrawer } from "./FiltersDrawer";
@@ -148,10 +148,16 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     },
   });
 
-  // Search riders
-  const { data: ridersData, isLoading: ridersLoading } = useQuery({
+  // Search riders with infinite pagination
+  const {
+    data: ridersPages,
+    isLoading: ridersLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: [
-      "auction-search-riders",
+      "auction-search-riders-infinite",
       phaseId,
       leagueId,
       debouncedSearch,
@@ -161,7 +167,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       sortOrder,
       context?.my_bids?.map((b: any) => b.coureur_id) || [],
     ],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
       // Convert selectedCotes to min/max ranges
       let cote_min: number | null = null;
       let cote_max: number | null = null;
@@ -190,14 +196,30 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
           exclude_rider_ids: context?.my_bids?.map((b: any) => b.coureur_id) || [],
           available_only: true,
           limit: 100,
+          offset: pageParam,
           order_by: sortOrder,
         },
       });
       if (error) throw error;
       return data;
     },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      if (lastPage?.pagination?.has_more) {
+        return (lastPage.pagination.offset || 0) + 100;
+      }
+      return undefined;
+    },
     enabled: !!context,
   });
+
+  // Flatten pages into single list
+  const ridersData = useMemo(() => {
+    if (!ridersPages?.pages) return { items: [] };
+    return {
+      items: ridersPages.pages.flatMap((page) => page.items || []),
+    };
+  }, [ridersPages]);
 
   // Upsert bid mutation
   const upsertBidMutation = useMutation({
@@ -595,6 +617,9 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
               isLoading={ridersLoading}
               onSortChange={setSortOrder}
               currentSort={sortOrder}
+              hasMore={hasNextPage}
+              onLoadMore={fetchNextPage}
+              isLoadingMore={isFetchingNextPage}
             />
           </div>
         </TabsContent>

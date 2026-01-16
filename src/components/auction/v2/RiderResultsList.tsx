@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Rider {
@@ -25,9 +25,13 @@ interface RiderResultsListProps {
   renderActionButton?: (rider: Rider) => React.ReactNode;
   onSortChange?: (order: 'nom' | 'cote') => void;
   currentSort?: 'nom' | 'cote';
+  // Pagination props
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
 }
 
-export function RiderResultsList({ riders, onAddRider, isLoading, renderActionButton, onSortChange, currentSort = 'nom' }: RiderResultsListProps) {
+export function RiderResultsList({ riders, onAddRider, isLoading, renderActionButton, onSortChange, currentSort = 'nom', hasMore, onLoadMore, isLoadingMore }: RiderResultsListProps) {
   const isMobile = useIsMobile();
   const [localSortColumn, setLocalSortColumn] = useState<'nom' | 'cote' | null>(null);
   const [localSortDirection, setLocalSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -161,6 +165,26 @@ export function RiderResultsList({ riders, onAddRider, isLoading, renderActionBu
           ))}
         </TableBody>
       </Table>
+      
+      {/* Load more button */}
+      {hasMore && (
+        <div className="p-4 flex justify-center border-t">
+          <Button
+            variant="outline"
+            onClick={() => onLoadMore?.()}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Chargement...
+              </>
+            ) : (
+              "Voir plus de coureurs"
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
