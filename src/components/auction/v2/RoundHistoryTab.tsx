@@ -53,9 +53,16 @@ export function RoundHistoryTab({
     },
   });
 
-  const won = outcomes.filter((o) => o.outcome === "won");
-  const lost = outcomes.filter((o) => o.outcome === "lost");
-  const carriedOver = outcomes.filter((o) => o.outcome === "carried_over");
+  // Sort by highest bid first (descending order)
+  const won = outcomes
+    .filter((o) => o.outcome === "won")
+    .sort((a, b) => (b.my_bid || 0) - (a.my_bid || 0));
+  const lost = outcomes
+    .filter((o) => o.outcome === "lost")
+    .sort((a, b) => (b.my_bid || 0) - (a.my_bid || 0));
+  const carriedOver = outcomes
+    .filter((o) => o.outcome === "carried_over")
+    .sort((a, b) => (b.my_bid || 0) - (a.my_bid || 0));
 
   // Get losers (beaten managers) for each won rider
   const { data: losersData = [] } = useQuery({
