@@ -352,21 +352,23 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Match entries to managers (ignore riders without roster)
+    // Match entries to managers (ignore riders without roster or without manager in map)
     for (const entry of enrichedEntries) {
       const coureurData = entry.coureurs;
-      const roster = rosters.find(r => r.coureur_id === entry.coureur_id);
+      const roster = (rosters || []).find(r => r.coureur_id === entry.coureur_id);
       if (roster) {
         const manager = managerMap.get(roster.manager_id);
-        manager.starters.push({
-          coureur_id: entry.coureur_id,
-          nom: coureurData.nom,
-          equipe: coureurData.equipe,
-          cote: coureurData.prix_initial,
-          bib_no: entry.bib_no,
-          recent_results: resultsMap.get(entry.coureur_id) || []
-        });
-        manager.starters_count++;
+        if (manager) {
+          manager.starters.push({
+            coureur_id: entry.coureur_id,
+            nom: coureurData.nom,
+            equipe: coureurData.equipe,
+            cote: coureurData.prix_initial,
+            bib_no: entry.bib_no,
+            recent_results: resultsMap.get(entry.coureur_id) || []
+          });
+          manager.starters_count++;
+        }
       }
       // Riders without roster are not displayed
     }
