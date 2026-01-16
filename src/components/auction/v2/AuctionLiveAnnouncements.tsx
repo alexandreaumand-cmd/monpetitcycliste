@@ -124,30 +124,30 @@ export function AuctionLiveAnnouncements({
   const recentlyAnnouncedManagerId = liveStatus?.recently_announced_manager_id;
 
   return (
-    <div className="animate-fade-in">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="animate-fade-in px-2 sm:px-0">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Left column: Announcements feed */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-3 sm:space-y-6">
           {/* Header */}
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <PartyPopper className="h-5 w-5 text-primary" />
-                  Résultats Round {liveStatus?.auction?.round_number || ''}
+            <CardHeader className="py-3 sm:py-6 px-3 sm:px-6">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-xl">
+                  <PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                  <span className="truncate">Résultats Round {liveStatus?.auction?.round_number || ''}</span>
                 </CardTitle>
-                <Badge variant={isComplete ? "default" : "secondary"}>
-                  {publishedCount}/{totalAnnonces} annonces
+                <Badge variant={isComplete ? "default" : "secondary"} className="text-xs sm:text-sm shrink-0">
+                  {publishedCount}/{totalAnnonces}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="py-2 sm:py-4 px-3 sm:px-6">
               {isComplete ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   ✅ Tous les résultats ont été annoncés !
                 </p>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   🎬 L'admin est en train de révéler les résultats...
                 </p>
               )}
@@ -157,14 +157,14 @@ export function AuctionLiveAnnouncements({
           {/* My stats */}
           {myWinsCount > 0 && (
             <Card className="border-primary/50 bg-primary/5">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <Trophy className="h-8 w-8 text-primary" />
+              <CardContent className="py-3 sm:pt-6 px-3 sm:px-6">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-primary shrink-0" />
                   <div>
-                    <p className="font-semibold text-lg">
+                    <p className="font-semibold text-sm sm:text-lg">
                       🎉 Bravo ! Tu as gagné {myWinsCount} coureur{myWinsCount > 1 ? 's' : ''} !
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Ton équipe se renforce...
                     </p>
                   </div>
@@ -175,17 +175,17 @@ export function AuctionLiveAnnouncements({
 
           {/* Announcements feed - REVERSED ORDER */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
+            <CardHeader className="py-3 sm:py-6 px-3 sm:px-6">
+              <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-xl">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
                 Annonces en direct
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[600px] pr-4" ref={scrollRef}>
+            <CardContent className="px-2 sm:px-6">
+              <ScrollArea className="h-[50vh] sm:h-[600px] pr-2 sm:pr-4" ref={scrollRef}>
                 <div className="space-y-4">
                   {liveAnnonces.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">
+                    <p className="text-center text-muted-foreground py-6 sm:py-8 text-sm">
                       En attente des annonces...
                     </p>
                   ) : (
@@ -202,38 +202,38 @@ export function AuctionLiveAnnouncements({
                           <div key={`wrapper-${annonce.id}`}>
                             {/* Message Top 10 */}
                             {showTop10Before && (
-                              <div className="p-6 rounded-lg bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500 text-center animate-fade-in mb-4">
-                                <p className="font-bold text-xl">🏆 On arrive au top 10 ! 🏆</p>
+                              <div className="p-3 sm:p-6 rounded-lg bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500 text-center animate-fade-in mb-3 sm:mb-4">
+                                <p className="font-bold text-base sm:text-xl">🏆 On arrive au top 10 ! 🏆</p>
                               </div>
                             )}
 
                             {/* Annonce normale */}
                             <div
-                              className={`p-4 rounded-lg border animate-fade-in ${
+                              className={`p-2.5 sm:p-4 rounded-lg border animate-fade-in ${
                                 annonce.is_my_win
                                   ? 'bg-primary/10 border-primary'
                                   : 'bg-card'
                               }`}
                             >
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-2">
+                              <div className="flex items-start justify-between gap-2 sm:gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1 sm:gap-2 mb-1.5 sm:mb-2 flex-wrap">
                                     {annonce.type === 'gain' ? (
-                                      <Trophy className="h-4 w-4 text-primary" />
+                                      <Trophy className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
                                     ) : (
-                                      <Users className="h-4 w-4 text-yellow-500" />
+                                      <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-500 shrink-0" />
                                     )}
-                                    <span className="font-semibold">
+                                    <span className="font-semibold text-sm sm:text-base truncate">
                                       {annonce.coureur?.nom}
                                     </span>
-                                    <Badge variant="outline" className="text-xs">
+                                    <Badge variant="outline" className="text-[10px] sm:text-xs shrink-0">
                                       {annonce.type === 'egalite' 
-                                        ? `${annonce.losers?.length || 0} enchère${(annonce.losers?.length || 0) > 1 ? 's' : ''}`
-                                        : `${(annonce.losers?.length || 0) + 1} enchère${((annonce.losers?.length || 0) + 1) > 1 ? 's' : ''}`
+                                        ? `${annonce.losers?.length || 0} ench.`
+                                        : `${(annonce.losers?.length || 0) + 1} ench.`
                                       }
                                     </Badge>
                                     {idx === 0 && (
-                                      <Badge variant="secondary" className="text-xs">
+                                      <Badge variant="secondary" className="text-[10px] sm:text-xs shrink-0">
                                         Nouveau !
                                       </Badge>
                                     )}
@@ -241,34 +241,34 @@ export function AuctionLiveAnnouncements({
 
                                   {annonce.type === 'gain' ? (
                                     <div>
-                                      <p className="text-sm">
+                                      <p className="text-xs sm:text-sm">
                                         {annonce.is_my_win ? (
                                           <span className="font-semibold text-primary">
-                                            🎉 Gagné par toi pour {annonce.winning_amount}
+                                            🎉 Gagné pour {annonce.winning_amount}
                                           </span>
                                         ) : (
                                           <span>
-                                            Gagné par <strong>{annonce.winning_manager?.nom}</strong> pour {annonce.winning_amount}
+                                            <strong>{annonce.winning_manager?.nom}</strong> — {annonce.winning_amount}
                                           </span>
                                         )}
                                       </p>
                                       {annonce.losers && annonce.losers.length > 0 && (
-                                        <p className="text-xs text-muted-foreground mt-1">
+                                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 line-clamp-2">
                                           {annonce.is_my_win ? (
-                                            <>✅ Tu bats : {annonce.losers.map((l: any) => `${l.manager} (${l.montant})`).join(', ')}</>
+                                            <>✅ {annonce.losers.map((l: any) => `${l.manager} (${l.montant})`).join(', ')}</>
                                           ) : (
-                                            <>Autres enchères : {annonce.losers.map((l: any) => `${l.manager} (${l.montant})`).join(', ')}</>
+                                            <>{annonce.losers.map((l: any) => `${l.manager} (${l.montant})`).join(', ')}</>
                                           )}
                                         </p>
                                       )}
                                     </div>
                                   ) : (
                                     <div>
-                                      <p className="text-sm">
+                                      <p className="text-xs sm:text-sm">
                                         🟨 Égalité à {annonce.winning_amount}
                                       </p>
-                                      <p className="text-xs text-muted-foreground mt-1">
-                                        {annonce.losers?.map((l: any) => l.manager).join(', ')} - On retente au prochain round !
+                                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
+                                        {annonce.losers?.map((l: any) => l.manager).join(', ')}
                                       </p>
                                     </div>
                                   )}
@@ -288,12 +288,12 @@ export function AuctionLiveAnnouncements({
           {/* Completion message */}
           {isComplete && (
             <Card className="border-green-500/50 bg-green-500/5">
-              <CardContent className="pt-6 text-center space-y-4">
+              <CardContent className="py-4 sm:pt-6 text-center space-y-3 sm:space-y-4 px-3 sm:px-6">
                 <div>
-                  <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                  <p className="text-base sm:text-lg font-semibold text-green-600 dark:text-green-400">
                     ✅ Résultats complets !
                   </p>
-                  <p className="text-sm text-muted-foreground mt-2">
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
                     Tu peux maintenant consulter ton équipe complète
                   </p>
                 </div>
@@ -304,8 +304,9 @@ export function AuctionLiveAnnouncements({
                     onBack?.();
                   }}
                   className="mx-auto"
+                  size="sm"
                 >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                   Retour aux enchères
                 </Button>
               </CardContent>
@@ -314,20 +315,20 @@ export function AuctionLiveAnnouncements({
         </div>
 
         {/* Right column: My new riders + Other managers */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="lg:col-span-1 space-y-3 sm:space-y-4">
           {/* Mes nouvelles recrues - Collapsible */}
           {myNewRiders.length > 0 && (
-            <Card className="sticky top-6">
+            <Card className="lg:sticky lg:top-6">
               <Collapsible open={myRecruitsOpen} onOpenChange={setMyRecruitsOpen}>
-                <CardHeader className="pb-2">
+                <CardHeader className="py-2.5 sm:pb-2 px-3 sm:px-6">
                   <CollapsibleTrigger asChild>
                     <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 -mx-2 px-2 py-1 rounded-lg transition-colors">
-                      <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
-                        Mes nouvelles recrues
+                      <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-xl">
+                        <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+                        Mes recrues
                       </CardTitle>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="default" className="text-lg px-3">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <Badge variant="default" className="text-sm sm:text-lg px-2 sm:px-3">
                           {myNewRiders.length}
                         </Badge>
                         {myRecruitsOpen ? (
@@ -340,18 +341,18 @@ export function AuctionLiveAnnouncements({
                   </CollapsibleTrigger>
                 </CardHeader>
                 <CollapsibleContent>
-                  <CardContent className="pt-2">
-                    <div className="space-y-2">
+                  <CardContent className="pt-1 sm:pt-2 px-2 sm:px-6">
+                    <div className="space-y-1.5 sm:space-y-2">
                       {myNewRiders.map((rider: ManagerRecruit) => (
                         <div
                           key={rider.coureur_id}
-                          className="flex items-center justify-between p-3 rounded-lg border bg-card animate-slide-in-right"
+                          className="flex items-center justify-between p-2 sm:p-3 rounded-lg border bg-card animate-slide-in-right"
                         >
-                          <div>
-                            <p className="font-semibold">{rider.nom}</p>
-                            <p className="text-sm text-muted-foreground">{rider.equipe}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-sm sm:text-base truncate">{rider.nom}</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground truncate">{rider.equipe}</p>
                           </div>
-                          <Badge variant="secondary">{rider.prix_signature}</Badge>
+                          <Badge variant="secondary" className="text-xs sm:text-sm ml-2 shrink-0">{rider.prix_signature}</Badge>
                         </div>
                       ))}
                     </div>
@@ -364,15 +365,15 @@ export function AuctionLiveAnnouncements({
           {/* Autres managers */}
           {allManagersRecruits.length > 0 && (
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Trophy className="h-4 w-4" />
+              <CardHeader className="py-2.5 sm:pb-2 px-3 sm:px-6">
+                <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base">
+                  <Trophy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Recrues des autres managers
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[calc(100vh-400px)] min-h-[300px]">
-                  <div className="space-y-2 pr-4">
+              <CardContent className="px-2 sm:px-6">
+                <ScrollArea className="h-[40vh] sm:h-[calc(100vh-400px)] sm:min-h-[300px]">
+                  <div className="space-y-1.5 sm:space-y-2 pr-2 sm:pr-4">
                     {allManagersRecruits.map((mgrData) => {
                       const isRecentlyAnnounced = recentlyAnnouncedManagerId === mgrData.manager_id;
                       const isOpen = openManagers.has(mgrData.manager_id);
@@ -391,19 +392,19 @@ export function AuctionLiveAnnouncements({
                             }`}
                           >
                             <CollapsibleTrigger asChild>
-                              <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors rounded-lg">
-                                <div className="flex items-center gap-2">
+                              <div className="flex items-center justify-between p-2 sm:p-3 cursor-pointer hover:bg-muted/50 transition-colors rounded-lg">
+                                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
                                   {isRecentlyAnnounced && (
-                                    <span className="text-yellow-500 animate-bounce">🎯</span>
+                                    <span className="text-yellow-500 animate-bounce shrink-0">🎯</span>
                                   )}
-                                  <span className={`font-medium ${isRecentlyAnnounced ? 'text-yellow-600 dark:text-yellow-400' : ''}`}>
+                                  <span className={`font-medium text-sm sm:text-base truncate ${isRecentlyAnnounced ? 'text-yellow-600 dark:text-yellow-400' : ''}`}>
                                     {mgrData.manager_nom}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                                   <Badge 
                                     variant={mgrData.recruits.length > 0 ? "default" : "outline"}
-                                    className={`min-w-[2.5rem] justify-center ${
+                                    className={`min-w-[2rem] sm:min-w-[2.5rem] justify-center text-xs sm:text-sm ${
                                       isRecentlyAnnounced ? 'bg-yellow-500 text-yellow-950' : ''
                                     }`}
                                   >
@@ -411,9 +412,9 @@ export function AuctionLiveAnnouncements({
                                   </Badge>
                                   {mgrData.recruits.length > 0 && (
                                     isOpen ? (
-                                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                      <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                                     ) : (
-                                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                      <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                                     )
                                   )}
                                 </div>
@@ -422,17 +423,17 @@ export function AuctionLiveAnnouncements({
                             
                             {mgrData.recruits.length > 0 && (
                               <CollapsibleContent>
-                                <div className="px-3 pb-3 space-y-1">
+                                <div className="px-2 sm:px-3 pb-2 sm:pb-3 space-y-1">
                                   {mgrData.recruits.map((rider) => (
                                     <div
                                       key={rider.coureur_id}
-                                      className="flex items-center justify-between p-2 rounded bg-muted/50 text-sm"
+                                      className="flex items-center justify-between p-1.5 sm:p-2 rounded bg-muted/50 text-xs sm:text-sm"
                                     >
-                                      <div>
-                                        <p className="font-medium">{rider.nom}</p>
-                                        <p className="text-xs text-muted-foreground">{rider.equipe}</p>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-medium truncate">{rider.nom}</p>
+                                        <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{rider.equipe}</p>
                                       </div>
-                                      <Badge variant="outline" className="text-xs">
+                                      <Badge variant="outline" className="text-[10px] sm:text-xs ml-1.5 shrink-0">
                                         {rider.prix_signature}
                                       </Badge>
                                     </div>
