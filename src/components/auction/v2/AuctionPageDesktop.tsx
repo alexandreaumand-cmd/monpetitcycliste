@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AuctionHeader } from "./AuctionHeader";
 import { AuctionSearchFilters } from "./AuctionSearchFilters";
@@ -149,10 +149,16 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     },
   });
 
-  // Search riders
-  const { data: ridersData, isLoading: ridersLoading } = useQuery({
+  // Search riders with infinite pagination
+  const {
+    data: ridersPages,
+    isLoading: ridersLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: [
-      "auction-search-riders",
+      "auction-search-riders-infinite",
       phaseId,
       leagueId,
       debouncedSearch,
@@ -162,7 +168,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
       sortOrder,
       context?.my_bids?.map((b: any) => b.coureur_id) || [],
     ],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
       // Convert selectedCotes to min/max ranges
       let cote_min: number | null = null;
       let cote_max: number | null = null;
@@ -191,14 +197,30 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
           exclude_rider_ids: context?.my_bids?.map((b: any) => b.coureur_id) || [],
           available_only: true,
           limit: 100,
+          offset: pageParam,
           order_by: sortOrder,
         },
       });
       if (error) throw error;
       return data;
     },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      if (lastPage?.pagination?.has_more) {
+        return (lastPage.pagination.offset || 0) + 100;
+      }
+      return undefined;
+    },
     enabled: !!context,
   });
+
+  // Flatten pages into single list
+  const ridersData = useMemo(() => {
+    if (!ridersPages?.pages) return { items: [] };
+    return {
+      items: ridersPages.pages.flatMap((page) => page.items || []),
+    };
+  }, [ridersPages]);
 
   // Mutations
   const upsertBidMutation = useMutation({
@@ -557,6 +579,9 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
           isImportingFavorites={importFavoritesMutation.isPending}
           sortOrder={sortOrder}
           setSortOrder={setSortOrder}
+          hasMore={hasNextPage}
+          onLoadMore={fetchNextPage}
+          isLoadingMore={isFetchingNextPage}
         />
       </MemberWriteGuard>
 

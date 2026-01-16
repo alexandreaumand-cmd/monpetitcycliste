@@ -42,6 +42,10 @@ interface AuctionTabsProps {
   // Sort
   sortOrder: 'nom' | 'cote';
   setSortOrder: (order: 'nom' | 'cote') => void;
+  // Pagination
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
 }
 
 export const AuctionTabs = ({
@@ -71,6 +75,9 @@ export const AuctionTabs = ({
   isImportingFavorites = false,
   sortOrder,
   setSortOrder,
+  hasMore,
+  onLoadMore,
+  isLoadingMore,
 }: AuctionTabsProps) => {
   // Fetch closed rounds for this phase
   const { data: closedRounds = [] } = useQuery({
@@ -236,6 +243,9 @@ export const AuctionTabs = ({
                     isLoading={isSearching}
                     onSortChange={setSortOrder}
                     currentSort={sortOrder}
+                    hasMore={hasMore}
+                    onLoadMore={onLoadMore}
+                    isLoadingMore={isLoadingMore}
                     renderActionButton={(rider) => (
                       <BidAmountPopover
                         trigger={
