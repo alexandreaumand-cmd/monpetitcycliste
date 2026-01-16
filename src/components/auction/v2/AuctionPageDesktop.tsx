@@ -13,6 +13,7 @@ import { AuctionTabs } from "./AuctionTabs";
 import { AuctionCompletedView } from "./AuctionCompletedView";
 import { AuctionPhaseHistoryView } from "./AuctionPhaseHistoryView";
 import { AuctionScheduledView } from "./AuctionScheduledView";
+import { AuctionRoundsHistory } from "./AuctionRoundsHistory";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2 } from "lucide-react";
@@ -50,6 +51,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);
   const [showMyValidatedBids, setShowMyValidatedBids] = useState(false);
+  const [showAuctionHistory, setShowAuctionHistory] = useState(false);
   const [hideLiveAnnouncements, setHideLiveAnnouncements] = useState(false);
   const [debouncedSearch] = useDebounce(searchQuery, 250);
 
@@ -487,6 +489,17 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     );
   }
 
+  if (showValidationScreen && showAuctionHistory) {
+    return (
+      <AuctionRoundsHistory
+        phaseId={phaseId}
+        managerId={managerId}
+        leagueId={leagueId}
+        onBack={() => setShowAuctionHistory(false)}
+      />
+    );
+  }
+
   if (showValidationScreen) {
     return (
       <AuctionValidationConfirmation
@@ -496,6 +509,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
         leagueId={leagueId}
         onBack={() => setShowValidationScreen(false)}
         onViewMyBids={() => setShowMyValidatedBids(true)}
+        onViewHistory={() => setShowAuctionHistory(true)}
       />
     );
   }

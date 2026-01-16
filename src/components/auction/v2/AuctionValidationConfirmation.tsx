@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, Users, RefreshCw, Loader2 } from "lucide-react";
+import { CheckCircle2, Clock, Users, RefreshCw, Loader2, History } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface AuctionValidationConfirmationProps {
@@ -14,9 +14,10 @@ interface AuctionValidationConfirmationProps {
   leagueId: string | null;
   onBack: () => void;
   onViewMyBids: () => void;
+  onViewHistory: () => void;
 }
 
-export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, leagueId, onBack, onViewMyBids }: AuctionValidationConfirmationProps) {
+export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, leagueId, onBack, onViewMyBids, onViewHistory }: AuctionValidationConfirmationProps) {
   const [timeRemaining, setTimeRemaining] = useState("");
 
   const { data: status, isLoading, refetch } = useQuery({
@@ -181,6 +182,14 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
               className="flex-1"
             >
               Voir mes enchères
+            </Button>
+            <Button
+              onClick={onViewHistory}
+              variant="secondary"
+              className="flex-1"
+            >
+              <History className="h-4 w-4 mr-2" />
+              Historique
             </Button>
           </div>
 
