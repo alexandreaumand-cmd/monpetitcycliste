@@ -176,14 +176,21 @@ Deno.serve(async (req) => {
 
     if (rostersError) throw rostersError;
 
+    console.log(`[startlist-manager-view] Found ${rosters?.length || 0} rosters for phase ${phaseId}, league ${league_id}`);
+    console.log(`[startlist-manager-view] enrichedEntries count: ${enrichedEntries.length}`);
+
     // Fetch managers separately using the public view (bypasses RLS on managers table)
     const managerIds = [...new Set((rosters || []).map(r => r.manager_id))];
+    console.log(`[startlist-manager-view] Unique manager IDs: ${managerIds.length}`);
+    
     const { data: managersData, error: managersError } = await supabase
       .from('v_managers_public')
       .select('id, nom, sponsor')
       .in('id', managerIds);
 
     if (managersError) throw managersError;
+
+    console.log(`[startlist-manager-view] Found ${managersData?.length || 0} managers from v_managers_public`);
 
     // Create a map of manager data
     const managersMap = new Map();
