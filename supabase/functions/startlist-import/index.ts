@@ -405,41 +405,47 @@ serve(async (req) => {
     const rosterCoureurIds = [...new Set((rostersData || []).map(r => r.coureur_id))];
     console.log(`[startlist-import] Found ${rosterCoureurIds.length} unique coureur_ids in rosters`);
 
-    // Load coureur details from coureurs_saisons + equipes_saisons
-    const rosterRiders: RiderRef[] = [];
+    // Load coureur details from coureurs_saisons + equipes_saisons - BATCH QUERY
+    let rosterRiders: RiderRef[] = [];
     if (saison_id && rosterCoureurIds.length > 0) {
-      for (const coureurId of rosterCoureurIds) {
-        const { data: csData } = await supabase
-          .from('coureurs_saisons')
-          .select('coureur_id, coureurs!inner(id, nom), equipe_id')
-          .eq('saison_id', saison_id)
-          .eq('coureur_id', coureurId)
-          .limit(1);
+      // Single batch query for all roster riders
+      const { data: csData, error: csError } = await supabase
+        .from('coureurs_saisons')
+        .select('coureur_id, coureurs!inner(id, nom), equipe_id')
+        .eq('saison_id', saison_id)
+        .in('coureur_id', rosterCoureurIds);
 
-        if (csData && csData.length > 0) {
-          const cs = csData[0];
-          const coureurInfo = Array.isArray(cs.coureurs) ? cs.coureurs[0] : cs.coureurs;
-          let equipeName = '';
-          
-          if (cs.equipe_id) {
-            const { data: equipeData } = await supabase
-              .from('equipes_saisons')
-              .select('nom_affiche')
-              .eq('id', cs.equipe_id)
-              .limit(1);
-            equipeName = equipeData?.[0]?.nom_affiche || '';
-          }
-          
-          rosterRiders.push({
-            id: (coureurInfo as any)?.id || cs.coureur_id,
-            nom: (coureurInfo as any)?.nom || '',
-            equipe: equipeName
-          });
-        }
+      if (csError) throw csError;
+
+      // Get unique equipe_ids for batch team lookup
+      const equipeIds = [...new Set((csData || []).map(cs => cs.equipe_id).filter(Boolean))];
+      
+      // Single batch query for all teams
+      let equipeMap: Record<string, string> = {};
+      if (equipeIds.length > 0) {
+        const { data: equipesData } = await supabase
+          .from('equipes_saisons')
+          .select('id, nom_affiche')
+          .in('id', equipeIds);
+        
+        equipeMap = (equipesData || []).reduce((acc, eq) => {
+          acc[eq.id] = eq.nom_affiche || '';
+          return acc;
+        }, {} as Record<string, string>);
       }
+
+      // Map results
+      rosterRiders = (csData || []).map(cs => {
+        const coureurInfo = Array.isArray(cs.coureurs) ? cs.coureurs[0] : cs.coureurs;
+        return {
+          id: (coureurInfo as any)?.id || cs.coureur_id,
+          nom: (coureurInfo as any)?.nom || '',
+          equipe: cs.equipe_id ? (equipeMap[cs.equipe_id] || '') : ''
+        };
+      });
     }
 
-    console.log(`[startlist-import] Loaded ${rosterRiders.length} unique riders from roster`);
+    console.log(`[startlist-import] Loaded ${rosterRiders.length} unique riders from roster (batch query)`);
 
     // Charger tous les coureurs (pour alias off-roster)
     const { data: allRidersData, error: allRidersError } = await supabase
