@@ -25,16 +25,24 @@ export function AuctionRoundsHistory({ phaseId, managerId, leagueId, onBack }: A
     queryFn: async () => {
       if (!leagueId) return [];
       
-      const { data: members, error } = await supabase
+      // First get league members
+      const { data: members, error: membersError } = await supabase
         .from("league_members")
-        .select(`
-          user_id,
-          managers!inner(id, nom, avatar_url)
-        `)
+        .select("user_id")
         .eq("league_id", leagueId);
       
-      if (error) throw error;
-      return members?.map(m => m.managers as unknown as { id: string; nom: string; avatar_url: string | null }) || [];
+      if (membersError) throw membersError;
+      if (!members || members.length === 0) return [];
+      
+      // Then get managers for those users
+      const userIds = members.map(m => m.user_id);
+      const { data: managers, error: managersError } = await supabase
+        .from("managers")
+        .select("id, nom, avatar_url")
+        .in("user_id", userIds);
+      
+      if (managersError) throw managersError;
+      return managers || [];
     },
     enabled: !!leagueId,
   });
