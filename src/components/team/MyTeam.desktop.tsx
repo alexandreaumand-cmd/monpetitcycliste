@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { RiderPointsDetail } from "./RiderPointsDetail";
+import { RiderSearchBar } from "./RiderSearchBar";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 
@@ -567,6 +568,19 @@ export const MyTeamDesktop = () => {
             </Button>
           )}
         </div>
+
+        {/* Barre de recherche de coureur */}
+        {leagueId && selectedPhaseId && (
+          <div className="mt-3">
+            <RiderSearchBar
+              phaseId={selectedPhaseId}
+              leagueId={leagueId}
+              onSelectManager={(managerId) => {
+                setSelectedManagerId(managerId);
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* KPIs compacts */}
