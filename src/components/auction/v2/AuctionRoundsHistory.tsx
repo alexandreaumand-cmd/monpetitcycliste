@@ -2,9 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Star } from "lucide-react";
 import { RoundHistoryTab } from "./RoundHistoryTab";
 import { useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface AuctionRoundsHistoryProps {
   phaseId: string;
@@ -15,6 +17,27 @@ interface AuctionRoundsHistoryProps {
 
 export function AuctionRoundsHistory({ phaseId, managerId, leagueId, onBack }: AuctionRoundsHistoryProps) {
   const [selectedRound, setSelectedRound] = useState<string | null>(null);
+  const [selectedManagerId, setSelectedManagerId] = useState<string>(managerId);
+
+  // Fetch all managers in the league
+  const { data: leagueManagers = [] } = useQuery({
+    queryKey: ["league-managers-history", leagueId],
+    queryFn: async () => {
+      if (!leagueId) return [];
+      
+      const { data: members, error } = await supabase
+        .from("league_members")
+        .select(`
+          user_id,
+          managers!inner(id, nom, avatar_url)
+        `)
+        .eq("league_id", leagueId);
+      
+      if (error) throw error;
+      return members?.map(m => m.managers as unknown as { id: string; nom: string; avatar_url: string | null }) || [];
+    },
+    enabled: !!leagueId,
+  });
 
   // Fetch all closed auctions for this phase/league
   const { data: closedAuctions, isLoading } = useQuery({
@@ -75,6 +98,37 @@ export function AuctionRoundsHistory({ phaseId, managerId, leagueId, onBack }: A
         </div>
       </div>
 
+      {/* Manager Navigation */}
+      {leagueManagers.length > 1 && (
+        <div className="px-4 pt-4">
+          <ScrollArea className="w-full">
+            <div className="flex gap-2 pb-2">
+              {leagueManagers
+                .sort((a, b) => (a.id === managerId ? -1 : b.id === managerId ? 1 : 0))
+                .map((manager) => (
+                  <Button
+                    key={manager.id}
+                    variant={selectedManagerId === manager.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedManagerId(manager.id)}
+                    className="flex-shrink-0 gap-2"
+                  >
+                    <Avatar className="h-5 w-5">
+                      <AvatarImage src={manager.avatar_url || undefined} />
+                      <AvatarFallback className="text-[10px]">
+                        {manager.nom.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {manager.id === managerId && <Star className="h-3 w-3 fill-current" />}
+                    {manager.nom}
+                  </Button>
+                ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </div>
+      )}
+
       {/* Tabs for rounds */}
       <Tabs
         value={effectiveSelectedRound}
@@ -95,7 +149,7 @@ export function AuctionRoundsHistory({ phaseId, managerId, leagueId, onBack }: A
           <TabsContent key={auction.id} value={auction.id} className="mt-0 p-4">
             <RoundHistoryTab
               phaseId={phaseId}
-              managerId={managerId}
+              managerId={selectedManagerId}
               leagueId={leagueId}
               roundNumber={auction.round_number}
               closedAt={auction.closed_at}
