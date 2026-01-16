@@ -11,17 +11,21 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
+    
     // Get authenticated user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Missing authorization header');
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    // Create client with user's JWT for proper RLS context
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: {
+        headers: { Authorization: authHeader }
+      }
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
       throw new Error('Unauthorized');
@@ -153,6 +157,7 @@ Deno.serve(async (req) => {
           
           // Extract unique manager IDs and fetch managers separately
           const managerIds = [...new Set(allRosterData.map(r => r.manager_id).filter(Boolean))];
+          
           const { data: managers } = await supabase
             .from('managers')
             .select('id, nom')
