@@ -69,9 +69,72 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
-    // Calculer les KPIs
-    const totalPoints = coureurs?.reduce((sum: number, c: any) => sum + Number(c.points_total || 0), 0) || 0;
-    const scorersCount = coureurs?.filter((c: any) => Number(c.points_total || 0) > 0).length || 0;
+    // Récupérer les annonces non publiées pour masquer les coureurs pas encore révélés
+    let hiddenRiderIds: string[] = [];
+    let pendingAnnouncements = 0;
+    
+    // Obtenir la phase active ou celle fournie pour les annonces
+    let phaseIdForAnnonces = phase_id;
+    if (!phaseIdForAnnonces) {
+      const { data: activePhase } = await supabase
+        .from('phases')
+        .select('id')
+        .eq('statut', 'active')
+        .order('date_debut', { ascending: false })
+        .limit(1)
+        .single();
+      phaseIdForAnnonces = activePhase?.id;
+    }
+    
+    if (phaseIdForAnnonces && league_id) {
+      // Récupérer les enchères closes de cette phase/ligue avec des annonces non publiées
+      const { data: unpublishedAnnonces } = await supabase
+        .from('annonces')
+        .select(`
+          coureur_id,
+          winning_manager_id,
+          auction_id
+        `)
+        .eq('published', false);
+      
+      if (unpublishedAnnonces && unpublishedAnnonces.length > 0) {
+        // Vérifier quelles annonces appartiennent à des enchères de cette phase/ligue
+        const auctionIds = [...new Set(unpublishedAnnonces.map(a => a.auction_id))];
+        
+        const { data: relevantAuctions } = await supabase
+          .from('auctions')
+          .select('id')
+          .in('id', auctionIds)
+          .eq('phase_id', phaseIdForAnnonces)
+          .eq('league_id', league_id)
+          .eq('statut', 'closed');
+        
+        if (relevantAuctions && relevantAuctions.length > 0) {
+          const relevantAuctionIds = new Set(relevantAuctions.map(a => a.id));
+          
+          // Filtrer les annonces pour ce manager dans ces enchères
+          hiddenRiderIds = unpublishedAnnonces
+            .filter(a => 
+              a.winning_manager_id === targetManagerId && 
+              relevantAuctionIds.has(a.auction_id)
+            )
+            .map(a => a.coureur_id);
+          
+          pendingAnnouncements = hiddenRiderIds.length;
+          
+          if (pendingAnnouncements > 0) {
+            console.log(`[manager-my-team] Hiding ${pendingAnnouncements} unannounced riders for manager ${targetManagerId}`);
+          }
+        }
+      }
+    }
+    
+    // Filtrer les coureurs pour masquer ceux non annoncés
+    const visibleCoureurs = coureurs?.filter((c: any) => !hiddenRiderIds.includes(c.coureur_id)) || [];
+
+    // Calculer les KPIs sur les coureurs VISIBLES uniquement
+    const totalPoints = visibleCoureurs.reduce((sum: number, c: any) => sum + Number(c.points_total || 0), 0) || 0;
+    const scorersCount = visibleCoureurs.filter((c: any) => Number(c.points_total || 0) > 0).length || 0;
 
     // Obtenir la phase active ou celle fournie
     let phaseId = phase_id;
@@ -138,9 +201,9 @@ Deno.serve(async (req) => {
 
     // Compter les courses gagnées (1ère position CG ou Etape)
     let winsCount = 0;
-    if (coureurs && coureurs.length > 0 && phaseId) {
-      // Extraire les IDs des coureurs du manager
-      const coureurIds = coureurs.map((c: any) => c.coureur_id);
+    if (visibleCoureurs && visibleCoureurs.length > 0 && phaseId) {
+      // Extraire les IDs des coureurs visibles du manager
+      const coureurIds = visibleCoureurs.map((c: any) => c.coureur_id);
       
       // Récupérer les IDs des courses de la phase
       const { data: courses } = await supabase
@@ -194,7 +257,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ 
-      coureurs: coureurs || [],
+      coureurs: visibleCoureurs,
       kpis: {
         scorers_count: scorersCount,
         total_points: totalPoints,
@@ -203,7 +266,8 @@ Deno.serve(async (req) => {
         total_with_bonus: totalPoints + bonusPoints,
         wins_count: winsCount,
         my_rank: myRank,
-        managers_count: managersCount
+        managers_count: managersCount,
+        pending_announcements: pendingAnnouncements
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
