@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
 
 interface MatchRiderDialogProps {
@@ -15,11 +16,24 @@ interface MatchRiderDialogProps {
   onSuccess: () => void;
 }
 
+// Fonction de normalisation pour comparer les noms
+function normalize(s: string): string {
+  if (!s) return '';
+  return s.normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/['']/g, "'")
+    .replace(/[.\-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
 export const MatchRiderDialog = ({ entry, saisonId, onClose, onSuccess }: MatchRiderDialogProps) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState(entry.source_name || '');
   const [selectedRiderId, setSelectedRiderId] = useState<string | null>(null);
+  const [createAlias, setCreateAlias] = useState(true);
 
   const { data: riders, isLoading: searchLoading } = useQuery({
     queryKey: ['search-riders-for-match', searchQuery, saisonId],
@@ -52,6 +66,7 @@ export const MatchRiderDialog = ({ entry, saisonId, onClose, onSuccess }: MatchR
     setIsLoading(true);
 
     try {
+      // Mettre à jour l'entrée startlist
       await supabase
         .from('startlist_entries')
         .update({
@@ -60,17 +75,51 @@ export const MatchRiderDialog = ({ entry, saisonId, onClose, onSuccess }: MatchR
         })
         .eq('id', entry.id);
 
-      if (searchQuery !== entry.source_name) {
-        await supabase.from('name_aliases').insert({
-          coureur_id: selectedRiderId,
-          alias_text: entry.source_name,
+      // Créer un alias si demandé et si le nom source est différent du nom du coureur
+      if (createAlias) {
+        const selectedRider = riders?.find((r: any) => r.coureur_id === selectedRiderId);
+        const normalizedSourceName = normalize(entry.source_name);
+        const normalizedRiderName = selectedRider ? normalize(selectedRider.coureur_nom) : '';
+        
+        // Ne créer l'alias que si les noms normalisés sont différents
+        if (normalizedSourceName !== normalizedRiderName) {
+          // Vérifier si l'alias existe déjà
+          const { data: existingAlias } = await supabase
+            .from('name_aliases')
+            .select('id')
+            .eq('alias_text', entry.source_name)
+            .eq('coureur_id', selectedRiderId)
+            .maybeSingle();
+          
+          if (!existingAlias) {
+            await supabase.from('name_aliases').insert({
+              coureur_id: selectedRiderId,
+              alias_text: entry.source_name,
+              source_team: entry.source_team || null,
+            });
+            
+            toast({
+              title: "Coureur matché",
+              description: `Alias "${entry.source_name}" créé pour améliorer les imports futurs`,
+            });
+          } else {
+            toast({
+              title: "Coureur matché",
+              description: "L'entrée a été associée avec succès",
+            });
+          }
+        } else {
+          toast({
+            title: "Coureur matché",
+            description: "L'entrée a été associée avec succès",
+          });
+        }
+      } else {
+        toast({
+          title: "Coureur matché",
+          description: "L'entrée a été associée avec succès (sans alias)",
         });
       }
-
-      toast({
-        title: "Coureur matché",
-        description: "L'entrée a été associée avec succès",
-      });
 
       onSuccess();
     } catch (error: any) {
@@ -134,6 +183,17 @@ export const MatchRiderDialog = ({ entry, saisonId, onClose, onSuccess }: MatchR
                 Tapez au moins 2 caractères pour rechercher
               </div>
             )}
+          </div>
+
+          <div className="flex items-center space-x-2 pt-2">
+            <Checkbox 
+              id="createAlias" 
+              checked={createAlias} 
+              onCheckedChange={(checked) => setCreateAlias(checked === true)}
+            />
+            <Label htmlFor="createAlias" className="text-sm cursor-pointer">
+              Créer un alias pour améliorer les imports futurs
+            </Label>
           </div>
         </div>
 

@@ -216,12 +216,12 @@ function matchEntry(
     }
   }
   
-  // 3) Signature de tokens (roster only) + même nom de famille
+  // 3) Signature de tokens identique (roster only) - SANS exiger le même nom de famille
+  // Cela permet de matcher "ADRIA Roger" avec "Roger ADRIA" car les tokens triés sont identiques
   for (const rider of rosterRiders) {
     const riderSig = tokenSig(rider.nom);
-    const riderLastName = extractLastName(rider.nom);
     
-    if (riderSig === entrySig && riderLastName === entryLastName) {
+    if (riderSig === entrySig) {
       return {
         coureur_id: rider.id,
         confidence: 0.95,
@@ -232,12 +232,9 @@ function matchEntry(
     }
   }
   
-  // 4) Fuzzy Levenshtein (roster only) + même nom de famille
+  // 4) Fuzzy Levenshtein (roster only) - assouplir pour matcher même si nom de famille inversé
   let best = { id: null as string | null, score: 0 };
   for (const rider of rosterRiders) {
-    const riderLastName = extractLastName(rider.nom);
-    if (riderLastName !== entryLastName) continue;
-    
     const score = similarity(entryNorm, normalize(rider.nom));
     if (score > best.score) {
       best = { id: rider.id, score };
@@ -268,12 +265,11 @@ function matchEntry(
     }
   }
   
-  // 5b) TokenSig + même nom de famille
+  // 5b) TokenSig identique (off-roster) - SANS exiger le même nom de famille
   for (const rider of allRiders) {
     const riderSig = tokenSig(rider.nom);
-    const riderLastName = extractLastName(rider.nom);
     
-    if (riderSig === entrySig && riderLastName === entryLastName) {
+    if (riderSig === entrySig) {
       return {
         coureur_id: rider.id,
         confidence: 0.95,
@@ -284,12 +280,9 @@ function matchEntry(
     }
   }
   
-  // 5c) Fuzzy + même nom de famille (seuil plus strict pour off-roster)
+  // 5c) Fuzzy (off-roster) - seuil plus strict
   let bestOffRoster = { id: null as string | null, score: 0 };
   for (const rider of allRiders) {
-    const riderLastName = extractLastName(rider.nom);
-    if (riderLastName !== entryLastName) continue;
-    
     const score = similarity(entryNorm, normalize(rider.nom));
     if (score > bestOffRoster.score) {
       bestOffRoster = { id: rider.id, score };
