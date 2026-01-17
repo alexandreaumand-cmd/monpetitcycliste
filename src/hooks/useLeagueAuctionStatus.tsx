@@ -127,6 +127,7 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
           .eq('published', false);
 
         if (count && count > 0) {
+          // Annonces en attente de publication
           return {
             auctionId: closedAuction.id,
             phaseId: closedAuction.phase_id,
@@ -135,6 +136,17 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
             totalManagers: 0,
             deadlineAt: closedAuction.closed_at || new Date().toISOString(),
             isAnnouncementsPending: true,
+          };
+        } else {
+          // Toutes les annonces sont publiées -> mode historique
+          return {
+            auctionId: closedAuction.id,
+            phaseId: closedAuction.phase_id,
+            roundNumber: closedAuction.round_number,
+            validatedCount: 0,
+            totalManagers: 0,
+            deadlineAt: closedAuction.closed_at || new Date().toISOString(),
+            isHistoryMode: true,
           };
         }
       }
