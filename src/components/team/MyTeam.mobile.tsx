@@ -59,7 +59,7 @@ interface PointDetail {
 }
 
 
-type SortBy = "points" | "ratio" | "prix" | "cote";
+type SortBy = "points" | "ratio" | "prix" | "cote" | "nom" | "equipe";
 
 interface Manager {
   id: string;
@@ -218,6 +218,10 @@ export const MyTeamMobile = () => {
         return b.prix_achat - a.prix_achat;
       case "cote":
         return b.cote_initiale - a.cote_initiale;
+      case "nom":
+        return a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' });
+      case "equipe":
+        return a.equipe.localeCompare(b.equipe, 'fr', { sensitivity: 'base' });
       default:
         return 0;
     }
@@ -248,6 +252,8 @@ export const MyTeamMobile = () => {
     { label: t('sort.ratio'), value: "ratio" as SortBy },
     { label: t('sort.price'), value: "prix" as SortBy },
     { label: t('sort.rating'), value: "cote" as SortBy },
+    { label: t('sort.rider'), value: "nom" as SortBy },
+    { label: t('sort.team'), value: "equipe" as SortBy },
   ];
 
   const loadTeamWithKpis = async () => {

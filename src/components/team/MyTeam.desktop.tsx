@@ -63,7 +63,7 @@ interface TeamKPIs {
 }
 
 
-type SortBy = 'points' | 'ratio' | 'prix' | 'cote';
+type SortBy = 'points' | 'ratio' | 'prix' | 'cote' | 'nom' | 'equipe';
 type SortDirection = 'asc' | 'desc';
 
 interface Manager {
@@ -393,6 +393,12 @@ export const MyTeamDesktop = () => {
       case 'cote':
         comparison = b.cote_initiale - a.cote_initiale;
         break;
+      case 'nom':
+        comparison = a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' });
+        return sortDirection === 'desc' ? comparison : -comparison;
+      case 'equipe':
+        comparison = a.equipe.localeCompare(b.equipe, 'fr', { sensitivity: 'base' });
+        return sortDirection === 'desc' ? comparison : -comparison;
       default:
         comparison = 0;
     }

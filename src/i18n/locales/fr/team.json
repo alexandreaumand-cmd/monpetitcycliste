@@ -58,7 +58,9 @@
     "points": "Points",
     "ratio": "Ratio",
     "price": "Prix",
-    "rating": "Cote"
+    "rating": "Cote",
+    "rider": "Coureur",
+    "team": "Équipe"
   },
   "empty": {
     "title": "Aucun coureur",
