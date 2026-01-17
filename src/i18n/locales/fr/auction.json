@@ -42,7 +42,7 @@
     "title": "Historique des enchères",
     "noHistory": "Aucun historique"
   },
-  "stats": {
+"stats": {
     "title": "Statistiques de bataille",
     "global": "Global",
     "byRound": "Par round",
@@ -55,6 +55,13 @@
     "battles": "batailles",
     "biggestRivalry": "Plus grandes rivalités",
     "manager": "Manager",
-    "battlesCount": "Batailles"
+    "battlesCount": "Batailles",
+    "detailTitle": "Détail des calculs",
+    "totalBids": "Total enchères",
+    "soloExplanation": "% Solo = (Enchères solo / Total) × 100",
+    "battleExplanation": "% Défaites = (Batailles perdues / Total batailles) × 100",
+    "lost": "perdues",
+    "of": "sur",
+    "clickForDetails": "Cliquez sur une ligne pour voir le détail"
   }
 }

@@ -1,12 +1,19 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Trophy, TrendingUp, TrendingDown, ThumbsDown, Zap, Swords } from "lucide-react";
+import { Loader2, Trophy, TrendingUp, TrendingDown, ThumbsDown, Zap, Swords, Info } from "lucide-react";
 import { formatAmount } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useTranslation } from "react-i18next";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface PhaseRecapTabProps {
   phaseId: string;
@@ -30,6 +37,7 @@ interface Rivalry {
 
 export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
   const { t } = useTranslation("auction");
+  const [selectedManager, setSelectedManager] = useState<ManagerBattleStats | null>(null);
 
   // Fetch all bids outcomes for KPIs
   const { data: allBids = [], isLoading: bidsLoading } = useQuery({
@@ -400,6 +408,10 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
             <Swords className="h-5 w-5" />
             {t('stats.title')}
           </CardTitle>
+          <CardDescription className="flex items-center gap-1 text-xs">
+            <Info className="h-3 w-3" />
+            {t('stats.clickForDetails')}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {battleStatsLoading ? (
@@ -421,7 +433,11 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
                   </thead>
                   <tbody>
                     {battleStats.managers.map((m) => (
-                      <tr key={m.nom} className="border-b hover:bg-muted/50">
+                      <tr 
+                        key={m.nom} 
+                        className="border-b hover:bg-muted/50 cursor-pointer transition-colors"
+                        onClick={() => setSelectedManager(m)}
+                      >
                         <td className="p-2 truncate max-w-[120px]">{m.nom}</td>
                         <td className="p-2 text-right">
                           <Badge variant="outline">{m.pctSolo}%</Badge>
@@ -462,6 +478,66 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog for manager detail */}
+      <Dialog open={!!selectedManager} onOpenChange={(open) => !open && setSelectedManager(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Swords className="h-5 w-5" />
+              {selectedManager?.nom} - {t('stats.detailTitle')}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedManager && (
+            <div className="space-y-4">
+              {/* Total bids */}
+              <div className="p-3 rounded-lg bg-muted/50">
+                <div className="text-sm text-muted-foreground">{t('stats.totalBids')}</div>
+                <div className="text-2xl font-bold">{selectedManager.totalBids}</div>
+              </div>
+
+              {/* Solo calculation */}
+              <div className="p-3 rounded-lg border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">% {t('stats.soloBids')}</span>
+                  <Badge variant="outline" className="text-lg">{selectedManager.pctSolo}%</Badge>
+                </div>
+                <div className="text-sm text-muted-foreground mb-2">
+                  {t('stats.soloExplanation')}
+                </div>
+                <div className="bg-muted/30 p-2 rounded text-sm font-mono">
+                  = ({selectedManager.soloBids} / {selectedManager.totalBids}) × 100
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  {selectedManager.soloBids} {t('stats.soloBids').toLowerCase()} {t('stats.of')} {selectedManager.totalBids} {t('stats.totalBids').toLowerCase()}
+                </div>
+              </div>
+
+              {/* Battle loss calculation */}
+              <div className="p-3 rounded-lg border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">% {t('stats.battleLossRate')}</span>
+                  <Badge 
+                    variant={selectedManager.pctBattleLoss > 60 ? "destructive" : "secondary"} 
+                    className="text-lg"
+                  >
+                    {selectedManager.pctBattleLoss}%
+                  </Badge>
+                </div>
+                <div className="text-sm text-muted-foreground mb-2">
+                  {t('stats.battleExplanation')}
+                </div>
+                <div className="bg-muted/30 p-2 rounded text-sm font-mono">
+                  = ({selectedManager.battlesLost} / {selectedManager.battlesEntered}) × 100
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  {selectedManager.battlesLost} {t('stats.lost')} {t('stats.of')} {selectedManager.battlesEntered} {t('stats.battlesCount').toLowerCase()}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
