@@ -8,7 +8,7 @@ import {
   MobileEmptyState,
 } from "@/components/mobile";
 import { RiderPointsDetail } from "./RiderPointsDetail";
-import { RiderSearchBar } from "./RiderSearchBar";
+
 import { BonusPointsDetailDialog } from "@/components/rankings/BonusPointsDetailDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -393,7 +393,7 @@ export const MyTeamMobile = () => {
           
           {phases.length > 0 && (
             <Select value={selectedPhaseId || ""} onValueChange={setSelectedPhaseId}>
-              <SelectTrigger className="flex-1">
+              <SelectTrigger className="flex-1 [&>svg]:hidden">
                 <SelectValue placeholder="Phase" />
               </SelectTrigger>
               <SelectContent>
@@ -408,16 +408,6 @@ export const MyTeamMobile = () => {
         </div>
       </div>
 
-      {/* Barre de recherche de coureur */}
-      {leagueId && selectedPhaseId && (
-        <RiderSearchBar
-          phaseId={selectedPhaseId}
-          leagueId={leagueId}
-          onSelectManager={(managerId) => {
-            setSelectedManagerId(managerId);
-          }}
-        />
-      )}
 
       {/* KPIs compacts */}
       <KPIRow
