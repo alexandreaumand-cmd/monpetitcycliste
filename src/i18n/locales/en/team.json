@@ -35,7 +35,12 @@
     "noEligible": "No eligible rider (initial rating 10 or 20)",
     "confirm": "Confirm selection",
     "successTitle": "Bonus rider selected!",
-    "successDescription": "{{name}} will now receive +25% bonus points."
+    "successDescription": "{{name}} will now receive +25% bonus points.",
+    "viewOthers": "View bonus",
+    "othersTitle": "League bonus riders",
+    "manager": "Manager",
+    "rider": "Rider",
+    "noData": "No bonus rider for this phase"
   },
   "rider": {
     "name": "Rider",

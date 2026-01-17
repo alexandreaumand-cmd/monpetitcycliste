@@ -10,6 +10,7 @@ import {
 } from "@/components/mobile";
 import { RiderPointsDetail } from "./RiderPointsDetail";
 import { RiderRaceIcons } from "./RiderRaceIcons";
+import { LeagueBonusRidersDialog } from "./LeagueBonusRidersDialog";
 
 import { BonusPointsDetailDialog } from "@/components/rankings/BonusPointsDetailDialog";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ import {
   DollarSign,
   Shirt,
   Star,
+  Users,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -96,6 +98,7 @@ export const MyTeamMobile = () => {
   const [bonusRiderSelection, setBonusRiderSelection] = useState<{ coureur_id: string; coureur_nom: string } | null>(null);
   const [hasSelectedBonusRider, setHasSelectedBonusRider] = useState(false);
   const [showBonusRiderDialog, setShowBonusRiderDialog] = useState(false);
+  const [showLeagueBonusDialog, setShowLeagueBonusDialog] = useState(false);
   
   // Bonus details dialog
   const [bonusDetailsOpen, setBonusDetailsOpen] = useState(false);
@@ -446,18 +449,29 @@ export const MyTeamMobile = () => {
         ]}
       />
 
-      {/* Bouton Choisir coureur bonus */}
-      {!hasSelectedBonusRider && !selectedManagerId && (
+      {/* Boutons coureur bonus */}
+      <div className="flex gap-2">
+        {!hasSelectedBonusRider && !selectedManagerId && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowBonusRiderDialog(true)}
+            className="flex-1 gap-2"
+          >
+            <Star className="h-4 w-4" />
+            {t('bonusRider.select')}
+          </Button>
+        )}
         <Button
-          variant="secondary"
+          variant="outline"
           size="sm"
-          onClick={() => setShowBonusRiderDialog(true)}
-          className="w-full gap-2"
+          onClick={() => setShowLeagueBonusDialog(true)}
+          className={hasSelectedBonusRider || selectedManagerId ? "w-full gap-2" : "gap-2"}
         >
-          <Star className="h-4 w-4" />
-          {t('bonusRider.select')}
+          <Users className="h-4 w-4" />
+          {t('bonusRider.viewOthers')}
         </Button>
-      )}
+      </div>
 
 
       {/* Sort chips */}
@@ -579,6 +593,14 @@ export const MyTeamMobile = () => {
         riderTeam={selectedRider?.equipe || ''}
         riderPrice={selectedRider?.prix || 0}
         phaseId={selectedPhaseId || ''}
+      />
+
+      {/* League Bonus Riders Dialog */}
+      <LeagueBonusRidersDialog
+        open={showLeagueBonusDialog}
+        onOpenChange={setShowLeagueBonusDialog}
+        leagueId={leagueId}
+        phaseId={selectedPhaseId}
       />
     </div>
   );

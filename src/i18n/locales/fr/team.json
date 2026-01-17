@@ -35,7 +35,12 @@
     "noEligible": "Aucun coureur éligible (cote initiale 10 ou 20)",
     "confirm": "Confirmer la sélection",
     "successTitle": "Coureur bonus sélectionné !",
-    "successDescription": "{{name}} recevra désormais +25% de points bonus."
+    "successDescription": "{{name}} recevra désormais +25% de points bonus.",
+    "viewOthers": "Voir les bonus",
+    "othersTitle": "Coureurs bonusés de la ligue",
+    "manager": "Manager",
+    "rider": "Coureur",
+    "noData": "Aucun coureur bonusé pour cette phase"
   },
   "rider": {
     "name": "Coureur",
