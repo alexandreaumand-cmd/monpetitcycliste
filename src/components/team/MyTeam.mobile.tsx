@@ -468,7 +468,7 @@ export const MyTeamMobile = () => {
               subtitle={coureur.equipe}
               meta={
                 <span className="flex items-center flex-wrap gap-x-1">
-                  💰 {coureur.prix_achat.toFixed(0)}
+                  {coureur.prix_achat.toFixed(0)}
                   {coureur.winning_round && (
                     <span className="text-[10px] bg-muted px-1 py-0.5 rounded text-muted-foreground/70">
                       R{coureur.winning_round}
