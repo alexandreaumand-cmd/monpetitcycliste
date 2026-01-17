@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,9 +8,11 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/hero-cycling.jpg";
 import mpcLogo from "@/assets/mpc-logo.png";
+import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation('home');
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -26,6 +29,138 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const howItWorksSteps = [
+    {
+      icon: Trophy,
+      title: t('howItWorks.steps.step1.title'),
+      description: t('howItWorks.steps.step1.description'),
+    },
+    {
+      icon: Users,
+      title: t('howItWorks.steps.step2.title'),
+      description: t('howItWorks.steps.step2.description'),
+    },
+    {
+      icon: TrendingUp,
+      title: t('howItWorks.steps.step3.title'),
+      description: t('howItWorks.steps.step3.description'),
+    },
+  ];
+
+  const leagueTypes = [
+    {
+      type: t('leagues.quick.type'),
+      description: t('leagues.quick.description'),
+      cta: t('leagues.quick.cta'),
+      Icon: Zap,
+      gradient: "from-yellow-50 to-yellow-100",
+      border: "border-yellow-400",
+    },
+    {
+      type: t('leagues.season.type'),
+      description: t('leagues.season.description'),
+      cta: t('leagues.season.cta'),
+      Icon: Calendar,
+      gradient: "from-gray-50 to-gray-100",
+      border: "border-gray-400",
+    },
+    {
+      type: t('leagues.friends.type'),
+      description: t('leagues.friends.description'),
+      cta: t('leagues.friends.cta'),
+      Icon: Users,
+      gradient: "from-yellow-100 to-amber-100",
+      border: "border-amber-400",
+    },
+    {
+      type: t('leagues.public.type'),
+      description: t('leagues.public.description'),
+      cta: t('leagues.public.cta'),
+      Icon: Globe,
+      gradient: "from-black to-gray-900",
+      border: "border-yellow-400",
+      textWhite: true,
+    },
+  ];
+
+  const scoringCategories = [
+    {
+      category: t('scoring.categories.stage'),
+      items: [
+        { position: t('scoring.positions.first'), points: "100", icon: Trophy, color: "yellow" },
+        { position: t('scoring.positions.second'), points: "80", icon: Award, color: "gray" },
+        { position: t('scoring.positions.third'), points: "60", icon: Award, color: "orange" },
+        { position: t('scoring.positions.top10'), points: "20-40", icon: Target, color: "blue" },
+      ],
+    },
+    {
+      category: t('scoring.categories.jerseys'),
+      items: [
+        { position: t('scoring.positions.yellowJersey'), points: "+30/jour", icon: Shield, color: "yellow" },
+        { position: t('scoring.positions.greenJersey'), points: "+25/jour", icon: Shield, color: "green" },
+        { position: t('scoring.positions.polkaDotJersey'), points: "+20/jour", icon: Shield, color: "red" },
+      ],
+    },
+    {
+      category: t('scoring.categories.gc'),
+      items: [
+        { position: t('scoring.positions.gcTop3'), points: "150-300", icon: MapPin, color: "yellow" },
+        { position: t('scoring.positions.gcTop10'), points: "50-100", icon: MapPin, color: "gray" },
+      ],
+    },
+  ];
+
+  const testimonials = [
+    {
+      quote: t('testimonials.quotes.quote1.text'),
+      author: t('testimonials.quotes.quote1.author'),
+      location: t('testimonials.quotes.quote1.location'),
+      initials: "JM",
+      rating: 5,
+    },
+    {
+      quote: t('testimonials.quotes.quote2.text'),
+      author: t('testimonials.quotes.quote2.author'),
+      location: t('testimonials.quotes.quote2.location'),
+      initials: "ML",
+      rating: 5,
+    },
+    {
+      quote: t('testimonials.quotes.quote3.text'),
+      author: t('testimonials.quotes.quote3.author'),
+      location: t('testimonials.quotes.quote3.location'),
+      initials: "TR",
+      rating: 5,
+    },
+  ];
+
+  const whyPlayFeatures = [
+    {
+      Icon: Trophy,
+      text: t('whyPlay.features.realRaces.title'),
+      description: t('whyPlay.features.realRaces.description'),
+      gradient: "from-yellow-400 to-yellow-500",
+    },
+    {
+      Icon: Target,
+      text: t('whyPlay.features.strategy.title'),
+      description: t('whyPlay.features.strategy.description'),
+      gradient: "from-blue-400 to-blue-500",
+    },
+    {
+      Icon: Users,
+      text: t('whyPlay.features.friends.title'),
+      description: t('whyPlay.features.friends.description'),
+      gradient: "from-green-400 to-green-500",
+    },
+    {
+      Icon: Award,
+      text: t('whyPlay.features.rankings.title'),
+      description: t('whyPlay.features.rankings.description'),
+      gradient: "from-purple-400 to-purple-500",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header fixe */}
@@ -35,9 +170,12 @@ const Index = () => {
             <img src={mpcLogo} alt="Mon Petit Cycliste" className="h-10 w-10" />
             <span className="font-montserrat font-bold text-xl">Mon Petit Cycliste</span>
           </div>
-          <Button onClick={() => (user ? navigate("/dashboard/home") : navigate("/auth"))}>
-            {user ? "Mes Ligues" : "Connexion"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher variant="ghost" size="icon" />
+            <Button onClick={() => (user ? navigate("/dashboard/home") : navigate("/auth"))}>
+              {user ? t('header.myLeagues') : t('header.login')}
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -53,11 +191,11 @@ const Index = () => {
         <div className="container relative z-10 mx-auto px-4 py-12 md:py-16">
           <div className="max-w-4xl">
             <h1 className="font-montserrat text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-6 leading-[1.15]">
-              Les cols c'est pour eux, <br className="hidden sm:block" />
-              <span className="tdf-yellow-text">les points, c'est pour toi.</span>
+              {t('hero.title1')} <br className="hidden sm:block" />
+              <span className="tdf-yellow-text">{t('hero.title2')}</span>
             </h1>
             <p className="font-poppins text-xl md:text-2xl text-gray-300 mb-10 max-w-3xl">
-              Mon Petit Cycliste, le jeu de fantasy cycling basé sur les vraies courses du calendrier UCI.
+              {t('hero.subtitle')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button
@@ -65,13 +203,13 @@ const Index = () => {
                 className="tdf-yellow-bg text-black hover:bg-yellow-400 font-montserrat font-bold text-lg px-8 py-6 shadow-2xl transition-all hover:scale-105"
                 onClick={() => (user ? navigate("/dashboard/home") : navigate("/auth"))}
               >
-                🟡 {user ? "Mes Ligues" : "Créer ma ligue"}
+                🟡 {user ? t('hero.cta.myLeagues') : t('hero.cta.createLeague')}
               </Button>
               <Button
                 size="lg"
                 className="bg-transparent text-white border-2 border-white hover:bg-white/10 font-montserrat font-bold text-lg px-8 py-6"
               >
-                Découvrir le jeu
+                {t('hero.cta.discover')}
               </Button>
             </div>
           </div>
@@ -82,30 +220,14 @@ const Index = () => {
       <section className="py-20 bg-gradient-to-br from-gray-50 via-white to-yellow-50">
         <div className="container mx-auto px-4">
           <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-4 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-            Comment ça marche ?
+            {t('howItWorks.title')}
           </h2>
           <p className="font-poppins text-center text-gray-600 mb-16 max-w-2xl mx-auto text-lg">
-            En 3 étapes simples, lance ton aventure de manager cycliste
+            {t('howItWorks.subtitle')}
           </p>
 
           <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
-            {[
-              {
-                icon: Trophy,
-                title: "Crée ta ligue ou rejoins-en une",
-                description: "Invite tes amis ou d'autres managers passionnés",
-              },
-              {
-                icon: Users,
-                title: "Compose ton équipe",
-                description: "Fais ton mercato lors des enchères et choisis tes coureurs",
-              },
-              {
-                icon: TrendingUp,
-                title: "Suis les vraies courses",
-                description: "Tes coureurs marquent des points selon leurs performances réelles",
-              },
-            ].map((step, i) => (
+            {howItWorksSteps.map((step, i) => (
               <Card 
                 key={i} 
                 className="group border-2 border-gray-100 hover:border-yellow-400 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl bg-white/80 backdrop-blur-sm"
@@ -132,46 +254,12 @@ const Index = () => {
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="font-montserrat text-4xl md:text-5xl font-bold mb-4">Les ligues disponibles</h2>
-            <p className="font-poppins text-lg text-gray-600">Chaque joueur choisit sa ligue selon son envie de jeu.</p>
+            <h2 className="font-montserrat text-4xl md:text-5xl font-bold mb-4">{t('leagues.title')}</h2>
+            <p className="font-poppins text-lg text-gray-600">{t('leagues.subtitle')}</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-            {[
-              {
-                type: "Ligues rapides",
-                description: "Joue sur un seul Grand Tour",
-                cta: "Tour de France",
-                Icon: Zap,
-                gradient: "from-yellow-50 to-yellow-100",
-                border: "border-yellow-400",
-              },
-              {
-                type: "Ligues saison",
-                description: "Suis toute l'année cycliste",
-                cta: "Saison complète",
-                Icon: Calendar,
-                gradient: "from-gray-50 to-gray-100",
-                border: "border-gray-400",
-              },
-              {
-                type: "Ligues entre amis",
-                description: "Jusqu'à 10 managers",
-                cta: "Créer ma ligue",
-                Icon: Users,
-                gradient: "from-yellow-100 to-amber-100",
-                border: "border-amber-400",
-              },
-              {
-                type: "Ligues publiques",
-                description: "Affronte toute la communauté",
-                cta: "Découvrir",
-                Icon: Globe,
-                gradient: "from-black to-gray-900",
-                border: "border-yellow-400",
-                textWhite: true,
-              },
-            ].map((league, i) => (
+            {leagueTypes.map((league, i) => (
               <Card 
                 key={i} 
                 className={`hover:scale-105 transition-all duration-300 border-2 ${league.border} bg-gradient-to-br ${league.gradient} shadow-lg`}
@@ -205,41 +293,15 @@ const Index = () => {
       <section className="py-20 bg-gradient-to-br from-gray-50 via-white to-yellow-50">
         <div className="container mx-auto px-4">
           <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-4 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-            Comment gagner des points ?
+            {t('scoring.title')}
           </h2>
           <p className="font-poppins text-center text-gray-600 mb-12 max-w-3xl mx-auto text-lg">
-            Chaque action de tes coureurs durant les vraies courses UCI génère des points. 
-            Plus tes coureurs performent, plus tu grimpes au classement !
+            {t('scoring.subtitle')}
           </p>
 
           {/* Grille détaillée */}
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
-            {[
-              {
-                category: "Classements d'étape",
-                items: [
-                  { position: "1ère place", points: "100", icon: Trophy, color: "yellow" },
-                  { position: "2ème place", points: "80", icon: Award, color: "gray" },
-                  { position: "3ème place", points: "60", icon: Award, color: "orange" },
-                  { position: "Top 10", points: "20-40", icon: Target, color: "blue" },
-                ],
-              },
-              {
-                category: "Maillots distinctifs",
-                items: [
-                  { position: "Maillot jaune", points: "+30/jour", icon: Shield, color: "yellow" },
-                  { position: "Maillot vert", points: "+25/jour", icon: Shield, color: "green" },
-                  { position: "Maillot à pois", points: "+20/jour", icon: Shield, color: "red" },
-                ],
-              },
-              {
-                category: "Classements généraux",
-                items: [
-                  { position: "GC Top 3", points: "150-300", icon: MapPin, color: "yellow" },
-                  { position: "GC Top 10", points: "50-100", icon: MapPin, color: "gray" },
-                ],
-              },
-            ].map((category, idx) => (
+            {scoringCategories.map((category, idx) => (
               <Card key={idx} className="border-2 border-yellow-400 shadow-xl bg-white">
                 <CardHeader className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-b-2 border-yellow-400">
                   <CardTitle className="font-montserrat text-lg text-center">{category.category}</CardTitle>
@@ -252,7 +314,7 @@ const Index = () => {
                         <span className="font-poppins text-sm">{item.position}</span>
                       </div>
                       <Badge className="bg-black text-yellow-400 font-montserrat font-bold">
-                        {item.points} pts
+                        {item.points} {t('scoring.points')}
                       </Badge>
                     </div>
                   ))}
@@ -271,8 +333,8 @@ const Index = () => {
                   <span className="font-montserrat font-black text-4xl text-gray-700">2</span>
                 </div>
                 <div className="mt-3">
-                  <p className="font-montserrat font-bold text-lg">Argent</p>
-                  <Badge className="bg-gray-500 text-white mt-1">80 pts</Badge>
+                  <p className="font-montserrat font-bold text-lg">{t('scoring.podium.silver')}</p>
+                  <Badge className="bg-gray-500 text-white mt-1">80 {t('scoring.points')}</Badge>
                 </div>
               </div>
             </div>
@@ -285,8 +347,8 @@ const Index = () => {
                   <span className="font-montserrat font-black text-5xl text-yellow-900">1</span>
                 </div>
                 <div className="mt-3">
-                  <p className="font-montserrat font-bold text-lg">Or</p>
-                  <Badge className="bg-yellow-500 text-black mt-1 font-bold">100 pts</Badge>
+                  <p className="font-montserrat font-bold text-lg">{t('scoring.podium.gold')}</p>
+                  <Badge className="bg-yellow-500 text-black mt-1 font-bold">100 {t('scoring.points')}</Badge>
                 </div>
               </div>
             </div>
@@ -299,8 +361,8 @@ const Index = () => {
                   <span className="font-montserrat font-black text-3xl text-orange-800">3</span>
                 </div>
                 <div className="mt-3">
-                  <p className="font-montserrat font-bold text-lg">Bronze</p>
-                  <Badge className="bg-orange-500 text-white mt-1">60 pts</Badge>
+                  <p className="font-montserrat font-bold text-lg">{t('scoring.podium.bronze')}</p>
+                  <Badge className="bg-orange-500 text-white mt-1">60 {t('scoring.points')}</Badge>
                 </div>
               </div>
             </div>
@@ -312,36 +374,14 @@ const Index = () => {
       <section className="py-20 bg-gradient-to-b from-white to-gray-50">
         <div className="container mx-auto px-4">
           <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-4">
-            Ce qu'ils en pensent
+            {t('testimonials.title')}
           </h2>
           <p className="font-poppins text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-            Des milliers de managers s'affrontent chaque saison
+            {t('testimonials.subtitle')}
           </p>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {[
-              {
-                quote: "Une ambiance incroyable dans notre ligue entre potes ! On se challenge tous les soirs pendant le Tour.",
-                author: "Maxime L.",
-                location: "Lyon",
-                initials: "ML",
-                rating: 5,
-              },
-              {
-                quote: "Le système d'enchères apporte une vraie dimension stratégique. Parfait pour les fans de cyclisme !",
-                author: "Julie D.",
-                location: "Nantes",
-                initials: "JD",
-                rating: 5,
-              },
-              {
-                quote: "Suivre les courses prend une toute nouvelle dimension quand tes coureurs jouent les premières places.",
-                author: "Thomas R.",
-                location: "Paris",
-                initials: "TR",
-                rating: 5,
-              },
-            ].map((testimonial, i) => (
+            {testimonials.map((testimonial, i) => (
               <Card 
                 key={i} 
                 className="border-2 border-gray-200 hover:border-yellow-400 transition-all duration-300 hover:shadow-2xl bg-white/80 backdrop-blur-sm"
@@ -385,40 +425,16 @@ const Index = () => {
       <section className="py-20 bg-gradient-to-br from-black via-gray-900 to-black text-white relative overflow-hidden">
         <div className="container mx-auto px-4 relative z-10">
           <h2 className="font-montserrat text-4xl md:text-5xl font-bold text-center mb-4">
-            Pourquoi jouer à{" "}
-            <span className="block text-yellow-400 mt-2">Mon Petit Cycliste</span>
+            {t('whyPlay.title')}{" "}
+            <span className="block text-yellow-400 mt-2">{t('whyPlay.brandName')}</span>
+            <span className="text-yellow-400">{t('whyPlay.questionMark')}</span>
           </h2>
           <p className="font-poppins text-center text-gray-400 mb-16 max-w-2xl mx-auto text-lg">
-            Le fantasy cycling le plus immersif basé sur les vraies courses UCI
+            {t('whyPlay.subtitle')}
           </p>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {[
-              {
-                Icon: Trophy,
-                text: "Basé sur les vraies courses",
-                description: "Tous les résultats sont synchronisés avec le calendrier UCI officiel",
-                gradient: "from-yellow-400 to-yellow-500",
-              },
-              {
-                Icon: Target,
-                text: "Stratégie et enchères",
-                description: "Compose ton équipe lors des mercatos et choisis tes tactiques",
-                gradient: "from-blue-400 to-blue-500",
-              },
-              {
-                Icon: Users,
-                text: "Joue avec tes amis",
-                description: "Crée ta ligue privée et défie jusqu'à 10 managers",
-                gradient: "from-green-400 to-green-500",
-              },
-              {
-                Icon: Award,
-                text: "Classements et trophées",
-                description: "Grimpe au sommet et remporte les maillots prestigieux",
-                gradient: "from-purple-400 to-purple-500",
-              },
-            ].map((feature, i) => (
+            {whyPlayFeatures.map((feature, i) => (
               <Card
                 key={i}
                 className="bg-white/10 backdrop-blur-md border-2 border-white/20 hover:border-yellow-400 transition-all duration-300 hover:scale-105 hover:bg-white/20 group"
@@ -447,9 +463,9 @@ const Index = () => {
       <section className="py-20 bg-gradient-to-r from-yellow-400 to-yellow-500">
         <div className="container mx-auto px-4 text-center">
           <h2 className="font-montserrat text-4xl md:text-5xl font-extrabold text-black mb-6">
-            Rejoins la communauté de managers cyclistes
+            {t('cta.title')}
           </h2>
-          <p className="font-poppins text-xl text-gray-900 mb-8">Lance ta première ligue aujourd'hui.</p>
+          <p className="font-poppins text-xl text-gray-900 mb-8">{t('cta.subtitle')}</p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
@@ -457,7 +473,7 @@ const Index = () => {
               className="tdf-black-bg text-white hover:bg-gray-900 font-montserrat font-bold text-lg px-10 py-6"
               onClick={() => navigate("/auth")}
             >
-              🟡 Créer ma ligue
+              🟡 {t('cta.createLeague')}
             </Button>
             <Button
               size="lg"
@@ -465,7 +481,7 @@ const Index = () => {
               className="border-2 border-black text-black hover:bg-black/10 font-montserrat font-bold text-lg px-10 py-6 bg-transparent"
               onClick={() => navigate("/auth")}
             >
-              ⚫ Essayer en solo
+              ⚫ {t('cta.trySolo')}
             </Button>
           </div>
         </div>
@@ -482,26 +498,26 @@ const Index = () => {
                   <span className="font-montserrat font-extrabold text-black text-xl">MPC</span>
                 </div>
               </div>
-              <p className="font-poppins text-gray-400 text-sm">Le fantasy cycling français</p>
+              <p className="font-poppins text-gray-400 text-sm">{t('footer.tagline')}</p>
             </div>
 
             {/* Liens Le jeu */}
             <div>
-              <h4 className="font-montserrat font-bold mb-3">Le jeu</h4>
+              <h4 className="font-montserrat font-bold mb-3">{t('footer.game.title')}</h4>
               <ul className="space-y-2 font-poppins text-sm">
                 <li>
                   <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">
-                    À propos
+                    {t('footer.game.about')}
                   </a>
                 </li>
                 <li>
                   <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">
-                    Règles du jeu
+                    {t('footer.game.rules')}
                   </a>
                 </li>
                 <li>
                   <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">
-                    Comment jouer
+                    {t('footer.game.howToPlay')}
                   </a>
                 </li>
               </ul>
@@ -509,21 +525,21 @@ const Index = () => {
 
             {/* Liens Légal */}
             <div>
-              <h4 className="font-montserrat font-bold mb-3">Légal</h4>
+              <h4 className="font-montserrat font-bold mb-3">{t('footer.legal.title')}</h4>
               <ul className="space-y-2 font-poppins text-sm">
                 <li>
                   <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">
-                    Mentions légales
+                    {t('footer.legal.legalNotice')}
                   </a>
                 </li>
                 <li>
                   <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">
-                    CGU
+                    {t('footer.legal.terms')}
                   </a>
                 </li>
                 <li>
                   <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">
-                    Confidentialité
+                    {t('footer.legal.privacy')}
                   </a>
                 </li>
               </ul>
@@ -531,21 +547,21 @@ const Index = () => {
 
             {/* Liens Communauté */}
             <div>
-              <h4 className="font-montserrat font-bold mb-3">Communauté</h4>
+              <h4 className="font-montserrat font-bold mb-3">{t('footer.community.title')}</h4>
               <ul className="space-y-2 font-poppins text-sm">
                 <li>
                   <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">
-                    Contact
+                    {t('footer.community.contact')}
                   </a>
                 </li>
                 <li>
                   <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">
-                    Discord
+                    {t('footer.community.discord')}
                   </a>
                 </li>
                 <li>
                   <a href="#" className="text-gray-400 hover:text-yellow-400 transition-colors">
-                    Instagram
+                    {t('footer.community.instagram')}
                   </a>
                 </li>
               </ul>
@@ -553,7 +569,7 @@ const Index = () => {
           </div>
 
           <div className="border-t border-gray-800 pt-6 text-center">
-            <p className="font-poppins text-gray-500 text-sm">© 2025 Mon Petit Cycliste. Tous droits réservés.</p>
+            <p className="font-poppins text-gray-500 text-sm">{t('footer.copyright')}</p>
           </div>
         </div>
       </footer>

@@ -1,0 +1,157 @@
+{
+  "header": {
+    "myLeagues": "Mes Ligues",
+    "login": "Connexion"
+  },
+  "hero": {
+    "title1": "Les cols c'est pour eux,",
+    "title2": "les points, c'est pour toi.",
+    "subtitle": "Mon Petit Cycliste, le jeu de fantasy cycling basé sur les vraies courses du calendrier UCI.",
+    "cta": {
+      "createLeague": "Créer ma ligue",
+      "myLeagues": "Mes Ligues",
+      "discover": "Découvrir le jeu"
+    }
+  },
+  "howItWorks": {
+    "title": "Comment ça marche ?",
+    "subtitle": "En 3 étapes simples, lance ton aventure de manager cycliste",
+    "steps": {
+      "step1": {
+        "title": "Crée ta ligue ou rejoins-en une",
+        "description": "Invite tes amis ou d'autres managers passionnés"
+      },
+      "step2": {
+        "title": "Compose ton équipe",
+        "description": "Fais ton mercato lors des enchères et choisis tes coureurs"
+      },
+      "step3": {
+        "title": "Suis les vraies courses",
+        "description": "Tes coureurs marquent des points selon leurs performances réelles"
+      }
+    }
+  },
+  "leagues": {
+    "title": "Les ligues disponibles",
+    "subtitle": "Chaque joueur choisit sa ligue selon son envie de jeu.",
+    "quick": {
+      "type": "Ligues rapides",
+      "description": "Joue sur un seul Grand Tour",
+      "cta": "Tour de France"
+    },
+    "season": {
+      "type": "Ligues saison",
+      "description": "Suis toute l'année cycliste",
+      "cta": "Saison complète"
+    },
+    "friends": {
+      "type": "Ligues entre amis",
+      "description": "Jusqu'à 10 managers",
+      "cta": "Créer ma ligue"
+    },
+    "public": {
+      "type": "Ligues publiques",
+      "description": "Affronte toute la communauté",
+      "cta": "Découvrir"
+    }
+  },
+  "scoring": {
+    "title": "Comment gagner des points ?",
+    "subtitle": "Chaque action de tes coureurs durant les vraies courses UCI génère des points. Plus tes coureurs performent, plus tu grimpes au classement !",
+    "categories": {
+      "stage": "Classements d'étape",
+      "jerseys": "Maillots distinctifs",
+      "gc": "Classements généraux"
+    },
+    "positions": {
+      "first": "1ère place",
+      "second": "2ème place",
+      "third": "3ème place",
+      "top10": "Top 10",
+      "yellowJersey": "Maillot jaune",
+      "greenJersey": "Maillot vert",
+      "polkaDotJersey": "Maillot à pois",
+      "gcTop3": "GC Top 3",
+      "gcTop10": "GC Top 10"
+    },
+    "podium": {
+      "gold": "Or",
+      "silver": "Argent",
+      "bronze": "Bronze"
+    },
+    "points": "pts"
+  },
+  "testimonials": {
+    "title": "Ce qu'ils en pensent",
+    "subtitle": "Des milliers de managers s'affrontent chaque saison",
+    "quotes": {
+      "quote1": {
+        "text": "Une ambiance incroyable dans notre ligue entre potes ! On se challenge tous les soirs pendant le Tour.",
+        "author": "Julien M.",
+        "location": "Lyon"
+      },
+      "quote2": {
+        "text": "Le système d'enchères apporte une vraie dimension stratégique. Parfait pour les fans de cyclisme !",
+        "author": "Marine L.",
+        "location": "Paris"
+      },
+      "quote3": {
+        "text": "Suivre les courses prend une toute nouvelle dimension quand tes coureurs jouent les premières places.",
+        "author": "Thomas R.",
+        "location": "Bordeaux"
+      }
+    }
+  },
+  "whyPlay": {
+    "title": "Pourquoi jouer à",
+    "brandName": "Mon Petit Cycliste",
+    "questionMark": "?",
+    "subtitle": "Le fantasy cycling le plus immersif basé sur les vraies courses UCI",
+    "features": {
+      "realRaces": {
+        "title": "Basé sur les vraies courses",
+        "description": "Tous les résultats sont synchronisés avec le calendrier UCI officiel"
+      },
+      "strategy": {
+        "title": "Stratégie et enchères",
+        "description": "Compose ton équipe lors des mercatos et choisis tes tactiques"
+      },
+      "friends": {
+        "title": "Joue avec tes amis",
+        "description": "Crée ta ligue privée et défie jusqu'à 10 managers"
+      },
+      "rankings": {
+        "title": "Classements et trophées",
+        "description": "Grimpe au sommet et remporte les maillots prestigieux"
+      }
+    }
+  },
+  "cta": {
+    "title": "Rejoins la communauté de managers cyclistes",
+    "subtitle": "Lance ta première ligue aujourd'hui.",
+    "createLeague": "Créer ma ligue",
+    "trySolo": "Essayer en solo"
+  },
+  "footer": {
+    "tagline": "Le fantasy cycling français",
+    "game": {
+      "title": "Le jeu",
+      "about": "À propos",
+      "rules": "Règles du jeu",
+      "howToPlay": "Comment jouer"
+    },
+    "legal": {
+      "title": "Légal",
+      "legalNotice": "Mentions légales",
+      "terms": "CGU",
+      "privacy": "Confidentialité"
+    },
+    "community": {
+      "title": "Communauté",
+      "contact": "Contact",
+      "discord": "Discord",
+      "instagram": "Instagram"
+    },
+    "copyright": "© 2025 Mon Petit Cycliste. Tous droits réservés."
+  }
+}

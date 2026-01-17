@@ -8,6 +8,7 @@ import frTeam from './locales/fr/team.json';
 import frAuction from './locales/fr/auction.json';
 import frDashboard from './locales/fr/dashboard.json';
 import frRankings from './locales/fr/rankings.json';
+import frHome from './locales/fr/home.json';
 
 // Import English translations
 import enCommon from './locales/en/common.json';
@@ -15,6 +16,7 @@ import enTeam from './locales/en/team.json';
 import enAuction from './locales/en/auction.json';
 import enDashboard from './locales/en/dashboard.json';
 import enRankings from './locales/en/rankings.json';
+import enHome from './locales/en/home.json';
 
 export const resources = {
   fr: {
@@ -23,6 +25,7 @@ export const resources = {
     auction: frAuction,
     dashboard: frDashboard,
     rankings: frRankings,
+    home: frHome,
   },
   en: {
     common: enCommon,
@@ -30,6 +33,7 @@ export const resources = {
     auction: enAuction,
     dashboard: enDashboard,
     rankings: enRankings,
+    home: enHome,
   },
 } as const;
 
@@ -44,7 +48,7 @@ i18n
     resources,
     fallbackLng: 'fr',
     defaultNS,
-    ns: ['common', 'team', 'auction', 'dashboard', 'rankings'],
+    ns: ['common', 'team', 'auction', 'dashboard', 'rankings', 'home'],
     interpolation: {
       escapeValue: false,
     },
