@@ -521,7 +521,7 @@ export const MyTeamMobile = () => {
           
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {coureurs
-              .filter(c => c.prix_achat === 10 || c.prix_achat === 20)
+              .filter(c => c.cote_initiale === 10 || c.cote_initiale === 20)
               .map((coureur) => (
                 <Button
                   key={coureur.coureur_id}
