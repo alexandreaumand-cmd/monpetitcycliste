@@ -61,26 +61,82 @@ export const LeagueRostersOverviewDialog = ({
   const fetchRosters = async () => {
     setLoading(true);
     try {
+      // First get the saison_id from the phase
+      const { data: phaseData, error: phaseError } = await supabase
+        .from("phases")
+        .select("saison_id")
+        .eq("id", phaseId)
+        .single();
+
+      if (phaseError) throw phaseError;
+
+      const saisonId = phaseData.saison_id;
+
+      // Fetch rosters with coureur info
       const { data, error } = await supabase
         .from("rosters")
         .select(`
           manager_id,
           coureur_id,
           prix_signature,
-          coureurs!inner(nom, equipe)
+          coureurs!inner(nom)
         `)
         .eq("league_id", leagueId)
         .eq("phase_id", phaseId);
 
       if (error) throw error;
 
-      const entries: RiderEntry[] = (data || []).map((r: any) => ({
-        manager_id: r.manager_id,
-        coureur_id: r.coureur_id,
-        nom: r.coureurs?.nom || "Inconnu",
-        equipe: r.coureurs?.equipe || "",
-        prix_signature: r.prix_signature,
-      }));
+      // Get coureurs_saisons to find team associations for the current season
+      const coureurIds = (data || []).map((r: any) => r.coureur_id);
+      
+      const { data: coureursSaisons, error: csError } = await supabase
+        .from("coureurs_saisons")
+        .select(`
+          coureur_id,
+          equipe_id
+        `)
+        .eq("saison_id", saisonId)
+        .in("coureur_id", coureurIds);
+
+      if (csError) throw csError;
+
+      // Get equipes_saisons to get the correct team names for this season
+      const equipeIds = [...new Set((coureursSaisons || []).map((cs: any) => cs.equipe_id))];
+      
+      const { data: equipesSaisons, error: esError } = await supabase
+        .from("equipes_saisons")
+        .select(`
+          equipe_id,
+          nom_affiche,
+          trigramme
+        `)
+        .eq("saison_id", saisonId)
+        .in("equipe_id", equipeIds);
+
+      if (esError) throw esError;
+
+      // Create lookup maps
+      const coureurEquipeMap = (coureursSaisons || []).reduce((acc: Record<string, string>, cs: any) => {
+        acc[cs.coureur_id] = cs.equipe_id;
+        return acc;
+      }, {});
+
+      const equipeNomMap = (equipesSaisons || []).reduce((acc: Record<string, string>, es: any) => {
+        acc[es.equipe_id] = es.trigramme || es.nom_affiche;
+        return acc;
+      }, {});
+
+      const entries: RiderEntry[] = (data || []).map((r: any) => {
+        const equipeId = coureurEquipeMap[r.coureur_id];
+        const equipeName = equipeId ? equipeNomMap[equipeId] : "";
+        return {
+          manager_id: r.manager_id,
+          coureur_id: r.coureur_id,
+          nom: r.coureurs?.nom || "Inconnu",
+          equipe: equipeName || "",
+          prix_signature: r.prix_signature,
+        };
+      });
 
       setRosters(entries);
     } catch (err) {
