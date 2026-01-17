@@ -53,7 +53,20 @@ export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
     );
   }
 
-  // 4. Aucune enchère active → état vide
+  // 4. Mode historique → afficher l'historique de la dernière phase
+  if (auctionStatus?.isHistoryMode && auctionStatus.phaseId) {
+    return (
+      <AuctionPhaseHistoryView
+        phaseId={auctionStatus.phaseId}
+        managerId={managerId}
+        leagueId={leagueId}
+        budget={0}
+        maxRiders={0}
+      />
+    );
+  }
+
+  // 5. Aucune enchère active → état vide
   return (
     <MobileEmptyState
       icon={<Trophy className="h-16 w-16" />}

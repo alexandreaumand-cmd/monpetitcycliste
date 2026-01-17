@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, Trophy, Database } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Users, Trophy, Database, History } from "lucide-react";
 import { RoundHistoryTab } from "./RoundHistoryTab";
 import { PhaseRecapTab } from "./PhaseRecapTab";
 import { FinalTeamTab } from "./FinalTeamTab";
@@ -51,8 +52,35 @@ export function AuctionPhaseHistoryView({
     );
   }
 
+  // Fetch phase info for the header
+  const { data: phaseInfo } = useQuery({
+    queryKey: ["phase-info", phaseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("phases")
+        .select("index_dans_saison, date_debut, date_fin")
+        .eq("id", phaseId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
   return (
     <div className="container max-w-7xl mx-auto px-4 py-6 md:px-6 space-y-6">
+      {/* Bandeau informatif pour le mode historique */}
+      <Alert className="bg-muted/50 border-primary/20">
+        <History className="h-4 w-4" />
+        <AlertDescription className="flex items-center gap-2">
+          <span className="font-medium">Mode historique</span>
+          <span className="text-muted-foreground">—</span>
+          <span>
+            Vous consultez les résultats de la phase {phaseInfo?.index_dans_saison ?? "..."} 
+            {closedRounds.length > 0 && ` (${closedRounds.length} round${closedRounds.length > 1 ? 's' : ''} terminé${closedRounds.length > 1 ? 's' : ''})`}
+          </span>
+        </AlertDescription>
+      </Alert>
+
       <Tabs defaultValue="recap" className="space-y-6">
         <ScrollArea className="w-full">
           <TabsList className="inline-flex h-12 items-center justify-start rounded-lg bg-muted p-1 w-full md:w-auto">
