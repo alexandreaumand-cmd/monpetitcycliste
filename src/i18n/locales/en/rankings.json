@@ -1,0 +1,104 @@
+{
+  "tabs": {
+    "managers": "Managers",
+    "topRiders": "Top Riders",
+    "timeline": "Timeline",
+    "comparison": "Comparison"
+  },
+  "phase": {
+    "global": "Global",
+    "phase": "Phase {{index}}",
+    "active": "✓"
+  },
+  "standings": {
+    "rank": "Rank",
+    "manager": "Manager",
+    "points": "Points",
+    "bonus": "Bonus",
+    "scorers": "Scorers",
+    "victories": "Wins",
+    "gap": "Gap",
+    "evolution": "Evolution",
+    "noStandings": "No standings available",
+    "clickForDetails": "Click for details",
+    "managerDetails": "Manager Details",
+    "pointsHistory": "Points history by race"
+  },
+  "topRiders": {
+    "rider": "Rider",
+    "team": "Team",
+    "points": "Points",
+    "price": "Price",
+    "ratio": "Ratio",
+    "managers": "Managers",
+    "noPoints": "No points for the selected period",
+    "noMatch": "No rider matches your search",
+    "searchPlaceholder": "Search for a rider or team...",
+    "searchRacePlaceholder": "Search for a race...",
+    "hideWithoutManager": "Without manager",
+    "hideWithoutManagerMobile": "Hide riders without manager",
+    "loadMore": "Load 20 more ({{remaining}} remaining)",
+    "viewAll": "View all ({{total}})",
+    "unknownTeam": "Unknown team",
+    "races": "{{count}} races",
+    "exportCsv": "Export CSV"
+  },
+  "riderDetails": {
+    "totalPoints": "Total points",
+    "racesWithPoints": "Races with points",
+    "victories": "Wins",
+    "pointsPriceRatio": "Pts/price ratio",
+    "ownerPhase": "Owner(s) — Phase",
+    "ownerAllPhases": "Owner(s) — All phases",
+    "managerHistoryByPhase": "Manager history by phase",
+    "manager": "Manager",
+    "phase": "Phase",
+    "upcomingRaces": "Upcoming races",
+    "upcomingRacesDescription": "Races on the startlist",
+    "noUpcomingRaces": "No upcoming races",
+    "bonusPoints": "Bonus Points",
+    "bonus": "{{count}} bonus"
+  },
+  "chart": {
+    "title": "Points Evolution",
+    "cumulativePoints": "Cumulative points",
+    "noData": "No data for the selected period"
+  },
+  "kpis": {
+    "funniest": "Funniest",
+    "grumpiest": "Grumpiest",
+    "luckiest": "Luckiest",
+    "notAssigned": "Not assigned",
+    "clickToAssign": "Click to assign",
+    "chooseManager": "Choose a manager",
+    "none": "None",
+    "updateSuccess": "Assignment updated",
+    "updateError": "Update error"
+  },
+  "breakdown": {
+    "details": "Details - {{name}}",
+    "total": "Total: {{points}} pts",
+    "noData": "No data available"
+  },
+  "comparison": {
+    "title": "Comparison",
+    "selectManagers": "Select two managers to compare",
+    "managerA": "Manager A",
+    "managerB": "Manager B"
+  },
+  "mobile": {
+    "position": "Position",
+    "totalPercent": "% of total",
+    "scorers": "Scorers",
+    "victories": "Wins",
+    "evolution": "Evolution",
+    "viewFullDetails": "View full details",
+    "fullDetails": "Full details",
+    "noStandings": "No standings",
+    "standingsDescription": "Standings will appear here once races are completed",
+    "noRiders": "No riders",
+    "ridersDescription": "Top riders will appear here",
+    "noResults": "No results",
+    "noResultsDescription": "No rider matches your search"
+  }
+}

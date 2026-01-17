@@ -8,6 +8,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useLeague } from "@/contexts/LeagueContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 type RankingsKPIsProps = {
   phaseId?: string | null;
@@ -16,6 +17,7 @@ type RankingsKPIsProps = {
 type AwardType = 'funniest' | 'grumpiest' | 'luckiest';
 
 export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
+  const { t } = useTranslation('rankings');
   const { isSuperAdmin } = useUserRole();
   const { leagueId } = useLeague();
   const queryClient = useQueryClient();
@@ -135,10 +137,10 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["fun-awards", phaseId, leagueId] });
-      toast.success("Attribution mise à jour");
+      toast.success(t('kpis.updateSuccess'));
     },
     onError: () => {
-      toast.error("Erreur lors de la mise à jour");
+      toast.error(t('kpis.updateError'));
     },
   });
 
@@ -159,7 +161,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
   const kpis = [
     {
       type: 'funniest' as AwardType,
-      label: "Le plus drôle",
+      label: t('kpis.funniest'),
       emoji: "😂",
       gradient: "from-yellow-100 via-yellow-50 to-white dark:from-yellow-900/30 dark:via-yellow-800/20 dark:to-transparent",
       borderColor: "border-yellow-400",
@@ -167,7 +169,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
     },
     {
       type: 'grumpiest' as AwardType,
-      label: "Le plus boudeur",
+      label: t('kpis.grumpiest'),
       emoji: "😤",
       gradient: "from-blue-100 via-blue-50 to-white dark:from-blue-900/30 dark:via-blue-800/20 dark:to-transparent",
       borderColor: "border-blue-400",
@@ -175,7 +177,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
     },
     {
       type: 'luckiest' as AwardType,
-      label: "Le plus chattard",
+      label: t('kpis.luckiest'),
       emoji: "🍀",
       gradient: "from-green-100 via-green-50 to-white dark:from-green-900/30 dark:via-green-800/20 dark:to-transparent",
       borderColor: "border-green-400",
@@ -225,7 +227,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                         ) : (
                           <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3 border-2 border-dashed border-gray-300">
                             <p className="text-sm text-muted-foreground text-center italic">
-                              Cliquer pour attribuer
+                              {t('kpis.clickToAssign')}
                             </p>
                           </div>
                         )}
@@ -233,14 +235,14 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                     </PopoverTrigger>
                     <PopoverContent className="w-64">
                       <div className="space-y-2">
-                        <h4 className="font-medium text-sm mb-2">Choisir un manager</h4>
+                        <h4 className="font-medium text-sm mb-2">{t('kpis.chooseManager')}</h4>
                         <div className="space-y-1 max-h-64 overflow-y-auto">
                           <Button
                             variant="ghost"
                             className="w-full justify-start"
                             onClick={() => updateAward.mutate({ awardType: kpi.type, managerId: null })}
                           >
-                            Aucun
+                            {t('kpis.none')}
                           </Button>
                           {managers?.map((m) => (
                             <Button
@@ -267,7 +269,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                     ) : (
                       <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3 border-2 border-dashed border-gray-300">
                         <p className="text-sm text-muted-foreground text-center italic">
-                          Non attribué
+                          {t('kpis.notAssigned')}
                         </p>
                       </div>
                     )}

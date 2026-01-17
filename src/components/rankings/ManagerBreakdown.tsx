@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "lucide-react";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { useLeague } from "@/contexts/LeagueContext";
 import {
   Accordion,
@@ -15,6 +14,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { useDateLocale } from "@/hooks/useDateLocale";
 
 type ManagerBreakdownProps = {
   managerId: string;
@@ -22,6 +23,8 @@ type ManagerBreakdownProps = {
 };
 
 export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) => {
+  const { t } = useTranslation('rankings');
+  const dateLocale = useDateLocale();
   const { leagueId, isLoading: leagueLoading } = useLeague();
   const leagueClient = useLeagueClient();
   
@@ -127,17 +130,17 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            Détails - {managerName}
+            {t('breakdown.details', { name: managerName })}
           </CardTitle>
           <Badge variant="default" className="text-lg px-4 py-1">
-            Total: {totalPoints} pts
+            {t('breakdown.total', { points: totalPoints })}
           </Badge>
         </div>
       </CardHeader>
       <CardContent>
         {courses.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            Aucune donnée disponible
+            {t('breakdown.noData')}
           </div>
         ) : (
           <Accordion type="multiple" className="space-y-2">
@@ -152,7 +155,7 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
                         <h3 className="font-semibold text-sm">{course.course_nom}</h3>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                           <Calendar className="h-3 w-3" />
-                          {course.date_debut && format(new Date(course.date_debut), "dd MMM yyyy", { locale: fr })}
+                          {course.date_debut && format(new Date(course.date_debut), "dd MMM yyyy", { locale: dateLocale })}
                         </div>
                       </div>
                       <Badge variant="default" className="px-3 py-1">

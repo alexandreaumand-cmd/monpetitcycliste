@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { normalizeString } from "@/lib/stringUtils";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
+import { useTranslation } from "react-i18next";
 
 type TopRidersProps = {
   phaseId?: string | null;
@@ -87,6 +88,7 @@ type UpcomingRace = {
 type TopRidersSortColumn = "total_points" | "prix_achat" | "ratio_points_par_prix";
 
 export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => {
+  const { t } = useTranslation('rankings');
   const { leagueId, isLoading: isLeagueLoading } = useLeague();
   const [selectedRider, setSelectedRider] = useState<TopRider | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -364,13 +366,13 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
         <CardContent className="pt-6">
           {!riders || riders.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              Aucun point pour la période sélectionnée
+              {t('topRiders.noPoints')}
             </div>
           ) : (
             <>
               <div className="grid md:grid-cols-[1fr_auto] gap-3 mb-4 items-center">
                 <Input
-                  placeholder="Rechercher un coureur ou une équipe..."
+                  placeholder={t('topRiders.searchPlaceholder')}
                   value={riderSearchTerm}
                   onChange={(e) => setRiderSearchTerm(e.target.value)}
                 />
@@ -381,14 +383,14 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                     onCheckedChange={setHideRidersWithoutManagers}
                   />
                   <Label htmlFor="hide-no-managers" className="cursor-pointer text-sm">
-                    Sans manager
+                    {t('topRiders.hideWithoutManager')}
                   </Label>
                 </div>
               </div>
               
               {filteredRiders.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  Aucun coureur ne correspond à votre recherche
+                  {t('topRiders.noMatch')}
                 </div>
               ) : (
                 <div className="rounded-md border overflow-x-auto">
@@ -396,14 +398,14 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-16">#</TableHead>
-                    <TableHead>Coureur</TableHead>
-                    <TableHead>Équipe</TableHead>
+                    <TableHead>{t('topRiders.rider')}</TableHead>
+                    <TableHead>{t('topRiders.team')}</TableHead>
                     <TableHead 
                       className="text-right cursor-pointer hover:bg-muted/50 transition-colors"
                       onClick={() => handleSort("total_points")}
                     >
                       <div className="flex items-center justify-end">
-                        Points
+                        {t('topRiders.points')}
                         <SortIcon column="total_points" />
                       </div>
                     </TableHead>
@@ -412,7 +414,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                       onClick={() => handleSort("prix_achat")}
                     >
                       <div className="flex items-center justify-end">
-                        Prix
+                        {t('topRiders.price')}
                         <SortIcon column="prix_achat" />
                       </div>
                     </TableHead>
@@ -421,11 +423,11 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                       onClick={() => handleSort("ratio_points_par_prix")}
                     >
                       <div className="flex items-center justify-end">
-                        Ratio
+                        {t('topRiders.ratio')}
                         <SortIcon column="ratio_points_par_prix" />
                       </div>
                     </TableHead>
-                    <TableHead>Managers</TableHead>
+                    <TableHead>{t('topRiders.managers')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -507,14 +509,14 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                 variant="outline"
                 onClick={() => setDisplayLimit(prev => Math.min(prev + 20, allRiders!.length))}
               >
-                Charger 20 de plus ({allRiders!.length - displayLimit} restants)
+                {t('topRiders.loadMore', { remaining: allRiders!.length - displayLimit })}
               </Button>
               {displayLimit >= 40 && (
                 <Button
                   variant="ghost"
                   onClick={() => setDisplayLimit(allRiders!.length)}
                 >
-                  Voir tous ({allRiders!.length})
+                  {t('topRiders.viewAll', { total: allRiders!.length })}
                 </Button>
               )}
             </div>
@@ -541,25 +543,25 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
             {phaseId && selectedRider?.owners && selectedRider.owners.length > 0 ? (
               <div className="pt-2">
                 <p className="text-sm font-medium">
-                  Propriétaire(s) — Phase : {selectedRider.owners.map(o => o.manager_nom).join(', ')}
+                  {t('riderDetails.ownerPhase')}: {selectedRider.owners.map(o => o.manager_nom).join(', ')}
                 </p>
               </div>
             ) : !phaseId && selectedRider?.owners_all && selectedRider.owners_all.length > 0 ? (
               <div className="pt-2 space-y-2">
                 <p className="text-sm font-medium">
-                  Propriétaire(s) — Toutes phases : {selectedRider.owners_all.map(o => o.manager_nom).join(', ')}
+                  {t('riderDetails.ownerAllPhases')}: {selectedRider.owners_all.map(o => o.manager_nom).join(', ')}
                 </p>
                 {selectedRider.owners_by_phase && Object.keys(selectedRider.owners_by_phase).length > 0 && (
                   <Card className="mt-2">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">Historique des managers par phase</CardTitle>
+                      <CardTitle className="text-sm">{t('riderDetails.managerHistoryByPhase')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-xs">Manager</TableHead>
-                            <TableHead className="text-xs">Phase</TableHead>
+                            <TableHead className="text-xs">{t('riderDetails.manager')}</TableHead>
+                            <TableHead className="text-xs">{t('riderDetails.phase')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -597,15 +599,15 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
                     <div className="text-3xl font-bold text-primary">{riderPointsData?.total || 0}</div>
-                    <div className="text-sm text-muted-foreground">Points totaux</div>
+                    <div className="text-sm text-muted-foreground">{t('riderDetails.totalPoints')}</div>
                   </div>
                   <div className="text-center">
                     <div className="text-3xl font-bold">{riderStats.totalRaces}</div>
-                    <div className="text-sm text-muted-foreground">Courses avec points</div>
+                    <div className="text-sm text-muted-foreground">{t('riderDetails.racesWithPoints')}</div>
                   </div>
                   <div className="text-center">
                     <div className="text-3xl font-bold text-yellow-600">{riderStats.wins}</div>
-                    <div className="text-sm text-muted-foreground">Victoires</div>
+                    <div className="text-sm text-muted-foreground">{t('riderDetails.victories')}</div>
                   </div>
                   <div className="text-center">
                     <div className="text-3xl font-bold">
@@ -613,7 +615,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                         ? ((riderPointsData?.total || 0) / selectedRider.prix_achat).toFixed(2)
                         : '0.00'}
                     </div>
-                    <div className="text-sm text-muted-foreground">Ratio pts/prix</div>
+                    <div className="text-sm text-muted-foreground">{t('riderDetails.pointsPriceRatio')}</div>
                   </div>
                 </div>
               </CardContent>
@@ -623,14 +625,14 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Input
-                  placeholder="Rechercher une course..."
+                  placeholder={t('topRiders.searchRacePlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <Button variant="outline" size="default" onClick={handleExportCSV}>
                 <Download className="h-4 w-4 mr-2" />
-                Export CSV
+                {t('topRiders.exportCsv')}
               </Button>
             </div>
 
@@ -748,9 +750,9 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                       <div className="flex items-center justify-between w-full pr-4">
                         <div className="flex items-center gap-3">
                           <Gift className="h-5 w-5 text-purple-600" />
-                          <span className="font-semibold">Points Bonus</span>
+                          <span className="font-semibold">{t('riderDetails.bonusPoints')}</span>
                           <span className="text-muted-foreground text-sm">
-                            {groupedByPhase.bonus.length} bonus
+                            {t('riderDetails.bonus', { count: groupedByPhase.bonus.length })}
                           </span>
                         </div>
                         <Badge className="bg-purple-600 text-base px-3">
@@ -788,8 +790,8 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
             {/* Programme à venir */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Programme à venir</CardTitle>
-                <CardDescription>Courses inscrites sur la startlist</CardDescription>
+                <CardTitle className="text-lg">{t('riderDetails.upcomingRaces')}</CardTitle>
+                <CardDescription>{t('riderDetails.upcomingRacesDescription')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoadingUpcoming ? (
@@ -831,7 +833,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                   </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    Aucune course programmée
+                    {t('riderDetails.noUpcomingRaces')}
                   </div>
                 )}
               </CardContent>
