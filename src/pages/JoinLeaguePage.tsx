@@ -1,23 +1,25 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 export function JoinLeaguePage() {
+  const { t } = useTranslation('leagues');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get("token");
   
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-  const [message, setMessage] = useState("Traitement de l'invitation…");
+  const [message, setMessage] = useState(t('join.processing'));
 
   useEffect(() => {
     async function joinLeague() {
       if (!token) {
         setStatus("error");
-        setMessage("Lien d'invitation invalide.");
+        setMessage(t('errors.invalidInvite'));
         return;
       }
 
@@ -46,14 +48,14 @@ export function JoinLeaguePage() {
           }
 
           const mapped = serverMsg === 'Invalid token'
-            ? "Ce lien d'invitation n'existe pas."
+            ? t('errors.invalidInvite')
             : serverMsg === 'Invite revoked'
-            ? "Cette invitation a été révoquée."
+            ? t('errors.revokedInvite')
             : serverMsg === 'Invite expired'
-            ? "Cette invitation a expiré."
+            ? t('errors.expiredInvite')
             : serverMsg === 'Invite limit reached'
-            ? "Cette invitation a atteint sa limite d'utilisations."
-            : "Impossible de rejoindre la ligue.";
+            ? t('errors.limitReached')
+            : t('errors.generic');
 
           setStatus("error");
           setMessage(mapped);
@@ -61,7 +63,7 @@ export function JoinLeaguePage() {
         }
 
         setStatus("success");
-        setMessage("Vous avez rejoint la ligue avec succès !");
+        setMessage(t('join.success'));
 
         // Redirect to auctions page with league selected
         setTimeout(() => {
@@ -70,12 +72,12 @@ export function JoinLeaguePage() {
       } catch (err) {
         console.error('Join league error:', err);
         setStatus("error");
-        setMessage("Une erreur inattendue s'est produite.");
+        setMessage(t('errors.generic'));
       }
     }
 
     joinLeague();
-  }, [token, navigate]);
+  }, [token, navigate, t]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -96,7 +98,7 @@ export function JoinLeaguePage() {
                   <AlertDescription>{message}</AlertDescription>
                 </Alert>
                 <p className="text-sm text-muted-foreground">
-                  Redirection en cours…
+                  {t('join.redirecting')}
                 </p>
               </>
             )}

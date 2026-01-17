@@ -1,0 +1,34 @@
+{
+  "title": "Calendar",
+  "filters": {
+    "search": "Search for a race...",
+    "category": "Category",
+    "phase": "Phase",
+    "allCategories": "All categories",
+    "allPhases": "All phases",
+    "reset": "Reset filters"
+  },
+  "table": {
+    "name": "Name",
+    "category": "Category",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "points": "Points",
+    "status": "Status"
+  },
+  "badges": {
+    "today": "Today",
+    "passed": "Finished",
+    "daysUntil": "In {{count}} day",
+    "daysUntil_plural": "In {{count}} days",
+    "inProgress": "In progress"
+  },
+  "export": {
+    "button": "Export",
+    "filename": "race_calendar"
+  },
+  "empty": {
+    "title": "No races found",
+    "description": "Try adjusting your filters"
+  }
+}

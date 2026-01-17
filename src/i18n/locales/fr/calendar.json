@@ -1,0 +1,34 @@
+{
+  "title": "Calendrier",
+  "filters": {
+    "search": "Rechercher une course...",
+    "category": "Catégorie",
+    "phase": "Phase",
+    "allCategories": "Toutes les catégories",
+    "allPhases": "Toutes les phases",
+    "reset": "Réinitialiser les filtres"
+  },
+  "table": {
+    "name": "Nom",
+    "category": "Catégorie",
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "points": "Points",
+    "status": "Statut"
+  },
+  "badges": {
+    "today": "Aujourd'hui",
+    "passed": "Terminée",
+    "daysUntil": "Dans {{count}} jour",
+    "daysUntil_plural": "Dans {{count}} jours",
+    "inProgress": "En cours"
+  },
+  "export": {
+    "button": "Exporter",
+    "filename": "calendrier_courses"
+  },
+  "empty": {
+    "title": "Aucune course trouvée",
+    "description": "Essayez de modifier vos filtres"
+  }
+}

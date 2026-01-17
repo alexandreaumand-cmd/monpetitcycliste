@@ -1,4 +1,5 @@
 import { Bell } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -9,12 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications } from "@/hooks/useNotifications";
 import { formatDistanceToNow } from "date-fns";
-import { fr } from "date-fns/locale";
+import { fr, enUS } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 
 export const NotificationCenter = () => {
+  const { t, i18n } = useTranslation('navigation');
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const navigate = useNavigate();
+  
+  const dateLocale = i18n.language === 'fr' ? fr : enUS;
 
   const handleNotificationClick = (notification: any) => {
     markAsRead(notification.id);
@@ -45,17 +49,17 @@ export const NotificationCenter = () => {
       </PopoverTrigger>
       <PopoverContent className="w-96 p-0" align="end">
         <div className="flex items-center justify-between p-4 border-b">
-          <h4 className="font-semibold">Notifications</h4>
+          <h4 className="font-semibold">{t('notifications.title')}</h4>
           {unreadCount > 0 && (
             <Button variant="ghost" size="sm" onClick={markAllAsRead}>
-              Tout marquer comme lu
+              {t('notifications.markAllRead')}
             </Button>
           )}
         </div>
         <ScrollArea className="h-[400px]">
           {notifications.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
-              Aucune notification
+              {t('notifications.empty')}
             </div>
           ) : (
             <div className="divide-y">
@@ -74,7 +78,7 @@ export const NotificationCenter = () => {
                       <p className="text-xs text-muted-foreground mt-1">
                         {formatDistanceToNow(new Date(notif.created_at), {
                           addSuffix: true,
-                          locale: fr
+                          locale: dateLocale
                         })}
                       </p>
                     </div>

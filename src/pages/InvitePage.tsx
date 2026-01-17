@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ type InviteInfo = {
 };
 
 export function InvitePage() {
+  const { t } = useTranslation('leagues');
+  const { t: tErrors } = useTranslation('errors');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get("token");
@@ -32,7 +35,7 @@ export function InvitePage() {
           league_name: "", 
           league_visibility: "", 
           member_count: 0,
-          error: "Lien d'invitation invalide" 
+          error: t('errors.invalidInvite')
         });
         setLoading(false);
         return;
@@ -54,7 +57,7 @@ export function InvitePage() {
             league_name: "", 
             league_visibility: "", 
             member_count: 0,
-            error: "Impossible de récupérer les informations de l'invitation" 
+            error: t('errors.generic')
           });
         } else {
           setInviteInfo(data);
@@ -66,7 +69,7 @@ export function InvitePage() {
           league_name: "", 
           league_visibility: "", 
           member_count: 0,
-          error: "Une erreur inattendue s'est produite" 
+          error: t('errors.generic')
         });
       }
 
@@ -74,7 +77,7 @@ export function InvitePage() {
     }
 
     checkAuthAndInvite();
-  }, [token]);
+  }, [token, t]);
 
   const handleSignIn = () => {
     navigate(`/auth?next=/join?token=${token}&tab=signin`);
@@ -111,7 +114,7 @@ export function InvitePage() {
           <CardContent className="pt-6">
             <div className="flex flex-col items-center space-y-4">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="text-center text-muted-foreground">Chargement de l'invitation…</p>
+              <p className="text-center text-muted-foreground">{t('invite.loading')}</p>
             </div>
           </CardContent>
         </Card>
@@ -127,20 +130,20 @@ export function InvitePage() {
             <div className="flex justify-center mb-4">
               <XCircle className="h-16 w-16 text-destructive" />
             </div>
-            <CardTitle>Invitation invalide</CardTitle>
+            <CardTitle>{t('errors.invalidInvite')}</CardTitle>
           </CardHeader>
           <CardContent>
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                {inviteInfo?.error || "Cette invitation n'est plus valide"}
+                {inviteInfo?.error || t('errors.invalidInvite')}
               </AlertDescription>
             </Alert>
             <Button 
               className="w-full mt-4" 
               onClick={() => navigate("/")}
             >
-              Retour à l'accueil
+              {tErrors('notFound.backHome')}
             </Button>
           </CardContent>
         </Card>
@@ -155,25 +158,27 @@ export function InvitePage() {
           <div className="flex justify-center">
             <img src={mpcLogo} alt="Mon Petit Cycliste" className="h-24 w-24 object-contain" />
           </div>
-          <CardTitle>Invitation à rejoindre une ligue</CardTitle>
+          <CardTitle>{t('invite.title')}</CardTitle>
           <CardDescription>
-            Vous êtes invité à rejoindre la ligue
+            {t('invite.welcome')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="bg-muted/50 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Nom de la ligue</span>
+              <span className="text-sm font-medium">{t('settings.name')}</span>
               <span className="text-sm font-semibold">{inviteInfo.league_name}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Visibilité</span>
-              <span className="text-sm capitalize">{inviteInfo.league_visibility}</span>
+              <span className="text-sm font-medium">{t('settings.visibility')}</span>
+              <span className="text-sm capitalize">
+                {inviteInfo.league_visibility === 'public' ? t('visibility.public') : t('visibility.private')}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium flex items-center gap-2">
                 <Users className="h-4 w-4" />
-                Membres
+                {t('invite.members')}
               </span>
               <span className="text-sm font-semibold">{inviteInfo.member_count}</span>
             </div>
@@ -184,35 +189,35 @@ export function InvitePage() {
               <Alert>
                 <CheckCircle2 className="h-4 w-4" />
                 <AlertDescription>
-                  Vous êtes déjà connecté. Cliquez ci-dessous pour rejoindre la ligue.
+                  {t('invite.joinNow')}
                 </AlertDescription>
               </Alert>
               <Button 
                 className="w-full gradient-primary text-white hover:opacity-90"
                 onClick={handleJoinNow}
               >
-                Rejoindre la ligue
+                {t('invite.joinNow')}
               </Button>
             </div>
           ) : (
             <div className="space-y-3">
               <Alert>
                 <AlertDescription>
-                  Pour rejoindre cette ligue, vous devez créer un compte ou vous connecter.
+                  {t('invite.signUp')}
                 </AlertDescription>
               </Alert>
               <Button 
                 className="w-full gradient-primary text-white hover:opacity-90"
                 onClick={handleSignUp}
               >
-                Créer un compte et rejoindre
+                {t('invite.signUp')}
               </Button>
               <Button 
                 variant="outline"
                 className="w-full"
                 onClick={handleSignIn}
               >
-                J'ai déjà un compte
+                {t('invite.signIn')}
               </Button>
             </div>
           )}

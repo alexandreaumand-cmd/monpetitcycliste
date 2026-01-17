@@ -1,0 +1,28 @@
+{
+  "bottomBar": {
+    "rankings": "Classement",
+    "teams": "Équipes",
+    "startlist": "Startlist",
+    "results": "Résultats",
+    "courses": "Courses"
+  },
+  "menu": {
+    "openMenu": "Ouvrir le menu"
+  },
+  "dropdown": {
+    "myAccount": "Mon Compte",
+    "settings": "Paramètres",
+    "signOut": "Déconnexion"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "empty": "Aucune notification",
+    "viewAll": "Voir toutes les notifications"
+  },
+  "header": {
+    "calendar": "Calendrier",
+    "data": "Data",
+    "superAdmin": "Super Admin"
+  }
+}

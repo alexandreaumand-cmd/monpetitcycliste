@@ -1,0 +1,23 @@
+{
+  "title": "Résultats",
+  "search": {
+    "placeholder": "Rechercher..."
+  },
+  "phase": {
+    "global": "Global",
+    "select": "Sélectionner une phase"
+  },
+  "empty": {
+    "title": "Aucun résultat trouvé",
+    "description": "Essayez de modifier vos filtres",
+    "reset": "Réinitialiser"
+  },
+  "loadMore": "Charger plus",
+  "podium": {
+    "managers": "Podium managers"
+  },
+  "tabs": {
+    "managers": "Managers",
+    "riders": "Coureurs"
+  }
+}

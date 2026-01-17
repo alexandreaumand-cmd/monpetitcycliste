@@ -9,6 +9,13 @@ import frAuction from './locales/fr/auction.json';
 import frDashboard from './locales/fr/dashboard.json';
 import frRankings from './locales/fr/rankings.json';
 import frHome from './locales/fr/home.json';
+import frAuth from './locales/fr/auth.json';
+import frAccount from './locales/fr/account.json';
+import frCalendar from './locales/fr/calendar.json';
+import frResults from './locales/fr/results.json';
+import frLeagues from './locales/fr/leagues.json';
+import frNavigation from './locales/fr/navigation.json';
+import frErrors from './locales/fr/errors.json';
 
 // Import English translations
 import enCommon from './locales/en/common.json';
@@ -17,6 +24,13 @@ import enAuction from './locales/en/auction.json';
 import enDashboard from './locales/en/dashboard.json';
 import enRankings from './locales/en/rankings.json';
 import enHome from './locales/en/home.json';
+import enAuth from './locales/en/auth.json';
+import enAccount from './locales/en/account.json';
+import enCalendar from './locales/en/calendar.json';
+import enResults from './locales/en/results.json';
+import enLeagues from './locales/en/leagues.json';
+import enNavigation from './locales/en/navigation.json';
+import enErrors from './locales/en/errors.json';
 
 export const resources = {
   fr: {
@@ -26,6 +40,13 @@ export const resources = {
     dashboard: frDashboard,
     rankings: frRankings,
     home: frHome,
+    auth: frAuth,
+    account: frAccount,
+    calendar: frCalendar,
+    results: frResults,
+    leagues: frLeagues,
+    navigation: frNavigation,
+    errors: frErrors,
   },
   en: {
     common: enCommon,
@@ -34,6 +55,13 @@ export const resources = {
     dashboard: enDashboard,
     rankings: enRankings,
     home: enHome,
+    auth: enAuth,
+    account: enAccount,
+    calendar: enCalendar,
+    results: enResults,
+    leagues: enLeagues,
+    navigation: enNavigation,
+    errors: enErrors,
   },
 } as const;
 
@@ -48,7 +76,7 @@ i18n
     resources,
     fallbackLng: 'fr',
     defaultNS,
-    ns: ['common', 'team', 'auction', 'dashboard', 'rankings', 'home'],
+    ns: ['common', 'team', 'auction', 'dashboard', 'rankings', 'home', 'auth', 'account', 'calendar', 'results', 'leagues', 'navigation', 'errors'],
     interpolation: {
       escapeValue: false,
     },

@@ -1,0 +1,65 @@
+{
+  "create": {
+    "title": "Create a League",
+    "selectMode": "Choose a game mode",
+    "configure": "Configure the league",
+    "next": "Next",
+    "back": "Back",
+    "cancel": "Cancel",
+    "submit": "Create League",
+    "creating": "Creating...",
+    "success": "League created successfully!"
+  },
+  "join": {
+    "title": "Join a League",
+    "description": "Join an existing league",
+    "publicLeagues": "Public Leagues",
+    "noPublicLeagues": "No public leagues available",
+    "privateSection": "Private League",
+    "inviteCode": "Invitation Code",
+    "inviteCodePlaceholder": "Enter the invitation code",
+    "joining": "Joining...",
+    "success": "You have joined the league!",
+    "button": "Join",
+    "processing": "Processing...",
+    "redirecting": "Redirecting to auctions..."
+  },
+  "settings": {
+    "name": "League Name",
+    "namePlaceholder": "Enter the league name",
+    "season": "Season",
+    "playerCount": "Number of Players",
+    "visibility": "Visibility",
+    "bonuses": "Bonuses Enabled",
+    "auctionDate": "First Auction Date",
+    "auctionTime": "Start Time"
+  },
+  "visibility": {
+    "public": "Public",
+    "private": "Private"
+  },
+  "templates": {
+    "title": "Choose your game mode",
+    "players": "players"
+  },
+  "invite": {
+    "title": "Invitation to Join",
+    "welcome": "You are invited to join",
+    "members": "members",
+    "joinNow": "Join Now",
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "loading": "Loading...",
+    "processing": "Processing...",
+    "success": "You have joined the league!",
+    "redirecting": "Redirecting..."
+  },
+  "errors": {
+    "invalidInvite": "Invalid invitation link",
+    "expiredInvite": "This invitation link has expired",
+    "revokedInvite": "This invitation link has been revoked",
+    "limitReached": "The maximum number of uses has been reached",
+    "alreadyMember": "You are already a member of this league",
+    "generic": "An error occurred"
+  }
+}

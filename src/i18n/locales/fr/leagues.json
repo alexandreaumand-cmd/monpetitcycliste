@@ -1,0 +1,65 @@
+{
+  "create": {
+    "title": "Créer une ligue",
+    "selectMode": "Choisir un mode de jeu",
+    "configure": "Configurer la ligue",
+    "next": "Suivant",
+    "back": "Retour",
+    "cancel": "Annuler",
+    "submit": "Créer la ligue",
+    "creating": "Création...",
+    "success": "Ligue créée avec succès !"
+  },
+  "join": {
+    "title": "Rejoindre une ligue",
+    "description": "Rejoignez une ligue existante",
+    "publicLeagues": "Ligues publiques",
+    "noPublicLeagues": "Aucune ligue publique disponible",
+    "privateSection": "Ligue privée",
+    "inviteCode": "Code d'invitation",
+    "inviteCodePlaceholder": "Entrez le code d'invitation",
+    "joining": "Connexion...",
+    "success": "Vous avez rejoint la ligue !",
+    "button": "Rejoindre",
+    "processing": "Traitement en cours...",
+    "redirecting": "Redirection vers les enchères..."
+  },
+  "settings": {
+    "name": "Nom de la ligue",
+    "namePlaceholder": "Entrez le nom de la ligue",
+    "season": "Saison",
+    "playerCount": "Nombre de joueurs",
+    "visibility": "Visibilité",
+    "bonuses": "Bonus activés",
+    "auctionDate": "Date de la première enchère",
+    "auctionTime": "Heure de début"
+  },
+  "visibility": {
+    "public": "Publique",
+    "private": "Privée"
+  },
+  "templates": {
+    "title": "Choisissez votre mode de jeu",
+    "players": "joueurs"
+  },
+  "invite": {
+    "title": "Invitation à rejoindre",
+    "welcome": "Vous êtes invité à rejoindre",
+    "members": "membres",
+    "joinNow": "Rejoindre maintenant",
+    "signIn": "Se connecter",
+    "signUp": "S'inscrire",
+    "loading": "Chargement...",
+    "processing": "Traitement en cours...",
+    "success": "Vous avez rejoint la ligue !",
+    "redirecting": "Redirection..."
+  },
+  "errors": {
+    "invalidInvite": "Lien d'invitation invalide",
+    "expiredInvite": "Ce lien d'invitation a expiré",
+    "revokedInvite": "Ce lien d'invitation a été révoqué",
+    "limitReached": "Le nombre maximum d'utilisations a été atteint",
+    "alreadyMember": "Vous êtes déjà membre de cette ligue",
+    "generic": "Une erreur est survenue"
+  }
+}
