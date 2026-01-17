@@ -44,15 +44,7 @@ export function AuctionPhaseHistoryView({
     },
   });
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // Fetch phase info for the header
+  // Fetch phase info for the header - MUST be called before any early return
   const { data: phaseInfo } = useQuery({
     queryKey: ["phase-info", phaseId],
     queryFn: async () => {
