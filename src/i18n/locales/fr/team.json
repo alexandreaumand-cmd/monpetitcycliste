@@ -1,0 +1,37 @@
+{
+  "title": "Mon équipe",
+  "roster": "Effectif",
+  "budget": "Budget",
+  "budgetRemaining": "Budget restant",
+  "riderCount": "Nombre de coureurs",
+  "maxRiders": "Maximum de coureurs",
+  "points": "Points",
+  "totalPoints": "Points totaux",
+  "bonusRider": {
+    "title": "Coureur Bonus",
+    "select": "Choisir coureur bonus",
+    "selected": "Coureur bonus sélectionné",
+    "description": "Sélectionnez un coureur pour doubler ses points cette phase",
+    "eligible": "Coureurs éligibles",
+    "noSelection": "Aucun coureur bonus sélectionné",
+    "confirm": "Confirmer la sélection"
+  },
+  "rider": {
+    "name": "Nom",
+    "team": "Équipe",
+    "price": "Prix",
+    "purchasePrice": "Prix d'achat",
+    "initialPrice": "Cote initiale",
+    "points": "Points",
+    "status": "Statut"
+  },
+  "empty": {
+    "title": "Aucun coureur",
+    "description": "Votre équipe est vide. Participez aux enchères pour recruter des coureurs."
+  },
+  "actions": {
+    "viewDetails": "Voir les détails",
+    "release": "Libérer",
+    "confirmRelease": "Confirmer la libération"
+  }
+}

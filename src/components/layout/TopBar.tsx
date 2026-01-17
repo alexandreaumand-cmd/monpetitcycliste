@@ -11,6 +11,8 @@ import { useUserLeagues } from "@/hooks/useUserLeagues";
 import { getLeagueTemplates } from "@/lib/leagues/templates";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 
 interface TopBarProps {
   onSignOut: () => void;
@@ -19,6 +21,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
+  const { t } = useTranslation();
   const { seasons, selectedSeason, setSelectedSeason, isLeagueSeason } = useSeasonContext();
   const { leagueId } = useLeague();
   const { leagues } = useUserLeagues();
@@ -100,11 +103,12 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
           )}
           
           <NotificationCenter />
+          <LanguageSwitcher />
           <Button
             variant="ghost"
             size="icon"
             onClick={onSignOut}
-            title="Se déconnecter"
+            title={t('navigation.logout')}
           >
             <LogOut className="h-5 w-5" />
           </Button>

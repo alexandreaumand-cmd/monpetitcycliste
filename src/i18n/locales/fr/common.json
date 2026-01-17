@@ -1,0 +1,71 @@
+{
+  "loading": "Chargement...",
+  "save": "Enregistrer",
+  "cancel": "Annuler",
+  "confirm": "Confirmer",
+  "delete": "Supprimer",
+  "error": "Erreur",
+  "success": "Succès",
+  "search": "Rechercher",
+  "close": "Fermer",
+  "back": "Retour",
+  "next": "Suivant",
+  "previous": "Précédent",
+  "yes": "Oui",
+  "no": "Non",
+  "or": "ou",
+  "and": "et",
+  "all": "Tous",
+  "none": "Aucun",
+  "noData": "Aucune donnée",
+  "noResults": "Aucun résultat",
+  "language": {
+    "fr": "Français",
+    "en": "English",
+    "select": "Langue"
+  },
+  "navigation": {
+    "dashboard": "Tableau de bord",
+    "myTeam": "Mon équipe",
+    "auctions": "Enchères",
+    "riders": "Coureurs",
+    "races": "Courses",
+    "standings": "Classement",
+    "results": "Résultats",
+    "admin": "Administration",
+    "settings": "Paramètres",
+    "logout": "Déconnexion",
+    "login": "Connexion",
+    "signup": "Inscription"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "loginButton": "Se connecter",
+    "signupButton": "S'inscrire",
+    "noAccount": "Pas encore de compte ?",
+    "hasAccount": "Déjà un compte ?",
+    "loginSuccess": "Connexion réussie",
+    "logoutSuccess": "Déconnexion réussie",
+    "signupSuccess": "Inscription réussie"
+  },
+  "errors": {
+    "generic": "Une erreur est survenue",
+    "network": "Erreur de connexion",
+    "unauthorized": "Non autorisé",
+    "notFound": "Non trouvé",
+    "validation": "Erreur de validation"
+  },
+  "time": {
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "tomorrow": "Demain",
+    "days": "jours",
+    "hours": "heures",
+    "minutes": "minutes",
+    "seconds": "secondes"
+  }
+}

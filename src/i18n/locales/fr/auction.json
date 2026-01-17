@@ -1,0 +1,45 @@
+{
+  "title": "Enchères",
+  "currentAuction": "Enchère en cours",
+  "nextAuction": "Prochaine enchère",
+  "noActiveAuction": "Aucune enchère en cours",
+  "round": "Tour",
+  "deadline": "Date limite",
+  "timeRemaining": "Temps restant",
+  "status": {
+    "open": "Ouverte",
+    "closed": "Fermée",
+    "pending": "En attente",
+    "processing": "En traitement"
+  },
+  "bid": {
+    "title": "Miser",
+    "amount": "Montant",
+    "place": "Placer une mise",
+    "update": "Modifier ma mise",
+    "cancel": "Annuler ma mise",
+    "current": "Ma mise actuelle",
+    "minimum": "Mise minimum",
+    "maximum": "Mise maximum",
+    "success": "Mise placée avec succès",
+    "error": "Erreur lors de la mise",
+    "confirm": "Confirmer la mise"
+  },
+  "rider": {
+    "available": "Coureurs disponibles",
+    "selected": "Coureur sélectionné"
+  },
+  "results": {
+    "title": "Résultats",
+    "winner": "Gagnant",
+    "winningBid": "Mise gagnante",
+    "yourBid": "Votre mise",
+    "won": "Gagné",
+    "lost": "Perdu",
+    "noBids": "Aucune mise"
+  },
+  "history": {
+    "title": "Historique des enchères",
+    "noHistory": "Aucun historique"
+  }
+}

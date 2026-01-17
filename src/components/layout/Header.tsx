@@ -12,6 +12,8 @@ import { NotificationCenter } from "./NotificationCenter";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { LeagueSwitcher } from "@/components/leagues/LeagueSwitcher";
 import { ManagerInfoDropdown } from "./ManagerInfoDropdown";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 
 interface HeaderProps {
   manager: any;
@@ -42,6 +44,7 @@ const mobileNavLinks = [
 ];
 
 export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const currentLeagueId = searchParams.get('leagueId');
@@ -159,16 +162,18 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
 
             <LeagueSwitcher />
             <NotificationCenter />
+            <LanguageSwitcher />
             
             <Button variant="ghost" size="sm" onClick={onSignOut} className="hidden sm:flex gap-2 h-8">
               <LogOut className="h-4 w-4" />
-              <span className="hidden lg:inline">Déconnexion</span>
+              <span className="hidden lg:inline">{t('navigation.logout')}</span>
             </Button>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={onSignOut}
               className="sm:hidden h-8 w-8 p-0"
+              title={t('navigation.logout')}
             >
               <LogOut className="h-4 w-4" />
             </Button>

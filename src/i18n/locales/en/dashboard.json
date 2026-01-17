@@ -1,0 +1,31 @@
+{
+  "title": "Dashboard",
+  "welcome": "Welcome",
+  "overview": "Overview",
+  "recentActivity": "Recent Activity",
+  "upcomingRaces": "Upcoming Races",
+  "standings": {
+    "title": "Standings",
+    "position": "Position",
+    "manager": "Manager",
+    "points": "Points",
+    "yourPosition": "Your position"
+  },
+  "stats": {
+    "totalPoints": "Total Points",
+    "riderCount": "Rider Count",
+    "budgetRemaining": "Remaining Budget",
+    "rank": "Rank"
+  },
+  "phase": {
+    "current": "Current Phase",
+    "upcoming": "Upcoming Phase",
+    "completed": "Completed Phase"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "noNotifications": "No notifications",
+    "viewAll": "View all notifications"
+  }
+}
