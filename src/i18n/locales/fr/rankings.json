@@ -1,0 +1,104 @@
+{
+  "tabs": {
+    "managers": "Managers",
+    "topRiders": "Top Coureurs",
+    "timeline": "Chrono",
+    "comparison": "Comparaison"
+  },
+  "phase": {
+    "global": "Global",
+    "phase": "Phase {{index}}",
+    "active": "✓"
+  },
+  "standings": {
+    "rank": "Rang",
+    "manager": "Manager",
+    "points": "Points",
+    "bonus": "Bonus",
+    "scorers": "Scoreurs",
+    "victories": "Victoires",
+    "gap": "Écart",
+    "evolution": "Évolution",
+    "noStandings": "Aucun classement disponible",
+    "clickForDetails": "Cliquer pour voir le détail",
+    "managerDetails": "Détails Manager",
+    "pointsHistory": "Historique des points par course"
+  },
+  "topRiders": {
+    "rider": "Coureur",
+    "team": "Équipe",
+    "points": "Points",
+    "price": "Prix",
+    "ratio": "Ratio",
+    "managers": "Managers",
+    "noPoints": "Aucun point pour la période sélectionnée",
+    "noMatch": "Aucun coureur ne correspond à votre recherche",
+    "searchPlaceholder": "Rechercher un coureur ou une équipe...",
+    "searchRacePlaceholder": "Rechercher une course...",
+    "hideWithoutManager": "Sans manager",
+    "hideWithoutManagerMobile": "Masquer les coureurs sans manager",
+    "loadMore": "Charger 20 de plus ({{remaining}} restants)",
+    "viewAll": "Voir tous ({{total}})",
+    "unknownTeam": "Équipe inconnue",
+    "races": "{{count}} courses",
+    "exportCsv": "Export CSV"
+  },
+  "riderDetails": {
+    "totalPoints": "Points totaux",
+    "racesWithPoints": "Courses avec points",
+    "victories": "Victoires",
+    "pointsPriceRatio": "Ratio pts/prix",
+    "ownerPhase": "Propriétaire(s) — Phase",
+    "ownerAllPhases": "Propriétaire(s) — Toutes phases",
+    "managerHistoryByPhase": "Historique des managers par phase",
+    "manager": "Manager",
+    "phase": "Phase",
+    "upcomingRaces": "Programme à venir",
+    "upcomingRacesDescription": "Courses inscrites sur la startlist",
+    "noUpcomingRaces": "Aucune course programmée",
+    "bonusPoints": "Points Bonus",
+    "bonus": "{{count}} bonus"
+  },
+  "chart": {
+    "title": "Évolution des points",
+    "cumulativePoints": "Points cumulés",
+    "noData": "Aucune donnée pour la période sélectionnée"
+  },
+  "kpis": {
+    "funniest": "Le plus drôle",
+    "grumpiest": "Le plus boudeur",
+    "luckiest": "Le plus chattard",
+    "notAssigned": "Non attribué",
+    "clickToAssign": "Cliquer pour attribuer",
+    "chooseManager": "Choisir un manager",
+    "none": "Aucun",
+    "updateSuccess": "Attribution mise à jour",
+    "updateError": "Erreur lors de la mise à jour"
+  },
+  "breakdown": {
+    "details": "Détails - {{name}}",
+    "total": "Total: {{points}} pts",
+    "noData": "Aucune donnée disponible"
+  },
+  "comparison": {
+    "title": "Comparaison",
+    "selectManagers": "Sélectionnez deux managers à comparer",
+    "managerA": "Manager A",
+    "managerB": "Manager B"
+  },
+  "mobile": {
+    "position": "Position",
+    "totalPercent": "% du total",
+    "scorers": "Scoreurs",
+    "victories": "Victoires",
+    "evolution": "Évolution",
+    "viewFullDetails": "Voir le détail complet",
+    "fullDetails": "Détail complet",
+    "noStandings": "Aucun classement",
+    "standingsDescription": "Les classements apparaîtront ici une fois les courses terminées",
+    "noRiders": "Aucun coureur",
+    "ridersDescription": "Les meilleurs coureurs apparaîtront ici",
+    "noResults": "Aucun résultat",
+    "noResultsDescription": "Aucun coureur ne correspond à votre recherche"
+  }
+}

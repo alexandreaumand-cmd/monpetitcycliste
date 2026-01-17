@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartConfig } from "@/components/ui/chart";
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useTranslation } from "react-i18next";
+import { useDateLocale } from "@/hooks/useDateLocale";
 
 interface RecentPointsChartProps {
   phaseId?: string | null;
@@ -39,6 +40,8 @@ const SortedChartTooltipContent = React.forwardRef<
 SortedChartTooltipContent.displayName = "SortedChartTooltipContent";
 
 export const RecentPointsChart = ({ phaseId, saisonId, viewMode }: RecentPointsChartProps) => {
+  const { t } = useTranslation('rankings');
+  const dateLocale = useDateLocale();
   const determinedViewMode = viewMode || (phaseId ? 'phase' : 'season');
   const { leagueId, isLoading: leagueLoading } = useLeague();
 
@@ -67,7 +70,7 @@ export const RecentPointsChart = ({ phaseId, saisonId, viewMode }: RecentPointsC
   const chartData = filteredSeries?.[0]?.points
     ?.map((p: any) => {
       const dateObj = new Date(p.date);
-      const formattedDate = format(dateObj, "dd MMM", { locale: fr });
+      const formattedDate = format(dateObj, "dd MMM", { locale: dateLocale });
       const dataPoint: any = { date: formattedDate, fullDate: p.date };
       
       filteredSeries.forEach((s: any) => {
@@ -129,16 +132,16 @@ export const RecentPointsChart = ({ phaseId, saisonId, viewMode }: RecentPointsC
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5" />
-          Évolution des points
+          {t('chart.title')}
         </CardTitle>
         <CardDescription>
-          Points cumulés {seriesData?.meta?.phase_info && `• Phase ${seriesData.meta.phase_info.index}`}
+          {t('chart.cumulativePoints')} {seriesData?.meta?.phase_info && `• Phase ${seriesData.meta.phase_info.index}`}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {chartData.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            Aucune donnée pour la période sélectionnée
+            {t('chart.noData')}
           </div>
         ) : (
           <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px] w-full">

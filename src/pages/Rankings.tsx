@@ -17,9 +17,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
 import { RankingsMobile } from "./Rankings.mobile";
+import { useTranslation } from "react-i18next";
 import { PageContainer } from "@/components/layout/PageContainer";
 
 export default function Rankings() {
+  const { t } = useTranslation('rankings');
   const isMobile = useIsMobile();
   const { selectedSeason, phases } = useSeasonContext();
   const { leagueId } = useLeague();
@@ -45,10 +47,10 @@ export default function Rankings() {
       <Tabs defaultValue="standings" className="space-y-2">
           <div className="flex items-center justify-between gap-4">
             <TabsList className="flex w-full gap-1">
-              <TabsTrigger value="standings">Managers</TabsTrigger>
-              <TabsTrigger value="riders">Top Coureurs</TabsTrigger>
-              <TabsTrigger value="timeline">Chrono</TabsTrigger>
-              <TabsTrigger value="comparison">Comparaison</TabsTrigger>
+              <TabsTrigger value="standings">{t('tabs.managers')}</TabsTrigger>
+              <TabsTrigger value="riders">{t('tabs.topRiders')}</TabsTrigger>
+              <TabsTrigger value="timeline">{t('tabs.timeline')}</TabsTrigger>
+              <TabsTrigger value="comparison">{t('tabs.comparison')}</TabsTrigger>
             </TabsList>
             
             <Select 
@@ -56,13 +58,13 @@ export default function Rankings() {
               onValueChange={(v) => setSelectedPhase(v === "all" ? null : v)}
             >
               <SelectTrigger className="w-40 shrink-0">
-                <SelectValue placeholder="Global" />
+                <SelectValue placeholder={t('phase.global')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Global</SelectItem>
+                <SelectItem value="all">{t('phase.global')}</SelectItem>
                 {phases?.map((phase) => (
                   <SelectItem key={phase.id} value={phase.id}>
-                    P{phase.index_dans_saison}{phase.statut === 'active' ? ' ✓' : ''}
+                    P{phase.index_dans_saison}{phase.statut === 'active' ? ` ${t('phase.active')}` : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -99,7 +101,7 @@ export default function Rankings() {
         <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
           <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
             <SheetHeader>
-              <SheetTitle>Détails Manager</SheetTitle>
+              <SheetTitle>{t('standings.managerDetails')}</SheetTitle>
             </SheetHeader>
             <div className="mt-6">
               {selectedManager && <ManagerBreakdown managerId={selectedManager} phaseId={selectedPhase} />}

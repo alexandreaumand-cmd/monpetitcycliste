@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ManagerPrestigeIcons } from "./ManagerPrestigeIcons";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useLeagueStandingsBySeason, useLeagueStandingsByPhase } from "@/hooks/useLeagueStandings";
+import { useTranslation } from "react-i18next";
 
 type StandingsProps = {
   phaseId?: string | null;
@@ -51,6 +52,7 @@ const ManagerNameWithJersey = ({ managerId, managerName }: { managerId: string; 
 // Note: enrichWithManagerNames removed - now handled directly by views
 
 export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) => {
+  const { t } = useTranslation('rankings');
   const { selectedSeason, activePhase } = useSeasonContext();
   const { leagueId, isLoading: leagueLoading } = useLeague();
   const leagueClient = useLeagueClient();
@@ -165,14 +167,14 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
         <Table>
         <TableHeader>
           <TableRow className="border-b-2 border-[#FFD500]">
-            <TableHead className="w-16 font-bold">Rang</TableHead>
-            <TableHead className="font-bold">Manager</TableHead>
-            <TableHead className="text-right font-bold">Points</TableHead>
-            <TableHead className="text-right font-bold">Bonus</TableHead>
-            <TableHead className="text-right font-bold">Scoreurs</TableHead>
-            <TableHead className="text-right font-bold">Victoires</TableHead>
-            <TableHead className="text-right font-bold">Écart</TableHead>
-            {previousGlobalStandings && <TableHead className="w-24 text-center font-bold">Évolution</TableHead>}
+            <TableHead className="w-16 font-bold">{t('standings.rank')}</TableHead>
+            <TableHead className="font-bold">{t('standings.manager')}</TableHead>
+            <TableHead className="text-right font-bold">{t('standings.points')}</TableHead>
+            <TableHead className="text-right font-bold">{t('standings.bonus')}</TableHead>
+            <TableHead className="text-right font-bold">{t('standings.scorers')}</TableHead>
+            <TableHead className="text-right font-bold">{t('standings.victories')}</TableHead>
+            <TableHead className="text-right font-bold">{t('standings.gap')}</TableHead>
+            {previousGlobalStandings && <TableHead className="w-24 text-center font-bold">{t('standings.evolution')}</TableHead>}
           </TableRow>
         </TableHeader>
           <TableBody>
@@ -276,7 +278,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
                             </Badge>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p className="text-xs">Cliquer pour voir le détail</p>
+                            <p className="text-xs">{t('standings.clickForDetails')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -336,7 +338,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
         </Table>
         {!standings || standings.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
-            Aucun classement disponible
+            {t('standings.noStandings')}
           </div>
         )}
       </CardContent>

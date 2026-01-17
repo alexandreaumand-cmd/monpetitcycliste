@@ -24,10 +24,12 @@ import { ManagerComparisonMobile } from "@/components/rankings/ManagerComparison
 import { ManagerPrestigeIcons } from "@/components/rankings/ManagerPrestigeIcons";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 type TabView = "standings" | "riders" | "timeline" | "comparison";
 
 export const RankingsMobile = () => {
+  const { t } = useTranslation('rankings');
   const { selectedSeason, phases, activePhase } = useSeasonContext();
   const { leagueId } = useLeague();
   const navigate = useNavigate();
@@ -184,7 +186,7 @@ export const RankingsMobile = () => {
   const topRiders = filteredTopRiders?.slice(0, ridersDisplayLimit);
 
   const phaseChips = [
-    { label: "Global", value: "null" },
+    { label: t('phase.global'), value: "null" },
     ...(phases?.map(p => ({
       label: `Phase ${p.index_dans_saison}`,
       value: p.id,
@@ -192,10 +194,10 @@ export const RankingsMobile = () => {
   ];
 
   const tabChips = [
-    { label: "Managers", value: "standings" as TabView },
-    { label: "Coureurs", value: "riders" as TabView },
-    { label: "Chrono", value: "timeline" as TabView },
-    { label: "Comparaison", value: "comparison" as TabView },
+    { label: t('tabs.managers'), value: "standings" as TabView },
+    { label: t('tabs.topRiders'), value: "riders" as TabView },
+    { label: t('tabs.timeline'), value: "timeline" as TabView },
+    { label: t('tabs.comparison'), value: "comparison" as TabView },
   ];
 
   const getRankBadge = (rank: number) => {
@@ -281,13 +283,13 @@ export const RankingsMobile = () => {
           onValueChange={(value) => setSelectedPhase(value === "null" ? null : value)}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Global" />
+            <SelectValue placeholder={t('phase.global')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="null">Global</SelectItem>
+            <SelectItem value="null">{t('phase.global')}</SelectItem>
             {phases?.map((phase) => (
               <SelectItem key={phase.id} value={phase.id}>
-                Phase {phase.index_dans_saison}{phase.statut === 'active' ? ' ✓' : ''}
+                Phase {phase.index_dans_saison}{phase.statut === 'active' ? ` ${t('phase.active')}` : ''}
               </SelectItem>
             ))}
           </SelectContent>
@@ -390,7 +392,7 @@ export const RankingsMobile = () => {
                         {/* Evolution badge */}
                         {evolutionBadge && (
                           <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground text-xs">Évolution:</span>
+                            <span className="text-muted-foreground text-xs">{t('mobile.evolution')}:</span>
                             {evolutionBadge}
                           </div>
                         )}
@@ -398,19 +400,19 @@ export const RankingsMobile = () => {
                         {/* Statistics grid */}
                         <div className="grid grid-cols-2 gap-3 text-xs">
                           <div className="flex flex-col gap-1">
-                            <span className="text-muted-foreground">Position</span>
+                            <span className="text-muted-foreground">{t('mobile.position')}</span>
                             <span className="font-semibold">{getRankLabel(rank)}</span>
                           </div>
                           <div className="flex flex-col gap-1">
-                            <span className="text-muted-foreground">% du total</span>
+                            <span className="text-muted-foreground">{t('mobile.totalPercent')}</span>
                             <span className="font-semibold">{percentage}%</span>
                           </div>
                           <div className="flex flex-col gap-1">
-                            <span className="text-muted-foreground">Scoreurs</span>
+                            <span className="text-muted-foreground">{t('mobile.scorers')}</span>
                             <span className="font-semibold">{standing.nb_scoreurs ?? 0}</span>
                           </div>
                           <div className="flex flex-col gap-1">
-                            <span className="text-muted-foreground">Victoires</span>
+                            <span className="text-muted-foreground">{t('mobile.victories')}</span>
                             <span className="font-semibold">{standing.nb_victoires ?? 0}</span>
                           </div>
                         </div>
@@ -427,7 +429,7 @@ export const RankingsMobile = () => {
                             setFullDetailsOpen(true);
                           }}
                         >
-                          Voir le détail complet
+                          {t('mobile.viewFullDetails')}
                         </Button>
                       </div>
                     }
@@ -437,8 +439,8 @@ export const RankingsMobile = () => {
             ) : (
               <MobileEmptyState
                 icon={<Trophy className="h-12 w-12" />}
-                title="Aucun classement"
-                description="Les classements apparaîtront ici une fois les courses terminées"
+                title={t('mobile.noStandings')}
+                description={t('mobile.standingsDescription')}
               />
             )}
           </div>
@@ -448,7 +450,7 @@ export const RankingsMobile = () => {
           <div className="space-y-3 pb-4">
             <div className="space-y-3 mb-4">
               <Input
-                placeholder="Rechercher un coureur ou une équipe..."
+                placeholder={t('topRiders.searchPlaceholder')}
                 value={riderSearchTerm}
                 onChange={(e) => setRiderSearchTerm(e.target.value)}
                 className="h-10"
@@ -460,7 +462,7 @@ export const RankingsMobile = () => {
                   onCheckedChange={setHideRidersWithoutManagers}
                 />
                 <Label htmlFor="hide-no-managers-mobile" className="text-sm cursor-pointer">
-                  Masquer les coureurs sans manager
+                  {t('topRiders.hideWithoutManagerMobile')}
                 </Label>
               </div>
             </div>
@@ -472,14 +474,14 @@ export const RankingsMobile = () => {
             ) : !allTopRiders || allTopRiders.length === 0 ? (
               <MobileEmptyState
                 icon={<User className="h-12 w-12" />}
-                title="Aucun coureur"
-                description="Les meilleurs coureurs apparaîtront ici"
+                title={t('mobile.noRiders')}
+                description={t('mobile.ridersDescription')}
               />
             ) : !topRiders || topRiders.length === 0 ? (
               <MobileEmptyState
                 icon={<User className="h-12 w-12" />}
-                title="Aucun résultat"
-                description="Aucun coureur ne correspond à votre recherche"
+                title={t('mobile.noResults')}
+                description={t('mobile.noResultsDescription')}
               />
             ) : (
               <>
@@ -490,7 +492,7 @@ export const RankingsMobile = () => {
                     <MobileCard
                       key={rider.coureur_id}
                       title={rider.coureur_nom}
-                      subtitle={rider.coureur_equipe || "Équipe inconnue"}
+                      subtitle={rider.coureur_equipe || t('topRiders.unknownTeam')}
                       meta={`${rider.courses_count || 0} courses`}
                       onClick={() => handleRiderClick(rider)}
                       avatar={
@@ -516,7 +518,7 @@ export const RankingsMobile = () => {
                       onClick={() => setRidersDisplayLimit(prev => Math.min(prev + 20, filteredTopRiders!.length))}
                       className="w-full"
                     >
-                      Charger 20 de plus ({filteredTopRiders!.length - ridersDisplayLimit} restants)
+                      {t('topRiders.loadMore', { remaining: filteredTopRiders!.length - ridersDisplayLimit })}
                     </Button>
                     {ridersDisplayLimit >= 40 && (
                       <Button
@@ -524,7 +526,7 @@ export const RankingsMobile = () => {
                         onClick={() => setRidersDisplayLimit(filteredTopRiders!.length)}
                         className="w-full"
                       >
-                        Voir tous ({filteredTopRiders!.length})
+                        {t('topRiders.viewAll', { total: filteredTopRiders!.length })}
                       </Button>
                     )}
                   </div>
@@ -552,8 +554,8 @@ export const RankingsMobile = () => {
       <MobileBottomSheet
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
-        title="Détails Manager"
-        description="Historique des points par course"
+        title={t('standings.managerDetails')}
+        description={t('standings.pointsHistory')}
       >
         {selectedManager && (
           <ManagerBreakdown managerId={selectedManager} phaseId={selectedPhase} />
@@ -580,7 +582,7 @@ export const RankingsMobile = () => {
           setFullDetailsOpen(open);
           if (!open) setFullDetailsManagerId(null);
         }}
-        title="Détail complet"
+        title={t('mobile.fullDetails')}
         className="h-[95vh]"
       >
         {fullDetailsManagerId && (
