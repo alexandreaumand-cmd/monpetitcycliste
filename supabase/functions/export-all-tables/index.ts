@@ -1,6 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
-import { corsHeaders } from '../_shared/cors.ts';
 import JSZip from 'https://esm.sh/jszip@3.10.1';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 // All 44 public tables to export
 const TABLES = [
@@ -120,8 +124,8 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
     // Authenticate user
     const authHeader = req.headers.get('Authorization');
@@ -132,20 +136,34 @@ Deno.serve(async (req) => {
       });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // Create client with user's token for auth verification
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
 
     if (authError || !user) {
+      console.error('Auth error:', authError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Check if user is superadmin
-    const { data: isSuperAdmin, error: roleError } = await supabase.rpc('is_superadmin');
+    // Check if user is superadmin using user's context
+    const { data: isSuperAdmin, error: roleError } = await userClient.rpc('is_superadmin');
     
-    if (roleError || !isSuperAdmin) {
+    if (roleError) {
+      console.error('Role check error:', roleError);
+      return new Response(JSON.stringify({ error: 'Failed to verify permissions' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!isSuperAdmin) {
+      console.error('User is not superadmin');
       return new Response(JSON.stringify({ error: 'Forbidden - Superadmin access required' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -153,6 +171,9 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Starting full database export for user ${user.id}`);
+    
+    // Create service role client for exporting all data (bypasses RLS)
+    const serviceClient = createClient(supabaseUrl, serviceRoleKey);
     
     // Create ZIP file
     const zip = new JSZip();
@@ -163,7 +184,7 @@ Deno.serve(async (req) => {
     for (const tableName of TABLES) {
       try {
         console.log(`Exporting table: ${tableName}`);
-        const { data, count } = await fetchAllRows(supabase, tableName);
+        const { data, count } = await fetchAllRows(serviceClient, tableName);
         
         if (data.length > 0) {
           const csv = arrayToCSV(data);
