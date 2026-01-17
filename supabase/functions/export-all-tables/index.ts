@@ -218,11 +218,11 @@ Deno.serve(async (req) => {
       tables: metadata
     }, null, 2));
     
-    // Generate ZIP
-    const zipContent = await zip.generateAsync({ 
+    // Generate ZIP (STORE = no compression to avoid CPU limits)
+    const zipContent = await zip.generateAsync({
       type: 'uint8array',
-      compression: 'DEFLATE',
-      compressionOptions: { level: 6 }
+      compression: 'STORE',
+      streamFiles: true,
     });
     
     const totalRows = Object.values(metadata).reduce((sum, t) => sum + (t.rows > 0 ? t.rows : 0), 0);
