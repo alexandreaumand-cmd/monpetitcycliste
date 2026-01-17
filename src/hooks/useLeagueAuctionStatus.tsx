@@ -10,7 +10,6 @@ interface AuctionStatus {
   deadlineAt: string;
   isScheduled?: boolean;
   isAnnouncementsPending?: boolean;
-  isHistoryMode?: boolean;
 }
 
 export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean = true) {
@@ -127,7 +126,6 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
           .eq('published', false);
 
         if (count && count > 0) {
-          // Annonces en attente de publication
           return {
             auctionId: closedAuction.id,
             phaseId: closedAuction.phase_id,
@@ -136,17 +134,6 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
             totalManagers: 0,
             deadlineAt: closedAuction.closed_at || new Date().toISOString(),
             isAnnouncementsPending: true,
-          };
-        } else {
-          // Toutes les annonces sont publiées -> mode historique
-          return {
-            auctionId: closedAuction.id,
-            phaseId: closedAuction.phase_id,
-            roundNumber: closedAuction.round_number,
-            validatedCount: 0,
-            totalManagers: 0,
-            deadlineAt: closedAuction.closed_at || new Date().toISOString(),
-            isHistoryMode: true,
           };
         }
       }
@@ -179,39 +166,6 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
           deadlineAt: scheduledAuction.opens_at, // Utilisé pour le countdown
           isScheduled: true,
         };
-      }
-
-      // 4. Si aucune enchère active, chercher la dernière phase avec enchères terminées
-      // D'abord, chercher la dernière enchère closed (toutes annonces publiées) pour cette ligue
-      const { data: lastClosedAuction } = await supabase
-        .from('auctions')
-        .select('id, phase_id, round_number, closed_at')
-        .eq('league_id', leagueId)
-        .eq('statut', 'closed')
-        .order('closed_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (lastClosedAuction?.phase_id) {
-        // Vérifier que toutes les annonces sont publiées
-        const { count: unpublishedCount } = await supabase
-          .from('annonces')
-          .select('*', { count: 'exact', head: true })
-          .eq('auction_id', lastClosedAuction.id)
-          .eq('published', false);
-
-        // Si toutes les annonces sont publiées, afficher l'historique
-        if (!unpublishedCount || unpublishedCount === 0) {
-          return {
-            auctionId: lastClosedAuction.id,
-            phaseId: lastClosedAuction.phase_id,
-            roundNumber: lastClosedAuction.round_number,
-            validatedCount: 0,
-            totalManagers: 0,
-            deadlineAt: lastClosedAuction.closed_at || new Date().toISOString(),
-            isHistoryMode: true,
-          };
-        }
       }
 
       return null;
