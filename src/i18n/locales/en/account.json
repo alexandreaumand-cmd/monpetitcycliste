@@ -1,0 +1,33 @@
+{
+  "title": "My Account",
+  "backToDashboard": "Back to dashboard",
+  "profile": {
+    "title": "Profile",
+    "description": "Manage your personal information",
+    "email": "Email",
+    "managerName": "Manager Name",
+    "sponsor": "Sponsor",
+    "sponsorPlaceholder": "Your sponsor name",
+    "updating": "Updating...",
+    "updateSuccess": "Profile updated successfully"
+  },
+  "security": {
+    "title": "Security",
+    "description": "Manage your password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password",
+    "changePassword": "Change Password",
+    "changing": "Changing...",
+    "passwordMismatch": "Passwords do not match",
+    "passwordChanged": "Password changed successfully"
+  },
+  "customization": {
+    "title": "Customization",
+    "description": "Customize your experience",
+    "comingSoon": "Coming soon"
+  },
+  "buttons": {
+    "updateProfile": "Update Profile",
+    "uploadPhoto": "Change Photo"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "title": "Results",
+  "search": {
+    "placeholder": "Search..."
+  },
+  "phase": {
+    "global": "Global",
+    "select": "Select a phase"
+  },
+  "empty": {
+    "title": "No results found",
+    "description": "Try adjusting your filters",
+    "reset": "Reset"
+  },
+  "loadMore": "Load more",
+  "podium": {
+    "managers": "Manager podium"
+  },
+  "tabs": {
+    "managers": "Managers",
+    "riders": "Riders"
+  }
+}

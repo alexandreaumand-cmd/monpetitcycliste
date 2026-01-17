@@ -1,0 +1,28 @@
+{
+  "bottomBar": {
+    "rankings": "Rankings",
+    "teams": "Teams",
+    "startlist": "Startlist",
+    "results": "Results",
+    "courses": "Courses"
+  },
+  "menu": {
+    "openMenu": "Open menu"
+  },
+  "dropdown": {
+    "myAccount": "My Account",
+    "settings": "Settings",
+    "signOut": "Sign Out"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "empty": "No notifications",
+    "viewAll": "View all notifications"
+  },
+  "header": {
+    "calendar": "Calendar",
+    "data": "Data",
+    "superAdmin": "Super Admin"
+  }
+}

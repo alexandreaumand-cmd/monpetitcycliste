@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { Loader2, User, Lock, Palette } from "lucide-react";
 import { AvatarUploader } from "@/components/account/AvatarUploader";
 
 export default function AccountPage() {
+  const { t } = useTranslation('account');
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -47,7 +49,7 @@ export default function AccountPage() {
       }
     } catch (error) {
       console.error("Error loading user data:", error);
-      toast.error("Erreur lors du chargement des données");
+      toast.error(t('profile.updateSuccess'));
     } finally {
       setLoading(false);
     }
@@ -68,11 +70,11 @@ export default function AccountPage() {
 
       if (error) throw error;
 
-      toast.success("Profil mis à jour avec succès");
+      toast.success(t('profile.updateSuccess'));
       loadUserData();
     } catch (error) {
       console.error("Error updating profile:", error);
-      toast.error("Erreur lors de la mise à jour du profil");
+      toast.error(t('profile.updateSuccess'));
     } finally {
       setUpdating(false);
     }
@@ -80,12 +82,12 @@ export default function AccountPage() {
 
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
-      toast.error("Les mots de passe ne correspondent pas");
+      toast.error(t('security.passwordMismatch'));
       return;
     }
 
     if (newPassword.length < 6) {
-      toast.error("Le mot de passe doit contenir au moins 6 caractères");
+      toast.error(t('security.passwordMismatch'));
       return;
     }
 
@@ -97,13 +99,13 @@ export default function AccountPage() {
 
       if (error) throw error;
 
-      toast.success("Mot de passe modifié avec succès");
+      toast.success(t('security.passwordChanged'));
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (error) {
       console.error("Error changing password:", error);
-      toast.error("Erreur lors du changement de mot de passe");
+      toast.error(t('security.passwordChanged'));
     } finally {
       setUpdating(false);
     }
@@ -121,17 +123,17 @@ export default function AccountPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-6">Mon Compte</h1>
+      <h1 className="text-3xl font-bold mb-6">{t('title')}</h1>
       
       {/* Section Profil */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            Profil
+            {t('profile.title')}
           </CardTitle>
           <CardDescription>
-            Gérez vos informations personnelles
+            {t('profile.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -145,7 +147,7 @@ export default function AccountPage() {
 
           {/* Email (read-only) */}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('profile.email')}</Label>
             <Input
               id="email"
               type="email"
@@ -153,30 +155,27 @@ export default function AccountPage() {
               disabled
               className="bg-muted"
             />
-            <p className="text-xs text-muted-foreground">
-              L'email ne peut pas être modifié pour le moment
-            </p>
           </div>
 
           {/* Nom du manager */}
           <div className="space-y-2">
-            <Label htmlFor="nom_manager">Nom du manager</Label>
+            <Label htmlFor="nom_manager">{t('profile.managerName')}</Label>
             <Input
               id="nom_manager"
               value={nomManager}
               onChange={(e) => setNomManager(e.target.value)}
-              placeholder="Votre nom de manager"
+              placeholder={t('profile.managerName')}
             />
           </div>
 
           {/* Sponsor */}
           <div className="space-y-2">
-            <Label htmlFor="sponsor">Sponsor</Label>
+            <Label htmlFor="sponsor">{t('profile.sponsor')}</Label>
             <Input
               id="sponsor"
               value={sponsor}
               onChange={(e) => setSponsor(e.target.value)}
-              placeholder="Nom de votre sponsor"
+              placeholder={t('profile.sponsorPlaceholder')}
             />
           </div>
 
@@ -188,10 +187,10 @@ export default function AccountPage() {
             {updating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Mise à jour...
+                {t('profile.updating')}
               </>
             ) : (
-              "Mettre à jour le profil"
+              t('buttons.updateProfile')
             )}
           </Button>
         </CardContent>
@@ -202,32 +201,32 @@ export default function AccountPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />
-            Sécurité
+            {t('security.title')}
           </CardTitle>
           <CardDescription>
-            Modifiez votre mot de passe
+            {t('security.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="new_password">Nouveau mot de passe</Label>
+            <Label htmlFor="new_password">{t('security.newPassword')}</Label>
             <Input
               id="new_password"
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Entrez votre nouveau mot de passe"
+              placeholder={t('security.newPassword')}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirm_password">Confirmer le mot de passe</Label>
+            <Label htmlFor="confirm_password">{t('security.confirmPassword')}</Label>
             <Input
               id="confirm_password"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirmez votre nouveau mot de passe"
+              placeholder={t('security.confirmPassword')}
             />
           </div>
 
@@ -239,10 +238,10 @@ export default function AccountPage() {
             {updating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Modification...
+                {t('security.changing')}
               </>
             ) : (
-              "Changer le mot de passe"
+              t('security.changePassword')
             )}
           </Button>
         </CardContent>
@@ -253,21 +252,21 @@ export default function AccountPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Palette className="h-5 w-5" />
-            Personnalisation
+            {t('customization.title')}
           </CardTitle>
           <CardDescription>
-            Personnalisez l'apparence de votre équipe
+            {t('customization.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Photo d'équipe</Label>
+            <Label>{t('buttons.uploadPhoto')}</Label>
             <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
               <p className="text-sm text-muted-foreground mb-2">
-                Fonctionnalité bientôt disponible
+                {t('customization.comingSoon')}
               </p>
               <Button variant="outline" size="sm" disabled>
-                Télécharger une photo
+                {t('buttons.uploadPhoto')}
               </Button>
             </div>
           </div>

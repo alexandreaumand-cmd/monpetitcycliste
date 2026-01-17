@@ -1,0 +1,33 @@
+{
+  "title": "Mon Compte",
+  "backToDashboard": "Retour au dashboard",
+  "profile": {
+    "title": "Profil",
+    "description": "Gérez vos informations personnelles",
+    "email": "Email",
+    "managerName": "Nom du manager",
+    "sponsor": "Sponsor",
+    "sponsorPlaceholder": "Nom de votre sponsor",
+    "updating": "Mise à jour...",
+    "updateSuccess": "Profil mis à jour avec succès"
+  },
+  "security": {
+    "title": "Sécurité",
+    "description": "Gérez votre mot de passe",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "changePassword": "Changer le mot de passe",
+    "changing": "Modification...",
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "passwordChanged": "Mot de passe changé avec succès"
+  },
+  "customization": {
+    "title": "Personnalisation",
+    "description": "Personnalisez votre expérience",
+    "comingSoon": "Bientôt disponible"
+  },
+  "buttons": {
+    "updateProfile": "Mettre à jour le profil",
+    "uploadPhoto": "Changer la photo"
+  }
+}

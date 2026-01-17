@@ -1,5 +1,6 @@
 import { User, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,7 @@ interface ManagerDropdownProps {
 }
 
 export function ManagerDropdown({ manager, isAdmin, onSignOut, avatarUrl, compact = false }: ManagerDropdownProps) {
+  const { t } = useTranslation('navigation');
   const navigate = useNavigate();
   const initials = manager.nom?.substring(0, 2).toUpperCase() || "?";
   
@@ -51,16 +53,16 @@ export function ManagerDropdown({ manager, isAdmin, onSignOut, avatarUrl, compac
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56 bg-popover z-50">
-        <DropdownMenuLabel>Mon Compte</DropdownMenuLabel>
+        <DropdownMenuLabel>{t('dropdown.myAccount')}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate('/dashboard/compte')}>
           <User className="mr-2 h-4 w-4" />
-          <span>Paramètres du compte</span>
+          <span>{t('dropdown.settings')}</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onSignOut} className="text-destructive">
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Se déconnecter</span>
+          <span>{t('dropdown.signOut')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

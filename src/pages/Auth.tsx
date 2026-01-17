@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import mpcLogo from "@/assets/mpc-logo.png";
 
 const Auth = () => {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -71,8 +73,8 @@ const Auth = () => {
             if (error) {
               console.error('Join league error:', error);
               toast({
-                title: "Erreur",
-                description: "Impossible de rejoindre la ligue automatiquement. Redirection...",
+                title: t('errors.generic'),
+                description: t('errors.generic'),
                 variant: "destructive",
               });
               navigate(`/invite?token=${inviteToken}`);
@@ -81,8 +83,8 @@ const Auth = () => {
 
             if (data?.ok) {
               toast({
-                title: "Bienvenue !",
-                description: `Vous avez rejoint la ligue "${data.league_name}"`,
+                title: t('messages.loginSuccess'),
+                description: `${t('messages.loginSuccess')} "${data.league_name}"`,
               });
               navigate(`/?leagueId=${data.league_id}`);
               return;
@@ -94,8 +96,8 @@ const Auth = () => {
           } catch (err) {
             console.error('Auto-join exception:', err);
             toast({
-              title: "Erreur",
-              description: "Une erreur est survenue. Veuillez réessayer.",
+              title: t('errors.generic'),
+              description: t('errors.generic'),
               variant: "destructive",
             });
             navigate(`/invite?token=${inviteToken}`);
@@ -107,7 +109,7 @@ const Auth = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, nextUrl, inviteToken]);
+  }, [navigate, nextUrl, inviteToken, t]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,19 +137,15 @@ const Auth = () => {
           });
 
         if (managerError) throw managerError;
-
-        const message = inviteToken 
-          ? "Compte créé ! Vous rejoignez maintenant la ligue..."
-          : "Inscription réussie ! Vous pouvez maintenant vous connecter.";
         
         toast({
-          title: "Inscription réussie !",
-          description: message,
+          title: t('messages.registerSuccess'),
+          description: t('messages.registerSuccess'),
         });
       }
     } catch (error: any) {
       toast({
-        title: "Erreur",
+        title: t('errors.generic'),
         description: error.message,
         variant: "destructive",
       });
@@ -169,7 +167,7 @@ const Auth = () => {
       if (error) throw error;
     } catch (error: any) {
       toast({
-        title: "Erreur de connexion",
+        title: t('errors.invalidCredentials'),
         description: error.message,
         variant: "destructive",
       });
@@ -187,38 +185,38 @@ const Auth = () => {
           </div>
           {inviteToken ? (
             <CardDescription className="text-primary font-medium">
-              🎉 Vous êtes invité à rejoindre une ligue !
+              🎉 {t('messages.inviteWelcome')}
               <br />
-              <span className="text-sm text-muted-foreground">Créez un compte ou connectez-vous pour continuer</span>
+              <span className="text-sm text-muted-foreground">{t('messages.createAccountAndJoin')}</span>
             </CardDescription>
           ) : (
             <CardDescription>
-              Connectez-vous pour gérer votre équipe
+              {t('messages.loginSuccess')}
             </CardDescription>
           )}
         </CardHeader>
         <CardContent>
           <Tabs defaultValue={defaultTab || (inviteToken ? "signup" : "signin")} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Connexion</TabsTrigger>
-              <TabsTrigger value="signup">Inscription</TabsTrigger>
+              <TabsTrigger value="signin">{t('tabs.signin')}</TabsTrigger>
+              <TabsTrigger value="signup">{t('tabs.signup')}</TabsTrigger>
             </TabsList>
             
             <TabsContent value="signin">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
+                  <Label htmlFor="signin-email">{t('labels.email')}</Label>
                   <Input
                     id="signin-email"
                     type="email"
-                    placeholder="votre@email.com"
+                    placeholder={t('placeholders.email')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signin-password">Mot de passe</Label>
+                  <Label htmlFor="signin-password">{t('labels.password')}</Label>
                   <Input
                     id="signin-password"
                     type="password"
@@ -233,7 +231,7 @@ const Auth = () => {
                   disabled={loading}
                 >
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Se Connecter
+                  {loading ? t('buttons.loggingIn') : t('buttons.login')}
                 </Button>
               </form>
             </TabsContent>
@@ -241,39 +239,39 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-nom">Nom du Manager</Label>
+                  <Label htmlFor="signup-nom">{t('labels.managerName')}</Label>
                   <Input
                     id="signup-nom"
                     type="text"
-                    placeholder="Votre nom"
+                    placeholder={t('placeholders.managerName')}
                     value={nom}
                     onChange={(e) => setNom(e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-sponsor">Sponsor (optionnel)</Label>
+                  <Label htmlFor="signup-sponsor">{t('labels.sponsor')}</Label>
                   <Input
                     id="signup-sponsor"
                     type="text"
-                    placeholder="Nom du sponsor"
+                    placeholder={t('placeholders.sponsor')}
                     value={sponsor}
                     onChange={(e) => setSponsor(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email">{t('labels.email')}</Label>
                   <Input
                     id="signup-email"
                     type="email"
-                    placeholder="votre@email.com"
+                    placeholder={t('placeholders.email')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Mot de passe</Label>
+                  <Label htmlFor="signup-password">{t('labels.password')}</Label>
                   <Input
                     id="signup-password"
                     type="password"
@@ -289,7 +287,7 @@ const Auth = () => {
                   disabled={loading}
                 >
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  S'inscrire
+                  {loading ? t('buttons.registering') : t('buttons.register')}
                 </Button>
               </form>
             </TabsContent>

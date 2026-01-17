@@ -1,0 +1,13 @@
+{
+  "notFound": {
+    "title": "404",
+    "subtitle": "Oups ! Page non trouvée",
+    "message": "La page que vous recherchez n'existe pas ou a été déplacée.",
+    "backHome": "Retour à l'accueil"
+  },
+  "generic": {
+    "error": "Une erreur est survenue",
+    "tryAgain": "Réessayer",
+    "loading": "Chargement..."
+  }
+}
