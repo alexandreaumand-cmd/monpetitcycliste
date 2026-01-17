@@ -594,7 +594,7 @@ export const MyTeamDesktop = () => {
               {/* Scorers */}
               <div className="text-center">
                 <TrendingUp className="h-5 w-5 mx-auto text-green-600 mb-1" />
-                <div className="text-2xl font-bold">{kpis.scorers_count}/{coureurs.length}</div>
+                <div className="text-2xl font-bold">{kpis.scorers_count}</div>
                 <div className="text-xs text-muted-foreground">Scoreurs</div>
               </div>
               

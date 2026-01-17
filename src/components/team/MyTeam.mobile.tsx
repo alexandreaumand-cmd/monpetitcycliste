@@ -414,7 +414,7 @@ export const MyTeamMobile = () => {
         items={[
           { label: "Points", value: kpis.total_points, icon: <Trophy className="h-4 w-4" /> },
           { label: "Bonus", value: kpis.bonus_points, icon: <Star className="h-4 w-4" />, onClick: () => setBonusDetailsOpen(true) },
-          { label: "Scoreurs", value: `${kpis.scorers_count}/${coureurs.length}`, icon: <TrendingUp className="h-4 w-4" /> },
+          { label: "Scoreurs", value: kpis.scorers_count, icon: <TrendingUp className="h-4 w-4" /> },
         ]}
       />
 
