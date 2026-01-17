@@ -1,0 +1,31 @@
+{
+  "title": "Tableau de bord",
+  "welcome": "Bienvenue",
+  "overview": "Vue d'ensemble",
+  "recentActivity": "Activité récente",
+  "upcomingRaces": "Prochaines courses",
+  "standings": {
+    "title": "Classement",
+    "position": "Position",
+    "manager": "Manager",
+    "points": "Points",
+    "yourPosition": "Votre position"
+  },
+  "stats": {
+    "totalPoints": "Points totaux",
+    "riderCount": "Nombre de coureurs",
+    "budgetRemaining": "Budget restant",
+    "rank": "Classement"
+  },
+  "phase": {
+    "current": "Phase actuelle",
+    "upcoming": "Phase à venir",
+    "completed": "Phase terminée"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "noNotifications": "Aucune notification",
+    "viewAll": "Voir toutes les notifications"
+  }
+}

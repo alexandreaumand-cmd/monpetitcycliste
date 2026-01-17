@@ -1,0 +1,45 @@
+{
+  "title": "Auctions",
+  "currentAuction": "Current Auction",
+  "nextAuction": "Next Auction",
+  "noActiveAuction": "No active auction",
+  "round": "Round",
+  "deadline": "Deadline",
+  "timeRemaining": "Time remaining",
+  "status": {
+    "open": "Open",
+    "closed": "Closed",
+    "pending": "Pending",
+    "processing": "Processing"
+  },
+  "bid": {
+    "title": "Bid",
+    "amount": "Amount",
+    "place": "Place a bid",
+    "update": "Update my bid",
+    "cancel": "Cancel my bid",
+    "current": "My current bid",
+    "minimum": "Minimum bid",
+    "maximum": "Maximum bid",
+    "success": "Bid placed successfully",
+    "error": "Error placing bid",
+    "confirm": "Confirm bid"
+  },
+  "rider": {
+    "available": "Available riders",
+    "selected": "Selected rider"
+  },
+  "results": {
+    "title": "Results",
+    "winner": "Winner",
+    "winningBid": "Winning bid",
+    "yourBid": "Your bid",
+    "won": "Won",
+    "lost": "Lost",
+    "noBids": "No bids"
+  },
+  "history": {
+    "title": "Auction History",
+    "noHistory": "No history"
+  }
+}

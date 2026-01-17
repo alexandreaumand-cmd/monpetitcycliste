@@ -1,0 +1,71 @@
+{
+  "loading": "Loading...",
+  "save": "Save",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "delete": "Delete",
+  "error": "Error",
+  "success": "Success",
+  "search": "Search",
+  "close": "Close",
+  "back": "Back",
+  "next": "Next",
+  "previous": "Previous",
+  "yes": "Yes",
+  "no": "No",
+  "or": "or",
+  "and": "and",
+  "all": "All",
+  "none": "None",
+  "noData": "No data",
+  "noResults": "No results",
+  "language": {
+    "fr": "Français",
+    "en": "English",
+    "select": "Language"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "myTeam": "My Team",
+    "auctions": "Auctions",
+    "riders": "Riders",
+    "races": "Races",
+    "standings": "Standings",
+    "results": "Results",
+    "admin": "Administration",
+    "settings": "Settings",
+    "logout": "Logout",
+    "login": "Login",
+    "signup": "Sign up"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "forgotPassword": "Forgot password?",
+    "resetPassword": "Reset password",
+    "loginButton": "Log in",
+    "signupButton": "Sign up",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "loginSuccess": "Successfully logged in",
+    "logoutSuccess": "Successfully logged out",
+    "signupSuccess": "Successfully signed up"
+  },
+  "errors": {
+    "generic": "An error occurred",
+    "network": "Connection error",
+    "unauthorized": "Unauthorized",
+    "notFound": "Not found",
+    "validation": "Validation error"
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow",
+    "days": "days",
+    "hours": "hours",
+    "minutes": "minutes",
+    "seconds": "seconds"
+  }
+}

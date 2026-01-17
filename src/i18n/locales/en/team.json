@@ -1,0 +1,37 @@
+{
+  "title": "My Team",
+  "roster": "Roster",
+  "budget": "Budget",
+  "budgetRemaining": "Remaining budget",
+  "riderCount": "Rider count",
+  "maxRiders": "Maximum riders",
+  "points": "Points",
+  "totalPoints": "Total points",
+  "bonusRider": {
+    "title": "Bonus Rider",
+    "select": "Select bonus rider",
+    "selected": "Bonus rider selected",
+    "description": "Select a rider to double their points this phase",
+    "eligible": "Eligible riders",
+    "noSelection": "No bonus rider selected",
+    "confirm": "Confirm selection"
+  },
+  "rider": {
+    "name": "Name",
+    "team": "Team",
+    "price": "Price",
+    "purchasePrice": "Purchase price",
+    "initialPrice": "Initial rating",
+    "points": "Points",
+    "status": "Status"
+  },
+  "empty": {
+    "title": "No riders",
+    "description": "Your team is empty. Participate in auctions to recruit riders."
+  },
+  "actions": {
+    "viewDetails": "View details",
+    "release": "Release",
+    "confirmRelease": "Confirm release"
+  }
+}
