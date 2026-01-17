@@ -41,5 +41,20 @@
   "history": {
     "title": "Auction History",
     "noHistory": "No history"
+  },
+  "stats": {
+    "title": "Battle Statistics",
+    "global": "Global",
+    "byRound": "By round",
+    "soloBids": "Solo",
+    "soloBidsDesc": "Alone bidding on a rider",
+    "battleLossRate": "Losses",
+    "battleLossDesc": "Lost when ≥2 managers",
+    "rivalries": "Rivalries",
+    "rivalriesDesc": "Battles between managers",
+    "battles": "battles",
+    "biggestRivalry": "Biggest rivalries",
+    "manager": "Manager",
+    "battlesCount": "Battles"
   }
 }
