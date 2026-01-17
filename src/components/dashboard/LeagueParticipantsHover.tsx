@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Users, Crown } from "lucide-react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,6 +19,7 @@ export function LeagueParticipantsHover({
   currentPlayerCount,
   isLoading 
 }: LeagueParticipantsHoverProps) {
+  const { t } = useTranslation('dashboard');
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -28,13 +30,13 @@ export function LeagueParticipantsHover({
       <div>
         <div className="flex items-center gap-2 mb-2">
           <Crown className="h-4 w-4 text-[#FFD500]" />
-          <h4 className="font-semibold text-sm">Administrateur</h4>
+          <h4 className="font-semibold text-sm">{t('leagueCard.participantsHover.administrator')}</h4>
         </div>
         {isLoading ? (
           <Skeleton className="h-6 w-full" />
         ) : (
           <p className="text-sm text-muted-foreground pl-6">
-            {ownerName || 'Inconnu'}
+            {ownerName || t('leagueCard.participantsHover.unknown')}
           </p>
         )}
       </div>
@@ -44,7 +46,7 @@ export function LeagueParticipantsHover({
         <div className="flex items-center gap-2 mb-2">
           <Users className="h-4 w-4 text-primary" />
           <h4 className="font-semibold text-sm">
-            Participants ({members.length})
+            {t('leagueCard.participantsHover.participants')} ({members.length})
           </h4>
         </div>
         {isLoading ? (
@@ -55,7 +57,7 @@ export function LeagueParticipantsHover({
           </div>
         ) : members.length === 0 ? (
           <p className="text-sm text-muted-foreground italic pl-6">
-            Aucun participant
+            {t('leagueCard.participantsHover.noParticipants')}
           </p>
         ) : (
           <ul className="space-y-1 pl-6">
@@ -84,7 +86,9 @@ export function LeagueParticipantsHover({
       onClick={onClick}
     >
       <Users className="h-3.5 w-3.5" />
-      {currentPlayerCount} {currentPlayerCount > 1 ? 'joueurs' : 'joueur'}
+      {currentPlayerCount} {currentPlayerCount > 1 
+        ? t('leagueCard.participantsHover.players') 
+        : t('leagueCard.participantsHover.player')}
     </span>
   );
 
@@ -96,7 +100,7 @@ export function LeagueParticipantsHover({
         <MobileBottomSheet
           open={sheetOpen}
           onOpenChange={setSheetOpen}
-          title="Participants de la ligue"
+          title={t('leagueCard.participantsHover.title')}
         >
           <ParticipantsContent />
         </MobileBottomSheet>
