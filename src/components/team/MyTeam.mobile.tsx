@@ -25,7 +25,7 @@ import {
   DollarSign,
   Shirt,
   Star,
-  Users,
+  Eye,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -468,7 +468,7 @@ export const MyTeamMobile = () => {
           onClick={() => setShowLeagueBonusDialog(true)}
           className={hasSelectedBonusRider || selectedManagerId ? "w-full gap-2" : "gap-2"}
         >
-          <Users className="h-4 w-4" />
+          <Eye className="h-4 w-4" />
           {t('bonusRider.viewOthers')}
         </Button>
       </div>
