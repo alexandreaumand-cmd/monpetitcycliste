@@ -1,4 +1,5 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useUserLeagues } from "@/hooks/useUserLeagues";
 import { QuickActions } from "@/components/dashboard/QuickActions";
@@ -15,6 +16,7 @@ interface DashboardHomeProps {
 }
 
 export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps) {
+  const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   const { setLeagueId } = useLeague();
   const { leagues, isLoading } = useUserLeagues();
@@ -55,7 +57,7 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-[#FFD500]" />
-            <h2 className="text-2xl font-montserrat font-semibold">Mes Ligues</h2>
+            <h2 className="text-2xl font-montserrat font-semibold">{t('myLeagues.title')}</h2>
           </div>
 
           {isLoading ? (
@@ -67,9 +69,9 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
           ) : leagues.length === 0 ? (
             <div className="text-center py-12 border-2 border-dashed rounded-lg bg-card">
               <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Aucune ligue</h3>
+              <h3 className="text-lg font-semibold mb-2">{t('myLeagues.noLeagues')}</h3>
               <p className="text-muted-foreground mb-4">
-                Créez votre première ligue ou rejoignez-en une pour commencer
+                {t('myLeagues.noLeaguesDescription')}
               </p>
             </div>
           ) : (
