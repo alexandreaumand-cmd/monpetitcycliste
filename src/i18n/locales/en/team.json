@@ -58,7 +58,9 @@
     "points": "Points",
     "ratio": "Ratio",
     "price": "Price",
-    "rating": "Rating"
+    "rating": "Rating",
+    "rider": "Rider",
+    "team": "Team"
   },
   "empty": {
     "title": "No riders",
