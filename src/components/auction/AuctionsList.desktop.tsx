@@ -53,7 +53,20 @@ export const AuctionsList = ({ managerId }: AuctionsListProps) => {
     );
   }
 
-  // 4. Aucune enchère active → message vide
+  // 4. Mode historique → afficher l'historique de la dernière phase
+  if (auctionStatus?.isHistoryMode && auctionStatus.phaseId) {
+    return (
+      <AuctionPhaseHistoryView
+        phaseId={auctionStatus.phaseId}
+        managerId={managerId}
+        leagueId={leagueId}
+        budget={0}
+        maxRiders={0}
+      />
+    );
+  }
+
+  // 5. Aucune enchère active → message vide
   return (
     <Card>
       <CardHeader>
