@@ -647,7 +647,7 @@ export const MyTeamDesktop = () => {
                     onClick={() => handleSort('prix')}
                   >
                     <div className="flex items-center justify-end gap-1">
-                      💰 Prix
+                      Prix
                       {sortBy === 'prix' && (
                         sortDirection === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />
                       )}
