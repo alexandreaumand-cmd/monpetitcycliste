@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt, Star, ArrowUp, ArrowDown, Award, Eye } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt, Star, ArrowUp, ArrowDown, Award, Eye, Users } from "lucide-react";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -27,6 +27,7 @@ import {
 import { RiderPointsDetail } from "./RiderPointsDetail";
 import { RiderRaceIcons } from "./RiderRaceIcons";
 import { LeagueBonusRidersDialog } from "./LeagueBonusRidersDialog";
+import { LeagueRostersOverviewDialog } from "./LeagueRostersOverviewDialog";
 import { useQuery } from "@tanstack/react-query";
 
 import { useSeasonContext } from "@/contexts/SeasonContext";
@@ -108,6 +109,7 @@ export const MyTeamDesktop = () => {
   const [hasSelectedBonusRider, setHasSelectedBonusRider] = useState(false);
   const [showBonusRiderDialog, setShowBonusRiderDialog] = useState(false);
   const [showLeagueBonusDialog, setShowLeagueBonusDialog] = useState(false);
+  const [showRostersOverviewDialog, setShowRostersOverviewDialog] = useState(false);
   
   // Get manager sponsor for jersey display
   const displayedManagerId = selectedManagerId || currentUserId;
@@ -608,6 +610,14 @@ export const MyTeamDesktop = () => {
             >
               <Eye className="h-4 w-4" />
             </Button>
+            <Button
+              onClick={() => setShowRostersOverviewDialog(true)}
+              variant="outline"
+              size="sm"
+              title="Vue d'ensemble des effectifs"
+            >
+              <Users className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
@@ -886,6 +896,17 @@ export const MyTeamDesktop = () => {
         leagueId={leagueId}
         phaseId={selectedPhaseId}
       />
+
+      {/* League Rosters Overview Dialog */}
+      {selectedPhaseId && leagueId && (
+        <LeagueRostersOverviewDialog
+          open={showRostersOverviewDialog}
+          onOpenChange={setShowRostersOverviewDialog}
+          leagueId={leagueId}
+          phaseId={selectedPhaseId}
+          managers={managers}
+        />
+      )}
     </div>
   );
 };
