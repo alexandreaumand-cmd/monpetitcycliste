@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt, Star, ArrowUp, ArrowDown, Award } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt, Star, ArrowUp, ArrowDown, Award, Users } from "lucide-react";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { RiderPointsDetail } from "./RiderPointsDetail";
 import { RiderRaceIcons } from "./RiderRaceIcons";
+import { LeagueBonusRidersDialog } from "./LeagueBonusRidersDialog";
 import { useQuery } from "@tanstack/react-query";
 
 import { useSeasonContext } from "@/contexts/SeasonContext";
@@ -106,6 +107,7 @@ export const MyTeamDesktop = () => {
   const [bonusRiderSelection, setBonusRiderSelection] = useState<{ coureur_id: string; coureur_nom: string } | null>(null);
   const [hasSelectedBonusRider, setHasSelectedBonusRider] = useState(false);
   const [showBonusRiderDialog, setShowBonusRiderDialog] = useState(false);
+  const [showLeagueBonusDialog, setShowLeagueBonusDialog] = useState(false);
   
   // Get manager sponsor for jersey display
   const displayedManagerId = selectedManagerId || currentUserId;
@@ -587,15 +589,26 @@ export const MyTeamDesktop = () => {
             )}
           </div>
 
-          {!hasSelectedBonusRider && !selectedManagerId && (
+          <div className="flex items-center gap-2">
+            {!hasSelectedBonusRider && !selectedManagerId && (
+              <Button
+                onClick={() => setShowBonusRiderDialog(true)}
+                variant="secondary"
+                size="sm"
+                title={t('bonusRider.select')}
+              >
+                <Star className="h-4 w-4" />
+              </Button>
+            )}
             <Button
-              onClick={() => setShowBonusRiderDialog(true)}
-              variant="secondary"
+              onClick={() => setShowLeagueBonusDialog(true)}
+              variant="outline"
               size="sm"
+              title={t('bonusRider.viewOthers')}
             >
-              <Star className="h-4 w-4" />
+              <Users className="h-4 w-4" />
             </Button>
-          )}
+          </div>
         </div>
 
       </div>
@@ -864,6 +877,14 @@ export const MyTeamDesktop = () => {
         riderTeam={selectedRider?.equipe || ''}
         riderPrice={selectedRider?.prix || 0}
         phaseId={selectedPhaseId || ''}
+      />
+
+      {/* League Bonus Riders Dialog */}
+      <LeagueBonusRidersDialog
+        open={showLeagueBonusDialog}
+        onOpenChange={setShowLeagueBonusDialog}
+        leagueId={leagueId}
+        phaseId={selectedPhaseId}
       />
     </div>
   );
