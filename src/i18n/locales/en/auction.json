@@ -42,7 +42,7 @@
     "title": "Auction History",
     "noHistory": "No history"
   },
-  "stats": {
+"stats": {
     "title": "Battle Statistics",
     "global": "Global",
     "byRound": "By round",
@@ -55,6 +55,13 @@
     "battles": "battles",
     "biggestRivalry": "Biggest rivalries",
     "manager": "Manager",
-    "battlesCount": "Battles"
+    "battlesCount": "Battles",
+    "detailTitle": "Calculation Details",
+    "totalBids": "Total bids",
+    "soloExplanation": "% Solo = (Solo bids / Total) × 100",
+    "battleExplanation": "% Losses = (Battles lost / Total battles) × 100",
+    "lost": "lost",
+    "of": "of",
+    "clickForDetails": "Click a row to see details"
   }
 }
