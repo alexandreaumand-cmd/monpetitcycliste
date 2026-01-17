@@ -44,6 +44,7 @@ interface Coureur {
   cote_initiale: number;
   points_total: number;
   ratio_points_par_prix: number;
+  winning_round?: number;
 }
 
 interface PointDetail {
@@ -465,10 +466,16 @@ export const MyTeamMobile = () => {
                 </div>
               }
               subtitle={coureur.equipe}
-              meta={`💰 ${coureur.prix_achat.toFixed(0)}/${coureur.cote_initiale.toFixed(0)} • Ratio: ${formatROICompact(computeRiderROI({
-                pointsTotal: coureur.points_total,
-                purchasePriceTotal: coureur.prix_achat
-              }))}`}
+              meta={
+                <span>
+                  💰 {coureur.prix_achat.toFixed(0)} / {coureur.cote_initiale.toFixed(0)}
+                  {coureur.winning_round && <span className="text-muted-foreground/60 ml-1">R{coureur.winning_round}</span>}
+                  {' • '}Ratio: {formatROICompact(computeRiderROI({
+                    pointsTotal: coureur.points_total,
+                    purchasePriceTotal: coureur.prix_achat
+                  }))}
+                </span>
+              }
               className="p-3"
               badge={
                 <div className="flex items-center gap-1">

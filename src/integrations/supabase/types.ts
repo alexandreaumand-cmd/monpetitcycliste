@@ -5133,6 +5133,7 @@ export type Database = {
           points_total: number
           prix_achat: number
           ratio_points_par_prix: number
+          winning_round: number
         }[]
       }
       migrate_tour_down_under_to_2025: { Args: never; Returns: Json }

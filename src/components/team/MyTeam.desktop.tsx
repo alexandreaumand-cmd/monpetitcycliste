@@ -36,6 +36,7 @@ interface Coureur {
   cote_initiale: number;
   points_total: number;
   ratio_points_par_prix: number;
+  winning_round?: number;
 }
 
 interface PointDetail {
@@ -646,8 +647,19 @@ export const MyTeamDesktop = () => {
                     onClick={() => handleSort('prix')}
                   >
                     <div className="flex items-center justify-end gap-1">
-                      💰 Prix/Cote
+                      💰 Prix
                       {sortBy === 'prix' && (
+                        sortDirection === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="text-right cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('cote')}
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Cote
+                      {sortBy === 'cote' && (
                         sortDirection === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />
                       )}
                     </div>
@@ -696,8 +708,14 @@ export const MyTeamDesktop = () => {
                     </TableCell>
                     <TableCell className="text-right py-2">
                       <span className="font-medium">{coureur.prix_achat.toFixed(0)}</span>
-                      <span className="text-muted-foreground"> / </span>
-                      <span className="text-sm">{coureur.cote_initiale.toFixed(0)}</span>
+                    </TableCell>
+                    <TableCell className="text-right py-2">
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-muted-foreground">{coureur.cote_initiale.toFixed(0)}</span>
+                        {coureur.winning_round && (
+                          <span className="text-xs text-muted-foreground/60">R{coureur.winning_round}</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right py-2">
                       <div className="flex items-center justify-end gap-2">
