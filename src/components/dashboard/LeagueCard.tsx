@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus, CheckCircle, Lock, Globe, Gavel, CheckCircle2, Clock, PartyPopper } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +26,7 @@ interface LeagueCardProps {
 }
 
 export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
+  const { t } = useTranslation('dashboard');
   const [invitesSheetOpen, setInvitesSheetOpen] = useState(false);
   const { data: memberCount, isLoading: loadingMembers } = useLeagueMemberCount(league.id);
   const { data: members = [], isLoading: loadingMembersList } = useLeagueMembers(league.id);
@@ -79,12 +81,12 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               {league.visibility === 'private' ? (
                 <>
                   <Lock className="h-3 w-3" />
-                  Privée
+                  {t('leagueCard.private')}
                 </>
               ) : (
                 <>
                   <Globe className="h-3 w-3" />
-                  Publique
+                  {t('leagueCard.public')}
                 </>
               )}
             </Badge>
@@ -108,7 +110,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               className="gap-1 bg-muted/50"
             >
               <Calendar className="h-3 w-3 animate-pulse" />
-              Chargement...
+              {t('leagueCard.loading')}
             </Badge>
           ) : leagueSeason?.season?.annee ? (
             <Badge 
@@ -129,7 +131,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-medium flex items-center gap-2">
                   <Users className="h-4 w-4" />
-                  Joueurs inscrits
+                  {t('leagueCard.registeredPlayers')}
                 </h4>
                 <LeagueParticipantsHover
                   ownerName={owner?.nom || null}
@@ -144,7 +146,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                 <div className="bg-muted/50 rounded-lg p-3">
                   {members.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center">
-                      En attente du premier joueur
+                      {t('leagueCard.waitingForFirstPlayer')}
                     </p>
                   ) : (
                     <ul className="space-y-1.5">
@@ -162,7 +164,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
 
             <div className="bg-muted/50 rounded-lg p-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">Places restantes</span>
+                <span className="text-sm font-medium text-muted-foreground">{t('leagueCard.remainingSpots')}</span>
                 <span className="text-3xl font-bold">{remainingSpots}</span>
               </div>
             </div>
@@ -173,7 +175,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                 className="w-full bg-[#FFD500] text-black border-2 border-black font-montserrat font-semibold hover:bg-yellow-400 gap-2"
               >
                 <UserPlus className="h-4 w-4" />
-                Inviter des joueurs
+                {t('leagueCard.invitePlayers')}
               </Button>
             )}
           </>
@@ -185,10 +187,10 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
             <div className="bg-[#FFD500] border-2 border-black rounded-lg p-4 text-center shadow-md">
               <CheckCircle className="h-8 w-8 text-black mx-auto mb-2" />
               <p className="font-montserrat font-bold text-black">
-                Tous les joueurs sont là !
+                {t('leagueCard.allPlayersHere')}
               </p>
               <p className="text-sm font-poppins text-gray-900 mt-1">
-                La ligue est prête à démarrer
+                {t('leagueCard.readyToStart')}
               </p>
             </div>
 
@@ -196,7 +198,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-medium flex items-center gap-2">
                   <Users className="h-4 w-4" />
-                  Joueurs inscrits
+                  {t('leagueCard.registeredPlayers')}
                 </h4>
                 <LeagueParticipantsHover
                   ownerName={owner?.nom || null}
@@ -222,7 +224,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
             </div>
 
             <Button onClick={() => onViewDetails()} className="w-full">
-              Lancer la ligue
+              {t('leagueCard.launchLeague')}
             </Button>
           </>
         )}
@@ -231,7 +233,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         {isActive && (
           <>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Participants</span>
+              <span className="text-sm text-muted-foreground">{t('leagueCard.participants')}</span>
               <LeagueParticipantsHover
                 ownerName={owner?.nom || null}
                 members={members}
@@ -252,7 +254,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                     <div className="flex items-center gap-2">
                       <Trophy className="h-4 w-4 text-primary" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Classement général</p>
+                        <p className="text-xs text-muted-foreground">{t('leagueCard.generalRanking')}</p>
                         <p className="font-semibold">
                           #{stats.mySeasonRank}
                           {stats.mySeasonRank === 1 && ' 🥇'}
@@ -262,7 +264,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Points</p>
+                      <p className="text-xs text-muted-foreground">{t('leagueCard.points')}</p>
                       <p className="font-semibold">{stats.mySeasonPoints}</p>
                     </div>
                   </div>
@@ -273,12 +275,12 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                     <div className="flex items-center gap-2">
                       <TrendingUp className="h-4 w-4 text-primary" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Classement phase</p>
+                        <p className="text-xs text-muted-foreground">{t('leagueCard.phaseRanking')}</p>
                         <p className="font-semibold">#{stats.myPhaseRank}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Points</p>
+                      <p className="text-xs text-muted-foreground">{t('leagueCard.points')}</p>
                       <p className="font-semibold">{stats.myPhasePoints}</p>
                     </div>
                   </div>
@@ -288,7 +290,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
                     <Crown className="h-4 w-4 text-primary" />
                     <div className="flex-1">
-                      <p className="text-xs text-muted-foreground">Leader</p>
+                      <p className="text-xs text-muted-foreground">{t('leagueCard.leader')}</p>
                       <p className="font-semibold text-sm">{stats.seasonLeader.name}</p>
                     </div>
                     <p className="text-sm font-semibold">{stats.seasonLeader.points} pts</p>
@@ -296,7 +298,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">Aucune donnée disponible</p>
+              <p className="text-sm text-muted-foreground text-center py-4">{t('leagueCard.noDataAvailable')}</p>
             )}
 
             {/* Section enchères (en cours, résultats OU programmées) */}
@@ -316,21 +318,21 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                     <>
                       <PartyPopper className="h-5 w-5 text-orange-600" />
                       <h3 className="font-montserrat font-bold text-orange-900">
-                        Résultats en cours
+                        {t('leagueCard.auction.resultsInProgress')}
                       </h3>
                     </>
                   ) : auctionStatus.isScheduled ? (
                     <>
                       <Clock className="h-5 w-5 text-blue-600" />
                       <h3 className="font-montserrat font-bold text-blue-900">
-                        Enchères programmées
+                        {t('leagueCard.auction.scheduled')}
                       </h3>
                     </>
                   ) : (
                     <>
                       <Gavel className="h-5 w-5 text-black" />
                       <h3 className="font-montserrat font-bold text-black">
-                        Enchères en cours
+                        {t('leagueCard.auction.inProgress')}
                       </h3>
                     </>
                   )}
@@ -344,7 +346,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                         : auctionStatus.isScheduled ? 'text-blue-800' 
                         : 'text-gray-900'
                     }`}>
-                      Tour d'enchères
+                      {t('leagueCard.auction.round')}
                     </span>
                     <span className={`text-lg font-montserrat font-bold ${
                       auctionStatus.isAnnouncementsPending ? 'text-orange-900' 
@@ -359,10 +361,10 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                   {auctionStatus.isAnnouncementsPending && (
                     <div className="bg-orange-50/80 rounded-lg p-3 border border-orange-200 mt-3">
                       <p className="text-sm text-orange-800 text-center">
-                        🎬 Les résultats sont en train d'être révélés...
+                        {t('leagueCard.auction.resultsRevealing')}
                       </p>
                       <p className="text-xs text-orange-600 text-center mt-1">
-                        Cliquez pour voir les annonces
+                        {t('leagueCard.auction.clickToSeeAnnouncements')}
                       </p>
                     </div>
                   )}
@@ -373,7 +375,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-poppins text-gray-900 flex items-center gap-1">
                           <CheckCircle2 className="h-4 w-4" />
-                          Managers validés
+                          {t('leagueCard.auction.validatedManagers')}
                         </span>
                         <span className="text-lg font-montserrat font-bold text-black">
                           {auctionStatus.validatedCount}/{auctionStatus.totalManagers}
@@ -398,13 +400,13 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                       <div className="flex items-center gap-2 mb-2">
                         <Clock className={`h-4 w-4 ${auctionStatus.isScheduled ? 'text-blue-600' : 'text-black'}`} />
                         <span className={`text-xs font-poppins font-medium ${auctionStatus.isScheduled ? 'text-blue-800' : 'text-gray-900'}`}>
-                          {auctionStatus.isScheduled ? "Ouverture dans" : "Temps restant"}
+                          {auctionStatus.isScheduled ? t('leagueCard.auction.openingIn') : t('leagueCard.auction.timeRemaining')}
                         </span>
                       </div>
                       
                       {countdown.isExpired ? (
                         <p className="text-sm font-montserrat font-bold text-red-600">
-                          {auctionStatus.isScheduled ? 'Ouverture en cours...' : 'Clôture en cours...'}
+                          {auctionStatus.isScheduled ? t('leagueCard.auction.openingInProgress') : t('leagueCard.auction.closingInProgress')}
                         </p>
                       ) : (
                         <div className="flex items-center justify-center gap-2">
@@ -413,7 +415,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
                               {String(countdown.days).padStart(2, '0')}
                             </div>
                             <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>
-                              jour{countdown.days > 1 ? 's' : ''}
+                              {countdown.days > 1 ? t('leagueCard.auction.days') : t('leagueCard.auction.day')}
                             </div>
                           </div>
                           <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-black'}`}>:</div>
@@ -450,7 +452,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               variant="outline" 
               className="w-full"
             >
-              {auctionStatus ? 'Aller aux enchères' : 'Voir ma ligue'}
+              {auctionStatus ? t('leagueCard.goToAuction') : t('leagueCard.viewMyLeague')}
             </Button>
           </>
         )}
@@ -461,24 +463,24 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
             <div className="bg-gradient-to-br from-black to-gray-900 rounded-lg p-4 border-2 border-[#FFD500] text-center shadow-lg">
               <Trophy className="h-8 w-8 text-[#FFD500] mx-auto mb-2" />
               <p className="font-montserrat font-bold text-white">
-                Ligue terminée
+                {t('leagueCard.leagueEnded')}
               </p>
               {stats?.seasonLeader && (
                 <p className="text-sm font-poppins text-gray-300 mt-1">
-                  Vainqueur : {stats.seasonLeader.name}
+                  {t('leagueCard.winner')} : {stats.seasonLeader.name}
                 </p>
               )}
             </div>
 
             {stats?.mySeasonRank && (
               <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <p className="text-xs text-muted-foreground">Votre classement final</p>
+                <p className="text-xs text-muted-foreground">{t('leagueCard.yourFinalRanking')}</p>
                 <p className="text-2xl font-bold text-primary">#{stats.mySeasonRank}</p>
               </div>
             )}
 
             <Button onClick={() => onViewDetails()} variant="outline" className="w-full">
-              Voir les résultats
+              {t('leagueCard.viewResults')}
             </Button>
           </>
         )}

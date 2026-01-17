@@ -1,4 +1,5 @@
 import { Settings, Database, Calendar } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import { ManagerDropdown } from "@/components/layout/ManagerDropdown";
@@ -23,6 +24,7 @@ export function DashboardHomeHeader({
   onSignOut,
   onNavigateAdmin,
 }: DashboardHomeHeaderProps) {
+  const { t } = useTranslation('dashboard');
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -66,7 +68,7 @@ export function DashboardHomeHeader({
             )}
           >
             <Calendar className="h-4 w-4" />
-            {!isMobile && "Calendrier"}
+            {!isMobile && t('header.calendar')}
           </Button>
 
           {/* Data Button */}
@@ -80,7 +82,7 @@ export function DashboardHomeHeader({
             )}
           >
             <Database className="h-4 w-4" />
-            {!isMobile && "Data"}
+            {!isMobile && t('header.data')}
           </Button>
 
           {/* Language Switcher */}
@@ -109,7 +111,7 @@ export function DashboardHomeHeader({
               className={!isMobile ? "gap-2" : ""}
             >
               <Settings className="h-4 w-4" />
-              {!isMobile && "Super Admin"}
+              {!isMobile && t('header.superAdmin')}
             </Button>
           )}
         </div>

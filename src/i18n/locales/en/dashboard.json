@@ -27,5 +27,60 @@
     "markAllRead": "Mark all as read",
     "noNotifications": "No notifications",
     "viewAll": "View all notifications"
+  },
+  "header": {
+    "calendar": "Calendar",
+    "data": "Data",
+    "superAdmin": "Super Admin"
+  },
+  "myLeagues": {
+    "title": "My Leagues",
+    "noLeagues": "No leagues",
+    "noLeaguesDescription": "Create your first league or join one to get started"
+  },
+  "quickActions": {
+    "title": "New competition",
+    "subtitle": "Create your league or join one",
+    "createLeague": "Create a league",
+    "join": "Join"
+  },
+  "leagueCard": {
+    "private": "Private",
+    "public": "Public",
+    "loading": "Loading...",
+    "registeredPlayers": "Registered players",
+    "waitingForFirstPlayer": "Waiting for first player",
+    "remainingSpots": "Remaining spots",
+    "invitePlayers": "Invite players",
+    "allPlayersHere": "All players are here!",
+    "readyToStart": "The league is ready to start",
+    "launchLeague": "Launch league",
+    "participants": "Participants",
+    "generalRanking": "General ranking",
+    "phaseRanking": "Phase ranking",
+    "points": "Points",
+    "leader": "Leader",
+    "noDataAvailable": "No data available",
+    "goToAuction": "Go to auction",
+    "viewMyLeague": "View my league",
+    "leagueEnded": "League ended",
+    "winner": "Winner",
+    "yourFinalRanking": "Your final ranking",
+    "viewResults": "View results",
+    "auction": {
+      "resultsInProgress": "Results in progress",
+      "scheduled": "Scheduled auctions",
+      "inProgress": "Auctions in progress",
+      "round": "Auction round",
+      "resultsRevealing": "🎬 Results are being revealed...",
+      "clickToSeeAnnouncements": "Click to see announcements",
+      "validatedManagers": "Validated managers",
+      "openingIn": "Opens in",
+      "timeRemaining": "Time remaining",
+      "openingInProgress": "Opening in progress...",
+      "closingInProgress": "Closing in progress...",
+      "day": "day",
+      "days": "days"
+    }
   }
 }

@@ -27,5 +27,60 @@
     "markAllRead": "Tout marquer comme lu",
     "noNotifications": "Aucune notification",
     "viewAll": "Voir toutes les notifications"
+  },
+  "header": {
+    "calendar": "Calendrier",
+    "data": "Data",
+    "superAdmin": "Super Admin"
+  },
+  "myLeagues": {
+    "title": "Mes Ligues",
+    "noLeagues": "Aucune ligue",
+    "noLeaguesDescription": "Créez votre première ligue ou rejoignez-en une pour commencer"
+  },
+  "quickActions": {
+    "title": "Nouvelle compétition",
+    "subtitle": "Créez votre ligue ou rejoignez-en une",
+    "createLeague": "Créer une ligue",
+    "join": "Rejoindre"
+  },
+  "leagueCard": {
+    "private": "Privée",
+    "public": "Publique",
+    "loading": "Chargement...",
+    "registeredPlayers": "Joueurs inscrits",
+    "waitingForFirstPlayer": "En attente du premier joueur",
+    "remainingSpots": "Places restantes",
+    "invitePlayers": "Inviter des joueurs",
+    "allPlayersHere": "Tous les joueurs sont là !",
+    "readyToStart": "La ligue est prête à démarrer",
+    "launchLeague": "Lancer la ligue",
+    "participants": "Participants",
+    "generalRanking": "Classement général",
+    "phaseRanking": "Classement phase",
+    "points": "Points",
+    "leader": "Leader",
+    "noDataAvailable": "Aucune donnée disponible",
+    "goToAuction": "Aller aux enchères",
+    "viewMyLeague": "Voir ma ligue",
+    "leagueEnded": "Ligue terminée",
+    "winner": "Vainqueur",
+    "yourFinalRanking": "Votre classement final",
+    "viewResults": "Voir les résultats",
+    "auction": {
+      "resultsInProgress": "Résultats en cours",
+      "scheduled": "Enchères programmées",
+      "inProgress": "Enchères en cours",
+      "round": "Tour d'enchères",
+      "resultsRevealing": "🎬 Les résultats sont en train d'être révélés...",
+      "clickToSeeAnnouncements": "Cliquez pour voir les annonces",
+      "validatedManagers": "Managers validés",
+      "openingIn": "Ouverture dans",
+      "timeRemaining": "Temps restant",
+      "openingInProgress": "Ouverture en cours...",
+      "closingInProgress": "Clôture en cours...",
+      "day": "jour",
+      "days": "jours"
+    }
   }
 }
