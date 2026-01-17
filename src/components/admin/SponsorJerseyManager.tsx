@@ -141,6 +141,8 @@ export const SponsorJerseyManager = () => {
           saison_id: selectedSeason,
           sponsor: existing?.sponsor || '',
           jersey_image_url: publicUrl,
+        }, {
+          onConflict: 'manager_id,saison_id'
         });
 
       if (updateError) throw updateError;
