@@ -1,5 +1,8 @@
 project_id = "oisfvryhpovwxaxqbmow"
 
+[functions.export-all-tables]
+verify_jwt = false
+
 [functions.super-admin-search-riders]
 verify_jwt = true
 
