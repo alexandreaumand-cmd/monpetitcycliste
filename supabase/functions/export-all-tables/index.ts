@@ -85,36 +85,53 @@ function arrayToCSV(data: Record<string, unknown>[]): string {
   return [headerRow, ...rows].join('\n');
 }
 
-async function fetchAllRows(
+async function exportTableToCSV(
   supabase: any,
-  tableName: string
-): Promise<{ data: Record<string, unknown>[]; count: number }> {
-  const allData: Record<string, unknown>[] = [];
+  tableName: string,
+): Promise<{ csv: string; count: number }> {
   const pageSize = 1000;
   let offset = 0;
-  let hasMore = true;
-  
-  while (hasMore) {
+  let count = 0;
+
+  let headers: string[] | null = null;
+  const lines: string[] = [];
+
+  while (true) {
     const { data, error } = await supabase
       .from(tableName)
       .select('*')
       .range(offset, offset + pageSize - 1);
-    
+
     if (error) {
-      console.error(`Error fetching ${tableName}:`, error.message);
+      throw new Error(`Error fetching ${tableName}: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
       break;
     }
-    
-    if (data && data.length > 0) {
-      allData.push(...data);
-      offset += pageSize;
-      hasMore = data.length === pageSize;
-    } else {
-      hasMore = false;
+
+    if (!headers) {
+      headers = Object.keys(data[0]);
+      lines.push(headers.join(';'));
+    }
+
+    for (const row of data) {
+      lines.push(headers.map((h) => escapeCSVField(row[h])).join(';'));
+    }
+
+    count += data.length;
+    offset += pageSize;
+
+    if (data.length < pageSize) {
+      break;
     }
   }
-  
-  return { data: allData, count: allData.length };
+
+  if (!headers) {
+    return { csv: '', count: 0 };
+  }
+
+  return { csv: lines.join('\n'), count };
 }
 
 Deno.serve(async (req) => {
@@ -184,32 +201,31 @@ Deno.serve(async (req) => {
     for (const tableName of TABLES) {
       try {
         console.log(`Exporting table: ${tableName}`);
-        const { data, count } = await fetchAllRows(serviceClient, tableName);
-        
-        if (data.length > 0) {
-          const csv = arrayToCSV(data);
+
+        const { csv, count } = await exportTableToCSV(serviceClient, tableName);
+
+        if (count > 0) {
           zip.file(`${tableName}.csv`, csv);
         } else {
-          // Create empty CSV with just a comment
           zip.file(`${tableName}.csv`, `# Table ${tableName} is empty`);
         }
-        
+
         metadata[tableName] = {
           rows: count,
-          exportedAt: exportDate
+          exportedAt: exportDate,
         };
-        
+
         console.log(`Exported ${tableName}: ${count} rows`);
       } catch (tableError) {
-        console.error(`Error exporting table ${tableName}:`, tableError);
+        const errMsg = tableError instanceof Error ? tableError.message : 'Unknown error';
+        console.error(`Error exporting table ${tableName}:`, errMsg);
         metadata[tableName] = {
           rows: -1,
-          exportedAt: exportDate
+          exportedAt: exportDate,
         };
-        zip.file(`${tableName}.csv`, `# Error exporting table: ${tableError instanceof Error ? tableError.message : 'Unknown error'}`);
+        zip.file(`${tableName}.csv`, `# Error exporting table: ${errMsg}`);
       }
     }
-    
     // Add metadata file
     zip.file('_metadata.json', JSON.stringify({
       exported_at: new Date().toISOString(),
@@ -226,17 +242,47 @@ Deno.serve(async (req) => {
     const totalRows = Object.values(metadata).reduce((sum, t) => sum + (t.rows > 0 ? t.rows : 0), 0);
     console.log(`ZIP generated: ${zipContent.length} bytes, ${totalRows} total rows`);
 
-    // Encode to Base64 for reliable transport
-    const base64Content = btoa(String.fromCharCode(...zipContent));
+    // Upload to private storage and return a short-lived signed URL (avoids Base64 memory spikes)
+    const bucket = 'admin-exports';
+    const { error: bucketError } = await serviceClient.storage.createBucket(bucket, {
+      public: false,
+      fileSizeLimit: 1024 * 1024 * 200, // 200MB
+    });
+    if (bucketError && !String(bucketError.message || '').includes('already exists')) {
+      console.error('Bucket creation error:', bucketError);
+    }
+
     const date = new Date().toISOString().split('T')[0];
-    
+    const objectPath = `db-backups/${date}/${crypto.randomUUID()}.zip`;
+
+    const { error: uploadError } = await serviceClient.storage
+      .from(bucket)
+      .upload(objectPath, zipContent, {
+        contentType: 'application/zip',
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      throw new Error(`Upload failed: ${uploadError.message}`);
+    }
+
+    const { data: signed, error: signedError } = await serviceClient.storage
+      .from(bucket)
+      .createSignedUrl(objectPath, 60 * 10); // 10 minutes
+
+    if (signedError || !signed?.signedUrl) {
+      console.error('Signed URL error:', signedError);
+      throw new Error('Failed to generate download URL');
+    }
+
     return new Response(
       JSON.stringify({
         filename: `database_backup_${date}.zip`,
-        content_base64: base64Content,
+        download_url: signed.signedUrl,
         size_bytes: zipContent.length,
         total_rows: totalRows,
-        tables_count: TABLES.length
+        tables_count: TABLES.length,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
