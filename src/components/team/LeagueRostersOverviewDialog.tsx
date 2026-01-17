@@ -359,11 +359,11 @@ export const LeagueRostersOverviewDialog = ({
                 <RefreshCw className={`h-4 w-4 ${analyzingAI ? "animate-spin" : ""}`} />
               </Button>
             </div>
-            <ScrollArea className="max-h-[300px]">
+            <div className="max-h-[50vh] overflow-y-auto border rounded-md p-4 bg-muted/30">
               <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm">
                 {analysis}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         )}
       </DialogContent>
