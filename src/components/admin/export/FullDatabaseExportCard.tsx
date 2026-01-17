@@ -32,23 +32,22 @@ export const FullDatabaseExportCard = () => {
         throw error;
       }
 
-      if (!data || !data.content_base64) {
+      if (!data || !data.download_url) {
         throw new Error('Réponse invalide du serveur');
       }
 
       setProgress(95);
 
-      // Decode Base64 to binary
-      const binaryString = atob(data.content_base64);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+      // Download via signed URL (more reliable than passing binary/Base64 through invoke)
+      const resp = await fetch(data.download_url);
+      if (!resp.ok) {
+        throw new Error('Téléchargement du fichier échoué');
       }
+
+      const blob = await resp.blob();
 
       setProgress(100);
 
-      // Create blob and download
-      const blob = new Blob([bytes], { type: 'application/zip' });
       const link = document.createElement('a');
       link.download = data.filename || `database_backup_${new Date().toISOString().split('T')[0]}.zip`;
       link.href = URL.createObjectURL(blob);
@@ -57,7 +56,7 @@ export const FullDatabaseExportCard = () => {
       document.body.removeChild(link);
       URL.revokeObjectURL(link.href);
 
-      toast.success(`Export complet téléchargé (${data.tables_count || TABLES_COUNT} tables, ${data.total_rows?.toLocaleString() || ''} lignes)`);
+      toast.success(`Export complet téléchargé (${data.tables_count || TABLES_COUNT} tables)`);
     } catch (error) {
       console.error('Export error:', error);
       toast.error("Erreur lors de l'export de la base de données");
