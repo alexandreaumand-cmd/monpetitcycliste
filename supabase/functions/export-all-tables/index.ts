@@ -212,9 +212,7 @@ Deno.serve(async (req) => {
     
     // Add metadata file
     zip.file('_metadata.json', JSON.stringify({
-      exportedAt: exportDate,
-      exportedBy: user.id,
-      tablesCount: TABLES.length,
+      exported_at: new Date().toISOString(),
       tables: metadata
     }, null, 2));
     
@@ -226,16 +224,25 @@ Deno.serve(async (req) => {
     });
     
     const totalRows = Object.values(metadata).reduce((sum, t) => sum + (t.rows > 0 ? t.rows : 0), 0);
-    console.log(`Export complete: ${TABLES.length} tables, ${totalRows} total rows`);
+    console.log(`ZIP generated: ${zipContent.length} bytes, ${totalRows} total rows`);
 
-    return new Response(new Uint8Array(zipContent), {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="database_backup_${exportDate.split('T')[0]}.zip"`,
-      },
-    });
-
+    // Encode to Base64 for reliable transport
+    const base64Content = btoa(String.fromCharCode(...zipContent));
+    const date = new Date().toISOString().split('T')[0];
+    
+    return new Response(
+      JSON.stringify({
+        filename: `database_backup_${date}.zip`,
+        content_base64: base64Content,
+        size_bytes: zipContent.length,
+        total_rows: totalRows,
+        tables_count: TABLES.length
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    );
   } catch (error) {
     console.error('Error in export-all-tables:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
