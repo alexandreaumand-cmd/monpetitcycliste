@@ -1,4 +1,5 @@
 import { Settings, Database, Calendar } from "lucide-react";
+import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import { ManagerDropdown } from "@/components/layout/ManagerDropdown";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
@@ -81,6 +82,13 @@ export function DashboardHomeHeader({
             <Database className="h-4 w-4" />
             {!isMobile && "Data"}
           </Button>
+
+          {/* Language Switcher */}
+          <LanguageSwitcher
+            variant="outline"
+            size="icon"
+            className="border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
+          />
 
           {manager && (
             <ManagerDropdown
