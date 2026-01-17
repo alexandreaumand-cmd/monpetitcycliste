@@ -101,7 +101,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
               className="gap-1 border-black text-black font-poppins"
             >
               <Zap className="h-3 w-3" />
-              {gameMode.name}
+              {t(`leagueCard.gameMode.${gameMode.id}`)}
             </Badge>
           )}
           {loadingSeason ? (
