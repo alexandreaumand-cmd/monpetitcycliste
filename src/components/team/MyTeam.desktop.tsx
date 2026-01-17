@@ -707,15 +707,17 @@ export const MyTeamDesktop = () => {
                       {coureur.equipe}
                     </TableCell>
                     <TableCell className="text-right py-2">
-                      <span className="font-medium">{coureur.prix_achat.toFixed(0)}</span>
-                    </TableCell>
-                    <TableCell className="text-right py-2">
-                      <div className="flex items-center justify-end gap-2">
-                        <span className="text-muted-foreground">{coureur.cote_initiale.toFixed(0)}</span>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <span className="font-medium">{coureur.prix_achat.toFixed(0)}</span>
                         {coureur.winning_round && (
-                          <span className="text-xs text-muted-foreground/60">R{coureur.winning_round}</span>
+                          <span className="text-[10px] bg-muted px-1 py-0.5 rounded text-muted-foreground/70">
+                            R{coureur.winning_round}
+                          </span>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell className="text-right py-2">
+                      <span className="text-muted-foreground">{coureur.cote_initiale.toFixed(0)}</span>
                     </TableCell>
                     <TableCell className="text-right py-2">
                       <div className="flex items-center justify-end gap-2">
