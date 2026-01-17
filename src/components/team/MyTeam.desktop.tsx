@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt, Star, ArrowUp, ArrowDown, Award, Users } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt, Star, ArrowUp, ArrowDown, Award, Eye } from "lucide-react";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -606,7 +606,7 @@ export const MyTeamDesktop = () => {
               size="sm"
               title={t('bonusRider.viewOthers')}
             >
-              <Users className="h-4 w-4" />
+              <Eye className="h-4 w-4" />
             </Button>
           </div>
         </div>
