@@ -87,6 +87,16 @@ export const SponsorJerseyManager = () => {
     },
   });
 
+  // Sanitize filename to remove accents and special characters
+  const sanitizeFileName = (name: string): string => {
+    return name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove accents
+      .replace(/[^a-zA-Z0-9]/g, '_')   // Replace special chars with underscore
+      .replace(/_+/g, '_')             // Collapse multiple underscores
+      .replace(/^_|_$/g, '');          // Trim leading/trailing underscores
+  };
+
   // Upload jersey mutation
   const uploadJersey = useMutation({
     mutationFn: async ({ managerId, managerNom, file }: { managerId: string; managerNom: string; file: File }) => {
@@ -101,16 +111,22 @@ export const SponsorJerseyManager = () => {
         .eq('saison_id', selectedSeason)
         .single();
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${managerNom}_${season.annee}.${fileExt}`;
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const sanitizedName = sanitizeFileName(managerNom);
+      const fileName = `${sanitizedName}_${season.annee}.${fileExt}`;
       const filePath = fileName;
+
+      console.log('Uploading jersey:', { filePath, fileSize: file.size, fileType: file.type });
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('sponsor-jerseys')
         .upload(filePath, file, { upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw uploadError;
+      }
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
@@ -133,8 +149,13 @@ export const SponsorJerseyManager = () => {
       queryClient.invalidateQueries({ queryKey: ['managers-sponsors-jerseys', selectedSeason] });
       toast({ title: "Maillot uploadé avec succès" });
     },
-    onError: () => {
-      toast({ title: "Erreur lors de l'upload", variant: "destructive" });
+    onError: (error: any) => {
+      console.error('Jersey upload failed:', error);
+      toast({ 
+        title: "Erreur lors de l'upload", 
+        description: error?.message || "Vérifiez vos permissions",
+        variant: "destructive" 
+      });
     },
   });
 
