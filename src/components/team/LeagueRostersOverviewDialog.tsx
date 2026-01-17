@@ -221,73 +221,69 @@ export const LeagueRostersOverviewDialog = ({
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <ScrollArea className="flex-1 max-h-[50vh]">
-            <div className="overflow-x-auto">
-              {/* Table container for export */}
-              <div ref={tableRef} className="bg-white p-4 min-w-max">
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr>
-                      {managers.map((manager) => (
-                        <th
-                          key={manager.id}
-                          className="border border-border bg-muted px-3 py-2 text-left font-semibold min-w-[150px]"
-                        >
-                          {manager.nom}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from({ length: maxRiders }).map((_, rowIndex) => (
-                      <tr key={rowIndex}>
-                        {managers.map((manager) => {
-                          const rider = rostersByManager[manager.id]?.[rowIndex];
-                          return (
-                            <td
-                              key={manager.id}
-                              className="border border-border px-3 py-1.5 align-top"
-                            >
-                              {rider ? (
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-foreground">
-                                    {rider.nom}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {rider.equipe} • {rider.prix_signature}M
-                                  </span>
-                                </div>
-                              ) : null}
-                            </td>
-                          );
-                        })}
-                      </tr>
+          <div className="flex-1 overflow-auto max-h-[50vh] border rounded-md">
+            {/* Table container for export */}
+            <div ref={tableRef} className="bg-white p-4 min-w-max">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr>
+                    {managers.map((manager) => (
+                      <th
+                        key={manager.id}
+                        className="border border-border bg-muted px-3 py-2 text-left font-semibold min-w-[150px]"
+                      >
+                        {manager.nom}
+                      </th>
                     ))}
-                    {/* Total row */}
-                    <tr className="bg-muted/50 font-semibold">
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: maxRiders }).map((_, rowIndex) => (
+                    <tr key={rowIndex}>
                       {managers.map((manager) => {
-                        const total = (rostersByManager[manager.id] || []).reduce(
-                          (sum, r) => sum + r.prix_signature,
-                          0
-                        );
-                        const count = rostersByManager[manager.id]?.length || 0;
+                        const rider = rostersByManager[manager.id]?.[rowIndex];
                         return (
                           <td
                             key={manager.id}
-                            className="border border-border px-3 py-2"
+                            className="border border-border px-3 py-1.5 align-top"
                           >
-                            {count} coureurs • {total}M
+                            {rider ? (
+                              <div className="flex flex-col">
+                                <span className="font-medium text-foreground">
+                                  {rider.nom}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {rider.equipe} • {rider.prix_signature}M
+                                </span>
+                              </div>
+                            ) : null}
                           </td>
                         );
                       })}
                     </tr>
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                  {/* Total row */}
+                  <tr className="bg-muted/50 font-semibold">
+                    {managers.map((manager) => {
+                      const total = (rostersByManager[manager.id] || []).reduce(
+                        (sum, r) => sum + r.prix_signature,
+                        0
+                      );
+                      const count = rostersByManager[manager.id]?.length || 0;
+                      return (
+                        <td
+                          key={manager.id}
+                          className="border border-border px-3 py-2"
+                        >
+                          {count} coureurs • {total}M
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <ScrollBar orientation="horizontal" />
-            <ScrollBar orientation="vertical" />
-          </ScrollArea>
+          </div>
         )}
 
         {/* AI Analysis section */}
