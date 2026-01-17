@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -66,6 +67,7 @@ interface Manager {
 }
 
 export const MyTeamMobile = () => {
+  const { t } = useTranslation('team');
   const { phases, activePhase, selectedSeason } = useSeasonContext();
   const { leagueId, isLoading: leagueLoading } = useLeague();
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
@@ -238,14 +240,14 @@ export const MyTeamMobile = () => {
   };
 
   const getPhaseLabel = (phase: any) => {
-    return `Phase ${phase.index_dans_saison}`;
+    return `${t('phase')} ${phase.index_dans_saison}`;
   };
 
   const sortChips = [
-    { label: "Points", value: "points" as SortBy },
-    { label: "Ratio", value: "ratio" as SortBy },
-    { label: "Prix", value: "prix" as SortBy },
-    { label: "Cote", value: "cote" as SortBy },
+    { label: t('sort.points'), value: "points" as SortBy },
+    { label: t('sort.ratio'), value: "ratio" as SortBy },
+    { label: t('sort.price'), value: "prix" as SortBy },
+    { label: t('sort.rating'), value: "cote" as SortBy },
   ];
 
   const loadTeamWithKpis = async () => {
@@ -359,7 +361,7 @@ export const MyTeamMobile = () => {
 
       if (error) throw error;
 
-      toast.success(`✅ ${coureur_nom} recevra désormais +25% de points bonus`);
+      toast.success(`✅ ${t('bonusRider.successDescription', { name: coureur_nom })}`);
 
       setBonusRiderSelection({ coureur_id, coureur_nom });
       setHasSelectedBonusRider(true);
@@ -398,10 +400,10 @@ export const MyTeamMobile = () => {
           {managers.length > 0 && (
             <Select value={selectedManagerId || '__MY_TEAM__'} onValueChange={(v) => setSelectedManagerId(v === '__MY_TEAM__' ? null : v)}>
               <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Mon équipe" />
+                <SelectValue placeholder={t('myTeam')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__MY_TEAM__">Mon équipe</SelectItem>
+                <SelectItem value="__MY_TEAM__">{t('myTeam')}</SelectItem>
                 {managers.map((manager) => (
                   <SelectItem key={manager.id} value={manager.id}>
                     {manager.nom}
@@ -414,7 +416,7 @@ export const MyTeamMobile = () => {
           {phases.length > 0 && (
             <Select value={selectedPhaseId || ""} onValueChange={setSelectedPhaseId}>
               <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Phase" />
+                <SelectValue placeholder={t('phase')} />
               </SelectTrigger>
               <SelectContent>
                 {phases.map((phase) => (
@@ -432,9 +434,9 @@ export const MyTeamMobile = () => {
       {/* KPIs compacts */}
       <KPIRow
         items={[
-          { label: "Points", value: kpis.total_points, icon: <Trophy className="h-4 w-4" /> },
-          { label: "Bonus", value: kpis.bonus_points, icon: <Star className="h-4 w-4" />, onClick: () => setBonusDetailsOpen(true) },
-          { label: "Scoreurs", value: kpis.scorers_count, icon: <TrendingUp className="h-4 w-4" /> },
+          { label: t('points'), value: kpis.total_points, icon: <Trophy className="h-4 w-4" /> },
+          { label: t('bonusPts'), value: kpis.bonus_points, icon: <Star className="h-4 w-4" />, onClick: () => setBonusDetailsOpen(true) },
+          { label: t('scorers'), value: kpis.scorers_count, icon: <TrendingUp className="h-4 w-4" /> },
         ]}
       />
 
@@ -447,7 +449,7 @@ export const MyTeamMobile = () => {
           className="w-full gap-2"
         >
           <Star className="h-4 w-4" />
-          Choisir coureur bonus
+          {t('bonusRider.select')}
         </Button>
       )}
 
@@ -459,8 +461,8 @@ export const MyTeamMobile = () => {
       {coureurs.length === 0 ? (
         <MobileEmptyState
           icon={<User className="h-12 w-12" />}
-          title="Aucun coureur"
-          description="Vous n'avez pas encore de coureurs dans votre équipe"
+          title={t('noRiders')}
+          description={t('noRidersDescription')}
         />
       ) : (
         <div className="space-y-3">
@@ -512,10 +514,10 @@ export const MyTeamMobile = () => {
       <Dialog open={showBonusRiderDialog} onOpenChange={setShowBonusRiderDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Choisir votre coureur bonus</DialogTitle>
+            <DialogTitle>{t('bonusRider.selectTitle')}</DialogTitle>
           <DialogDescription>
-            Sélectionnez un coureur avec une cote initiale de 10 ou 20 qui recevra +25% de points bonus.
-            <br />⚠️ Ce choix est définitif pour cette phase.
+            {t('bonusRider.description')}
+            <br />⚠️ {t('bonusRider.warning')}
           </DialogDescription>
           </DialogHeader>
           
@@ -533,7 +535,7 @@ export const MyTeamMobile = () => {
                   <div className="text-left">
                     <div className="font-semibold">{coureur.nom}</div>
                     <div className="text-xs text-muted-foreground">
-                      {coureur.equipe} • Cote: {coureur.cote_initiale} • {coureur.points_total} pts
+                      {coureur.equipe} • {t('rating')}: {coureur.cote_initiale} • {coureur.points_total} pts
                     </div>
                   </div>
                 </Button>
@@ -541,7 +543,7 @@ export const MyTeamMobile = () => {
             
             {coureurs.filter(c => c.cote_initiale === 10 || c.cote_initiale === 20).length === 0 && (
               <p className="text-center text-muted-foreground py-4">
-                Aucun coureur éligible (cote initiale 10 ou 20)
+                {t('bonusRider.noEligible')}
               </p>
             )}
           </div>
@@ -556,7 +558,7 @@ export const MyTeamMobile = () => {
         managerName={
           selectedManagerId && selectedManagerId !== currentUserId
             ? managers.find(m => m.id === selectedManagerId)?.nom || ''
-            : 'Mon équipe'
+            : t('myTeam')
         }
         phaseId={selectedPhaseId}
         leagueId={leagueId}
