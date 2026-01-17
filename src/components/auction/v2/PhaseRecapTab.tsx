@@ -344,14 +344,11 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
         </Card>
       </div>
 
-      {/* Tableau "Qui a le seum ?" */}
+      {/* Tableau "Les plus gros loupés" */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 flex-wrap">
-            <span>😤 Qui a le seum ?</span>
-            <Badge variant="secondary" className="text-xs">
-              Les plus gros loupés
-            </Badge>
+          <CardTitle className="flex items-center gap-2">
+            😤 Les plus gros loupés
           </CardTitle>
         </CardHeader>
         <CardContent>
