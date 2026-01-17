@@ -419,7 +419,7 @@ export const MyTeamDesktop = () => {
   };
 
   const getPhaseLabel = (phase: any) => {
-    return `Phase ${phase.index_dans_saison}${phase.statut === 'active' ? ' ✓' : ''}`;
+    return `Phase ${phase.index_dans_saison}`;
   };
 
   if (loading) {
@@ -545,7 +545,7 @@ export const MyTeamDesktop = () => {
             
             {phases.length > 0 && (
               <Select value={selectedPhaseId || ''} onValueChange={setSelectedPhaseId}>
-                <SelectTrigger className="flex-1 [&>svg]:hidden">
+                <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Phase" />
                 </SelectTrigger>
                 <SelectContent>
