@@ -8,6 +8,7 @@ import {
   MobileEmptyState,
 } from "@/components/mobile";
 import { RiderPointsDetail } from "./RiderPointsDetail";
+import { RiderRaceIcons } from "./RiderRaceIcons";
 
 import { BonusPointsDetailDialog } from "@/components/rankings/BonusPointsDetailDialog";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,7 @@ import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useQuery } from "@tanstack/react-query";
 
 interface Coureur {
   coureur_id: string;
@@ -99,6 +101,24 @@ export const MyTeamMobile = () => {
   // Get manager sponsor for jersey display
   const displayedManagerId = selectedManagerId || currentUserId;
   const { data: managerSponsor } = useManagerSponsor(displayedManagerId, selectedSeason?.id);
+
+  // Fetch rider races for all team riders
+  const riderIds = coureurs.map(c => c.coureur_id);
+  const { data: riderRacesData } = useQuery({
+    queryKey: ['team-riders-races-mobile', riderIds],
+    queryFn: async () => {
+      if (riderIds.length === 0) return { races_by_rider: {} };
+      
+      const { data, error } = await supabase.functions.invoke('get-team-riders-races', {
+        body: { rider_ids: riderIds }
+      });
+      
+      if (error) throw error;
+      return data as { races_by_rider: Record<string, { current_races: any[]; upcoming_races: any[] }> };
+    },
+    enabled: riderIds.length > 0,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
 
   useEffect(() => {
     loadCurrentUser();
@@ -453,6 +473,10 @@ export const MyTeamMobile = () => {
                     <Star className="h-4 w-4 text-[#FFD500] fill-[#FFD500]" />
                   )}
                   {coureur.nom}
+                  <RiderRaceIcons 
+                    currentRaces={riderRacesData?.races_by_rider?.[coureur.coureur_id]?.current_races}
+                    upcomingRaces={riderRacesData?.races_by_rider?.[coureur.coureur_id]?.upcoming_races}
+                  />
                 </div>
               }
               subtitle={coureur.equipe}
