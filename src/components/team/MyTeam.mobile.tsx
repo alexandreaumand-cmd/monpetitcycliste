@@ -11,6 +11,7 @@ import {
 import { RiderPointsDetail } from "./RiderPointsDetail";
 import { RiderRaceIcons } from "./RiderRaceIcons";
 import { LeagueBonusRidersDialog } from "./LeagueBonusRidersDialog";
+import { LeagueRostersOverviewDialog } from "./LeagueRostersOverviewDialog";
 
 import { BonusPointsDetailDialog } from "@/components/rankings/BonusPointsDetailDialog";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ import {
   Shirt,
   Star,
   Eye,
+  Users,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -99,6 +101,7 @@ export const MyTeamMobile = () => {
   const [hasSelectedBonusRider, setHasSelectedBonusRider] = useState(false);
   const [showBonusRiderDialog, setShowBonusRiderDialog] = useState(false);
   const [showLeagueBonusDialog, setShowLeagueBonusDialog] = useState(false);
+  const [showRostersOverviewDialog, setShowRostersOverviewDialog] = useState(false);
   
   // Bonus details dialog
   const [bonusDetailsOpen, setBonusDetailsOpen] = useState(false);
@@ -450,7 +453,7 @@ export const MyTeamMobile = () => {
       />
 
       {/* Boutons coureur bonus */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {!hasSelectedBonusRider && !selectedManagerId && (
           <Button
             variant="secondary"
@@ -466,10 +469,19 @@ export const MyTeamMobile = () => {
           variant="outline"
           size="sm"
           onClick={() => setShowLeagueBonusDialog(true)}
-          className={hasSelectedBonusRider || selectedManagerId ? "w-full gap-2" : "gap-2"}
+          className="gap-2"
         >
           <Eye className="h-4 w-4" />
           {t('bonusRider.viewOthers')}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowRostersOverviewDialog(true)}
+          className="gap-2"
+        >
+          <Users className="h-4 w-4" />
+          Effectifs
         </Button>
       </div>
 
@@ -602,6 +614,17 @@ export const MyTeamMobile = () => {
         leagueId={leagueId}
         phaseId={selectedPhaseId}
       />
+
+      {/* League Rosters Overview Dialog */}
+      {selectedPhaseId && leagueId && (
+        <LeagueRostersOverviewDialog
+          open={showRostersOverviewDialog}
+          onOpenChange={setShowRostersOverviewDialog}
+          leagueId={leagueId}
+          phaseId={selectedPhaseId}
+          managers={managers}
+        />
+      )}
     </div>
   );
 };
