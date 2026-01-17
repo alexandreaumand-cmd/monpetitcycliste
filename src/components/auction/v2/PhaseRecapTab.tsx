@@ -2,17 +2,35 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Trophy, TrendingUp, TrendingDown, ThumbsDown, Zap } from "lucide-react";
+import { Loader2, Trophy, TrendingUp, TrendingDown, ThumbsDown, Zap, Swords } from "lucide-react";
 import { formatAmount } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 
 interface PhaseRecapTabProps {
   phaseId: string;
   leagueId: string | null;
 }
 
+interface ManagerBattleStats {
+  nom: string;
+  totalBids: number;
+  soloBids: number;
+  battlesEntered: number;
+  battlesLost: number;
+  pctSolo: number;
+  pctBattleLoss: number;
+}
+
+interface Rivalry {
+  managers: string[];
+  count: number;
+}
+
 export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
+  const { t } = useTranslation("auction");
+
   // Fetch all bids outcomes for KPIs
   const { data: allBids = [], isLoading: bidsLoading } = useQuery({
     queryKey: ["phase-all-bids", phaseId, leagueId],
@@ -58,6 +76,92 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
         .sort(([, a], [, b]) => a - b)
         .slice(0, 3); // Top 3
     },
+  });
+
+  // Battle statistics
+  const { data: battleStats, isLoading: battleStatsLoading } = useQuery({
+    queryKey: ["phase-battle-stats", phaseId, leagueId],
+    queryFn: async () => {
+      // Grouper par round + coureur pour identifier les batailles
+      const battles = allBids.reduce((acc, bid) => {
+        const key = `${bid.round_number}-${bid.coureur_id}`;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(bid);
+        return acc;
+      }, {} as Record<string, typeof allBids>);
+
+      // Calcul des stats par manager
+      const managerStats: Record<string, {
+        nom: string;
+        totalBids: number;
+        soloBids: number;
+        battlesEntered: number;
+        battlesLost: number;
+      }> = {};
+
+      // Calcul des rivalités (paires de managers)
+      const rivalries: Record<string, { managers: string[]; count: number }> = {};
+
+      Object.values(battles).forEach((bidsOnRider) => {
+        const isBattle = bidsOnRider.length > 1;
+        
+        bidsOnRider.forEach((bid) => {
+          const managerId = bid.manager_id;
+          const managerNom = bid.managers?.nom || "Inconnu";
+          
+          if (!managerStats[managerId]) {
+            managerStats[managerId] = {
+              nom: managerNom,
+              totalBids: 0,
+              soloBids: 0,
+              battlesEntered: 0,
+              battlesLost: 0
+            };
+          }
+          
+          managerStats[managerId].totalBids++;
+          
+          if (isBattle) {
+            managerStats[managerId].battlesEntered++;
+            if (bid.outcome === 'lost') {
+              managerStats[managerId].battlesLost++;
+            }
+          } else {
+            managerStats[managerId].soloBids++;
+          }
+        });
+
+        // Compter les rivalités (batailles avec participants uniques)
+        if (isBattle) {
+          const managerNames = [...new Set(bidsOnRider.map(b => b.managers?.nom || "Inconnu"))].sort();
+          // Pour chaque paire de managers dans cette bataille
+          for (let i = 0; i < managerNames.length; i++) {
+            for (let j = i + 1; j < managerNames.length; j++) {
+              const key = `${managerNames[i]}-${managerNames[j]}`;
+              if (!rivalries[key]) {
+                rivalries[key] = { managers: [managerNames[i], managerNames[j]], count: 0 };
+              }
+              rivalries[key].count++;
+            }
+          }
+        }
+      });
+
+      // Calculer les pourcentages
+      const managers: ManagerBattleStats[] = Object.values(managerStats).map(m => ({
+        ...m,
+        pctSolo: m.totalBids > 0 ? Math.round(m.soloBids / m.totalBids * 100) : 0,
+        pctBattleLoss: m.battlesEntered > 0 ? Math.round(m.battlesLost / m.battlesEntered * 100) : 0
+      }));
+
+      return {
+        managers: managers.sort((a, b) => b.battlesEntered - a.battlesEntered),
+        topRivalries: Object.values(rivalries)
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5) as Rivalry[]
+      };
+    },
+    enabled: allBids.length > 0,
   });
 
   if (bidsLoading || completionLoading) {
@@ -287,6 +391,76 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
           ) : (
             <p className="text-muted-foreground text-sm text-center py-4">
               Aucune enchère perdue à afficher
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Battle Statistics */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Swords className="h-5 w-5" />
+            {t('stats.title')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {battleStatsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : battleStats ? (
+            <>
+              {/* Tableau des stats par manager */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">{t('stats.manager')}</th>
+                      <th className="text-right p-2">% {t('stats.soloBids')}</th>
+                      <th className="text-right p-2">{t('stats.battlesCount')}</th>
+                      <th className="text-right p-2">% {t('stats.battleLossRate')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {battleStats.managers.map((m) => (
+                      <tr key={m.nom} className="border-b hover:bg-muted/50">
+                        <td className="p-2 truncate max-w-[120px]">{m.nom}</td>
+                        <td className="p-2 text-right">
+                          <Badge variant="outline">{m.pctSolo}%</Badge>
+                        </td>
+                        <td className="p-2 text-right font-mono">{m.battlesEntered}</td>
+                        <td className="p-2 text-right">
+                          <Badge variant={m.pctBattleLoss > 60 ? "destructive" : "secondary"}>
+                            {m.pctBattleLoss}%
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Top Rivalités */}
+              {battleStats.topRivalries.length > 0 && (
+                <div className="pt-4 border-t">
+                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                    ⚔️ {t('stats.biggestRivalry')}
+                  </h4>
+                  <div className="space-y-2">
+                    {battleStats.topRivalries.map((r, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm bg-muted/30 rounded-md px-3 py-2">
+                        <span className="font-medium">{r.managers[0]} vs {r.managers[1]}</span>
+                        <Badge variant="outline">{r.count} {t('stats.battles')}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="text-muted-foreground text-sm text-center py-4">
+              Aucune donnée de bataille
             </p>
           )}
         </CardContent>

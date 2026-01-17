@@ -41,5 +41,20 @@
   "history": {
     "title": "Historique des enchères",
     "noHistory": "Aucun historique"
+  },
+  "stats": {
+    "title": "Statistiques de bataille",
+    "global": "Global",
+    "byRound": "Par round",
+    "soloBids": "Solo",
+    "soloBidsDesc": "Seul à miser sur un coureur",
+    "battleLossRate": "Défaites",
+    "battleLossDesc": "Perdu quand ≥2 managers",
+    "rivalries": "Rivalités",
+    "rivalriesDesc": "Batailles entre managers",
+    "battles": "batailles",
+    "biggestRivalry": "Plus grandes rivalités",
+    "manager": "Manager",
+    "battlesCount": "Batailles"
   }
 }
