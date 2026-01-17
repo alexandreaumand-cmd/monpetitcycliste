@@ -1,5 +1,6 @@
 {
   "title": "Mon équipe",
+  "myTeam": "Mon équipe",
   "roster": "Effectif",
   "budget": "Budget",
   "budgetRemaining": "Budget restant",
@@ -7,23 +8,57 @@
   "maxRiders": "Maximum de coureurs",
   "points": "Points",
   "totalPoints": "Points totaux",
+  "totalPts": "Total pts",
+  "bonusPts": "Bonus pts",
+  "scorers": "Scoreurs",
+  "ranking": "Classement",
+  "ratio": "Ratio",
+  "price": "Prix",
+  "rating": "Cote",
+  "phase": "Phase",
+  "selectPhase": "Sélectionner une phase",
+  "emptyTeam": "Équipe vide",
+  "emptyTeamDescription": "Votre équipe est vide pour cette phase",
+  "noRiders": "Aucun coureur",
+  "noRidersDescription": "Vous n'avez pas encore de coureurs dans votre équipe",
+  "riderCount_one": "{{count}} coureur",
+  "riderCount_other": "{{count}} coureurs",
   "bonusRider": {
     "title": "Coureur Bonus",
     "select": "Choisir coureur bonus",
+    "selectTitle": "Choisir votre coureur bonus",
     "selected": "Coureur bonus sélectionné",
-    "description": "Sélectionnez un coureur pour doubler ses points cette phase",
+    "description": "Sélectionnez un coureur avec une cote initiale de 10 ou 20 qui recevra +25% de points bonus.",
+    "warning": "Ce choix est définitif pour cette phase.",
     "eligible": "Coureurs éligibles",
     "noSelection": "Aucun coureur bonus sélectionné",
-    "confirm": "Confirmer la sélection"
+    "noEligible": "Aucun coureur éligible (cote initiale 10 ou 20)",
+    "confirm": "Confirmer la sélection",
+    "successTitle": "Coureur bonus sélectionné !",
+    "successDescription": "{{name}} recevra désormais +25% de points bonus."
   },
   "rider": {
-    "name": "Nom",
+    "name": "Coureur",
     "team": "Équipe",
     "price": "Prix",
     "purchasePrice": "Prix d'achat",
     "initialPrice": "Cote initiale",
     "points": "Points",
     "status": "Statut"
+  },
+  "table": {
+    "rider": "Coureur",
+    "team": "Équipe",
+    "price": "Prix",
+    "rating": "Cote",
+    "totalPoints": "Points totaux",
+    "ratio": "Ratio"
+  },
+  "sort": {
+    "points": "Points",
+    "ratio": "Ratio",
+    "price": "Prix",
+    "rating": "Cote"
   },
   "empty": {
     "title": "Aucun coureur",

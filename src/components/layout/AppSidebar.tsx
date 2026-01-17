@@ -1,5 +1,6 @@
 import { BarChart3, Users, Calendar, ListChecks, LineChart, Trophy, Settings, Home, Shield, Database } from "lucide-react";
 import { NavLink, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Sidebar,
   SidebarContent,
@@ -23,18 +24,19 @@ interface AppSidebarProps {
   isLeagueAdminOnly?: boolean;
 }
 
-const navItems = [
-  { label: 'Accueil', href: '/dashboard/home', icon: Home },
-  { label: 'Classement', href: '/dashboard/classement', icon: BarChart3 },
-  { label: 'Équipes', href: '/dashboard/mon-equipe', icon: Users },
-  { label: 'Résultats', href: '/dashboard/resultats', icon: BarChart3 },
-  { label: 'Courses', href: '/dashboard/courses', icon: Calendar },
-  { label: 'Startlist', href: '/dashboard/startlist', icon: ListChecks },
-  { label: 'Statistiques', href: '/dashboard/statistiques', icon: LineChart },
-  { label: 'Enchères', href: '/dashboard/encheres', icon: Trophy },
+const navItemsConfig = [
+  { key: 'home', href: '/dashboard/home', icon: Home },
+  { key: 'standings', href: '/dashboard/classement', icon: BarChart3 },
+  { key: 'teams', href: '/dashboard/mon-equipe', icon: Users },
+  { key: 'results', href: '/dashboard/resultats', icon: BarChart3 },
+  { key: 'races', href: '/dashboard/courses', icon: Calendar },
+  { key: 'startlist', href: '/dashboard/startlist', icon: ListChecks },
+  { key: 'statistics', href: '/dashboard/statistiques', icon: LineChart },
+  { key: 'auctions', href: '/dashboard/encheres', icon: Trophy },
 ];
 
 export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = false }: AppSidebarProps) {
+  const { t } = useTranslation();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [searchParams] = useSearchParams();
@@ -49,6 +51,11 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
   const buildNavUrl = (path: string) => {
     return currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
   };
+
+  const navItems = navItemsConfig.map(item => ({
+    ...item,
+    label: t(`navigation.${item.key}`)
+  }));
 
   return (
     <Sidebar collapsible="icon">
@@ -110,13 +117,13 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                             }
                           >
                             <Settings className="h-4 w-4" />
-                            {!isCollapsed && <span>Admin Ligue</span>}
+                            {!isCollapsed && <span>{t('navigation.adminLeague')}</span>}
                           </NavLink>
                         </SidebarMenuButton>
                       </TooltipTrigger>
                       {isCollapsed && (
                         <TooltipContent side="right">
-                          Admin Ligue
+                          {t('navigation.adminLeague')}
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -136,13 +143,13 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                             }
                           >
                             <Shield className="h-4 w-4" />
-                            {!isCollapsed && <span>Super Admin</span>}
+                            {!isCollapsed && <span>{t('navigation.superAdmin')}</span>}
                           </NavLink>
                         </SidebarMenuButton>
                       </TooltipTrigger>
                       {isCollapsed && (
                         <TooltipContent side="right">
-                          Super Admin
+                          {t('navigation.superAdmin')}
                         </TooltipContent>
                       )}
                     </Tooltip>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +72,7 @@ interface Manager {
 }
 
 export const MyTeamDesktop = () => {
+  const { t } = useTranslation('team');
   const { toast } = useToast();
   const { phases, activePhase, selectedSeason } = useSeasonContext();
   const { leagueId, isLoading: leagueLoading } = useLeague();
@@ -339,8 +341,8 @@ export const MyTeamDesktop = () => {
       if (error) throw error;
 
       toast({
-        title: "✅ Coureur bonus sélectionné !",
-        description: `${coureur_nom} recevra désormais +25% de points bonus.`,
+        title: `✅ ${t('bonusRider.successTitle')}`,
+        description: t('bonusRider.successDescription', { name: coureur_nom }),
       });
 
       setBonusRiderSelection({ coureur_id, coureur_nom });
@@ -439,7 +441,7 @@ export const MyTeamDesktop = () => {
   };
 
   const getPhaseLabel = (phase: any) => {
-    return `Phase ${phase.index_dans_saison}`;
+    return `${t('phase')} ${phase.index_dans_saison}`;
   };
 
   if (loading) {
@@ -459,10 +461,10 @@ export const MyTeamDesktop = () => {
           <h1 className="text-3xl font-bold">
             {selectedManagerId && selectedManagerId !== currentUserId
               ? managers.find(m => m.id === selectedManagerId)?.nom
-              : 'Mon équipe'}
+              : t('myTeam')}
           </h1>
           <p className="text-muted-foreground">
-            {coureurs.length} coureur{coureurs.length > 1 ? 's' : ''}
+            {t('riderCount', { count: coureurs.length })}
           </p>
         </div>
         
@@ -470,10 +472,10 @@ export const MyTeamDesktop = () => {
         {managers.length > 0 && (
           <Select value={selectedManagerId || '__MY_TEAM__'} onValueChange={(v) => setSelectedManagerId(v === '__MY_TEAM__' ? null : v)}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Mon équipe" />
+              <SelectValue placeholder={t('myTeam')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__MY_TEAM__">Mon équipe</SelectItem>
+              <SelectItem value="__MY_TEAM__">{t('myTeam')}</SelectItem>
               {managers.map((manager) => (
                 <SelectItem key={manager.id} value={manager.id}>
                   {manager.nom}
@@ -487,7 +489,7 @@ export const MyTeamDesktop = () => {
         {phases.length > 0 && (
           <Select value={selectedPhaseId || ''} onValueChange={setSelectedPhaseId}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Sélectionner une phase" />
+              <SelectValue placeholder={t('selectPhase')} />
             </SelectTrigger>
             <SelectContent>
               {phases.map((phase) => (
@@ -507,7 +509,7 @@ export const MyTeamDesktop = () => {
             onClick={() => setSortBy('points')}
           >
             <Trophy className="h-4 w-4 mr-2" />
-            Points
+            {t('sort.points')}
           </Button>
           <Button
             variant={sortBy === 'ratio' ? 'default' : 'outline'}
@@ -515,21 +517,21 @@ export const MyTeamDesktop = () => {
             onClick={() => setSortBy('ratio')}
           >
             <ArrowUpDown className="h-4 w-4 mr-2" />
-            Ratio
+            {t('sort.ratio')}
           </Button>
           <Button
             variant={sortBy === 'prix' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setSortBy('prix')}
           >
-            Prix
+            {t('sort.price')}
           </Button>
           <Button
             variant={sortBy === 'cote' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setSortBy('cote')}
           >
-            Cote
+            {t('sort.rating')}
           </Button>
         </div>
       </div>
@@ -549,11 +551,11 @@ export const MyTeamDesktop = () => {
           <div className="flex gap-2 flex-1">
             {managers.length > 0 && (
               <Select value={selectedManagerId || '__MY_TEAM__'} onValueChange={(v) => setSelectedManagerId(v === '__MY_TEAM__' ? null : v)}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Mon équipe" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__MY_TEAM__">Mon équipe</SelectItem>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder={t('myTeam')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__MY_TEAM__">{t('myTeam')}</SelectItem>
                   {managers.map((manager) => (
                     <SelectItem key={manager.id} value={manager.id}>
                       {manager.nom}
@@ -565,8 +567,8 @@ export const MyTeamDesktop = () => {
             
             {phases.length > 0 && (
               <Select value={selectedPhaseId || ''} onValueChange={setSelectedPhaseId}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Phase" />
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder={t('phase')} />
                 </SelectTrigger>
                 <SelectContent>
                   {phases.map((phase) => (
@@ -601,21 +603,21 @@ export const MyTeamDesktop = () => {
               <div className="text-center">
                 <Trophy className="h-5 w-5 mx-auto text-[#FFD500] mb-1" />
                 <div className="text-2xl font-bold">{kpis.total_points}</div>
-                <div className="text-xs text-muted-foreground">Total pts</div>
+                <div className="text-xs text-muted-foreground">{t('totalPts')}</div>
               </div>
               
               {/* Bonus Points */}
               <div className="text-center">
                 <Star className="h-5 w-5 mx-auto text-orange-500 mb-1" />
                 <div className="text-2xl font-bold">{kpis.bonus_points}</div>
-                <div className="text-xs text-muted-foreground">Bonus pts</div>
+                <div className="text-xs text-muted-foreground">{t('bonusPts')}</div>
               </div>
               
               {/* Scorers */}
               <div className="text-center">
                 <TrendingUp className="h-5 w-5 mx-auto text-green-600 mb-1" />
                 <div className="text-2xl font-bold">{kpis.scorers_count}</div>
-                <div className="text-xs text-muted-foreground">Scoreurs</div>
+                <div className="text-xs text-muted-foreground">{t('scorers')}</div>
               </div>
               
               {/* Rank */}
@@ -625,7 +627,7 @@ export const MyTeamDesktop = () => {
                   {kpis.my_rank ? `#${kpis.my_rank}` : '—'}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {kpis.managers_count > 0 ? `/${kpis.managers_count}` : 'Classement'}
+                  {kpis.managers_count > 0 ? `/${kpis.managers_count}` : t('ranking')}
                 </div>
               </div>
             </div>
@@ -636,9 +638,9 @@ export const MyTeamDesktop = () => {
       {coureurs.length === 0 ? (
         <Card className="p-12 text-center">
           <Trophy className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-semibold mb-2">Équipe vide</h3>
+          <h3 className="text-lg font-semibold mb-2">{t('emptyTeam')}</h3>
           <p className="text-muted-foreground">
-            Votre équipe est vide pour cette phase
+            {t('emptyTeamDescription')}
           </p>
         </Card>
       ) : (
@@ -648,14 +650,14 @@ export const MyTeamDesktop = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Coureur</TableHead>
-                  <TableHead>Équipe</TableHead>
+                  <TableHead>{t('table.rider')}</TableHead>
+                  <TableHead>{t('table.team')}</TableHead>
                   <TableHead 
                     className="text-right cursor-pointer hover:bg-muted/50 select-none"
                     onClick={() => handleSort('prix')}
                   >
                     <div className="flex items-center justify-end gap-1">
-                      Prix
+                      {t('table.price')}
                       {sortBy === 'prix' && (
                         sortDirection === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />
                       )}
@@ -666,7 +668,7 @@ export const MyTeamDesktop = () => {
                     onClick={() => handleSort('cote')}
                   >
                     <div className="flex items-center justify-end gap-1">
-                      Cote
+                      {t('table.rating')}
                       {sortBy === 'cote' && (
                         sortDirection === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />
                       )}
@@ -677,7 +679,7 @@ export const MyTeamDesktop = () => {
                     onClick={() => handleSort('points')}
                   >
                     <div className="flex items-center justify-end gap-1">
-                      Points totaux
+                      {t('table.totalPoints')}
                       {sortBy === 'points' && (
                         sortDirection === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />
                       )}
@@ -688,7 +690,7 @@ export const MyTeamDesktop = () => {
                     onClick={() => handleSort('ratio')}
                   >
                     <div className="flex items-center justify-end gap-1">
-                      Ratio
+                      {t('table.ratio')}
                       {sortBy === 'ratio' && (
                         sortDirection === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />
                       )}
@@ -798,8 +800,8 @@ export const MyTeamDesktop = () => {
                 </div>
                 
                 <div className="flex gap-4 text-sm text-muted-foreground">
-                  <span>Prix: <span className="font-semibold text-foreground">{coureur.prix_achat.toFixed(0)}</span></span>
-                  <span>Cote: <span className="font-semibold text-foreground">{coureur.cote_initiale.toFixed(0)}</span></span>
+                  <span>{t('price')}: <span className="font-semibold text-foreground">{coureur.prix_achat.toFixed(0)}</span></span>
+                  <span>{t('rating')}: <span className="font-semibold text-foreground">{coureur.cote_initiale.toFixed(0)}</span></span>
                 </div>
               </div>
             ))}
@@ -811,10 +813,10 @@ export const MyTeamDesktop = () => {
       <Dialog open={showBonusRiderDialog} onOpenChange={setShowBonusRiderDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Choisir votre coureur bonus</DialogTitle>
+            <DialogTitle>{t('bonusRider.selectTitle')}</DialogTitle>
               <DialogDescription>
-                Sélectionnez un coureur avec une cote initiale de 10 ou 20 qui recevra +25% de points bonus.
-                <br />⚠️ Ce choix est définitif pour cette phase.
+                {t('bonusRider.description')}
+                <br />⚠️ {t('bonusRider.warning')}
               </DialogDescription>
           </DialogHeader>
           
@@ -829,18 +831,18 @@ export const MyTeamDesktop = () => {
                   onClick={() => handleSelectBonusRider(coureur.coureur_id, coureur.nom)}
                 >
                   <Star className="h-5 w-5 text-amber-500" />
-                      <div className="text-left">
-                        <div className="font-semibold">{coureur.nom}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {coureur.equipe} • Cote: {coureur.cote_initiale} • {coureur.points_total} pts
-                        </div>
-                      </div>
+                  <div className="text-left">
+                    <div className="font-semibold">{coureur.nom}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {coureur.equipe} • {t('rating')}: {coureur.cote_initiale} • {coureur.points_total} pts
+                    </div>
+                  </div>
                 </Button>
               ))}
             
             {coureurs.filter(c => c.cote_initiale === 10 || c.cote_initiale === 20).length === 0 && (
               <p className="text-center text-muted-foreground py-4">
-                Aucun coureur éligible (cote initiale 10 ou 20)
+                {t('bonusRider.noEligible')}
               </p>
             )}
           </div>

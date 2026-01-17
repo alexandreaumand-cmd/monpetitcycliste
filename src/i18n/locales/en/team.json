@@ -1,5 +1,6 @@
 {
   "title": "My Team",
+  "myTeam": "My team",
   "roster": "Roster",
   "budget": "Budget",
   "budgetRemaining": "Remaining budget",
@@ -7,23 +8,57 @@
   "maxRiders": "Maximum riders",
   "points": "Points",
   "totalPoints": "Total points",
+  "totalPts": "Total pts",
+  "bonusPts": "Bonus pts",
+  "scorers": "Scorers",
+  "ranking": "Ranking",
+  "ratio": "Ratio",
+  "price": "Price",
+  "rating": "Rating",
+  "phase": "Phase",
+  "selectPhase": "Select a phase",
+  "emptyTeam": "Empty team",
+  "emptyTeamDescription": "Your team is empty for this phase",
+  "noRiders": "No riders",
+  "noRidersDescription": "You don't have any riders in your team yet",
+  "riderCount_one": "{{count}} rider",
+  "riderCount_other": "{{count}} riders",
   "bonusRider": {
     "title": "Bonus Rider",
     "select": "Select bonus rider",
+    "selectTitle": "Select your bonus rider",
     "selected": "Bonus rider selected",
-    "description": "Select a rider to double their points this phase",
+    "description": "Select a rider with an initial rating of 10 or 20 who will receive +25% bonus points.",
+    "warning": "This choice is final for this phase.",
     "eligible": "Eligible riders",
     "noSelection": "No bonus rider selected",
-    "confirm": "Confirm selection"
+    "noEligible": "No eligible rider (initial rating 10 or 20)",
+    "confirm": "Confirm selection",
+    "successTitle": "Bonus rider selected!",
+    "successDescription": "{{name}} will now receive +25% bonus points."
   },
   "rider": {
-    "name": "Name",
+    "name": "Rider",
     "team": "Team",
     "price": "Price",
     "purchasePrice": "Purchase price",
     "initialPrice": "Initial rating",
     "points": "Points",
     "status": "Status"
+  },
+  "table": {
+    "rider": "Rider",
+    "team": "Team",
+    "price": "Price",
+    "rating": "Rating",
+    "totalPoints": "Total points",
+    "ratio": "Ratio"
+  },
+  "sort": {
+    "points": "Points",
+    "ratio": "Ratio",
+    "price": "Price",
+    "rating": "Rating"
   },
   "empty": {
     "title": "No riders",
