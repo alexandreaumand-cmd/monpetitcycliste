@@ -6,7 +6,9 @@
     "myLeagues": "Mes ligues",
     "noLeagues": "Aucune ligue",
     "createLeague": "Créer une ligue",
-    "joinLeague": "Rejoindre une ligue"
+    "joinLeague": "Rejoindre une ligue",
+    "changeLeague": "Changer de ligue",
+    "selectOrCreate": "Sélectionnez une ligue ou créez-en une nouvelle"
   },
   "create": {
     "title": "Créer une ligue",

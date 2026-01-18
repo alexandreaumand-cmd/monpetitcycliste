@@ -37,5 +37,18 @@
     "season": "Season",
     "seasonLocked": "Season locked"
   },
-  "logout": "Sign Out"
+  "logout": "Sign Out",
+  "superAdmin": {
+    "riders": "Riders",
+    "teams": "Teams",
+    "scales": "Scales",
+    "pointsLedger": "Points Ledger",
+    "startlists": "Startlists",
+    "startlistData": "Startlist Data",
+    "data": "Data",
+    "leagues": "Leagues",
+    "users": "Users",
+    "interface": "Management interface",
+    "backToDashboard": "Back to Dashboard"
+  }
 }
