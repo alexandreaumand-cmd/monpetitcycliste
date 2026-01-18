@@ -21,26 +21,25 @@ interface HeaderProps {
   onSignOut: () => void;
 }
 
-// Desktop navigation order
-const desktopNavLinks = [
-  { label: 'Classement', href: '/dashboard/classement', icon: BarChart3 },
-  { label: 'Équipes', href: '/dashboard/mon-equipe', icon: Users },
-  { label: 'Résultats', href: '/dashboard/resultats', icon: BarChart3 },
-  { label: 'Courses', href: '/dashboard/courses', icon: Calendar },
-  { label: 'Startlist', href: '/dashboard/startlist', icon: ListChecks },
-  { label: 'Statistiques', href: '/dashboard/statistiques', icon: LineChart },
-  { label: 'Enchères', href: '/dashboard/encheres', icon: Trophy },
+// Navigation links with translation keys
+const getDesktopNavLinks = (t: any) => [
+  { label: t('navigation:header.rankings'), href: '/dashboard/classement', icon: BarChart3 },
+  { label: t('navigation:header.teams'), href: '/dashboard/mon-equipe', icon: Users },
+  { label: t('navigation:header.results'), href: '/dashboard/resultats', icon: BarChart3 },
+  { label: t('navigation:header.races'), href: '/dashboard/courses', icon: Calendar },
+  { label: t('navigation:header.startlist'), href: '/dashboard/startlist', icon: ListChecks },
+  { label: t('navigation:header.statistics'), href: '/dashboard/statistiques', icon: LineChart },
+  { label: t('navigation:header.auctions'), href: '/dashboard/encheres', icon: Trophy },
 ];
 
-// Mobile navigation order (unchanged)
-const mobileNavLinks = [
-  { label: 'Enchères', href: '/dashboard/encheres', icon: Trophy },
-  { label: 'Équipes', href: '/dashboard/mon-equipe', icon: Users },
-  { label: 'Courses', href: '/dashboard/courses', icon: Calendar },
-  { label: 'Résultats', href: '/dashboard/resultats', icon: BarChart3 },
-  { label: 'Classement', href: '/dashboard/classement', icon: BarChart3 },
-  { label: 'Startlist', href: '/dashboard/startlist', icon: ListChecks },
-  { label: 'Statistiques', href: '/dashboard/statistiques', icon: LineChart },
+const getMobileNavLinks = (t: any) => [
+  { label: t('navigation:header.auctions'), href: '/dashboard/encheres', icon: Trophy },
+  { label: t('navigation:header.teams'), href: '/dashboard/mon-equipe', icon: Users },
+  { label: t('navigation:header.races'), href: '/dashboard/courses', icon: Calendar },
+  { label: t('navigation:header.results'), href: '/dashboard/resultats', icon: BarChart3 },
+  { label: t('navigation:header.rankings'), href: '/dashboard/classement', icon: BarChart3 },
+  { label: t('navigation:header.startlist'), href: '/dashboard/startlist', icon: ListChecks },
+  { label: t('navigation:header.statistics'), href: '/dashboard/statistiques', icon: LineChart },
 ];
 
 export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
@@ -56,12 +55,15 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   // Fallback: sponsor de la saison > sponsor global > null
   const displaySponsor = seasonSponsor?.sponsor || manager?.sponsor;
   
+  const desktopNavLinks = getDesktopNavLinks(t);
+  const mobileNavLinks = getMobileNavLinks(t);
+  
   const allDesktopLinks = isAdmin 
-    ? [...desktopNavLinks, { label: 'Admin', href: '/dashboard/admin', icon: Shield }]
+    ? [...desktopNavLinks, { label: t('navigation:header.admin'), href: '/dashboard/admin', icon: Shield }]
     : desktopNavLinks;
 
   const allMobileLinks = isAdmin 
-    ? [...mobileNavLinks, { label: 'Admin', href: '/dashboard/admin', icon: Shield }]
+    ? [...mobileNavLinks, { label: t('navigation:header.admin'), href: '/dashboard/admin', icon: Shield }]
     : mobileNavLinks;
 
   const buildNavUrl = (href: string) => {
@@ -115,22 +117,22 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
             {/* Season Selector or Locked Badge */}
             {!seasonsLoading && seasons.length > 0 && (
               <>
-                {isLeagueSeason && lockedLeagueSeason ? (
+              {isLeagueSeason && lockedLeagueSeason ? (
                   <Badge variant="secondary" className="gap-1 h-8 px-3">
                     <Lock className="h-3 w-3" />
-                    <span className="text-xs">Saison {lockedLeagueSeason.annee}</span>
+                    <span className="text-xs">{t('navigation:header.season')} {lockedLeagueSeason.annee}</span>
                   </Badge>
                 ) : (
                   <>
                     {/* Mobile: Native select */}
                     <select
-                      aria-label="Choisir l'année"
+                      aria-label={t('navigation:header.year')}
                       className="md:hidden w-[90px] h-8 text-xs rounded-md border border-input bg-background text-foreground px-2 focus:outline-none focus:ring-2 focus:ring-ring"
                       value={selectedSeason?.id || ""}
                       onChange={(e) => handleSeasonChange(e.target.value)}
                       disabled={isLeagueSeason}
                     >
-                      <option value="" disabled>Année</option>
+                      <option value="" disabled>{t('navigation:header.year')}</option>
                       {seasons.map((season) => (
                         <option key={season.id} value={season.id}>
                           {season.annee}
@@ -145,7 +147,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                       disabled={isLeagueSeason}
                     >
                       <SelectTrigger className="hidden md:flex w-[100px] h-8">
-                        <SelectValue placeholder="Année" />
+                        <SelectValue placeholder={t('navigation:header.year')} />
                       </SelectTrigger>
                       <SelectContent className="z-50 bg-popover">
                         {seasons.map((season) => (
@@ -215,7 +217,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
             className="gap-2"
           >
             {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            <span className="text-sm">Menu</span>
+            <span className="text-sm">{t('navigation:header.menu')}</span>
           </Button>
         </div>
 

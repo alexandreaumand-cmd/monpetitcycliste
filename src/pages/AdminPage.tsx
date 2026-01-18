@@ -6,13 +6,10 @@ import { cn } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ShieldAlert, Loader2 } from "lucide-react";
-
-const allTabs = [
-  { label: '🎮 Enchères', path: 'encheres', superAdminOnly: false },
-  { label: '🏆 Ligues', path: 'leagues', superAdminOnly: false },
-];
+import { useTranslation } from "react-i18next";
 
 export const AdminPage = () => {
+  const { t } = useTranslation('admin');
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { isSuperAdmin, isLeagueAdminOnly, loading } = useUserRole();
@@ -20,12 +17,17 @@ export const AdminPage = () => {
   const leagueId = searchParams.get('leagueId');
   const preserveLeagueParam = leagueId ? `?leagueId=${leagueId}` : '';
 
+  const allTabs = [
+    { label: t('tabs.auctions'), path: 'encheres', superAdminOnly: false },
+    { label: t('tabs.leagues'), path: 'leagues', superAdminOnly: false },
+  ];
+
   if (loading) {
     return (
       <div className="min-h-[400px] flex items-center justify-center">
         <div className="text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Vérification des permissions...</p>
+          <p className="text-sm text-muted-foreground">{t('permissionCheck')}</p>
         </div>
       </div>
     );
@@ -37,8 +39,8 @@ export const AdminPage = () => {
         <Alert variant="destructive" className="max-w-md">
           <ShieldAlert className="h-5 w-5" />
           <AlertDescription className="ml-2">
-            <strong>Accès refusé</strong>
-            <p className="mt-1 text-sm">Cette interface est réservée aux administrateurs de ligue.</p>
+            <strong>{t('accessDenied')}</strong>
+            <p className="mt-1 text-sm">{t('accessDeniedMessage')}</p>
           </AlertDescription>
         </Alert>
       </div>

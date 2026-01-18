@@ -1,0 +1,24 @@
+{
+  "loading": "Loading...",
+  "permissionCheck": "Checking permissions...",
+  "accessDenied": "Access Denied",
+  "accessDeniedMessage": "This interface is reserved for league administrators.",
+  "tabs": {
+    "auctions": "🎮 Auctions",
+    "leagues": "🏆 Leagues"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading...",
+    "noData": "No data",
+    "actions": "Actions",
+    "confirm": "Confirm",
+    "success": "Success",
+    "error": "Error"
+  }
+}

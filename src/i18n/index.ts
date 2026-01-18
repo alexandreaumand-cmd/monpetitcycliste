@@ -16,6 +16,8 @@ import frResults from './locales/fr/results.json';
 import frLeagues from './locales/fr/leagues.json';
 import frNavigation from './locales/fr/navigation.json';
 import frErrors from './locales/fr/errors.json';
+import frStatistics from './locales/fr/statistics.json';
+import frAdmin from './locales/fr/admin.json';
 
 // Import English translations
 import enCommon from './locales/en/common.json';
@@ -31,6 +33,8 @@ import enResults from './locales/en/results.json';
 import enLeagues from './locales/en/leagues.json';
 import enNavigation from './locales/en/navigation.json';
 import enErrors from './locales/en/errors.json';
+import enStatistics from './locales/en/statistics.json';
+import enAdmin from './locales/en/admin.json';
 
 export const resources = {
   fr: {
@@ -47,6 +51,8 @@ export const resources = {
     leagues: frLeagues,
     navigation: frNavigation,
     errors: frErrors,
+    statistics: frStatistics,
+    admin: frAdmin,
   },
   en: {
     common: enCommon,
@@ -62,6 +68,8 @@ export const resources = {
     leagues: enLeagues,
     navigation: enNavigation,
     errors: enErrors,
+    statistics: enStatistics,
+    admin: enAdmin,
   },
 } as const;
 
@@ -76,7 +84,7 @@ i18n
     resources,
     fallbackLng: 'fr',
     defaultNS,
-    ns: ['common', 'team', 'auction', 'dashboard', 'rankings', 'home', 'auth', 'account', 'calendar', 'results', 'leagues', 'navigation', 'errors'],
+    ns: ['common', 'team', 'auction', 'dashboard', 'rankings', 'home', 'auth', 'account', 'calendar', 'results', 'leagues', 'navigation', 'errors', 'statistics', 'admin'],
     interpolation: {
       escapeValue: false,
     },

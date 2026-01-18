@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getLeagueTemplates, type GameMode } from "@/lib/leagues/templates";
 import { Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type LeagueTemplateSelectorProps = {
   selectedMode: GameMode | null;
@@ -11,6 +12,7 @@ type LeagueTemplateSelectorProps = {
 };
 
 export function LeagueTemplateSelector({ selectedMode, onSelect }: LeagueTemplateSelectorProps) {
+  const { t } = useTranslation('leagues');
   const { data: templates, isLoading } = useQuery({
     queryKey: ['league-templates'],
     queryFn: getLeagueTemplates,
@@ -44,13 +46,13 @@ export function LeagueTemplateSelector({ selectedMode, onSelect }: LeagueTemplat
               </p>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary" className="text-xs">
-                  {template.playerCounts.join(', ')} joueurs
+                  {template.playerCounts.join(', ')} {t('templates.players')}
                 </Badge>
                 <Badge variant="outline" className="text-xs">
-                  Budget: {template.defaultBudget}
+                  {t('templates.budget')}: {template.defaultBudget}
                 </Badge>
                 <Badge variant="outline" className="text-xs">
-                  Max: {template.defaultMaxRiders} coureurs
+                  {t('templates.maxRiders')}: {template.defaultMaxRiders}
                 </Badge>
               </div>
             </div>

@@ -12,8 +12,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { fr, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 type LeagueSettingsFormProps = {
   name: string;
@@ -48,6 +49,9 @@ export function LeagueSettingsForm({
   onFirstAuctionDateChange,
   seasons,
 }: LeagueSettingsFormProps) {
+  const { t, i18n } = useTranslation('leagues');
+  const dateLocale = i18n.language === 'fr' ? fr : enUS;
+  
   const { data: templates } = useQuery({
     queryKey: ['league-templates'],
     queryFn: getLeagueTemplates,
@@ -65,10 +69,10 @@ export function LeagueSettingsForm({
     <div className="space-y-6">
       {/* League Name */}
       <div className="space-y-2">
-        <Label htmlFor="league-name">Nom de la ligue</Label>
+        <Label htmlFor="league-name">{t('settings.name')}</Label>
         <Input
           id="league-name"
-          placeholder="Ma Super Ligue"
+          placeholder={t('settings.namePlaceholder')}
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
         />
@@ -76,15 +80,15 @@ export function LeagueSettingsForm({
 
       {/* Season Selection */}
       <div className="space-y-2">
-        <Label>Saison</Label>
+        <Label>{t('settings.season')}</Label>
         <Select value={seasonId} onValueChange={onSeasonChange}>
           <SelectTrigger>
-            <SelectValue placeholder="Sélectionner une saison" />
+            <SelectValue placeholder={t('settings.selectSeason')} />
           </SelectTrigger>
           <SelectContent>
             {seasons.map((season) => (
               <SelectItem key={season.id} value={season.id}>
-                Saison {season.annee}
+                {t('settings.season')} {season.annee}
               </SelectItem>
             ))}
           </SelectContent>
@@ -93,7 +97,7 @@ export function LeagueSettingsForm({
 
       {/* Player Count */}
       <div className="space-y-2">
-        <Label>Nombre de joueurs</Label>
+        <Label>{t('settings.playerCount')}</Label>
         <RadioGroup
           value={playerCount.toString()}
           onValueChange={(value) => onPlayerCountChange(parseInt(value))}
@@ -116,14 +120,14 @@ export function LeagueSettingsForm({
           ))}
         </RadioGroup>
         <div className="flex gap-2 mt-2">
-          <Badge variant="secondary">Budget: {settings.budget}</Badge>
-          <Badge variant="secondary">Max coureurs: {settings.maxRiders}</Badge>
+          <Badge variant="secondary">{t('settings.budget')}: {settings.budget}</Badge>
+          <Badge variant="secondary">{t('settings.maxRiders')}: {settings.maxRiders}</Badge>
         </div>
       </div>
 
       {/* Visibility */}
       <div className="space-y-2">
-        <Label>Visibilité</Label>
+        <Label>{t('settings.visibility')}</Label>
         <RadioGroup
           value={visibility}
           onValueChange={(value) => onVisibilityChange(value as 'public' | 'private')}
@@ -131,13 +135,13 @@ export function LeagueSettingsForm({
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="public" id="public" />
             <Label htmlFor="public" className="font-normal cursor-pointer">
-              Publique - Visible par tous
+              {t('visibility.public')} - {t('visibility.publicDesc')}
             </Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="private" id="private" />
             <Label htmlFor="private" className="font-normal cursor-pointer">
-              Privée - Sur invitation uniquement
+              {t('visibility.private')} - {t('visibility.privateDesc')}
             </Label>
           </div>
         </RadioGroup>
@@ -146,9 +150,9 @@ export function LeagueSettingsForm({
       {/* Bonuses */}
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
-          <Label htmlFor="bonuses">Bonus activés</Label>
+          <Label htmlFor="bonuses">{t('settings.bonuses')}</Label>
           <p className="text-sm text-muted-foreground">
-            Coureurs bonus, ITT, TTT, première victoire
+            {t('settings.bonusesDesc')}
           </p>
         </div>
         <Switch
@@ -160,9 +164,9 @@ export function LeagueSettingsForm({
 
       {/* First Auction Date */}
       <div className="space-y-2">
-        <Label>Date et heure du premier tour d'enchères *</Label>
+        <Label>{t('settings.auctionDate')} *</Label>
         <p className="text-sm text-muted-foreground mb-2">
-          Les managers verront un compte à rebours avant le début des enchères
+          {t('settings.auctionDateDesc')}
         </p>
         <Popover>
           <PopoverTrigger asChild>
@@ -175,9 +179,9 @@ export function LeagueSettingsForm({
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
               {firstAuctionDate ? (
-                format(firstAuctionDate, "PPP 'à' HH:mm", { locale: fr })
+                format(firstAuctionDate, "PPP 'à' HH:mm", { locale: dateLocale })
               ) : (
-                <span>Sélectionner une date et heure</span>
+                <span>{t('settings.selectDateTime')}</span>
               )}
             </Button>
           </PopoverTrigger>
@@ -200,7 +204,7 @@ export function LeagueSettingsForm({
                 className="pointer-events-auto"
               />
               <div className="border-t pt-3 space-y-2">
-                <Label className="text-xs">Heure</Label>
+                <Label className="text-xs">{t('settings.hour')}</Label>
                 <div className="flex gap-2">
                   <Input
                     type="number"

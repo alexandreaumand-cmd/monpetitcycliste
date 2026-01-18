@@ -1,0 +1,42 @@
+{
+  "title": "Statistiques avancées",
+  "subtitle": "Analyses approfondies des performances et de la régularité des managers",
+  "loading": "Chargement...",
+  "noSeason": "Aucune saison sélectionnée",
+  "season": "Saison",
+  "tabs": {
+    "heatmap": "Heatmap",
+    "consistency": "Consistency",
+    "distribution": "Distribution",
+    "predictions": "Prédictions",
+    "knowledge": "🧠 Connaissance",
+    "luck": "🍀 La Chatte"
+  },
+  "knowledge": {
+    "title": "Classement Connaissance Vélo",
+    "description": "Qui sait mieux sélectionner ses coureurs ? Score basé sur le ratio points/prix, les pépites et les performances en WT",
+    "score": "Score",
+    "avgRatio": "Ratio moy.",
+    "pepites": "Pépites",
+    "wtPercentage": "% WT",
+    "smartest": "🏆 Le plus futé",
+    "avgScore": "Score moyen",
+    "totalPepites": "Pépites totales",
+    "managers": "managers",
+    "avg": "Moy"
+  },
+  "luck": {
+    "title": "Classement \"La Chatte\"",
+    "description": "Qui a la chance avec eux ? Score basé sur l'écart entre performance attendue et réelle, variance et gros coups",
+    "luckScore": "Score chance",
+    "perfGap": "Écart perf.",
+    "variance": "Variance",
+    "bigWins": "Gros coups",
+    "luckiest": "🍀 Le plus chanceux",
+    "unluckiest": "💩 Le plus malchanceux",
+    "avgGap": "Écart moyen",
+    "managers": "managers",
+    "luckiestBadge": "🍀 Le plus chanceux",
+    "unluckiestBadge": "💩 Le plus malchanceux"
+  }
+}

@@ -1,46 +1,83 @@
 {
+  "switcher": {
+    "loading": "Chargement...",
+    "selectLeague": "Sélectionner une ligue",
+    "current": "Actuelle",
+    "myLeagues": "Mes ligues",
+    "noLeagues": "Aucune ligue",
+    "createLeague": "Créer une ligue",
+    "joinLeague": "Rejoindre une ligue"
+  },
   "create": {
     "title": "Créer une ligue",
     "selectMode": "Choisir un mode de jeu",
-    "configure": "Configurer la ligue",
+    "selectModeDesc": "Sélectionnez le type de ligue que vous souhaitez créer",
+    "configure": "Configuration de la ligue",
+    "configureDesc": "Personnalisez les paramètres de votre ligue",
     "next": "Suivant",
     "back": "Retour",
     "cancel": "Annuler",
     "submit": "Créer la ligue",
     "creating": "Création...",
-    "success": "Ligue créée avec succès !"
+    "success": "Ligue créée avec succès !",
+    "selectDateError": "Veuillez sélectionner une date et heure pour le premier tour d'enchères",
+    "futureDateError": "La date du premier tour doit être dans le futur",
+    "error": "Erreur lors de la création de la ligue"
   },
   "join": {
     "title": "Rejoindre une ligue",
+    "titlePublic": "Rejoindre une ligue publique",
     "description": "Rejoignez une ligue existante",
+    "descriptionPublic": "Choisissez une ligue publique à rejoindre parmi la liste ci-dessous.",
     "publicLeagues": "Ligues publiques",
     "noPublicLeagues": "Aucune ligue publique disponible",
+    "noPublicLeaguesHint": "Créez votre propre ligue ou attendez qu'une ligue publique soit créée",
     "privateSection": "Ligue privée",
+    "joinPrivate": "Rejoindre une ligue privée",
+    "joinPrivateDesc": "Entrez le code d'invitation fourni par l'administrateur de la ligue.",
     "inviteCode": "Code d'invitation",
     "inviteCodePlaceholder": "Entrez le code d'invitation",
     "joining": "Connexion...",
+    "verifying": "Vérification...",
     "success": "Vous avez rejoint la ligue !",
+    "successWithName": "Vous avez rejoint la ligue \"{{name}}\" !",
     "button": "Rejoindre",
     "processing": "Traitement en cours...",
-    "redirecting": "Redirection vers les enchères..."
+    "redirecting": "Redirection vers les enchères...",
+    "loadingLeagues": "Chargement des ligues...",
+    "createdOn": "Créée le",
+    "or": "ou",
+    "public": "Publique",
+    "registering": "Inscription..."
   },
   "settings": {
     "name": "Nom de la ligue",
-    "namePlaceholder": "Entrez le nom de la ligue",
+    "namePlaceholder": "Ma Super Ligue",
     "season": "Saison",
+    "selectSeason": "Sélectionner une saison",
     "playerCount": "Nombre de joueurs",
     "visibility": "Visibilité",
     "bonuses": "Bonus activés",
-    "auctionDate": "Date de la première enchère",
-    "auctionTime": "Heure de début"
+    "bonusesDesc": "Coureurs bonus, ITT, TTT, première victoire",
+    "auctionDate": "Date et heure du premier tour d'enchères",
+    "auctionDateDesc": "Les managers verront un compte à rebours avant le début des enchères",
+    "auctionTime": "Heure de début",
+    "selectDateTime": "Sélectionner une date et heure",
+    "hour": "Heure",
+    "budget": "Budget",
+    "maxRiders": "Max coureurs"
   },
   "visibility": {
     "public": "Publique",
-    "private": "Privée"
+    "publicDesc": "Visible par tous",
+    "private": "Privée",
+    "privateDesc": "Sur invitation uniquement"
   },
   "templates": {
     "title": "Choisissez votre mode de jeu",
-    "players": "joueurs"
+    "players": "joueurs",
+    "budget": "Budget",
+    "maxRiders": "Max"
   },
   "invite": {
     "title": "Invitation à rejoindre",
@@ -56,10 +93,13 @@
   },
   "errors": {
     "invalidInvite": "Lien d'invitation invalide",
+    "invalidCode": "Code d'invitation invalide",
     "expiredInvite": "Ce lien d'invitation a expiré",
     "revokedInvite": "Ce lien d'invitation a été révoqué",
     "limitReached": "Le nombre maximum d'utilisations a été atteint",
     "alreadyMember": "Vous êtes déjà membre de cette ligue",
-    "generic": "Une erreur est survenue"
+    "generic": "Une erreur est survenue",
+    "enterCode": "Veuillez entrer un code d'invitation",
+    "joinError": "Erreur lors de la tentative de rejoindre la ligue"
   }
 }
