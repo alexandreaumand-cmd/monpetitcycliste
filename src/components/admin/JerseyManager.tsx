@@ -102,12 +102,15 @@ export const JerseyManager = () => {
         .from('sponsor-jerseys')
         .getPublicUrl(filePath);
 
+      // Add cache-busting query parameter to force browser to reload the image
+      const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
+
       const { error: upsertError } = await supabase
         .from('manager_sponsors')
         .upsert({
           manager_id: selectedManager,
           saison_id: selectedSeason,
-          jersey_image_url: publicUrl,
+          jersey_image_url: cacheBustedUrl,
           sponsor: currentJersey?.sponsor || '',
           updated_at: new Date().toISOString(),
         }, {
