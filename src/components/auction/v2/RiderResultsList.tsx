@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTranslation } from "react-i18next";
 
 interface Rider {
   rider_id: string;
@@ -32,6 +33,7 @@ interface RiderResultsListProps {
 }
 
 export function RiderResultsList({ riders, onAddRider, isLoading, renderActionButton, onSortChange, currentSort = 'nom', hasMore, onLoadMore, isLoadingMore }: RiderResultsListProps) {
+  const { t } = useTranslation("auction");
   const isMobile = useIsMobile();
   const [localSortColumn, setLocalSortColumn] = useState<'nom' | 'cote' | null>(null);
   const [localSortDirection, setLocalSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -102,9 +104,9 @@ export function RiderResultsList({ riders, onAddRider, isLoading, renderActionBu
   if (riders.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center">
-        <p className="text-muted-foreground mb-2">Aucun coureur trouvé</p>
+        <p className="text-muted-foreground mb-2">{t("rider.notFound")}</p>
         <p className="text-sm text-muted-foreground">
-          Essaie de modifier tes filtres
+          {t("rider.modifyFilters")}
         </p>
       </div>
     );
@@ -119,17 +121,17 @@ export function RiderResultsList({ riders, onAddRider, isLoading, renderActionBu
               className="cursor-pointer hover:bg-muted/50 select-none"
               onClick={() => handleSort('nom')}
             >
-              Coureur
+              {t("table.rider")}
               {getSortIcon('nom')}
             </TableHead>
             <TableHead 
               className="text-right cursor-pointer hover:bg-muted/50 select-none"
               onClick={() => handleSort('cote')}
             >
-              Côte
+              {t("table.odds")}
               {getSortIcon('cote')}
             </TableHead>
-            <TableHead className="text-center w-[100px]">Action</TableHead>
+            <TableHead className="text-center w-[100px]">{t("table.action")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -177,10 +179,10 @@ export function RiderResultsList({ riders, onAddRider, isLoading, renderActionBu
             {isLoadingMore ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Chargement...
+                {t("rider.loading")}
               </>
             ) : (
-              "Voir plus de coureurs"
+              t("rider.loadMore")
             )}
           </Button>
         </div>

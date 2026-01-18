@@ -3,14 +3,20 @@
   "currentAuction": "Enchère en cours",
   "nextAuction": "Prochaine enchère",
   "noActiveAuction": "Aucune enchère en cours",
+  "noScheduledAuction": "Aucune enchère programmée",
+  "auctionsNotPlanned": "Les enchères n'ont pas encore été planifiées",
   "round": "Tour",
   "deadline": "Date limite",
   "timeRemaining": "Temps restant",
+  "finished": "Terminé",
+  "phase": "Phase",
   "status": {
     "open": "Ouverte",
     "closed": "Fermée",
     "pending": "En attente",
-    "processing": "En traitement"
+    "processing": "En traitement",
+    "ready": "Prêt à valider",
+    "incomplete": "Incomplet"
   },
   "bid": {
     "title": "Miser",
@@ -23,11 +29,77 @@
     "maximum": "Mise maximum",
     "success": "Mise placée avec succès",
     "error": "Erreur lors de la mise",
-    "confirm": "Confirmer la mise"
+    "confirm": "Confirmer la mise",
+    "saved": "Enchère enregistrée",
+    "deleted": "Enchère supprimée",
+    "savingError": "Erreur lors de l'enregistrement de l'enchère",
+    "deleteError": "Impossible de supprimer l'enchère"
   },
   "rider": {
     "available": "Coureurs disponibles",
-    "selected": "Coureur sélectionné"
+    "selected": "Coureur sélectionné",
+    "noSelected": "Aucun coureur sélectionné",
+    "startSearch": "Commence par rechercher et ajouter des coureurs",
+    "notFound": "Aucun coureur trouvé",
+    "modifyFilters": "Essaie de modifier tes filtres",
+    "loadMore": "Voir plus de coureurs",
+    "loading": "Chargement..."
+  },
+  "budget": {
+    "title": "Budget",
+    "remaining": "Budget restant",
+    "initial": "Budget initial",
+    "committed": "Enchères engagées",
+    "ok": "Budget OK",
+    "left": "Reste",
+    "used": "utilisés",
+    "total": "total",
+    "mustSpend": "Tu dois encore dépenser {{amount}}",
+    "exceeded": "Tu as dépassé de {{amount}}"
+  },
+  "submit": {
+    "validating": "Validation en cours...",
+    "validate": "Valider mes enchères",
+    "confirmTitle": "Confirmer la validation",
+    "confirmMessage": "Tu es sur le point de valider tes enchères. Une fois validées, tu ne pourras plus les modifier.",
+    "bidsCount": "Nombre d'enchères",
+    "totalAmount": "Montant total",
+    "confirmQuestion": "Es-tu sûr de vouloir continuer ?",
+    "cancel": "Annuler",
+    "confirmFinal": "Valider définitivement",
+    "impossible": "Validation impossible",
+    "checkConditions": "Vérifie que toutes les conditions sont remplies"
+  },
+  "search": {
+    "placeholder": "Rechercher un coureur…",
+    "importFavorites": "Importer favoris",
+    "category": "Catégorie",
+    "teams": "Équipes",
+    "teamsCount": "{{count}} équipes",
+    "searchTeam": "Rechercher une équipe...",
+    "all": "Tout",
+    "none": "Aucun",
+    "noTeamFound": "Aucune équipe trouvée",
+    "price": "Prix",
+    "clear": "Effacer"
+  },
+  "table": {
+    "rider": "Coureur",
+    "odds": "Côte",
+    "action": "Action"
+  },
+  "myBids": {
+    "title": "Mes enchères",
+    "count": "Mes enchères ({{count}})"
+  },
+  "favorites": {
+    "imported": "Favoris importés",
+    "importedCount": "{{count}} coureur ajouté à vos enchères",
+    "importedCountPlural": "{{count}} coureurs ajoutés à vos enchères",
+    "importImpossible": "Import impossible",
+    "importError": "Erreur lors de l'import des favoris",
+    "noFavorites": "Aucun favori à importer",
+    "allTaken": "Tous les favoris sont déjà pris ou dans vos enchères"
   },
   "results": {
     "title": "Résultats",
@@ -42,7 +114,7 @@
     "title": "Historique des enchères",
     "noHistory": "Aucun historique"
   },
-"stats": {
+  "stats": {
     "title": "Statistiques de bataille",
     "global": "Global",
     "byRound": "Par round",
@@ -63,5 +135,10 @@
     "lost": "perdues",
     "of": "sur",
     "clickForDetails": "Cliquez sur une ligne pour voir le détail"
-  }
+  },
+  "slots": {
+    "title": "Coureurs"
+  },
+  "warning": "Attention",
+  "error": "Erreur"
 }

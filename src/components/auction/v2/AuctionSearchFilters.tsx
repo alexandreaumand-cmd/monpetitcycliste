@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-
 import { Search, X, ChevronDown, Star, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface AuctionSearchFiltersProps {
   searchQuery: string;
@@ -34,6 +34,7 @@ export function AuctionSearchFilters({
   onImportFavorites,
   isImportingFavorites = false,
 }: AuctionSearchFiltersProps) {
+  const { t } = useTranslation("auction");
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
 
   const categorieOptions = [
@@ -116,7 +117,7 @@ export function AuctionSearchFilters({
             ) : (
               <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
             )}
-            Importer favoris
+            {t("search.importFavorites")}
           </Button>
         )}
 
@@ -124,7 +125,7 @@ export function AuctionSearchFilters({
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher un coureur…"
+            placeholder={t("search.placeholder")}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-9 pr-10 h-10"
@@ -143,7 +144,7 @@ export function AuctionSearchFilters({
 
         {/* Team Category Filter */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">Catégorie:</span>
+          <span className="text-sm text-muted-foreground whitespace-nowrap">{t("search.category")}:</span>
           {categorieOptions.map((cat) => (
             <Badge
               key={cat.value}
@@ -166,10 +167,10 @@ export function AuctionSearchFilters({
             >
               <span className="truncate">
                 {selectedTeams.length === 0 
-                  ? "Équipes" 
+                  ? t("search.teams")
                   : selectedTeams.length <= 2 
                     ? getSelectedTeamNames()
-                    : `${selectedTeams.length} équipes`}
+                    : t("search.teamsCount", { count: selectedTeams.length })}
               </span>
               <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
@@ -178,19 +179,19 @@ export function AuctionSearchFilters({
             {/* Header with search and actions */}
             <div className="p-3 border-b">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Équipes ({selectedTeams.length})</span>
+                <span className="text-sm font-medium">{t("search.teams")} ({selectedTeams.length})</span>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="sm" onClick={selectAllTeams} className="h-6 text-xs">
-                    Tout
+                    {t("search.all")}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={clearAllTeams} className="h-6 text-xs">
-                    Aucun
+                    {t("search.none")}
                   </Button>
                 </div>
               </div>
               <Input
                 type="text"
-                placeholder="Rechercher une équipe..."
+                placeholder={t("search.searchTeam")}
                 value={teamSearchQuery}
                 onChange={(e) => setTeamSearchQuery(e.target.value)}
                 className="h-8 text-sm"
@@ -210,7 +211,7 @@ export function AuctionSearchFilters({
               ))}
               {filteredTeams.length === 0 && (
                 <div className="p-4 text-center text-sm text-muted-foreground">
-                  Aucune équipe trouvée
+                  {t("search.noTeamFound")}
                 </div>
               )}
             </div>
@@ -220,7 +221,7 @@ export function AuctionSearchFilters({
 
       {/* Second row: Price Filter */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-muted-foreground whitespace-nowrap">Prix:</span>
+        <span className="text-sm text-muted-foreground whitespace-nowrap">{t("search.price")}:</span>
         {coteOptions.map((cote) => (
           <Badge
             key={cote}
@@ -238,7 +239,7 @@ export function AuctionSearchFilters({
             onClick={() => onCotesChange([])}
             className="h-6 px-2 text-xs"
           >
-            Effacer
+            {t("search.clear")}
           </Button>
         )}
       </div>
