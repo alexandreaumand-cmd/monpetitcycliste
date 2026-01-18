@@ -14,13 +14,19 @@ interface RosterEntry {
   }>;
 }
 
+interface LeagueContext {
+  seasonYear: number;
+  phaseIndex: number;
+  races: string[];
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { rosters } = await req.json() as { rosters: RosterEntry[] };
+    const { rosters, context } = await req.json() as { rosters: RosterEntry[]; context?: LeagueContext };
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -35,17 +41,32 @@ serve(async (req) => {
       return `**${r.manager_name}**:\n${ridersList}`;
     }).join("\n\n");
 
-    const systemPrompt = `Tu es un expert en cyclisme professionnel avec une connaissance approfondie du peloton actuel (saison 2025).
-Tu dois analyser les effectifs de managers dans un jeu de fantasy cycling.
+    // Build context-aware system prompt
+    const seasonYear = context?.seasonYear || new Date().getFullYear();
+    const phaseIndex = context?.phaseIndex || 1;
+    const races = context?.races || [];
+    
+    const racesContext = races.length > 0 
+      ? `\n\nCourses de la phase ${phaseIndex} à prendre en compte pour juger les effectifs :\n${races.map(r => `- ${r}`).join('\n')}`
+      : '';
+
+    const systemPrompt = `Tu es un expert en cyclisme professionnel avec une connaissance approfondie du peloton.
+
+CONTEXTE IMPORTANT :
+- Nous sommes dans une ligue fantasy pour la saison ${seasonYear}
+- Les effectifs sont constitués pour la PHASE ${phaseIndex} uniquement
+- Pour juger les coureurs, base-toi sur leurs performances des saisons ${seasonYear - 1} et ${seasonYear - 2}${racesContext}
+
+Tu dois analyser les effectifs de managers en tenant compte de CE CONTEXTE SPÉCIFIQUE.
 
 Pour CHAQUE manager, tu dois fournir une analyse structurée en 4 points :
-1. **Points forts** : Les atouts majeurs de l'effectif (sprinteurs, grimpeurs, leaders GT, équipes fortes, etc.)
-2. **Points faibles** : Les manques ou faiblesses (pas de sprinteur, trop cher pour la qualité, manque de diversité, etc.)
-3. **Le bon coup** : La meilleure pioche de l'effectif - le coureur qui représente le meilleur rapport qualité/prix ou une vraie opportunité
-4. **Who is this ?** : Le coureur dont on ne comprend pas le recrutement - un choix étrange ou surprenant
+1. **Points forts** : Les atouts majeurs de l'effectif POUR LES COURSES DE CETTE PHASE (sprinteurs, grimpeurs, leaders GT, coureurs de classiques, etc.)
+2. **Points faibles** : Les manques ou faiblesses PAR RAPPORT AUX COURSES DE CETTE PHASE (pas le bon profil de coureurs, manque de diversité, etc.)
+3. **Le bon coup** : La meilleure pioche de l'effectif - le coureur qui représente le meilleur rapport qualité/prix ou une vraie opportunité pour cette phase
+4. **Who is this ?** : Le coureur dont on ne comprend pas le recrutement - un choix étrange ou surprenant vu le contexte de la phase
 
 Sois concis mais pertinent. Chaque point doit faire 1-2 phrases maximum.
-Base-toi sur tes connaissances actuelles du cyclisme professionnel.`;
+Base-toi sur tes connaissances des saisons ${seasonYear - 2} et ${seasonYear - 1} pour évaluer les coureurs.`;
 
     const userPrompt = `Voici les effectifs des managers de la ligue :\n\n${rostersDescription}\n\nAnalyse chaque effectif selon les 4 critères demandés.`;
 
