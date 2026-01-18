@@ -19,20 +19,7 @@ import { EquipesSaisonsManager } from "@/components/admin/EquipesSaisonsManager"
 import { BaremesManager } from "@/components/admin/BaremesManager";
 import { PointsLedgerTable } from "@/components/admin/PointsLedgerTable";
 import mpcLogo from "@/assets/mpc-logo-horizontal.png";
-
-const superAdminNavItems = [
-  { label: 'Résultats', path: 'results', icon: Trophy },
-  { label: 'Courses', path: 'courses', icon: Calendar },
-  { label: 'Coureurs', path: 'coureurs', icon: UserCircle },
-  { label: 'Équipes', path: 'equipes', icon: Users },
-  { label: 'Barèmes', path: 'baremes', icon: BarChart },
-  { label: 'Points Ledger', path: 'points-ledger', icon: Database },
-  { label: 'Startlists', path: 'startlists', icon: FileText },
-  { label: 'Données Startlists', path: 'startlist-data', icon: FileText },
-  { label: 'Données', path: 'data', icon: Database },
-  { label: 'Ligues', path: 'leagues', icon: Users },
-  { label: 'Utilisateurs', path: 'users', icon: Shield },
-];
+import { useTranslation } from "react-i18next";
 
 interface SuperAdminPageMobileProps {
   manager: any;
@@ -40,9 +27,24 @@ interface SuperAdminPageMobileProps {
 }
 
 export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobileProps) => {
+  const { t } = useTranslation('navigation');
   const [sheetOpen, setSheetOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  const superAdminNavItems = [
+    { label: t('header.results', 'Résultats'), path: 'results', icon: Trophy },
+    { label: t('header.races', 'Courses'), path: 'courses', icon: Calendar },
+    { label: t('superAdmin.riders', 'Coureurs'), path: 'coureurs', icon: UserCircle },
+    { label: t('superAdmin.teams', 'Équipes'), path: 'equipes', icon: Users },
+    { label: t('superAdmin.scales', 'Barèmes'), path: 'baremes', icon: BarChart },
+    { label: t('superAdmin.pointsLedger', 'Points Ledger'), path: 'points-ledger', icon: Database },
+    { label: t('superAdmin.startlists', 'Startlists'), path: 'startlists', icon: FileText },
+    { label: t('superAdmin.startlistData', 'Données Startlists'), path: 'startlist-data', icon: FileText },
+    { label: t('superAdmin.data', 'Données'), path: 'data', icon: Database },
+    { label: t('superAdmin.leagues', 'Ligues'), path: 'leagues', icon: Users },
+    { label: t('superAdmin.users', 'Utilisateurs'), path: 'users', icon: Shield },
+  ];
 
   const isActive = (path: string) => {
     return location.pathname.includes(`/dashboard/super-admin/${path}`);
@@ -71,7 +73,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
                 className="touch-target shrink-0"
               >
                 <Menu className="h-5 w-5" />
-                <span className="sr-only">Ouvrir le menu</span>
+                <span className="sr-only">{t('menu.openMenu')}</span>
               </Button>
             </SheetTrigger>
 
@@ -81,7 +83,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
                   <Shield className="h-6 w-6 text-primary" />
                   <SheetTitle>Super Admin</SheetTitle>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Interface de gestion</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('superAdmin.interface', 'Interface de gestion')}</p>
               </SheetHeader>
 
               {/* Manager Info */}
@@ -138,7 +140,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
                   }}
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Retour au Dashboard
+                  {t('superAdmin.backToDashboard', 'Retour au Dashboard')}
                 </button>
                 <button
                   type="button"
@@ -149,7 +151,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
                   }}
                 >
                   <LogOut className="h-4 w-4" />
-                  Déconnexion
+                  {t('logout')}
                 </button>
               </div>
             </SheetContent>

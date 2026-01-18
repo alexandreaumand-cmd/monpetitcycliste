@@ -6,7 +6,9 @@
     "myLeagues": "My leagues",
     "noLeagues": "No leagues",
     "createLeague": "Create a league",
-    "joinLeague": "Join a league"
+    "joinLeague": "Join a league",
+    "changeLeague": "Change league",
+    "selectOrCreate": "Select a league or create a new one"
   },
   "create": {
     "title": "Create a League",

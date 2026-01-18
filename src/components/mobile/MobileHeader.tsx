@@ -9,6 +9,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import mpcLogo from "@/assets/mpc-logo.png";
 import { LeagueSwitcherHeaderMobile } from "@/components/leagues/LeagueSwitcherHeaderMobile";
+import { useTranslation } from "react-i18next";
 
 interface NavItem {
   label: string;
@@ -22,6 +23,7 @@ interface MobileHeaderProps {
 }
 
 export const MobileHeader = ({ title, navItems }: MobileHeaderProps) => {
+  const { t } = useTranslation('navigation');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -32,7 +34,7 @@ export const MobileHeader = ({ title, navItems }: MobileHeaderProps) => {
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="text-yellow-400 hover:text-yellow-500 touch-target">
               <Menu className="h-6 w-6" />
-              <span className="sr-only">Ouvrir le menu</span>
+              <span className="sr-only">{t('menu.openMenu')}</span>
             </Button>
           </SheetTrigger>
           

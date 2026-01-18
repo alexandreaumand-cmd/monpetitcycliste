@@ -8,6 +8,7 @@ import { MobileBottomSheet } from "@/components/mobile/MobileBottomSheet";
 import { CreateLeagueDialog } from "./CreateLeagueDialog";
 import { JoinLeagueDialog } from "./JoinLeagueDialog";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface LeagueSwitcherBottomSheetProps {
   open: boolean;
@@ -18,6 +19,7 @@ export function LeagueSwitcherBottomSheet({
   open,
   onOpenChange,
 }: LeagueSwitcherBottomSheetProps) {
+  const { t } = useTranslation('leagues');
   const { leagueId, setLeagueId } = useLeague();
   const { leagues, roles, isLoading } = useUserLeagues();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -33,16 +35,16 @@ export function LeagueSwitcherBottomSheet({
       <MobileBottomSheet
         open={open}
         onOpenChange={onOpenChange}
-        title="Changer de ligue"
-        description="Sélectionnez une ligue ou créez-en une nouvelle"
+        title={t('switcher.changeLeague', 'Changer de ligue')}
+        description={t('switcher.selectOrCreate', 'Sélectionnez une ligue ou créez-en une nouvelle')}
       >
         {isLoading ? (
           <div className="text-sm text-muted-foreground animate-pulse py-4">
-            Chargement des ligues...
+            {t('switcher.loading')}
           </div>
         ) : leagues.length === 0 ? (
           <div className="text-sm text-muted-foreground py-4">
-            Aucune ligue disponible
+            {t('switcher.noLeagues')}
           </div>
         ) : (
           <div className="space-y-2 mb-6">
@@ -80,7 +82,7 @@ export function LeagueSwitcherBottomSheet({
             }}
           >
             <Plus className="mr-2 h-4 w-4" />
-            Créer une ligue
+            {t('switcher.createLeague')}
           </Button>
           
           <Button
@@ -92,7 +94,7 @@ export function LeagueSwitcherBottomSheet({
             }}
           >
             <Users className="mr-2 h-4 w-4" />
-            Rejoindre une ligue
+            {t('switcher.joinLeague')}
           </Button>
         </div>
       </MobileBottomSheet>

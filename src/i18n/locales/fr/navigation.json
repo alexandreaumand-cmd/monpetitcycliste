@@ -37,5 +37,18 @@
     "season": "Saison",
     "seasonLocked": "Saison verrouillée"
   },
-  "logout": "Déconnexion"
+  "logout": "Déconnexion",
+  "superAdmin": {
+    "riders": "Coureurs",
+    "teams": "Équipes",
+    "scales": "Barèmes",
+    "pointsLedger": "Points Ledger",
+    "startlists": "Startlists",
+    "startlistData": "Données Startlists",
+    "data": "Données",
+    "leagues": "Ligues",
+    "users": "Utilisateurs",
+    "interface": "Interface de gestion",
+    "backToDashboard": "Retour au Dashboard"
+  }
 }
