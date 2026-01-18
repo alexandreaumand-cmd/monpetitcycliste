@@ -16,6 +16,7 @@ import { LeagueTemplateSelector } from "./LeagueTemplateSelector";
 import { LeagueSettingsForm } from "./LeagueSettingsForm";
 import { type GameMode, calculateLeagueSettings, getLeagueScopeConfig } from "@/lib/leagues/templates";
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type CreateLeagueDialogProps = {
   open: boolean;
@@ -23,6 +24,7 @@ type CreateLeagueDialogProps = {
 };
 
 export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogProps) {
+  const { t } = useTranslation('leagues');
   const { refetch } = useUserLeagues();
   const { setLeagueId } = useLeague();
   const [isCreating, setIsCreating] = useState(false);
@@ -82,13 +84,13 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     if (!selectedMode || !name || !seasonId) return;
 
     if (!firstAuctionDate) {
-      toast.error("Veuillez sélectionner une date et heure pour le premier tour d'enchères");
+      toast.error(t('create.selectDateError'));
       return;
     }
 
     const now = new Date();
     if (firstAuctionDate <= now) {
-      toast.error("La date du premier tour doit être dans le futur");
+      toast.error(t('create.futureDateError'));
       return;
     }
 
@@ -113,7 +115,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
 
       if (error) throw error;
 
-      toast.success("Ligue créée avec succès !");
+      toast.success(t('create.success'));
       await refetch();
       
       if (data?.league?.id) {
@@ -123,7 +125,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
       handleClose();
     } catch (error: any) {
       console.error("Error creating league:", error);
-      toast.error(error.message || "Erreur lors de la création de la ligue");
+      toast.error(error.message || t('create.error'));
     } finally {
       setIsCreating(false);
     }
@@ -136,12 +138,12 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
-            {step === 1 ? "Choisir un mode de jeu" : "Configuration de la ligue"}
+            {step === 1 ? t('create.selectMode') : t('create.configure')}
           </DialogTitle>
           <DialogDescription>
             {step === 1 
-              ? "Sélectionnez le type de ligue que vous souhaitez créer"
-              : "Personnalisez les paramètres de votre ligue"
+              ? t('create.selectModeDesc')
+              : t('create.configureDesc')
             }
           </DialogDescription>
         </DialogHeader>
@@ -176,20 +178,20 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
           {step === 2 && (
             <Button variant="outline" onClick={handleBack} disabled={isCreating}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour
+              {t('create.back')}
             </Button>
           )}
           <div className="flex gap-2 ml-auto">
             <Button variant="outline" onClick={handleClose} disabled={isCreating}>
-              Annuler
+              {t('create.cancel')}
             </Button>
             {step === 1 ? (
               <Button onClick={handleNext} disabled={!canProceed}>
-                Suivant
+                {t('create.next')}
               </Button>
             ) : (
               <Button onClick={handleSubmit} disabled={!canProceed || isCreating}>
-                {isCreating ? "Création..." : "Créer la ligue"}
+                {isCreating ? t('create.creating') : t('create.submit')}
               </Button>
             )}
           </div>

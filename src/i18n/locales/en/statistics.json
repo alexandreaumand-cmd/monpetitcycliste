@@ -1,0 +1,42 @@
+{
+  "title": "Advanced Statistics",
+  "subtitle": "In-depth analysis of manager performance and consistency",
+  "loading": "Loading...",
+  "noSeason": "No season selected",
+  "season": "Season",
+  "tabs": {
+    "heatmap": "Heatmap",
+    "consistency": "Consistency",
+    "distribution": "Distribution",
+    "predictions": "Predictions",
+    "knowledge": "🧠 Knowledge",
+    "luck": "🍀 Luck"
+  },
+  "knowledge": {
+    "title": "Cycling Knowledge Ranking",
+    "description": "Who knows how to pick riders best? Score based on points/price ratio, gems and WT performance",
+    "score": "Score",
+    "avgRatio": "Avg. ratio",
+    "pepites": "Gems",
+    "wtPercentage": "% WT",
+    "smartest": "🏆 Smartest",
+    "avgScore": "Average score",
+    "totalPepites": "Total gems",
+    "managers": "managers",
+    "avg": "Avg"
+  },
+  "luck": {
+    "title": "\"Luck\" Ranking",
+    "description": "Who's got luck on their side? Score based on performance gap, variance and big wins",
+    "luckScore": "Luck score",
+    "perfGap": "Perf. gap",
+    "variance": "Variance",
+    "bigWins": "Big wins",
+    "luckiest": "🍀 Luckiest",
+    "unluckiest": "💩 Unluckiest",
+    "avgGap": "Avg. gap",
+    "managers": "managers",
+    "luckiestBadge": "🍀 Luckiest",
+    "unluckiestBadge": "💩 Unluckiest"
+  }
+}

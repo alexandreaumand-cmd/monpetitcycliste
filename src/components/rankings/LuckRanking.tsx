@@ -4,12 +4,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Clover, TrendingUp, Zap, Target } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useTranslation } from "react-i18next";
 
 interface LuckRankingProps {
   saisonId: string;
 }
 
 export const LuckRanking = ({ saisonId }: LuckRankingProps) => {
+  const { t } = useTranslation('statistics');
   const { leagueId } = useLeague();
   const { data, isLoading } = useLuckRanking(saisonId, leagueId);
 
@@ -41,10 +43,10 @@ export const LuckRanking = ({ saisonId }: LuckRankingProps) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Clover className="h-6 w-6 text-green-500" />
-          Classement "La Chatte"
+          {t('luck.title')}
         </CardTitle>
         <CardDescription>
-          Qui a la chance avec eux ? Score basé sur l'écart entre performance attendue et réelle, variance et gros coups
+          {t('luck.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -56,12 +58,12 @@ export const LuckRanking = ({ saisonId }: LuckRankingProps) => {
             {/* Special badges */}
             {idx === 0 && (
               <Badge className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-emerald-500">
-                🍀 Le plus chanceux
+                {t('luck.luckiestBadge')}
               </Badge>
             )}
             {idx === rankings.length - 1 && rankings.length > 1 && (
               <Badge variant="destructive" className="absolute -top-2 -right-2">
-                💩 Le plus malchanceux
+                {t('luck.unluckiestBadge')}
               </Badge>
             )}
 
@@ -80,7 +82,7 @@ export const LuckRanking = ({ saisonId }: LuckRankingProps) => {
             {/* Score gauge */}
             <div className="flex-1 space-y-1">
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Score chance</span>
+                <span>{t('luck.luckScore')}</span>
                 <span className="font-bold text-foreground">{manager.luck_score}</span>
               </div>
               <div className="bg-muted rounded-full h-3 overflow-hidden">
@@ -96,7 +98,7 @@ export const LuckRanking = ({ saisonId }: LuckRankingProps) => {
               <div className="space-y-1">
                 <div className="flex items-center justify-center gap-1 text-muted-foreground">
                   <TrendingUp className="h-3 w-3" />
-                  <span className="text-xs">Écart perf.</span>
+                  <span className="text-xs">{t('luck.perfGap')}</span>
                 </div>
                 <div className={`font-semibold text-sm ${manager.performance_gap > 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {manager.performance_gap > 0 ? '+' : ''}{manager.performance_gap}%
@@ -105,14 +107,14 @@ export const LuckRanking = ({ saisonId }: LuckRankingProps) => {
               <div className="space-y-1">
                 <div className="flex items-center justify-center gap-1 text-muted-foreground">
                   <Zap className="h-3 w-3" />
-                  <span className="text-xs">Variance</span>
+                  <span className="text-xs">{t('luck.variance')}</span>
                 </div>
                 <div className="font-semibold text-sm">{manager.variance}</div>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-center gap-1 text-muted-foreground">
                   <Target className="h-3 w-3" />
-                  <span className="text-xs">Gros coups</span>
+                  <span className="text-xs">{t('luck.bigWins')}</span>
                 </div>
                 <div className="font-semibold text-sm">{manager.big_wins_ratio}%</div>
               </div>
@@ -124,26 +126,26 @@ export const LuckRanking = ({ saisonId }: LuckRankingProps) => {
         <div className="mt-6 pt-6 border-t">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">🍀 Le plus chanceux</div>
+              <div className="text-sm text-muted-foreground">{t('luck.luckiest')}</div>
               <div className="font-semibold text-lg">{rankings[0]?.manager_nom || '-'}</div>
               <div className="text-xs text-muted-foreground">
-                Score: {rankings[0]?.luck_score || 0}
+                {t('luck.luckScore')}: {rankings[0]?.luck_score || 0}
               </div>
             </div>
             <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">💩 Le plus malchanceux</div>
+              <div className="text-sm text-muted-foreground">{t('luck.unluckiest')}</div>
               <div className="font-semibold text-lg">{rankings[rankings.length - 1]?.manager_nom || '-'}</div>
               <div className="text-xs text-muted-foreground">
-                Score: {rankings[rankings.length - 1]?.luck_score || 0}
+                {t('luck.luckScore')}: {rankings[rankings.length - 1]?.luck_score || 0}
               </div>
             </div>
             <div className="space-y-1">
-              <div className="text-sm text-muted-foreground">Écart moyen</div>
+              <div className="text-sm text-muted-foreground">{t('luck.avgGap')}</div>
               <div className={`font-semibold text-lg ${avgGap > 0 ? 'text-green-500' : 'text-red-500'}`}>
                 {avgGap > 0 ? '+' : ''}{avgGap}%
               </div>
               <div className="text-xs text-muted-foreground">
-                {rankings.length} managers
+                {rankings.length} {t('luck.managers')}
               </div>
             </div>
           </div>

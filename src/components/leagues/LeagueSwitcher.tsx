@@ -14,8 +14,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CreateLeagueDialog } from "./CreateLeagueDialog";
 import { JoinLeagueDialog } from "./JoinLeagueDialog";
+import { useTranslation } from "react-i18next";
 
 export function LeagueSwitcher() {
+  const { t } = useTranslation('leagues');
   const { leagueId, setLeagueId, isLegacy } = useLeague();
   const { leagues, roles, isLoading } = useUserLeagues();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -26,7 +28,7 @@ export function LeagueSwitcher() {
   if (isLoading) {
     return (
       <Button variant="outline" size="sm" disabled>
-        <span className="animate-pulse">Chargement...</span>
+        <span className="animate-pulse">{t('switcher.loading')}</span>
       </Button>
     );
   }
@@ -38,19 +40,19 @@ export function LeagueSwitcher() {
           <Button variant="outline" size="sm" className="gap-2">
             <Users className="h-4 w-4" />
             <span className="hidden md:inline">
-              {currentLeague?.name || "Sélectionner une ligue"}
+              {currentLeague?.name || t('switcher.selectLeague')}
             </span>
-            {isLegacy && <Badge className="ml-1 hidden md:inline-flex bg-[#FFF4CC] text-black border border-[#FFD500] font-semibold">Actuelle</Badge>}
+            {isLegacy && <Badge className="ml-1 hidden md:inline-flex bg-[#FFF4CC] text-black border border-[#FFD500] font-semibold">{t('switcher.current')}</Badge>}
             <ChevronDown className="h-4 w-4 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[280px]">
-          <DropdownMenuLabel>Mes ligues</DropdownMenuLabel>
+          <DropdownMenuLabel>{t('switcher.myLeagues')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           
           {leagues.length === 0 ? (
             <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-              Aucune ligue
+              {t('switcher.noLeagues')}
             </div>
           ) : (
             leagues.map(league => (
@@ -62,7 +64,7 @@ export function LeagueSwitcher() {
                 <div className="flex flex-col gap-1">
                   <span className="font-medium">{league.name}</span>
                   {league.id === leagueId && (
-                    <Badge className="w-fit text-xs bg-[#FFF4CC] text-black border border-[#FFD500] font-semibold">Actuelle</Badge>
+                    <Badge className="w-fit text-xs bg-[#FFF4CC] text-black border border-[#FFD500] font-semibold">{t('switcher.current')}</Badge>
                   )}
                 </div>
                 <Badge variant="outline" className="ml-2">
@@ -81,7 +83,7 @@ export function LeagueSwitcher() {
             className="cursor-pointer"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Créer une ligue
+            {t('switcher.createLeague')}
           </DropdownMenuItem>
           
           <DropdownMenuItem
@@ -89,7 +91,7 @@ export function LeagueSwitcher() {
             className="cursor-pointer"
           >
             <Users className="mr-2 h-4 w-4" />
-            Rejoindre une ligue
+            {t('switcher.joinLeague')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Globe, Lock } from "lucide-react";
 import type { League } from "@/lib/leagues/types";
+import { useTranslation } from "react-i18next";
 
 type JoinLeagueDialogProps = {
   open: boolean;
@@ -24,6 +25,7 @@ type JoinLeagueDialogProps = {
 };
 
 export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) {
+  const { t } = useTranslation('leagues');
   const navigate = useNavigate();
   const { setLeagueId } = useLeague();
   const { leagues: myLeagues, refetch } = useUserLeagues();
@@ -59,7 +61,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
 
       if (error) throw error;
 
-      toast.success("Vous avez rejoint la ligue !");
+      toast.success(t('join.success'));
       
       // Refresh leagues list
       await refetch();
@@ -74,7 +76,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
       onOpenChange(false);
     } catch (error: any) {
       console.error('Error joining league:', error);
-      toast.error(error.message || "Erreur lors de la tentative de rejoindre la ligue");
+      toast.error(error.message || t('errors.joinError'));
     } finally {
       setJoiningLeagueId(null);
     }
@@ -82,7 +84,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
 
   const handleJoinByCode = async () => {
     if (!inviteCode.trim()) {
-      toast.error("Veuillez entrer un code d'invitation");
+      toast.error(t('errors.enterCode'));
       return;
     }
     
@@ -95,7 +97,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
       
       if (error) throw error;
       
-      toast.success(`Vous avez rejoint la ligue "${data.league_name}" !`);
+      toast.success(t('join.successWithName', { name: data.league_name }));
       
       // Refresh leagues list
       await refetch();
@@ -114,15 +116,15 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
       
       // Messages d'erreur spécifiques selon le code erreur
       if (error.message?.includes('Invalid token')) {
-        toast.error("Code d'invitation invalide");
+        toast.error(t('errors.invalidCode'));
       } else if (error.message?.includes('revoked')) {
-        toast.error("Ce code d'invitation a été révoqué");
+        toast.error(t('errors.revokedInvite'));
       } else if (error.message?.includes('expired')) {
-        toast.error("Ce code d'invitation a expiré");
+        toast.error(t('errors.expiredInvite'));
       } else if (error.message?.includes('limit reached')) {
-        toast.error("Ce code d'invitation a atteint sa limite d'utilisations");
+        toast.error(t('errors.limitReached'));
       } else {
-        toast.error(error.message || "Erreur lors de la tentative de rejoindre la ligue");
+        toast.error(error.message || t('errors.joinError'));
       }
     } finally {
       setIsJoiningByCode(false);
@@ -133,22 +135,22 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Rejoindre une ligue publique</DialogTitle>
+          <DialogTitle>{t('join.titlePublic')}</DialogTitle>
           <DialogDescription>
-            Choisissez une ligue publique à rejoindre parmi la liste ci-dessous.
+            {t('join.descriptionPublic')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 max-h-[400px] overflow-y-auto">
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground">
-              Chargement des ligues...
+              {t('join.loadingLeagues')}
             </div>
           ) : !publicLeagues || publicLeagues.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Globe className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>Aucune ligue publique disponible</p>
-              <p className="text-sm mt-1">Créez votre propre ligue ou attendez qu'une ligue publique soit créée</p>
+              <p>{t('join.noPublicLeagues')}</p>
+              <p className="text-sm mt-1">{t('join.noPublicLeaguesHint')}</p>
             </div>
           ) : (
             publicLeagues.map((league: any) => (
@@ -161,11 +163,11 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
                     <h4 className="font-medium">{league.name}</h4>
                     <Badge variant="outline" className="gap-1">
                       <Globe className="h-3 w-3" />
-                      Publique
+                      {t('join.public')}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Créée le {new Date(league.created_at).toLocaleDateString('fr-FR')}
+                    {t('join.createdOn')} {new Date(league.created_at).toLocaleDateString('fr-FR')}
                   </p>
                 </div>
                 
@@ -174,7 +176,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
                   disabled={joiningLeagueId !== null}
                   size="sm"
                 >
-                  {joiningLeagueId === league.id ? "Inscription..." : "Rejoindre"}
+                  {joiningLeagueId === league.id ? t('join.registering') : t('join.button')}
                 </Button>
               </div>
             ))
@@ -184,7 +186,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
         <div className="mt-6 space-y-4">
           <div className="flex items-center gap-2">
             <div className="h-px bg-border flex-1" />
-            <span className="text-sm text-muted-foreground">ou</span>
+            <span className="text-sm text-muted-foreground">{t('join.or')}</span>
             <div className="h-px bg-border flex-1" />
           </div>
 
@@ -192,9 +194,9 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
             <div className="flex items-start gap-2">
               <Lock className="h-4 w-4 mt-0.5 text-muted-foreground" />
               <div className="flex-1">
-                <p className="font-medium text-sm mb-1">Rejoindre une ligue privée</p>
+                <p className="font-medium text-sm mb-1">{t('join.joinPrivate')}</p>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Entrez le code d'invitation fourni par l'administrateur de la ligue.
+                  {t('join.joinPrivateDesc')}
                 </p>
                 
                 <div className="flex gap-2">
@@ -214,7 +216,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
                     onClick={handleJoinByCode}
                     disabled={!inviteCode.trim() || isJoiningByCode}
                   >
-                    {isJoiningByCode ? "Vérification..." : "Rejoindre"}
+                    {isJoiningByCode ? t('join.verifying') : t('join.button')}
                   </Button>
                 </div>
               </div>

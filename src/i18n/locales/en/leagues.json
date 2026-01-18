@@ -1,46 +1,83 @@
 {
+  "switcher": {
+    "loading": "Loading...",
+    "selectLeague": "Select a league",
+    "current": "Current",
+    "myLeagues": "My leagues",
+    "noLeagues": "No leagues",
+    "createLeague": "Create a league",
+    "joinLeague": "Join a league"
+  },
   "create": {
     "title": "Create a League",
     "selectMode": "Choose a game mode",
-    "configure": "Configure the league",
+    "selectModeDesc": "Select the type of league you want to create",
+    "configure": "League Configuration",
+    "configureDesc": "Customize your league settings",
     "next": "Next",
     "back": "Back",
     "cancel": "Cancel",
     "submit": "Create League",
     "creating": "Creating...",
-    "success": "League created successfully!"
+    "success": "League created successfully!",
+    "selectDateError": "Please select a date and time for the first auction round",
+    "futureDateError": "The first round date must be in the future",
+    "error": "Error creating league"
   },
   "join": {
     "title": "Join a League",
+    "titlePublic": "Join a public league",
     "description": "Join an existing league",
+    "descriptionPublic": "Choose a public league to join from the list below.",
     "publicLeagues": "Public Leagues",
     "noPublicLeagues": "No public leagues available",
+    "noPublicLeaguesHint": "Create your own league or wait for a public league to be created",
     "privateSection": "Private League",
+    "joinPrivate": "Join a private league",
+    "joinPrivateDesc": "Enter the invitation code provided by the league administrator.",
     "inviteCode": "Invitation Code",
     "inviteCodePlaceholder": "Enter the invitation code",
     "joining": "Joining...",
+    "verifying": "Verifying...",
     "success": "You have joined the league!",
+    "successWithName": "You have joined the league \"{{name}}\"!",
     "button": "Join",
     "processing": "Processing...",
-    "redirecting": "Redirecting to auctions..."
+    "redirecting": "Redirecting to auctions...",
+    "loadingLeagues": "Loading leagues...",
+    "createdOn": "Created on",
+    "or": "or",
+    "public": "Public",
+    "registering": "Registering..."
   },
   "settings": {
     "name": "League Name",
-    "namePlaceholder": "Enter the league name",
+    "namePlaceholder": "My Super League",
     "season": "Season",
+    "selectSeason": "Select a season",
     "playerCount": "Number of Players",
     "visibility": "Visibility",
     "bonuses": "Bonuses Enabled",
-    "auctionDate": "First Auction Date",
-    "auctionTime": "Start Time"
+    "bonusesDesc": "Bonus riders, ITT, TTT, first win",
+    "auctionDate": "First auction round date and time",
+    "auctionDateDesc": "Managers will see a countdown before the auction starts",
+    "auctionTime": "Start Time",
+    "selectDateTime": "Select a date and time",
+    "hour": "Hour",
+    "budget": "Budget",
+    "maxRiders": "Max riders"
   },
   "visibility": {
     "public": "Public",
-    "private": "Private"
+    "publicDesc": "Visible to everyone",
+    "private": "Private",
+    "privateDesc": "By invitation only"
   },
   "templates": {
     "title": "Choose your game mode",
-    "players": "players"
+    "players": "players",
+    "budget": "Budget",
+    "maxRiders": "Max"
   },
   "invite": {
     "title": "Invitation to Join",
@@ -56,10 +93,13 @@
   },
   "errors": {
     "invalidInvite": "Invalid invitation link",
+    "invalidCode": "Invalid invitation code",
     "expiredInvite": "This invitation link has expired",
     "revokedInvite": "This invitation link has been revoked",
     "limitReached": "The maximum number of uses has been reached",
     "alreadyMember": "You are already a member of this league",
-    "generic": "An error occurred"
+    "generic": "An error occurred",
+    "enterCode": "Please enter an invitation code",
+    "joinError": "Error trying to join the league"
   }
 }

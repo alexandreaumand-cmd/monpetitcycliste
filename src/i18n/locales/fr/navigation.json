@@ -21,8 +21,21 @@
     "viewAll": "Voir toutes les notifications"
   },
   "header": {
+    "rankings": "Classement",
+    "teams": "Équipes",
+    "results": "Résultats",
+    "races": "Courses",
+    "startlist": "Startlist",
+    "statistics": "Statistiques",
+    "auctions": "Enchères",
+    "admin": "Admin",
     "calendar": "Calendrier",
     "data": "Data",
-    "superAdmin": "Super Admin"
-  }
+    "superAdmin": "Super Admin",
+    "menu": "Menu",
+    "year": "Année",
+    "season": "Saison",
+    "seasonLocked": "Saison verrouillée"
+  },
+  "logout": "Déconnexion"
 }

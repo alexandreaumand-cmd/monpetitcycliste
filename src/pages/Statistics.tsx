@@ -12,8 +12,10 @@ import { BikeKnowledgeRanking } from "@/components/rankings/BikeKnowledgeRanking
 import { LuckRanking } from "@/components/rankings/LuckRanking";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useTranslation } from "react-i18next";
 
 const Statistics = () => {
+  const { t } = useTranslation('statistics');
   const { selectedSeason, setSelectedSeason, seasons, isLoading } = useSeasonContext();
   const { leagueId } = useLeague();
 
@@ -22,7 +24,7 @@ const Statistics = () => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Chargement...</p>
+          <p className="text-muted-foreground">{t('loading')}</p>
         </div>
       </div>
     );
@@ -31,7 +33,7 @@ const Statistics = () => {
   if (!selectedSeason) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Aucune saison sélectionnée</p>
+        <p className="text-muted-foreground">{t('noSeason')}</p>
       </div>
     );
   }
@@ -40,8 +42,8 @@ const Statistics = () => {
     <PageContainer>
       <PageHeader
         icon={BarChart3}
-        title="Statistiques avancées"
-        subtitle="Analyses approfondies des performances et de la régularité des managers"
+        title={t('title')}
+        subtitle={t('subtitle')}
         actions={
           !leagueId && seasons.length > 0 && (
             <Select
@@ -52,7 +54,7 @@ const Statistics = () => {
               }}
             >
               <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Saison" />
+                <SelectValue placeholder={t('season')} />
               </SelectTrigger>
               <SelectContent>
                 {seasons.map((season) => (
@@ -68,12 +70,12 @@ const Statistics = () => {
 
       <Tabs defaultValue="heatmap" className="w-full">
         <TabsList className="grid w-full max-w-4xl grid-cols-6">
-          <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
-          <TabsTrigger value="consistency">Consistency</TabsTrigger>
-          <TabsTrigger value="distribution">Distribution</TabsTrigger>
-          <TabsTrigger value="predictions">Prédictions</TabsTrigger>
-          <TabsTrigger value="knowledge">🧠 Connaissance</TabsTrigger>
-          <TabsTrigger value="luck">🍀 La Chatte</TabsTrigger>
+          <TabsTrigger value="heatmap">{t('tabs.heatmap')}</TabsTrigger>
+          <TabsTrigger value="consistency">{t('tabs.consistency')}</TabsTrigger>
+          <TabsTrigger value="distribution">{t('tabs.distribution')}</TabsTrigger>
+          <TabsTrigger value="predictions">{t('tabs.predictions')}</TabsTrigger>
+          <TabsTrigger value="knowledge">{t('tabs.knowledge')}</TabsTrigger>
+          <TabsTrigger value="luck">{t('tabs.luck')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="heatmap" className="mt-6">
