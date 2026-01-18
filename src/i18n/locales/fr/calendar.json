@@ -30,5 +30,42 @@
   "empty": {
     "title": "Aucune course trouvée",
     "description": "Essayez de modifier vos filtres"
+  },
+  "startlist": {
+    "title": "Startlists",
+    "tabs": {
+      "history": "Historique",
+      "days30": "30 jours",
+      "days90": "90 jours",
+      "year": "Année"
+    },
+    "noRace": "Aucune course",
+    "noRaceHistory": "Aucune course passée avec startlist",
+    "noRace30": "Aucune course prévue dans les 30 prochains jours",
+    "noRace90": "Aucune course prévue dans les 90 prochains jours",
+    "noRaceYear": "Aucune course à venir cette année",
+    "noStartlist": "Aucune startlist pour cette course",
+    "shared": "Startlist partagée !",
+    "downloaded": "Startlist téléchargée !",
+    "exportError": "Erreur lors de l'export",
+    "generating": "Génération en cours...",
+    "share": "Partager la startlist",
+    "back": "Retour",
+    "error": "Erreur",
+    "loadError": "Impossible de charger la startlist",
+    "managersAtStart": "Managers au départ",
+    "starters": "Partants",
+    "riders": "coureurs",
+    "phaseRank": "Phase",
+    "gcRank": "CG",
+    "reduce": "Réduire",
+    "moreOthers": "+{{count}} autres",
+    "withoutOwner": "Sans propriétaire",
+    "route": "Parcours",
+    "startlisterNote": "Le mot du startlisteur",
+    "startlisterOpinion": "L'avis du startlisteur",
+    "generalScale": "Barème Général",
+    "stageScale": "Barème Étapes",
+    "rateManagers": "Noter les managers"
   }
 }

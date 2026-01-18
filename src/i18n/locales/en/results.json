@@ -4,17 +4,21 @@
     "placeholder": "Search..."
   },
   "phase": {
-    "global": "Global",
-    "select": "Select a phase"
+    "global": "Global (full season)",
+    "select": "Select a phase",
+    "label": "Phase {{index}} ({{start}} - {{end}})",
+    "active": "✓"
   },
   "empty": {
-    "title": "No results found",
-    "description": "Try adjusting your filters",
+    "title": "No races found",
+    "description": "No races for this search",
+    "noResults": "No races with results",
     "reset": "Reset"
   },
   "loadMore": "Load more",
+  "loading": "Loading...",
   "podium": {
-    "managers": "Manager podium"
+    "managers": "Manager Podium"
   },
   "tabs": {
     "managers": "Managers",
