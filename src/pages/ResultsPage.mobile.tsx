@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,8 @@ import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerJerseys } from "@/hooks/useManagerJerseys";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useDateLocale } from "@/hooks/useDateLocale";
+import { format } from "date-fns";
 
 interface Race {
   course_id: string;
@@ -44,6 +47,8 @@ interface Phase {
 }
 
 export const ResultsPageMobile = () => {
+  const { t } = useTranslation('results');
+  const dateLocale = useDateLocale();
   const { selectedSeason, phases, activePhase, isLoading: isLoadingContext } = useSeasonContext();
   const { leagueId } = useLeague();
   const [races, setRaces] = useState<Race[]>([]);
@@ -155,13 +160,13 @@ export const ResultsPageMobile = () => {
   };
 
   const getPhaseLabel = (phase: any) => {
-    const debut = new Date(phase.date_debut).toLocaleDateString('fr-FR', { month: 'short' });
-    const fin = new Date(phase.date_fin).toLocaleDateString('fr-FR', { month: 'short' });
+    const start = format(new Date(phase.date_debut), 'MMM', { locale: dateLocale });
+    const end = format(new Date(phase.date_fin), 'MMM', { locale: dateLocale });
     
     const today = new Date();
     const isActive = today >= new Date(phase.date_debut) && today <= new Date(phase.date_fin);
     
-    return `Phase ${phase.index_dans_saison} (${debut} - ${fin})${isActive ? ' ✓' : ''}`;
+    return `${t('phase.label', { index: phase.index_dans_saison, start, end })}${isActive ? ` ${t('phase.active')}` : ''}`;
   };
 
   return (
@@ -176,17 +181,17 @@ export const ResultsPageMobile = () => {
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold">Résultats</h1>
+              <h1 className="text-xl font-bold">{t('title')}</h1>
             </div>
           </div>
 
           <Select value={selectedPhaseId || 'global'} onValueChange={setSelectedPhaseId}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Sélectionner une période" />
+              <SelectValue placeholder={t('phase.select')} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="global">
-                🌍 Global (toute la saison)
+                🌍 {t('phase.global')}
               </SelectItem>
               {phases.map((phase) => (
                 <SelectItem key={phase.id} value={phase.id}>
@@ -199,7 +204,7 @@ export const ResultsPageMobile = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Rechercher..."
+              placeholder={t('search.placeholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -219,12 +224,12 @@ export const ResultsPageMobile = () => {
         ) : races.length === 0 ? (
           <MobileEmptyState
             icon={<Trophy className="h-16 w-16" />}
-            title="Aucune course trouvée"
-            description={searchQuery ? "Aucune course pour cette recherche" : "Aucune course avec résultats"}
+            title={t('empty.title')}
+            description={searchQuery ? t('empty.description') : t('empty.noResults')}
             action={
               searchQuery ? (
                 <Button variant="outline" onClick={() => setSearchQuery("")}>
-                  Réinitialiser
+                  {t('empty.reset')}
                 </Button>
               ) : undefined
             }
@@ -247,9 +252,9 @@ export const ResultsPageMobile = () => {
                     <div className="flex items-center gap-2 text-muted-foreground mt-1">
                       <Calendar className="h-4 w-4" />
                       <span className="text-sm">
-                        {new Date(race.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                        {format(new Date(race.date_debut), 'd MMM', { locale: dateLocale })}
                         {' → '}
-                        {new Date(race.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                        {format(new Date(race.date_fin), 'd MMM', { locale: dateLocale })}
                       </span>
                     </div>
                   }
@@ -272,7 +277,7 @@ export const ResultsPageMobile = () => {
                   {racePodium.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
                       <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                        Podium Managers
+                        {t('podium.managers')}
                       </div>
                       {racePodium.slice(0, 3).map((manager, idx) => (
                         <div 
@@ -319,10 +324,10 @@ export const ResultsPageMobile = () => {
                   {loadingMore ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Chargement...
+                      {t('loading')}
                     </>
                   ) : (
-                    'Charger plus'
+                    t('loadMore')
                   )}
                 </Button>
               </div>

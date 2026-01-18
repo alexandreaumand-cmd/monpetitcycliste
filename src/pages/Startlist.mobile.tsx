@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { toPng } from 'html-to-image';
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { useDateLocale } from "@/hooks/useDateLocale";
 import {
   ChipGroup,
   MobileCard,
@@ -39,6 +40,9 @@ import { StartlistDesktopExport } from "@/components/startlist/StartlistDesktopE
 import { useLeague } from "@/contexts/LeagueContext";
 
 export const StartlistMobile = () => {
+  const { t } = useTranslation('calendar');
+  const { t: tCommon } = useTranslation('common');
+  const dateLocale = useDateLocale();
   const queryClient = useQueryClient();
   const { isAdmin } = useUserRole();
   const { phases, selectedSeason, isLoading: isLoadingContext } = useSeasonContext();
@@ -178,11 +182,11 @@ export const StartlistMobile = () => {
               title: 'Startlist',
               text: `Startlist - ${startlistViewData.race.nom}`
             });
-            toast.success("Startlist partagée !");
+            toast.success(t('startlist.shared'));
             return;
           } catch (shareError: any) {
             if (shareError.name !== 'AbortError') {
-              console.warn('Partage annulé');
+              console.warn('Share cancelled');
             }
           }
         }
@@ -192,11 +196,11 @@ export const StartlistMobile = () => {
       link.download = fileName;
       link.href = dataUrl;
       link.click();
-      toast.success("Startlist téléchargée !");
+      toast.success(t('startlist.downloaded'));
       
     } catch (error) {
-      console.error('Erreur export:', error);
-      toast.error("Erreur lors de l'export");
+      console.error('Export error:', error);
+      toast.error(t('startlist.exportError'));
     } finally {
       setIsExporting(false);
     }
@@ -209,12 +213,25 @@ export const StartlistMobile = () => {
     setViewMode("view");
   };
 
+  const getEmptyDescription = () => {
+    switch (tabMode) {
+      case 'history':
+        return t('startlist.noRaceHistory');
+      case '30days':
+        return t('startlist.noRace30');
+      case '90days':
+        return t('startlist.noRace90');
+      default:
+        return t('startlist.noRaceYear');
+    }
+  };
+
   // LIST MODE
   if (viewMode === "list") {
     return (
       <div className="p-4 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Startlists</h2>
+          <h2 className="text-xl font-bold">{t('startlist.title')}</h2>
         </div>
 
         {/* 4 onglets */}
@@ -225,7 +242,7 @@ export const StartlistMobile = () => {
             onClick={() => setTabMode("history")}
             className="flex-1 whitespace-nowrap"
           >
-            Historique
+            {t('startlist.tabs.history')}
           </Button>
           <Button
             variant={tabMode === "30days" ? "default" : "outline"}
@@ -233,7 +250,7 @@ export const StartlistMobile = () => {
             onClick={() => setTabMode("30days")}
             className="flex-1 whitespace-nowrap"
           >
-            30 jours
+            {t('startlist.tabs.days30')}
           </Button>
           <Button
             variant={tabMode === "90days" ? "default" : "outline"}
@@ -241,7 +258,7 @@ export const StartlistMobile = () => {
             onClick={() => setTabMode("90days")}
             className="flex-1 whitespace-nowrap"
           >
-            90 jours
+            {t('startlist.tabs.days90')}
           </Button>
           <Button
             variant={tabMode === "upcoming-year" ? "default" : "outline"}
@@ -249,23 +266,15 @@ export const StartlistMobile = () => {
             onClick={() => setTabMode("upcoming-year")}
             className="flex-1 whitespace-nowrap"
           >
-            Année
+            {t('startlist.tabs.year')}
           </Button>
         </div>
 
         {!races || races.length === 0 ? (
         <MobileEmptyState
           icon={<Trophy className="h-12 w-12" />}
-          title="Aucune course"
-          description={
-            tabMode === 'history' 
-              ? "Aucune course passée avec startlist" 
-              : tabMode === '30days'
-              ? "Aucune course prévue dans les 30 prochains jours"
-              : tabMode === '90days'
-              ? "Aucune course prévue dans les 90 prochains jours"
-              : "Aucune course à venir cette année"
-          }
+          title={t('startlist.noRace')}
+          description={getEmptyDescription()}
         />
         ) : (
           <div className="space-y-3">
@@ -284,7 +293,7 @@ export const StartlistMobile = () => {
                 <MobileCard
                   key={race.id}
                   title={race.nom}
-                  subtitle={format(new Date(race.date_debut), "dd MMMM yyyy", { locale: fr })}
+                  subtitle={format(new Date(race.date_debut), "dd MMMM yyyy", { locale: dateLocale })}
                   avatar={
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <Calendar className="h-5 w-5 text-primary" />
@@ -294,7 +303,7 @@ export const StartlistMobile = () => {
                     <div className="flex gap-1">
                       {isOngoing && (
                         <Badge className="bg-red-600 text-white text-xs animate-pulse">
-                          EN COURS
+                          {t('badges.inProgress')}
                         </Badge>
                       )}
                       {race.categorie && (
@@ -314,7 +323,7 @@ export const StartlistMobile = () => {
                     if (hasStartlist && startlistInfo?.id) {
                       handleSelectRace(race.id, startlistInfo.id);
                     } else {
-                      toast.info("Aucune startlist pour cette course");
+                      toast.info(t('startlist.noStartlist'));
                     }
                   }}
                 />
@@ -344,12 +353,12 @@ export const StartlistMobile = () => {
         <div className="p-4">
           <Button variant="ghost" onClick={() => setViewMode("list")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour
+            {t('startlist.back')}
           </Button>
           <MobileEmptyState
             icon={<AlertCircle className="h-12 w-12" />}
-            title="Erreur"
-            description="Impossible de charger la startlist"
+            title={t('startlist.error')}
+            description={t('startlist.loadError')}
           />
         </div>
       );
@@ -361,7 +370,7 @@ export const StartlistMobile = () => {
           <div className="flex items-center justify-between">
             <Button variant="ghost" size="sm" onClick={() => setViewMode("list")}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour
+              {t('startlist.back')}
             </Button>
             {startlistViewData.pcs_validated && (
               <Badge className="bg-green-600 text-white">
@@ -375,7 +384,7 @@ export const StartlistMobile = () => {
           <div>
             <h2 className="text-xl font-bold">{startlistViewData.race.nom}</h2>
             <p className="text-sm text-muted-foreground">
-              {format(new Date(startlistViewData.race.date_debut), "dd MMMM yyyy", { locale: fr })} •{" "}
+              {format(new Date(startlistViewData.race.date_debut), "dd MMMM yyyy", { locale: dateLocale })} •{" "}
               {startlistViewData.race.categorie}
             </p>
           </div>
@@ -390,7 +399,7 @@ export const StartlistMobile = () => {
               >
                 <img
                   src={startlistViewData.route_image_url}
-                  alt="Parcours"
+                  alt={t('startlist.route')}
                   className="w-full h-auto object-cover"
                 />
               </div>
@@ -401,7 +410,7 @@ export const StartlistMobile = () => {
               <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <h4 className="font-semibold text-sm">L'avis du startlisteur</h4>
+                  <h4 className="font-semibold text-sm">{t('startlist.startlisterOpinion')}</h4>
                 </div>
                 <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
                   "{startlistViewData.admin_rating_note}"
@@ -422,7 +431,7 @@ export const StartlistMobile = () => {
               {startlistViewData.scoring.rules.some((r: any) => r.type_classement === 'General') && (
                 <div className="bg-muted/50 rounded-xl p-3 border">
                   <h4 className="font-semibold text-xs mb-2">
-                    Barème Général ({startlistViewData.scoring.categorie})
+                    {t('startlist.generalScale')} ({startlistViewData.scoring.categorie})
                   </h4>
                   <div className="grid grid-cols-5 gap-x-3 gap-y-1 text-xs">
                     {startlistViewData.scoring.rules
@@ -442,7 +451,7 @@ export const StartlistMobile = () => {
               {startlistViewData.scoring.rules.some((r: any) => r.type_classement === 'Etape') && (
                 <div className="bg-primary/5 rounded-xl p-3 border border-primary/20">
                   <h4 className="font-semibold text-xs mb-2 text-primary">
-                    Barème Étapes
+                    {t('startlist.stageScale')}
                   </h4>
                   <div className="grid grid-cols-5 gap-x-3 gap-y-1 text-xs">
                     {startlistViewData.scoring.rules
@@ -466,7 +475,7 @@ export const StartlistMobile = () => {
               <div className="flex items-center gap-2 mb-2">
                 <MessageSquare className="h-4 w-4 text-amber-500" />
                 <h4 className="font-semibold text-sm text-amber-700 dark:text-amber-400">
-                  Le mot du startlisteur
+                  {t('startlist.startlisterNote')}
                 </h4>
               </div>
               <p className="text-base text-foreground/80 whitespace-pre-wrap leading-relaxed">
@@ -479,13 +488,13 @@ export const StartlistMobile = () => {
           <KPIRow
             items={[
               { label: "Managers", value: startlistViewData.totals.managers, icon: <Users className="h-4 w-4" /> },
-              { label: "Partants", value: startlistViewData.totals.starters_all, icon: <Trophy className="h-4 w-4" /> },
+              { label: t('startlist.starters'), value: startlistViewData.totals.starters_all, icon: <Trophy className="h-4 w-4" /> },
             ]}
           />
 
           {/* Managers */}
           <div>
-            <h3 className="text-lg font-semibold mb-3">Managers au départ</h3>
+            <h3 className="text-lg font-semibold mb-3">{t('startlist.managersAtStart')}</h3>
             <div className="space-y-3">
               {startlistViewData.managers.map((manager: any) => {
                 const isExpanded = expandedManagers.has(manager.manager_id);
@@ -501,8 +510,8 @@ export const StartlistMobile = () => {
                       <div className="space-y-1">
                         <ManagerStars avgStars={manager.avg_stars} votes={manager.votes} showVotes={manager.votes > 1} />
                         <div className="flex gap-3 text-xs text-muted-foreground">
-                          <span>Phase: #{manager.rank_phase || "-"}</span>
-                          <span>CG: #{manager.rank_total || "-"}</span>
+                          <span>{t('startlist.phaseRank')}: #{manager.rank_phase || "-"}</span>
+                          <span>{t('startlist.gcRank')}: #{manager.rank_total || "-"}</span>
                         </div>
                       </div>
                     }
@@ -527,7 +536,7 @@ export const StartlistMobile = () => {
                     }
                     badge={
                       <Badge variant="outline" className="text-xs">
-                        {manager.starters_count} coureurs
+                        {manager.starters_count} {t('startlist.riders')}
                       </Badge>
                     }
                   >
@@ -552,8 +561,8 @@ export const StartlistMobile = () => {
                           className="text-xs text-primary font-medium hover:underline w-full text-left"
                         >
                           {isExpanded 
-                            ? "Réduire" 
-                            : `+${manager.starters.length - 3} autres`}
+                            ? t('startlist.reduce') 
+                            : t('startlist.moreOthers', { count: manager.starters.length - 3 })}
                         </button>
                       )}
                     </div>
@@ -567,7 +576,7 @@ export const StartlistMobile = () => {
           {startlistViewData.without_owner && startlistViewData.without_owner.length > 0 && (
             <div className="rounded-xl bg-muted/50 p-4">
               <h4 className="font-semibold text-sm mb-2">
-                Sans propriétaire ({startlistViewData.without_owner.length})
+                {t('startlist.withoutOwner')} ({startlistViewData.without_owner.length})
               </h4>
               <div className="flex flex-wrap gap-1.5">
                 {startlistViewData.without_owner.map((coureur: any) => (
@@ -589,12 +598,12 @@ export const StartlistMobile = () => {
               {isExporting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Génération en cours...
+                  {t('startlist.generating')}
                 </>
               ) : (
                 <>
                   <Share2 className="h-4 w-4 mr-2" />
-                  Partager la startlist
+                  {t('startlist.share')}
                 </>
               )}
             </Button>
@@ -616,7 +625,7 @@ export const StartlistMobile = () => {
           <MobileStickyBottom>
             <Button className="w-full touch-target" onClick={() => setShowRatingModal(true)}>
               <Star className="h-4 w-4 mr-2" />
-              Noter les managers
+              {t('startlist.rateManagers')}
             </Button>
           </MobileStickyBottom>
         )}
@@ -637,12 +646,12 @@ export const StartlistMobile = () => {
         <MobileBottomSheet
           open={imageModalOpen}
           onOpenChange={setImageModalOpen}
-          title="Parcours"
+          title={t('startlist.route')}
         >
           {startlistViewData.route_image_url && (
             <img
               src={startlistViewData.route_image_url}
-              alt="Parcours en grand"
+              alt={t('startlist.route')}
               className="w-full h-auto rounded-lg"
             />
           )}

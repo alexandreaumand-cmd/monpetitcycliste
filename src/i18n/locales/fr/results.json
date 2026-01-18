@@ -4,17 +4,21 @@
     "placeholder": "Rechercher..."
   },
   "phase": {
-    "global": "Global",
-    "select": "Sélectionner une phase"
+    "global": "Global (toute la saison)",
+    "select": "Sélectionner une phase",
+    "label": "Phase {{index}} ({{start}} - {{end}})",
+    "active": "✓"
   },
   "empty": {
-    "title": "Aucun résultat trouvé",
-    "description": "Essayez de modifier vos filtres",
+    "title": "Aucune course trouvée",
+    "description": "Aucune course pour cette recherche",
+    "noResults": "Aucune course avec résultats",
     "reset": "Réinitialiser"
   },
   "loadMore": "Charger plus",
+  "loading": "Chargement...",
   "podium": {
-    "managers": "Podium managers"
+    "managers": "Podium Managers"
   },
   "tabs": {
     "managers": "Managers",

@@ -30,5 +30,42 @@
   "empty": {
     "title": "No races found",
     "description": "Try adjusting your filters"
+  },
+  "startlist": {
+    "title": "Startlists",
+    "tabs": {
+      "history": "History",
+      "days30": "30 days",
+      "days90": "90 days",
+      "year": "Year"
+    },
+    "noRace": "No race",
+    "noRaceHistory": "No past races with startlist",
+    "noRace30": "No races scheduled in the next 30 days",
+    "noRace90": "No races scheduled in the next 90 days",
+    "noRaceYear": "No upcoming races this year",
+    "noStartlist": "No startlist for this race",
+    "shared": "Startlist shared!",
+    "downloaded": "Startlist downloaded!",
+    "exportError": "Error during export",
+    "generating": "Generating...",
+    "share": "Share startlist",
+    "back": "Back",
+    "error": "Error",
+    "loadError": "Unable to load startlist",
+    "managersAtStart": "Managers at the start",
+    "starters": "Starters",
+    "riders": "riders",
+    "phaseRank": "Phase",
+    "gcRank": "GC",
+    "reduce": "Reduce",
+    "moreOthers": "+{{count}} more",
+    "withoutOwner": "Without owner",
+    "route": "Route",
+    "startlisterNote": "Startlister's note",
+    "startlisterOpinion": "Startlister's opinion",
+    "generalScale": "General Scale",
+    "stageScale": "Stage Scale",
+    "rateManagers": "Rate managers"
   }
 }

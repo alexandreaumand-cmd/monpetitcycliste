@@ -1,4 +1,5 @@
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Users, BarChart3, ListChecks, Medal, Calendar } from "lucide-react";
 
@@ -7,17 +8,18 @@ interface MobileBottomBarProps {
 }
 
 export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
+  const { t } = useTranslation('common');
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const currentLeagueId = searchParams.get('leagueId');
 
   const mainRoutes = [
-    { label: "Classement", path: "/dashboard/classement", icon: BarChart3 },
-    { label: "Equipes", path: "/dashboard/mon-equipe", icon: Users },
-    { label: "Startlist", path: "/dashboard/startlist", icon: ListChecks },
-    { label: "Résultats", path: "/dashboard/resultats", icon: Medal },
-    { label: "Courses", path: "/dashboard/courses", icon: Calendar },
+    { label: t('navigation.standings'), path: "/dashboard/classement", icon: BarChart3 },
+    { label: t('navigation.teams'), path: "/dashboard/mon-equipe", icon: Users },
+    { label: t('navigation.startlist'), path: "/dashboard/startlist", icon: ListChecks },
+    { label: t('navigation.results'), path: "/dashboard/resultats", icon: Medal },
+    { label: t('navigation.races'), path: "/dashboard/courses", icon: Calendar },
   ];
 
   const buildNavUrl = (path: string) => {
@@ -32,7 +34,7 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-t border-yellow-500/30 safe-bottom"
       role="navigation"
-      aria-label="Navigation principale"
+      aria-label={t('navigation.dashboard')}
     >
       <div className="flex items-center justify-around px-2 py-3">
         {mainRoutes.map((route) => {
