@@ -2,6 +2,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, AlertCircle, Clock, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface AuctionHeaderProps {
   starting_budget: number;
@@ -41,6 +42,7 @@ export function AuctionHeader({
   total_managers = 0,
   phase_index,
 }: AuctionHeaderProps) {
+  const { t } = useTranslation("auction");
   const [timeRemaining, setTimeRemaining] = useState<string>("");
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export function AuctionHeader({
       const diff = deadline - now;
 
       if (diff <= 0) {
-        setTimeRemaining("Terminé");
+        setTimeRemaining(t("finished"));
         return;
       }
 
@@ -72,7 +74,7 @@ export function AuctionHeader({
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [deadline_at]);
+  }, [deadline_at, t]);
 
   const budgetProgress = ((budget_spent + draft_sum) / starting_budget) * 100;
   const slotsProgress = ((roster_count + draft_count) / max_slots) * 100;
@@ -97,7 +99,7 @@ export function AuctionHeader({
         {phase_index && (
           <div className="mb-3">
             <Badge variant="outline" className="text-xs">
-              Phase {phase_index}
+              {t("phase")} {phase_index}
             </Badge>
           </div>
         )}
@@ -110,7 +112,7 @@ export function AuctionHeader({
                 <Clock className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-medium">Temps restant</p>
+                <p className="text-xs text-muted-foreground font-medium">{t("timeRemaining")}</p>
                 <p className="text-lg font-bold tracking-tight">{timeRemaining}</p>
               </div>
             </div>
@@ -123,7 +125,7 @@ export function AuctionHeader({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2 mb-1">
-                <p className="text-xs text-muted-foreground font-medium">Budget</p>
+                <p className="text-xs text-muted-foreground font-medium">{t("budget.title")}</p>
                 <Badge variant={getBudgetColor()} className="text-xs">
                   {remaining_budget}{currency}
                 </Badge>
@@ -139,7 +141,7 @@ export function AuctionHeader({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2 mb-1">
-                <p className="text-xs text-muted-foreground font-medium">Coureurs</p>
+                <p className="text-xs text-muted-foreground font-medium">{t("slots.title")}</p>
                 <Badge variant={getSlotsColor()} className="text-xs">
                   {totalSlots}/{max_slots}
                 </Badge>
@@ -164,12 +166,12 @@ export function AuctionHeader({
               )}
             </div>
             <div>
-              <p className="text-xs text-muted-foreground font-medium">Statut</p>
+              <p className="text-xs text-muted-foreground font-medium">{t("status.pending")}</p>
               <p className="text-sm font-semibold">
                 {validation_status.can_submit ? (
-                  <span className="text-green-600 dark:text-green-400">Prêt à valider</span>
+                  <span className="text-green-600 dark:text-green-400">{t("status.ready")}</span>
                 ) : (
-                  <span className="text-amber-600 dark:text-amber-400">Incomplet</span>
+                  <span className="text-amber-600 dark:text-amber-400">{t("status.incomplete")}</span>
                 )}
               </p>
             </div>

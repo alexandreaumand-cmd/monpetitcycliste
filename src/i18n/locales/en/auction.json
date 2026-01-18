@@ -3,14 +3,20 @@
   "currentAuction": "Current Auction",
   "nextAuction": "Next Auction",
   "noActiveAuction": "No active auction",
+  "noScheduledAuction": "No scheduled auction",
+  "auctionsNotPlanned": "Auctions have not been scheduled yet",
   "round": "Round",
   "deadline": "Deadline",
   "timeRemaining": "Time remaining",
+  "finished": "Finished",
+  "phase": "Phase",
   "status": {
     "open": "Open",
     "closed": "Closed",
     "pending": "Pending",
-    "processing": "Processing"
+    "processing": "Processing",
+    "ready": "Ready to submit",
+    "incomplete": "Incomplete"
   },
   "bid": {
     "title": "Bid",
@@ -23,11 +29,77 @@
     "maximum": "Maximum bid",
     "success": "Bid placed successfully",
     "error": "Error placing bid",
-    "confirm": "Confirm bid"
+    "confirm": "Confirm bid",
+    "saved": "Bid saved",
+    "deleted": "Bid deleted",
+    "savingError": "Error saving bid",
+    "deleteError": "Unable to delete bid"
   },
   "rider": {
     "available": "Available riders",
-    "selected": "Selected rider"
+    "selected": "Selected rider",
+    "noSelected": "No rider selected",
+    "startSearch": "Start by searching and adding riders",
+    "notFound": "No rider found",
+    "modifyFilters": "Try modifying your filters",
+    "loadMore": "Load more riders",
+    "loading": "Loading..."
+  },
+  "budget": {
+    "title": "Budget",
+    "remaining": "Remaining budget",
+    "initial": "Initial budget",
+    "committed": "Committed bids",
+    "ok": "Budget OK",
+    "left": "Left",
+    "used": "used",
+    "total": "total",
+    "mustSpend": "You must spend {{amount}} more",
+    "exceeded": "You exceeded by {{amount}}"
+  },
+  "submit": {
+    "validating": "Validating...",
+    "validate": "Submit my bids",
+    "confirmTitle": "Confirm submission",
+    "confirmMessage": "You are about to submit your bids. Once submitted, you won't be able to modify them.",
+    "bidsCount": "Number of bids",
+    "totalAmount": "Total amount",
+    "confirmQuestion": "Are you sure you want to continue?",
+    "cancel": "Cancel",
+    "confirmFinal": "Submit permanently",
+    "impossible": "Submission impossible",
+    "checkConditions": "Check that all conditions are met"
+  },
+  "search": {
+    "placeholder": "Search a rider…",
+    "importFavorites": "Import favorites",
+    "category": "Category",
+    "teams": "Teams",
+    "teamsCount": "{{count}} teams",
+    "searchTeam": "Search a team...",
+    "all": "All",
+    "none": "None",
+    "noTeamFound": "No team found",
+    "price": "Price",
+    "clear": "Clear"
+  },
+  "table": {
+    "rider": "Rider",
+    "odds": "Odds",
+    "action": "Action"
+  },
+  "myBids": {
+    "title": "My bids",
+    "count": "My bids ({{count}})"
+  },
+  "favorites": {
+    "imported": "Favorites imported",
+    "importedCount": "{{count}} rider added to your bids",
+    "importedCountPlural": "{{count}} riders added to your bids",
+    "importImpossible": "Import impossible",
+    "importError": "Error importing favorites",
+    "noFavorites": "No favorites to import",
+    "allTaken": "All favorites are already taken or in your bids"
   },
   "results": {
     "title": "Results",
@@ -42,7 +114,7 @@
     "title": "Auction History",
     "noHistory": "No history"
   },
-"stats": {
+  "stats": {
     "title": "Battle Statistics",
     "global": "Global",
     "byRound": "By round",
@@ -63,5 +135,10 @@
     "lost": "lost",
     "of": "of",
     "clickForDetails": "Click a row to see details"
-  }
+  },
+  "slots": {
+    "title": "Riders"
+  },
+  "warning": "Warning",
+  "error": "Error"
 }

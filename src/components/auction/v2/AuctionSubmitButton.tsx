@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface AuctionSubmitButtonProps {
   canSubmit: boolean;
@@ -29,6 +30,7 @@ export function AuctionSubmitButton({
   draft_sum,
   currency,
 }: AuctionSubmitButtonProps) {
+  const { t } = useTranslation("auction");
   const [showDialog, setShowDialog] = useState(false);
 
   const handleClick = () => {
@@ -55,11 +57,11 @@ export function AuctionSubmitButton({
           className="w-full h-10"
         >
           {isSubmitting ? (
-            "Validation en cours..."
+            t("submit.validating")
           ) : (
             <>
               <CheckCircle2 className="h-4 w-4 mr-2" />
-              Valider mes enchères
+              {t("submit.validate")}
             </>
           )}
         </Button>
@@ -68,33 +70,28 @@ export function AuctionSubmitButton({
       <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmer la validation</AlertDialogTitle>
+            <AlertDialogTitle>{t("submit.confirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
-                <p>
-                  Tu es sur le point de valider tes enchères. Une fois validées, 
-                  tu ne pourras plus les modifier.
-                </p>
+                <p>{t("submit.confirmMessage")}</p>
                 <div className="rounded-lg bg-muted p-3 space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Nombre d'enchères:</span>
+                    <span className="text-muted-foreground">{t("submit.bidsCount")}:</span>
                     <span className="font-medium">{draft_count}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Montant total:</span>
+                    <span className="text-muted-foreground">{t("submit.totalAmount")}:</span>
                     <span className="font-medium">{draft_sum}</span>
                   </div>
                 </div>
-                <p className="text-sm">
-                  Es-tu sûr de vouloir continuer ?
-                </p>
+                <p className="text-sm">{t("submit.confirmQuestion")}</p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel>{t("submit.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirm}>
-              Valider définitivement
+              {t("submit.confirmFinal")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

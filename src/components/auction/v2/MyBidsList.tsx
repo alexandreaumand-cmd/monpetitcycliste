@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Minus, Plus } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 interface MyBid {
   bid_id?: string;
@@ -31,6 +32,7 @@ export function MyBidsList({
   step = 1,
   isUpdating,
 }: MyBidsListProps) {
+  const { t } = useTranslation("auction");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
@@ -80,9 +82,9 @@ export function MyBidsList({
   if (bids.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center">
-        <p className="text-muted-foreground mb-1">Aucun coureur sélectionné</p>
+        <p className="text-muted-foreground mb-1">{t("rider.noSelected")}</p>
         <p className="text-sm text-muted-foreground">
-          Commence par rechercher et ajouter des coureurs
+          {t("rider.startSearch")}
         </p>
       </div>
     );
@@ -91,7 +93,7 @@ export function MyBidsList({
   return (
     <div className="space-y-0.5 px-3">
       <h3 className="text-sm font-semibold mb-2">
-        Mes enchères ({bids.length})
+        {t("myBids.count", { count: bids.length })}
       </h3>
 
       {sortedBids.map((bid) => (

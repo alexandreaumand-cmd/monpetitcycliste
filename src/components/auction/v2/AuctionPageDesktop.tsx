@@ -19,6 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "use-debounce";
+import { useTranslation } from "react-i18next";
 import { useLeague } from "@/contexts/LeagueContext";
 import { MemberWriteGuard } from "@/components/guards/MemberWriteGuard";
 import {
@@ -39,6 +40,7 @@ interface AuctionPageDesktopProps {
 }
 
 export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPageDesktopProps) {
+  const { t } = useTranslation("auction");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -235,21 +237,21 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId] });
-      toast({ title: "Enchère enregistrée" });
+      toast({ title: t("bid.saved") });
       
       // Show budget warning if exceeded
       if (data?.warnings && data.warnings.length > 0) {
         toast({ 
-          title: "⚠️ Attention", 
+          title: `⚠️ ${t("warning")}`, 
           description: data.warnings[0],
           variant: "destructive" 
         });
       }
     },
     onError: (error: any) => {
-      const errorMessage = error?.message || "Erreur lors de l'enregistrement de l'enchère";
+      const errorMessage = error?.message || t("bid.savingError");
       toast({ 
-        title: "Erreur", 
+        title: t("error"), 
         description: errorMessage,
         variant: "destructive" 
       });
@@ -266,12 +268,12 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId] });
-      toast({ title: "Enchère supprimée" });
+      toast({ title: t("bid.deleted") });
     },
     onError: (error: any) => {
       toast({
-        title: "Erreur",
-        description: error.message || "Impossible de supprimer l'enchère",
+        title: t("error"),
+        description: error.message || t("bid.deleteError"),
         variant: "destructive",
       });
     },
@@ -292,8 +294,8 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     },
     onError: (error: any) => {
       toast({
-        title: "Validation impossible",
-        description: error.message || "Vérifie que toutes les conditions sont remplies",
+        title: t("submit.impossible"),
+        description: error.message || t("submit.checkConditions"),
         variant: "destructive",
       });
     },
@@ -379,14 +381,16 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId] });
       toast({ 
-        title: "Favoris importés", 
-        description: `${data.imported} coureur${data.imported > 1 ? 's' : ''} ajouté${data.imported > 1 ? 's' : ''} à vos enchères` 
+        title: t("favorites.imported"), 
+        description: data.imported > 1 
+          ? t("favorites.importedCountPlural", { count: data.imported })
+          : t("favorites.importedCount", { count: data.imported })
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Import impossible",
-        description: error.message || "Erreur lors de l'import des favoris",
+        title: t("favorites.importImpossible"),
+        description: error.message || t("favorites.importError"),
         variant: "destructive",
       });
     },
@@ -454,9 +458,9 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
       <Card className="m-8">
         <CardContent className="flex items-center justify-center p-12 text-center">
           <div>
-            <p className="text-muted-foreground">Aucune enchère programmée</p>
+            <p className="text-muted-foreground">{t("noScheduledAuction")}</p>
             <p className="text-sm text-muted-foreground mt-2">
-              Les enchères n'ont pas encore été planifiées
+              {t("auctionsNotPlanned")}
             </p>
           </div>
         </CardContent>
