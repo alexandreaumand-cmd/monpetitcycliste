@@ -1,0 +1,52 @@
+{
+  "title": "Riders Data",
+  "loading": "Loading seasons...",
+  "filters": {
+    "search": "Search",
+    "searchPlaceholder": "Rider name...",
+    "team": "Team",
+    "allTeams": "All teams",
+    "category": "Category",
+    "allCategories": "All categories",
+    "cotes": "Rating",
+    "program": "Program",
+    "programAll": "All",
+    "programWith": "With program",
+    "programWithout": "Without program",
+    "favoritesOnly": "Favorites only",
+    "reset": "Reset"
+  },
+  "table": {
+    "fav": "Fav",
+    "name": "Name",
+    "team": "Team",
+    "category": "Category",
+    "cote": "Rating",
+    "points": "Points",
+    "program": "Program"
+  },
+  "results": {
+    "ridersShown": "{{count}} rider shown",
+    "ridersShown_plural": "{{count}} riders shown",
+    "outOfTotal": "out of {{total}} total",
+    "noRiders": "No riders found"
+  },
+  "export": {
+    "button": "Excel",
+    "noData": "No data to export",
+    "success": "Export successful: {{filename}}",
+    "columns": {
+      "name": "Name",
+      "team": "Team",
+      "category": "Category",
+      "cote": "Rating",
+      "points": "Points",
+      "favorite": "Favorite",
+      "yes": "Yes",
+      "no": "No"
+    }
+  },
+  "favorites": {
+    "error": "Error updating favorites"
+  }
+}

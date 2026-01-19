@@ -1,31 +1,53 @@
 {
   "title": "Calendrier",
+  "loading": "Chargement des saisons...",
+  "header": {
+    "season": "Saison"
+  },
   "filters": {
-    "search": "Rechercher une course...",
+    "search": "Rechercher",
+    "searchPlaceholder": "Nom de la course...",
     "category": "Catégorie",
     "phase": "Phase",
     "allCategories": "Toutes les catégories",
     "allPhases": "Toutes les phases",
-    "reset": "Réinitialiser les filtres"
+    "reset": "Réinitialiser"
   },
   "table": {
     "name": "Nom",
     "category": "Catégorie",
-    "startDate": "Date de début",
-    "endDate": "Date de fin",
+    "countdown": "Compte à rebours",
+    "startDate": "Date début",
+    "endDate": "Date fin",
+    "phase": "Phase",
+    "season": "Saison",
     "points": "Points",
-    "status": "Statut"
+    "startlist": "Startlist"
   },
   "badges": {
     "today": "Aujourd'hui",
-    "passed": "Terminée",
+    "passed": "Passée",
     "daysUntil": "Dans {{count}} jour",
     "daysUntil_plural": "Dans {{count}} jours",
     "inProgress": "En cours"
   },
+  "results": {
+    "found": "{{count}} course trouvée",
+    "found_plural": "{{count}} courses trouvées"
+  },
   "export": {
-    "button": "Exporter",
-    "filename": "calendrier_courses"
+    "button": "Export Excel",
+    "filename": "calendrier_courses",
+    "columns": {
+      "name": "Nom",
+      "category": "Catégorie",
+      "startDate": "Date début",
+      "endDate": "Date fin",
+      "phase": "Phase",
+      "season": "Saison",
+      "points": "Points",
+      "startlist": "Startlist"
+    }
   },
   "empty": {
     "title": "Aucune course trouvée",

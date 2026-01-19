@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import mpcLogo from "@/assets/mpc-logo.png";
 import * as XLSX from "xlsx";
+import { useTranslation } from "react-i18next";
 
 interface RiderWithPoints {
   coureur_id: string;
@@ -57,6 +58,7 @@ interface UpcomingRace {
 export default function RidersData() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { t } = useTranslation('data');
   
   // Local season state (autonomous from global context)
   const [localSelectedSeason, setLocalSelectedSeason] = useState<{ id: string; annee: number } | null>(null);
@@ -394,7 +396,7 @@ export default function RidersData() {
       queryClient.invalidateQueries({ queryKey: ["riders-data"] });
     },
     onError: (error) => {
-      toast.error("Erreur lors de la mise à jour des favoris");
+      toast.error(t('favorites.error'));
       console.error(error);
     },
   });
@@ -536,22 +538,22 @@ export default function RidersData() {
   // Excel export function
   const handleExportExcel = useCallback(() => {
     if (!sortedRiders || sortedRiders.length === 0) {
-      toast.error("Aucune donnée à exporter");
+      toast.error(t('export.noData'));
       return;
     }
 
     const exportData = sortedRiders.map((rider) => ({
-      Nom: rider.coureur_nom,
-      Équipe: rider.equipe_trigramme || "",
-      Catégorie: rider.equipe_categorie || "",
-      Cote: rider.prix_initial,
-      Points: rider.total_points,
-      Favori: rider.is_favorite ? "Oui" : "Non",
+      [t('export.columns.name')]: rider.coureur_nom,
+      [t('export.columns.team')]: rider.equipe_trigramme || "",
+      [t('export.columns.category')]: rider.equipe_categorie || "",
+      [t('export.columns.cote')]: rider.prix_initial,
+      [t('export.columns.points')]: rider.total_points,
+      [t('export.columns.favorite')]: rider.is_favorite ? t('export.columns.yes') : t('export.columns.no'),
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Coureurs");
+    XLSX.utils.book_append_sheet(workbook, worksheet, t('title'));
 
     // Auto-size columns
     const colWidths = [
@@ -566,8 +568,8 @@ export default function RidersData() {
 
     const fileName = `coureurs_${localSelectedSeason?.annee || "export"}_${new Date().toISOString().split("T")[0]}.xlsx`;
     XLSX.writeFile(workbook, fileName);
-    toast.success(`Export réussi: ${fileName}`);
-  }, [sortedRiders, localSelectedSeason]);
+    toast.success(t('export.success', { filename: fileName }));
+  }, [sortedRiders, localSelectedSeason, t]);
 
   if (!localSelectedSeason) {
     return (
@@ -580,7 +582,7 @@ export default function RidersData() {
                 <ArrowLeft className="h-5 w-5 text-white" />
               </Button>
               <img src={mpcLogo} alt="Logo" className="h-8 w-8 md:h-10 md:w-10" />
-              <h1 className="font-montserrat font-bold text-white text-sm md:text-xl">Données Coureurs</h1>
+              <h1 className="font-montserrat font-bold text-white text-sm md:text-xl">{t('title')}</h1>
             </div>
             <Button variant="ghost" size="icon" onClick={handleSignOut}>
               <LogOut className="h-5 w-5 text-white" />
@@ -589,7 +591,7 @@ export default function RidersData() {
         </header>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-12 text-muted-foreground">
-            Chargement des saisons...
+            {t('loading')}
           </div>
         </div>
       </div>
@@ -606,7 +608,7 @@ export default function RidersData() {
               <ArrowLeft className="h-5 w-5 text-white" />
             </Button>
             <img src={mpcLogo} alt="Logo" className="h-8 w-8 md:h-10 md:w-10" />
-            <h1 className="font-montserrat font-bold text-white text-sm md:text-xl">Données Coureurs</h1>
+            <h1 className="font-montserrat font-bold text-white text-sm md:text-xl">{t('title')}</h1>
           </div>
           <div className="flex items-center gap-2">
             <Select
@@ -639,12 +641,12 @@ export default function RidersData() {
       {/* Filters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
         <div className="space-y-1.5">
-          <Label htmlFor="search">Rechercher</Label>
+          <Label htmlFor="search">{t('filters.search')}</Label>
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               id="search"
-              placeholder="Nom du coureur..."
+              placeholder={t('filters.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"
@@ -653,13 +655,13 @@ export default function RidersData() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Équipe</Label>
+          <Label>{t('filters.team')}</Label>
           <Select value={selectedEquipe} onValueChange={setSelectedEquipe}>
             <SelectTrigger>
-              <SelectValue placeholder="Toutes" />
+              <SelectValue placeholder={t('filters.allTeams')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes les équipes</SelectItem>
+              <SelectItem value="all">{t('filters.allTeams')}</SelectItem>
               {filteredTeamsData?.map((team) => (
                 <SelectItem key={team.id} value={team.equipe_id}>
                   {team.nom_affiche}
@@ -670,13 +672,13 @@ export default function RidersData() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Catégorie</Label>
+          <Label>{t('filters.category')}</Label>
           <Select value={selectedCategorie} onValueChange={setSelectedCategorie}>
             <SelectTrigger>
-              <SelectValue placeholder="Toutes" />
+              <SelectValue placeholder={t('filters.allCategories')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes les catégories</SelectItem>
+              <SelectItem value="all">{t('filters.allCategories')}</SelectItem>
               {categorieOptions.map((cat) => (
                 <SelectItem key={cat} value={cat}>
                   {cat}
@@ -687,7 +689,7 @@ export default function RidersData() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Cotes {selectedCotes.length > 0 && `(${selectedCotes.length})`}</Label>
+          <Label>{t('filters.cotes')} {selectedCotes.length > 0 && `(${selectedCotes.length})`}</Label>
           <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
             {coteOptions.map((cote) => (
               <div key={cote} className="flex items-center space-x-2">
@@ -711,15 +713,15 @@ export default function RidersData() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Programme</Label>
+          <Label>{t('filters.program')}</Label>
           <Select value={programFilter} onValueChange={(v) => setProgramFilter(v as "all" | "with" | "without")}>
             <SelectTrigger>
-              <SelectValue placeholder="Tous" />
+              <SelectValue placeholder={t('filters.programAll')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous</SelectItem>
-              <SelectItem value="with">Avec programme</SelectItem>
-              <SelectItem value="without">Sans programme</SelectItem>
+              <SelectItem value="all">{t('filters.programAll')}</SelectItem>
+              <SelectItem value="with">{t('filters.programWith')}</SelectItem>
+              <SelectItem value="without">{t('filters.programWithout')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -732,7 +734,7 @@ export default function RidersData() {
               onCheckedChange={(checked) => setShowFavoritesOnly(checked === true)}
             />
             <Label htmlFor="favorites" className="cursor-pointer">
-              Favoris uniquement
+              {t('filters.favoritesOnly')}
             </Label>
           </div>
         </div>
@@ -749,7 +751,7 @@ export default function RidersData() {
               setProgramFilter("all");
             }}
           >
-            Réinitialiser
+            {t('filters.reset')}
           </Button>
           <Button
             variant="default"
@@ -757,16 +759,16 @@ export default function RidersData() {
             disabled={!sortedRiders || sortedRiders.length === 0}
           >
             <Download className="h-4 w-4 mr-2" />
-            Excel
+            {t('export.button')}
           </Button>
         </div>
       </div>
 
       {/* Results count */}
       <div className="text-sm text-muted-foreground mb-4">
-        {filteredRiders.length} coureur{filteredRiders.length > 1 ? "s" : ""} affiché{filteredRiders.length > 1 ? "s" : ""}
+        {t('results.ridersShown', { count: filteredRiders.length })}
         {ridersData && filteredRiders.length !== ridersData.length && (
-          <span> sur {ridersData.length} total</span>
+          <span> {t('results.outOfTotal', { total: ridersData.length })}</span>
         )}
       </div>
 
@@ -782,35 +784,35 @@ export default function RidersData() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12">Fav</TableHead>
-                <TableHead>Nom</TableHead>
+                <TableHead className="w-12">{t('table.fav')}</TableHead>
+                <TableHead>{t('table.name')}</TableHead>
                 <TableHead 
                   className="cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('equipe')}
                 >
-                  Équipe {getSortIcon('equipe')}
+                  {t('table.team')} {getSortIcon('equipe')}
                 </TableHead>
-                <TableHead className="w-20">Catégorie</TableHead>
+                <TableHead className="w-20">{t('table.category')}</TableHead>
                 <TableHead 
                   className="w-16 text-right cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('cote')}
                 >
-                  Cote {getSortIcon('cote')}
+                  {t('table.cote')} {getSortIcon('cote')}
                 </TableHead>
                 <TableHead 
                   className="w-20 text-right cursor-pointer hover:bg-muted/50 select-none"
                   onClick={() => handleSort('points')}
                 >
-                  Points {getSortIcon('points')}
+                  {t('table.points')} {getSortIcon('points')}
                 </TableHead>
-                <TableHead className="min-w-[300px]">Programme</TableHead>
+                <TableHead className="min-w-[300px]">{t('table.program')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedRiders.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Aucun coureur trouvé
+                    {t('results.noRiders')}
                   </TableCell>
                 </TableRow>
               ) : (
