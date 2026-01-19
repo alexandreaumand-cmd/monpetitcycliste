@@ -314,7 +314,7 @@ export const StartlistMobile = () => {
                       {isPcsValidated && (
                         <Badge className="bg-green-600 text-white text-xs">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
-                          PCS OK
+                          SL officielle
                         </Badge>
                       )}
                     </div>
@@ -375,7 +375,7 @@ export const StartlistMobile = () => {
             {startlistViewData.pcs_validated && (
               <Badge className="bg-green-600 text-white">
                 <CheckCircle2 className="h-3 w-3 mr-1" />
-                PCS OK
+                SL officielle
               </Badge>
             )}
           </div>

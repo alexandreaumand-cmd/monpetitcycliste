@@ -265,7 +265,7 @@ const StartlistDesktop = () => {
 
       if (error) throw error;
 
-      toast.success(newStatus ? "Startlist validée PCS ✓" : "Validation PCS retirée");
+      toast.success(newStatus ? "SL validée ✓" : "Validation retirée");
       queryClient.invalidateQueries({ queryKey: ['startlist-view'] });
       queryClient.invalidateQueries({ queryKey: ['startlist-imports'] });
     } catch (error: any) {
@@ -465,7 +465,7 @@ const StartlistDesktop = () => {
                         {isPcsValidated(course.id) && (
                           <Badge variant="outline" className="bg-green-600 text-white">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
-                            PCS OK
+                            SL officielle
                           </Badge>
                         )}
                       </div>

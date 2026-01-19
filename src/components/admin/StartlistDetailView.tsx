@@ -88,7 +88,7 @@ export const StartlistDetailView = ({ startlistId, onBack, isSuperAdmin, onImpor
 
       if (error) throw error;
 
-      toast.success(newStatus ? "Startlist validée PCS ✓" : "Validation PCS retirée");
+      toast.success(newStatus ? "SL validée ✓" : "Validation retirée");
       queryClient.invalidateQueries({ queryKey: ['startlist-view'] });
       queryClient.invalidateQueries({ queryKey: ['startlist-imports'] });
     } catch (error: any) {
@@ -195,7 +195,7 @@ export const StartlistDetailView = ({ startlistId, onBack, isSuperAdmin, onImpor
               className="bg-green-600 text-white hover:bg-green-700 border-green-600"
             >
               <CheckCircle2 className="h-3 w-3 mr-1" />
-              PCS OK (retirer)
+              SL officielle (retirer)
             </Button>
           )}
           {isSuperAdmin && startlistViewData.managers.length > 0 && (

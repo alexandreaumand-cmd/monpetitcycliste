@@ -15,11 +15,11 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
   ({ startlistData }, ref) => {
     return (
       <div ref={ref} className="relative space-y-4 bg-white">
-        {/* Badge PCS OK - visible uniquement si validé */}
+        {/* Badge SL officielle - visible uniquement si validé */}
         {startlistData.pcs_validated && (
           <div className="absolute top-2 right-2 z-10 bg-green-600 text-white px-3 py-1 rounded-full flex items-center gap-1 text-sm font-semibold shadow-lg">
             <CheckCircle2 className="h-4 w-4" />
-            PCS OK
+            SL officielle
           </div>
         )}
 
