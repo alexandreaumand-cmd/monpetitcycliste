@@ -119,5 +119,20 @@
     "generalScale": "Barème Général",
     "stageScale": "Barème Étapes",
     "rateManagers": "Noter les managers"
+  },
+  "courses": {
+    "title": "Toutes les courses de la saison",
+    "searchPlaceholder": "Rechercher une course...",
+    "allPhases": "Toutes",
+    "noCoursesFound": "Aucune course trouvée avec les filtres sélectionnés.",
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain",
+    "daysUntil": "J-{{count}}",
+    "stages": "étapes",
+    "oneDay": "Course d'un jour",
+    "cancelled": "Annulée",
+    "configUWT": "Config UWT",
+    "viewDetails": "Voir détail →",
+    "pts": "pts"
   }
 }

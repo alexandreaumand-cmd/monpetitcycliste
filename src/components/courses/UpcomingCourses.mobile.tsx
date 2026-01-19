@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Trophy, Clock, MapPin, Search, XCircle } from "lucide-react";
 import { CoursePointsDrawer } from "./CoursePointsDrawer";
-import { format, differenceInDays } from "date-fns";
-import { fr } from "date-fns/locale";
+import { format, differenceInCalendarDays } from "date-fns";
+import { fr, enUS } from "date-fns/locale";
 import { normalizeCourseType } from "@/lib/courseType";
 import { MobileCard, ChipGroup, MobileEmptyState } from "@/components/mobile";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useTranslation } from "react-i18next";
 
 interface CourseData {
   course_id: string;
@@ -36,11 +37,14 @@ interface CourseData {
 }
 
 export const UpcomingCoursesMobile = () => {
+  const { t, i18n } = useTranslation('calendar');
   const [searchTerm, setSearchTerm] = useState("");
   const [phaseFilter, setPhaseFilter] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<CourseData | null>(null);
   const { selectedSeason, phases, isLoading: isLoadingContext } = useSeasonContext();
   const { leagueId } = useLeague();
+  
+  const dateLocale = i18n.language === 'fr' ? fr : enUS;
 
   const seasonPhaseIds = phases?.map(p => p.id) || [];
 
@@ -96,7 +100,7 @@ export const UpcomingCoursesMobile = () => {
     ?.sort((a, b) => a.date_debut.localeCompare(b.date_debut));
 
   const phaseItems = [
-    { value: "all", label: "Toutes" },
+    { value: "all", label: t('courses.allPhases') },
     ...(phases?.map(p => ({ value: p.index_dans_saison.toString(), label: `Phase ${p.index_dans_saison}` })) || [])
   ];
 
@@ -106,7 +110,7 @@ export const UpcomingCoursesMobile = () => {
       <div className="sticky top-14 z-10 bg-background border-b safe-top">
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold">Toutes les courses</h1>
+            <h1 className="text-xl font-bold">{t('courses.title')}</h1>
             {filteredCourses && (
               <span className="text-xs text-muted-foreground">{filteredCourses.length} courses</span>
             )}
@@ -115,7 +119,7 @@ export const UpcomingCoursesMobile = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Rechercher..."
+              placeholder={t('courses.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -141,17 +145,21 @@ export const UpcomingCoursesMobile = () => {
         ) : !filteredCourses || filteredCourses.length === 0 ? (
           <MobileEmptyState
             icon={<Calendar className="h-16 w-16" />}
-            title="Aucune course"
-            description="Aucune course à venir avec ces filtres"
+            title={t('empty.title')}
+            description={t('courses.noCoursesFound')}
           />
         ) : (
           filteredCourses.map(course => {
-            const daysUntil = differenceInDays(new Date(course.date_debut), new Date());
-            const daysLabel = daysUntil === 0 ? "Aujourd'hui" : daysUntil === 1 ? "Demain" : `J-${daysUntil}`;
+            const daysUntil = differenceInCalendarDays(new Date(course.date_debut), new Date());
+            const daysLabel = daysUntil === 0 
+              ? t('courses.today') 
+              : daysUntil === 1 
+                ? t('courses.tomorrow') 
+                : t('courses.daysUntil', { count: daysUntil });
             const normalized = normalizeCourseType(course.type_course);
             const etapesLabel = normalized.isStage
-              ? `${course.nb_etapes_estimees} étapes` 
-              : "Course d'un jour";
+              ? `${course.nb_etapes_estimees} ${t('courses.stages')}` 
+              : t('courses.oneDay');
 
             return (
               <MobileCard
@@ -162,9 +170,9 @@ export const UpcomingCoursesMobile = () => {
                     <div className="flex items-center gap-1.5 text-muted-foreground">
                       <Calendar className="h-3 w-3" />
                       <span>
-                        {format(new Date(course.date_debut), 'dd MMM', { locale: fr })}
+                        {format(new Date(course.date_debut), 'dd MMM', { locale: dateLocale })}
                         {course.date_fin && course.date_fin !== course.date_debut && (
-                          <> → {format(new Date(course.date_fin), 'dd MMM', { locale: fr })}</>
+                          <> → {format(new Date(course.date_fin), 'dd MMM', { locale: dateLocale })}</>
                         )}
                         {' '}({course.nb_jours}j)
                       </span>
@@ -187,7 +195,7 @@ export const UpcomingCoursesMobile = () => {
                   {course.is_cancelled && (
                     <Badge variant="destructive" className="text-xs h-5 gap-1">
                       <XCircle className="h-3 w-3" />
-                      Annulée
+                      {t('courses.cancelled')}
                     </Badge>
                   )}
                   <Badge variant="secondary" className="text-xs h-5">
