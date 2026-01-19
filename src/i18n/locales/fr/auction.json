@@ -179,6 +179,21 @@
     "opponentTeams": "Équipes adverses",
     "viewBudgetsAndRosters": "Voir les budgets et effectifs des autres managers"
   },
+  "finalTeam": {
+    "title": "Mon Équipe Finale",
+    "subtitle": "Composition complète de votre effectif",
+    "theoreticalValue": "Valeur théorique",
+    "sumOfOdds": "Somme des cotes initiales",
+    "mostExpensive": "Coureur le plus cher",
+    "mostOverpaid": "Le plus surpayé",
+    "vsOdds": "vs cote",
+    "highestOdds": "Cote la plus haute",
+    "odds": "Cote",
+    "round": "Round",
+    "rider": "coureur",
+    "riders": "coureurs",
+    "total": "total"
+  },
   "availableRiders": "Coureurs disponibles",
   "results_count": "{{count}} résultat",
   "results_count_plural": "{{count}} résultats",
