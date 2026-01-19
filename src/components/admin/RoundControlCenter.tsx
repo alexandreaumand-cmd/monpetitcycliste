@@ -135,7 +135,7 @@ export const RoundControlCenter = () => {
         .from('annonces')
         .select('*, coureurs(nom), managers(nom)')
         .eq('auction_id', currentAuction.id)
-        .order('created_at', { ascending: true });
+        .order('winning_amount', { ascending: true });
       
       if (error) throw error;
       
