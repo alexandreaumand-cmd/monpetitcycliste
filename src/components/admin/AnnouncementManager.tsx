@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatAmount } from "@/lib/utils";
 
 export const AnnouncementManager = () => {
+  const { i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedAuctionId, setSelectedAuctionId] = useState<string>("");
   const [currentAnnouncementText, setCurrentAnnouncementText] = useState("");
@@ -50,7 +52,7 @@ export const AnnouncementManager = () => {
   const publishNextMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('publier-annonce', {
-        body: { auction_id: selectedAuctionId, publish_all: false }
+        body: { auction_id: selectedAuctionId, publish_all: false, lang: i18n.language }
       });
       if (error) throw error;
       return data;
@@ -76,7 +78,7 @@ export const AnnouncementManager = () => {
   const publishAllMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('publier-annonce', {
-        body: { auction_id: selectedAuctionId, publish_all: true }
+        body: { auction_id: selectedAuctionId, publish_all: true, lang: i18n.language }
       });
       if (error) throw error;
       return data;

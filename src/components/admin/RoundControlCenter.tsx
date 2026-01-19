@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
@@ -13,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useLeague } from "@/contexts/LeagueContext";
 
 export const RoundControlCenter = () => {
+  const { i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { leagueId } = useLeague();
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>("");
@@ -206,7 +208,7 @@ export const RoundControlCenter = () => {
   const publishNextMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('publier-annonce', {
-        body: { auction_id: currentAuction?.id, publish_all: false }
+        body: { auction_id: currentAuction?.id, publish_all: false, lang: i18n.language }
       });
       if (error) throw error;
       return data;
@@ -232,7 +234,7 @@ export const RoundControlCenter = () => {
   const publishAllMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke('publier-annonce', {
-        body: { auction_id: currentAuction?.id, publish_all: true }
+        body: { auction_id: currentAuction?.id, publish_all: true, lang: i18n.language }
       });
       if (error) throw error;
       return data;

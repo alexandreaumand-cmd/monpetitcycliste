@@ -16,8 +16,29 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { auction_id, publish_all } = await req.json();
-    console.log('Publishing annonce for auction:', auction_id, 'publish_all:', publish_all);
+    const { auction_id, publish_all, lang = 'fr' } = await req.json();
+    console.log('Publishing annonce for auction:', auction_id, 'publish_all:', publish_all, 'lang:', lang);
+
+    // Translations for announcement text
+    const translations = {
+      fr: {
+        wonBy: 'GAGNÉ par',
+        at: 'à',
+        losers: 'Managers battus',
+        tie: 'ÉGALITÉ au montant max',
+        between: 'entre',
+        nextRound: 'Le coureur repart au PROCHAIN ROUND'
+      },
+      en: {
+        wonBy: 'WON by',
+        at: 'at',
+        losers: 'Outbid managers',
+        tie: 'TIE at max amount',
+        between: 'between',
+        nextRound: 'The rider goes to NEXT ROUND'
+      }
+    };
+    const t = translations[lang as keyof typeof translations] || translations.fr;
 
     if (publish_all) {
       console.log('📢 Publishing all annonces in order (highest amount first)...');
@@ -188,13 +209,13 @@ Deno.serve(async (req) => {
           .map((l) => `${l.manager} (${l.montant.toFixed(1)})`)
           .join(' · ');
 
-        text = `🥁 [Round ${annonce.round_number}] ${annonce.coureurs.nom} — GAGNÉ par ${annonce.managers.nom} à ${annonce.winning_amount.toFixed(1)}.\n${losersList ? `Managers battus : ${losersList}.` : ''}`;
+        text = `🥁 [Round ${annonce.round_number}] ${annonce.coureurs.nom} — ${t.wonBy} ${annonce.managers.nom} ${t.at} ${annonce.winning_amount.toFixed(1)}.\n${losersList ? `${t.losers} : ${losersList}.` : ''}`;
       } else {
         const exAequoList = (annonce.losers_json as any[])
           .map((l) => l.manager)
           .join(', ');
 
-        text = `🟨 [Round ${annonce.round_number}] ${annonce.coureurs.nom} — ÉGALITÉ au montant max ${annonce.winning_amount.toFixed(1)} entre : ${exAequoList}.\nLe coureur repart au PROCHAIN ROUND.`;
+        text = `🟨 [Round ${annonce.round_number}] ${annonce.coureurs.nom} — ${t.tie} ${annonce.winning_amount.toFixed(1)} ${t.between} : ${exAequoList}.\n${t.nextRound}.`;
       }
 
       return new Response(
