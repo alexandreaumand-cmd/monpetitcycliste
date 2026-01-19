@@ -84,5 +84,20 @@
       "player": "player",
       "players": "players"
     }
+  },
+  "recentResults": {
+    "title": "Latest Results",
+    "noResults": "No recent results",
+    "noResultsYet": "No results yet",
+    "unknownDate": "Unknown date",
+    "general": "General",
+    "stages": "Stages",
+    "classificationPlaceholder": "Classification type",
+    "generalClassification": "General Classification",
+    "pointsClassification": "Points",
+    "mountainClassification": "Mountain (Polka Dot)",
+    "youthClassification": "Youth",
+    "stagePlaceholder": "Select a stage",
+    "stage": "Stage"
   }
 }

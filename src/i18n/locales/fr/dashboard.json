@@ -84,5 +84,20 @@
       "player": "joueur",
       "players": "joueurs"
     }
+  },
+  "recentResults": {
+    "title": "Derniers résultats",
+    "noResults": "Aucun résultat récent",
+    "noResultsYet": "Pas encore de résultats",
+    "unknownDate": "Date inconnue",
+    "general": "Général",
+    "stages": "Étapes",
+    "classificationPlaceholder": "Type de classement",
+    "generalClassification": "Classement Général",
+    "pointsClassification": "Points",
+    "mountainClassification": "Pois (Montagne)",
+    "youthClassification": "Jeunes",
+    "stagePlaceholder": "Sélectionner une étape",
+    "stage": "Étape"
   }
 }
