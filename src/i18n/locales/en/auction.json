@@ -163,6 +163,22 @@
     "none": "None",
     "na": "N/A"
   },
+  "completed": {
+    "title": "Auctions completed",
+    "badge": "Complete",
+    "description": "You have completed your team of {{count}} riders. Your auctions are finished for this phase.",
+    "budgetSpent": "Budget spent",
+    "budgetRemaining": "Budget remaining",
+    "roundStatus": "Round {{round}} Status",
+    "managersValidated": "Managers who validated",
+    "haveValidated": "Have validated:",
+    "waiting": "Waiting:",
+    "noInfo": "No information available",
+    "myTeam": "My team",
+    "viewMyRiders": "View my {{count}} riders",
+    "opponentTeams": "Opponent teams",
+    "viewBudgetsAndRosters": "View budgets and rosters of other managers"
+  },
   "availableRiders": "Available riders",
   "results_count": "{{count}} result",
   "results_count_plural": "{{count}} results",

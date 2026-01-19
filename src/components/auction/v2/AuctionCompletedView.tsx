@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AuctionTeamsGrid } from "../AuctionTeamsGrid";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Loader2 } from "lucide-react";
-
+import { useTranslation } from "react-i18next";
 interface AuctionCompletedViewProps {
   roster: Array<{
     coureur_id: string;
@@ -35,6 +35,7 @@ export function AuctionCompletedView({
   managerId,
   leagueId
 }: AuctionCompletedViewProps) {
+  const { t } = useTranslation('auction');
   // Fetch validation status
   const { data: validationStatus, isLoading: validationLoading } = useQuery({
     queryKey: ['auction-validation-status', phaseId, leagueId],
@@ -95,13 +96,13 @@ export function AuctionCompletedView({
             <CheckCircle2 className="h-7 w-7 md:h-8 md:w-8 text-green-500 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h1 className="text-xl md:text-2xl font-bold">Enchères terminées</h1>
+                <h1 className="text-xl md:text-2xl font-bold">{t('completed.title')}</h1>
                 <Badge className="bg-green-500/10 text-green-500 border-green-500/20 flex-shrink-0">
-                  Complet
+                  {t('completed.badge')}
                 </Badge>
               </div>
               <p className="text-sm md:text-base text-muted-foreground">
-                Tu as complété ton équipe de {max_slots} coureurs. Tes enchères sont terminées pour cette phase.
+                {t('completed.description', { count: max_slots })}
               </p>
             </div>
           </div>
@@ -109,11 +110,11 @@ export function AuctionCompletedView({
           {/* Budget summary */}
           <div className="grid grid-cols-2 gap-3 md:gap-4 mt-4 pt-4 border-t">
             <div>
-              <p className="text-xs md:text-sm text-muted-foreground">Budget dépensé</p>
+              <p className="text-xs md:text-sm text-muted-foreground">{t('completed.budgetSpent')}</p>
               <p className="text-xl md:text-2xl font-bold">{budget_spent}{currency}</p>
             </div>
             <div>
-              <p className="text-xs md:text-sm text-muted-foreground">Budget restant</p>
+              <p className="text-xs md:text-sm text-muted-foreground">{t('completed.budgetRemaining')}</p>
               <p className="text-xl md:text-2xl font-bold text-muted-foreground">{remainingBudget}{currency}</p>
             </div>
           </div>
@@ -125,7 +126,7 @@ export function AuctionCompletedView({
         <CardHeader className="pb-3">
           <CardTitle className="text-lg md:text-xl flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Statut du Round {currentRound}
+            {t('completed.roundStatus', { round: currentRound })}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -136,7 +137,7 @@ export function AuctionCompletedView({
           ) : validationStatus ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Managers ayant validé</p>
+                <p className="text-sm text-muted-foreground">{t('completed.managersValidated')}</p>
                 <Badge variant="default" className="text-base px-3 py-1">
                   {validationStatus.validated_count} / {validationStatus.total_managers}
                 </Badge>
@@ -145,7 +146,7 @@ export function AuctionCompletedView({
               {/* Validated managers */}
               {validationStatus.validated_managers.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">✅ Ont validé :</p>
+                  <p className="text-sm font-medium">✅ {t('completed.haveValidated')}</p>
                   <div className="flex flex-wrap gap-2">
                     {validationStatus.validated_managers.map((mgr) => (
                       <Badge 
@@ -163,7 +164,7 @@ export function AuctionCompletedView({
               {/* Waiting managers */}
               {validationStatus.waiting_managers.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">⏳ En attente :</p>
+                  <p className="text-sm font-medium">⏳ {t('completed.waiting')}</p>
                   <div className="flex flex-wrap gap-2">
                     {validationStatus.waiting_managers.map((mgr) => (
                       <Badge 
@@ -179,7 +180,7 @@ export function AuctionCompletedView({
               )}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Aucune information disponible</p>
+            <p className="text-sm text-muted-foreground">{t('completed.noInfo')}</p>
           )}
         </CardContent>
       </Card>
@@ -187,14 +188,14 @@ export function AuctionCompletedView({
       {/* Team list - NOW IN ACCORDION */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg md:text-xl">Mon équipe</CardTitle>
+          <CardTitle className="text-lg md:text-xl">{t('completed.myTeam')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="team" className="border-none">
               <AccordionTrigger className="hover:no-underline py-2">
                 <span className="text-sm text-muted-foreground">
-                  Voir mes {roster.length} coureurs
+                  {t('completed.viewMyRiders', { count: roster.length })}
                 </span>
               </AccordionTrigger>
               <AccordionContent>
@@ -228,7 +229,7 @@ export function AuctionCompletedView({
         <CardHeader className="pb-3">
           <CardTitle className="text-lg md:text-xl flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Équipes adverses
+            {t('completed.opponentTeams')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -236,7 +237,7 @@ export function AuctionCompletedView({
             <AccordionItem value="teams" className="border-none">
               <AccordionTrigger className="hover:no-underline py-2">
                 <span className="text-sm text-muted-foreground">
-                  Voir les budgets et effectifs des autres managers
+                  {t('completed.viewBudgetsAndRosters')}
                 </span>
               </AccordionTrigger>
               <AccordionContent>
