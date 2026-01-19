@@ -207,7 +207,7 @@ export const StartlistRaceCards = ({ onRaceClick, isSuperAdmin }: StartlistRaceC
                       )}
                       {pcsValidated && (
                         <Badge className="bg-green-600 text-white border-green-600">
-                          PCS OK
+                          SL officielle
                         </Badge>
                       )}
                     </div>

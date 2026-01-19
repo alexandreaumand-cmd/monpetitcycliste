@@ -185,7 +185,7 @@ export const StartlistImportManager = () => {
       if (error) throw error;
 
       setPcsValidated(newStatus);
-      toast.success(newStatus ? "Startlist validée PCS ✓" : "Validation PCS retirée");
+      toast.success(newStatus ? "SL validée ✓" : "Validation retirée");
       queryClient.invalidateQueries({ queryKey: ['startlist-imports'] });
     } catch (error: any) {
       toast.error("Erreur : " + error.message);
