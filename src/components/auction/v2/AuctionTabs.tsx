@@ -10,6 +10,7 @@ import { BidAmountPopover } from "./BidAmountPopover";
 import { Plus, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
 
 interface AuctionTabsProps {
   phaseId: string;
@@ -79,6 +80,7 @@ export const AuctionTabs = ({
   onLoadMore,
   isLoadingMore,
 }: AuctionTabsProps) => {
+  const { t } = useTranslation("auction");
   // Fetch closed rounds for this phase
   const { data: closedRounds = [] } = useQuery({
     queryKey: ["closed-rounds", phaseId, leagueId],
@@ -134,7 +136,7 @@ export const AuctionTabs = ({
               "
             >
               <Plus className="h-5 w-5 mr-2" />
-              Enchérir
+              {t('tabs.bid')}
             </TabsTrigger>
             
             {/* Dynamic tabs for closed rounds */}
@@ -200,7 +202,7 @@ export const AuctionTabs = ({
                 cursor-pointer
               "
             >
-              Équipes adverses
+              {t('tabs.teams')}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -230,9 +232,9 @@ export const AuctionTabs = ({
             {/* Left: Search Results - Full height */}
             <div className="flex flex-col h-full">
               <div className="mb-2 flex items-center justify-between flex-shrink-0">
-                <h2 className="text-base font-semibold">Coureurs disponibles</h2>
+                <h2 className="text-base font-semibold">{t('availableRiders')}</h2>
                 <span className="text-xs text-muted-foreground">
-                  {riders.length} résultat{riders.length > 1 ? 's' : ''}
+                  {riders.length > 1 ? t('results_count_plural', { count: riders.length }) : t('results_count', { count: riders.length })}
                 </span>
               </div>
               <Card className="shadow-sm flex-1 flex flex-col overflow-hidden">
@@ -251,7 +253,7 @@ export const AuctionTabs = ({
                         trigger={
                           <Button size="sm" variant="default" className="gap-1">
                             <Plus className="h-3 w-3" />
-                            Enchérir
+                            {t('tabs.bid')}
                           </Button>
                         }
                         rider={{
@@ -274,9 +276,9 @@ export const AuctionTabs = ({
             {/* Right: My Bids - Full height */}
             <div className="flex flex-col h-full">
               <div className="mb-2 flex items-center justify-between flex-shrink-0">
-                <h2 className="text-base font-semibold">Mes enchères</h2>
+                <h2 className="text-base font-semibold">{t('myBids.title')}</h2>
                 <span className="text-xs text-muted-foreground">
-                  {myBids.length} coureur{myBids.length > 1 ? 's' : ''}
+                  {myBids.length > 1 ? t('riders_count_plural', { count: myBids.length }) : t('riders_count', { count: myBids.length })}
                 </span>
               </div>
 
@@ -291,12 +293,12 @@ export const AuctionTabs = ({
                   {isSubmitting ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                      Validation en cours...
+                      {t('submit.validating')}
                     </>
                   ) : (
                     <>
                       <CheckCircle2 className="h-5 w-5 mr-2" />
-                      Valider mes enchères
+                      {t('submit.validate')}
                     </>
                   )}
                 </Button>
@@ -304,10 +306,12 @@ export const AuctionTabs = ({
                 {!context?.validation_status?.can_submit && (
                   <p className="text-xs text-center text-muted-foreground">
                     {context?.validation_status?.missing_slots > 0 
-                      ? `Il manque ${context.validation_status.missing_slots} coureur${context.validation_status.missing_slots > 1 ? 's' : ''}`
+                      ? (context.validation_status.missing_slots > 1 
+                          ? t('missingRiders_plural', { count: context.validation_status.missing_slots })
+                          : t('missingRiders', { count: context.validation_status.missing_slots }))
                       : context?.validation_status?.budget_overflow 
-                        ? "Budget dépassé" 
-                        : "Conditions non remplies"}
+                        ? t('budgetExceeded')
+                        : t('conditionsNotMet')}
                   </p>
                 )}
               </div>

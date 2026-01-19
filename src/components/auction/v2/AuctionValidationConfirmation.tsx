@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock, Users, RefreshCw, Loader2, History } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 interface AuctionValidationConfirmationProps {
   phaseId: string | null;
@@ -18,6 +19,7 @@ interface AuctionValidationConfirmationProps {
 }
 
 export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, leagueId, onBack, onViewMyBids, onViewHistory }: AuctionValidationConfirmationProps) {
+  const { t } = useTranslation("auction");
   const [timeRemaining, setTimeRemaining] = useState("");
 
   const { data: status, isLoading, refetch } = useQuery({
@@ -46,7 +48,7 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
       const diff = deadline.getTime() - now.getTime();
 
       if (diff <= 0) {
-        setTimeRemaining("Clôture imminente...");
+        setTimeRemaining(t('validation.closingSoon'));
         return;
       }
 
@@ -82,18 +84,18 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
 
   const getEncouragingMessage = () => {
     if (allValidated) {
-      return "🎊 Tous les managers ont validé ! Le round va bientôt se clôturer.";
+      return `🎊 ${t('validation.allValidated')}`;
     }
     if (progress >= 75) {
-      return "🚀 Plus que quelques retardataires...";
+      return `🚀 ${t('validation.almostDone')}`;
     }
     if (progress >= 50) {
-      return "⏳ On attend encore quelques managers...";
+      return `⏳ ${t('validation.waitingMore')}`;
     }
     if (progress >= 25) {
-      return "👀 Patience... Les autres managers finalisent leurs enchères.";
+      return `👀 ${t('validation.waitingOthers')}`;
     }
-    return "✨ Tu fais partie des premiers à avoir validé ! Bravo !";
+    return `✨ ${t('validation.earlyBird')}`;
   };
 
   return (
@@ -107,15 +109,15 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
           </div>
           <div>
             <CardTitle className="text-2xl md:text-3xl">
-              Enchères validées ! 🎉
+              {t('validation.validated')} 🎉
               {status.round_number && (
                 <span className="block text-lg text-muted-foreground font-normal mt-1">
-                  Round {status.round_number}
+                  {t('round')} {status.round_number}
                 </span>
               )}
             </CardTitle>
             <p className="text-muted-foreground mt-2">
-              Tes enchères ont été soumises avec succès
+              {t('validation.submitted')}
             </p>
           </div>
         </CardHeader>
@@ -125,7 +127,7 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium">
-                {status.validated_count}/{status.total_managers} managers ont validé
+                {t('validation.managersValidated', { validated: status.validated_count, total: status.total_managers })}
               </span>
               <Badge variant={allValidated ? "default" : "secondary"}>
                 {Math.round(progress)}%
@@ -143,7 +145,7 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <Clock className="h-4 w-4" />
             <span className="text-sm">
-              Temps restant : <strong className="text-foreground">{timeRemaining}</strong>
+              {t('validation.timeRemaining')} <strong className="text-foreground">{timeRemaining}</strong>
             </span>
           </div>
 
@@ -152,7 +154,7 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Users className="h-4 w-4" />
-                <span>Managers en attente ({status.waiting_managers.length})</span>
+                <span>{t('validation.waitingManagers')} ({status.waiting_managers.length})</span>
               </div>
               <div className="bg-muted rounded-lg p-3">
                 <div className="flex flex-wrap gap-2">
@@ -174,14 +176,14 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
               className="flex-1"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
-              Actualiser
+              {t('validation.refresh')}
             </Button>
             <Button
               onClick={onViewMyBids}
               variant="secondary"
               className="flex-1"
             >
-              Voir mes enchères
+              {t('validation.viewMyBids')}
             </Button>
             <Button
               onClick={onViewHistory}
@@ -189,13 +191,13 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
               className="flex-1"
             >
               <History className="h-4 w-4 mr-2" />
-              Historique
+              {t('validation.history')}
             </Button>
           </div>
 
           {/* Info */}
           <p className="text-xs text-muted-foreground text-center">
-            Cette page se met à jour automatiquement toutes les 15 secondes
+            {t('validation.autoUpdate')}
           </p>
         </CardContent>
       </Card>

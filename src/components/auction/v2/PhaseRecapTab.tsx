@@ -236,7 +236,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <TrendingDown className="h-5 w-5 text-red-600" />
-              Plus grand perdant
+              {t('recap.biggestLoser')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -246,7 +246,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
                   {biggestLoser[0]}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {biggestLoser[1]} enchères perdues
+                  {biggestLoser[1]} {t('recap.bidsLost')}
                 </p>
               </>
             ) : (
@@ -260,7 +260,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Enchère Max
+              {t('recap.maxBid')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -278,7 +278,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Trophy className="h-5 w-5 text-amber-600" />
-              Roi du Tour 1
+              {t('recap.round1King')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -288,7 +288,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
                   {round1King[0]}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {round1King[1]} victoire{round1King[1] > 1 ? "s" : ""}
+                  {round1King[1]} {round1King[1] > 1 ? t('recap.victories_plural') : t('recap.victories')}
                 </p>
               </>
             ) : (
@@ -305,7 +305,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <ThumbsDown className="h-4 w-4" />
-              Loser du Tour 1
+              {t('recap.round1Loser')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -313,7 +313,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
               <>
                 <p className="text-2xl font-bold truncate">{round1Loser[0]}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {round1Loser[1]} raté{round1Loser[1] > 1 ? "s" : ""}
+                  {round1Loser[1]} {round1Loser[1] > 1 ? t('recap.missed_plural') : t('recap.missed')}
                 </p>
               </>
             ) : (
@@ -327,7 +327,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Zap className="h-4 w-4" />
-              Les plus rapides
+              {t('recap.fastest')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -341,11 +341,11 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
                       </Badge>
                       <span className="truncate max-w-[120px]">{manager}</span>
                     </span>
-                    <span className="text-muted-foreground">Round {round}</span>
+                    <span className="text-muted-foreground">{t('round')} {round}</span>
                   </div>
                 ))
               ) : (
-                <p className="text-muted-foreground text-xs">Aucune donnée</p>
+                <p className="text-muted-foreground text-xs">{t('recap.noData')}</p>
               )}
             </div>
           </CardContent>
@@ -356,7 +356,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            😤 Les plus gros loupés
+            😤 {t('recap.biggestMisses')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -365,11 +365,11 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-2">Manager</th>
-                    <th className="text-left p-2">Coureur</th>
-                    <th className="text-right p-2">Enchère</th>
-                    <th className="text-right p-2">Enchère gagnante</th>
-                    <th className="text-right p-2">Écart</th>
+                    <th className="text-left p-2">{t('recap.manager')}</th>
+                    <th className="text-left p-2">{t('recap.rider')}</th>
+                    <th className="text-right p-2">{t('recap.bid')}</th>
+                    <th className="text-right p-2">{t('recap.winningBid')}</th>
+                    <th className="text-right p-2">{t('recap.gap')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -395,7 +395,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
             </div>
           ) : (
             <p className="text-muted-foreground text-sm text-center py-4">
-              Aucune enchère perdue à afficher
+              {t('recap.noLostBids')}
             </p>
           )}
         </CardContent>
@@ -473,7 +473,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
             </>
           ) : (
             <p className="text-muted-foreground text-sm text-center py-4">
-              Aucune donnée de bataille
+              {t('recap.noBattleData')}
             </p>
           )}
         </CardContent>

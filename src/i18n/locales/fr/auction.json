@@ -139,6 +139,57 @@
   "slots": {
     "title": "Coureurs"
   },
+  "tabs": {
+    "bid": "Enchérir",
+    "teams": "Équipes adverses"
+  },
+  "availableRiders": "Coureurs disponibles",
+  "results_count": "{{count}} résultat",
+  "results_count_plural": "{{count}} résultats",
+  "riders_count": "{{count}} coureur",
+  "riders_count_plural": "{{count}} coureurs",
+  "missingRiders": "Il manque {{count}} coureur",
+  "missingRiders_plural": "Il manque {{count}} coureurs",
+  "budgetExceeded": "Budget dépassé",
+  "conditionsNotMet": "Conditions non remplies",
+  "validation": {
+    "validated": "Enchères validées !",
+    "submitted": "Tes enchères ont été soumises avec succès",
+    "closingSoon": "Clôture imminente...",
+    "timeRemaining": "Temps restant :",
+    "waitingManagers": "Managers en attente",
+    "managersValidated": "{{validated}}/{{total}} managers ont validé",
+    "refresh": "Actualiser",
+    "viewMyBids": "Voir mes enchères",
+    "history": "Historique",
+    "autoUpdate": "Cette page se met à jour automatiquement toutes les 15 secondes",
+    "allValidated": "Tous les managers ont validé ! Le round va bientôt se clôturer.",
+    "almostDone": "Plus que quelques retardataires...",
+    "waitingMore": "On attend encore quelques managers...",
+    "waitingOthers": "Patience... Les autres managers finalisent leurs enchères.",
+    "earlyBird": "Tu fais partie des premiers à avoir validé ! Bravo !"
+  },
+  "recap": {
+    "biggestLoser": "Plus grand perdant",
+    "bidsLost": "enchères perdues",
+    "maxBid": "Enchère Max",
+    "round1King": "Roi du Tour 1",
+    "victories": "victoire",
+    "victories_plural": "victoires",
+    "round1Loser": "Loser du Tour 1",
+    "missed": "raté",
+    "missed_plural": "ratés",
+    "fastest": "Les plus rapides",
+    "noData": "Aucune donnée",
+    "biggestMisses": "Les plus gros loupés",
+    "noLostBids": "Aucune enchère perdue à afficher",
+    "noBattleData": "Aucune donnée de bataille",
+    "manager": "Manager",
+    "rider": "Coureur",
+    "bid": "Enchère",
+    "winningBid": "Enchère gagnante",
+    "gap": "Écart"
+  },
   "warning": "Attention",
   "error": "Erreur"
 }
