@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Trophy, Medal, Filter, Flag } from "lucide-react";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { fr, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 type RiderResult = {
@@ -32,6 +33,7 @@ type ClassificationResult = {
 };
 
 function RaceCard({ race }: { race: RaceWithResults }) {
+  const { t, i18n } = useTranslation('dashboard');
   const [activeTab, setActiveTab] = useState<'general' | 'stages'>('general');
   const [selectedClassificationType, setSelectedClassificationType] = useState<string>('General');
   const [selectedStage, setSelectedStage] = useState<number>(race.etapes_disponibles?.[0] ?? 1);
@@ -39,6 +41,7 @@ function RaceCard({ race }: { race: RaceWithResults }) {
     General: race.top10
   });
   const [isLoadingTab, setIsLoadingTab] = useState(false);
+  const dateLocale = i18n.language === 'fr' ? fr : enUS;
 
   const loadClassification = async (type: string, etape?: number) => {
     const key = etape ? `${type}-${etape}` : type;
@@ -120,7 +123,7 @@ function RaceCard({ race }: { race: RaceWithResults }) {
           <h4 className="font-bold text-base leading-tight">{race.course_nom}</h4>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Calendar className="h-3 w-3" />
-            {race.date_fin ? format(new Date(race.date_fin), 'dd MMMM yyyy', { locale: fr }) : 'Date inconnue'}
+            {race.date_fin ? format(new Date(race.date_fin), 'dd MMMM yyyy', { locale: dateLocale }) : t('recentResults.unknownDate')}
           </div>
         </div>
       </CardHeader>
@@ -130,12 +133,12 @@ function RaceCard({ race }: { race: RaceWithResults }) {
             <TabsList className="grid w-full grid-cols-2 mb-3">
               <TabsTrigger value="general">
                 <Filter className="h-3 w-3 mr-1" />
-                Général
+                {t('recentResults.general')}
               </TabsTrigger>
               {hasMultipleStages && (
                 <TabsTrigger value="stages">
                   <Flag className="h-3 w-3 mr-1" />
-                  Étapes
+                  {t('recentResults.stages')}
                 </TabsTrigger>
               )}
             </TabsList>
@@ -144,18 +147,18 @@ function RaceCard({ race }: { race: RaceWithResults }) {
               <div className="mb-3">
                 <Select value={selectedClassificationType} onValueChange={handleClassificationChange}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Type de classement" />
+                    <SelectValue placeholder={t('recentResults.classificationPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="General">🏆 Classement Général</SelectItem>
+                    <SelectItem value="General">🏆 {t('recentResults.generalClassification')}</SelectItem>
                     {availableTypes.includes('Points') && (
-                      <SelectItem value="Points">🟢 Points</SelectItem>
+                      <SelectItem value="Points">🟢 {t('recentResults.pointsClassification')}</SelectItem>
                     )}
                     {availableTypes.includes('Montagne') && (
-                      <SelectItem value="Montagne">⛰️ Pois (Montagne)</SelectItem>
+                      <SelectItem value="Montagne">⛰️ {t('recentResults.mountainClassification')}</SelectItem>
                     )}
                     {availableTypes.includes('Jeune') && (
-                      <SelectItem value="Jeune">👶 Jeunes</SelectItem>
+                      <SelectItem value="Jeune">👶 {t('recentResults.youthClassification')}</SelectItem>
                     )}
                   </SelectContent>
                 </Select>
@@ -176,12 +179,12 @@ function RaceCard({ race }: { race: RaceWithResults }) {
                 <div className="mb-3">
                   <Select value={selectedStage.toString()} onValueChange={handleStageChange}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Sélectionner une étape" />
+                      <SelectValue placeholder={t('recentResults.stagePlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       {race.etapes_disponibles.map((etape) => (
                         <SelectItem key={etape} value={etape.toString()}>
-                          🚩 Étape {etape}
+                          🚩 {t('recentResults.stage')} {etape}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -208,6 +211,8 @@ function RaceCard({ race }: { race: RaceWithResults }) {
 }
 
 function RidersList({ riders }: { riders: RiderResult[] }) {
+  const { t } = useTranslation('dashboard');
+  
   const getMedalIcon = (position: number) => {
     if (position === 1) return <Medal className="h-4 w-4 text-[#FFD500] fill-[#FFD500]" />;
     if (position === 2) return <Medal className="h-4 w-4 text-gray-500 fill-gray-500" />;
@@ -231,7 +236,7 @@ function RidersList({ riders }: { riders: RiderResult[] }) {
   if (riders.length === 0) {
     return (
       <p className="text-xs text-muted-foreground italic text-center py-4">
-        Pas encore de résultats
+        {t('recentResults.noResultsYet')}
       </p>
     );
   }
@@ -287,6 +292,8 @@ function RidersList({ riders }: { riders: RiderResult[] }) {
 }
 
 export function RecentResultsWidget() {
+  const { t } = useTranslation('dashboard');
+  
   const { data: racesWithResults, isLoading } = useQuery({
     queryKey: ['recent-results-top10'],
     queryFn: async () => {
@@ -305,7 +312,7 @@ export function RecentResultsWidget() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
-            Derniers résultats
+            {t('recentResults.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -333,12 +340,12 @@ export function RecentResultsWidget() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
-            Derniers résultats
+            {t('recentResults.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground text-center py-8">
-            Aucun résultat récent
+            {t('recentResults.noResults')}
           </p>
         </CardContent>
       </Card>
@@ -350,7 +357,7 @@ export function RecentResultsWidget() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Trophy className="h-5 w-5 text-primary" />
-          Derniers résultats
+          {t('recentResults.title')}
         </CardTitle>
       </CardHeader>
       <CardContent>
