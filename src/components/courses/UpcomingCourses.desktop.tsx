@@ -8,14 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, Trophy, Clock, MapPin, XCircle } from "lucide-react";
 import { CoursePointsDrawer } from "./CoursePointsDrawer";
-import { format, differenceInDays } from "date-fns";
-import { fr } from "date-fns/locale";
+import { format, differenceInCalendarDays } from "date-fns";
+import { fr, enUS } from "date-fns/locale";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { UI_CONSTANTS } from "@/lib/ui-constants";
+import { useTranslation } from "react-i18next";
 
 interface CourseData {
   course_id: string;
@@ -41,11 +42,14 @@ interface CourseData {
 }
 
 export const UpcomingCourses = () => {
+  const { t, i18n } = useTranslation('calendar');
   const [searchTerm, setSearchTerm] = useState("");
   const [phaseFilter, setPhaseFilter] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<CourseData | null>(null);
   const { selectedSeason, phases, isLoading: isLoadingContext } = useSeasonContext();
   const { leagueId } = useLeague();
+  
+  const dateLocale = i18n.language === 'fr' ? fr : enUS;
 
   const seasonPhaseIds = phases?.map(p => p.id) || [];
 
@@ -124,11 +128,11 @@ export const UpcomingCourses = () => {
     <PageContainer>
       <PageHeader
         icon={Calendar}
-        title="Toutes les courses de la saison"
+        title={t('courses.title')}
         filters={
           <>
             <Input
-              placeholder="Rechercher une course..."
+              placeholder={t('courses.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className={UI_CONSTANTS.filterWidth}
@@ -136,10 +140,10 @@ export const UpcomingCourses = () => {
             
             <Select value={phaseFilter} onValueChange={setPhaseFilter}>
               <SelectTrigger className={UI_CONSTANTS.filterWidth}>
-                <SelectValue placeholder="Toutes les phases" />
+                <SelectValue placeholder={t('filters.allPhases')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes</SelectItem>
+                <SelectItem value="all">{t('courses.allPhases')}</SelectItem>
                 {phases?.map(p => (
                   <SelectItem key={p.index_dans_saison} value={p.index_dans_saison.toString()}>
                     Phase {p.index_dans_saison}
@@ -157,19 +161,23 @@ export const UpcomingCourses = () => {
           <CardContent className="py-12 text-center">
             <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">
-              Aucune course trouvée avec les filtres sélectionnés.
+              {t('courses.noCoursesFound')}
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className={`grid ${UI_CONSTANTS.gridCols} ${UI_CONSTANTS.gridGap}`}>
           {filteredCourses.map(course => {
-            const daysUntil = differenceInDays(new Date(course.date_debut), new Date());
-            const daysLabel = daysUntil === 0 ? "Aujourd'hui" : `J-${daysUntil}`;
+            const daysUntil = differenceInCalendarDays(new Date(course.date_debut), new Date());
+            const daysLabel = daysUntil === 0 
+              ? t('courses.today') 
+              : daysUntil === 1 
+                ? t('courses.tomorrow') 
+                : t('courses.daysUntil', { count: daysUntil });
             const normalized = normalizeCourseType(course.type_course);
             const etapesLabel = normalized.isStage
-              ? `${course.nb_etapes_estimees} étapes` 
-              : "Course d'un jour";
+              ? `${course.nb_etapes_estimees} ${t('courses.stages')}` 
+              : t('courses.oneDay');
 
             return (
               <Card key={course.course_id} className={`${UI_CONSTANTS.cardHover} cursor-pointer`} onClick={() => setSelectedCourse(course)}>
@@ -180,7 +188,7 @@ export const UpcomingCourses = () => {
                       {course.is_cancelled && (
                         <Badge variant="destructive" className="gap-1">
                           <XCircle className="h-3 w-3" />
-                          Annulée
+                          {t('courses.cancelled')}
                         </Badge>
                       )}
                       {course.phase_index && (
@@ -191,7 +199,7 @@ export const UpcomingCourses = () => {
                       {course.is_uwt && course.points_total === 0 && (
                         <Badge variant="destructive" className="gap-1">
                           <span>⚠️</span>
-                          Config UWT
+                          {t('courses.configUWT')}
                         </Badge>
                       )}
                     </div>
@@ -202,9 +210,9 @@ export const UpcomingCourses = () => {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span>
-                        {format(new Date(course.date_debut), 'dd MMM', { locale: fr })}
+                        {format(new Date(course.date_debut), 'dd MMM', { locale: dateLocale })}
                         {course.date_fin && course.date_fin !== course.date_debut && (
-                          <> → {format(new Date(course.date_fin), 'dd MMM', { locale: fr })}</>
+                          <> → {format(new Date(course.date_fin), 'dd MMM', { locale: dateLocale })}</>
                         )}
                         {' '}({course.nb_jours}j)
                       </span>
@@ -226,10 +234,10 @@ export const UpcomingCourses = () => {
                         <span className="text-2xl font-bold text-primary">
                           {course.points_total || 0}
                         </span>
-                        <span className="text-sm text-muted-foreground">pts</span>
+                        <span className="text-sm text-muted-foreground">{t('courses.pts')}</span>
                       </div>
                       <span className="text-xs text-primary hover:underline">
-                        Voir détail →
+                        {t('courses.viewDetails')}
                       </span>
                     </div>
                   </div>
