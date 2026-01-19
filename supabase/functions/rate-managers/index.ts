@@ -76,9 +76,9 @@ serve(async (req) => {
       preview: typeof global_note === 'string' ? global_note.slice(0, 60) : null,
     });
 
-    if (!startlist_id || !Array.isArray(ratings)) {
+    if (!startlist_id || !Array.isArray(ratings) || !league_id) {
       return new Response(
-        JSON.stringify({ error: 'startlist_id and ratings array are required' }),
+        JSON.stringify({ error: 'startlist_id, league_id and ratings array are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -93,20 +93,21 @@ serve(async (req) => {
       }
     }
 
-    // Upsert ratings
+    // Upsert ratings with league_id
     const ratingsToInsert = ratings.map(r => ({
       startlist_id,
       manager_id: r.manager_id,
       rated_by: user.id,
       stars: r.stars,
       note: r.note || null,
+      league_id,
       updated_at: new Date().toISOString()
     }));
 
     const { error: upsertError } = await supabase
       .from('startlist_manager_ratings')
       .upsert(ratingsToInsert, {
-        onConflict: 'startlist_id,manager_id,rated_by'
+        onConflict: 'startlist_id,manager_id,rated_by,league_id'
       });
 
     if (upsertError) {
@@ -149,11 +150,12 @@ serve(async (req) => {
       });
     }
 
-    // Fetch updated ratings aggregated
+    // Fetch updated ratings aggregated for this league
     const { data: updatedRatings, error: fetchError } = await supabase
       .from('startlist_manager_ratings')
       .select('manager_id, stars')
-      .eq('startlist_id', startlist_id);
+      .eq('startlist_id', startlist_id)
+      .eq('league_id', league_id);
 
     if (fetchError) {
       console.error('Fetch error:', fetchError);

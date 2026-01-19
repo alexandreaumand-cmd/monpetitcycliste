@@ -64,6 +64,11 @@ export function ManagerRatingModal({
   };
 
   const handleSave = async () => {
+    if (!leagueId) {
+      toast.error("Ligue non sélectionnée");
+      return;
+    }
+
     const ratingsArray = Object.entries(ratings)
       .filter(([_, stars]) => stars > 0)
       .map(([manager_id, stars]) => ({ manager_id, stars }));
