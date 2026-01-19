@@ -139,6 +139,57 @@
   "slots": {
     "title": "Riders"
   },
+  "tabs": {
+    "bid": "Bid",
+    "teams": "Opponent teams"
+  },
+  "availableRiders": "Available riders",
+  "results_count": "{{count}} result",
+  "results_count_plural": "{{count}} results",
+  "riders_count": "{{count}} rider",
+  "riders_count_plural": "{{count}} riders",
+  "missingRiders": "{{count}} rider missing",
+  "missingRiders_plural": "{{count}} riders missing",
+  "budgetExceeded": "Budget exceeded",
+  "conditionsNotMet": "Conditions not met",
+  "validation": {
+    "validated": "Bids validated!",
+    "submitted": "Your bids have been submitted successfully",
+    "closingSoon": "Closing soon...",
+    "timeRemaining": "Time remaining:",
+    "waitingManagers": "Waiting managers",
+    "managersValidated": "{{validated}}/{{total}} managers validated",
+    "refresh": "Refresh",
+    "viewMyBids": "View my bids",
+    "history": "History",
+    "autoUpdate": "This page updates automatically every 15 seconds",
+    "allValidated": "All managers have validated! The round will close soon.",
+    "almostDone": "Just a few stragglers left...",
+    "waitingMore": "Still waiting for some managers...",
+    "waitingOthers": "Patience... Other managers are finalizing their bids.",
+    "earlyBird": "You're among the first to validate! Well done!"
+  },
+  "recap": {
+    "biggestLoser": "Biggest loser",
+    "bidsLost": "bids lost",
+    "maxBid": "Max Bid",
+    "round1King": "Round 1 King",
+    "victories": "victory",
+    "victories_plural": "victories",
+    "round1Loser": "Round 1 Loser",
+    "missed": "missed",
+    "missed_plural": "missed",
+    "fastest": "Fastest",
+    "noData": "No data",
+    "biggestMisses": "Biggest misses",
+    "noLostBids": "No lost bids to display",
+    "noBattleData": "No battle data",
+    "manager": "Manager",
+    "rider": "Rider",
+    "bid": "Bid",
+    "winningBid": "Winning bid",
+    "gap": "Gap"
+  },
   "warning": "Warning",
   "error": "Error"
 }
