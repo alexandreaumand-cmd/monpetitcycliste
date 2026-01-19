@@ -53,6 +53,36 @@
     "title": "Aucune course trouvée",
     "description": "Essayez de modifier vos filtres"
   },
+  "drawer": {
+    "description": "Détail de la course",
+    "totalPoints": "Points totaux",
+    "pointsBreakdown": "Répartition par classement",
+    "route": "Parcours",
+    "registeredRiders": "Coureurs inscrits",
+    "matched": "matchés",
+    "unmatched": "non matchés",
+    "noStartlist": "Aucune startlist disponible pour cette course.",
+    "classifications": {
+      "stages": "Étapes",
+      "gc": "Classement Général",
+      "points": "Points (maillot vert)",
+      "mountain": "Montagne",
+      "youth": "Jeune"
+    },
+    "bareme": {
+      "viewScale": "Voir le barème des points",
+      "scaleTitle": "Barème",
+      "noScale": "Aucun barème disponible pour cette catégorie et ce type de classement.",
+      "types": {
+        "General": "Classement Général",
+        "Etape": "Étape",
+        "Points": "Points (Vert)",
+        "Montagne": "Montagne (Pois)",
+        "Jeune": "Jeune (Blanc)",
+        "Combatif": "Super Combatif"
+      }
+    }
+  },
   "startlist": {
     "title": "Startlists",
     "tabs": {

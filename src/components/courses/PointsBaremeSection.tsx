@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, Info } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Database } from "@/integrations/supabase/types";
+import { useTranslation } from "react-i18next";
 
 type TypeClassement = Database["public"]["Enums"]["type_classement"];
 
@@ -20,6 +21,7 @@ interface BaremeEntry {
 }
 
 export const PointsBaremeSection = ({ courseId, typeClassement }: PointsBaremeSectionProps) => {
+  const { t } = useTranslation('calendar');
   const [isOpen, setIsOpen] = useState(false);
 
   // Fetch the course category AND its season via phase
@@ -87,15 +89,14 @@ export const PointsBaremeSection = ({ courseId, typeClassement }: PointsBaremeSe
   });
 
   const getTypeLabel = (type: string): string => {
-    switch (type) {
-      case "General": return "Classement Général";
-      case "Etape": return "Étape";
-      case "Points": return "Points (Vert)";
-      case "Montagne": return "Montagne (Pois)";
-      case "Jeune": return "Jeune (Blanc)";
-      case "Combatif": return "Super Combatif";
-      default: return type;
+    const key = `drawer.bareme.types.${type}`;
+    const translated = t(key, { defaultValue: '' });
+    // If translation exists and is not the key itself, use it
+    if (translated && translated !== key) {
+      return translated;
     }
+    // Fallback to the type itself
+    return type;
   };
 
   return (
@@ -108,7 +109,7 @@ export const PointsBaremeSection = ({ courseId, typeClassement }: PointsBaremeSe
             <ChevronRight className="h-4 w-4" />
           )}
           <Info className="h-4 w-4" />
-          <span>Voir le barème des points</span>
+          <span>{t('drawer.bareme.viewScale')}</span>
           {courseData?.categorie && (
             <Badge variant="outline" className="text-xs ml-auto">
               {courseData.categorie}
@@ -120,7 +121,7 @@ export const PointsBaremeSection = ({ courseId, typeClassement }: PointsBaremeSe
       <CollapsibleContent>
         <div className="mt-2 p-3 bg-muted/30 rounded-lg border">
           <div className="flex items-center gap-2 mb-3">
-            <span className="font-medium text-sm">Barème - {getTypeLabel(typeClassement)}</span>
+            <span className="font-medium text-sm">{t('drawer.bareme.scaleTitle')} - {getTypeLabel(typeClassement)}</span>
           </div>
           
           {isLoading ? (
@@ -145,7 +146,7 @@ export const PointsBaremeSection = ({ courseId, typeClassement }: PointsBaremeSe
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Aucun barème disponible pour cette catégorie et ce type de classement.
+              {t('drawer.bareme.noScale')}
             </p>
           )}
         </div>

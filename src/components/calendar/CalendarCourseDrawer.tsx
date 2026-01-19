@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { isStageRace } from "@/lib/courseType";
 import { PointsBaremeSection } from "@/components/courses/PointsBaremeSection";
+import { useTranslation } from "react-i18next";
 
 type TypeClassement = "Etape" | "General" | "Points" | "Montagne" | "Jeune";
 
@@ -39,6 +40,7 @@ interface StartlistEntry {
 }
 
 export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCourseDrawerProps) => {
+  const { t } = useTranslation('calendar');
   const [imageError, setImageError] = useState(false);
   const [pointsBreakdownOpen, setPointsBreakdownOpen] = useState(true);
 
@@ -117,7 +119,7 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
     typeClassement: TypeClassement;
   }[] = courseDetails ? [
     {
-      label: "Étapes",
+      label: t('drawer.classifications.stages'),
       points: courseDetails.points_etapes || 0,
       icon: TrendingUp,
       color: "text-blue-600",
@@ -128,7 +130,7 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
       typeClassement: "Etape"
     },
     {
-      label: "Classement Général",
+      label: t('drawer.classifications.gc'),
       points: courseDetails.points_gc || 0,
       icon: Trophy,
       color: "text-yellow-600",
@@ -137,7 +139,7 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
       typeClassement: "General"
     },
     {
-      label: "Points (maillot vert)",
+      label: t('drawer.classifications.points'),
       points: courseDetails.points_pts || 0,
       icon: Award,
       color: "text-green-600",
@@ -146,7 +148,7 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
       typeClassement: "Points"
     },
     {
-      label: "Montagne",
+      label: t('drawer.classifications.mountain'),
       points: courseDetails.points_mont || 0,
       icon: Mountain,
       color: "text-red-600",
@@ -155,7 +157,7 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
       typeClassement: "Montagne"
     },
     {
-      label: "Jeune",
+      label: t('drawer.classifications.youth'),
       points: courseDetails.points_jeune || 0,
       icon: Star,
       color: "text-purple-600",
@@ -172,7 +174,7 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
       <SheetContent className="sm:max-w-lg p-0 flex flex-col h-full">
         <SheetHeader className="px-6 pt-6 pb-4 border-b">
           <SheetTitle className="text-xl">{course.nom}</SheetTitle>
-          <SheetDescription>Détail de la course</SheetDescription>
+          <SheetDescription>{t('drawer.description')}</SheetDescription>
           <div className="flex flex-wrap gap-2 pt-2">
             {course.categorie && (
               <Badge variant="outline">{course.categorie}</Badge>
@@ -188,7 +190,7 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
             {/* Total Points */}
             <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Points totaux</span>
+                <span className="text-sm font-medium">{t('drawer.totalPoints')}</span>
                 {loadingDetails ? (
                   <Skeleton className="h-9 w-20" />
                 ) : (
@@ -211,7 +213,7 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
               <Collapsible open={pointsBreakdownOpen} onOpenChange={setPointsBreakdownOpen}>
                 <CollapsibleTrigger asChild>
                   <button className="w-full flex items-center justify-between py-2 hover:bg-muted/50 rounded-md px-2 -mx-2 transition-colors">
-                    <h3 className="font-semibold">Répartition par classement</h3>
+                    <h3 className="font-semibold">{t('drawer.pointsBreakdown')}</h3>
                     {pointsBreakdownOpen ? (
                       <ChevronUp className="h-4 w-4 text-muted-foreground" />
                     ) : (
@@ -261,7 +263,7 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
               <div className="space-y-3">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Image className="h-4 w-4" />
-                  Parcours
+                  {t('drawer.route')}
                 </h3>
                 <a 
                   href={startlistImport.route_image_url} 
@@ -271,7 +273,7 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
                 >
                   <img 
                     src={startlistImport.route_image_url} 
-                    alt="Parcours"
+                    alt={t('drawer.route')}
                     className="w-full rounded-lg border hover:opacity-90 transition-opacity cursor-zoom-in"
                     onError={() => setImageError(true)}
                   />
@@ -283,7 +285,7 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
             <div className="space-y-3">
               <h3 className="font-semibold flex items-center gap-2">
                 <Users className="h-4 w-4" />
-                Coureurs inscrits
+                {t('drawer.registeredRiders')}
                 {startlistData?.stats && (
                   <Badge variant="outline" className="ml-2">
                     {startlistData.stats.total}
@@ -303,12 +305,12 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
                   <div className="flex gap-4 text-sm">
                     <div className="flex items-center gap-1 text-green-600">
                       <CheckCircle className="h-4 w-4" />
-                      <span>{startlistData?.stats.matched} matchés</span>
+                      <span>{startlistData?.stats.matched} {t('drawer.matched')}</span>
                     </div>
                     {startlistData?.stats.unmatched && startlistData.stats.unmatched > 0 && (
                       <div className="flex items-center gap-1 text-yellow-600">
                         <AlertCircle className="h-4 w-4" />
-                        <span>{startlistData.stats.unmatched} non matchés</span>
+                        <span>{startlistData.stats.unmatched} {t('drawer.unmatched')}</span>
                       </div>
                     )}
                   </div>
@@ -340,7 +342,7 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Aucune startlist disponible pour cette course.
+                  {t('drawer.noStartlist')}
                 </p>
               )}
             </div>
