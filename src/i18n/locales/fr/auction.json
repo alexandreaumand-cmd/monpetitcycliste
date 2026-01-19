@@ -190,6 +190,38 @@
     "winningBid": "Enchère gagnante",
     "gap": "Écart"
   },
+  "live": {
+    "resultsRound": "Résultats Round {{round}}",
+    "allResultsAnnounced": "Tous les résultats ont été annoncés !",
+    "adminRevealing": "L'admin est en train de révéler les résultats...",
+    "congratsWon": "Bravo ! Tu as gagné {{count}} coureur !",
+    "congratsWon_plural": "Bravo ! Tu as gagné {{count}} coureurs !",
+    "teamGrowing": "Ton équipe se renforce...",
+    "liveAnnouncements": "Annonces en direct",
+    "waitingAnnouncements": "En attente des annonces...",
+    "top10Message": "On arrive au top 10 !",
+    "new": "Nouveau !",
+    "wonFor": "Gagné pour {{amount}}",
+    "tieAt": "Égalité à {{amount}}",
+    "resultsComplete": "Résultats complets !",
+    "canViewTeam": "Tu peux maintenant consulter ton équipe complète",
+    "backToAuction": "Retour aux enchères",
+    "myRecruits": "Mes recrues",
+    "otherManagersRecruits": "Recrues des autres managers"
+  },
+  "admin": {
+    "liveAnnouncements": "Annonces Live",
+    "allPublishedAutoLaunch": "Toutes publiées · Le prochain round sera lancé automatiquement",
+    "remaining": "{{count}} restante",
+    "remaining_plural": "{{count}} restantes",
+    "wonBy": "Gagné par {{manager}}",
+    "tie": "Égalité",
+    "announce": "Annoncer",
+    "announceAll": "Tout ({{count}})",
+    "allPublished": "Toutes les annonces publiées",
+    "timeline": "Timeline ({{count}})",
+    "top10": "Top 10 !"
+  },
   "warning": "Attention",
   "error": "Erreur"
 }
