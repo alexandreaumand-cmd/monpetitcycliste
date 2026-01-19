@@ -18,7 +18,35 @@
     "title": "Notifications",
     "markAllRead": "Tout marquer comme lu",
     "empty": "Aucune notification",
-    "viewAll": "Voir toutes les notifications"
+    "viewAll": "Voir toutes les notifications",
+    "types": {
+      "auction_opened": {
+        "title": "🎯 Round {{round}} lancé !",
+        "titleAuto": "🤖 Round {{round}} lancé automatiquement",
+        "message": "Le round {{round}} est maintenant ouvert. Placez vos enchères avant la deadline !",
+        "messageAuto": "Le round {{round}} a été lancé automatiquement. Placez vos enchères !"
+      },
+      "auction_closed": {
+        "title": "⏰ Round d'enchères clôturé",
+        "message": "Le round {{round}} est maintenant terminé. Consultez les résultats !"
+      },
+      "auction_validation": {
+        "title": "✅ Enchères validées",
+        "message": "Un manager a validé ses enchères. En attente des autres managers..."
+      },
+      "auction_ready_to_close": {
+        "title": "🔔 Prêt à clôturer",
+        "message": "Tous les managers ont validé. Le round peut être clôturé."
+      },
+      "results_added": {
+        "title": "🏁 Nouveaux résultats",
+        "message": "De nouveaux résultats sont disponibles."
+      },
+      "startlist_validated": {
+        "title": "📋 Startlist validée",
+        "message": "Une nouvelle startlist a été validée."
+      }
+    }
   },
   "header": {
     "rankings": "Classement",

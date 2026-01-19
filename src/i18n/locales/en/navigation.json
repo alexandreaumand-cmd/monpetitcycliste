@@ -18,7 +18,35 @@
     "title": "Notifications",
     "markAllRead": "Mark all as read",
     "empty": "No notifications",
-    "viewAll": "View all notifications"
+    "viewAll": "View all notifications",
+    "types": {
+      "auction_opened": {
+        "title": "🎯 Round {{round}} launched!",
+        "titleAuto": "🤖 Round {{round}} launched automatically",
+        "message": "Round {{round}} is now open. Place your bids before the deadline!",
+        "messageAuto": "Round {{round}} was launched automatically. Place your bids!"
+      },
+      "auction_closed": {
+        "title": "⏰ Auction round closed",
+        "message": "Round {{round}} is now finished. Check the results!"
+      },
+      "auction_validation": {
+        "title": "✅ Bids validated",
+        "message": "A manager has validated their bids. Waiting for other managers..."
+      },
+      "auction_ready_to_close": {
+        "title": "🔔 Ready to close",
+        "message": "All managers have validated. The round can be closed."
+      },
+      "results_added": {
+        "title": "🏁 New results",
+        "message": "New results are available."
+      },
+      "startlist_validated": {
+        "title": "📋 Startlist validated",
+        "message": "A new startlist has been validated."
+      }
+    }
   },
   "header": {
     "rankings": "Rankings",
