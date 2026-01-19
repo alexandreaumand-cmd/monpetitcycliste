@@ -9,6 +9,7 @@ import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useTranslation } from "react-i18next";
 import {
   Accordion,
   AccordionContent,
@@ -69,6 +70,7 @@ const ManagerJerseyIcon = ({ managerId }: { managerId: string }) => {
 };
 
 export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) => {
+  const { t } = useTranslation('auction');
   const { leagueId, isLoading: leagueLoading } = useLeague();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRider, setSelectedRider] = useState<{
@@ -134,7 +136,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
           console.log('[AuctionTeamsGrid] coureur:', roster.coureur_id, 'coureurSaisonResult:', coureurSaisonResult.data);
 
           // Nom de l'équipe depuis equipes_saisons
-          let equipeNom = 'N/A';
+          let equipeNom = t('teams.na');
           if (coureurSaisonResult.data?.equipe_id && saisonId) {
             const equipeResult = await supabase
               .from('equipes_saisons')
@@ -143,7 +145,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
               .eq('saison_id', saisonId)
               .maybeSingle();
             console.log('[AuctionTeamsGrid] coureur:', roster.coureur_id, 'equipeResult:', equipeResult.data);
-            equipeNom = equipeResult.data?.nom_affiche || 'N/A';
+            equipeNom = equipeResult.data?.nom_affiche || t('teams.na');
           }
 
           // Enchères perdues pour ce coureur
@@ -184,7 +186,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
             losing_bids: (lostBidsResult.data || []).map((bid: any) => ({
               manager_id: bid.manager_id,
               montant: bid.montant,
-              manager_nom: bid.managers?.nom || 'Inconnu'
+              manager_nom: bid.managers?.nom || t('teams.unknown')
             })),
             winning_round: winningBidResult.data?.round_number || null
           };
@@ -229,7 +231,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
       if (!acc[mgrId]) {
         const status = managersStatus.find((s) => s.manager_id === mgrId);
         acc[mgrId] = {
-          managerName: roster.managers?.nom || 'Inconnu',
+          managerName: roster.managers?.nom || t('teams.unknown'),
           rosters: [],
           budgetRestant: status?.budget_restant || 0,
           slotsRestants: status?.slots_restants || 0,
@@ -285,20 +287,20 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher un manager ou coureur..."
+            placeholder={t('teams.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9"
           />
         </div>
         <Badge variant="outline">
-          {filteredManagers.length} manager(s)
+          {t('teams.managersCount', { count: filteredManagers.length })}
         </Badge>
       </div>
 
       {filteredManagers.length === 0 ? (
         <div className="py-8 text-center text-muted-foreground border rounded-lg">
-          Aucune équipe trouvée
+          {t('teams.noTeamFound')}
         </div>
       ) : (
         <Accordion type="single" collapsible className="space-y-3">
@@ -322,7 +324,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
                       <div className="text-left">
                         <p className="font-semibold">{data.managerName}</p>
                         <p className="text-xs text-muted-foreground">
-                          {data.rosters.length}/{data.maxCoureurs} coureurs · {data.slotsRestants} slots
+                          {data.rosters.length}/{data.maxCoureurs} {t('teams.riders')} · {data.slotsRestants} {t('teams.slots')}
                         </p>
                       </div>
                     </div>
@@ -330,15 +332,15 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
                     {/* Center: KPIs */}
                     <div className="hidden md:flex gap-6 text-sm">
                       <div>
-                        <span className="text-muted-foreground">Dépensé: </span>
+                        <span className="text-muted-foreground">{t('teams.spent')}: </span>
                         <span className="font-medium">{formatAmount(totalSpent)}</span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Moyen: </span>
+                        <span className="text-muted-foreground">{t('teams.average')}: </span>
                         <span className="font-medium">{formatAmount(avgPrice)}</span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Max: </span>
+                        <span className="text-muted-foreground">{t('teams.max')}: </span>
                         <span className="font-medium">{formatAmount(mostExpensive)}</span>
                       </div>
                     </div>
@@ -348,7 +350,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
                       variant={getBudgetVariant(data.budgetRestant)}
                       className="text-sm px-3 py-1"
                     >
-                      💰 {formatAmount(data.budgetRestant)} restant
+                      💰 {formatAmount(data.budgetRestant)} {t('teams.remaining')}
                     </Badge>
                   </div>
                 </AccordionTrigger>
@@ -358,12 +360,12 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Coureur</TableHead>
-                          <TableHead className="text-right">Prix payé</TableHead>
-                          <TableHead className="text-right">Cote</TableHead>
-                          <TableHead className="text-right">Diff.</TableHead>
-                          <TableHead>Managers battus</TableHead>
-                          <TableHead className="text-center">Round</TableHead>
+                          <TableHead>{t('teams.rider')}</TableHead>
+                          <TableHead className="text-right">{t('teams.pricePaid')}</TableHead>
+                          <TableHead className="text-right">{t('teams.odds')}</TableHead>
+                          <TableHead className="text-right">{t('teams.diff')}</TableHead>
+                          <TableHead>{t('teams.defeatedManagers')}</TableHead>
+                          <TableHead className="text-center">{t('teams.round')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -389,7 +391,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
                                   <div>
                                     <p className="font-medium">{roster.coureurs.nom}</p>
                                     <p className="text-xs text-muted-foreground">
-                                      {roster.coureurs.equipe || 'N/A'}
+                                      {roster.coureurs.equipe || t('teams.na')}
                                     </p>
                                   </div>
                                 </TableCell>
@@ -419,7 +421,7 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
                                     </div>
                                   ) : (
                                     <span className="text-xs text-muted-foreground">
-                                      Aucun
+                                      {t('teams.none')}
                                     </span>
                                   )}
                                 </TableCell>
