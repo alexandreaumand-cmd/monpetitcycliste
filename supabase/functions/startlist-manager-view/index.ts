@@ -297,11 +297,12 @@ Deno.serve(async (req) => {
     const { data: totalStandings } = await totalStandingsQuery
       .order('total_points', { ascending: false });
 
-    // Get ratings for managers
+    // Get ratings for managers filtered by league
     const { data: ratings } = await supabase
       .from('startlist_manager_ratings')
       .select('manager_id, stars')
-      .eq('startlist_id', startlist_id);
+      .eq('startlist_id', startlist_id)
+      .eq('league_id', league_id);
 
     // Calculate average ratings per manager
     const ratingsMap = new Map();

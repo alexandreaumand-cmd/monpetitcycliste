@@ -3521,6 +3521,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          league_id: string | null
           manager_id: string
           note: string | null
           rated_by: string
@@ -3531,6 +3532,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          league_id?: string | null
           manager_id: string
           note?: string | null
           rated_by: string
@@ -3541,6 +3543,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          league_id?: string | null
           manager_id?: string
           note?: string | null
           rated_by?: string
@@ -3549,6 +3552,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "startlist_manager_ratings_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "startlist_manager_ratings_manager_id_fkey"
             columns: ["manager_id"]
