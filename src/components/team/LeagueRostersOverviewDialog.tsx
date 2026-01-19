@@ -8,7 +8,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Sparkles, RefreshCw } from "lucide-react";
+import { Loader2, Download, Sparkles, RefreshCw, FileSpreadsheet } from "lucide-react";
+import * as XLSX from "xlsx";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { toPng } from "html-to-image";
@@ -50,6 +51,7 @@ export const LeagueRostersOverviewDialog = ({
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [analyzingAI, setAnalyzingAI] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   // Fetch all rosters when dialog opens
   useEffect(() => {
@@ -257,6 +259,53 @@ export const LeagueRostersOverviewDialog = ({
     }
   };
 
+  const handleExportExcel = () => {
+    setExportingExcel(true);
+    try {
+      // Build data for Excel: each manager as a column
+      const wsData: (string | number)[][] = [];
+      
+      // Header row with manager names
+      wsData.push(managers.map(m => m.nom));
+      
+      // Rider rows
+      for (let i = 0; i < maxRiders; i++) {
+        const row = managers.map(manager => {
+          const rider = rostersByManager[manager.id]?.[i];
+          return rider ? `${rider.nom} (${rider.equipe}) - ${rider.prix_signature}M` : "";
+        });
+        wsData.push(row);
+      }
+      
+      // Total row
+      wsData.push(managers.map(manager => {
+        const total = (rostersByManager[manager.id] || []).reduce((sum, r) => sum + r.prix_signature, 0);
+        const count = rostersByManager[manager.id]?.length || 0;
+        return `${count} coureurs • ${total}M`;
+      }));
+
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Effectifs");
+      
+      XLSX.writeFile(wb, `effectifs_ligue_${new Date().toISOString().split("T")[0]}.xlsx`);
+
+      toast({
+        title: "Export réussi",
+        description: "Le fichier Excel a été téléchargé",
+      });
+    } catch (err) {
+      console.error("Excel export error:", err);
+      toast({
+        title: "Erreur d'export",
+        description: "Impossible d'exporter le fichier Excel",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] max-h-[90vh] flex flex-col">
@@ -279,6 +328,19 @@ export const LeagueRostersOverviewDialog = ({
               <Download className="h-4 w-4 mr-2" />
             )}
             Exporter image
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportExcel}
+            disabled={loading || exportingExcel || rosters.length === 0}
+          >
+            {exportingExcel ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+            )}
+            Exporter Excel
           </Button>
           <Button
             variant="default"
