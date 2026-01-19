@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,7 @@ export function AuctionLiveAnnouncements({
   phaseId,
   onBack,
 }: AuctionLiveAnnouncementsProps) {
+  const { t } = useTranslation('auction');
   const [liveAnnonces, setLiveAnnonces] = useState<any[]>([]);
   const [myRecruitsOpen, setMyRecruitsOpen] = useState(true);
   const [openManagers, setOpenManagers] = useState<Set<string>>(new Set());
@@ -134,7 +136,7 @@ export function AuctionLiveAnnouncements({
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-xl">
                   <PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  <span className="truncate">Résultats Round {liveStatus?.auction?.round_number || ''}</span>
+                  <span className="truncate">{t('live.resultsRound', { round: liveStatus?.auction?.round_number || '' })}</span>
                 </CardTitle>
                 <Badge variant={isComplete ? "default" : "secondary"} className="text-xs sm:text-sm shrink-0">
                   {publishedCount}/{totalAnnonces}
@@ -144,11 +146,11 @@ export function AuctionLiveAnnouncements({
             <CardContent className="py-2 sm:py-4 px-3 sm:px-6">
               {isComplete ? (
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  ✅ Tous les résultats ont été annoncés !
+                  ✅ {t('live.allResultsAnnounced')}
                 </p>
               ) : (
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  🎬 L'admin est en train de révéler les résultats...
+                  🎬 {t('live.adminRevealing')}
                 </p>
               )}
             </CardContent>
@@ -162,10 +164,10 @@ export function AuctionLiveAnnouncements({
                   <Trophy className="h-6 w-6 sm:h-8 sm:w-8 text-primary shrink-0" />
                   <div>
                     <p className="font-semibold text-sm sm:text-lg">
-                      🎉 Bravo ! Tu as gagné {myWinsCount} coureur{myWinsCount > 1 ? 's' : ''} !
+                      🎉 {t(myWinsCount > 1 ? 'live.congratsWon_plural' : 'live.congratsWon', { count: myWinsCount })}
                     </p>
                     <p className="text-xs sm:text-sm text-muted-foreground">
-                      Ton équipe se renforce...
+                      {t('live.teamGrowing')}
                     </p>
                   </div>
                 </div>
@@ -178,7 +180,7 @@ export function AuctionLiveAnnouncements({
             <CardHeader className="py-3 sm:py-6 px-3 sm:px-6">
               <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-xl">
                 <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
-                Annonces en direct
+                {t('live.liveAnnouncements')}
               </CardTitle>
             </CardHeader>
             <CardContent className="px-2 sm:px-6">
@@ -186,7 +188,7 @@ export function AuctionLiveAnnouncements({
                 <div className="space-y-4">
                   {liveAnnonces.length === 0 ? (
                     <p className="text-center text-muted-foreground py-6 sm:py-8 text-sm">
-                      En attente des annonces...
+                      {t('live.waitingAnnouncements')}
                     </p>
                   ) : (
                     (() => {
@@ -203,7 +205,7 @@ export function AuctionLiveAnnouncements({
                             {/* Message Top 10 */}
                             {showTop10Before && (
                               <div className="p-3 sm:p-6 rounded-lg bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500 text-center animate-fade-in mb-3 sm:mb-4">
-                                <p className="font-bold text-base sm:text-xl">🏆 On arrive au top 10 ! 🏆</p>
+                                <p className="font-bold text-base sm:text-xl">🏆 {t('live.top10Message')} 🏆</p>
                               </div>
                             )}
 
@@ -234,7 +236,7 @@ export function AuctionLiveAnnouncements({
                                     </Badge>
                                     {idx === 0 && (
                                       <Badge variant="secondary" className="text-[10px] sm:text-xs shrink-0">
-                                        Nouveau !
+                                        {t('live.new')}
                                       </Badge>
                                     )}
                                   </div>
@@ -244,7 +246,7 @@ export function AuctionLiveAnnouncements({
                                       <p className="text-xs sm:text-sm">
                                         {annonce.is_my_win ? (
                                           <span className="font-semibold text-primary">
-                                            🎉 Gagné pour {annonce.winning_amount}
+                                            🎉 {t('live.wonFor', { amount: annonce.winning_amount })}
                                           </span>
                                         ) : (
                                           <span>
@@ -265,7 +267,7 @@ export function AuctionLiveAnnouncements({
                                   ) : (
                                     <div>
                                       <p className="text-xs sm:text-sm">
-                                        🟨 Égalité à {annonce.winning_amount}
+                                        🟨 {t('live.tieAt', { amount: annonce.winning_amount })}
                                       </p>
                                       <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                                         {annonce.losers?.map((l: any) => l.manager).join(', ')}
@@ -291,10 +293,10 @@ export function AuctionLiveAnnouncements({
               <CardContent className="py-4 sm:pt-6 text-center space-y-3 sm:space-y-4 px-3 sm:px-6">
                 <div>
                   <p className="text-base sm:text-lg font-semibold text-green-600 dark:text-green-400">
-                    ✅ Résultats complets !
+                    ✅ {t('live.resultsComplete')}
                   </p>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
-                    Tu peux maintenant consulter ton équipe complète
+                    {t('live.canViewTeam')}
                   </p>
                 </div>
                 <Button
@@ -307,7 +309,7 @@ export function AuctionLiveAnnouncements({
                   size="sm"
                 >
                   <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  Retour aux enchères
+                  {t('live.backToAuction')}
                 </Button>
               </CardContent>
             </Card>
@@ -325,7 +327,7 @@ export function AuctionLiveAnnouncements({
                     <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 -mx-2 px-2 py-1 rounded-lg transition-colors">
                       <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-xl">
                         <Users className="h-4 w-4 sm:h-5 sm:w-5" />
-                        Mes recrues
+                        {t('live.myRecruits')}
                       </CardTitle>
                       <div className="flex items-center gap-1.5 sm:gap-2">
                         <Badge variant="default" className="text-sm sm:text-lg px-2 sm:px-3">
@@ -368,7 +370,7 @@ export function AuctionLiveAnnouncements({
               <CardHeader className="py-2.5 sm:pb-2 px-3 sm:px-6">
                 <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base">
                   <Trophy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  Recrues des autres managers
+                  {t('live.otherManagersRecruits')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-2 sm:px-6">

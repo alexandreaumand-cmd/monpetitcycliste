@@ -190,6 +190,38 @@
     "winningBid": "Winning bid",
     "gap": "Gap"
   },
+  "live": {
+    "resultsRound": "Results Round {{round}}",
+    "allResultsAnnounced": "All results have been announced!",
+    "adminRevealing": "The admin is revealing the results...",
+    "congratsWon": "Congrats! You won {{count}} rider!",
+    "congratsWon_plural": "Congrats! You won {{count}} riders!",
+    "teamGrowing": "Your team is getting stronger...",
+    "liveAnnouncements": "Live Announcements",
+    "waitingAnnouncements": "Waiting for announcements...",
+    "top10Message": "Here comes the top 10!",
+    "new": "New!",
+    "wonFor": "Won for {{amount}}",
+    "tieAt": "Tie at {{amount}}",
+    "resultsComplete": "Results complete!",
+    "canViewTeam": "You can now view your complete team",
+    "backToAuction": "Back to auction",
+    "myRecruits": "My recruits",
+    "otherManagersRecruits": "Other managers' recruits"
+  },
+  "admin": {
+    "liveAnnouncements": "Live Announcements",
+    "allPublishedAutoLaunch": "All published - Next round will launch automatically",
+    "remaining": "{{count}} remaining",
+    "remaining_plural": "{{count}} remaining",
+    "wonBy": "Won by {{manager}}",
+    "tie": "Tie",
+    "announce": "Announce",
+    "announceAll": "All ({{count}})",
+    "allPublished": "All announcements published",
+    "timeline": "Timeline ({{count}})",
+    "top10": "Top 10!"
+  },
   "warning": "Warning",
   "error": "Error"
 }
