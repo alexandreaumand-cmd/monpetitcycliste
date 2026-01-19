@@ -66,10 +66,11 @@ serve(async (req) => {
       );
     }
 
-    const { startlist_id, ratings = [], global_note = undefined } = await req.json();
+    const { startlist_id, ratings = [], global_note = undefined, league_id } = await req.json();
 
     console.log('rate-managers payload', {
       startlist_id,
+      league_id,
       ratings_len: Array.isArray(ratings) ? ratings.length : 'n/a',
       has_global: typeof global_note,
       preview: typeof global_note === 'string' ? global_note.slice(0, 60) : null,
@@ -116,26 +117,33 @@ serve(async (req) => {
       );
     }
 
-    // Update global note AND author on startlist_imports
-    if (global_note !== undefined) {
+    // Update league-scoped note in league_startlist_notes table
+    if (global_note !== undefined && league_id) {
       const cleaned = typeof global_note === 'string' ? global_note.trim() : null;
-      const { error: updateError } = await supabase
-        .from('startlist_imports')
-        .update({ 
-          admin_rating_note: cleaned || null,
-          admin_rating_author_id: cleaned ? currentManager.id : null
-        })
-        .eq('id', startlist_id);
       
-      if (updateError) {
-        console.error('Error updating global note:', updateError);
+      // Upsert into league_startlist_notes
+      const { error: upsertNoteError } = await supabase
+        .from('league_startlist_notes')
+        .upsert({
+          league_id,
+          startlist_id,
+          admin_rating_note: cleaned || null,
+          admin_rating_author_id: cleaned ? currentManager.id : null,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'league_id,startlist_id'
+        });
+      
+      if (upsertNoteError) {
+        console.error('Error updating league note:', upsertNoteError);
         return new Response(
-          JSON.stringify({ error: `Failed to update global note: ${updateError.message}` }),
+          JSON.stringify({ error: `Failed to update league note: ${upsertNoteError.message}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      console.log('Global note updated', { 
-        startlist_id, 
+      console.log('League note updated', { 
+        startlist_id,
+        league_id, 
         length: cleaned ? cleaned.length : 0,
         author: currentManager.nom 
       });

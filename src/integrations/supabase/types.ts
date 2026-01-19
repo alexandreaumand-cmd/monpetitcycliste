@@ -1415,6 +1415,93 @@ export type Database = {
           },
         ]
       }
+      league_startlist_notes: {
+        Row: {
+          admin_rating_author_id: string | null
+          admin_rating_note: string | null
+          created_at: string
+          id: string
+          league_id: string
+          startlist_id: string
+          updated_at: string
+        }
+        Insert: {
+          admin_rating_author_id?: string | null
+          admin_rating_note?: string | null
+          created_at?: string
+          id?: string
+          league_id: string
+          startlist_id: string
+          updated_at?: string
+        }
+        Update: {
+          admin_rating_author_id?: string | null
+          admin_rating_note?: string | null
+          created_at?: string
+          id?: string
+          league_id?: string
+          startlist_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_startlist_notes_admin_rating_author_id_fkey"
+            columns: ["admin_rating_author_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["taken_by_manager_id"]
+          },
+          {
+            foreignKeyName: "league_startlist_notes_admin_rating_author_id_fkey"
+            columns: ["admin_rating_author_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "league_startlist_notes_admin_rating_author_id_fkey"
+            columns: ["admin_rating_author_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "league_startlist_notes_admin_rating_author_id_fkey"
+            columns: ["admin_rating_author_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_startlist_notes_admin_rating_author_id_fkey"
+            columns: ["admin_rating_author_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "league_startlist_notes_admin_rating_author_id_fkey"
+            columns: ["admin_rating_author_id"]
+            isOneToOne: false
+            referencedRelation: "v_managers_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_startlist_notes_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_startlist_notes_startlist_id_fkey"
+            columns: ["startlist_id"]
+            isOneToOne: false
+            referencedRelation: "startlist_imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       league_templates: {
         Row: {
           auction_phase_groups: number[] | null
