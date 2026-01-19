@@ -62,6 +62,19 @@
     "participants": "Participants",
     "noDataAvailable": "No data available",
     "viewMyLeague": "View my league",
+    "goToAuction": "Go to auction",
+    "auction": {
+      "inProgress": "Auction in progress",
+      "scheduled": "Scheduled auction",
+      "resultsInProgress": "Results in progress",
+      "resultsRevealing": "Results are being revealed...",
+      "clickToSeeAnnouncements": "Click to see announcements",
+      "round": "Round",
+      "validatedManagers": "Validated managers",
+      "timeRemaining": "Time remaining",
+      "day": "d",
+      "startsIn": "Starts in"
+    },
     "status": {
       "waiting": "Waiting",
       "readyToLaunch": "Ready to launch",
