@@ -138,51 +138,33 @@ export default function CalendarPage() {
       let startlistCountMap = new Map<string, number>();
       
       if (courseIds.length > 0) {
-        // Get all imports for these courses (race_id = course_id)
+        // Get all imports for these courses with entry counts (race_id = course_id)
         const { data: imports, error: importsError } = await supabase
           .from("startlist_imports")
-          .select("id, race_id, created_at")
+          .select("id, race_id, created_at, startlist_entries(count)")
           .in("race_id", courseIds);
         
         if (!importsError && imports) {
-          // Find latest import per course
-          const latestImportMap = new Map<string, string>();
+          // Find latest import per course and use its entry count
+          const latestImportMap = new Map<string, { id: string; created_at: string | null; count: number }>();
           imports.forEach(imp => {
+            const entryCount = (imp.startlist_entries as unknown as { count: number }[])?.[0]?.count || 0;
             const existing = latestImportMap.get(imp.race_id);
             if (!existing) {
-              latestImportMap.set(imp.race_id, imp.id);
+              latestImportMap.set(imp.race_id, { id: imp.id, created_at: imp.created_at, count: entryCount });
             } else {
-              const existingImport = imports.find(i => i.id === existing);
-              if (existingImport && new Date(imp.created_at || '') > new Date(existingImport.created_at || '')) {
-                latestImportMap.set(imp.race_id, imp.id);
+              if (new Date(imp.created_at || '') > new Date(existing.created_at || '')) {
+                latestImportMap.set(imp.race_id, { id: imp.id, created_at: imp.created_at, count: entryCount });
               }
             }
           });
           
-          const latestImportIds = Array.from(latestImportMap.values());
-          
-          if (latestImportIds.length > 0) {
-            // Count entries per import (startlist_id = import id)
-            const { data: entries, error: entriesError } = await supabase
-              .from("startlist_entries")
-              .select("startlist_id")
-              .in("startlist_id", latestImportIds);
-            
-            if (!entriesError && entries) {
-              // Map startlist_id to course_id and count
-              const importToCourse = new Map<string, string>();
-              latestImportMap.forEach((importId, courseId) => {
-                importToCourse.set(importId, courseId);
-              });
-              
-              entries.forEach(entry => {
-                const courseId = importToCourse.get(entry.startlist_id);
-                if (courseId) {
-                  startlistCountMap.set(courseId, (startlistCountMap.get(courseId) || 0) + 1);
-                }
-              });
+          // Set counts from latest imports
+          latestImportMap.forEach((importData, courseId) => {
+            if (importData.count > 0) {
+              startlistCountMap.set(courseId, importData.count);
             }
-          }
+          });
         }
       }
 
