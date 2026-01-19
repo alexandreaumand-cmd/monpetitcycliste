@@ -67,7 +67,7 @@ export function LeagueBonusRidersDialog({
           manager_id,
           coureur_id,
           prix_signature,
-          coureurs!inner(nom, equipe)
+          coureurs!inner(nom)
         `)
         .eq("league_id", leagueId)
         .eq("phase_id", phaseId)
@@ -76,7 +76,7 @@ export function LeagueBonusRidersDialog({
 
       if (rosterError) throw rosterError;
 
-      // Get initial ratings from coureurs_saisons
+      // Get season id and initial ratings + team names from coureurs_saisons with equipes_saisons
       const { data: saisonData } = await supabase
         .from("phases")
         .select("saison_id")
@@ -85,19 +85,25 @@ export function LeagueBonusRidersDialog({
 
       const saisonId = saisonData?.saison_id;
       let coureursInitialData: Record<string, number> = {};
+      let coureursTeamData: Record<string, string> = {};
 
       if (saisonId) {
         const { data: csData } = await supabase
           .from("coureurs_saisons")
-          .select("coureur_id, prix_initial")
+          .select(`
+            coureur_id, 
+            prix_initial,
+            equipes_saisons!inner(nom_affiche)
+          `)
           .eq("saison_id", saisonId)
           .in("coureur_id", coureurIds);
 
         if (csData) {
-          coureursInitialData = csData.reduce((acc, cs) => {
-            acc[cs.coureur_id] = cs.prix_initial ?? 0;
-            return acc;
-          }, {} as Record<string, number>);
+          csData.forEach((cs) => {
+            coureursInitialData[cs.coureur_id] = cs.prix_initial ?? 0;
+            const equipeSaison = cs.equipes_saisons as unknown as { nom_affiche: string } | null;
+            coureursTeamData[cs.coureur_id] = equipeSaison?.nom_affiche || "";
+          });
         }
       }
 
@@ -124,7 +130,7 @@ export function LeagueBonusRidersDialog({
         );
         const managerNom = (s.managers as any)?.nom || "Inconnu";
         const coureurNom = roster?.coureurs?.nom || "Inconnu";
-        const equipe = roster?.coureurs?.equipe || "";
+        const equipe = coureursTeamData[s.coureur_id] || "";
         const prixAchat = roster?.prix_signature || 0;
         const coteInitiale = coureursInitialData[s.coureur_id] || 0;
         const pointsTotal = pointsByRider[s.coureur_id] || 0;
