@@ -179,6 +179,21 @@
     "opponentTeams": "Opponent teams",
     "viewBudgetsAndRosters": "View budgets and rosters of other managers"
   },
+  "finalTeam": {
+    "title": "My Final Team",
+    "subtitle": "Complete composition of your roster",
+    "theoreticalValue": "Theoretical value",
+    "sumOfOdds": "Sum of initial odds",
+    "mostExpensive": "Most expensive rider",
+    "mostOverpaid": "Most overpaid",
+    "vsOdds": "vs odds",
+    "highestOdds": "Highest odds",
+    "odds": "Odds",
+    "round": "Round",
+    "rider": "rider",
+    "riders": "riders",
+    "total": "total"
+  },
   "availableRiders": "Available riders",
   "results_count": "{{count}} result",
   "results_count_plural": "{{count}} results",

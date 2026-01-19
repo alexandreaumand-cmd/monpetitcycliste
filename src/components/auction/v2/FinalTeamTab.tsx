@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Users, DollarSign, TrendingUp, Award } from "lucide-react";
 import { formatAmount } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface FinalTeamTabProps {
   phaseId: string;
@@ -21,6 +22,7 @@ export function FinalTeamTab({
   budget,
   maxRiders,
 }: FinalTeamTabProps) {
+  const { t } = useTranslation('auction');
   // Fetch roster with round acquisition data
   const { data: roster = [], isLoading } = useQuery({
     queryKey: ["final-team", phaseId, managerId, leagueId],
@@ -155,9 +157,9 @@ export function FinalTeamTab({
             <div className="space-y-1">
               <CardTitle className="text-3xl flex items-center gap-3">
                 <Users className="h-8 w-8 text-primary" />
-                Mon Équipe Finale
+                {t('finalTeam.title')}
               </CardTitle>
-              <p className="text-muted-foreground">Composition complète de votre effectif</p>
+              <p className="text-muted-foreground">{t('finalTeam.subtitle')}</p>
             </div>
             <div className="flex gap-3 items-center">
               <Badge variant="default" className="text-lg px-5 py-2 bg-primary">
@@ -173,13 +175,13 @@ export function FinalTeamTab({
             <div className="p-4 bg-background/80 rounded-xl border border-primary/20">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <p className="text-sm text-muted-foreground">Valeur théorique</p>
+                <p className="text-sm text-muted-foreground">{t('finalTeam.theoreticalValue')}</p>
               </div>
               <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {formatAmount(totalCotes)}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Somme des cotes initiales
+                {t('finalTeam.sumOfOdds')}
               </p>
             </div>
 
@@ -187,7 +189,7 @@ export function FinalTeamTab({
             <div className="p-4 bg-background/80 rounded-xl border border-amber-500/20">
               <div className="flex items-center gap-2 mb-2">
                 <Award className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                <p className="text-sm text-muted-foreground">Coureur le plus cher</p>
+                <p className="text-sm text-muted-foreground">{t('finalTeam.mostExpensive')}</p>
               </div>
               <p className="text-lg font-bold truncate">{mostExpensive.nom}</p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -199,11 +201,11 @@ export function FinalTeamTab({
             <div className="p-4 bg-background/80 rounded-xl border border-red-500/20">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="h-4 w-4 text-red-600 dark:text-red-400" />
-                <p className="text-sm text-muted-foreground">Le plus surpayé</p>
+                <p className="text-sm text-muted-foreground">{t('finalTeam.mostOverpaid')}</p>
               </div>
               <p className="text-lg font-bold truncate">{mostOverpaid.nom}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                +{formatAmount(Number(mostOverpaid.prix_signature) - Number(mostOverpaid.cote_initiale))} vs cote
+                +{formatAmount(Number(mostOverpaid.prix_signature) - Number(mostOverpaid.cote_initiale))} {t('finalTeam.vsOdds')}
               </p>
             </div>
 
@@ -211,11 +213,11 @@ export function FinalTeamTab({
             <div className="p-4 bg-background/80 rounded-xl border border-green-500/20">
               <div className="flex items-center gap-2 mb-2">
                 <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
-                <p className="text-sm text-muted-foreground">Cote la plus haute</p>
+                <p className="text-sm text-muted-foreground">{t('finalTeam.highestOdds')}</p>
               </div>
               <p className="text-lg font-bold truncate">{highestCote.nom}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Cote: {formatAmount(highestCote.cote_initiale)}
+                {t('finalTeam.odds')}: {formatAmount(highestCote.cote_initiale)}
               </p>
             </div>
           </div>
@@ -232,14 +234,14 @@ export function FinalTeamTab({
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <CardTitle className="text-xl flex items-center gap-3">
                     <Badge variant="secondary" className="text-base px-4 py-1.5 bg-primary/20 border-primary/30">
-                      Round {roundNum}
+                      {t('finalTeam.round')} {roundNum}
                     </Badge>
                     <span className="text-sm font-normal text-muted-foreground">
-                      {riders.length} coureur{riders.length > 1 ? "s" : ""}
+                      {riders.length} {riders.length > 1 ? t('finalTeam.riders') : t('finalTeam.rider')}
                     </span>
                   </CardTitle>
                   <Badge variant="outline" className="text-sm">
-                    {formatAmount(riders.reduce((sum, r) => sum + Number(r.prix_signature), 0))} total
+                    {formatAmount(riders.reduce((sum, r) => sum + Number(r.prix_signature), 0))} {t('finalTeam.total')}
                   </Badge>
                 </div>
               </CardHeader>
