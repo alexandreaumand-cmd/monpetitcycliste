@@ -53,6 +53,36 @@
     "title": "No races found",
     "description": "Try adjusting your filters"
   },
+  "drawer": {
+    "description": "Race details",
+    "totalPoints": "Total points",
+    "pointsBreakdown": "Points breakdown",
+    "route": "Route",
+    "registeredRiders": "Registered riders",
+    "matched": "matched",
+    "unmatched": "unmatched",
+    "noStartlist": "No startlist available for this race.",
+    "classifications": {
+      "stages": "Stages",
+      "gc": "General Classification",
+      "points": "Points (green jersey)",
+      "mountain": "Mountain",
+      "youth": "Youth"
+    },
+    "bareme": {
+      "viewScale": "View points scale",
+      "scaleTitle": "Scale",
+      "noScale": "No scale available for this category and classification type.",
+      "types": {
+        "General": "General Classification",
+        "Etape": "Stage",
+        "Points": "Points (Green)",
+        "Montagne": "Mountain (Polka Dot)",
+        "Jeune": "Youth (White)",
+        "Combatif": "Super Combative"
+      }
+    }
+  },
   "startlist": {
     "title": "Startlists",
     "tabs": {
