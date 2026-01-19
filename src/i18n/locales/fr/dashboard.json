@@ -62,6 +62,19 @@
     "participants": "Participants",
     "noDataAvailable": "Aucune donnée disponible",
     "viewMyLeague": "Voir ma ligue",
+    "goToAuction": "Accéder aux enchères",
+    "auction": {
+      "inProgress": "Enchères en cours",
+      "scheduled": "Enchères programmées",
+      "resultsInProgress": "Résultats en cours",
+      "resultsRevealing": "Les résultats sont en cours de révélation...",
+      "clickToSeeAnnouncements": "Cliquez pour voir les annonces",
+      "round": "Round",
+      "validatedManagers": "Managers validés",
+      "timeRemaining": "Temps restant",
+      "day": "j",
+      "startsIn": "Début dans"
+    },
     "status": {
       "waiting": "En attente",
       "readyToLaunch": "Prêt à lancer",
