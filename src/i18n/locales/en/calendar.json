@@ -1,20 +1,28 @@
 {
   "title": "Calendar",
+  "loading": "Loading seasons...",
+  "header": {
+    "season": "Season"
+  },
   "filters": {
-    "search": "Search for a race...",
+    "search": "Search",
+    "searchPlaceholder": "Race name...",
     "category": "Category",
     "phase": "Phase",
     "allCategories": "All categories",
     "allPhases": "All phases",
-    "reset": "Reset filters"
+    "reset": "Reset"
   },
   "table": {
     "name": "Name",
     "category": "Category",
+    "countdown": "Countdown",
     "startDate": "Start Date",
     "endDate": "End Date",
+    "phase": "Phase",
+    "season": "Season",
     "points": "Points",
-    "status": "Status"
+    "startlist": "Startlist"
   },
   "badges": {
     "today": "Today",
@@ -23,9 +31,23 @@
     "daysUntil_plural": "In {{count}} days",
     "inProgress": "In progress"
   },
+  "results": {
+    "found": "{{count}} race found",
+    "found_plural": "{{count}} races found"
+  },
   "export": {
-    "button": "Export",
-    "filename": "race_calendar"
+    "button": "Export Excel",
+    "filename": "race_calendar",
+    "columns": {
+      "name": "Name",
+      "category": "Category",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "phase": "Phase",
+      "season": "Season",
+      "points": "Points",
+      "startlist": "Startlist"
+    }
   },
   "empty": {
     "title": "No races found",

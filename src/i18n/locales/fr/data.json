@@ -1,0 +1,52 @@
+{
+  "title": "Données Coureurs",
+  "loading": "Chargement des saisons...",
+  "filters": {
+    "search": "Rechercher",
+    "searchPlaceholder": "Nom du coureur...",
+    "team": "Équipe",
+    "allTeams": "Toutes les équipes",
+    "category": "Catégorie",
+    "allCategories": "Toutes les catégories",
+    "cotes": "Cotes",
+    "program": "Programme",
+    "programAll": "Tous",
+    "programWith": "Avec programme",
+    "programWithout": "Sans programme",
+    "favoritesOnly": "Favoris uniquement",
+    "reset": "Réinitialiser"
+  },
+  "table": {
+    "fav": "Fav",
+    "name": "Nom",
+    "team": "Équipe",
+    "category": "Catégorie",
+    "cote": "Cote",
+    "points": "Points",
+    "program": "Programme"
+  },
+  "results": {
+    "ridersShown": "{{count}} coureur affiché",
+    "ridersShown_plural": "{{count}} coureurs affichés",
+    "outOfTotal": "sur {{total}} total",
+    "noRiders": "Aucun coureur trouvé"
+  },
+  "export": {
+    "button": "Excel",
+    "noData": "Aucune donnée à exporter",
+    "success": "Export réussi: {{filename}}",
+    "columns": {
+      "name": "Nom",
+      "team": "Équipe",
+      "category": "Catégorie",
+      "cote": "Cote",
+      "points": "Points",
+      "favorite": "Favori",
+      "yes": "Oui",
+      "no": "Non"
+    }
+  },
+  "favorites": {
+    "error": "Erreur lors de la mise à jour des favoris"
+  }
+}

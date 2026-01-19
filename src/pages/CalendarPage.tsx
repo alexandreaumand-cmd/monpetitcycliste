@@ -26,8 +26,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import mpcLogo from "@/assets/mpc-logo.png";
 import { format, differenceInDays, parseISO } from "date-fns";
-import { fr } from "date-fns/locale";
+import { fr, enUS } from "date-fns/locale";
 import { CalendarCourseDrawer } from "@/components/calendar/CalendarCourseDrawer";
+import { useTranslation } from "react-i18next";
 
 interface CourseWithPoints {
   course_id: string;
@@ -47,7 +48,8 @@ type SortColumn = 'nom' | 'categorie' | 'days_until' | 'date_debut' | 'date_fin'
 
 export default function CalendarPage() {
   const navigate = useNavigate();
-  
+  const { t, i18n } = useTranslation('calendar');
+  const dateLocale = i18n.language === 'fr' ? fr : enUS;
   // Local season state
   const [localSelectedSeason, setLocalSelectedSeason] = useState<{ id: string; annee: number } | null>(null);
   
@@ -324,28 +326,28 @@ export default function CalendarPage() {
   // Export to Excel
   const handleExportExcel = () => {
     const exportData = sortedCourses.map(course => ({
-      "Nom": course.nom,
-      "Catégorie": course.categorie || "",
-      "Date début": course.date_debut || "",
-      "Date fin": course.date_fin || "",
-      "Phase": course.phase_index !== null ? `Phase ${course.phase_index}` : "",
-      "Saison": course.saison_annee || "",
-      "Points": course.total_points,
-      "Startlist": course.startlist_count,
+      [t('export.columns.name')]: course.nom,
+      [t('export.columns.category')]: course.categorie || "",
+      [t('export.columns.startDate')]: course.date_debut || "",
+      [t('export.columns.endDate')]: course.date_fin || "",
+      [t('export.columns.phase')]: course.phase_index !== null ? `Phase ${course.phase_index}` : "",
+      [t('export.columns.season')]: course.saison_annee || "",
+      [t('export.columns.points')]: course.total_points,
+      [t('export.columns.startlist')]: course.startlist_count,
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Calendrier");
+    XLSX.utils.book_append_sheet(workbook, worksheet, t('title'));
     
-    const filename = `calendrier_${localSelectedSeason?.annee || "export"}.xlsx`;
+    const filename = `${t('export.filename')}_${localSelectedSeason?.annee || "export"}.xlsx`;
     XLSX.writeFile(workbook, filename);
   };
 
   // Format date
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
-    return format(parseISO(dateStr), "dd MMM yyyy", { locale: fr });
+    return format(parseISO(dateStr), "dd MMM yyyy", { locale: dateLocale });
   };
 
   // Days until badge
@@ -354,9 +356,9 @@ export default function CalendarPage() {
     if (days === null) return <span className="text-muted-foreground">-</span>;
     
     if (days < 0) {
-      return <Badge variant="secondary">Passée</Badge>;
+      return <Badge variant="secondary">{t('badges.passed')}</Badge>;
     } else if (days === 0) {
-      return <Badge className="bg-green-500 hover:bg-green-600">Aujourd'hui</Badge>;
+      return <Badge className="bg-green-500 hover:bg-green-600">{t('badges.today')}</Badge>;
     } else if (days <= 7) {
       return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-black">J-{days}</Badge>;
     } else if (days <= 30) {
@@ -376,7 +378,7 @@ export default function CalendarPage() {
                 <ArrowLeft className="h-5 w-5 text-white" />
               </Button>
               <img src={mpcLogo} alt="Logo" className="h-8 w-8 md:h-10 md:w-10" />
-              <h1 className="font-montserrat font-bold text-white text-sm md:text-xl">Calendrier</h1>
+              <h1 className="font-montserrat font-bold text-white text-sm md:text-xl">{t('title')}</h1>
             </div>
             <Button variant="ghost" size="icon" onClick={handleSignOut}>
               <LogOut className="h-5 w-5 text-white" />
@@ -385,7 +387,7 @@ export default function CalendarPage() {
         </header>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-12 text-muted-foreground">
-            Chargement des saisons...
+            {t('loading')}
           </div>
         </div>
       </div>
@@ -402,7 +404,7 @@ export default function CalendarPage() {
               <ArrowLeft className="h-5 w-5 text-white" />
             </Button>
             <img src={mpcLogo} alt="Logo" className="h-8 w-8 md:h-10 md:w-10" />
-            <h1 className="font-montserrat font-bold text-white text-sm md:text-xl">Calendrier</h1>
+            <h1 className="font-montserrat font-bold text-white text-sm md:text-xl">{t('title')}</h1>
           </div>
           <div className="flex items-center gap-2">
             <Select
@@ -413,7 +415,7 @@ export default function CalendarPage() {
               }}
             >
               <SelectTrigger className="w-[100px] md:w-[140px] border-yellow-500/50 bg-black/80 text-white">
-                <SelectValue placeholder="Saison" />
+                <SelectValue placeholder={t('header.season')} />
               </SelectTrigger>
               <SelectContent className="bg-popover">
                 {allSeasons?.map((s) => (
@@ -434,12 +436,12 @@ export default function CalendarPage() {
         {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="space-y-1.5">
-            <Label htmlFor="search">Rechercher</Label>
+            <Label htmlFor="search">{t('filters.search')}</Label>
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 id="search"
-                placeholder="Nom de la course..."
+                placeholder={t('filters.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-8"
@@ -448,13 +450,13 @@ export default function CalendarPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Catégorie</Label>
+            <Label>{t('filters.category')}</Label>
             <Select value={selectedCategorie} onValueChange={setSelectedCategorie}>
               <SelectTrigger>
-                <SelectValue placeholder="Toutes" />
+                <SelectValue placeholder={t('filters.allCategories')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes les catégories</SelectItem>
+                <SelectItem value="all">{t('filters.allCategories')}</SelectItem>
                 {categorieOptions.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
@@ -465,16 +467,16 @@ export default function CalendarPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Phase</Label>
+            <Label>{t('filters.phase')}</Label>
             <Select value={selectedPhase} onValueChange={setSelectedPhase}>
               <SelectTrigger>
-                <SelectValue placeholder="Toutes" />
+                <SelectValue placeholder={t('filters.allPhases')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes les phases</SelectItem>
+                <SelectItem value="all">{t('filters.allPhases')}</SelectItem>
                 {phasesData?.map((phase) => (
                   <SelectItem key={phase.id} value={phase.id}>
-                    Phase {phase.index_dans_saison}
+                    {t('table.phase')} {phase.index_dans_saison}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -483,7 +485,7 @@ export default function CalendarPage() {
 
           <div className="flex items-end">
             <Button variant="outline" onClick={resetFilters} className="w-full">
-              Réinitialiser
+              {t('filters.reset')}
             </Button>
           </div>
         </div>
@@ -491,7 +493,7 @@ export default function CalendarPage() {
         {/* Results count and export */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground">
-            {sortedCourses.length} course{sortedCourses.length !== 1 ? 's' : ''} trouvée{sortedCourses.length !== 1 ? 's' : ''}
+            {t('results.found', { count: sortedCourses.length })}
           </p>
           <Button 
             variant="outline" 
@@ -500,7 +502,7 @@ export default function CalendarPage() {
             disabled={sortedCourses.length === 0}
           >
             <Download className="h-4 w-4 mr-2" />
-            Export Excel
+            {t('export.button')}
           </Button>
         </div>
 
@@ -520,50 +522,50 @@ export default function CalendarPage() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleSort('nom')}
                   >
-                    Nom {getSortIcon('nom')}
+                    {t('table.name')} {getSortIcon('nom')}
                   </TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleSort('categorie')}
                   >
-                    Catégorie {getSortIcon('categorie')}
+                    {t('table.category')} {getSortIcon('categorie')}
                   </TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50 text-center"
                     onClick={() => handleSort('days_until')}
                   >
-                    Compte à rebours {getSortIcon('days_until')}
+                    {t('table.countdown')} {getSortIcon('days_until')}
                   </TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleSort('date_debut')}
                   >
-                    Date début {getSortIcon('date_debut')}
+                    {t('table.startDate')} {getSortIcon('date_debut')}
                   </TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleSort('date_fin')}
                   >
-                    Date fin {getSortIcon('date_fin')}
+                    {t('table.endDate')} {getSortIcon('date_fin')}
                   </TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50 text-center"
                     onClick={() => handleSort('phase')}
                   >
-                    Phase {getSortIcon('phase')}
+                    {t('table.phase')} {getSortIcon('phase')}
                   </TableHead>
-                  <TableHead className="text-center">Saison</TableHead>
+                  <TableHead className="text-center">{t('table.season')}</TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50 text-right"
                     onClick={() => handleSort('points')}
                   >
-                    Points {getSortIcon('points')}
+                    {t('table.points')} {getSortIcon('points')}
                   </TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50 text-center"
                     onClick={() => handleSort('startlist')}
                   >
-                    Startlist {getSortIcon('startlist')}
+                    {t('table.startlist')} {getSortIcon('startlist')}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -571,7 +573,7 @@ export default function CalendarPage() {
                 {sortedCourses.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                      Aucune course trouvée
+                      {t('empty.title')}
                     </TableCell>
                   </TableRow>
                 ) : (
