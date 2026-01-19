@@ -163,6 +163,22 @@
     "none": "Aucun",
     "na": "N/A"
   },
+  "completed": {
+    "title": "Enchères terminées",
+    "badge": "Complet",
+    "description": "Tu as complété ton équipe de {{count}} coureurs. Tes enchères sont terminées pour cette phase.",
+    "budgetSpent": "Budget dépensé",
+    "budgetRemaining": "Budget restant",
+    "roundStatus": "Statut du Round {{round}}",
+    "managersValidated": "Managers ayant validé",
+    "haveValidated": "Ont validé :",
+    "waiting": "En attente :",
+    "noInfo": "Aucune information disponible",
+    "myTeam": "Mon équipe",
+    "viewMyRiders": "Voir mes {{count}} coureurs",
+    "opponentTeams": "Équipes adverses",
+    "viewBudgetsAndRosters": "Voir les budgets et effectifs des autres managers"
+  },
   "availableRiders": "Coureurs disponibles",
   "results_count": "{{count}} résultat",
   "results_count_plural": "{{count}} résultats",
