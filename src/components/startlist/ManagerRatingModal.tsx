@@ -26,6 +26,7 @@ interface ManagerRatingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   startlistId: string;
+  leagueId: string | null;
   managers: Manager[];
   onRatingsUpdated: () => void;
   initialGlobalNote?: string;
@@ -35,6 +36,7 @@ export function ManagerRatingModal({
   open, 
   onOpenChange, 
   startlistId, 
+  leagueId,
   managers,
   onRatingsUpdated,
   initialGlobalNote 
@@ -76,7 +78,8 @@ export function ManagerRatingModal({
     try {
       const { error } = await supabase.functions.invoke('rate-managers', {
         body: { 
-          startlist_id: startlistId, 
+          startlist_id: startlistId,
+          league_id: leagueId,
           ratings: ratingsArray,
           global_note: globalNote.trim() || null
         }

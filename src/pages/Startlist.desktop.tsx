@@ -143,10 +143,10 @@ const StartlistDesktop = () => {
       
       if (error) throw error;
       
-      // Get PCS validation info and admin note
+      // Get PCS validation info only (admin_rating_note comes from edge function as league-scoped)
       const { data: startlistData } = await supabase
         .from('startlist_imports')
-        .select('pcs_validated, pcs_validated_at, pcs_validated_by_manager_id, admin_rating_note')
+        .select('pcs_validated, pcs_validated_at, pcs_validated_by_manager_id')
         .eq('id', selectedStartlistId)
         .single();
       
@@ -378,6 +378,7 @@ const StartlistDesktop = () => {
           open={showRatingModal}
           onOpenChange={setShowRatingModal}
           startlistId={selectedStartlistId!}
+          leagueId={leagueId}
           managers={startlistViewData.managers}
           initialGlobalNote={startlistViewData.admin_rating_note || ""}
           onRatingsUpdated={() => queryClient.invalidateQueries({ queryKey: ['startlist-view', selectedStartlistId] })}
