@@ -103,5 +103,25 @@
     "generic": "An error occurred",
     "enterCode": "Please enter an invitation code",
     "joinError": "Error trying to join the league"
+  },
+  "inviteSheet": {
+    "title": "Invite Players",
+    "leagueMembers": "League Members",
+    "loading": "Loading...",
+    "noMembers": "No members yet",
+    "remainingSpots": "Remaining Spots",
+    "players": "players",
+    "inviteCode": "Invite Code",
+    "inviteLink": "Invite Link",
+    "copy": "Copy",
+    "copyInvite": "Copy Invitation",
+    "shareWhatsApp": "Share via WhatsApp",
+    "codeCopied": "Code copied!",
+    "inviteCopied": "Invitation copied!",
+    "copyError": "Unable to copy",
+    "createError": "Unable to create invitation",
+    "shareMessage": "🚴 Join my league \"{{leagueName}}\" on Mon Petit Cycliste!\n\n{{url}}\n\nUse this link to join us.",
+    "shareTitle": "Mon Petit Cycliste Invitation",
+    "shareText": "Join my league \"{{leagueName}}\"!"
   }
 }
