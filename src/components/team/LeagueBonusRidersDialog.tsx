@@ -88,21 +88,37 @@ export function LeagueBonusRidersDialog({
       let coureursTeamData: Record<string, string> = {};
 
       if (saisonId) {
+        // Step 1: Get coureurs_saisons with equipe_id
         const { data: csData } = await supabase
           .from("coureurs_saisons")
-          .select(`
-            coureur_id, 
-            prix_initial,
-            equipes_saisons!inner(nom_affiche)
-          `)
+          .select("coureur_id, prix_initial, equipe_id")
           .eq("saison_id", saisonId)
           .in("coureur_id", coureurIds);
 
         if (csData) {
+          // Collect unique equipe_ids
+          const equipeIds = [...new Set(csData.map(cs => cs.equipe_id).filter(Boolean))] as string[];
+          
+          // Step 2: Get team names from equipes_saisons
+          let equipeNoms: Record<string, string> = {};
+          if (equipeIds.length > 0) {
+            const { data: esData } = await supabase
+              .from("equipes_saisons")
+              .select("equipe_id, nom_affiche")
+              .eq("saison_id", saisonId)
+              .in("equipe_id", equipeIds);
+            
+            if (esData) {
+              esData.forEach(es => {
+                equipeNoms[es.equipe_id] = es.nom_affiche || "";
+              });
+            }
+          }
+          
+          // Map data by coureur
           csData.forEach((cs) => {
             coureursInitialData[cs.coureur_id] = cs.prix_initial ?? 0;
-            const equipeSaison = cs.equipes_saisons as unknown as { nom_affiche: string } | null;
-            coureursTeamData[cs.coureur_id] = equipeSaison?.nom_affiche || "";
+            coureursTeamData[cs.coureur_id] = cs.equipe_id ? equipeNoms[cs.equipe_id] || "" : "";
           });
         }
       }
@@ -160,7 +176,7 @@ export function LeagueBonusRidersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Star className="h-5 w-5 text-[#FFD500] fill-[#FFD500]" />
@@ -198,9 +214,9 @@ export function LeagueBonusRidersDialog({
                     <td className="p-2">
                       <div className="flex items-center gap-1">
                         <Star className="h-3 w-3 text-[#FFD500] fill-[#FFD500]" />
-                        <span className="truncate max-w-[120px]">{rider.coureur_nom}</span>
+                        <span className="truncate max-w-[200px]" title={rider.coureur_nom}>{rider.coureur_nom}</span>
                       </div>
-                      <div className="text-xs text-muted-foreground truncate">
+                      <div className="text-xs text-muted-foreground truncate max-w-[200px]" title={rider.equipe}>
                         {rider.equipe}
                       </div>
                     </td>
