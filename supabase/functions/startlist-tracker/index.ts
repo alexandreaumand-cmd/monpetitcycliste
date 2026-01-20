@@ -55,8 +55,11 @@ serve(async (req) => {
       let racesAnalyzed = 0;
       let racesMatched = 0;
 
+      // Maximum courses to process per run to avoid timeout (150s limit)
+      const MAX_COURSES_PER_RUN = 5;
+
       if (source_type === "global") {
-        // NEW TWO-STEP APPROACH:
+        // TWO-STEP APPROACH:
         // Step 1: Fetch list of races with recent startlist modifications
         console.log("Step 1: Fetching list of changed races...");
         const changedRaces = await scrapeChangedRacesList(lovableApiKey);
@@ -87,7 +90,9 @@ serve(async (req) => {
               dbCoursesByName.set(normalizedName, course);
             }
 
-            // Step 3: For each changed race that exists in our DB, do a full sync
+            // Step 3: Match races and limit processing
+            const racesToProcess: { race: ChangedRace; matchedCourse: { id: string; nom: string } }[] = [];
+            
             for (const race of changedRaces) {
               const slugLower = race.slug.toLowerCase();
               const normalizedRaceName = normalizeName(race.name);
@@ -112,6 +117,15 @@ serve(async (req) => {
                 continue;
               }
 
+              racesToProcess.push({ race, matchedCourse });
+            }
+
+            console.log(`Matched ${racesToProcess.length} courses, processing max ${MAX_COURSES_PER_RUN}`);
+            
+            // Limit to MAX_COURSES_PER_RUN to avoid timeout
+            const limitedRaces = racesToProcess.slice(0, MAX_COURSES_PER_RUN);
+            
+            for (const { race, matchedCourse } of limitedRaces) {
               racesMatched++;
               console.log(`Processing course: ${race.name} -> matched to ${matchedCourse.id}`);
 
@@ -129,6 +143,10 @@ serve(async (req) => {
                 console.error(`Error processing race ${race.name}:`, raceError);
                 // Continue with next race
               }
+            }
+            
+            if (racesToProcess.length > MAX_COURSES_PER_RUN) {
+              console.log(`Note: ${racesToProcess.length - MAX_COURSES_PER_RUN} more courses pending, run again to process them`);
             }
           } else {
             console.log("No courses found in database for current season");
