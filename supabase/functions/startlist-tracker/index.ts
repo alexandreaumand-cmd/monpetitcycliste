@@ -45,13 +45,18 @@ serve(async (req) => {
 
     try {
       let changes: StartlistChange[] = [];
+      let fullSyncMode = false;
 
       if (source_type === "global") {
         // Fetch the global startlist changes page
         changes = await scrapeGlobalChanges(lovableApiKey);
       } else if (source_type === "race" && race_url) {
-        // Fetch a specific race startlist
-        changes = await scrapeRaceStartlist(race_url, lovableApiKey);
+        // Fetch a specific race startlist - this triggers FULL SYNC mode
+        fullSyncMode = true;
+        const scrapedRiders = await scrapeRaceStartlist(race_url, lovableApiKey);
+        
+        // For full sync, we need to compare with existing entries and generate removals
+        changes = await generateFullSyncChanges(supabase, scrapedRiders, race_url);
       }
 
       // Insert detected changes
@@ -348,6 +353,149 @@ Only return valid JSON, no markdown or explanation.`,
   return [];
 }
 
+/**
+ * Generate full sync changes by comparing scraped riders with existing startlist entries.
+ * This creates "added" changes for new riders and "removed" changes for riders no longer present.
+ */
+async function generateFullSyncChanges(
+  supabase: any,
+  scrapedRiders: StartlistChange[],
+  raceUrl: string
+): Promise<StartlistChange[]> {
+  if (scrapedRiders.length === 0) {
+    console.log("No riders scraped, skipping full sync");
+    return [];
+  }
+
+  const courseName = scrapedRiders[0]?.course_name || "Unknown Race";
+  const courseId = scrapedRiders[0]?.course_id || "unknown";
+  
+  console.log(`Full sync for ${courseName}: ${scrapedRiders.length} riders scraped`);
+
+  // Try to find the matching course in database
+  const { data: courses } = await supabase.rpc("search_course_by_name", {
+    p_search: courseName,
+    p_limit: 1,
+  });
+
+  let course = courses?.[0];
+
+  // Fallback: direct search on courses table
+  if (!course) {
+    const searchTerms = courseName.split(" ").slice(0, 4).join("%");
+    const { data: directCourses } = await supabase
+      .from("courses")
+      .select("id, nom, date_debut")
+      .ilike("nom", `%${searchTerms}%`)
+      .order("date_debut", { ascending: false })
+      .limit(1);
+    course = directCourses?.[0];
+  }
+
+  if (!course) {
+    console.log(`Course not found for full sync: ${courseName}`);
+    // Return all scraped as "added" - they'll be processed later when course is matched
+    return scrapedRiders;
+  }
+
+  console.log(`Found course for full sync: ${course.id} - ${course.nom}`);
+
+  // Get existing startlist for this course
+  const { data: imports } = await supabase
+    .from("startlist_imports")
+    .select("id")
+    .eq("race_id", course.id)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (!imports || imports.length === 0) {
+    console.log("No existing startlist import, all scraped riders are additions");
+    return scrapedRiders;
+  }
+
+  const startlistId = imports[0].id;
+
+  // Get all existing entries for this startlist
+  const { data: existingEntries } = await supabase
+    .from("startlist_entries")
+    .select("id, source_name, coureur_id, coureurs(nom)")
+    .eq("startlist_id", startlistId);
+
+  if (!existingEntries || existingEntries.length === 0) {
+    console.log("No existing entries, all scraped riders are additions");
+    return scrapedRiders;
+  }
+
+  console.log(`Existing entries: ${existingEntries.length}`);
+
+  // Normalize names for comparison
+  const normalize = (name: string) => 
+    name.toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z\s]/g, "")
+      .trim();
+
+  // Create sets for comparison
+  const scrapedNamesNormalized = new Set(
+    scrapedRiders.map(r => normalize(r.rider_name))
+  );
+  
+  const existingNamesNormalized = new Map<string, { source_name: string; coureur_nom: string | null }>();
+  for (const entry of existingEntries) {
+    const sourceName = entry.source_name || "";
+    const coureurNom = entry.coureurs?.nom || "";
+    
+    // Use source_name for matching primarily
+    if (sourceName) {
+      existingNamesNormalized.set(normalize(sourceName), {
+        source_name: sourceName,
+        coureur_nom: coureurNom
+      });
+    }
+    // Also add coureur nom as fallback
+    if (coureurNom && !existingNamesNormalized.has(normalize(coureurNom))) {
+      existingNamesNormalized.set(normalize(coureurNom), {
+        source_name: sourceName || coureurNom,
+        coureur_nom: coureurNom
+      });
+    }
+  }
+
+  const changes: StartlistChange[] = [];
+
+  // Find riders to REMOVE (in existing but not in scraped)
+  for (const [normalizedName, entry] of existingNamesNormalized.entries()) {
+    if (!scrapedNamesNormalized.has(normalizedName)) {
+      // This rider is no longer in the scraped startlist - mark for removal
+      const displayName = entry.coureur_nom || entry.source_name;
+      console.log(`Marking for removal: ${displayName}`);
+      changes.push({
+        course_id: courseId,
+        course_name: courseName,
+        rider_name: entry.source_name,
+        team_name: null,
+        change_type: "removed",
+        source_url: raceUrl,
+      });
+    }
+  }
+
+  // Find riders to ADD (in scraped but not in existing)
+  for (const scrapedRider of scrapedRiders) {
+    const normalizedScraped = normalize(scrapedRider.rider_name);
+    if (!existingNamesNormalized.has(normalizedScraped)) {
+      // This is a new rider - mark for addition
+      console.log(`Marking for addition: ${scrapedRider.rider_name}`);
+      changes.push(scrapedRider);
+    }
+  }
+
+  console.log(`Full sync result: ${changes.filter(c => c.change_type === "added").length} additions, ${changes.filter(c => c.change_type === "removed").length} removals`);
+
+  return changes;
+}
+
 async function processChanges(supabase: any, changes: StartlistChange[]): Promise<number> {
   let processedCount = 0;
 
@@ -374,9 +522,13 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
     try {
       console.log(`Processing change: ${change.rider_name} for ${change.course_name}`);
       
+      // Normalize course name: remove year suffix (e.g., "Paris-Nice 2026" -> "Paris-Nice")
+      const normalizedCourseName = change.course_name.replace(/\s+\d{4}$/, '').trim();
+      console.log(`Normalized course name: "${normalizedCourseName}"`);
+      
       // Try to find matching course by normalized name
       const { data: courses } = await supabase.rpc("search_course_by_name", {
-        p_search: change.course_name,
+        p_search: normalizedCourseName,
         p_limit: 1,
       });
 
@@ -386,7 +538,7 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
       // Fallback: direct search on courses table with flexible matching
       if (!course) {
         // Extract key words from course name for better matching
-        const searchTerms = change.course_name.split(" ").slice(0, 4).join("%");
+        const searchTerms = normalizedCourseName.split(" ").slice(0, 4).join("%");
         const { data: directCourses } = await supabase
           .from("courses")
           .select("id, nom, date_debut")
