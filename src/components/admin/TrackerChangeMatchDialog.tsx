@@ -114,45 +114,83 @@ export const TrackerChangeMatchDialog = ({
 
       if (error) throw error;
 
-      // If we have both rider and course matched, and there's a startlist import, add to startlist_entries
-      if (selectedRider && selectedCourse) {
-        // Find startlist import for this course
-        const { data: imports } = await supabase
+      // If we have both rider and course matched, add to startlist_entries
+      if (selectedRider && selectedCourse && change.change_type === "added") {
+        // Find or create startlist import for this course
+        let { data: imports } = await supabase
           .from("startlist_imports")
           .select("id")
           .eq("race_id", selectedCourse.id)
           .order("created_at", { ascending: false })
           .limit(1);
 
-        if (imports && imports.length > 0) {
-          // Check if entry exists
-          const { data: existing } = await supabase
+        let startlistId: string;
+        
+        if (!imports || imports.length === 0) {
+          // Get the saison_id from the course via phase
+          const { data: courseData } = await supabase
+            .from("courses")
+            .select("phase_id, phases!inner(saison_id)")
+            .eq("id", selectedCourse.id)
+            .single();
+          
+          const saisonId = (courseData?.phases as unknown as { saison_id: string })?.saison_id;
+          
+          if (!saisonId) {
+            throw new Error("Impossible de déterminer la saison pour cette course");
+          }
+          
+          // Create a new startlist import for this course
+          const { data: newImport, error: importError } = await supabase
+            .from("startlist_imports")
+            .insert({
+              race_id: selectedCourse.id,
+              source_url: `https://www.procyclingstats.com/race/${selectedCourse.id}`,
+              saison_id: saisonId,
+            } as any)
+            .select()
+            .single();
+
+          if (importError) {
+            console.error("Failed to create startlist import:", importError);
+            throw new Error(`Impossible de créer le startlist import: ${importError.message}`);
+          }
+          startlistId = newImport.id;
+        } else {
+          startlistId = imports[0].id;
+        }
+
+        // Check if entry exists
+        const { data: existing } = await supabase
+          .from("startlist_entries")
+          .select("id")
+          .eq("startlist_id", startlistId)
+          .eq("coureur_id", selectedRider.id)
+          .limit(1);
+
+        if (!existing || existing.length === 0) {
+          // Get max line_no for this startlist
+          const { data: maxLine } = await supabase
             .from("startlist_entries")
-            .select("id")
-            .eq("startlist_id", imports[0].id)
-            .eq("coureur_id", selectedRider.id)
+            .select("line_no")
+            .eq("startlist_id", startlistId)
+            .order("line_no", { ascending: false })
             .limit(1);
+          
+          const nextLineNo = (maxLine?.[0]?.line_no || 0) + 1;
 
-          if (!existing || existing.length === 0) {
-            // Get max line_no for this startlist
-            const { data: maxLine } = await supabase
-              .from("startlist_entries")
-              .select("line_no")
-              .eq("startlist_id", imports[0].id)
-              .order("line_no", { ascending: false })
-              .limit(1);
-            
-            const nextLineNo = (maxLine?.[0]?.line_no || 0) + 1;
+          const { error: entryError } = await supabase.from("startlist_entries").insert([{
+            startlist_id: startlistId,
+            line_no: nextLineNo,
+            source_name: change.rider_name,
+            source_team: change.team_name,
+            coureur_id: selectedRider.id,
+            confidence: 1.0,
+            status: "confirmed" as const,
+          }]);
 
-            await supabase.from("startlist_entries").insert([{
-              startlist_id: imports[0].id,
-              line_no: nextLineNo,
-              source_name: change.rider_name,
-              source_team: change.team_name,
-              coureur_id: selectedRider.id,
-              confidence: 1.0,
-              status: "confirmed" as const,
-            }]);
+          if (entryError) {
+            console.error("Failed to insert entry:", entryError);
           }
         }
       }
