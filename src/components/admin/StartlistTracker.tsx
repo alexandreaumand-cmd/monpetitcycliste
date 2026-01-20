@@ -5,16 +5,31 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, RefreshCw, Clock, CheckCircle, XCircle, UserPlus, UserMinus, AlertCircle } from "lucide-react";
+import { Loader2, RefreshCw, Clock, CheckCircle, XCircle, UserPlus, UserMinus, AlertCircle, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { TrackerChangeMatchDialog } from "./TrackerChangeMatchDialog";
+
+interface TrackerChange {
+  id: string;
+  rider_name: string;
+  team_name: string | null;
+  course_name: string;
+  course_id: string | null;
+  coureur_id: string | null;
+  change_type: string;
+  processed: boolean;
+  detected_at: string;
+}
 
 export const StartlistTracker = () => {
   const queryClient = useQueryClient();
   const [raceUrl, setRaceUrl] = useState("");
+  const [selectedChange, setSelectedChange] = useState<TrackerChange | null>(null);
+  const [matchDialogOpen, setMatchDialogOpen] = useState(false);
 
   // Fetch recent runs
   const { data: runs, isLoading: runsLoading } = useQuery({
@@ -86,9 +101,9 @@ export const StartlistTracker = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "running":
-        return <Badge variant="outline" className="text-blue-600"><Loader2 className="h-3 w-3 mr-1 animate-spin" />En cours</Badge>;
+        return <Badge variant="outline" className="text-primary"><Loader2 className="h-3 w-3 mr-1 animate-spin" />En cours</Badge>;
       case "completed":
-        return <Badge variant="outline" className="text-green-600"><CheckCircle className="h-3 w-3 mr-1" />Terminé</Badge>;
+        return <Badge variant="outline" className="text-primary"><CheckCircle className="h-3 w-3 mr-1" />Terminé</Badge>;
       case "failed":
         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Échoué</Badge>;
       default:
@@ -98,9 +113,9 @@ export const StartlistTracker = () => {
 
   const getChangeTypeBadge = (type: string) => {
     if (type === "added") {
-      return <Badge className="bg-green-100 text-green-800"><UserPlus className="h-3 w-3 mr-1" />Ajouté</Badge>;
+      return <Badge variant="secondary" className="bg-primary/10 text-primary"><UserPlus className="h-3 w-3 mr-1" />Ajouté</Badge>;
     }
-    return <Badge className="bg-red-100 text-red-800"><UserMinus className="h-3 w-3 mr-1" />Retiré</Badge>;
+    return <Badge variant="destructive"><UserMinus className="h-3 w-3 mr-1" />Retiré</Badge>;
   };
 
   // Stats
@@ -152,7 +167,7 @@ export const StartlistTracker = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <AlertCircle className="h-8 w-8 text-blue-500" />
+              <AlertCircle className="h-8 w-8 text-primary" />
               <div>
                 <p className="text-2xl font-bold">{stats.totalChanges}</p>
                 <p className="text-sm text-muted-foreground">Changements détectés</p>
@@ -163,7 +178,7 @@ export const StartlistTracker = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <UserPlus className="h-8 w-8 text-green-500" />
+              <UserPlus className="h-8 w-8 text-primary" />
               <div>
                 <p className="text-2xl font-bold">{stats.addedCount}</p>
                 <p className="text-sm text-muted-foreground">Ajouts</p>
@@ -174,7 +189,7 @@ export const StartlistTracker = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <UserMinus className="h-8 w-8 text-red-500" />
+              <UserMinus className="h-8 w-8 text-destructive" />
               <div>
                 <p className="text-2xl font-bold">{stats.removedCount}</p>
                 <p className="text-sm text-muted-foreground">Retraits</p>
@@ -241,10 +256,11 @@ export const StartlistTracker = () => {
                       <TableHead>Course</TableHead>
                       <TableHead>Détecté</TableHead>
                       <TableHead>Statut</TableHead>
+                      <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {changes.map((change: any) => (
+                    {changes.map((change: TrackerChange) => (
                       <TableRow key={change.id}>
                         <TableCell>{getChangeTypeBadge(change.change_type)}</TableCell>
                         <TableCell className="font-medium">{change.rider_name}</TableCell>
@@ -255,11 +271,25 @@ export const StartlistTracker = () => {
                         </TableCell>
                         <TableCell>
                           {change.processed ? (
-                            <Badge variant="outline" className="text-green-600">
+                            <Badge variant="outline" className="text-primary">
                               <CheckCircle className="h-3 w-3 mr-1" />Traité
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-yellow-600">En attente</Badge>
+                            <Badge variant="outline" className="text-warning">En attente</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {!change.processed && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setSelectedChange(change);
+                                setMatchDialogOpen(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
                           )}
                         </TableCell>
                       </TableRow>
@@ -329,6 +359,12 @@ export const StartlistTracker = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <TrackerChangeMatchDialog
+        change={selectedChange}
+        open={matchDialogOpen}
+        onOpenChange={setMatchDialogOpen}
+      />
     </div>
   );
 };

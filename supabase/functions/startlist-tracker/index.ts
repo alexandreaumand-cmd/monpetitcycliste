@@ -339,42 +339,62 @@ Only return valid JSON, no markdown or explanation.`,
 async function processChanges(supabase: any, changes: StartlistChange[]): Promise<number> {
   let processedCount = 0;
 
-  // Get the current season for rider matching
+  // Get the current season (2026)
   const { data: currentSeason } = await supabase
     .from("saisons")
-    .select("id")
-    .gte("annee_fin", new Date().getFullYear())
-    .order("annee_debut", { ascending: false })
-    .limit(1)
+    .select("id, annee")
+    .eq("annee", 2026)
     .single();
 
   const saisonId = currentSeason?.id;
+  console.log(`Using season: ${saisonId} (${currentSeason?.annee})`);
 
   for (const change of changes) {
     try {
-      // Try to find matching course - use normalize_text for better matching
+      console.log(`Processing change: ${change.rider_name} for ${change.course_name}`);
+      
+      // Try to find matching course by normalized name
       const { data: courses } = await supabase.rpc("search_course_by_name", {
         p_search: change.course_name,
+        p_limit: 1,
       });
 
       let course = courses?.[0];
+      console.log(`RPC search result: ${JSON.stringify(course)}`);
 
-      // Fallback: direct search on courses table
+      // Fallback: direct search on courses table with flexible matching
       if (!course) {
+        // Extract key words from course name for better matching
+        const searchTerms = change.course_name.split(" ").slice(0, 4).join("%");
         const { data: directCourses } = await supabase
           .from("courses")
-          .select("id, nom")
-          .or(`id.ilike.%${change.course_id}%,nom.ilike.%${change.course_name.split(" ").slice(0, 3).join("%")}%`)
+          .select("id, nom, date_debut")
+          .ilike("nom", `%${searchTerms}%`)
+          .order("date_debut", { ascending: false })
           .limit(1);
         course = directCourses?.[0];
+        console.log(`Fallback search result: ${JSON.stringify(course)}`);
       }
 
       if (!course) {
-        console.log(`Course not found: ${change.course_name} (${change.course_id})`);
+        console.log(`Course not found: ${change.course_name}`);
+        // Mark change as unprocessed but store the course_name for manual matching
+        await supabase
+          .from("startlist_tracker_changes")
+          .update({
+            processed: false,
+            course_id: null,
+          })
+          .eq("rider_name", change.rider_name)
+          .eq("course_name", change.course_name)
+          .is("processed", false);
         continue;
       }
 
-      // Find the latest startlist import for this course
+      console.log(`Found course: ${course.id} - ${course.nom}`);
+
+      // Find or create startlist import for this course
+      let startlistId: string;
       const { data: imports } = await supabase
         .from("startlist_imports")
         .select("id")
@@ -383,24 +403,43 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
         .limit(1);
 
       if (!imports || imports.length === 0) {
-        console.log(`No startlist import found for course: ${course.id}`);
-        continue;
-      }
+        console.log(`Creating new startlist import for course: ${course.id}`);
+        // Create a new startlist import for this course
+        const { data: newImport, error: importError } = await supabase
+          .from("startlist_imports")
+          .insert({
+            race_id: course.id,
+            source_url: change.source_url || `https://www.procyclingstats.com/race/${course.id}`,
+            status: "completed",
+          })
+          .select()
+          .single();
 
-      const startlistId = imports[0].id;
+        if (importError) {
+          console.error(`Failed to create startlist import: ${importError.message}`);
+          continue;
+        }
+        startlistId = newImport.id;
+      } else {
+        startlistId = imports[0].id;
+      }
 
       // Use the proper RPC function for word-order-insensitive, accent-insensitive matching
       let coureurId: string | null = null;
       if (saisonId) {
-        const { data: matchedRiders } = await supabase.rpc("search_riders_for_matching", {
+        const { data: matchedRiders, error: matchError } = await supabase.rpc("search_riders_for_matching", {
           p_saison_id: saisonId,
           p_query: change.rider_name,
           p_limit: 1,
         });
 
-        if (matchedRiders && matchedRiders.length > 0) {
+        if (matchError) {
+          console.error(`Rider matching error: ${matchError.message}`);
+        } else if (matchedRiders && matchedRiders.length > 0) {
           coureurId = matchedRiders[0].coureur_id;
           console.log(`Matched rider: "${change.rider_name}" -> "${matchedRiders[0].coureur_nom}" (${coureurId})`);
+        } else {
+          console.log(`No match found for rider: ${change.rider_name}`);
         }
       }
 
@@ -415,7 +454,7 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
 
         if (!existing || existing.length === 0) {
           // Add new entry
-          await supabase.from("startlist_entries").insert({
+          const { error: entryError } = await supabase.from("startlist_entries").insert({
             startlist_id: startlistId,
             source_name: change.rider_name,
             source_team: change.team_name,
@@ -423,7 +462,11 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
             confidence: coureurId ? 0.9 : null,
             status: coureurId ? "matched" : "unmatched",
           });
-          processedCount++;
+          if (entryError) {
+            console.error(`Failed to insert entry: ${entryError.message}`);
+          } else {
+            console.log(`Added entry for ${change.rider_name} to startlist ${startlistId}`);
+          }
         }
       } else if (change.change_type === "removed") {
         // Remove entry if exists
@@ -439,24 +482,24 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
             .from("startlist_entries")
             .delete()
             .eq("id", toRemove[0].id);
-          processedCount++;
         }
       }
 
-      // Update the tracker change record
+      // Update the tracker change record as processed
+      const isProcessed = coureurId !== null;
       await supabase
         .from("startlist_tracker_changes")
         .update({
-          processed: true,
+          processed: isProcessed,
           processed_at: new Date().toISOString(),
           coureur_id: coureurId,
           course_id: course.id,
+          startlist_entry_id: null, // Will be set if we track the entry
         })
         .eq("rider_name", change.rider_name)
-        .eq("course_name", change.course_name)
-        .eq("processed", false);
+        .eq("course_name", change.course_name);
 
-      if (coureurId) {
+      if (isProcessed) {
         processedCount++;
       }
     } catch (error) {
