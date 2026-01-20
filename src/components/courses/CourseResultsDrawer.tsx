@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Search, ChevronDown, ChevronRight } from "lucide-react";
+import { Calendar, Search, ChevronDown, ChevronRight, X } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { StageJerseyBonuses } from "./StageJerseyBonuses";
 import { PointsBaremeSection } from "./PointsBaremeSection";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Jersey holders compact bar component
 const JerseyHoldersBar = ({ courseId, etapeNumero }: { courseId: string | null; etapeNumero: number | null }) => {
@@ -126,6 +128,7 @@ interface CourseResultsDrawerProps {
 
 export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResultsDrawerProps) => {
   const { leagueId } = useLeague();
+  const isMobile = useIsMobile();
   const [meta, setMeta] = useState<CourseMeta | null>(null);
   const [results, setResults] = useState<ResultRow[]>([]);
   const [selectedType, setSelectedType] = useState<string>("");
@@ -206,16 +209,26 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
         // Detect if this is a stage race
         const isStageRace = data.meta.etapes_disponibles?.length > 0;
         
+        // Check if General results actually exist in the available types
+        const hasGeneralResults = types.includes('General');
+        
         if (isStageRace) {
-          // For stage races: start on "Classements Finaux" tab with "General"
-          setActiveTab('finals');
-          setSelectedType('General');
-          setSelectedEtape(null);
+          if (hasGeneralResults) {
+            // For stage races with General results: show finals tab with General
+            setActiveTab('finals');
+            setSelectedType('General');
+            setSelectedEtape(null);
+          } else {
+            // No General yet: show stages tab with latest stage
+            setActiveTab('stages');
+            setSelectedType('Etape');
+            const latestEtape = Math.max(...(data.meta.etapes_disponibles || [1]));
+            setSelectedEtape(latestEtape);
+          }
         } else {
           // For simple races: start on "results" tab
           setActiveTab('results');
-          const types = (data.meta.types_disponibles || []).filter((type: string) => !type.startsWith('Porteur'));
-          const defaultType = types.includes('General') ? 'General' : types[0];
+          const defaultType = hasGeneralResults ? 'General' : types[0];
           setSelectedType(defaultType);
         }
       }
@@ -416,39 +429,32 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     }
   };
 
-  return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[90vh]">
-        <DrawerHeader>
-          <DrawerTitle className="flex items-center justify-between gap-3">
-            {meta ? (
-              <>
-                <div className="flex flex-col items-start gap-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xl font-bold">{meta.course_nom}</span>
-                    <Badge variant="outline">{meta.categorie}</Badge>
-                    {selectedType === 'Etape' && results.some((r: any) => r.position_decimal !== null && !r.isTeamHeader) && (
-                      <Badge variant="secondary" className="bg-blue-500 text-white">
-                        TTT
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground font-normal">
-                    <Calendar className="h-4 w-4" />
-                    {meta.date_debut && format(new Date(meta.date_debut), 'dd MMM', { locale: fr })}
-                    {meta.date_fin && meta.date_fin !== meta.date_debut && (
-                      <> - {format(new Date(meta.date_fin), 'dd MMM yyyy', { locale: fr })}</>
-                    )}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <Skeleton className="h-6 w-64" />
-            )}
-          </DrawerTitle>
-        </DrawerHeader>
+  // Header content - shared between Dialog and Drawer
+  const headerContent = meta ? (
+    <div className="flex flex-col items-start gap-1">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xl font-bold">{meta.course_nom}</span>
+        <Badge variant="outline">{meta.categorie}</Badge>
+        {selectedType === 'Etape' && results.some((r: any) => r.position_decimal !== null && !r.isTeamHeader) && (
+          <Badge variant="secondary" className="bg-blue-500 text-white">
+            TTT
+          </Badge>
+        )}
+      </div>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground font-normal">
+        <Calendar className="h-4 w-4" />
+        {meta.date_debut && format(new Date(meta.date_debut), 'dd MMM', { locale: fr })}
+        {meta.date_fin && meta.date_fin !== meta.date_debut && (
+          <> - {format(new Date(meta.date_fin), 'dd MMM yyyy', { locale: fr })}</>
+        )}
+      </div>
+    </div>
+  ) : (
+    <Skeleton className="h-6 w-64" />
+  );
 
-        <div className="px-4 pb-4 space-y-4 overflow-y-auto">
+  // Body content - shared between Dialog and Drawer
+  const bodyContent = (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             {/* Conditional tabs based on race type */}
             {meta?.etapes_disponibles && meta.etapes_disponibles.length > 0 ? (
@@ -1176,8 +1182,38 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
               )}
             </TabsContent>
           </Tabs>
+  );
+
+  // Desktop: Dialog, Mobile: Drawer
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader>
+            <DrawerTitle className="flex items-center justify-between gap-3">
+              {headerContent}
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4 space-y-4 overflow-y-auto">
+            {bodyContent}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center justify-between gap-3">
+            {headerContent}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {bodyContent}
         </div>
-      </DrawerContent>
-    </Drawer>
+      </DialogContent>
+    </Dialog>
   );
 };
