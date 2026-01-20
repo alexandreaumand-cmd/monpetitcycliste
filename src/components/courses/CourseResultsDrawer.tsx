@@ -598,15 +598,14 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                       </Table>
                     </div>
                   ) : (
-                    // Regular results table
+                    // Regular results table - optimized for mobile
                     <div className="border rounded-lg overflow-hidden">
-                      <Table className="text-xs sm:text-sm">
+                      <Table className="text-xs table-fixed w-full">
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="w-14 px-2">Pos.</TableHead>
-                            <TableHead className="px-2">Coureur</TableHead>
-                            <TableHead className="text-right px-2 w-14">Pts</TableHead>
-                            <TableHead className="px-2 w-20">Manager</TableHead>
+                            <TableHead className="w-10 px-1.5">Pos.</TableHead>
+                            <TableHead className="px-1.5">Coureur</TableHead>
+                            <TableHead className="text-right px-1.5 w-12">Pts</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -628,9 +627,9 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                       : ""
                                 }
                               >
-                                <TableCell className="font-medium px-2 py-2">
+                                <TableCell className="font-medium px-1.5 py-1.5">
                                   {isFinished ? (
-                                    <div className="flex items-center gap-1">
+                                    <div className="flex items-center gap-0.5">
                                       {isTeamHeader ? (
                                         <>
                                           {displayPosition <= 3 && (
@@ -642,45 +641,46 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                           <span>{displayPosition}</span>
                                         </>
                                       ) : (
-                                        <span className="text-muted-foreground ml-4">
+                                        <span className="text-muted-foreground ml-3">
                                           {displayPosition}
                                         </span>
                                       )}
                                     </div>
                                   ) : statutBadge ? (
-                                    <Badge variant={statutBadge.variant} className="text-[10px] px-1 py-0">
+                                    <Badge variant={statutBadge.variant} className="text-[9px] px-0.5 py-0">
                                       {statutBadge.label}
                                     </Badge>
                                   ) : (
                                     "—"
                                   )}
                                 </TableCell>
-                                <TableCell className="px-2 py-2">
+                                <TableCell className="px-1.5 py-1.5">
                                   {isTeamHeader ? (
                                     <span className="font-bold text-xs">{row.coureur_nom}</span>
                                   ) : (
-                                    <div className="flex flex-col gap-0.5">
+                                    <div className="flex flex-col gap-0">
                                       <div className="flex items-center gap-1 flex-wrap">
-                                        <span className="font-semibold leading-tight">{row.coureur_nom}</span>
+                                        <span className="font-semibold leading-tight text-xs">{row.coureur_nom}</span>
                                         {row.is_my_rider && (
-                                          <Badge variant="default" className="text-[9px] px-1 py-0 leading-tight">
-                                            Mon équipe
+                                          <Badge variant="default" className="text-[8px] px-0.5 py-0 leading-tight">
+                                            ⭐
                                           </Badge>
                                         )}
                                       </div>
-                                      <span className="text-[10px] text-muted-foreground">{row.equipe}</span>
+                                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                        <span className="truncate max-w-[100px]">{row.equipe}</span>
+                                        {row.manager_nom && (
+                                          <>
+                                            <span>•</span>
+                                            <span className="truncate max-w-[60px] font-medium">{row.manager_nom}</span>
+                                          </>
+                                        )}
+                                      </div>
                                     </div>
                                   )}
                                 </TableCell>
-                                <TableCell className="text-right font-bold px-2 py-2 tabular-nums">
+                                <TableCell className="text-right font-bold px-1.5 py-1.5 tabular-nums">
                                   {points > 0 ? points : "—"}
-                                </TableCell>
-                                <TableCell className="px-2 py-2">
-                                  {row.manager_nom && (
-                                    <span className="text-[10px] text-muted-foreground truncate block max-w-[70px]">
-                                      {row.manager_nom}
-                                    </span>
-                                  )}
                                 </TableCell>
                               </TableRow>
                             );
