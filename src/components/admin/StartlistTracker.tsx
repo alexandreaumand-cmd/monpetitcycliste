@@ -1,17 +1,18 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, RefreshCw, Clock, CheckCircle, XCircle, UserPlus, UserMinus, AlertCircle, Edit } from "lucide-react";
+import { Loader2, RefreshCw, Clock, CheckCircle, XCircle, UserPlus, UserMinus, AlertCircle, Edit, Filter, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { TrackerChangeMatchDialog } from "./TrackerChangeMatchDialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface TrackerChange {
   id: string;
@@ -26,11 +27,16 @@ interface TrackerChange {
   validation_status: string;
 }
 
+type TypeFilter = "all" | "added" | "removed";
+type StatusFilter = "all" | "validated" | "pending" | "unmatched" | "skipped";
+
 export const StartlistTracker = () => {
   const queryClient = useQueryClient();
   const [raceUrl, setRaceUrl] = useState("");
   const [selectedChange, setSelectedChange] = useState<TrackerChange | null>(null);
   const [matchDialogOpen, setMatchDialogOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   // Fetch recent runs
   const { data: runs, isLoading: runsLoading } = useQuery({
@@ -127,6 +133,23 @@ export const StartlistTracker = () => {
     addedCount: changes?.filter((c: any) => c.change_type === "added").length || 0,
     removedCount: changes?.filter((c: any) => c.change_type === "removed").length || 0,
     processedCount: changes?.filter((c: any) => c.processed).length || 0,
+  };
+
+  // Filtered changes
+  const filteredChanges = useMemo(() => {
+    if (!changes) return [];
+    return changes.filter((change: TrackerChange) => {
+      const typeMatch = typeFilter === "all" || change.change_type === typeFilter;
+      const statusMatch = statusFilter === "all" || change.validation_status === statusFilter;
+      return typeMatch && statusMatch;
+    });
+  }, [changes, typeFilter, statusFilter]);
+
+  const hasActiveFilters = typeFilter !== "all" || statusFilter !== "all";
+
+  const resetFilters = () => {
+    setTypeFilter("all");
+    setStatusFilter("all");
   };
 
   return (
@@ -242,12 +265,56 @@ export const StartlistTracker = () => {
             <CardHeader>
               <CardTitle className="text-lg">Modifications récentes</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {/* Filter bar */}
+              <div className="flex flex-wrap items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as TypeFilter)}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les types</SelectItem>
+                    <SelectItem value="added">
+                      <span className="flex items-center gap-1">
+                        <UserPlus className="h-3 w-3" /> Ajouts
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="removed">
+                      <span className="flex items-center gap-1">
+                        <UserMinus className="h-3 w-3" /> Retraits
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue placeholder="Statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les statuts</SelectItem>
+                    <SelectItem value="validated">Validé</SelectItem>
+                    <SelectItem value="pending">En attente</SelectItem>
+                    <SelectItem value="unmatched">Unmatched</SelectItem>
+                    <SelectItem value="skipped">Ignoré</SelectItem>
+                  </SelectContent>
+                </Select>
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" onClick={resetFilters} className="gap-1">
+                    <RotateCcw className="h-3 w-3" />
+                    Réinitialiser
+                  </Button>
+                )}
+                <span className="ml-auto text-sm text-muted-foreground">
+                  {filteredChanges.length} résultat{filteredChanges.length > 1 ? "s" : ""} sur {changes?.length || 0}
+                </span>
+              </div>
+
               {changesLoading ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : changes && changes.length > 0 ? (
+              ) : filteredChanges.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -261,7 +328,7 @@ export const StartlistTracker = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {changes.map((change: TrackerChange) => (
+                    {filteredChanges.map((change: TrackerChange) => (
                       <TableRow key={change.id}>
                         <TableCell>{getChangeTypeBadge(change.change_type)}</TableCell>
                         <TableCell className="font-medium">{change.rider_name}</TableCell>
@@ -303,6 +370,10 @@ export const StartlistTracker = () => {
                     ))}
                   </TableBody>
                 </Table>
+              ) : changes && changes.length > 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Aucun résultat pour les filtres sélectionnés.
+                </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   Aucune modification détectée. Lancez le scraping pour commencer.
