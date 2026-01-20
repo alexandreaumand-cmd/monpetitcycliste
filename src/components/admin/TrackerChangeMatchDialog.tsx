@@ -95,9 +95,14 @@ export const TrackerChangeMatchDialog = ({
     mutationFn: async () => {
       if (!change) throw new Error("No change selected");
 
+      // Determine validation status based on what was matched
+      const isFullyMatched = selectedRider && selectedCourse;
+      const validationStatus = isFullyMatched ? "validated" : "unmatched";
+
       const updates: Record<string, unknown> = {
         processed: true,
         processed_at: new Date().toISOString(),
+        validation_status: validationStatus,
       };
 
       if (selectedRider) {
@@ -216,6 +221,7 @@ export const TrackerChangeMatchDialog = ({
         .update({
           processed: true,
           processed_at: new Date().toISOString(),
+          validation_status: "skipped",
         })
         .eq("id", change.id);
 

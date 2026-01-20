@@ -3625,6 +3625,7 @@ export type Database = {
           source_url: string | null
           startlist_entry_id: string | null
           team_name: string | null
+          validation_status: string | null
         }
         Insert: {
           change_type: string
@@ -3640,6 +3641,7 @@ export type Database = {
           source_url?: string | null
           startlist_entry_id?: string | null
           team_name?: string | null
+          validation_status?: string | null
         }
         Update: {
           change_type?: string
@@ -3655,6 +3657,7 @@ export type Database = {
           source_url?: string | null
           startlist_entry_id?: string | null
           team_name?: string | null
+          validation_status?: string | null
         }
         Relationships: [
           {
