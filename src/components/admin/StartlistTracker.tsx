@@ -30,6 +30,8 @@ interface TrackerChange {
 type TypeFilter = "all" | "added" | "removed";
 type StatusFilter = "all" | "validated" | "pending" | "unmatched" | "skipped";
 
+const CHANGES_LIMIT = 500;
+
 export const StartlistTracker = () => {
   const queryClient = useQueryClient();
   const [raceUrl, setRaceUrl] = useState("");
@@ -37,6 +39,7 @@ export const StartlistTracker = () => {
   const [matchDialogOpen, setMatchDialogOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [riderFilter, setRiderFilter] = useState("");
 
   // Fetch recent runs
   const { data: runs, isLoading: runsLoading } = useQuery({
@@ -60,7 +63,7 @@ export const StartlistTracker = () => {
         .from("startlist_tracker_changes")
         .select("*")
         .order("detected_at", { ascending: false })
-        .limit(100);
+        .limit(CHANGES_LIMIT);
       if (error) throw error;
       return data;
     },
@@ -152,15 +155,18 @@ export const StartlistTracker = () => {
     return changes.filter((change: TrackerChange) => {
       const typeMatch = typeFilter === "all" || change.change_type === typeFilter;
       const statusMatch = statusFilter === "all" || change.validation_status === statusFilter;
-      return typeMatch && statusMatch;
+      const riderMatch = !riderFilter || 
+        change.rider_name.toLowerCase().includes(riderFilter.toLowerCase());
+      return typeMatch && statusMatch && riderMatch;
     });
-  }, [changes, typeFilter, statusFilter]);
+  }, [changes, typeFilter, statusFilter, riderFilter]);
 
-  const hasActiveFilters = typeFilter !== "all" || statusFilter !== "all";
+  const hasActiveFilters = typeFilter !== "all" || statusFilter !== "all" || riderFilter !== "";
 
   const resetFilters = () => {
     setTypeFilter("all");
     setStatusFilter("all");
+    setRiderFilter("");
   };
 
   return (
@@ -310,6 +316,12 @@ export const StartlistTracker = () => {
                     <SelectItem value="skipped">Ignoré</SelectItem>
                   </SelectContent>
                 </Select>
+                <Input
+                  placeholder="Rechercher un coureur..."
+                  value={riderFilter}
+                  onChange={(e) => setRiderFilter(e.target.value)}
+                  className="w-[200px]"
+                />
                 {hasActiveFilters && (
                   <Button variant="ghost" size="sm" onClick={resetFilters} className="gap-1">
                     <RotateCcw className="h-3 w-3" />
