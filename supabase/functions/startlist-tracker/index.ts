@@ -225,6 +225,19 @@ Focus on recent changes (last 24-48 hours if dates are visible).`,
   return [];
 }
 
+function extractPcsRaceSlug(raceUrl: string): string | null {
+  try {
+    const url = new URL(raceUrl);
+    const parts = url.pathname.split("/").filter(Boolean);
+    const raceIdx = parts.indexOf("race");
+    if (raceIdx >= 0 && parts[raceIdx + 1]) return parts[raceIdx + 1];
+    // Fallback for unexpected paths: PCS often ends with /{slug}/{year}/startlist
+    return parts[parts.length - 3] || parts[parts.length - 2] || null;
+  } catch {
+    return null;
+  }
+}
+
 async function scrapeRaceStartlist(raceUrl: string, apiKey: string | undefined): Promise<StartlistChange[]> {
   // Fetch the race startlist page
   const response = await fetch(raceUrl, {
@@ -243,9 +256,8 @@ async function scrapeRaceStartlist(raceUrl: string, apiKey: string | undefined):
     throw new Error("LOVABLE_API_KEY is not configured");
   }
 
-  // Extract race ID from URL
-  const urlParts = raceUrl.split("/");
-  const courseId = urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];
+  // Extract race slug from URL (e.g. /race/classic-brugge-de-panne/2026/startlist -> classic-brugge-de-panne)
+  const courseId = extractPcsRaceSlug(raceUrl) || "unknown";
 
   const geminiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -315,7 +327,7 @@ Only return valid JSON, no markdown or explanation.`,
 
   const geminiData = await geminiResponse.json();
   const toolCall = geminiData.choices?.[0]?.message?.tool_calls?.[0];
-  
+
   if (toolCall?.function?.arguments) {
     try {
       const parsed = JSON.parse(toolCall.function.arguments);
@@ -340,14 +352,23 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
   let processedCount = 0;
 
   // Get the current season (2026)
-  const { data: currentSeason } = await supabase
+  const { data: currentSeason, error: seasonError } = await supabase
     .from("saisons")
     .select("id, annee")
     .eq("annee", 2026)
-    .single();
+    .maybeSingle();
+
+  if (seasonError) {
+    console.error(`Failed to load season 2026: ${seasonError.message}`);
+  }
 
   const saisonId = currentSeason?.id;
   console.log(`Using season: ${saisonId} (${currentSeason?.annee})`);
+
+  if (!saisonId) {
+    console.error("No season id found for 2026; cannot auto-match riders.");
+    return 0;
+  }
 
   for (const change of changes) {
     try {
@@ -378,12 +399,12 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
 
       if (!course) {
         console.log(`Course not found: ${change.course_name}`);
-        // Mark change as unprocessed but store the course_name for manual matching
         await supabase
           .from("startlist_tracker_changes")
           .update({
             processed: false,
-            course_id: null,
+            processed_at: new Date().toISOString(),
+            validation_status: "unmatched",
           })
           .eq("rider_name", change.rider_name)
           .eq("course_name", change.course_name)
@@ -404,19 +425,29 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
 
       if (!imports || imports.length === 0) {
         console.log(`Creating new startlist import for course: ${course.id}`);
-        // Create a new startlist import for this course
         const { data: newImport, error: importError } = await supabase
           .from("startlist_imports")
           .insert({
             race_id: course.id,
-            source_url: change.source_url || `https://www.procyclingstats.com/race/${course.id}`,
-            status: "completed",
+            file_url: change.source_url || `https://www.procyclingstats.com/race/${course.id}`,
+            saison_id: saisonId,
           })
           .select()
           .single();
 
         if (importError) {
           console.error(`Failed to create startlist import: ${importError.message}`);
+          await supabase
+            .from("startlist_tracker_changes")
+            .update({
+              processed: false,
+              processed_at: new Date().toISOString(),
+              validation_status: "unmatched",
+              course_id: course.id,
+            })
+            .eq("rider_name", change.rider_name)
+            .eq("course_name", change.course_name)
+            .is("processed", false);
           continue;
         }
         startlistId = newImport.id;
@@ -460,7 +491,7 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
             source_team: change.team_name,
             coureur_id: coureurId,
             confidence: coureurId ? 0.9 : null,
-            status: coureurId ? "matched" : "unmatched",
+            status: coureurId ? "confirmed" : "unmatched",
           });
           if (entryError) {
             console.error(`Failed to insert entry: ${entryError.message}`);
@@ -492,6 +523,7 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
         .update({
           processed: isProcessed,
           processed_at: new Date().toISOString(),
+          validation_status: isProcessed ? "validated" : "unmatched",
           coureur_id: coureurId,
           course_id: course.id,
           startlist_entry_id: null, // Will be set if we track the entry
