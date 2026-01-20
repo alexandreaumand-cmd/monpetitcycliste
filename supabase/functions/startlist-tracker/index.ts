@@ -384,6 +384,7 @@ async function scrapeRaceStartlist(raceUrl: string, apiKey: string | undefined):
   }
 
   const html = await response.text();
+  console.log(`Fetched race HTML: ${html.length} characters`);
 
   if (!apiKey) {
     throw new Error("LOVABLE_API_KEY is not configured");
@@ -391,6 +392,28 @@ async function scrapeRaceStartlist(raceUrl: string, apiKey: string | undefined):
 
   // Extract race slug from URL (e.g. /race/classic-brugge-de-panne/2026/startlist -> classic-brugge-de-panne)
   const courseId = extractPcsRaceSlug(raceUrl) || "unknown";
+
+  // Try to extract only the startlist section from HTML for more focused parsing
+  // PCS uses various class names for the startlist container
+  let htmlToProcess = html;
+  const startlistPatterns = [
+    /<div[^>]*class="[^"]*startlist_v4[^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/i,
+    /<ul[^>]*class="[^"]*startlist[^"]*"[^>]*>[\s\S]*?<\/ul>/i,
+    /<div[^>]*class="[^"]*teams[^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>/i,
+  ];
+  
+  for (const pattern of startlistPatterns) {
+    const match = html.match(pattern);
+    if (match && match[0].length > 1000) {
+      htmlToProcess = match[0];
+      console.log(`Extracted startlist section: ${htmlToProcess.length} characters`);
+      break;
+    }
+  }
+
+  // Limit to 100k characters for Gemini processing
+  const truncatedHtml = htmlToProcess.substring(0, 100000);
+  console.log(`Processing HTML: ${truncatedHtml.length} characters`);
 
   const geminiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -403,24 +426,33 @@ async function scrapeRaceStartlist(raceUrl: string, apiKey: string | undefined):
       messages: [
         {
           role: "system",
-          content: `You are an HTML parser specialized in cycling startlist extraction.
-Extract the complete startlist from a ProCyclingStats race page.
-Return all riders currently listed as "added" entries.
-Return a JSON array with this structure:
-{
-  "course_name": "Race Name",
-  "riders": [
-    {
-      "rider_name": "Rider Full Name",
-      "team_name": "Team Code"
-    }
-  ]
-}
-Only return valid JSON, no markdown or explanation.`,
+          content: `You are an expert HTML parser specialized in extracting cycling race startlists from ProCyclingStats.
+
+CRITICAL INSTRUCTIONS - READ CAREFULLY:
+
+1. You MUST extract EVERY SINGLE RIDER from the startlist. Missing riders will cause data corruption.
+
+2. STRUCTURE OF PCS STARTLISTS:
+   - The startlist is organized by TEAMS
+   - Each team section has a team name/header
+   - Under each team, there are typically 6-8 riders listed
+   - A typical race has 20-25 teams = 150-200 riders total
+
+3. HOW TO FIND RIDERS:
+   - Look for <a> tags containing rider names with href="/rider/..."
+   - Rider names are in format "LASTNAME Firstname" or "LASTNAME FIRSTNAME"
+   - Team names appear as headers before groups of riders
+
+4. VERIFICATION:
+   - After extraction, count your total riders
+   - If you have fewer than 50 riders for a major race, you likely missed sections
+   - Double-check you haven't stopped reading mid-page
+
+5. OUTPUT: Return ALL riders found, even if there are 200+ of them.`,
         },
         {
           role: "user",
-          content: `Parse this race startlist HTML:\n\n${html.substring(0, 80000)}`,
+          content: `Extract the COMPLETE startlist from this ProCyclingStats race page. Make sure to include every single rider from every team:\n\n${truncatedHtml}`,
         },
       ],
       tools: [
@@ -428,18 +460,20 @@ Only return valid JSON, no markdown or explanation.`,
           type: "function",
           function: {
             name: "extract_race_startlist",
-            description: "Extract race startlist from HTML",
+            description: "Extract the complete race startlist - must include every rider from every team",
             parameters: {
               type: "object",
               properties: {
-                course_name: { type: "string" },
+                course_name: { type: "string", description: "The race name as shown on the page" },
+                total_teams: { type: "number", description: "Total number of teams found in the startlist" },
                 riders: {
                   type: "array",
+                  description: "Complete list of ALL riders from ALL teams",
                   items: {
                     type: "object",
                     properties: {
-                      rider_name: { type: "string" },
-                      team_name: { type: "string" },
+                      rider_name: { type: "string", description: "Full rider name in LASTNAME Firstname format" },
+                      team_name: { type: "string", description: "Team code or short name" },
                     },
                     required: ["rider_name"],
                   },
@@ -455,6 +489,8 @@ Only return valid JSON, no markdown or explanation.`,
   });
 
   if (!geminiResponse.ok) {
+    const errorText = await geminiResponse.text();
+    console.error("Gemini API error:", errorText);
     throw new Error(`Gemini API error: ${geminiResponse.status}`);
   }
 
@@ -464,7 +500,22 @@ Only return valid JSON, no markdown or explanation.`,
   if (toolCall?.function?.arguments) {
     try {
       const parsed = JSON.parse(toolCall.function.arguments);
-      return (parsed.riders || []).map((r: any) => ({
+      const riders = parsed.riders || [];
+      const totalTeams = parsed.total_teams || 0;
+      
+      console.log(`Gemini extracted ${riders.length} riders from ${totalTeams} teams for "${parsed.course_name}"`);
+      
+      // Log sample riders for debugging
+      if (riders.length > 0) {
+        console.log(`Sample riders: ${riders.slice(0, 5).map((r: any) => r.rider_name).join(", ")}...`);
+      }
+      
+      // Warn if extraction seems incomplete
+      if (riders.length < 20) {
+        console.warn(`WARNING: Only ${riders.length} riders extracted - this seems incomplete for a race startlist!`);
+      }
+      
+      return riders.map((r: any) => ({
         course_id: courseId,
         course_name: parsed.course_name || "Unknown Race",
         rider_name: r.rider_name,
@@ -478,6 +529,7 @@ Only return valid JSON, no markdown or explanation.`,
     }
   }
 
+  console.log("No tool call found in Gemini response");
   return [];
 }
 
@@ -592,20 +644,35 @@ async function generateFullSyncChanges(
 
   const changes: StartlistChange[] = [];
 
+  // SAFETY CHECK: If scraped count is suspiciously low compared to existing,
+  // skip removals to prevent false deletions from incomplete extraction
+  const scrapedCount = scrapedRiders.length;
+  const existingCount = existingEntries.length;
+  const removalThreshold = 0.5; // If scraped < 50% of existing, don't remove
+  
+  const shouldProcessRemovals = scrapedCount >= existingCount * removalThreshold;
+  
+  if (!shouldProcessRemovals) {
+    console.warn(`SAFETY: Scraped ${scrapedCount} riders vs ${existingCount} existing (< ${removalThreshold * 100}%). Skipping removals to prevent false deletions.`);
+  }
+
   // Find riders to REMOVE (in existing but not in scraped)
-  for (const [normalizedName, entry] of existingNamesNormalized.entries()) {
-    if (!scrapedNamesNormalized.has(normalizedName)) {
-      // This rider is no longer in the scraped startlist - mark for removal
-      const displayName = entry.coureur_nom || entry.source_name;
-      console.log(`Marking for removal: ${displayName}`);
-      changes.push({
-        course_id: courseId,
-        course_name: courseName,
-        rider_name: entry.source_name,
-        team_name: null,
-        change_type: "removed",
-        source_url: raceUrl,
-      });
+  // Only process if we have a reasonable number of scraped riders
+  if (shouldProcessRemovals) {
+    for (const [normalizedName, entry] of existingNamesNormalized.entries()) {
+      if (!scrapedNamesNormalized.has(normalizedName)) {
+        // This rider is no longer in the scraped startlist - mark for removal
+        const displayName = entry.coureur_nom || entry.source_name;
+        console.log(`Marking for removal: ${displayName}`);
+        changes.push({
+          course_id: courseId,
+          course_name: courseName,
+          rider_name: entry.source_name,
+          team_name: null,
+          change_type: "removed",
+          source_url: raceUrl,
+        });
+      }
     }
   }
 
@@ -619,7 +686,9 @@ async function generateFullSyncChanges(
     }
   }
 
-  console.log(`Full sync result: ${changes.filter(c => c.change_type === "added").length} additions, ${changes.filter(c => c.change_type === "removed").length} removals`);
+  const additionsCount = changes.filter(c => c.change_type === "added").length;
+  const removalsCount = changes.filter(c => c.change_type === "removed").length;
+  console.log(`Full sync result: ${additionsCount} additions, ${removalsCount} removals (safety check: removals ${shouldProcessRemovals ? "enabled" : "DISABLED"})`);
 
   return changes;
 }
@@ -806,19 +875,47 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
         }
       } else if (change.change_type === "removed") {
         // Remove entry if exists
-        const { data: toRemove } = await supabase
+        console.log(`Looking for entry to remove: startlist_id=${startlistId}, source_name="${change.rider_name}"`);
+        
+        // Try by source_name first
+        let { data: toRemove } = await supabase
           .from("startlist_entries")
-          .select("id")
+          .select("id, source_name, coureur_id")
           .eq("startlist_id", startlistId)
           .ilike("source_name", change.rider_name)
           .limit(1);
 
+        console.log(`Search by source_name result: ${JSON.stringify(toRemove)}`);
+
+        // Fallback: search by coureur_id if we have a matched rider and source_name search failed
+        if ((!toRemove || toRemove.length === 0) && coureurId) {
+          console.log(`Fallback: searching by coureur_id=${coureurId}`);
+          const { data: fallbackEntries } = await supabase
+            .from("startlist_entries")
+            .select("id, source_name, coureur_id")
+            .eq("startlist_id", startlistId)
+            .eq("coureur_id", coureurId)
+            .limit(1);
+          toRemove = fallbackEntries;
+          console.log(`Fallback search result: ${JSON.stringify(toRemove)}`);
+        }
+
         if (toRemove && toRemove.length > 0) {
-          await supabase
+          const entryToDelete = toRemove[0];
+          const { error: deleteError } = await supabase
             .from("startlist_entries")
             .delete()
-            .eq("id", toRemove[0].id);
-          entryInserted = true; // Removal succeeded
+            .eq("id", entryToDelete.id);
+          
+          if (deleteError) {
+            console.error(`Failed to delete entry ${entryToDelete.id}: ${deleteError.message}`);
+          } else {
+            console.log(`Successfully deleted entry ${entryToDelete.id} for ${change.rider_name}`);
+            entryInserted = true; // Removal succeeded
+            insertedEntryId = entryToDelete.id; // Track the deleted entry ID for audit
+          }
+        } else {
+          console.log(`No entry found to remove for ${change.rider_name} in startlist ${startlistId}`);
         }
       }
 
