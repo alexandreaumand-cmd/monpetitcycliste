@@ -152,6 +152,23 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
           </div>
         </Card>
 
+        {/* Section Liste complète des partants (SuperAdmin mode - no managers) */}
+        {startlistData?.starters?.length > 0 && startlistData?.managers?.length === 0 && (
+          <Card className="p-4">
+            <h3 className="text-lg font-semibold mb-4">Liste des partants ({startlistData.starters.length})</h3>
+            <div className="grid grid-cols-3 gap-2">
+              {startlistData.starters.map((starter: any) => (
+                <div key={starter.coureur_id} className="flex items-center gap-2 text-sm py-1 px-2 bg-muted/30 rounded">
+                  <span className="font-medium truncate flex-1">{starter.nom}</span>
+                  {starter.equipe && (
+                    <span className="text-xs text-muted-foreground truncate">{starter.equipe}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
         {/* Section Managers - Only show if managers exist */}
         {startlistData?.managers?.length > 0 && (
           <Card className="p-4">

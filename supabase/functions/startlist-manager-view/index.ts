@@ -142,8 +142,17 @@ Deno.serve(async (req) => {
     // Check if we should include managers (only if league_id is provided)
     const includeManagers = !!league_id;
 
-    // If no league_id (SuperAdmin mode), return generic view without managers
+    // If no league_id (SuperAdmin mode), return generic view without managers but WITH starters list
     if (!includeManagers) {
+      // Build starters list from enrichedEntries
+      const starters = enrichedEntries.map(e => ({
+        coureur_id: e.coureur_id,
+        nom: e.coureurs?.nom || e.coureur_id,
+        equipe: e.coureurs?.equipe || '',
+        cote: e.coureurs?.prix_initial || 10,
+        bib_no: e.bib_no
+      })).sort((a, b) => a.nom.localeCompare(b.nom));
+
       const result = {
         race: {
           id: race.id,
@@ -157,6 +166,7 @@ Deno.serve(async (req) => {
         admin_rating_note: null,
         admin_rating_author: null,
         managers: [],
+        starters: starters,
         scoring: {
           categorie: race.categorie,
           rules: scoringRules || []
@@ -167,7 +177,7 @@ Deno.serve(async (req) => {
         }
       };
 
-      console.log('SuperAdmin generic view:', result.totals);
+      console.log('SuperAdmin generic view:', result.totals, 'starters:', starters.length);
 
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
