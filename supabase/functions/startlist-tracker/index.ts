@@ -474,6 +474,9 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
         }
       }
 
+      let entryInserted = false;
+      let insertedEntryId: string | null = null;
+
       if (change.change_type === "added") {
         // Check if entry already exists
         const { data: existing } = await supabase
@@ -484,20 +487,42 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
           .limit(1);
 
         if (!existing || existing.length === 0) {
-          // Add new entry
-          const { error: entryError } = await supabase.from("startlist_entries").insert({
-            startlist_id: startlistId,
-            source_name: change.rider_name,
-            source_team: change.team_name,
-            coureur_id: coureurId,
-            confidence: coureurId ? 0.9 : null,
-            status: coureurId ? "confirmed" : "unmatched",
-          });
+          // Get max line_no for this startlist to calculate next line number
+          const { data: maxLineData } = await supabase
+            .from("startlist_entries")
+            .select("line_no")
+            .eq("startlist_id", startlistId)
+            .order("line_no", { ascending: false })
+            .limit(1);
+          
+          const nextLineNo = (maxLineData?.[0]?.line_no || 0) + 1;
+
+          // Add new entry with line_no
+          const { data: insertedEntry, error: entryError } = await supabase
+            .from("startlist_entries")
+            .insert({
+              startlist_id: startlistId,
+              line_no: nextLineNo,
+              source_name: change.rider_name,
+              source_team: change.team_name,
+              coureur_id: coureurId,
+              confidence: coureurId ? 0.9 : null,
+              status: coureurId ? "confirmed" : "unmatched",
+            })
+            .select("id")
+            .single();
+
           if (entryError) {
             console.error(`Failed to insert entry: ${entryError.message}`);
           } else {
-            console.log(`Added entry for ${change.rider_name} to startlist ${startlistId}`);
+            console.log(`Added entry for ${change.rider_name} to startlist ${startlistId} (line ${nextLineNo})`);
+            entryInserted = true;
+            insertedEntryId = insertedEntry?.id || null;
           }
+        } else {
+          // Entry already exists, consider it as processed
+          entryInserted = true;
+          insertedEntryId = existing[0].id;
         }
       } else if (change.change_type === "removed") {
         // Remove entry if exists
@@ -513,25 +538,26 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
             .from("startlist_entries")
             .delete()
             .eq("id", toRemove[0].id);
+          entryInserted = true; // Removal succeeded
         }
       }
 
-      // Update the tracker change record as processed
-      const isProcessed = coureurId !== null;
+      // Update the tracker change record - only "validated" if both rider matched AND entry inserted/removed
+      const isFullyValidated = coureurId !== null && entryInserted;
       await supabase
         .from("startlist_tracker_changes")
         .update({
-          processed: isProcessed,
+          processed: entryInserted,
           processed_at: new Date().toISOString(),
-          validation_status: isProcessed ? "validated" : "unmatched",
+          validation_status: isFullyValidated ? "validated" : (entryInserted ? "pending" : "unmatched"),
           coureur_id: coureurId,
           course_id: course.id,
-          startlist_entry_id: null, // Will be set if we track the entry
+          startlist_entry_id: insertedEntryId,
         })
         .eq("rider_name", change.rider_name)
         .eq("course_name", change.course_name);
 
-      if (isProcessed) {
+      if (isFullyValidated) {
         processedCount++;
       }
     } catch (error) {
