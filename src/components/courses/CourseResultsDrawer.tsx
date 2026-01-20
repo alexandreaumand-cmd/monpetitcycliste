@@ -452,17 +452,27 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             {/* Conditional tabs based on race type */}
             {meta?.etapes_disponibles && meta.etapes_disponibles.length > 0 ? (
-              // Stage race: 3 tabs
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="finals">Classements Finaux</TabsTrigger>
-                <TabsTrigger value="stages">Classements Étapes</TabsTrigger>
-                <TabsTrigger value="leaderboard">Classement Managers</TabsTrigger>
+              // Stage race: 3 tabs - shorter labels for mobile
+              <TabsList className="grid w-full grid-cols-3 h-auto p-1">
+                <TabsTrigger value="finals" className="text-xs px-2 py-2 whitespace-nowrap">
+                  Finaux
+                </TabsTrigger>
+                <TabsTrigger value="stages" className="text-xs px-2 py-2 whitespace-nowrap">
+                  Étapes
+                </TabsTrigger>
+                <TabsTrigger value="leaderboard" className="text-xs px-2 py-2 whitespace-nowrap">
+                  Managers
+                </TabsTrigger>
               </TabsList>
             ) : (
               // Simple race: 2 tabs
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="results">Résultats</TabsTrigger>
-                <TabsTrigger value="leaderboard">Classement Managers</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 h-auto p-1">
+                <TabsTrigger value="results" className="text-sm px-3 py-2">
+                  Résultats
+                </TabsTrigger>
+                <TabsTrigger value="leaderboard" className="text-sm px-3 py-2">
+                  Managers
+                </TabsTrigger>
               </TabsList>
             )}
 
