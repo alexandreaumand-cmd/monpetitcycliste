@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
-import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift } from "lucide-react";
+import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Radar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataManagementTabs } from "@/components/admin/DataManagementTabs";
 import { SuperAdminLeaguesPage } from "@/pages/admin/SuperAdminLeaguesPage";
@@ -15,6 +15,7 @@ import { BaremesManager } from "@/components/admin/BaremesManager";
 import { PointsLedgerTable } from "@/components/admin/PointsLedgerTable";
 import { StartlistDataManager } from "@/components/admin/StartlistDataManager";
 import { SuperAdminBonusPage } from "@/pages/admin/SuperAdminBonusPage";
+import { StartlistTracker } from "@/components/admin/StartlistTracker";
 
 const superAdminNavItems = [
   { label: 'Résultats', path: 'results', icon: Trophy },
@@ -25,6 +26,7 @@ const superAdminNavItems = [
   { label: 'Barèmes', path: 'baremes', icon: BarChart },
   { label: 'Points Ledger', path: 'points-ledger', icon: Database },
   { label: 'Startlists', path: 'startlists', icon: FileText },
+  { label: 'Startlist Tracker', path: 'startlist-tracker', icon: Radar },
   { label: 'Données Startlists', path: 'startlist-data', icon: Database },
   { label: 'Données', path: 'data', icon: Database },
   { label: 'Ligues', path: 'leagues', icon: Users },
@@ -95,6 +97,7 @@ export const SuperAdminPageDesktop = ({ manager, onSignOut }: SuperAdminPageDesk
             <Route path="baremes" element={<BaremesManager />} />
             <Route path="points-ledger" element={<PointsLedgerTable />} />
             <Route path="startlists" element={<StartlistImportManager />} />
+            <Route path="startlist-tracker" element={<StartlistTracker />} />
             <Route path="startlist-data" element={<StartlistDataManager />} />
             <Route path="data" element={<DataManagementTabs />} />
               <Route path="leagues" element={<SuperAdminLeaguesPage />} />
