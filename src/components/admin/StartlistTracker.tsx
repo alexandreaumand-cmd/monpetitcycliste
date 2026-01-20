@@ -23,6 +23,7 @@ interface TrackerChange {
   change_type: string;
   processed: boolean;
   detected_at: string;
+  validation_status: string;
 }
 
 export const StartlistTracker = () => {
@@ -270,16 +271,22 @@ export const StartlistTracker = () => {
                           {formatDistanceToNow(new Date(change.detected_at), { addSuffix: true, locale: fr })}
                         </TableCell>
                         <TableCell>
-                          {change.processed ? (
+                          {change.validation_status === "validated" ? (
                             <Badge variant="outline" className="text-primary">
-                              <CheckCircle className="h-3 w-3 mr-1" />Traité
+                              <CheckCircle className="h-3 w-3 mr-1" />Validé
                             </Badge>
+                          ) : change.validation_status === "unmatched" ? (
+                            <Badge variant="outline" className="text-destructive">
+                              <XCircle className="h-3 w-3 mr-1" />Unmatched
+                            </Badge>
+                          ) : change.validation_status === "skipped" ? (
+                            <Badge variant="outline" className="text-muted-foreground">Ignoré</Badge>
                           ) : (
                             <Badge variant="outline" className="text-warning">En attente</Badge>
                           )}
                         </TableCell>
                         <TableCell>
-                          {!change.processed && (
+                          {change.validation_status === "pending" && (
                             <Button
                               variant="ghost"
                               size="icon"
