@@ -339,21 +339,40 @@ Only return valid JSON, no markdown or explanation.`,
 async function processChanges(supabase: any, changes: StartlistChange[]): Promise<number> {
   let processedCount = 0;
 
+  // Get the current season for rider matching
+  const { data: currentSeason } = await supabase
+    .from("saisons")
+    .select("id")
+    .gte("annee_fin", new Date().getFullYear())
+    .order("annee_debut", { ascending: false })
+    .limit(1)
+    .single();
+
+  const saisonId = currentSeason?.id;
+
   for (const change of changes) {
     try {
-      // Try to find matching course in our database
-      const { data: courses } = await supabase
-        .from("courses")
-        .select("id, nom")
-        .or(`id.ilike.%${change.course_id}%,nom.ilike.%${change.course_name}%`)
-        .limit(1);
+      // Try to find matching course - use normalize_text for better matching
+      const { data: courses } = await supabase.rpc("search_course_by_name", {
+        p_search: change.course_name,
+      });
 
-      if (!courses || courses.length === 0) {
+      let course = courses?.[0];
+
+      // Fallback: direct search on courses table
+      if (!course) {
+        const { data: directCourses } = await supabase
+          .from("courses")
+          .select("id, nom")
+          .or(`id.ilike.%${change.course_id}%,nom.ilike.%${change.course_name.split(" ").slice(0, 3).join("%")}%`)
+          .limit(1);
+        course = directCourses?.[0];
+      }
+
+      if (!course) {
         console.log(`Course not found: ${change.course_name} (${change.course_id})`);
         continue;
       }
-
-      const course = courses[0];
 
       // Find the latest startlist import for this course
       const { data: imports } = await supabase
@@ -370,23 +389,18 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
 
       const startlistId = imports[0].id;
 
-      // Try to match the rider
-      const { data: riders } = await supabase
-        .from("coureurs")
-        .select("id, nom")
-        .ilike("nom", `%${change.rider_name.split(" ").pop()}%`)
-        .limit(5);
-
+      // Use the proper RPC function for word-order-insensitive, accent-insensitive matching
       let coureurId: string | null = null;
-      if (riders && riders.length > 0) {
-        // Simple matching - find best match
-        const normalizedName = change.rider_name.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        for (const rider of riders) {
-          const riderNormalized = rider.nom.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-          if (riderNormalized.includes(normalizedName) || normalizedName.includes(riderNormalized)) {
-            coureurId = rider.id;
-            break;
-          }
+      if (saisonId) {
+        const { data: matchedRiders } = await supabase.rpc("search_riders_for_matching", {
+          p_saison_id: saisonId,
+          p_query: change.rider_name,
+          p_limit: 1,
+        });
+
+        if (matchedRiders && matchedRiders.length > 0) {
+          coureurId = matchedRiders[0].coureur_id;
+          console.log(`Matched rider: "${change.rider_name}" -> "${matchedRiders[0].coureur_nom}" (${coureurId})`);
         }
       }
 
@@ -406,7 +420,7 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
             source_name: change.rider_name,
             source_team: change.team_name,
             coureur_id: coureurId,
-            confidence: coureurId ? 0.8 : null,
+            confidence: coureurId ? 0.9 : null,
             status: coureurId ? "matched" : "unmatched",
           });
           processedCount++;
@@ -436,10 +450,15 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
           processed: true,
           processed_at: new Date().toISOString(),
           coureur_id: coureurId,
+          course_id: course.id,
         })
         .eq("rider_name", change.rider_name)
-        .eq("course_id", change.course_id)
+        .eq("course_name", change.course_name)
         .eq("processed", false);
+
+      if (coureurId) {
+        processedCount++;
+      }
     } catch (error) {
       console.error(`Error processing change for ${change.rider_name}:`, error);
     }
