@@ -254,22 +254,27 @@ async function scrapeChangedRacesList(apiKey: string | undefined): Promise<Chang
         {
           role: "system",
           content: `You are an HTML parser specialized in extracting cycling race information from ProCyclingStats.
-This page shows a list of races that have had startlist modifications in the last 12 hours.
 
-Your task is to extract all races from the page. Each race appears as a link in the list.
-The race URL format on PCS is: /race/{slug}/{year}/startlist
+This page shows a TABLE with races that have had startlist modifications in the last 12 hours.
+The table has columns: Last change | Date | Race | Class | #Changes
 
-Extract each race and return:
-- name: The displayed race name (e.g., "Tour Down Under", "Paris-Nice")
-- slug: The race slug from the URL (e.g., "tour-down-under", "paris-nice")
-- year: The year from the URL (e.g., 2026)
+CRITICAL: You MUST extract ALL races from the table, reading from TOP to BOTTOM.
+Each row contains a race with:
+- The race name in the "Race" column (often with a flag icon and link)
+- The race link format is: /race/{race-slug}/{year}/startlist or /race/{race-slug}/{year}
 
-Return ONLY the races listed on the page, not navigation elements.
-If no races are found, return an empty array.`,
+Examples of races you might find:
+- "UAE Tour" -> slug: "uae-tour", year: 2026
+- "Tour Down Under" -> slug: "tour-down-under", year: 2026
+- "Classica Camp de Morvedre" -> slug: "classica-camp-de-morvedre", year: 2026
+- "Gran Premio Castellón" -> slug: "gran-premio-castellon", year: 2026
+
+Extract EVERY SINGLE race row from the table. Do not skip any.
+If the page shows 10 races, return exactly 10 races.`,
         },
         {
           role: "user",
-          content: `Extract the list of races with recent startlist changes from this HTML:\n\n${html.substring(0, 80000)}`,
+          content: `Extract ALL races with recent startlist changes from this HTML page. Make sure to extract every single race in the table:\n\n${html.substring(0, 100000)}`,
         },
       ],
       tools: [
@@ -277,18 +282,19 @@ If no races are found, return an empty array.`,
           type: "function",
           function: {
             name: "extract_changed_races",
-            description: "Extract the list of races with recent startlist changes",
+            description: "Extract the complete list of races with recent startlist changes from the table",
             parameters: {
               type: "object",
               properties: {
                 races: {
                   type: "array",
+                  description: "All races from the table, one per row",
                   items: {
                     type: "object",
                     properties: {
-                      name: { type: "string", description: "Race name as displayed" },
-                      slug: { type: "string", description: "Race slug from URL" },
-                      year: { type: "number", description: "Race year" },
+                      name: { type: "string", description: "Race name exactly as displayed in the table" },
+                      slug: { type: "string", description: "Race slug extracted from the race URL (e.g., 'uae-tour', 'tour-down-under')" },
+                      year: { type: "number", description: "Race year from the URL (e.g., 2026)" },
                     },
                     required: ["name", "slug", "year"],
                   },
@@ -321,7 +327,8 @@ If no races are found, return an empty array.`,
         year: r.year,
         url: `https://www.procyclingstats.com/race/${r.slug}/${r.year}/startlist`,
       }));
-      console.log(`Extracted ${races.length} races from page`);
+      console.log(`Extracted ${races.length} races from page:`);
+      races.forEach((r, i) => console.log(`  ${i + 1}. ${r.name} (${r.slug}/${r.year})`));
       return races;
     } catch (e) {
       console.error("Failed to parse Gemini response:", e);
@@ -329,6 +336,7 @@ If no races are found, return an empty array.`,
     }
   }
 
+  console.log("No tool call found in Gemini response");
   return [];
 }
 
