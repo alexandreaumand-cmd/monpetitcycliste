@@ -5607,6 +5607,15 @@ export type Database = {
           total_purchase_price: number
         }[]
       }
+      search_course_by_name: {
+        Args: { p_limit?: number; p_search: string }
+        Returns: {
+          date_debut: string
+          id: string
+          nom: string
+          phase_id: string
+        }[]
+      }
       search_riders_for_matching: {
         Args: { p_limit?: number; p_query?: string; p_saison_id: string }
         Returns: {
