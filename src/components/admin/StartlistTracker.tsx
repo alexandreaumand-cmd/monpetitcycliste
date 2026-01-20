@@ -76,7 +76,18 @@ export const StartlistTracker = () => {
       return data;
     },
     onSuccess: (data) => {
-      toast.success(`Scraping terminé: ${data.changes_detected} changements détectés, ${data.changes_processed} traités`);
+      const { races_analyzed = 0, races_matched = 0, changes_detected = 0, changes_processed = 0 } = data;
+      
+      if (races_analyzed === 0) {
+        toast.info("Aucune course avec modifications dans les 12 dernières heures.");
+      } else if (races_matched === 0) {
+        toast.warning(`${races_analyzed} courses analysées, mais aucune ne correspond à la base de données.`);
+      } else if (changes_detected === 0) {
+        toast.success(`${races_matched}/${races_analyzed} courses analysées. Startlists déjà à jour.`);
+      } else {
+        toast.success(`${races_matched} courses analysées: ${changes_detected} changements détectés, ${changes_processed} traités.`);
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["startlist-tracker-runs"] });
       queryClient.invalidateQueries({ queryKey: ["startlist-tracker-changes"] });
     },

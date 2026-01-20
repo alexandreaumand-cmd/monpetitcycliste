@@ -15,6 +15,13 @@ interface StartlistChange {
   source_url: string;
 }
 
+interface ChangedRace {
+  name: string;
+  slug: string;
+  year: number;
+  url: string;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -45,17 +52,93 @@ serve(async (req) => {
 
     try {
       let changes: StartlistChange[] = [];
-      let fullSyncMode = false;
+      let racesAnalyzed = 0;
+      let racesMatched = 0;
 
       if (source_type === "global") {
-        // Fetch the global startlist changes page
-        changes = await scrapeGlobalChanges(lovableApiKey);
+        // NEW TWO-STEP APPROACH:
+        // Step 1: Fetch list of races with recent startlist modifications
+        console.log("Step 1: Fetching list of changed races...");
+        const changedRaces = await scrapeChangedRacesList(lovableApiKey);
+        console.log(`Found ${changedRaces.length} races with recent changes`);
+        racesAnalyzed = changedRaces.length;
+
+        if (changedRaces.length === 0) {
+          console.log("No races with changes found in the last 12 hours");
+        } else {
+          // Step 2: Get races from current season in database
+          const { data: dbCourses } = await supabase
+            .from("courses")
+            .select("id, nom, date_debut")
+            .gte("date_debut", "2025-07-01"); // Season 2026 starts July 2025
+
+          if (dbCourses && dbCourses.length > 0) {
+            console.log(`Database has ${dbCourses.length} courses for current season`);
+            
+            // Create lookup maps for matching
+            const dbCoursesBySlug = new Map<string, { id: string; nom: string }>();
+            const dbCoursesByName = new Map<string, { id: string; nom: string }>();
+            
+            for (const course of dbCourses) {
+              // Add by lowercase ID (slug)
+              dbCoursesBySlug.set(course.id.toLowerCase(), course);
+              // Add by normalized name
+              const normalizedName = normalizeName(course.nom);
+              dbCoursesByName.set(normalizedName, course);
+            }
+
+            // Step 3: For each changed race that exists in our DB, do a full sync
+            for (const race of changedRaces) {
+              const slugLower = race.slug.toLowerCase();
+              const normalizedRaceName = normalizeName(race.name);
+              
+              // Try to match by slug first, then by name
+              let matchedCourse = dbCoursesBySlug.get(slugLower);
+              if (!matchedCourse) {
+                matchedCourse = dbCoursesByName.get(normalizedRaceName);
+              }
+              // Also try partial matching on slug
+              if (!matchedCourse) {
+                for (const [dbSlug, course] of dbCoursesBySlug) {
+                  if (dbSlug.includes(slugLower) || slugLower.includes(dbSlug)) {
+                    matchedCourse = course;
+                    break;
+                  }
+                }
+              }
+
+              if (!matchedCourse) {
+                console.log(`Course "${race.name}" (${race.slug}) not found in database, skipping`);
+                continue;
+              }
+
+              racesMatched++;
+              console.log(`Processing course: ${race.name} -> matched to ${matchedCourse.id}`);
+
+              try {
+                // Scrape the full startlist for this race
+                const scrapedRiders = await scrapeRaceStartlist(race.url, lovableApiKey);
+                console.log(`Scraped ${scrapedRiders.length} riders from ${race.name}`);
+
+                // Generate changes by comparing with existing entries (full sync)
+                const raceChanges = await generateFullSyncChanges(supabase, scrapedRiders, race.url);
+                console.log(`Generated ${raceChanges.length} changes for ${race.name}`);
+                
+                changes.push(...raceChanges);
+              } catch (raceError) {
+                console.error(`Error processing race ${race.name}:`, raceError);
+                // Continue with next race
+              }
+            }
+          } else {
+            console.log("No courses found in database for current season");
+          }
+        }
       } else if (source_type === "race" && race_url) {
-        // Fetch a specific race startlist - this triggers FULL SYNC mode
-        fullSyncMode = true;
+        // Single race scraping - triggers FULL SYNC mode
+        racesAnalyzed = 1;
+        racesMatched = 1;
         const scrapedRiders = await scrapeRaceStartlist(race_url, lovableApiKey);
-        
-        // For full sync, we need to compare with existing entries and generate removals
         changes = await generateFullSyncChanges(supabase, scrapedRiders, race_url);
       }
 
@@ -89,6 +172,8 @@ serve(async (req) => {
         JSON.stringify({
           success: true,
           run_id: runId,
+          races_analyzed: racesAnalyzed,
+          races_matched: racesMatched,
           changes_detected: changes.length,
           changes_processed: processedCount,
         }),
@@ -118,23 +203,41 @@ serve(async (req) => {
   }
 });
 
-async function scrapeGlobalChanges(apiKey: string | undefined): Promise<StartlistChange[]> {
-  const pcsUrl = "https://www.procyclingstats.com/startlist-changes.php";
+/**
+ * Normalize a name for comparison (remove accents, lowercase, etc.)
+ */
+function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * NEW FUNCTION: Scrape the list of races with recent startlist changes
+ * URL: https://www.procyclingstats.com/races.php?s=startlist-changes-all-races&interval=12&filter=Filter
+ */
+async function scrapeChangedRacesList(apiKey: string | undefined): Promise<ChangedRace[]> {
+  const pcsUrl = "https://www.procyclingstats.com/races.php?s=startlist-changes-all-races&interval=12&filter=Filter";
   
-  // Fetch the HTML page
+  console.log(`Fetching changed races list from: ${pcsUrl}`);
+  
   const response = await fetch(pcsUrl, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     },
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch PCS page: ${response.status}`);
+    throw new Error(`Failed to fetch PCS races page: ${response.status}`);
   }
 
   const html = await response.text();
+  console.log(`Fetched HTML: ${html.length} characters`);
 
-  // Use Gemini to parse the HTML and extract changes
   if (!apiKey) {
     throw new Error("LOVABLE_API_KEY is not configured");
   }
@@ -146,64 +249,57 @@ async function scrapeGlobalChanges(apiKey: string | undefined): Promise<Startlis
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3-flash-preview",
       messages: [
         {
           role: "system",
-          content: `You are an HTML parser specialized in cycling data extraction. 
-Extract startlist changes from ProCyclingStats HTML.
-Return a JSON array of changes with this structure:
-{
-  "changes": [
-    {
-      "course_id": "race-slug-from-url",
-      "course_name": "Race Name",
-      "rider_name": "Rider Full Name",
-      "team_name": "Team Code or Name",
-      "change_type": "added" or "removed",
-      "source_url": "full URL of the race page"
-    }
-  ]
-}
-Only return valid JSON, no markdown or explanation.
-Focus on recent changes (last 24-48 hours if dates are visible).`,
+          content: `You are an HTML parser specialized in extracting cycling race information from ProCyclingStats.
+This page shows a list of races that have had startlist modifications in the last 12 hours.
+
+Your task is to extract all races from the page. Each race appears as a link in the list.
+The race URL format on PCS is: /race/{slug}/{year}/startlist
+
+Extract each race and return:
+- name: The displayed race name (e.g., "Tour Down Under", "Paris-Nice")
+- slug: The race slug from the URL (e.g., "tour-down-under", "paris-nice")
+- year: The year from the URL (e.g., 2026)
+
+Return ONLY the races listed on the page, not navigation elements.
+If no races are found, return an empty array.`,
         },
         {
           role: "user",
-          content: `Parse this HTML and extract startlist changes:\n\n${html.substring(0, 50000)}`,
+          content: `Extract the list of races with recent startlist changes from this HTML:\n\n${html.substring(0, 80000)}`,
         },
       ],
       tools: [
         {
           type: "function",
           function: {
-            name: "extract_startlist_changes",
-            description: "Extract startlist changes from HTML",
+            name: "extract_changed_races",
+            description: "Extract the list of races with recent startlist changes",
             parameters: {
               type: "object",
               properties: {
-                changes: {
+                races: {
                   type: "array",
                   items: {
                     type: "object",
                     properties: {
-                      course_id: { type: "string" },
-                      course_name: { type: "string" },
-                      rider_name: { type: "string" },
-                      team_name: { type: "string" },
-                      change_type: { type: "string", enum: ["added", "removed"] },
-                      source_url: { type: "string" },
+                      name: { type: "string", description: "Race name as displayed" },
+                      slug: { type: "string", description: "Race slug from URL" },
+                      year: { type: "number", description: "Race year" },
                     },
-                    required: ["course_id", "course_name", "rider_name", "change_type"],
+                    required: ["name", "slug", "year"],
                   },
                 },
               },
-              required: ["changes"],
+              required: ["races"],
             },
           },
         },
       ],
-      tool_choice: { type: "function", function: { name: "extract_startlist_changes" } },
+      tool_choice: { type: "function", function: { name: "extract_changed_races" } },
     }),
   });
 
@@ -215,12 +311,18 @@ Focus on recent changes (last 24-48 hours if dates are visible).`,
 
   const geminiData = await geminiResponse.json();
   
-  // Extract tool call result
   const toolCall = geminiData.choices?.[0]?.message?.tool_calls?.[0];
   if (toolCall?.function?.arguments) {
     try {
       const parsed = JSON.parse(toolCall.function.arguments);
-      return parsed.changes || [];
+      const races: ChangedRace[] = (parsed.races || []).map((r: any) => ({
+        name: r.name,
+        slug: r.slug,
+        year: r.year,
+        url: `https://www.procyclingstats.com/race/${r.slug}/${r.year}/startlist`,
+      }));
+      console.log(`Extracted ${races.length} races from page`);
+      return races;
     } catch (e) {
       console.error("Failed to parse Gemini response:", e);
       return [];
@@ -247,7 +349,7 @@ async function scrapeRaceStartlist(raceUrl: string, apiKey: string | undefined):
   // Fetch the race startlist page
   const response = await fetch(raceUrl, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     },
   });
 
@@ -271,7 +373,7 @@ async function scrapeRaceStartlist(raceUrl: string, apiKey: string | undefined):
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3-flash-preview",
       messages: [
         {
           role: "system",
@@ -292,7 +394,7 @@ Only return valid JSON, no markdown or explanation.`,
         },
         {
           role: "user",
-          content: `Parse this race startlist HTML:\n\n${html.substring(0, 50000)}`,
+          content: `Parse this race startlist HTML:\n\n${html.substring(0, 80000)}`,
         },
       ],
       tools: [
