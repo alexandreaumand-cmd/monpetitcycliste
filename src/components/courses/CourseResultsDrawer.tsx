@@ -21,9 +21,9 @@ import { useLeague } from "@/contexts/LeagueContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 // Jersey holders compact bar component
-const JerseyHoldersBar = ({ courseId, etapeNumero }: { courseId: string | null; etapeNumero: number | null }) => {
+const JerseyHoldersBar = ({ courseId, etapeNumero, leagueId }: { courseId: string | null; etapeNumero: number | null; leagueId: string | null }) => {
   const { data: holders, isLoading } = useQuery({
-    queryKey: ["jersey-holders", courseId, etapeNumero],
+    queryKey: ["jersey-holders", courseId, etapeNumero, leagueId],
     queryFn: async () => {
       if (!courseId || !etapeNumero) return null;
       
@@ -41,15 +41,18 @@ const JerseyHoldersBar = ({ courseId, etapeNumero }: { courseId: string | null; 
             body: {
               course_id: courseId,
               type_classement: jersey.type,
-              etape_numero: etapeNumero
+              etape_numero: etapeNumero,
+              league_id: leagueId
             }
           });
           
           const holder = data?.rows?.[0];
           return holder ? {
             ...jersey,
+            coureur_id: holder.coureur_id,
             coureur_nom: holder.coureur_nom,
-            equipe: holder.equipe
+            equipe: holder.equipe,
+            manager_nom: holder.manager_nom
           } : null;
         })
       );
@@ -76,6 +79,9 @@ const JerseyHoldersBar = ({ courseId, etapeNumero }: { courseId: string | null; 
             <span className="text-base">{holder.icon}</span>
             <span className="font-medium">{holder.coureur_nom}</span>
             <span className="text-muted-foreground text-xs">({holder.equipe})</span>
+            {holder.manager_nom && (
+              <span className="text-primary text-xs font-medium">• {holder.manager_nom}</span>
+            )}
             {idx < holders.length - 1 && <span className="text-muted-foreground mx-1">|</span>}
           </div>
         ))}
@@ -720,7 +726,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
 
                 {/* Jersey holders for selected stage */}
                 {selectedEtape && (
-                  <JerseyHoldersBar courseId={courseId} etapeNumero={selectedEtape} />
+                  <JerseyHoldersBar courseId={courseId} etapeNumero={selectedEtape} leagueId={leagueId} />
                 )}
 
                 {/* Barème des points */}
