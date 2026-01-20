@@ -286,7 +286,7 @@ export const StartlistTracker = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          {change.validation_status === "pending" && (
+                          {change.validation_status !== "validated" && change.validation_status !== "skipped" && (
                             <Button
                               variant="ghost"
                               size="icon"
