@@ -3610,6 +3610,130 @@ export type Database = {
           },
         ]
       }
+      startlist_tracker_changes: {
+        Row: {
+          change_type: string
+          coureur_id: string | null
+          course_id: string
+          course_name: string
+          created_at: string
+          detected_at: string
+          id: string
+          processed: boolean | null
+          processed_at: string | null
+          rider_name: string
+          source_url: string | null
+          startlist_entry_id: string | null
+          team_name: string | null
+        }
+        Insert: {
+          change_type: string
+          coureur_id?: string | null
+          course_id: string
+          course_name: string
+          created_at?: string
+          detected_at?: string
+          id?: string
+          processed?: boolean | null
+          processed_at?: string | null
+          rider_name: string
+          source_url?: string | null
+          startlist_entry_id?: string | null
+          team_name?: string | null
+        }
+        Update: {
+          change_type?: string
+          coureur_id?: string | null
+          course_id?: string
+          course_name?: string
+          created_at?: string
+          detected_at?: string
+          id?: string
+          processed?: boolean | null
+          processed_at?: string | null
+          rider_name?: string
+          source_url?: string | null
+          startlist_entry_id?: string | null
+          team_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "startlist_tracker_changes_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startlist_tracker_changes_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startlist_tracker_changes_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "startlist_tracker_changes_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "startlist_tracker_changes_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_coureurs_saisons_admin"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "startlist_tracker_changes_startlist_entry_id_fkey"
+            columns: ["startlist_entry_id"]
+            isOneToOne: false
+            referencedRelation: "startlist_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      startlist_tracker_runs: {
+        Row: {
+          changes_detected: number | null
+          changes_processed: number | null
+          completed_at: string | null
+          error_message: string | null
+          id: string
+          source_type: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          changes_detected?: number | null
+          changes_processed?: number | null
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          source_type: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          changes_detected?: number | null
+          changes_processed?: number | null
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          source_type?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       user_activity_logs: {
         Row: {
           created_at: string
