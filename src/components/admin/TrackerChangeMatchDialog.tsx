@@ -145,9 +145,9 @@ export const TrackerChangeMatchDialog = ({
             .from("startlist_imports")
             .insert({
               race_id: selectedCourse.id,
-              source_url: `https://www.procyclingstats.com/race/${selectedCourse.id}`,
+              file_url: `https://www.procyclingstats.com/race/${selectedCourse.id}`,
               saison_id: saisonId,
-            } as any)
+            })
             .select()
             .single();
 
