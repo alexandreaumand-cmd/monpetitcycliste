@@ -280,7 +280,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
     
     // Les types "Porteur" ne comptent pas comme victoires
     const porteurTypes = [
-      'Porteur Général', 
+      'Porteur Leader', 
       'Porteur Vert', 
       'Porteur Montagne', 
       'Porteur Jeune', 

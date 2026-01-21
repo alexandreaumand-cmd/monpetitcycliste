@@ -75,7 +75,7 @@ export const ExportResultsImage = ({
     queryFn: async () => {
       // Pour les courses par étapes, inclure TOUS les points de l'étape (Etape + Porteurs)
       const typeFilter = etapeNumero 
-        ? ['Etape', 'Porteur Général', 'Porteur Vert', 'Porteur Montagne', 'Porteur Jeune', 'Porteur Combattif']
+        ? ['Etape', 'Porteur Leader', 'Porteur Vert', 'Porteur Montagne', 'Porteur Jeune', 'Porteur Combattif']
         : [typeClassement];
 
       // @ts-ignore - Type classement is dynamic
