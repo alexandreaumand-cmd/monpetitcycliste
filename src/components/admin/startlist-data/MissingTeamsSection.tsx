@@ -15,9 +15,21 @@ interface MissingTeamsSectionProps {
 export const MissingTeamsSection = ({ saisonId, onTeamCreated }: MissingTeamsSectionProps) => {
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
 
+  // Helper function to clean team names (remove suffixes like (WT), (PRT), (CT))
+  const cleanTeamName = (name: string) => {
+    return name
+      .replace(/\s*\(WT\)\s*$/i, '')
+      .replace(/\s*\(PRT\)\s*$/i, '')
+      .replace(/\s*\(CT\)\s*$/i, '')
+      .replace(/\s*\(DT\)\s*$/i, '')
+      .trim()
+      .toLowerCase();
+  };
+
   const { data: missingTeams, isLoading } = useQuery({
     queryKey: ['missing-teams', saisonId],
     queryFn: async () => {
+      // 1. Fetch all unmatched entries for the season
       const { data: unmatchedEntries } = await supabase
         .from('startlist_entries')
         .select('source_team, startlist_imports!inner(race_id, courses!inner(phase_id, phases!inner(saison_id)))')
@@ -26,24 +38,44 @@ export const MissingTeamsSection = ({ saisonId, onTeamCreated }: MissingTeamsSec
 
       if (!unmatchedEntries) return [];
 
+      // 2. Fetch ALL teams for the season in a single query (with equipes join)
+      const { data: seasonTeams } = await supabase
+        .from('equipes_saisons')
+        .select('id, trigramme, nom_affiche, equipes!inner(code_court, nom_complet)')
+        .eq('saison_id', saisonId);
+
+      if (!seasonTeams) return [];
+
+      // 3. Create normalized sets for fast comparison
+      const normalizedTeams = new Set<string>();
+      for (const team of seasonTeams) {
+        if (team.trigramme) normalizedTeams.add(team.trigramme.toLowerCase());
+        if (team.equipes?.code_court) normalizedTeams.add(team.equipes.code_court.toLowerCase());
+        if (team.nom_affiche) normalizedTeams.add(team.nom_affiche.toLowerCase());
+        if (team.equipes?.nom_complet) normalizedTeams.add(team.equipes.nom_complet.toLowerCase());
+      }
+
+      // 4. Check which teams are truly missing
       const distinctTeams = [...new Set(unmatchedEntries.map((e: any) => e.source_team))];
       const missing = [];
 
       for (const team of distinctTeams) {
-        const { data: exists } = await supabase
-          .from('equipes_saisons')
-          .select('id')
-          .eq('saison_id', saisonId)
-          .ilike('trigramme', team)
-          .single();
+        const cleaned = cleanTeamName(team);
+        
+        // Exact match check
+        const exactMatch = normalizedTeams.has(cleaned);
+        
+        // Partial match check (if cleaned name is contained in an existing team or vice versa)
+        const partialMatch = !exactMatch && 
+          [...normalizedTeams].some(t => t.includes(cleaned) || cleaned.includes(t));
 
-        if (!exists) {
+        if (!exactMatch && !partialMatch) {
           const count = unmatchedEntries.filter((e: any) => e.source_team === team).length;
           missing.push({ team, count });
         }
       }
 
-      return missing;
+      return missing.sort((a, b) => b.count - a.count);
     },
     enabled: !!saisonId,
   });
