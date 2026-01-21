@@ -56,16 +56,39 @@ export const CoureursCombobox = ({
     queryFn: async () => {
       if (!value) return null;
 
-      let query = supabase
+      // Always filter by phase_id and use limit(1) to avoid "multiple rows" error
+      // coureurs_disponibilite can have multiple entries for the same rider ID
+      const { data, error } = await supabase
         .from('coureurs_disponibilite')
         .select('id, nom, uci_id, equipe, prix_initial, saison_id, phase_id, is_taken, taken_by_manager_nom')
-        .eq('id', value);
+        .eq('id', value)
+        .eq('phase_id', phaseId)
+        .limit(1)
+        .maybeSingle();
 
-      if (context !== 'super-admin') {
-        query = query.eq('phase_id', phaseId);
+      // Fallback: if not found in this phase, try without phase filter (for historical data)
+      if (!data && !error) {
+        const { data: fallbackData } = await supabase
+          .from('coureurs_disponibilite')
+          .select('id, nom, uci_id, equipe, prix_initial, saison_id, phase_id, is_taken, taken_by_manager_nom')
+          .eq('id', value)
+          .limit(1)
+          .maybeSingle();
+        
+        if (fallbackData) {
+          return {
+            coureur_id: fallbackData.id,
+            coureur_nom: fallbackData.nom,
+            coureur_equipe: fallbackData.equipe,
+            is_taken: fallbackData.is_taken,
+            taken_by_manager_nom: fallbackData.taken_by_manager_nom,
+            id: fallbackData.id,
+            nom: fallbackData.nom,
+            equipe: fallbackData.equipe,
+          };
+        }
       }
 
-      const { data, error } = await query.maybeSingle();
       if (error || !data) return null;
 
       return {
@@ -74,7 +97,6 @@ export const CoureursCombobox = ({
         coureur_equipe: data.equipe,
         is_taken: data.is_taken,
         taken_by_manager_nom: data.taken_by_manager_nom,
-        // compatibility fields
         id: data.id,
         nom: data.nom,
         equipe: data.equipe,
