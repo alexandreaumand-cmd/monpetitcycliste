@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,16 +34,34 @@ type ClassificationResult = {
 
 function RaceCard({ race }: { race: RaceWithResults }) {
   const { t, i18n } = useTranslation('dashboard');
-  const [activeTab, setActiveTab] = useState<'general' | 'stages'>('general');
+  
+  // Determine default tab: if General has no results but stages are available, default to stages
+  const hasGeneralResults = race.top10 && race.top10.length > 0;
+  const stagesAvailable = (race.etapes_disponibles?.length ?? 0) > 0;
+  const latestStage = stagesAvailable 
+    ? Math.max(...race.etapes_disponibles) 
+    : 1;
+  
+  // Default to stages tab with latest stage if general has no results
+  const defaultTab = (!hasGeneralResults && stagesAvailable) ? 'stages' : 'general';
+  
+  const [activeTab, setActiveTab] = useState<'general' | 'stages'>(defaultTab);
   const [selectedClassificationType, setSelectedClassificationType] = useState<string>('General');
-  const [selectedStage, setSelectedStage] = useState<number>(race.etapes_disponibles?.[0] ?? 1);
+  const [selectedStage, setSelectedStage] = useState<number>(latestStage);
   const [loadedClassifications, setLoadedClassifications] = useState<ClassificationResult>({
     General: race.top10
   });
   const [isLoadingTab, setIsLoadingTab] = useState(false);
   const dateLocale = i18n.language === 'fr' ? fr : enUS;
 
-  const loadClassification = async (type: string, etape?: number) => {
+  // Load the latest stage results on mount if defaulting to stages tab
+  useEffect(() => {
+    if (defaultTab === 'stages' && !loadedClassifications[`Etape-${latestStage}`]) {
+      loadClassificationData('Etape', latestStage);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadClassificationData = async (type: string, etape?: number) => {
     const key = etape ? `${type}-${etape}` : type;
     
     if (loadedClassifications[key]) {
@@ -84,7 +102,7 @@ function RaceCard({ race }: { race: RaceWithResults }) {
     if (tab === 'stages') {
       const key = `Etape-${selectedStage}`;
       if (!loadedClassifications[key]) {
-        await loadClassification('Etape', selectedStage);
+        await loadClassificationData('Etape', selectedStage);
       }
     }
   };
@@ -92,7 +110,7 @@ function RaceCard({ race }: { race: RaceWithResults }) {
   const handleClassificationChange = async (value: string) => {
     setSelectedClassificationType(value);
     if (!loadedClassifications[value]) {
-      await loadClassification(value);
+      await loadClassificationData(value);
     }
   };
 
@@ -101,7 +119,7 @@ function RaceCard({ race }: { race: RaceWithResults }) {
     setSelectedStage(stageNum);
     const key = `Etape-${stageNum}`;
     if (!loadedClassifications[key]) {
-      await loadClassification('Etape', stageNum);
+      await loadClassificationData('Etape', stageNum);
     }
   };
 
@@ -113,7 +131,6 @@ function RaceCard({ race }: { race: RaceWithResults }) {
   };
 
   const currentResults = loadedClassifications[getCurrentKey()] || [];
-  const hasMultipleStages = (race.etapes_disponibles?.length ?? 0) > 0;
   const availableTypes = (race.types_disponibles || []).filter(t => t !== 'General');
 
   return (
@@ -128,14 +145,14 @@ function RaceCard({ race }: { race: RaceWithResults }) {
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        {availableTypes.length > 0 || hasMultipleStages ? (
+        {availableTypes.length > 0 || stagesAvailable ? (
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-3">
               <TabsTrigger value="general">
                 <Filter className="h-3 w-3 mr-1" />
                 {t('recentResults.general')}
               </TabsTrigger>
-              {hasMultipleStages && (
+              {stagesAvailable && (
                 <TabsTrigger value="stages">
                   <Flag className="h-3 w-3 mr-1" />
                   {t('recentResults.stages')}
@@ -174,7 +191,7 @@ function RaceCard({ race }: { race: RaceWithResults }) {
               )}
             </TabsContent>
 
-            {hasMultipleStages && (
+            {stagesAvailable && (
               <TabsContent value="stages" className="mt-0">
                 <div className="mb-3">
                   <Select value={selectedStage.toString()} onValueChange={handleStageChange}>
