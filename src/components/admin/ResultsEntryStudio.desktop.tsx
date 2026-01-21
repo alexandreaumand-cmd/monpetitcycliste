@@ -107,6 +107,11 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     jeune: null,
     combattif: null,
   });
+  // Keep a ref to avoid stale state inside mutations (user can click Save immediately after selection)
+  const jerseyHoldersRef = useRef<JerseyHolders>(jerseyHolders);
+  useEffect(() => {
+    jerseyHoldersRef.current = jerseyHolders;
+  }, [jerseyHolders]);
   const [combatifWinner, setCombatifWinner] = useState<string | null>(null);
   const [isCancelled, setIsCancelled] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -698,10 +703,13 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       // 1. We have valid rows in resultRows
       // 2. OR we have a Super Combatif winner (WT GT only, finals tab)
       const hasSuperCombatif = !isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT' && combatifWinner;
+
+      // Snapshot to avoid stale jerseyHolders in this async mutation
+      const jerseySnapshot = jerseyHoldersRef.current;
       
       // Check if jersey holders have been set (stage races, stages tab only)
       const hasJerseyHolders = !isOneDay && activeTab === "stages" && etapeNumero && 
-        Object.values(jerseyHolders).some(v => v !== null && v !== undefined);
+        Object.values(jerseySnapshot).some(v => v !== null && v !== undefined);
 
       if (validRows.length === 0 && !hasSuperCombatif && !hasJerseyHolders) {
         throw new Error("Aucune ligne à enregistrer");
@@ -783,7 +791,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         console.log('🔵 Sauvegarde des porteurs de maillots:', {
           courseId: course.course_id,
           etapeNumero: Number(etapeNumero),
-          jerseyHolders: jerseyHolders
+          jerseyHolders: jerseySnapshot
         });
 
         const jerseyMappings: Array<{ type: ClassementType; key: JerseyType }> = [
@@ -795,7 +803,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         ];
 
         for (const { type, key } of jerseyMappings) {
-          const coureurId = jerseyHolders[key];
+          const coureurId = jerseySnapshot[key];
           console.log(`🟡 Sauvegarde ${type} (étape ${etapeNumero}):`, {
             coureurId,
             typeClassement: type
