@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Building2, Loader2, X, RotateCcw } from "lucide-react";
+import { useState, useEffect } from "react";
 import { CreateTeamDialog } from "./CreateTeamDialog";
+import { toast } from "sonner";
 
 interface MissingTeamsSectionProps {
   saisonId: string;
@@ -14,7 +15,30 @@ interface MissingTeamsSectionProps {
 
 export const MissingTeamsSection = ({ saisonId, onTeamCreated }: MissingTeamsSectionProps) => {
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const [dismissedTeams, setDismissedTeams] = useState<string[]>([]);
 
+  // Load dismissed teams from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(`dismissed-teams-${saisonId}`);
+    if (stored) {
+      setDismissedTeams(JSON.parse(stored));
+    } else {
+      setDismissedTeams([]);
+    }
+  }, [saisonId]);
+
+  const handleDismissTeam = (team: string) => {
+    const updated = [...dismissedTeams, team];
+    setDismissedTeams(updated);
+    localStorage.setItem(`dismissed-teams-${saisonId}`, JSON.stringify(updated));
+    toast.success(`"${team}" masquée de la liste`);
+  };
+
+  const handleRestoreAll = () => {
+    setDismissedTeams([]);
+    localStorage.removeItem(`dismissed-teams-${saisonId}`);
+    toast.success("Toutes les équipes masquées ont été restaurées");
+  };
   // Helper function to clean team names (remove suffixes like (WT), (PRT), (CT))
   const cleanTeamName = (name: string) => {
     return name
@@ -90,7 +114,10 @@ export const MissingTeamsSection = ({ saisonId, onTeamCreated }: MissingTeamsSec
     );
   }
 
-  if (!missingTeams || missingTeams.length === 0) {
+  // Filter out dismissed teams
+  const visibleTeams = missingTeams?.filter(({ team }) => !dismissedTeams.includes(team)) || [];
+
+  if (visibleTeams.length === 0 && dismissedTeams.length === 0) {
     return null;
   }
 
@@ -98,25 +125,49 @@ export const MissingTeamsSection = ({ saisonId, onTeamCreated }: MissingTeamsSec
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Équipes manquantes ({missingTeams.length})
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Équipes manquantes ({visibleTeams.length})
+            </div>
+            {dismissedTeams.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={handleRestoreAll} className="text-xs">
+                <RotateCcw className="h-3 w-3 mr-1" />
+                Restaurer ({dismissedTeams.length})
+              </Button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {missingTeams.map(({ team, count }) => (
-            <div key={team} className="flex items-center justify-between py-2 border-b last:border-0">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">{team}</Badge>
-                <span className="text-sm text-muted-foreground">
-                  ({count} coureur{count > 1 ? 's' : ''})
-                </span>
+          {visibleTeams.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Toutes les équipes ont été masquées.
+            </p>
+          ) : (
+            visibleTeams.map(({ team, count }) => (
+              <div key={team} className="flex items-center justify-between py-2 border-b last:border-0">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">{team}</Badge>
+                  <span className="text-sm text-muted-foreground">
+                    ({count} coureur{count > 1 ? 's' : ''})
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => handleDismissTeam(team)}
+                    title="Masquer cette équipe"
+                  >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                  <Button size="sm" onClick={() => setSelectedTeam(team)}>
+                    Créer équipe
+                  </Button>
+                </div>
               </div>
-              <Button size="sm" onClick={() => setSelectedTeam(team)}>
-                Créer équipe
-              </Button>
-            </div>
-          ))}
+            ))
+          )}
         </CardContent>
       </Card>
 
