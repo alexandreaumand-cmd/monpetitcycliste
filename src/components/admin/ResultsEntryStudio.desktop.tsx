@@ -698,8 +698,12 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       // 1. We have valid rows in resultRows
       // 2. OR we have a Super Combatif winner (WT GT only, finals tab)
       const hasSuperCombatif = !isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT' && combatifWinner;
+      
+      // Check if jersey holders have been set (stage races, stages tab only)
+      const hasJerseyHolders = !isOneDay && activeTab === "stages" && etapeNumero && 
+        Object.values(jerseyHolders).some(v => v !== null && v !== undefined);
 
-      if (validRows.length === 0 && !hasSuperCombatif) {
+      if (validRows.length === 0 && !hasSuperCombatif && !hasJerseyHolders) {
         throw new Error("Aucune ligne à enregistrer");
       }
 
