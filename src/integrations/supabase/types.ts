@@ -5693,6 +5693,7 @@ export type Database = {
         | "Porteur Combattif"
         | "Combatif"
         | "Porteur Leader"
+        | "Porteur General"
       wt_tier_type:
         | "GT"
         | "Monument"
@@ -5864,6 +5865,7 @@ export const Constants = {
         "Porteur Combattif",
         "Combatif",
         "Porteur Leader",
+        "Porteur General",
       ],
       wt_tier_type: [
         "GT",
