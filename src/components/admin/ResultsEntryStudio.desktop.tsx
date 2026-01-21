@@ -870,6 +870,8 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       queryClient.invalidateQueries({ queryKey: ["top-riders"] });
       queryClient.invalidateQueries({ queryKey: ["recent-points"] });
       queryClient.invalidateQueries({ queryKey: ["rankings-kpis"] });
+      queryClient.invalidateQueries({ queryKey: ["jersey-holders"] });
+      queryClient.invalidateQueries({ queryKey: ["results-course-table"] });
 
       if (data.message === 'Annulation enregistrée') {
         toast({
