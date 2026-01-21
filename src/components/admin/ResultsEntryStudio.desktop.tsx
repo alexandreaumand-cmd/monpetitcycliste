@@ -237,13 +237,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     setGridPrepared(false);
     setIsDirty(false);
     setIsCancelled(false);
-    setJerseyHolders({
-      general: null,
-      vert: null,
-      montagne: null,
-      jeune: null,
-      combattif: null,
-    });
+    // jerseyHolders reset moved to handlePrepareGrid to avoid race condition
 
     // Auto-set date
     if (activeTab === "stages" && etapeNumero) {
@@ -280,6 +274,15 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     const newRequestId = ++requestIdRef.current;
     setCurrentRequestId(newRequestId);
     setIsLoadingGrid(true);
+
+    // Reset jerseyHolders at the start to avoid stale data, before fetching new ones
+    setJerseyHolders({
+      general: null,
+      vert: null,
+      montagne: null,
+      jeune: null,
+      combattif: null,
+    });
 
     let rows: ResultRow[] = [];
 
