@@ -5,7 +5,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useLeague } from "@/contexts/LeagueContext";
@@ -189,7 +189,20 @@ export const CoureursCombobox = ({
           disabled={disabled}
         >
           {selectedCoureur ? (
-            <span className="truncate">{selectedCoureur.coureur_nom || selectedCoureur.nom}</span>
+            <div className="flex items-center justify-between flex-1 min-w-0">
+              <span className="truncate">{selectedCoureur.coureur_nom || selectedCoureur.nom}</span>
+              <button
+                type="button"
+                className="ml-2 p-1 hover:bg-muted rounded-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect(null);
+                }}
+                aria-label="Effacer la sélection"
+              >
+                <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+              </button>
+            </div>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}
