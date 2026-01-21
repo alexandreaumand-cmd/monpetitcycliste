@@ -50,7 +50,7 @@ const typeClassements = [
   { value: "Montagne", label: "Montagne" },
   { value: "Jeune", label: "Jeune" },
   { value: "Combatif", label: "Combativité" },
-  { value: "Porteur Général", label: "🟡 Porteur Jaune" },
+  { value: "Porteur Leader", label: "🟡 Porteur Jaune" },
   { value: "Porteur Vert", label: "🟢 Porteur Vert" },
   { value: "Porteur Montagne", label: "🔴 Porteur Pois" },
   { value: "Porteur Jeune", label: "⚪ Porteur Blanc" },

@@ -150,10 +150,10 @@ Deno.serve(async (req) => {
         .eq('course_id', course_id)
         .eq('etape_numero', etape_numero)
         .eq('position', 1)
-        .in('type_classement', ['Porteur Général', 'Porteur Vert', 'Porteur Montagne', 'Porteur Jeune', 'Porteur Combattif']);
+        .in('type_classement', ['Porteur Leader', 'Porteur Vert', 'Porteur Montagne', 'Porteur Jeune', 'Porteur Combattif']);
 
       const jersey_holders_base = {
-        general_holder_id: jerseyHoldersData?.find(j => j.type_classement === 'Porteur Général')?.coureur_id || null,
+        general_holder_id: jerseyHoldersData?.find(j => j.type_classement === 'Porteur Leader')?.coureur_id || null,
         vert_holder_id: jerseyHoldersData?.find(j => j.type_classement === 'Porteur Vert')?.coureur_id || null,
         montagne_holder_id: jerseyHoldersData?.find(j => j.type_classement === 'Porteur Montagne')?.coureur_id || null,
         jeune_holder_id: jerseyHoldersData?.find(j => j.type_classement === 'Porteur Jeune')?.coureur_id || null,

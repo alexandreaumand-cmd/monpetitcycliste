@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
       if (jersey_holders.general_holder_id) {
         jerseyInserts.push({
           course_id,
-          type_classement: 'Porteur Général',
+          type_classement: 'Porteur Leader',
           etape_numero,
           coureur_id: jersey_holders.general_holder_id,
           position: 1,
@@ -235,7 +235,7 @@ Deno.serve(async (req) => {
           .delete()
           .eq('course_id', course_id)
           .eq('etape_numero', etape_numero)
-          .in('type_classement', ['Porteur Général', 'Porteur Vert', 'Porteur Montagne', 'Porteur Jeune', 'Porteur Combattif']);
+          .in('type_classement', ['Porteur Leader', 'Porteur Vert', 'Porteur Montagne', 'Porteur Jeune', 'Porteur Combattif']);
 
         const { error: jerseyError } = await supabase
           .from('race_results')

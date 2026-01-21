@@ -41,7 +41,7 @@ type CourseData = {
   phase_id: string;
 };
 
-type ClassementType = "Etape" | "General" | "Points" | "Montagne" | "Jeune" | "Combatif" | "Porteur Général" | "Porteur Vert" | "Porteur Montagne" | "Porteur Jeune" | "Porteur Combattif";
+type ClassementType = "Etape" | "General" | "Points" | "Montagne" | "Jeune" | "Combatif" | "Porteur Leader" | "Porteur Vert" | "Porteur Montagne" | "Porteur Jeune" | "Porteur Combattif";
 type ResultStatut = "finished" | "dnf" | "dns" | "dsq";
 type JerseyType = 'general' | 'vert' | 'montagne' | 'jeune' | 'combattif';
 
@@ -321,7 +321,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               .from('race_results')
               .select('coureur_id, type_classement')
               .eq('course_id', course.course_id)
-              .in('type_classement', ['Porteur Général', 'Porteur Vert', 'Porteur Montagne', 'Porteur Jeune', 'Porteur Combattif'])
+              .in('type_classement', ['Porteur Leader', 'Porteur Vert', 'Porteur Montagne', 'Porteur Jeune', 'Porteur Combattif'])
               .eq('etape_numero', currentStage)
               .eq('position', 1)
           : Promise.resolve({ data: [] }),
@@ -368,7 +368,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         };
 
         jerseyDataArray?.data?.forEach((j: any) => {
-          if (j.type_classement === 'Porteur Général') newJerseyHolders.general = j.coureur_id;
+          if (j.type_classement === 'Porteur Leader') newJerseyHolders.general = j.coureur_id;
           if (j.type_classement === 'Porteur Vert') newJerseyHolders.vert = j.coureur_id;
           if (j.type_classement === 'Porteur Montagne') newJerseyHolders.montagne = j.coureur_id;
           if (j.type_classement === 'Porteur Jeune') newJerseyHolders.jeune = j.coureur_id;
@@ -794,8 +794,9 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           jerseyHolders: jerseySnapshot
         });
 
+        // Simple jersey mappings - no accent issues with "Leader"
         const jerseyMappings: Array<{ type: ClassementType; key: JerseyType }> = [
-          { type: 'Porteur Général', key: 'general' },
+          { type: 'Porteur Leader', key: 'general' },
           { type: 'Porteur Vert', key: 'vert' },
           { type: 'Porteur Montagne', key: 'montagne' },
           { type: 'Porteur Jeune', key: 'jeune' },
@@ -805,26 +806,13 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         for (const { type, key } of jerseyMappings) {
           const coureurId = jerseySnapshot[key];
 
-          // Normalize to NFC to avoid unicode normalization mismatch with DB enum labels
-          // (e.g. "Général" can be sent as e + combining accent, which Postgres enum won't match)
-          const typeNfc = (type as string).normalize('NFC') as ClassementType;
-          console.log(`🟡 Sauvegarde ${type} (étape ${etapeNumero}):`, {
-            coureurId,
-            typeClassement: type,
-            typeClassementNFC: typeNfc,
-            typeCodepoints: Array.from(type as string).map((c) => c.codePointAt(0)),
-            typeNfcCodepoints: Array.from(typeNfc as string).map((c) => c.codePointAt(0)),
-          });
-
           if (coureurId) {
-            const { data, error: jerseyError } = await supabase.rpc("admin_result_save_lot", {
+            const { error: jerseyError } = await supabase.rpc("admin_result_save_lot", {
               p_course_id: course.course_id,
-              p_type_classement: typeNfc,
+              p_type_classement: type,
               p_etape_numero: Number(etapeNumero),
               p_rows: [{ coureur_id: coureurId, position: 1, statut: 'finished' as ResultStatut }],
             });
-
-            console.log(`✅ Réponse pour ${type}:`, { data, error: jerseyError });
             if (jerseyError) console.error(`Error saving ${type}:`, jerseyError);
           } else {
             // Delete existing holder if cleared
@@ -832,11 +820,9 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               .from('race_results')
               .delete()
               .eq('course_id', course.course_id)
-              .eq('type_classement', typeNfc)
+              .eq('type_classement', type)
               .eq('etape_numero', Number(etapeNumero));
-            
             if (deleteError) console.error(`Error clearing ${type}:`, deleteError);
-            else console.log(`✅ ${type} cleared for étape ${etapeNumero}`);
           }
         }
       }
@@ -867,10 +853,9 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
       // Save Combatif winner if on finals tab for WT GT
       if (!isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT' && combatifWinner) {
-        const finalTypeNfc = ('Combatif' as string).normalize('NFC') as ClassementType;
         await supabase.rpc("admin_result_save_lot", {
           p_course_id: course.course_id,
-          p_type_classement: finalTypeNfc,
+          p_type_classement: 'Combatif' as ClassementType,
           p_etape_numero: null,
           p_rows: [{ coureur_id: combatifWinner, position: 1, statut: 'finished' as ResultStatut }],
         });

@@ -28,7 +28,7 @@ const JerseyHoldersBar = ({ courseId, etapeNumero, leagueId }: { courseId: strin
       if (!courseId || !etapeNumero) return null;
       
       const jerseyTypes = [
-        { type: 'Porteur Général', icon: '🟡', label: 'Jaune' },
+        { type: 'Porteur Leader', icon: '🟡', label: 'Jaune' },
         { type: 'Porteur Vert', icon: '🟢', label: 'Vert' },
         { type: 'Porteur Montagne', icon: '🔴', label: 'Pois' },
         { type: 'Porteur Jeune', icon: '⚪', label: 'Blanc' },

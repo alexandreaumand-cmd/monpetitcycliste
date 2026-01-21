@@ -504,7 +504,7 @@ Deno.serve(async (req) => {
           const classementLower = parsed.classement.toLowerCase();
           
           if (classementLower.includes('leader') || classementLower.includes('général') || classementLower.includes('general')) {
-            typeClassement = 'Porteur Général';
+            typeClassement = 'Porteur Leader';
           } else if (classementLower.includes('vert') || classementLower.includes('points')) {
             typeClassement = 'Porteur Vert';
           } else if (classementLower.includes('pois') || classementLower.includes('grimpeur') || classementLower.includes('montagne')) {

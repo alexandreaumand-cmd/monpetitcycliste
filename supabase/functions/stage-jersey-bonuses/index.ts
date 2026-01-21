@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
 
     // Jersey types with their icons
     const jerseyTypes = [
-      { type: 'Porteur Général', icon: '🟡', label: 'Jaune' },
+      { type: 'Porteur Leader', icon: '🟡', label: 'Jaune' },
       { type: 'Porteur Vert', icon: '🟢', label: 'Vert' },
       { type: 'Porteur Montagne', icon: '🔴', label: 'Pois' },
       { type: 'Porteur Jeune', icon: '⚪', label: 'Blanc' },

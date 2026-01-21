@@ -242,7 +242,7 @@ export const ResultsEntryStudioMobile = ({
 
   const loadJerseyHolders = async () => {
     const jerseyMappings: Array<{ key: 'general' | 'vert' | 'montagne' | 'jeune' | 'combattif'; type: string }> = [
-      { key: 'general', type: 'Porteur Général' },
+      { key: 'general', type: 'Porteur Leader' },
       { key: 'vert', type: 'Porteur Vert' },
       { key: 'montagne', type: 'Porteur Montagne' },
       { key: 'jeune', type: 'Porteur Jeune' },
@@ -443,7 +443,7 @@ export const ResultsEntryStudioMobile = ({
       // Save jersey holders
       if (courseIsStageRace && currentClassement === 'Etape') {
         const jerseyMappings: Array<{ key: 'general' | 'vert' | 'montagne' | 'jeune' | 'combattif'; type: string }> = [
-          { key: 'general', type: 'Porteur Général' },
+          { key: 'general', type: 'Porteur Leader' },
           { key: 'vert', type: 'Porteur Vert' },
           { key: 'montagne', type: 'Porteur Montagne' },
           { key: 'jeune', type: 'Porteur Jeune' },
