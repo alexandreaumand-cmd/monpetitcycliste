@@ -778,7 +778,55 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         }
       }
 
-      // Immediately recompute points for this course to reflect Porteur points
+      // Save jersey holders FIRST if on stage race + stages tab (before computing points)
+      if (!isOneDay && activeTab === "stages" && etapeNumero) {
+        console.log('🔵 Sauvegarde des porteurs de maillots:', {
+          courseId: course.course_id,
+          etapeNumero: Number(etapeNumero),
+          jerseyHolders: jerseyHolders
+        });
+
+        const jerseyMappings: Array<{ type: ClassementType; key: JerseyType }> = [
+          { type: 'Porteur Général', key: 'general' },
+          { type: 'Porteur Vert', key: 'vert' },
+          { type: 'Porteur Montagne', key: 'montagne' },
+          { type: 'Porteur Jeune', key: 'jeune' },
+          { type: 'Porteur Combattif', key: 'combattif' },
+        ];
+
+        for (const { type, key } of jerseyMappings) {
+          const coureurId = jerseyHolders[key];
+          console.log(`🟡 Sauvegarde ${type} (étape ${etapeNumero}):`, {
+            coureurId,
+            typeClassement: type
+          });
+
+          if (coureurId) {
+            const { data, error: jerseyError } = await supabase.rpc("admin_result_save_lot", {
+              p_course_id: course.course_id,
+              p_type_classement: type,
+              p_etape_numero: Number(etapeNumero),
+              p_rows: [{ coureur_id: coureurId, position: 1, statut: 'finished' as ResultStatut }],
+            });
+
+            console.log(`✅ Réponse pour ${type}:`, { data, error: jerseyError });
+            if (jerseyError) console.error(`Error saving ${type}:`, jerseyError);
+          } else {
+            // Delete existing holder if cleared
+            const { error: deleteError } = await supabase
+              .from('race_results')
+              .delete()
+              .eq('course_id', course.course_id)
+              .eq('type_classement', type)
+              .eq('etape_numero', Number(etapeNumero));
+            
+            if (deleteError) console.error(`Error clearing ${type}:`, deleteError);
+            else console.log(`✅ ${type} cleared for étape ${etapeNumero}`);
+          }
+        }
+      }
+
+      // Now recompute points for this course (after jersey holders are saved)
       const { data: computeData, error: computeError } = await supabase.functions.invoke('compute-points', {
         body: { course_id: course.course_id }
       });
@@ -799,43 +847,6 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         
         // Reset manual TTT flag after successful save
         tttManuallySet.current = false;
-      }
-
-      // Save jersey holders if on stage race + stages tab
-      if (!isOneDay && activeTab === "stages" && etapeNumero) {
-        console.log('🔵 Sauvegarde des porteurs de maillots:', {
-          courseId: course.course_id,
-          etapeNumero: Number(etapeNumero),
-          jerseyHolders: jerseyHolders
-        });
-
-        const jerseyMappings: Array<{ type: ClassementType; key: JerseyType }> = [
-          { type: 'Porteur Général', key: 'general' },
-          { type: 'Porteur Vert', key: 'vert' },
-          { type: 'Porteur Montagne', key: 'montagne' },
-          { type: 'Porteur Jeune', key: 'jeune' },
-          { type: 'Porteur Combattif', key: 'combattif' },
-        ];
-
-        for (const { type, key } of jerseyMappings) {
-          const coureurId = jerseyHolders[key];
-          if (coureurId) {
-            console.log(`🟡 Sauvegarde ${type} (étape ${etapeNumero}):`, {
-              coureurId,
-              typeClassement: type
-            });
-
-            const { data, error: jerseyError } = await supabase.rpc("admin_result_save_lot", {
-              p_course_id: course.course_id,
-              p_type_classement: type,
-              p_etape_numero: Number(etapeNumero),
-              p_rows: [{ coureur_id: coureurId, position: 1, statut: 'finished' as ResultStatut }],
-            });
-
-            console.log(`✅ Réponse pour ${type}:`, { data, error: jerseyError });
-            if (jerseyError) console.error(`Error saving ${type}:`, jerseyError);
-          }
-        }
       }
 
 
