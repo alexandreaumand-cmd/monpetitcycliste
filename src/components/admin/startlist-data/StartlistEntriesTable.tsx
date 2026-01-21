@@ -2,8 +2,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { UserPlus, Link as LinkIcon, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { UserPlus, Link as LinkIcon, Trash2, X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { useState, useMemo } from "react";
 import { CreateRiderDialog } from "./CreateRiderDialog";
 import { MatchRiderDialog } from "./MatchRiderDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,12 +25,77 @@ interface StartlistEntriesTableProps {
   onUpdate: () => void;
 }
 
+type SortColumn = 'source_name' | 'source_team' | 'coureur' | 'status' | 'startlist' | null;
+type SortDirection = 'asc' | 'desc' | null;
+
 export const StartlistEntriesTable = ({ entries, saisonId, onUpdate }: StartlistEntriesTableProps) => {
   const [selectedEntry, setSelectedEntry] = useState<any>(null);
   const [matchingEntry, setMatchingEntry] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [sortColumn, setSortColumn] = useState<SortColumn>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      // Cycle: desc -> asc -> null
+      if (sortDirection === 'desc') {
+        setSortDirection('asc');
+      } else if (sortDirection === 'asc') {
+        setSortColumn(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
+
+  const getSortIcon = (column: SortColumn) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    }
+    if (sortDirection === 'desc') {
+      return <ArrowDown className="h-4 w-4 ml-1" />;
+    }
+    return <ArrowUp className="h-4 w-4 ml-1" />;
+  };
+
+  const sortedEntries = useMemo(() => {
+    if (!sortColumn || !sortDirection) return entries;
+
+    return [...entries].sort((a, b) => {
+      let aVal: string = '';
+      let bVal: string = '';
+
+      switch (sortColumn) {
+        case 'source_name':
+          aVal = a.source_name || '';
+          bVal = b.source_name || '';
+          break;
+        case 'source_team':
+          aVal = a.source_team || '';
+          bVal = b.source_team || '';
+          break;
+        case 'coureur':
+          aVal = a.coureurs?.nom || '';
+          bVal = b.coureurs?.nom || '';
+          break;
+        case 'status':
+          aVal = a.status || '';
+          bVal = b.status || '';
+          break;
+        case 'startlist':
+          aVal = a.startlist_imports?.courses?.nom || '';
+          bVal = b.startlist_imports?.courses?.nom || '';
+          break;
+      }
+
+      const comparison = aVal.localeCompare(bVal, 'fr', { sensitivity: 'base' });
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [entries, sortColumn, sortDirection]);
 
   const toggleSelection = (id: string) => {
     const newSelection = new Set(selectedIds);
@@ -91,6 +156,18 @@ export const StartlistEntriesTable = ({ entries, saisonId, onUpdate }: Startlist
     );
   }
 
+  const SortableHeader = ({ column, children }: { column: SortColumn; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-muted/50 select-none"
+      onClick={() => handleSort(column)}
+    >
+      <div className="flex items-center">
+        {children}
+        {getSortIcon(column)}
+      </div>
+    </TableHead>
+  );
+
   return (
     <>
       {/* Bulk action bar */}
@@ -127,16 +204,16 @@ export const StartlistEntriesTable = ({ entries, saisonId, onUpdate }: Startlist
                 onCheckedChange={toggleSelectAll}
               />
             </TableHead>
-            <TableHead>Nom source</TableHead>
-            <TableHead>Équipe source</TableHead>
-            <TableHead>Coureur matché</TableHead>
-            <TableHead>Statut</TableHead>
-            <TableHead>Startlist</TableHead>
+            <SortableHeader column="source_name">Nom source</SortableHeader>
+            <SortableHeader column="source_team">Équipe source</SortableHeader>
+            <SortableHeader column="coureur">Coureur matché</SortableHeader>
+            <SortableHeader column="status">Statut</SortableHeader>
+            <SortableHeader column="startlist">Startlist</SortableHeader>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {entries.map((entry) => (
+          {sortedEntries.map((entry) => (
             <TableRow key={entry.id}>
               <TableCell>
                 <Checkbox
