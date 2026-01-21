@@ -711,6 +711,18 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       const hasJerseyHolders = !isOneDay && activeTab === "stages" && etapeNumero && 
         Object.values(jerseySnapshot).some(v => v !== null && v !== undefined);
 
+      // 🔍 DEBUG: Log jersey save conditions
+      console.log('🟡 Jersey save check:', {
+        isOneDay,
+        activeTab,
+        etapeNumero,
+        currentStage,
+        jerseySnapshot,
+        hasJerseyHolders,
+        validRowsCount: validRows.length,
+        hasSuperCombatif,
+      });
+
       if (validRows.length === 0 && !hasSuperCombatif && !hasJerseyHolders) {
         throw new Error("Aucune ligne à enregistrer");
       }
@@ -813,7 +825,16 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               p_etape_numero: Number(etapeNumero),
               p_rows: [{ coureur_id: coureurId, position: 1, statut: 'finished' as ResultStatut }],
             });
-            if (jerseyError) console.error(`Error saving ${type}:`, jerseyError);
+            if (jerseyError) {
+              console.error(`❌ Error saving ${type}:`, jerseyError);
+              toast({
+                title: `⚠️ Erreur porteur ${key}`,
+                description: `Impossible de sauvegarder ${type}: ${jerseyError.message}`,
+                variant: "destructive",
+              });
+            } else {
+              console.log(`✅ Jersey ${type} saved for coureur ${coureurId}`);
+            }
           } else {
             // Delete existing holder if cleared
             const { error: deleteError } = await supabase
@@ -822,7 +843,14 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               .eq('course_id', course.course_id)
               .eq('type_classement', type)
               .eq('etape_numero', Number(etapeNumero));
-            if (deleteError) console.error(`Error clearing ${type}:`, deleteError);
+            if (deleteError) {
+              console.error(`❌ Error clearing ${type}:`, deleteError);
+              toast({
+                title: `⚠️ Erreur suppression ${key}`,
+                description: `Impossible de supprimer ${type}: ${deleteError.message}`,
+                variant: "destructive",
+              });
+            }
           }
         }
       }
