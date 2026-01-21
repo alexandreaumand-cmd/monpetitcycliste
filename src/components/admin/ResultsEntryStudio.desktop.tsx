@@ -804,15 +804,22 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
         for (const { type, key } of jerseyMappings) {
           const coureurId = jerseySnapshot[key];
+
+          // Normalize to NFC to avoid unicode normalization mismatch with DB enum labels
+          // (e.g. "Général" can be sent as e + combining accent, which Postgres enum won't match)
+          const typeNfc = (type as string).normalize('NFC') as ClassementType;
           console.log(`🟡 Sauvegarde ${type} (étape ${etapeNumero}):`, {
             coureurId,
-            typeClassement: type
+            typeClassement: type,
+            typeClassementNFC: typeNfc,
+            typeCodepoints: Array.from(type as string).map((c) => c.codePointAt(0)),
+            typeNfcCodepoints: Array.from(typeNfc as string).map((c) => c.codePointAt(0)),
           });
 
           if (coureurId) {
             const { data, error: jerseyError } = await supabase.rpc("admin_result_save_lot", {
               p_course_id: course.course_id,
-              p_type_classement: type,
+              p_type_classement: typeNfc,
               p_etape_numero: Number(etapeNumero),
               p_rows: [{ coureur_id: coureurId, position: 1, statut: 'finished' as ResultStatut }],
             });
@@ -825,7 +832,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
               .from('race_results')
               .delete()
               .eq('course_id', course.course_id)
-              .eq('type_classement', type)
+              .eq('type_classement', typeNfc)
               .eq('etape_numero', Number(etapeNumero));
             
             if (deleteError) console.error(`Error clearing ${type}:`, deleteError);
@@ -860,9 +867,10 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
       // Save Combatif winner if on finals tab for WT GT
       if (!isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT' && combatifWinner) {
+        const finalTypeNfc = ('Combatif' as string).normalize('NFC') as ClassementType;
         await supabase.rpc("admin_result_save_lot", {
           p_course_id: course.course_id,
-          p_type_classement: 'Combatif' as ClassementType,
+          p_type_classement: finalTypeNfc,
           p_etape_numero: null,
           p_rows: [{ coureur_id: combatifWinner, position: 1, statut: 'finished' as ResultStatut }],
         });
