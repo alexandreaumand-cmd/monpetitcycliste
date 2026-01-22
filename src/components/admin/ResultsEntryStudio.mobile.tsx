@@ -558,16 +558,15 @@ export const ResultsEntryStudioMobile = ({
       }
 
       if (pointsToInsert.length > 0) {
-        await leagueClient.from('points_ledger').insert(pointsToInsert);
+        const { error: insertPointsError } = await leagueClient.from('points_ledger').insert(pointsToInsert);
+        if (insertPointsError) throw insertPointsError;
       }
+      
+      return { success: true };
     },
-    onSuccess: (data: any) => {
+    onSuccess: () => {
       setLastSaved(new Date());
-      if (data.message === 'Annulation enregistrée') {
-        toast.success("Annulation enregistrée");
-      } else {
-        toast.success("Résultats enregistrés");
-      }
+      toast.success("Résultats enregistrés");
       queryClient.invalidateQueries({ queryKey: ['results-status'] });
       loadResults();
     },
