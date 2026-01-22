@@ -349,10 +349,12 @@ export const ResultsEntryStudioMobile = ({
       let dateClassement = '';
 
       if (validRows.length > 0) {
+        // Normalize category to lowercase for scoring_rules_norm lookup
+        const normalizedCategory = course.categorie?.toLowerCase() || '';
         const { data: serverScoringRules, error: rulesError } = await supabase
         .from('scoring_rules_norm')
         .select('place, points')
-        .eq('cat_canon', course.categorie)
+        .eq('cat_canon', normalizedCategory)
         .eq('type_canon', currentClassement)
         .order('place');
 
