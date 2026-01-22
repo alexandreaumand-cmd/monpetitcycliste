@@ -186,12 +186,18 @@ function matchEntry(
   aliases: AliasRef[]
 ): MatchResult {
   const entryNorm = normalize(entry.canonical_guess);
+  const sourceNorm = normalize(entry.source_name);
   const entryLastName = extractLastName(entry.canonical_guess);
   const entrySig = tokenSig(entry.canonical_guess);
+  const sourceSig = tokenSig(entry.source_name);
   
-  // 1) Alias (prio max)
+  // 1) Alias (prio max) - check both source_name AND canonical_guess
   for (const alias of aliases) {
-    if (normalize(alias.alias_text) === entryNorm) {
+    const aliasNorm = normalize(alias.alias_text);
+    const aliasSig = tokenSig(alias.alias_text);
+    
+    // Match if normalized text matches OR if token signatures match
+    if (aliasNorm === sourceNorm || aliasNorm === entryNorm || aliasSig === sourceSig || aliasSig === entrySig) {
       const isOnRoster = rosterRiders.some(r => r.id === alias.coureur_id);
       return {
         coureur_id: alias.coureur_id,
@@ -221,7 +227,8 @@ function matchEntry(
   for (const rider of rosterRiders) {
     const riderSig = tokenSig(rider.nom);
     
-    if (riderSig === entrySig) {
+    // Also check sourceSig to handle cases where canonical inversion didn't help
+    if (riderSig === entrySig || riderSig === sourceSig) {
       return {
         coureur_id: rider.id,
         confidence: 0.95,
@@ -235,7 +242,8 @@ function matchEntry(
   // 4) Fuzzy Levenshtein (roster only) - assouplir pour matcher même si nom de famille inversé
   let best = { id: null as string | null, score: 0 };
   for (const rider of rosterRiders) {
-    const score = similarity(entryNorm, normalize(rider.nom));
+    // Try both canonical and source name for fuzzy matching
+    const score = Math.max(similarity(entryNorm, normalize(rider.nom)), similarity(sourceNorm, normalize(rider.nom)));
     if (score > best.score) {
       best = { id: rider.id, score };
     }
@@ -252,9 +260,10 @@ function matchEntry(
   }
   
   // 5) FALLBACK sur allRiders (off-roster)
-  // 5a) Exact match
+  // 5a) Exact match - check both canonical and source name
   for (const rider of allRiders) {
-    if (normalize(rider.nom) === entryNorm) {
+    const riderNorm = normalize(rider.nom);
+    if (riderNorm === entryNorm || riderNorm === sourceNorm) {
       return {
         coureur_id: rider.id,
         confidence: 1.0,
@@ -265,11 +274,12 @@ function matchEntry(
     }
   }
   
-  // 5b) TokenSig identique (off-roster) - SANS exiger le même nom de famille
+  // 5b) TokenSig identique (off-roster) - check both canonical and source
+  
   for (const rider of allRiders) {
     const riderSig = tokenSig(rider.nom);
     
-    if (riderSig === entrySig) {
+    if (riderSig === entrySig || riderSig === sourceSig) {
       return {
         coureur_id: rider.id,
         confidence: 0.95,
@@ -280,16 +290,20 @@ function matchEntry(
     }
   }
   
-  // 5c) Fuzzy (off-roster) - seuil plus strict
+  // 5c) Fuzzy (off-roster) - check both canonical and source
   let bestOffRoster = { id: null as string | null, score: 0 };
   for (const rider of allRiders) {
-    const score = similarity(entryNorm, normalize(rider.nom));
+    const riderNorm = normalize(rider.nom);
+    const score = Math.max(
+      similarity(entryNorm, riderNorm),
+      similarity(sourceNorm, riderNorm)
+    );
     if (score > bestOffRoster.score) {
       bestOffRoster = { id: rider.id, score };
     }
   }
   
-  if (bestOffRoster.id && bestOffRoster.score >= 0.92) {
+  if (bestOffRoster.id && bestOffRoster.score >= 0.90) {
     return {
       coureur_id: bestOffRoster.id,
       confidence: bestOffRoster.score,
@@ -447,10 +461,11 @@ serve(async (req) => {
 
     console.log(`[startlist-import] Loaded ${rosterRiders.length} unique riders from roster (batch query)`);
 
-    // Charger tous les coureurs (pour alias off-roster)
+    // Charger tous les coureurs (pour alias off-roster) - IMPORTANT: increase limit beyond default 1000
     const { data: allRidersData, error: allRidersError } = await supabase
       .from('coureurs')
-      .select('id, nom, equipe');
+      .select('id, nom, equipe')
+      .limit(5000);
 
     if (allRidersError) throw allRidersError;
 
@@ -459,6 +474,8 @@ serve(async (req) => {
       nom: r.nom,
       equipe: r.equipe
     }));
+    
+    console.log(`[startlist-import] Loaded ${allRiders.length} total riders from coureurs table`);
 
     // Charger name_aliases
     const { data: aliasesData, error: aliasesError } = await supabase
