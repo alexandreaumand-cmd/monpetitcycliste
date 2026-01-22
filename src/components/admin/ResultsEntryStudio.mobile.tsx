@@ -543,18 +543,15 @@ export const ResultsEntryStudioMobile = ({
         const serverPoints = scoringMap.get(row.position) || 0;
         if (serverPoints === 0) continue;
 
-        const managerId = riderManagerMap.get(row.coureur_id!);
-        if (managerId) {
-          pointsToInsert.push({
-            course_id: course.course_id,
-            coureur_id: row.coureur_id!,
-            manager_id: managerId,
-            phase_id: course.phase_id,
-            type_classement: currentClassement,
-            etape_numero: currentClassement === 'Etape' ? currentStage : null,
-            points: serverPoints,
-          });
-        }
+        // points_ledger does NOT have manager_id - it's linked via coureur_id
+        pointsToInsert.push({
+          course_id: course.course_id,
+          coureur_id: row.coureur_id!,
+          phase_id: course.phase_id,
+          type_classement: currentClassement,
+          etape_numero: currentClassement === 'Etape' ? currentStage : null,
+          points: serverPoints,
+        });
       }
 
       if (pointsToInsert.length > 0) {
