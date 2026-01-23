@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isToday, getDay } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -178,9 +178,43 @@ export const StartlistCalendarView = ({
                     );
                   })}
                   {dayCourses.length > 3 && (
-                    <div className="text-xs text-muted-foreground text-center">
-                      +{dayCourses.length - 3} autres
-                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="text-xs text-muted-foreground text-center w-full hover:text-foreground hover:underline transition-colors cursor-pointer">
+                          +{dayCourses.length - 3} autres
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72 p-2" align="start">
+                        <div className="text-sm font-medium mb-2">
+                          {format(day, 'd MMMM yyyy', { locale: fr })}
+                        </div>
+                        <div className="space-y-1 max-h-60 overflow-y-auto">
+                          {dayCourses.map(course => {
+                            const hasStartlistBadge = hasStartlist(course.id);
+                            const isValidated = isPcsValidated(course.id);
+                            return (
+                              <div
+                                key={course.id}
+                                onClick={() => onSelectRace(course)}
+                                className={cn(
+                                  "text-xs px-2 py-1.5 rounded border cursor-pointer flex items-center gap-1",
+                                  getCourseColor(course),
+                                  "hover:opacity-80 transition-opacity"
+                                )}
+                              >
+                                {hasStartlistBadge && (
+                                  <CheckCircle2 className={cn(
+                                    "h-3 w-3 shrink-0",
+                                    isValidated ? "text-primary" : "text-muted-foreground"
+                                  )} />
+                                )}
+                                <span className="truncate">{course.nom}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   )}
                 </div>
               </div>
