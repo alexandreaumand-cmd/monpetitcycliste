@@ -24,6 +24,8 @@ import {
   Loader2,
   Users,
   Calendar,
+  CalendarDays,
+  List,
   Star,
   CheckCircle2,
   AlertCircle,
@@ -38,6 +40,7 @@ import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { StartlistDesktopExport } from "@/components/startlist/StartlistDesktopExport";
 import { useLeague } from "@/contexts/LeagueContext";
+import { StartlistCalendarMobile } from "@/components/startlist/StartlistCalendarMobile";
 
 export const StartlistMobile = () => {
   const { t } = useTranslation('calendar');
@@ -48,7 +51,8 @@ export const StartlistMobile = () => {
   const { phases, selectedSeason, isLoading: isLoadingContext } = useSeasonContext();
   const { leagueId } = useLeague();
   const [viewMode, setViewMode] = useState<"list" | "view">("list");
-  const [tabMode, setTabMode] = useState<"30days" | "90days" | "history" | "upcoming-year">("30days");
+  const [displayMode, setDisplayMode] = useState<"list" | "calendar">("calendar");
+  const [tabMode, setTabMode] = useState<"30days" | "90days" | "history" | "upcoming-year">("upcoming-year");
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showUnmatched, setShowUnmatched] = useState(false);
@@ -226,110 +230,169 @@ export const StartlistMobile = () => {
     }
   };
 
+  // Helper functions for calendar view
+  const hasStartlistForRace = (raceId: string) => !!startlistsInfo?.get(raceId);
+  const isPcsValidatedForRace = (raceId: string) => startlistsInfo?.get(raceId)?.pcs_validated || false;
+  
+  const handleCalendarSelectRace = (race: any) => {
+    const startlistInfo = startlistsInfo?.get(race.id);
+    if (startlistInfo?.id) {
+      handleSelectRace(race.id, startlistInfo.id);
+    } else {
+      toast.info(t('startlist.noStartlist'));
+    }
+  };
+
   // LIST MODE
   if (viewMode === "list") {
     return (
       <div className="p-4 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold">{t('startlist.title')}</h2>
-        </div>
-
-        {/* 4 onglets */}
-        <div className="flex gap-2 overflow-x-auto">
-          <Button
-            variant={tabMode === "history" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTabMode("history")}
-            className="flex-1 whitespace-nowrap"
-          >
-            {t('startlist.tabs.history')}
-          </Button>
-          <Button
-            variant={tabMode === "30days" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTabMode("30days")}
-            className="flex-1 whitespace-nowrap"
-          >
-            {t('startlist.tabs.days30')}
-          </Button>
-          <Button
-            variant={tabMode === "90days" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTabMode("90days")}
-            className="flex-1 whitespace-nowrap"
-          >
-            {t('startlist.tabs.days90')}
-          </Button>
-          <Button
-            variant={tabMode === "upcoming-year" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTabMode("upcoming-year")}
-            className="flex-1 whitespace-nowrap"
-          >
-            {t('startlist.tabs.year')}
-          </Button>
-        </div>
-
-        {!races || races.length === 0 ? (
-        <MobileEmptyState
-          icon={<Trophy className="h-12 w-12" />}
-          title={t('startlist.noRace')}
-          description={getEmptyDescription()}
-        />
-        ) : (
-          <div className="space-y-3">
-            {races.map((race) => {
-              const startlistInfo = startlistsInfo?.get(race.id);
-              const hasStartlist = !!startlistInfo;
-              const isPcsValidated = startlistInfo?.pcs_validated || false;
-              
-              // En mode "history", n'afficher QUE les courses avec startlist
-              if (tabMode === "history" && !hasStartlist) return null;
-              
-              const today = new Date().toISOString().split('T')[0];
-              const isOngoing = race.date_debut <= today && race.date_fin >= today;
-
-              return (
-                <MobileCard
-                  key={race.id}
-                  title={race.nom}
-                  subtitle={format(new Date(race.date_debut), "dd MMMM yyyy", { locale: dateLocale })}
-                  avatar={
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Calendar className="h-5 w-5 text-primary" />
-                    </div>
-                  }
-                  badge={
-                    <div className="flex gap-1">
-                      {isOngoing && (
-                        <Badge className="bg-red-600 text-white text-xs animate-pulse">
-                          {t('badges.inProgress')}
-                        </Badge>
-                      )}
-                      {race.categorie && (
-                        <Badge variant="outline" className="text-xs">
-                          {race.categorie}
-                        </Badge>
-                      )}
-                      {isPcsValidated && (
-                        <Badge className="bg-green-600 text-white text-xs">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          SL officielle
-                        </Badge>
-                      )}
-                    </div>
-                  }
-                  onClick={() => {
-                    if (hasStartlist && startlistInfo?.id) {
-                      handleSelectRace(race.id, startlistInfo.id);
-                    } else {
-                      toast.info(t('startlist.noStartlist'));
-                    }
-                  }}
-                />
-              );
-            })}
+          
+          {/* Toggle list/calendar */}
+          <div className="flex border rounded-lg overflow-hidden">
+            <Button
+              variant={displayMode === "list" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-none h-8 px-3"
+              onClick={() => setDisplayMode("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={displayMode === "calendar" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-none h-8 px-3"
+              onClick={() => setDisplayMode("calendar")}
+            >
+              <CalendarDays className="h-4 w-4" />
+            </Button>
           </div>
+        </div>
+
+        {/* Tabs - only show for list mode */}
+        {displayMode === "list" && (
+          <div className="flex gap-2 overflow-x-auto">
+            <Button
+              variant={tabMode === "history" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTabMode("history")}
+              className="flex-1 whitespace-nowrap"
+            >
+              {t('startlist.tabs.history')}
+            </Button>
+            <Button
+              variant={tabMode === "30days" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTabMode("30days")}
+              className="flex-1 whitespace-nowrap"
+            >
+              {t('startlist.tabs.days30')}
+            </Button>
+            <Button
+              variant={tabMode === "90days" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTabMode("90days")}
+              className="flex-1 whitespace-nowrap"
+            >
+              {t('startlist.tabs.days90')}
+            </Button>
+            <Button
+              variant={tabMode === "upcoming-year" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTabMode("upcoming-year")}
+              className="flex-1 whitespace-nowrap"
+            >
+              {t('startlist.tabs.year')}
+            </Button>
+          </div>
+        )}
+
+        {/* Calendar view */}
+        {displayMode === "calendar" && races && races.length > 0 && (
+          <StartlistCalendarMobile
+            courses={races}
+            hasStartlist={hasStartlistForRace}
+            isPcsValidated={isPcsValidatedForRace}
+            onSelectRace={handleCalendarSelectRace}
+          />
+        )}
+
+        {/* List view */}
+        {displayMode === "list" && (
+          <>
+            {!races || races.length === 0 ? (
+              <MobileEmptyState
+                icon={<Trophy className="h-12 w-12" />}
+                title={t('startlist.noRace')}
+                description={getEmptyDescription()}
+              />
+            ) : (
+              <div className="space-y-3">
+                {races.map((race) => {
+                  const startlistInfo = startlistsInfo?.get(race.id);
+                  const hasStartlist = !!startlistInfo;
+                  const isPcsValidated = startlistInfo?.pcs_validated || false;
+                  
+                  // En mode "history", n'afficher QUE les courses avec startlist
+                  if (tabMode === "history" && !hasStartlist) return null;
+                  
+                  const today = new Date().toISOString().split('T')[0];
+                  const isOngoing = race.date_debut <= today && race.date_fin >= today;
+
+                  return (
+                    <MobileCard
+                      key={race.id}
+                      title={race.nom}
+                      subtitle={format(new Date(race.date_debut), "dd MMMM yyyy", { locale: dateLocale })}
+                      avatar={
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Calendar className="h-5 w-5 text-primary" />
+                        </div>
+                      }
+                      badge={
+                        <div className="flex gap-1">
+                          {isOngoing && (
+                            <Badge className="bg-destructive text-destructive-foreground text-xs animate-pulse">
+                              {t('badges.inProgress')}
+                            </Badge>
+                          )}
+                          {race.categorie && (
+                            <Badge variant="outline" className="text-xs">
+                              {race.categorie}
+                            </Badge>
+                          )}
+                          {isPcsValidated && (
+                            <Badge className="bg-green-600 text-white text-xs">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              SL officielle
+                            </Badge>
+                          )}
+                        </div>
+                      }
+                      onClick={() => {
+                        if (hasStartlist && startlistInfo?.id) {
+                          handleSelectRace(race.id, startlistInfo.id);
+                        } else {
+                          toast.info(t('startlist.noStartlist'));
+                        }
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+        
+        {/* Empty state for calendar */}
+        {displayMode === "calendar" && (!races || races.length === 0) && (
+          <MobileEmptyState
+            icon={<Trophy className="h-12 w-12" />}
+            title={t('startlist.noRace')}
+            description={getEmptyDescription()}
+          />
         )}
       </div>
     );
