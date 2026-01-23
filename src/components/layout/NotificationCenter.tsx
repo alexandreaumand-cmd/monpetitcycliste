@@ -43,16 +43,22 @@ export const NotificationCenter = () => {
       const round = notification.metadata?.round_number;
       const isAuto = notification.metadata?.auto_launched;
       const raceName = notification.metadata?.race_name;
+      const stage = notification.metadata?.etape_numero;
       
       // Map notification types to translation keys
       const typeKey = `notifications.types.${type}`;
       
       // Check if translation exists for this type
       const titleKey = isAuto ? `${typeKey}.titleAuto` : `${typeKey}.title`;
-      const messageKey = isAuto ? `${typeKey}.messageAuto` : `${typeKey}.message`;
       
-      const translatedTitle = t(titleKey, { round, raceName, defaultValue: '' });
-      const translatedMessage = t(messageKey, { round, raceName, defaultValue: '' });
+      // For results_added, use messageWithStage if stage is available
+      let messageKey = isAuto ? `${typeKey}.messageAuto` : `${typeKey}.message`;
+      if (type === 'results_added' && stage) {
+        messageKey = `${typeKey}.messageWithStage`;
+      }
+      
+      const translatedTitle = t(titleKey, { round, raceName, stage, defaultValue: '' });
+      const translatedMessage = t(messageKey, { round, raceName, stage, defaultValue: '' });
       
       // If translation exists, use it; otherwise fall back to original
       return {
