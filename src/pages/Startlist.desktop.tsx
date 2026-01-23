@@ -35,7 +35,7 @@ const StartlistDesktop = () => {
   const { leagueId } = useLeague();
   const [viewMode, setViewMode] = useState<'list' | 'view'>('list');
   const [displayMode, setDisplayMode] = useState<'cards' | 'calendar'>('calendar');
-  const [tabMode, setTabMode] = useState<'30days' | '90days' | 'history' | 'upcoming-year'>('30days');
+  const [tabMode, setTabMode] = useState<'30days' | '90days' | 'history' | 'upcoming-year'>('upcoming-year');
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
   const [selectedRaceForViewing, setSelectedRaceForViewing] = useState<any>(null);
   const [showUnmatched, setShowUnmatched] = useState(false);
