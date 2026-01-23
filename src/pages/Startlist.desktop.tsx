@@ -3,14 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Users, AlertCircle, Download, FileText, Calendar, Trophy, ArrowLeft, CheckCircle2, Star, Camera, Shirt, MessageSquare } from "lucide-react";
+import { Loader2, Users, AlertCircle, Download, FileText, Calendar, CalendarDays, Trophy, ArrowLeft, CheckCircle2, Star, Camera, Shirt, MessageSquare, LayoutGrid, List } from "lucide-react";
 import { toPng } from "html-to-image";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { differenceInDays, format } from "date-fns";
+import { differenceInCalendarDays, differenceInDays, format, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -25,6 +25,8 @@ import { cn } from "@/lib/utils";
 import { StartlistDesktopExport } from "@/components/startlist/StartlistDesktopExport";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLeague } from "@/contexts/LeagueContext";
+import { StartlistCalendarView } from "@/components/startlist/StartlistCalendarView";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const StartlistDesktop = () => {
   
@@ -32,6 +34,7 @@ const StartlistDesktop = () => {
   const { isSuperAdmin, isLeagueAdminOnly, loading: isLoadingRole } = useUserRole();
   const { leagueId } = useLeague();
   const [viewMode, setViewMode] = useState<'list' | 'view'>('list');
+  const [displayMode, setDisplayMode] = useState<'cards' | 'calendar'>('cards');
   const [tabMode, setTabMode] = useState<'30days' | '90days' | 'history' | 'upcoming-year'>('30days');
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
   const [selectedRaceForViewing, setSelectedRaceForViewing] = useState<any>(null);
@@ -390,22 +393,36 @@ const StartlistDesktop = () => {
   if (viewMode === 'list') {
     return (
       <div className="container mx-auto py-8 space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold">Startlists</h1>
             <p className="text-muted-foreground mt-1">Cliquez sur une course pour consulter ou ajouter sa startlist</p>
           </div>
+          
+          {/* Toggle Cards / Calendar */}
+          <ToggleGroup type="single" value={displayMode} onValueChange={(v) => v && setDisplayMode(v as 'cards' | 'calendar')}>
+            <ToggleGroupItem value="cards" aria-label="Vue cartes">
+              <LayoutGrid className="h-4 w-4 mr-2" />
+              Cartes
+            </ToggleGroupItem>
+            <ToggleGroupItem value="calendar" aria-label="Vue calendrier">
+              <CalendarDays className="h-4 w-4 mr-2" />
+              Calendrier
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
 
-        {/* 4 onglets avec Tabs */}
-        <Tabs value={tabMode} onValueChange={(v) => setTabMode(v as '30days' | '90days' | 'history' | 'upcoming-year')}>
-          <TabsList className="grid w-full max-w-2xl grid-cols-4">
-            <TabsTrigger value="history">Historique</TabsTrigger>
-            <TabsTrigger value="30days">30 jours</TabsTrigger>
-            <TabsTrigger value="90days">90 jours</TabsTrigger>
-            <TabsTrigger value="upcoming-year">Année à venir</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Tabs - hidden in calendar view since calendar has its own navigation */}
+        {displayMode === 'cards' && (
+          <Tabs value={tabMode} onValueChange={(v) => setTabMode(v as '30days' | '90days' | 'history' | 'upcoming-year')}>
+            <TabsList className="grid w-full max-w-2xl grid-cols-4">
+              <TabsTrigger value="history">Historique</TabsTrigger>
+              <TabsTrigger value="30days">30 jours</TabsTrigger>
+              <TabsTrigger value="90days">90 jours</TabsTrigger>
+              <TabsTrigger value="upcoming-year">Année à venir</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
 
         {isLoadingCourses ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -421,6 +438,14 @@ const StartlistDesktop = () => {
               </Card>
             ))}
           </div>
+        ) : displayMode === 'calendar' ? (
+          // Calendar view - show all courses for the season
+          <StartlistCalendarView 
+            courses={upcomingCourses || []}
+            hasStartlist={hasStartlist}
+            isPcsValidated={isPcsValidated}
+            onSelectRace={handleSelectRace}
+          />
         ) : upcomingCourses && upcomingCourses.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {upcomingCourses
@@ -434,12 +459,21 @@ const StartlistDesktop = () => {
               .map((course: any) => {
               const dateDebut = new Date(course.date_debut);
               const dateFin = new Date(course.date_fin);
-              const today = new Date().toISOString().split('T')[0];
-              const isOngoing = course.date_debut <= today && course.date_fin >= today;
-              const daysUntil = differenceInDays(dateDebut, new Date());
+              const todayStr = new Date().toISOString().split('T')[0];
+              const isOngoing = course.date_debut <= todayStr && course.date_fin >= todayStr;
+              const daysUntil = differenceInCalendarDays(dateDebut, new Date());
               const duration = differenceInDays(dateFin, dateDebut) + 1;
               const estimatedStages = course.type_course === 'etape' ? duration : 1;
               const phaseData = course.phases as any;
+
+              // Countdown label - more dynamic
+              const getCountdownLabel = () => {
+                if (isOngoing) return 'En cours';
+                if (daysUntil === 0) return "Aujourd'hui";
+                if (daysUntil === 1) return 'Demain';
+                if (daysUntil < 0) return 'Passée';
+                return `J-${daysUntil}`;
+              };
 
               return (
                 <Card 
@@ -452,18 +486,18 @@ const StartlistDesktop = () => {
                       <CardTitle className="text-lg line-clamp-2">{course.nom}</CardTitle>
                       <div className="flex gap-1.5 shrink-0">
                         {isOngoing && (
-                          <Badge className="bg-red-600 text-white animate-pulse">
+                          <Badge className="bg-destructive text-destructive-foreground animate-pulse">
                             EN COURS
                           </Badge>
                         )}
                         {hasStartlist(course.id) && (
-                          <Badge variant="outline" className="bg-green-500/10">
+                          <Badge variant="outline" className="bg-accent text-accent-foreground">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Startlist
                           </Badge>
                         )}
                         {isPcsValidated(course.id) && (
-                          <Badge variant="outline" className="bg-green-600 text-white">
+                          <Badge variant="default" className="bg-primary text-primary-foreground">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             SL officielle
                           </Badge>
@@ -495,15 +529,16 @@ const StartlistDesktop = () => {
                       </span>
                     </div>
                     
-                    {daysUntil >= 0 ? (
-                      <Badge variant="outline" className="bg-primary/10">
-                        J-{daysUntil}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-muted">
-                        En cours
-                      </Badge>
-                    )}
+                    <Badge 
+                      variant="outline" 
+                      className={cn(
+                        "bg-primary/10",
+                        daysUntil <= 1 && daysUntil >= 0 && "bg-accent text-accent-foreground font-semibold",
+                        isOngoing && "bg-destructive/10 text-destructive"
+                      )}
+                    >
+                      {getCountdownLabel()}
+                    </Badge>
                     
                     {estimatedStages > 1 && (
                       <div className="text-sm text-muted-foreground">
