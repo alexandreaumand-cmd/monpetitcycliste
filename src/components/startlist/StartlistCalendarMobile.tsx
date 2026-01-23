@@ -185,8 +185,10 @@ export const StartlistCalendarMobile = ({
             const key = format(day, "yyyy-MM-dd");
             const dayCourses = coursesByDay.get(key) || [];
             const hasRaces = dayCourses.length > 0;
-            const hasSL = dayCourses.some(c => hasStartlist(c.id));
-            const hasValidatedSL = dayCourses.some(c => isPcsValidated(c.id));
+            const coursesWithSL = dayCourses.filter(c => hasStartlist(c.id));
+            const validatedCount = dayCourses.filter(c => isPcsValidated(c.id)).length;
+            const allValidated = hasRaces && validatedCount === dayCourses.length;
+            const someValidated = validatedCount > 0 && !allValidated;
 
             return (
               <div
@@ -225,10 +227,15 @@ export const StartlistCalendarMobile = ({
                   </div>
                 )}
                 
-                {/* SL validation indicator */}
-                {hasValidatedSL && (
+                {/* SL validation indicator - shows full check if all validated, partial if some */}
+                {allValidated && (
                   <div className="absolute top-0.5 right-0.5">
                     <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
+                  </div>
+                )}
+                {someValidated && (
+                  <div className="absolute top-0.5 right-0.5">
+                    <CheckCircle2 className="h-2.5 w-2.5 text-amber-500" />
                   </div>
                 )}
               </div>
@@ -253,7 +260,11 @@ export const StartlistCalendarMobile = ({
         </div>
         <div className="flex items-center gap-1">
           <CheckCircle2 className="h-3 w-3 text-green-600" />
-          <span>SL officielle</span>
+          <span>Toutes SL validées</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <CheckCircle2 className="h-3 w-3 text-amber-500" />
+          <span>SL partielles</span>
         </div>
       </div>
 
