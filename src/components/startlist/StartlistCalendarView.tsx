@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, getDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isToday, getDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
@@ -51,12 +51,18 @@ export const StartlistCalendarView = ({
     const map = new Map<string, Course[]>();
     
     courses.forEach(course => {
-      const startDate = new Date(course.date_debut);
-      const endDate = new Date(course.date_fin);
+      // Parse dates and normalize to start of day for proper comparison
+      const startDate = new Date(course.date_debut + 'T00:00:00');
+      const endDate = new Date(course.date_fin + 'T23:59:59');
       
       // Add course to each day it spans
       daysInMonth.forEach(day => {
-        if (day >= startDate && day <= endDate) {
+        // Normalize the day for comparison
+        const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+        const courseStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const courseEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        
+        if (dayStart >= courseStart && dayStart <= courseEnd) {
           const key = format(day, 'yyyy-MM-dd');
           const existing = map.get(key) || [];
           // Avoid duplicates
@@ -145,7 +151,6 @@ export const StartlistCalendarView = ({
                 
                 <div className="space-y-0.5 overflow-hidden">
                   {dayCourses.slice(0, 3).map(course => {
-                    const isStartDay = isSameDay(day, new Date(course.date_debut));
                     const hasStartlistBadge = hasStartlist(course.id);
                     const isValidated = isPcsValidated(course.id);
 
@@ -167,7 +172,7 @@ export const StartlistCalendarView = ({
                           )} />
                         )}
                         <span className="truncate">
-                          {isStartDay ? course.nom : '↔'}
+                          {course.nom}
                         </span>
                       </div>
                     );
