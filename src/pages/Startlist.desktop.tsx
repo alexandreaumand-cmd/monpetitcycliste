@@ -34,7 +34,7 @@ const StartlistDesktop = () => {
   const { isSuperAdmin, isLeagueAdminOnly, loading: isLoadingRole } = useUserRole();
   const { leagueId } = useLeague();
   const [viewMode, setViewMode] = useState<'list' | 'view'>('list');
-  const [displayMode, setDisplayMode] = useState<'cards' | 'calendar'>('cards');
+  const [displayMode, setDisplayMode] = useState<'cards' | 'calendar'>('calendar');
   const [tabMode, setTabMode] = useState<'30days' | '90days' | 'history' | 'upcoming-year'>('30days');
   const [selectedStartlistId, setSelectedStartlistId] = useState<string | null>(null);
   const [selectedRaceForViewing, setSelectedRaceForViewing] = useState<any>(null);
