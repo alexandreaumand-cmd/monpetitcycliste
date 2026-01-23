@@ -40,7 +40,8 @@
       },
       "results_added": {
         "title": "🏁 New results",
-        "message": "New results are available."
+        "message": "New results are available for {{raceName}}.",
+        "messageWithStage": "New results are available for {{raceName}} (Stage {{stage}})."
       },
       "startlist_validated": {
         "title": "📋 Startlist validated",
