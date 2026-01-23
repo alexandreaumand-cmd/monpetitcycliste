@@ -44,7 +44,7 @@
       },
       "startlist_validated": {
         "title": "📋 Startlist validated",
-        "message": "A new startlist has been validated."
+        "message": "The startlist for {{raceName}} has been validated."
       }
     }
   },

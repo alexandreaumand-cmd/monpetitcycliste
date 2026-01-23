@@ -42,6 +42,7 @@ export const NotificationCenter = () => {
       const type = notification.type;
       const round = notification.metadata?.round_number;
       const isAuto = notification.metadata?.auto_launched;
+      const raceName = notification.metadata?.race_name;
       
       // Map notification types to translation keys
       const typeKey = `notifications.types.${type}`;
@@ -50,8 +51,8 @@ export const NotificationCenter = () => {
       const titleKey = isAuto ? `${typeKey}.titleAuto` : `${typeKey}.title`;
       const messageKey = isAuto ? `${typeKey}.messageAuto` : `${typeKey}.message`;
       
-      const translatedTitle = t(titleKey, { round, defaultValue: '' });
-      const translatedMessage = t(messageKey, { round, defaultValue: '' });
+      const translatedTitle = t(titleKey, { round, raceName, defaultValue: '' });
+      const translatedMessage = t(messageKey, { round, raceName, defaultValue: '' });
       
       // If translation exists, use it; otherwise fall back to original
       return {
