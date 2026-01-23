@@ -46,6 +46,15 @@ export const StartlistCalendarView = ({
   // Create padding for days before the month starts
   const paddingDays = Array(adjustedStartDay).fill(null);
 
+  // Get category priority for sorting (lower = higher priority)
+  const getCategoryPriority = (course: Course): number => {
+    const cat = course.categorie?.toLowerCase() || '';
+    if (cat.includes('2.uwt') || cat.includes('1.uwt')) return 1; // WorldTour first
+    if (cat.includes('2.pro') || cat.includes('1.pro')) return 2; // ProSeries second
+    if (cat.includes('1.1') || cat.includes('2.1')) return 3; // .1 third
+    return 4; // Others last
+  };
+
   // Map courses to days
   const coursesByDay = useMemo(() => {
     const map = new Map<string, Course[]>();
@@ -73,6 +82,11 @@ export const StartlistCalendarView = ({
       });
     });
     
+    // Sort courses by category priority for each day
+    map.forEach((dayCourses, key) => {
+      map.set(key, dayCourses.sort((a, b) => getCategoryPriority(a) - getCategoryPriority(b)));
+    });
+    
     return map;
   }, [courses, daysInMonth]);
 
@@ -81,11 +95,11 @@ export const StartlistCalendarView = ({
   const goToToday = () => setCurrentMonth(new Date());
 
   const getCourseColor = (course: Course) => {
-    // Color based on category using semantic tokens
+    // Color based on category - using gold/amber for WorldTour matching the legend
     const cat = course.categorie?.toLowerCase() || '';
-    if (cat.includes('2.uwt') || cat.includes('1.uwt')) return 'bg-amber-500/20 border-amber-500/50 text-amber-800 dark:text-amber-200';
-    if (cat.includes('2.pro') || cat.includes('1.pro')) return 'bg-sky-500/20 border-sky-500/50 text-sky-800 dark:text-sky-200';
-    if (cat.includes('1.1') || cat.includes('2.1')) return 'bg-emerald-500/20 border-emerald-500/50 text-emerald-800 dark:text-emerald-200';
+    if (cat.includes('2.uwt') || cat.includes('1.uwt')) return 'bg-amber-400/30 border-amber-500 text-amber-900 dark:text-amber-100';
+    if (cat.includes('2.pro') || cat.includes('1.pro')) return 'bg-sky-400/30 border-sky-500 text-sky-900 dark:text-sky-100';
+    if (cat.includes('1.1') || cat.includes('2.1')) return 'bg-emerald-400/30 border-emerald-500 text-emerald-900 dark:text-emerald-100';
     return 'bg-muted border-border text-muted-foreground';
   };
 
