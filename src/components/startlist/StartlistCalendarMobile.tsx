@@ -44,8 +44,10 @@ export const StartlistCalendarMobile = ({
   // Get category priority for sorting (lower = higher priority)
   const getCategoryPriority = (course: Course): number => {
     const cat = course.categorie?.toLowerCase() || "";
-    if (cat.includes("wt") || cat === "worldtour" || cat.includes(' wt ') || cat.includes(' wt') || cat.startsWith('wt ')) return 1;
-    if (cat.includes("proseries") || cat.includes("pro series")) return 2;
+    // WorldTour: matches .uwt patterns OR contains "wt"
+    if (cat.includes('.uwt') || cat.includes(' wt ') || cat.includes(' wt') || cat.startsWith('wt ')) return 1;
+    // ProSeries: matches .pro patterns OR contains "proseries"
+    if (cat.includes('.pro') || cat.includes('proseries')) return 2;
     if (cat.includes(".1")) return 3;
     return 4;
   };
@@ -81,17 +83,19 @@ export const StartlistCalendarMobile = ({
     return map;
   }, [courses]);
 
-  // Get course color based on category
+  // Get course color based on category - aligned with desktop legend
   const getCourseColor = (course: Course) => {
     const cat = course.categorie?.toLowerCase() || "";
-    if (cat.includes("wt") || cat === "worldtour" || cat.includes(' wt ') || cat.includes(' wt') || cat.startsWith('wt ')) {
+    // WorldTour: matches .uwt patterns OR contains "wt"
+    if (cat.includes('.uwt') || cat.includes(' wt ') || cat.includes(' wt') || cat.startsWith('wt ')) {
       return "bg-amber-500 text-white";
     }
-    if (cat.includes("proseries") || cat.includes("pro series")) {
-      return "bg-blue-500 text-white";
+    // ProSeries: matches .pro patterns OR contains "proseries"
+    if (cat.includes('.pro') || cat.includes('proseries')) {
+      return "bg-sky-500 text-white";
     }
     if (cat.includes(".1")) {
-      return "bg-green-500 text-white";
+      return "bg-emerald-500 text-white";
     }
     return "bg-muted text-foreground";
   };
@@ -233,18 +237,18 @@ export const StartlistCalendarMobile = ({
         </div>
       </div>
 
-      {/* Legend */}
+      {/* Legend - aligned with getCourseColor */}
       <div className="flex flex-wrap gap-2 justify-center text-xs">
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-amber-500" />
           <span>WorldTour</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-2 h-2 rounded-full bg-blue-500" />
+          <div className="w-2 h-2 rounded-full bg-sky-500" />
           <span>ProSeries</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-2 h-2 rounded-full bg-green-500" />
+          <div className="w-2 h-2 rounded-full bg-emerald-500" />
           <span>.1</span>
         </div>
         <div className="flex items-center gap-1">
