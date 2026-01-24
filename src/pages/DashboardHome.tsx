@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLeague } from "@/contexts/LeagueContext";
@@ -6,7 +7,7 @@ import { QuickActions } from "@/components/dashboard/QuickActions";
 import { LeagueCard } from "@/components/dashboard/LeagueCard";
 import { RecentResultsWidget } from "@/components/dashboard/RecentResultsWidget";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users } from "lucide-react";
+import { Users, Archive, ChevronDown, ChevronUp } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { DashboardHomeHeader } from "@/components/dashboard/DashboardHomeHeader";
 
@@ -24,6 +25,10 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
   const [searchParams] = useSearchParams();
   const currentLeagueId = searchParams.get('leagueId');
   const isAnyAdmin = isSuperAdmin || isLeagueAdminOnly;
+  const [showArchived, setShowArchived] = useState(false);
+
+  const activeLeagues = leagues.filter(league => league.status !== 'completed');
+  const completedLeagues = leagues.filter(league => league.status === 'completed');
 
   const buildNavUrl = (path: string) => {
     return currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
@@ -75,17 +80,47 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {leagues
-                .filter(league => league.status !== 'completed')
-                .map((league) => (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeLeagues.map((league) => (
                   <LeagueCard
                     key={league.id}
                     league={league}
                     onViewDetails={(hasActiveAuction) => handleViewLeagueDetails(league.id, hasActiveAuction)}
                   />
                 ))}
-            </div>
+              </div>
+
+              {/* Ligues terminées - Section pliable */}
+              {completedLeagues.length > 0 && (
+                <div className="mt-6">
+                  <button
+                    onClick={() => setShowArchived(!showArchived)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Archive className="h-4 w-4" />
+                    <span>Ligues terminées ({completedLeagues.length})</span>
+                    {showArchived ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </button>
+                  
+                  {showArchived && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                      {completedLeagues.map((league) => (
+                        <LeagueCard
+                          key={league.id}
+                          league={league}
+                          onViewDetails={() => handleViewLeagueDetails(league.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
 
