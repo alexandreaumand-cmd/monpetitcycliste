@@ -63,6 +63,10 @@
     "noDataAvailable": "Aucune donnée disponible",
     "viewMyLeague": "Voir ma ligue",
     "goToAuction": "Accéder aux enchères",
+    "leagueEnded": "Ligue terminée",
+    "winner": "Vainqueur",
+    "yourFinalRanking": "Votre classement final",
+    "viewResults": "Voir les résultats",
     "auction": {
       "inProgress": "Enchères en cours",
       "scheduled": "Enchères programmées",
