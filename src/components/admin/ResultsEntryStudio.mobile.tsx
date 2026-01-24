@@ -470,21 +470,21 @@ export const ResultsEntryStudioMobile = ({
             .eq('etape_numero', currentStage);
         }
 
-        // Get scoring rules for jersey holders
-        const normalizedCategory = course.categorie?.toLowerCase() || '';
-        
         for (const { key, type } of jerseyMappings) {
           const coureurId = jerseyHolders[key];
           if (!coureurId) continue;
 
           // Get points from scoring rules for this jersey type
-          const { data: jerseyScoring } = await supabase
-            .from('scoring_rules_norm')
+          const { data: jerseyScoring, error: jerseyScoringError } = await supabase
+            .from('scoring_rules_saisons')
             .select('points')
-            .eq('cat_canon', normalizedCategory)
-            .eq('type_canon', type)
+            .eq('saison_id', phaseData.saison_id)
+            .eq('categorie', course.categorie || '')
+            .eq('type_classement', type as any)
             .eq('place', 1)
             .maybeSingle();
+
+          if (jerseyScoringError) throw jerseyScoringError;
 
           const jerseyPoints = jerseyScoring?.points || 0;
 
