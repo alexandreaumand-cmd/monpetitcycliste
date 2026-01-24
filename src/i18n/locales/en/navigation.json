@@ -67,6 +67,10 @@
     "seasonLocked": "Season locked"
   },
   "logout": "Sign Out",
+  "profile": {
+    "account": "Profile",
+    "signOut": "Sign Out"
+  },
   "superAdmin": {
     "riders": "Riders",
     "teams": "Teams",
