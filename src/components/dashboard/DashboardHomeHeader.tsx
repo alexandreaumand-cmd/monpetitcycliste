@@ -72,11 +72,12 @@ export function DashboardHomeHeader({
             </DropdownMenu>
             
             {manager && (
-              <ManagerDropdown
+              <UnifiedProfileDropdown
                 manager={manager}
                 isAdmin={isAnyAdmin}
+                isSuperAdmin={isSuperAdmin}
                 onSignOut={onSignOut}
-                compact={true}
+                onNavigateAdmin={onNavigateAdmin}
               />
             )}
             <NotificationCenter variant="dark" />
