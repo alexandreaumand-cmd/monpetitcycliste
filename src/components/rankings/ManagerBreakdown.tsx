@@ -130,26 +130,73 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
     return map;
   }, [tttData]);
 
-  // Grouper les points par course
-  const groupedByCourse = breakdown?.reduce((acc: any, item: any) => {
-    const courseId = item.course_id;
-    if (!acc[courseId]) {
-      acc[courseId] = {
-        course_nom: item.course_nom,
-        date_debut: item.date_debut,
-        date_fin: item.date_fin,
-        points: []
-      };
-    }
-    acc[courseId].points.push(item);
-    return acc;
-  }, {} as Record<string, any>);
+  // Grouper les points par course puis par coureur
+  const groupedByCourse = useMemo(() => {
+    if (!breakdown) return {};
+    
+    return breakdown.reduce((acc: any, item: any) => {
+      const courseId = item.course_id;
+      
+      // Niveau 1: Course
+      if (!acc[courseId]) {
+        acc[courseId] = {
+          course_id: courseId,
+          course_nom: item.course_nom,
+          date_debut: item.date_debut,
+          date_fin: item.date_fin,
+          riders: {}
+        };
+      }
+      
+      // Niveau 2: Coureur au sein de la course
+      const riderId = item.coureur_id;
+      if (!acc[courseId].riders[riderId]) {
+        acc[courseId].riders[riderId] = {
+          coureur_id: riderId,
+          coureur_nom: item.coureur_nom,
+          coureur_equipe: item.coureur_equipe,
+          details: []
+        };
+      }
+      
+      // Niveau 3: Détails (étapes/classements)
+      acc[courseId].riders[riderId].details.push({
+        type_classement: item.type_classement,
+        etape_numero: item.etape_numero,
+        points: item.points,
+        course_id: item.course_id
+      });
+      
+      return acc;
+    }, {} as Record<string, any>);
+  }, [breakdown]);
 
-  const courses = Object.values(groupedByCourse || {}).sort((a: any, b: any) => {
-    const dateA = new Date(a.date_debut || a.date_fin || 0);
-    const dateB = new Date(b.date_debut || b.date_fin || 0);
-    return dateB.getTime() - dateA.getTime();
-  });
+  // Calculer les totaux par coureur et par course
+  const courses = useMemo(() => {
+    return Object.values(groupedByCourse).map((course: any) => {
+      // Calculer le total par coureur
+      const ridersArray = Object.values(course.riders).map((rider: any) => ({
+        ...rider,
+        totalPoints: rider.details.reduce((sum: number, d: any) => sum + d.points, 0)
+      }));
+      
+      // Trier les coureurs par points décroissants
+      ridersArray.sort((a: any, b: any) => b.totalPoints - a.totalPoints);
+      
+      // Calculer le total de la course
+      const courseTotal = ridersArray.reduce((sum: number, r: any) => sum + r.totalPoints, 0);
+      
+      return {
+        ...course,
+        ridersArray,
+        totalPoints: courseTotal
+      };
+    }).sort((a: any, b: any) => {
+      const dateA = new Date(a.date_debut || a.date_fin || 0);
+      const dateB = new Date(b.date_debut || b.date_fin || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [groupedByCourse]);
 
   // Calculate totals
   const racePoints = breakdown?.reduce((sum: number, item: any) => sum + item.points, 0) || 0;
@@ -200,58 +247,84 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
           <>
             {courses.length > 0 && (
               <Accordion type="multiple" className="space-y-2">
-                {courses.map((course: any, courseIdx: number) => {
-                  const courseTotal = course.points.reduce((sum: number, p: any) => sum + p.points, 0);
-                  
-                  return (
-                    <AccordionItem key={courseIdx} value={`course-${courseIdx}`} className="border rounded-lg">
-                      <AccordionTrigger className="hover:no-underline px-3 py-3">
-                        <div className="flex items-center justify-between w-full pr-4">
-                          <div className="flex-1 text-left">
-                            <h3 className="font-semibold text-sm">{course.course_nom}</h3>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                              <Calendar className="h-3 w-3" />
-                              {course.date_debut && format(new Date(course.date_debut), "dd MMM yyyy", { locale: dateLocale })}
-                            </div>
+                {courses.map((course: any, courseIdx: number) => (
+                  <AccordionItem key={courseIdx} value={`course-${courseIdx}`} className="border rounded-lg">
+                    {/* NIVEAU 1 : Course */}
+                    <AccordionTrigger className="hover:no-underline px-3 py-3">
+                      <div className="flex items-center justify-between w-full pr-4">
+                        <div className="flex-1 text-left">
+                          <h3 className="font-semibold text-sm">{course.course_nom}</h3>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                            <Calendar className="h-3 w-3" />
+                            {course.date_debut && format(new Date(course.date_debut), "dd MMM yyyy", { locale: dateLocale })}
                           </div>
-                          <Badge variant="default" className="px-3 py-1">
-                            {courseTotal} pts
-                          </Badge>
                         </div>
-                      </AccordionTrigger>
-                      
-                      <AccordionContent>
-                        <div className="ml-4 mr-3 space-y-1 pt-2 pb-2">
-                          {course.points.map((item: any, idx: number) => {
-                            const typeLabel = item.type_classement;
-                            const etapeInfo = item.etape_numero > 0 ? ` #${item.etape_numero}` : "";
-                            const tttKey = `${item.course_id}_${item.type_classement}_${item.etape_numero || 'null'}`;
-                            const isTtt = tttMap.get(tttKey) || false;
-                            
-                            return (
-                              <div key={idx} className="flex items-center justify-between py-2 border-b last:border-0">
-                                <div className="flex items-center gap-3 flex-1">
-                                  <Badge variant="outline" className="text-xs shrink-0">
-                                    {typeLabel}{etapeInfo}
-                                  </Badge>
-                                  {isTtt && (
-                                    <Badge variant="outline" className="text-xs shrink-0">
-                                      TTT
-                                    </Badge>
+                        <Badge variant="default" className="px-3 py-1">
+                          {course.totalPoints} pts
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    
+                    <AccordionContent className="px-2 pb-2">
+                      {/* NIVEAU 2 : Accordéon par coureur */}
+                      <Accordion type="multiple" className="space-y-1">
+                        {course.ridersArray.map((rider: any, riderIdx: number) => (
+                          <AccordionItem 
+                            key={riderIdx} 
+                            value={`rider-${courseIdx}-${riderIdx}`} 
+                            className="border rounded-md bg-muted/30"
+                          >
+                            <AccordionTrigger className="hover:no-underline px-3 py-2">
+                              <div className="flex items-center justify-between w-full pr-4">
+                                <div className="flex-1 text-left">
+                                  <span className="text-sm font-medium">{rider.coureur_nom}</span>
+                                  {rider.coureur_equipe && (
+                                    <span className="text-xs text-muted-foreground ml-2">
+                                      ({rider.coureur_equipe})
+                                    </span>
                                   )}
-                                  <span className="text-sm">{item.coureur_nom}</span>
                                 </div>
-                                <Badge variant={item.points > 0 ? "secondary" : "outline"} className="text-xs">
-                                  {item.points} pts
+                                <Badge variant="secondary" className="px-2 py-0.5 text-xs">
+                                  {rider.totalPoints} pts
                                 </Badge>
                               </div>
-                            );
-                          })}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
+                            </AccordionTrigger>
+                            
+                            <AccordionContent className="px-3 pb-2">
+                              {/* NIVEAU 3 : Détails des classements/étapes */}
+                              <div className="space-y-1 pt-1">
+                                {rider.details.map((detail: any, detailIdx: number) => {
+                                  const etapeInfo = detail.etape_numero > 0 ? ` #${detail.etape_numero}` : "";
+                                  const tttKey = `${detail.course_id}_${detail.type_classement}_${detail.etape_numero || 'null'}`;
+                                  const isTtt = tttMap.get(tttKey) || false;
+                                  
+                                  return (
+                                    <div 
+                                      key={detailIdx} 
+                                      className="flex items-center justify-between py-1.5 px-2 rounded bg-background/50 text-sm"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-muted-foreground">
+                                          {detail.type_classement}{etapeInfo}
+                                        </span>
+                                        {isTtt && (
+                                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                            TTT
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <span className="font-medium">{detail.points} pts</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        ))}
+                      </Accordion>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
               </Accordion>
             )}
             
