@@ -321,6 +321,7 @@ export function RecentResultsWidget() {
       if (error) throw error;
       return data.races as RaceWithResults[];
     },
+    staleTime: 60000, // Cache for 1 minute
   });
 
   if (isLoading) {

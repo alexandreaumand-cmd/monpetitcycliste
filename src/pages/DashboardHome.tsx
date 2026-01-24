@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useUserLeagues } from "@/hooks/useUserLeagues";
+import { useLeagueCardsData } from "@/hooks/useLeagueCardsData";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { LeagueCard } from "@/components/dashboard/LeagueCard";
 import { RecentResultsWidget } from "@/components/dashboard/RecentResultsWidget";
@@ -26,6 +27,19 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
   const currentLeagueId = searchParams.get('leagueId');
   const isAnyAdmin = isSuperAdmin || isLeagueAdminOnly;
   const [showArchived, setShowArchived] = useState(false);
+
+  // Prepare league info for batch hook
+  const leagueInfos = useMemo(() => 
+    leagues.map(l => ({ 
+      id: l.id, 
+      owner_manager_id: l.owner_manager_id, 
+      status: l.status 
+    })), 
+    [leagues]
+  );
+
+  // Batch fetch all league card data
+  const { data: leagueCardsData, isLoading: isLoadingCardsData } = useLeagueCardsData(leagueInfos);
 
   const activeLeagues = leagues.filter(league => league.status !== 'completed');
   const completedLeagues = leagues.filter(league => league.status === 'completed');
@@ -86,6 +100,8 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
                   <LeagueCard
                     key={league.id}
                     league={league}
+                    cardData={leagueCardsData?.[league.id]}
+                    isLoadingCardData={isLoadingCardsData}
                     onViewDetails={(hasActiveAuction) => handleViewLeagueDetails(league.id, hasActiveAuction)}
                   />
                 ))}
@@ -113,6 +129,8 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
                         <LeagueCard
                           key={league.id}
                           league={league}
+                          cardData={leagueCardsData?.[league.id]}
+                          isLoadingCardData={isLoadingCardsData}
                           onViewDetails={() => handleViewLeagueDetails(league.id)}
                         />
                       ))}

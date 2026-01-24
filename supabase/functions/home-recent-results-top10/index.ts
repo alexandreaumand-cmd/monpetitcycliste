@@ -46,61 +46,90 @@ Deno.serve(async (req) => {
       });
     }
 
-    // For each race, get metadata and top 10 from race_results
-    const racesWithTop10 = await Promise.all(
-      recentCourses.map(async (course) => {
-        // Get top 10 from race_results using the existing RPC
-        const { data: top10Data, error: topError } = await supabase
-          .rpc('results_course_top', {
-            p_course_id: course.course_id,
-            p_type_classement: 'General',
-            p_etape_numero: null,
-            p_limit: 10
-          });
+    // Extract all course IDs for batch queries
+    const courseIds = recentCourses.map(c => c.course_id);
 
-        if (topError) {
-          console.error(`Error fetching top 10 for ${course.course_id}:`, topError);
-        }
+    // BATCH 1: Get all top 10 results for all courses at once
+    const { data: allTop10, error: top10Error } = await supabase
+      .from('race_results')
+      .select(`
+        course_id,
+        position,
+        points,
+        coureur_id,
+        coureurs!inner(nom),
+        equipes_saisons(nom_affiche)
+      `)
+      .in('course_id', courseIds)
+      .eq('type_classement', 'General')
+      .is('etape_numero', null)
+      .lte('position', 10)
+      .order('position', { ascending: true });
 
-        // Get available classification types from race_results
-        const { data: types, error: typesError } = await supabase
-          .from('race_results')
-          .select('type_classement')
-          .eq('course_id', course.course_id)
-          .is('etape_numero', null);
+    if (top10Error) {
+      console.error('Error fetching batch top 10:', top10Error);
+    }
 
-        const uniqueTypes = [...new Set((types || []).map(t => t.type_classement))];
+    // BATCH 2: Get all metadata (types + stages) for all courses at once
+    const { data: allMetadata, error: metaError } = await supabase
+      .from('race_results')
+      .select('course_id, type_classement, etape_numero')
+      .in('course_id', courseIds);
 
-        // Get available stages
-        const { data: stages, error: stagesError } = await supabase
-          .from('race_results')
-          .select('etape_numero')
-          .eq('course_id', course.course_id)
-          .eq('type_classement', 'Etape')
-          .not('etape_numero', 'is', null)
-          .order('etape_numero');
+    if (metaError) {
+      console.error('Error fetching batch metadata:', metaError);
+    }
 
-        const uniqueStages = [...new Set((stages || []).map(s => s.etape_numero).filter(Boolean))];
+    // Build maps for O(1) access
+    const top10Map = new Map<string, any[]>();
+    const typesMap = new Map<string, Set<string>>();
+    const stagesMap = new Map<string, Set<number>>();
 
-        // Format top10 results
-        const formattedTop10 = top10Data.map((r: any) => ({
-          position: r.position,
-          coureur_nom: r.coureur_nom || 'Inconnu',
-          coureur_equipe: r.coureur_equipe || '',
-          points: r.points || 0
-        }));
+    // Initialize maps for all courses
+    courseIds.forEach(id => {
+      top10Map.set(id, []);
+      typesMap.set(id, new Set());
+      stagesMap.set(id, new Set());
+    });
 
-        return {
-          course_id: course.course_id,
-          course_nom: course.course_nom,
-          date_fin: course.date_fin,
-          total_points: course.total_points,
-          top10: formattedTop10,
-          types_disponibles: uniqueTypes,
-          etapes_disponibles: uniqueStages
-        };
-      })
-    );
+    // Populate top10 map
+    (allTop10 || []).forEach((r: any) => {
+      const arr = top10Map.get(r.course_id) || [];
+      arr.push({
+        position: r.position,
+        coureur_nom: r.coureurs?.nom || 'Inconnu',
+        coureur_equipe: r.equipes_saisons?.nom_affiche || '',
+        points: r.points || 0
+      });
+      top10Map.set(r.course_id, arr);
+    });
+
+    // Populate types and stages maps
+    (allMetadata || []).forEach((r: any) => {
+      if (r.etape_numero === null && r.type_classement) {
+        typesMap.get(r.course_id)?.add(r.type_classement);
+      }
+      if (r.type_classement === 'Etape' && r.etape_numero !== null) {
+        stagesMap.get(r.course_id)?.add(r.etape_numero);
+      }
+    });
+
+    // Build final results using maps (no additional queries)
+    const racesWithTop10 = recentCourses.map((course) => {
+      const top10 = top10Map.get(course.course_id) || [];
+      const uniqueTypes = [...(typesMap.get(course.course_id) || [])];
+      const uniqueStages = [...(stagesMap.get(course.course_id) || [])].sort((a, b) => a - b);
+
+      return {
+        course_id: course.course_id,
+        course_nom: course.course_nom,
+        date_fin: course.date_fin,
+        total_points: course.total_points,
+        top10: top10,
+        types_disponibles: uniqueTypes,
+        etapes_disponibles: uniqueStages
+      };
+    });
 
     return new Response(JSON.stringify({ races: racesWithTop10 }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
