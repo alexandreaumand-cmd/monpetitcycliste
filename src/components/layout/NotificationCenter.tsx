@@ -41,6 +41,21 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
   
   const dateLocale = i18n.language === 'fr' ? fr : enUS;
 
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'results_added':
+        return '🏆';
+      case 'startlist_validated':
+        return '📋';
+      case 'auction_opened':
+      case 'auction_closed':
+      case 'auction_ready_to_close':
+        return '🔨';
+      default:
+        return '🔔';
+    }
+  };
+
   // Translate notification based on type and metadata
   const getTranslatedNotification = useMemo(() => {
     return (notification: Notification) => {
@@ -134,14 +149,14 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
                       !notif.is_read && "bg-muted/50"
                     )}
                   >
-                    <div className="flex items-start gap-2">
-                      {!notif.is_read && (
-                        <span className="h-2 w-2 mt-1.5 rounded-full bg-yellow-500 flex-shrink-0" />
-                      )}
-                      <div className={cn("flex-1 min-w-0", notif.is_read && "ml-4")}>
-                        <p className="font-medium truncate">{translated.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {translated.message}
+                    <div className="flex items-start gap-3">
+                      <span className="text-lg flex-shrink-0">{getNotificationIcon(notif.type)}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn(
+                          "font-medium",
+                          !notif.is_read && "text-foreground"
+                        )}>
+                          {translated.title}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {formatDistanceToNow(new Date(notif.created_at), {
@@ -150,6 +165,9 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
                           })}
                         </p>
                       </div>
+                      {!notif.is_read && (
+                        <span className="h-2 w-2 mt-2 rounded-full bg-yellow-500 flex-shrink-0" />
+                      )}
                     </div>
                   </button>
                 );
