@@ -67,6 +67,10 @@
     "seasonLocked": "Saison verrouillée"
   },
   "logout": "Déconnexion",
+  "profile": {
+    "account": "Profil",
+    "signOut": "Se déconnecter"
+  },
   "superAdmin": {
     "riders": "Coureurs",
     "teams": "Équipes",
