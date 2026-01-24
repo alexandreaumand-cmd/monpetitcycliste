@@ -186,75 +186,76 @@ Deno.serve(async (req) => {
       }
     });
 
-    // 7. Calculate winners (existing logic)
+    // 7. Calculate winners using BATCH queries instead of N+1
     const winnerResult: Record<string, { coureur_id: string; coureur_nom: string; type_classement: string; etape_numero: number | null } | null> = {};
 
-    const { data: coursesInfo, error: coursesInfoError } = await supabase
-      .from('courses')
-      .select('id, nom, date_debut, date_fin')
-      .in('id', course_ids);
-    
-    if (coursesInfoError) throw coursesInfoError;
+    // Batch fetch all general classification winners
+    const { data: allGeneralWinners, error: generalError } = await supabase
+      .from('race_results')
+      .select('course_id, coureur_id, coureurs!inner(nom)')
+      .in('course_id', course_ids)
+      .eq('type_classement', 'General')
+      .eq('position', 1)
+      .eq('statut', 'finished');
 
-    for (const courseInfo of coursesInfo || []) {
-      const courseId = courseInfo.id;
+    if (generalError) throw generalError;
 
-      // Priority 1: General classification
-      let winnerQuery = supabase
-        .from('race_results')
-        .select('coureur_id, coureurs!inner(nom), type_classement, etape_numero')
-        .eq('course_id', courseId)
-        .eq('type_classement', 'General')
-        .eq('position', 1)
-        .eq('statut', 'finished');
+    // Batch fetch all stage winners
+    const { data: allStageWinners, error: stageError } = await supabase
+      .from('race_results')
+      .select('course_id, coureur_id, coureurs!inner(nom), etape_numero')
+      .in('course_id', course_ids)
+      .eq('type_classement', 'Etape')
+      .eq('position', 1)
+      .eq('statut', 'finished')
+      .not('etape_numero', 'is', null)
+      .order('etape_numero', { ascending: false });
 
-      if (courseInfo.date_debut && courseInfo.date_fin) {
-        winnerQuery = winnerQuery
-          .gte('date_classement', courseInfo.date_debut)
-          .lte('date_classement', courseInfo.date_fin);
+    if (stageError) throw stageError;
+
+    // Build maps for O(1) lookup
+    const generalWinnersMap = new Map<string, { coureur_id: string; coureur_nom: string }>();
+    allGeneralWinners?.forEach(w => {
+      if (!generalWinnersMap.has(w.course_id)) {
+        generalWinnersMap.set(w.course_id, {
+          coureur_id: w.coureur_id,
+          coureur_nom: (w.coureurs as any)?.nom || 'Unknown'
+        });
       }
+    });
 
-      const { data: generalWinner, error: generalError } = await winnerQuery.maybeSingle();
-      
-      if (generalError && generalError.code !== 'PGRST116') throw generalError;
+    // For stages, keep only the highest stage number per course
+    const stageWinnersMap = new Map<string, { coureur_id: string; coureur_nom: string; etape_numero: number }>();
+    allStageWinners?.forEach(w => {
+      if (!stageWinnersMap.has(w.course_id)) {
+        stageWinnersMap.set(w.course_id, {
+          coureur_id: w.coureur_id,
+          coureur_nom: (w.coureurs as any)?.nom || 'Unknown',
+          etape_numero: w.etape_numero!
+        });
+      }
+    });
 
+    // Build winner result for each course
+    for (const courseId of course_ids) {
+      const generalWinner = generalWinnersMap.get(courseId);
       if (generalWinner) {
         winnerResult[courseId] = {
           coureur_id: generalWinner.coureur_id,
-          coureur_nom: (generalWinner.coureurs as any)?.nom || 'Unknown',
+          coureur_nom: generalWinner.coureur_nom,
           type_classement: 'General',
           etape_numero: null,
         };
         continue;
       }
 
-      // Priority 2: Highest stage (Etape)
-      let stageQuery = supabase
-        .from('race_results')
-        .select('coureur_id, coureurs!inner(nom), type_classement, etape_numero')
-        .eq('course_id', courseId)
-        .eq('type_classement', 'Etape')
-        .eq('position', 1)
-        .eq('statut', 'finished')
-        .not('etape_numero', 'is', null);
-
-      if (courseInfo.date_debut && courseInfo.date_fin) {
-        stageQuery = stageQuery
-          .gte('date_classement', courseInfo.date_debut)
-          .lte('date_classement', courseInfo.date_fin);
-      }
-
-      const { data: stageWinners, error: stageError } = await stageQuery.order('etape_numero', { ascending: false });
-      
-      if (stageError) throw stageError;
-
-      if (stageWinners && stageWinners.length > 0) {
-        const bestStage = stageWinners[0];
+      const stageWinner = stageWinnersMap.get(courseId);
+      if (stageWinner) {
         winnerResult[courseId] = {
-          coureur_id: bestStage.coureur_id,
-          coureur_nom: (bestStage.coureurs as any)?.nom || 'Unknown',
+          coureur_id: stageWinner.coureur_id,
+          coureur_nom: stageWinner.coureur_nom,
           type_classement: 'Etape',
-          etape_numero: bestStage.etape_numero,
+          etape_numero: stageWinner.etape_numero,
         };
         continue;
       }

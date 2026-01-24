@@ -106,45 +106,26 @@ export const ResultsPage = () => {
       
       setHasMore(data.has_more || false);
 
-      // Load podiums and winners in parallel
+      // Load podiums and winners - single call (results-courses-podiums returns both)
       if (loadedRaces.length > 0) {
         const courseIds = loadedRaces.map((r: Race) => r.course_id);
         
         try {
-          const [winnersResp, podiumsResp] = await Promise.all([
-            supabase.functions.invoke('results-courses-podiums', {
-              body: { 
-                course_ids: courseIds,
-                saison_id: selectedSeason?.id,
-                league_id: leagueId
-              }
-            }),
-            supabase.functions.invoke('courses-leaderboard-podiums', {
-              body: { 
-                course_ids: courseIds,
-                league_id: leagueId
-              }
-            })
-          ]);
+          const { data, error } = await supabase.functions.invoke('results-courses-podiums', {
+            body: { 
+              course_ids: courseIds,
+              saison_id: selectedSeason?.id,
+              league_id: leagueId
+            }
+          });
           
-          if (winnersResp.error) {
-            console.error('Error loading winners:', winnersResp.error);
-          } else if (winnersResp.data) {
-            setWinners(prev => reset ? (winnersResp.data.winners || {}) : { ...prev, ...(winnersResp.data.winners || {}) });
+          if (error) {
+            console.error('Error loading podiums/winners:', error);
+          } else if (data) {
+            setWinners(prev => reset ? (data.winners || {}) : { ...prev, ...(data.winners || {}) });
+            setPodiums(prev => reset ? (data.podiums || {}) : { ...prev, ...(data.podiums || {}) });
+            console.log(`Loaded podiums for ${Object.keys(data.podiums || {}).length} courses`);
           }
-          
-          // Merge podiums from both sources
-          const winnersPodiums = winnersResp.data?.podiums || {};
-          const leaderboardPodiums = podiumsResp.data?.podiums || {};
-          const mergedPodiums = { ...leaderboardPodiums, ...winnersPodiums };
-          
-          if (podiumsResp.error) {
-            console.error('Error loading podiums from courses-leaderboard-podiums:', podiumsResp.error);
-          }
-          
-          setPodiums(prev => reset ? mergedPodiums : { ...prev, ...mergedPodiums });
-          console.log(`Loaded podiums for ${Object.keys(mergedPodiums).length} courses (merged from both sources)`);
-
         } catch (error) {
           console.error('Failed to load podiums/winners:', error);
         }

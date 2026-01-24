@@ -110,37 +110,25 @@ export const ResultsPageMobile = () => {
       
       setHasMore(data.has_more || false);
 
+      // Load podiums and winners - single call (results-courses-podiums returns both)
       if (loadedRaces.length > 0) {
         const courseIds = loadedRaces.map((r: Race) => r.course_id);
         
         try {
-          const [winnersResp, podiumsResp] = await Promise.all([
-            supabase.functions.invoke('results-courses-podiums', {
-              body: { 
-                course_ids: courseIds,
-                saison_id: selectedSeason?.id,
-                league_id: leagueId
-              }
-            }),
-            supabase.functions.invoke('courses-leaderboard-podiums', {
-              body: { 
-                course_ids: courseIds,
-                league_id: leagueId
-              }
-            })
-          ]);
+          const { data, error } = await supabase.functions.invoke('results-courses-podiums', {
+            body: { 
+              course_ids: courseIds,
+              saison_id: selectedSeason?.id,
+              league_id: leagueId
+            }
+          });
           
-          if (winnersResp.error) {
-            console.error('Error loading winners:', winnersResp.error);
-          } else if (winnersResp.data) {
-            setWinners(prev => reset ? (winnersResp.data.winners || {}) : { ...prev, ...(winnersResp.data.winners || {}) });
-          }
-          
-          if (podiumsResp.error) {
-            console.error('Error loading podiums:', podiumsResp.error);
-          } else if (podiumsResp.data) {
-            setPodiums(prev => reset ? (podiumsResp.data.podiums || {}) : { ...prev, ...(podiumsResp.data.podiums || {}) });
-            console.log(`Loaded podiums for ${Object.keys(podiumsResp.data.podiums || {}).length} courses`);
+          if (error) {
+            console.error('Error loading podiums/winners:', error);
+          } else if (data) {
+            setWinners(prev => reset ? (data.winners || {}) : { ...prev, ...(data.winners || {}) });
+            setPodiums(prev => reset ? (data.podiums || {}) : { ...prev, ...(data.podiums || {}) });
+            console.log(`Loaded podiums for ${Object.keys(data.podiums || {}).length} courses`);
           }
         } catch (error) {
           console.error('Failed to load podiums/winners:', error);
