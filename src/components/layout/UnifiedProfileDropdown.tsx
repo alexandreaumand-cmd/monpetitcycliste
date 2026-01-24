@@ -221,7 +221,7 @@ export function UnifiedProfileDropdown({
         <DropdownMenuSeparator />
 
         {/* Menu items */}
-        <DropdownMenuItem onClick={() => { navigate('/dashboard/account'); setOpen(false); }}>
+        <DropdownMenuItem onClick={() => { navigate('/dashboard/compte'); setOpen(false); }}>
           <User className="mr-2 h-4 w-4" />
           {t('navigation:profile.account')}
         </DropdownMenuItem>
