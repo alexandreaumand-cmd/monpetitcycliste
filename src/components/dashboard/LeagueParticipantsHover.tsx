@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Users, Crown } from "lucide-react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -79,18 +79,23 @@ export function LeagueParticipantsHover({
     </div>
   );
 
-  // Trigger commun
-  const TriggerElement = ({ onClick }: { onClick?: () => void }) => (
-    <span 
-      className="text-sm font-medium cursor-help hover:text-primary transition-colors flex items-center gap-1.5"
-      onClick={onClick}
-    >
-      <Users className="h-3.5 w-3.5" />
-      {currentPlayerCount} {currentPlayerCount > 1 
-        ? t('leagueCard.participantsHover.players') 
-        : t('leagueCard.participantsHover.player')}
-    </span>
+  // Trigger avec forwardRef pour que Radix UI puisse attacher la ref
+  const TriggerElement = forwardRef<HTMLSpanElement, { onClick?: () => void }>(
+    ({ onClick, ...props }, ref) => (
+      <span 
+        ref={ref}
+        className="text-sm font-medium cursor-help hover:text-primary transition-colors flex items-center gap-1.5"
+        onClick={onClick}
+        {...props}
+      >
+        <Users className="h-3.5 w-3.5" />
+        {currentPlayerCount} {currentPlayerCount > 1 
+          ? t('leagueCard.participantsHover.players') 
+          : t('leagueCard.participantsHover.player')}
+      </span>
+    )
   );
+  TriggerElement.displayName = 'TriggerElement';
 
   // VERSION MOBILE : Bottom Sheet
   if (isMobile) {
