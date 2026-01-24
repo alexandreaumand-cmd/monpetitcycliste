@@ -12,6 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { CreateLeagueDialog } from "./CreateLeagueDialog";
 import { JoinLeagueDialog } from "./JoinLeagueDialog";
@@ -47,36 +52,19 @@ export function LeagueSwitcher() {
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2 h-auto py-1.5 px-3">
-            <Users className="h-4 w-4 shrink-0" />
-            <div className="flex flex-col items-start text-left">
-              <span className="hidden md:inline font-medium text-sm">
-                {currentLeague?.name || t('switcher.selectLeague')}
-              </span>
-              {/* Subtitle with game mode and season when a league is selected */}
-              {currentLeague && (gameModeTemplate || selectedSeason) && (
-                <span className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground">
-                  {gameModeTemplate && (
-                    <>
-                      <Trophy className="h-3 w-3" />
-                      <span>{gameModeTemplate.name}</span>
-                    </>
-                  )}
-                  {gameModeTemplate && selectedSeason && <span>•</span>}
-                  {selectedSeason && (
-                    <>
-                      <Calendar className="h-3 w-3" />
-                      <span>{selectedSeason.annee}</span>
-                    </>
-                  )}
-                </span>
-              )}
-            </div>
-            <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
-          </Button>
-        </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Users className="h-4 w-4 shrink-0" />
+                  <span className="hidden md:inline font-medium text-sm">
+                    {currentLeague?.name || t('switcher.selectLeague')}
+                  </span>
+                  <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+                </Button>
+              </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[280px]">
           <DropdownMenuLabel>{t('switcher.myLeagues')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -125,7 +113,27 @@ export function LeagueSwitcher() {
             {t('switcher.joinLeague')}
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
+            </DropdownMenu>
+          </span>
+        </TooltipTrigger>
+        {currentLeague && (gameModeTemplate || selectedSeason) && (
+          <TooltipContent side="bottom" className="flex items-center gap-2">
+            {gameModeTemplate && (
+              <>
+                <Trophy className="h-3 w-3" />
+                <span>{gameModeTemplate.name}</span>
+              </>
+            )}
+            {gameModeTemplate && selectedSeason && <span>•</span>}
+            {selectedSeason && (
+              <>
+                <Calendar className="h-3 w-3" />
+                <span>{selectedSeason.annee}</span>
+              </>
+            )}
+          </TooltipContent>
+        )}
+      </Tooltip>
 
       <CreateLeagueDialog
         open={createDialogOpen}
