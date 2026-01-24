@@ -1,13 +1,17 @@
-import { Calendar, Database } from "lucide-react";
+import { Calendar, Bike, MoreHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
 import mpcLogo from "@/assets/mpc-logo.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { UnifiedProfileDropdown } from "@/components/layout/UnifiedProfileDropdown";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { ManagerDropdown } from "@/components/layout/ManagerDropdown";
-import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface DashboardHomeHeaderProps {
   manager: any;
@@ -34,42 +38,39 @@ export function DashboardHomeHeader({
     return currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
   };
 
-  // Mobile: keep original compact layout
+  // Mobile: optimized compact layout
   if (isMobile) {
     return (
       <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <img
-              src={mpcLogo}
-              alt="Logo Mon Petit Cycliste"
-              className="h-8 w-8"
-            />
-            <h1 className="font-montserrat font-bold text-white text-sm">
-              Mon Petit Cycliste
-            </h1>
-          </div>
+          {/* Logo only - no title on mobile */}
+          <img
+            src={mpcLogo}
+            alt="Logo Mon Petit Cycliste"
+            className="h-8 w-8"
+          />
 
-          {/* Mobile actions - keep compact */}
+          {/* Mobile actions - consolidated */}
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => navigate('/dashboard/calendar')}
-              className="p-2 text-yellow-500 hover:bg-yellow-500/10 rounded-md"
-            >
-              <Calendar className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => navigate('/dashboard/data')}
-              className="p-2 text-yellow-500 hover:bg-yellow-500/10 rounded-md"
-            >
-              <Database className="h-4 w-4" />
-            </button>
-            <LanguageSwitcher
-              variant="ghost"
-              size="icon"
-              className="text-yellow-500 hover:bg-yellow-500/10 h-8 w-8"
-            />
+            {/* More menu with Calendar + Data */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-2 text-yellow-500 hover:bg-yellow-500/10 rounded-md">
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-popover">
+                <DropdownMenuItem onClick={() => navigate('/dashboard/calendar')}>
+                  <Calendar className="mr-2 h-4 w-4" />
+                  {t('header.calendar')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/dashboard/data')}>
+                  <Bike className="mr-2 h-4 w-4" />
+                  {t('header.data')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
             {manager && (
               <ManagerDropdown
                 manager={manager}
@@ -112,8 +113,9 @@ export function DashboardHomeHeader({
           <span className="text-yellow-500/30">|</span>
           <button
             onClick={() => navigate('/dashboard/data')}
-            className="px-3 py-1.5 text-yellow-500 hover:text-yellow-400 hover:underline underline-offset-4 transition-colors font-medium"
+            className="px-3 py-1.5 text-yellow-500 hover:text-yellow-400 hover:underline underline-offset-4 transition-colors font-medium flex items-center gap-1.5"
           >
+            <Bike className="h-4 w-4" />
             {t('header.data')}
           </button>
         </nav>
