@@ -452,9 +452,41 @@ export const ResultsEntryStudioMobile = ({
           { key: 'combattif', type: 'Porteur Combattif' },
         ];
 
+        // First delete existing jersey holder results for this stage
+        for (const { type } of jerseyMappings) {
+          await leagueClient
+            .from('race_results')
+            .delete()
+            .eq('course_id', course.course_id)
+            .eq('type_classement', type as any)
+            .eq('etape_numero', currentStage);
+            
+          // Also delete existing jersey holder points from points_ledger
+          await leagueClient
+            .from('points_ledger')
+            .delete()
+            .eq('course_id', course.course_id)
+            .eq('type_classement', type as any)
+            .eq('etape_numero', currentStage);
+        }
+
+        // Get scoring rules for jersey holders
+        const normalizedCategory = course.categorie?.toLowerCase() || '';
+        
         for (const { key, type } of jerseyMappings) {
           const coureurId = jerseyHolders[key];
           if (!coureurId) continue;
+
+          // Get points from scoring rules for this jersey type
+          const { data: jerseyScoring } = await supabase
+            .from('scoring_rules_norm')
+            .select('points')
+            .eq('cat_canon', normalizedCategory)
+            .eq('type_canon', type)
+            .eq('place', 1)
+            .maybeSingle();
+
+          const jerseyPoints = jerseyScoring?.points || 0;
 
           // Récupérer le manager_id pour ce coureur spécifiquement
           const { data: roster } = await leagueClient
@@ -464,6 +496,7 @@ export const ResultsEntryStudioMobile = ({
             .eq('coureur_id', coureurId)
             .maybeSingle();
 
+          // Insert race_result for jersey holder
           await leagueClient.from('race_results').insert({
             course_id: course.course_id,
             coureur_id: coureurId,
@@ -473,9 +506,21 @@ export const ResultsEntryStudioMobile = ({
             statut: 'finished' as const,
             date_classement: dateClassement,
             manager_id: roster?.manager_id || null,
-            points: 0,
+            points: jerseyPoints,
             saison_id: phaseData.saison_id,
           } as any);
+
+          // Insert points into points_ledger for jersey holder
+          if (jerseyPoints > 0) {
+            await leagueClient.from('points_ledger').insert({
+              course_id: course.course_id,
+              coureur_id: coureurId,
+              phase_id: course.phase_id,
+              type_classement: type as any,
+              etape_numero: currentStage,
+              points: jerseyPoints,
+            });
+          }
         }
       }
 
