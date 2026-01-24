@@ -122,21 +122,27 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
               {t('notifications.empty')}
             </div>
           ) : (
-            <div className="divide-y">
+            <div className="space-y-1 p-2">
               {notifications.map((notif: Notification) => {
                 const translated = getTranslatedNotification(notif);
                 return (
-                  <div
+                  <button
                     key={notif.id}
-                    className={`p-4 cursor-pointer hover:bg-accent transition-colors ${
-                      !notif.is_read ? 'bg-accent/50' : ''
-                    }`}
                     onClick={() => handleNotificationClick(notif)}
+                    className={cn(
+                      "w-full text-left p-3 rounded-md text-sm transition-colors hover:bg-muted",
+                      !notif.is_read && "bg-muted/50"
+                    )}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{translated.title}</p>
-                        <p className="text-sm text-muted-foreground">{translated.message}</p>
+                    <div className="flex items-start gap-2">
+                      {!notif.is_read && (
+                        <span className="h-2 w-2 mt-1.5 rounded-full bg-yellow-500 flex-shrink-0" />
+                      )}
+                      <div className={cn("flex-1 min-w-0", notif.is_read && "ml-4")}>
+                        <p className="font-medium truncate">{translated.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {translated.message}
+                        </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {formatDistanceToNow(new Date(notif.created_at), {
                             addSuffix: true,
@@ -144,11 +150,8 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
                           })}
                         </p>
                       </div>
-                      {!notif.is_read && (
-                        <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-1" />
-                      )}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
