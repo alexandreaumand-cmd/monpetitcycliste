@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ChevronDown, Plus, Users } from "lucide-react";
+import { ChevronDown, Plus, Users, Trophy, Calendar } from "lucide-react";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useUserLeagues } from "@/hooks/useUserLeagues";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,15 +16,26 @@ import { Badge } from "@/components/ui/badge";
 import { CreateLeagueDialog } from "./CreateLeagueDialog";
 import { JoinLeagueDialog } from "./JoinLeagueDialog";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
+import { getLeagueTemplates } from "@/lib/leagues/templates";
 
 export function LeagueSwitcher() {
   const { t } = useTranslation('leagues');
-  const { leagueId, setLeagueId, isLegacy } = useLeague();
+  const { leagueId, setLeagueId } = useLeague();
   const { leagues, roles, isLoading } = useUserLeagues();
+  const { selectedSeason } = useSeasonContext();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
 
+  const { data: templates } = useQuery({
+    queryKey: ['league-templates'],
+    queryFn: getLeagueTemplates,
+  });
+
   const currentLeague = leagues.find(l => l.id === leagueId);
+  const gameModeTemplate = currentLeague?.game_mode 
+    ? templates?.find(t => t.id === currentLeague.game_mode) 
+    : null;
 
   if (isLoading) {
     return (
@@ -37,16 +49,35 @@ export function LeagueSwitcher() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2">
-            <Users className="h-4 w-4" />
-            <span className="hidden md:inline">
-              {currentLeague?.name || t('switcher.selectLeague')}
-            </span>
-            {isLegacy && <Badge className="ml-1 hidden md:inline-flex bg-[#FFF4CC] text-black border border-[#FFD500] font-semibold">{t('switcher.current')}</Badge>}
-            <ChevronDown className="h-4 w-4 opacity-50" />
+          <Button variant="outline" size="sm" className="gap-2 h-auto py-1.5 px-3">
+            <Users className="h-4 w-4 shrink-0" />
+            <div className="flex flex-col items-start text-left">
+              <span className="hidden md:inline font-medium text-sm">
+                {currentLeague?.name || t('switcher.selectLeague')}
+              </span>
+              {/* Subtitle with game mode and season when a league is selected */}
+              {currentLeague && (gameModeTemplate || selectedSeason) && (
+                <span className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground">
+                  {gameModeTemplate && (
+                    <>
+                      <Trophy className="h-3 w-3" />
+                      <span>{gameModeTemplate.name}</span>
+                    </>
+                  )}
+                  {gameModeTemplate && selectedSeason && <span>•</span>}
+                  {selectedSeason && (
+                    <>
+                      <Calendar className="h-3 w-3" />
+                      <span>{selectedSeason.annee}</span>
+                    </>
+                  )}
+                </span>
+              )}
+            </div>
+            <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[280px]">
+        <DropdownMenuContent align="start" className="w-[280px]">
           <DropdownMenuLabel>{t('switcher.myLeagues')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           

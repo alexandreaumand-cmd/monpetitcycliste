@@ -1,5 +1,3 @@
-import { LogOut, Trophy, Calendar } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "./NotificationCenter";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LeagueSwitcher } from "@/components/leagues/LeagueSwitcher";
@@ -7,12 +5,6 @@ import { useSeasonContext } from "@/contexts/SeasonContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ManagerDropdown } from "./ManagerDropdown";
 import { useLeague } from "@/contexts/LeagueContext";
-import { useUserLeagues } from "@/hooks/useUserLeagues";
-import { getLeagueTemplates } from "@/lib/leagues/templates";
-import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
-import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 
 interface TopBarProps {
   onSignOut: () => void;
@@ -21,28 +13,15 @@ interface TopBarProps {
 }
 
 export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
-  const { t } = useTranslation();
-  const { seasons, selectedSeason, setSelectedSeason, isLeagueSeason } = useSeasonContext();
+  const { seasons, selectedSeason, setSelectedSeason } = useSeasonContext();
   const { leagueId } = useLeague();
-  const { leagues } = useUserLeagues();
-  
-  const { data: templates } = useQuery({
-    queryKey: ['league-templates'],
-    queryFn: getLeagueTemplates,
-  });
-
-  const currentLeague = leagues.find(l => l.id === leagueId);
-  const gameMode = currentLeague?.game_mode;
-  const gameModeTemplate = gameMode 
-    ? templates?.find(t => t.id === gameMode) 
-    : null;
   
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background">
       <div className="flex h-14 items-center gap-4 px-4">
         <SidebarTrigger />
         
-        {/* League selector on the left */}
+        {/* League selector with integrated metadata */}
         <div className="flex items-center gap-3">
           <LeagueSwitcher />
           
@@ -66,33 +45,11 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
           )}
         </div>
         
-        {/* Espacement gauche */}
+        {/* Flexible spacer */}
         <div className="flex-1" />
         
-        {/* Badges informatifs au centre - visible uniquement si une ligue est sélectionnée */}
-        {currentLeague && (
-          <div className="flex items-center gap-2">
-            {gameModeTemplate && (
-              <Badge variant="outline" className="gap-1.5 px-3 py-1.5">
-                <Trophy className="h-3.5 w-3.5" />
-                <span className="text-xs font-medium">{gameModeTemplate.name}</span>
-              </Badge>
-            )}
-            
-            {selectedSeason && (
-              <Badge variant="outline" className="gap-1.5 px-3 py-1.5 bg-white">
-                <Calendar className="h-3.5 w-3.5" />
-                <span className="text-xs font-medium">{selectedSeason.annee}</span>
-              </Badge>
-            )}
-          </div>
-        )}
-        
-        {/* Espacement droit */}
-        <div className="flex-1" />
-        
-        {/* Manager, Notifications and Logout on the right */}
-        <div className="flex items-center gap-3">
+        {/* Manager dropdown and Notifications on the right */}
+        <div className="flex items-center gap-2">
           {manager && (
             <ManagerDropdown 
               manager={manager}
@@ -103,15 +60,6 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
           )}
           
           <NotificationCenter />
-          <LanguageSwitcher />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onSignOut}
-            title={t('navigation.logout')}
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
         </div>
       </div>
     </header>
