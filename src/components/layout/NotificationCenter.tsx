@@ -60,27 +60,27 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
   const getTranslatedNotification = useMemo(() => {
     return (notification: Notification) => {
       const type = notification.type;
-      const round = notification.metadata?.round_number;
-      const isAuto = notification.metadata?.auto_launched;
-      const raceName = notification.metadata?.race_name;
-      const stage = notification.metadata?.etape_numero;
       
-      // Map notification types to translation keys
-      const typeKey = `notifications.types.${type}`;
-      
-      // Check if translation exists for this type
-      const titleKey = isAuto ? `${typeKey}.titleAuto` : `${typeKey}.title`;
-      
-      // For results_added, use messageWithStage if stage is available
-      let messageKey = isAuto ? `${typeKey}.messageAuto` : `${typeKey}.message`;
-      if (type === 'results_added' && stage) {
-        messageKey = `${typeKey}.messageWithStage`;
+      // For results_added and startlist_validated, use the enriched 
+      // values directly from the database (contains winner name, race name, etc.)
+      if (type === 'results_added' || type === 'startlist_validated') {
+        return {
+          title: notification.title,
+          message: notification.message
+        };
       }
       
-      const translatedTitle = t(titleKey, { round, raceName, stage, defaultValue: '' });
-      const translatedMessage = t(messageKey, { round, raceName, stage, defaultValue: '' });
+      // For other types (auction_*), translate with metadata
+      const round = notification.metadata?.round_number;
+      const isAuto = notification.metadata?.auto_launched;
       
-      // If translation exists, use it; otherwise fall back to original
+      const typeKey = `notifications.types.${type}`;
+      const titleKey = isAuto ? `${typeKey}.titleAuto` : `${typeKey}.title`;
+      const messageKey = isAuto ? `${typeKey}.messageAuto` : `${typeKey}.message`;
+      
+      const translatedTitle = t(titleKey, { round, defaultValue: '' });
+      const translatedMessage = t(messageKey, { round, defaultValue: '' });
+      
       return {
         title: translatedTitle || notification.title,
         message: translatedMessage || notification.message
