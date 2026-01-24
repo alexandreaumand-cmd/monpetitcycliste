@@ -98,7 +98,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
           {gameMode && (
             <Badge 
               variant="outline" 
-              className="gap-1 border-black text-black font-poppins"
+              className="gap-1 text-xs text-muted-foreground border-muted-foreground/30 font-poppins"
             >
               <Zap className="h-3 w-3" />
               {t(`leagueCard.gameMode.${gameMode.id}`)}
@@ -115,7 +115,7 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
           ) : leagueSeason?.season?.annee ? (
             <Badge 
               variant="outline" 
-              className="gap-1 border-black text-black font-poppins"
+              className="gap-1 text-xs text-muted-foreground border-muted-foreground/30 font-poppins"
             >
               <Calendar className="h-3 w-3" />
               {leagueSeason.season.annee}
@@ -232,6 +232,14 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         {/* EN COURS */}
         {isActive && (
           <>
+            <div className="flex items-center justify-end">
+              <LeagueParticipantsHover
+                ownerName={owner?.nom || null}
+                members={members}
+                currentPlayerCount={league.current_player_count}
+                isLoading={loadingMembersList || loadingOwner}
+              />
+            </div>
 
             {loadingStats ? (
               <div className="space-y-2">
