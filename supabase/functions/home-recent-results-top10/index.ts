@@ -55,7 +55,6 @@ Deno.serve(async (req) => {
       .select(`
         course_id,
         position,
-        points,
         coureur_id,
         coureurs!inner(nom),
         equipes_saisons(nom_affiche)
@@ -65,6 +64,24 @@ Deno.serve(async (req) => {
       .is('etape_numero', null)
       .lte('position', 10)
       .order('position', { ascending: true });
+
+    // BATCH 1b: Get points from points_ledger for these courses
+    const { data: allPoints, error: pointsError } = await supabase
+      .from('points_ledger')
+      .select('course_id, coureur_id, points, type_classement, etape_numero')
+      .in('course_id', courseIds)
+      .eq('type_classement', 'General')
+      .is('etape_numero', null);
+
+    if (pointsError) {
+      console.error('Error fetching points:', pointsError);
+    }
+
+    // Build points lookup map: course_id:coureur_id -> points
+    const pointsMap = new Map<string, number>();
+    (allPoints || []).forEach((p: any) => {
+      pointsMap.set(`${p.course_id}:${p.coureur_id}`, p.points || 0);
+    });
 
     if (top10Error) {
       console.error('Error fetching batch top 10:', top10Error);
@@ -92,14 +109,15 @@ Deno.serve(async (req) => {
       stagesMap.set(id, new Set());
     });
 
-    // Populate top10 map
+    // Populate top10 map with points from points_ledger
     (allTop10 || []).forEach((r: any) => {
       const arr = top10Map.get(r.course_id) || [];
+      const points = pointsMap.get(`${r.course_id}:${r.coureur_id}`) || 0;
       arr.push({
         position: r.position,
         coureur_nom: r.coureurs?.nom || 'Inconnu',
         coureur_equipe: r.equipes_saisons?.nom_affiche || '',
-        points: r.points || 0
+        points: points
       });
       top10Map.set(r.course_id, arr);
     });
