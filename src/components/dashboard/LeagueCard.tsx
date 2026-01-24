@@ -2,35 +2,42 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus, CheckCircle, Lock, Globe, Gavel, CheckCircle2, Clock, PartyPopper } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useLeagueMemberCount } from "@/hooks/useLeagueMemberCount";
-import { useMyLeagueStats } from "@/hooks/useMyLeagueStats";
-import { useLeagueMembers } from "@/hooks/useLeagueMembers";
-import { useLeagueSeason } from "@/hooks/useLeagueSeason";
-import { useLeagueAuctionStatus } from "@/hooks/useLeagueAuctionStatus";
 import { useCountdown } from "@/hooks/useCountdown";
 import { LeagueStatusBadge } from "@/components/leagues/LeagueStatusBadge";
 import type { LeagueWithRole } from "@/lib/leagues/types";
 import { getLeagueTemplates } from "@/lib/leagues/templates";
 import { LeagueInvitesBottomSheet } from "@/components/leagues/LeagueInvitesBottomSheet";
 import { LeagueParticipantsHover } from "./LeagueParticipantsHover";
-import { useLeagueOwner } from "@/hooks/useLeagueOwner";
+import type { LeagueCardData } from "@/hooks/useLeagueCardsData";
 
 interface LeagueCardProps {
   league: LeagueWithRole;
+  cardData?: LeagueCardData;
+  isLoadingCardData?: boolean;
   onViewDetails: (hasActiveAuction?: boolean) => void;
 }
 
-export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
+export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails }: LeagueCardProps) {
   const { t } = useTranslation('dashboard');
   const [invitesSheetOpen, setInvitesSheetOpen] = useState(false);
-  const { data: memberCount, isLoading: loadingMembers } = useLeagueMemberCount(league.id);
-  const { data: members = [], isLoading: loadingMembersList } = useLeagueMembers(league.id);
-  const { data: owner, isLoading: loadingOwner } = useLeagueOwner(league.owner_manager_id);
+  
+  // Use pre-loaded data from cardData
+  const members = cardData?.members || [];
+  const owner = cardData?.owner || null;
+  const leagueSeason = cardData?.season || null;
+  const stats = cardData?.stats || null;
+  const auctionStatus = cardData?.auctionStatus || null;
+  
+  const loadingMembers = isLoadingCardData;
+  const loadingMembersList = isLoadingCardData;
+  const loadingOwner = isLoadingCardData;
+  const loadingSeason = isLoadingCardData;
+  const loadingStats = isLoadingCardData;
+  const loadingAuction = isLoadingCardData;
   
   const isAdmin = league.role === 'owner' || league.role === 'admin';
   const isPending = league.status === 'pending';
@@ -40,27 +47,13 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
   const isCompleted = league.status === 'completed';
   const remainingSpots = league.max_players - league.current_player_count;
 
-  // Fetch season from league_scopes (single source of truth)
-  const { data: leagueSeason, isLoading: loadingSeason } = useLeagueSeason(league.id);
-
-  // Pass season to stats hook
-  const { data: stats, isLoading: loadingStats } = useMyLeagueStats(
-    league.id,
-    leagueSeason?.seasonId || null
-  );
-
-  // Fetch auction status for active leagues
-  const { data: auctionStatus, isLoading: loadingAuction } = useLeagueAuctionStatus(
-    league.id,
-    isActive // Only fetch if league is active
-  );
-
   // Countdown for auction deadline
   const countdown = useCountdown(auctionStatus?.deadlineAt || null);
 
   const { data: templates } = useQuery({
     queryKey: ['league-templates'],
     queryFn: getLeagueTemplates,
+    staleTime: 60000,
   });
 
   const gameMode = templates?.find(t => t.id === league.game_mode);
