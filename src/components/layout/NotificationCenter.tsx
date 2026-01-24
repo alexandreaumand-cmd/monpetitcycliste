@@ -13,6 +13,7 @@ import { formatDistanceToNow } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { useMemo } from "react";
+import { cn } from "@/lib/utils";
 
 interface Notification {
   id: string;
@@ -29,7 +30,11 @@ interface Notification {
   };
 }
 
-export const NotificationCenter = () => {
+interface NotificationCenterProps {
+  variant?: 'default' | 'dark';
+}
+
+export const NotificationCenter = ({ variant = 'default' }: NotificationCenterProps) => {
   const { t, i18n } = useTranslation('navigation');
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const navigate = useNavigate();
@@ -83,8 +88,15 @@ export const NotificationCenter = () => {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5 text-primary" />
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className={cn("relative", variant === 'dark' && "hover:bg-yellow-500/10")}
+        >
+          <Bell className={cn(
+            "h-5 w-5",
+            variant === 'dark' ? "text-yellow-500" : "text-primary"
+          )} />
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 

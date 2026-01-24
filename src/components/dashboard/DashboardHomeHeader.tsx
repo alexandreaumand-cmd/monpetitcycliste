@@ -78,7 +78,7 @@ export function DashboardHomeHeader({
                 compact={true}
               />
             )}
-            <NotificationCenter />
+            <NotificationCenter variant="dark" />
           </div>
         </div>
       </header>
