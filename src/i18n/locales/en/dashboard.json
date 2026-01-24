@@ -63,6 +63,10 @@
     "noDataAvailable": "No data available",
     "viewMyLeague": "View my league",
     "goToAuction": "Go to auction",
+    "leagueEnded": "League ended",
+    "winner": "Winner",
+    "yourFinalRanking": "Your final ranking",
+    "viewResults": "View results",
     "auction": {
       "inProgress": "Auction in progress",
       "scheduled": "Scheduled auction",
