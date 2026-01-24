@@ -87,44 +87,50 @@ Deno.serve(async (req) => {
 
     if (entriesError) throw entriesError;
 
-    // Enrich entries with coureurs_saisons data
-    const coureurIds = (entries || []).map(e => e.coureur_id);
+    // OPTIMIZED: Batch fetch all coureurs_saisons in one query
+    const coureurIds = (entries || []).map(e => e.coureur_id).filter(Boolean);
     const coureursMap = new Map();
 
     if (coureurIds.length > 0 && saisonId) {
-      for (const coureurId of coureurIds) {
-        const { data: csData } = await supabase
-          .from('coureurs_saisons')
-          .select('coureur_id, coureurs!inner(id, nom), equipe_id, prix_initial')
-          .eq('saison_id', saisonId)
-          .eq('coureur_id', coureurId)
-          .limit(1);
+      // Batch fetch all coureurs_saisons
+      const { data: allCoureursSaisons } = await supabase
+        .from('coureurs_saisons')
+        .select('coureur_id, coureurs!inner(id, nom), equipe_id, prix_initial')
+        .eq('saison_id', saisonId)
+        .in('coureur_id', coureurIds);
 
-        if (csData && csData.length > 0) {
-          const cs = csData[0];
-          const coureurInfo = Array.isArray(cs.coureurs) ? cs.coureurs[0] : cs.coureurs;
-          let equipeName = '';
-          
-          if (cs.equipe_id) {
-            const { data: equipeData } = await supabase
-              .from('equipes_saisons')
-              .select('nom_affiche')
-              .eq('id', cs.equipe_id)
-              .limit(1);
-            equipeName = equipeData?.[0]?.nom_affiche || '';
-          }
-          
-          coureursMap.set(coureurId, {
-            id: (coureurInfo as any)?.id || cs.coureur_id,
-            nom: (coureurInfo as any)?.nom || '',
-            equipe: equipeName,
-            prix_initial: cs.prix_initial
-          });
-        }
+      // Batch fetch all equipes_saisons
+      const equipeIds = [...new Set(
+        (allCoureursSaisons || [])
+          .filter(cs => cs.equipe_id)
+          .map(cs => cs.equipe_id)
+      )];
+
+      const equipesMap = new Map();
+      if (equipeIds.length > 0) {
+        const { data: allEquipes } = await supabase
+          .from('equipes_saisons')
+          .select('id, nom_affiche')
+          .in('id', equipeIds);
+
+        (allEquipes || []).forEach((e: any) => {
+          equipesMap.set(e.id, e.nom_affiche || '');
+        });
       }
+
+      // Build the coureurs map with O(1) lookups
+      (allCoureursSaisons || []).forEach((cs: any) => {
+        const coureurInfo = Array.isArray(cs.coureurs) ? cs.coureurs[0] : cs.coureurs;
+        coureursMap.set(cs.coureur_id, {
+          id: coureurInfo?.id || cs.coureur_id,
+          nom: coureurInfo?.nom || '',
+          equipe: equipesMap.get(cs.equipe_id) || '',
+          prix_initial: cs.prix_initial
+        });
+      });
     }
 
-    // Enrich entries with coureur data
+    // Enrich entries with coureur data using pre-built map (no additional queries)
     const enrichedEntries = (entries || []).map(e => ({
       ...e,
       coureurs: coureursMap.get(e.coureur_id) || { id: e.coureur_id, nom: '', equipe: '', prix_initial: 10 }
