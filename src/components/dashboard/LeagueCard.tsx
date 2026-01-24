@@ -72,22 +72,22 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         <div className="flex items-start justify-between gap-3 pb-3 border-b border-border">
           <CardTitle className="text-lg">{league.name}</CardTitle>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <LeagueStatusBadge 
-              status={league.status} 
-              currentPlayerCount={league.current_player_count}
-              maxPlayers={league.max_players}
-            />
-            <Badge variant="outline" className="gap-1">
+            {league.status !== 'active' && (
+              <LeagueStatusBadge 
+                status={league.status} 
+                currentPlayerCount={league.current_player_count}
+                maxPlayers={league.max_players}
+              />
+            )}
+            <Badge 
+              variant="outline" 
+              className="px-1.5" 
+              title={league.visibility === 'private' ? t('leagueCard.private') : t('leagueCard.public')}
+            >
               {league.visibility === 'private' ? (
-                <>
-                  <Lock className="h-3 w-3" />
-                  {t('leagueCard.private')}
-                </>
+                <Lock className="h-3 w-3" />
               ) : (
-                <>
-                  <Globe className="h-3 w-3" />
-                  {t('leagueCard.public')}
-                </>
+                <Globe className="h-3 w-3" />
               )}
             </Badge>
           </div>
@@ -232,15 +232,6 @@ export function LeagueCard({ league, onViewDetails }: LeagueCardProps) {
         {/* EN COURS */}
         {isActive && (
           <>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{t('leagueCard.participants')}</span>
-              <LeagueParticipantsHover
-                ownerName={owner?.nom || null}
-                members={members}
-                currentPlayerCount={league.current_player_count}
-                isLoading={loadingMembersList || loadingOwner}
-              />
-            </div>
 
             {loadingStats ? (
               <div className="space-y-2">
