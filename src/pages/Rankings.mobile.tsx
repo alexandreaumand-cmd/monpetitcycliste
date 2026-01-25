@@ -521,12 +521,21 @@ export const RankingsMobile = () => {
               <>
                 {topRiders.map((rider, idx) => {
                   const rank = idx + 1;
+                  const owners = selectedPhase ? rider.owners : rider.owners_all;
+                  const ownerNames = owners?.map((o: any) => o.manager_nom).filter(Boolean).join(', ') || null;
                   
                   return (
                     <MobileCard
                       key={rider.coureur_id}
                       title={rider.coureur_nom}
-                      subtitle={rider.coureur_equipe || t('topRiders.unknownTeam')}
+                      subtitle={
+                        <div className="flex flex-col gap-0.5">
+                          <span>{rider.coureur_equipe || t('topRiders.unknownTeam')}</span>
+                          {ownerNames && (
+                            <span className="text-xs text-primary font-medium">{ownerNames}</span>
+                          )}
+                        </div>
+                      }
                       meta={`${rider.courses_count || 0} courses`}
                       onClick={() => handleRiderClick(rider)}
                       avatar={
