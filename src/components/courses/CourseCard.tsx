@@ -27,7 +27,7 @@ export const CourseCard = ({ course, daysUntil, onShowDetails }: CourseCardProps
   const durationLabel = `${course.nb_jours} j`;
   const normalized = normalizeCourseType(course.type_course);
   const etapesLabel = normalized.isStage
-    ? `${course.nb_etapes_estimees} étapes` 
+    ? `Course par étapes (${course.nb_etapes_estimees})` 
     : "Course d'un jour";
 
   const countdownLabel = daysUntil === 0 ? "Aujourd'hui" : `J-${daysUntil}`;
