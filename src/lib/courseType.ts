@@ -16,7 +16,10 @@ export interface NormalizedCourseType {
 
 export function normalizeCourseType(typeValue: string | null | undefined): NormalizedCourseType {
   const normalized = (typeValue || '').toLowerCase().trim();
-  const isStage = normalized.includes('stage');
+  // Check for various stage race indicators: 'stage', 'stages', 'etapes', 'étape', 'étapes'
+  const isStage = normalized.includes('stage') || 
+                  normalized.includes('etape') || 
+                  normalized.includes('étape');
   
   return {
     isStage,
