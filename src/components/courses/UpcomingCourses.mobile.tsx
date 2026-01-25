@@ -158,7 +158,7 @@ export const UpcomingCoursesMobile = () => {
                 : t('courses.daysUntil', { count: daysUntil });
             const normalized = normalizeCourseType(course.type_course);
             const etapesLabel = normalized.isStage
-              ? `${course.nb_etapes_estimees} ${t('courses.stages')}` 
+              ? `${t('courses.stageRace')} (${course.nb_etapes_estimees})` 
               : t('courses.oneDay');
 
             return (

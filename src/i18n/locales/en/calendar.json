@@ -129,6 +129,7 @@
     "tomorrow": "Tomorrow",
     "daysUntil": "D-{{count}}",
     "stages": "stages",
+    "stageRace": "Stage race",
     "oneDay": "One-day race",
     "cancelled": "Cancelled",
     "configUWT": "UWT Config",

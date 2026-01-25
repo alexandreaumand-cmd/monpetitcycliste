@@ -129,6 +129,7 @@
     "tomorrow": "Demain",
     "daysUntil": "J-{{count}}",
     "stages": "étapes",
+    "stageRace": "Course par étapes",
     "oneDay": "Course d'un jour",
     "cancelled": "Annulée",
     "configUWT": "Config UWT",
