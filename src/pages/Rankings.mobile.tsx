@@ -25,6 +25,7 @@ import { ManagerPrestigeIcons } from "@/components/rankings/ManagerPrestigeIcons
 import { useLeague } from "@/contexts/LeagueContext";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 
 type TabView = "standings" | "riders" | "timeline" | "comparison";
 
@@ -501,11 +502,19 @@ export const RankingsMobile = () => {
                         </div>
                       }
                       badge={
-                        <div className="flex items-center gap-1">
-                          <span className="text-2xl font-bold text-primary">
-                            {rider.total_points}
+                        <div className="flex flex-col items-end">
+                          <div className="flex items-center gap-1">
+                            <span className="text-2xl font-bold text-primary">
+                              {rider.total_points}
+                            </span>
+                            <span className="text-xs text-muted-foreground">pts</span>
+                          </div>
+                          <span className="text-xs font-medium text-accent-foreground">
+                            ROI: {formatROICompact(computeRiderROI({
+                              pointsTotal: rider.total_points,
+                              purchasePriceTotal: rider.prix_achat
+                            }))}
                           </span>
-                          <span className="text-xs text-muted-foreground">pts</span>
                         </div>
                       }
                     />
