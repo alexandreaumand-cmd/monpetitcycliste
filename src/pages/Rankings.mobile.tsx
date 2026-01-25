@@ -41,6 +41,7 @@ export const RankingsMobile = () => {
   const [ridersDisplayLimit, setRidersDisplayLimit] = useState(20);
   const [riderSearchTerm, setRiderSearchTerm] = useState("");
   const [hideRidersWithoutManagers, setHideRidersWithoutManagers] = useState(false);
+  const [riderSortBy, setRiderSortBy] = useState<'points' | 'ratio'>('points');
   const [selectedRider, setSelectedRider] = useState<{
     id: string;
     nom: string;
@@ -162,7 +163,7 @@ export const RankingsMobile = () => {
     },
   });
 
-  // Filter riders by search term and manager ownership
+  // Filter and sort riders by search term, manager ownership, and sort preference
   const filteredTopRiders = useMemo(() => {
     let filtered = allTopRiders || [];
     
@@ -181,8 +182,20 @@ export const RankingsMobile = () => {
       });
     }
     
+    // Sort by selected criteria
+    if (riderSortBy === 'ratio') {
+      filtered = [...filtered].sort((a, b) => {
+        const roiA = computeRiderROI({ pointsTotal: a.total_points, purchasePriceTotal: a.prix_achat });
+        const roiB = computeRiderROI({ pointsTotal: b.total_points, purchasePriceTotal: b.prix_achat });
+        return roiB - roiA;
+      });
+    } else {
+      // Default: sort by points (already sorted from API, but ensure consistency)
+      filtered = [...filtered].sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
+    }
+    
     return filtered;
-  }, [allTopRiders, riderSearchTerm, hideRidersWithoutManagers, selectedPhase]);
+  }, [allTopRiders, riderSearchTerm, hideRidersWithoutManagers, selectedPhase, riderSortBy]);
 
   const topRiders = filteredTopRiders?.slice(0, ridersDisplayLimit);
 
@@ -456,15 +469,35 @@ export const RankingsMobile = () => {
                 onChange={(e) => setRiderSearchTerm(e.target.value)}
                 className="h-10"
               />
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="hide-no-managers-mobile"
-                  checked={hideRidersWithoutManagers}
-                  onCheckedChange={setHideRidersWithoutManagers}
-                />
-                <Label htmlFor="hide-no-managers-mobile" className="text-sm cursor-pointer">
-                  {t('topRiders.hideWithoutManagerMobile')}
-                </Label>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="hide-no-managers-mobile"
+                    checked={hideRidersWithoutManagers}
+                    onCheckedChange={setHideRidersWithoutManagers}
+                  />
+                  <Label htmlFor="hide-no-managers-mobile" className="text-sm cursor-pointer">
+                    {t('topRiders.hideWithoutManager')}
+                  </Label>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant={riderSortBy === 'points' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setRiderSortBy('points')}
+                    className="h-8 px-3 text-xs"
+                  >
+                    {t('topRiders.points')}
+                  </Button>
+                  <Button
+                    variant={riderSortBy === 'ratio' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setRiderSortBy('ratio')}
+                    className="h-8 px-3 text-xs"
+                  >
+                    {t('topRiders.ratio')}
+                  </Button>
+                </div>
               </div>
             </div>
 
