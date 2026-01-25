@@ -47,14 +47,16 @@ Deno.serve(async (req) => {
     }
 
     // Fetch league-specific notes if league_id is provided
+    // Notes are now linked to race_id (persistent across startlist reimports)
     let leagueNote = null;
     let ratingAuthorName = null;
+    const raceId = startlist.race_id;
     
-    if (league_id) {
+    if (league_id && raceId) {
       const { data: leagueNoteData } = await supabase
         .from('league_startlist_notes')
         .select('admin_rating_note, admin_rating_author_id')
-        .eq('startlist_id', startlist_id)
+        .eq('race_id', raceId)
         .eq('league_id', league_id)
         .maybeSingle();
       

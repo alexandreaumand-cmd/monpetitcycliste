@@ -83,6 +83,22 @@ serve(async (req) => {
       );
     }
 
+    // Fetch race_id from startlist_imports to use for notes (persistent across reimports)
+    const { data: startlistData, error: startlistError } = await supabase
+      .from('startlist_imports')
+      .select('race_id')
+      .eq('id', startlist_id)
+      .single();
+
+    if (startlistError || !startlistData?.race_id) {
+      return new Response(
+        JSON.stringify({ error: 'Startlist not found or missing race_id' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const raceId = startlistData.race_id;
+
     // Validate ratings
     for (const rating of ratings) {
       if (!rating.manager_id || typeof rating.stars !== 'number' || rating.stars < 1 || rating.stars > 5) {
@@ -119,20 +135,22 @@ serve(async (req) => {
     }
 
     // Update league-scoped note in league_startlist_notes table
+    // Notes are now linked to race_id (persistent across startlist reimports)
     if (global_note !== undefined && league_id) {
       const cleaned = typeof global_note === 'string' ? global_note.trim() : null;
       
-      // Upsert into league_startlist_notes
+      // Upsert into league_startlist_notes using race_id
       const { error: upsertNoteError } = await supabase
         .from('league_startlist_notes')
         .upsert({
           league_id,
-          startlist_id,
+          race_id: raceId,
+          startlist_id, // Keep for backwards compatibility
           admin_rating_note: cleaned || null,
           admin_rating_author_id: cleaned ? currentManager.id : null,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'league_id,startlist_id'
+          onConflict: 'league_id,race_id'
         });
       
       if (upsertNoteError) {

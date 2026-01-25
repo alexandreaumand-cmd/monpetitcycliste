@@ -1422,6 +1422,7 @@ export type Database = {
           created_at: string
           id: string
           league_id: string
+          race_id: string | null
           startlist_id: string
           updated_at: string
         }
@@ -1431,6 +1432,7 @@ export type Database = {
           created_at?: string
           id?: string
           league_id: string
+          race_id?: string | null
           startlist_id: string
           updated_at?: string
         }
@@ -1440,6 +1442,7 @@ export type Database = {
           created_at?: string
           id?: string
           league_id?: string
+          race_id?: string | null
           startlist_id?: string
           updated_at?: string
         }
@@ -1492,6 +1495,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "leagues"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_startlist_notes_race_id_fkey"
+            columns: ["race_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_startlist_notes_race_id_fkey"
+            columns: ["race_id"]
+            isOneToOne: false
+            referencedRelation: "courses_for_points_norm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_startlist_notes_race_id_fkey"
+            columns: ["race_id"]
+            isOneToOne: false
+            referencedRelation: "v_course_points_theoriques"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "league_startlist_notes_race_id_fkey"
+            columns: ["race_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_recent_results"
+            referencedColumns: ["course_id"]
           },
           {
             foreignKeyName: "league_startlist_notes_startlist_id_fkey"
