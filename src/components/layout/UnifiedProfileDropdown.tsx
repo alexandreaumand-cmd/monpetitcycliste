@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { User, Settings, LogOut, Bell, Check } from "lucide-react";
+import { User, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,10 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useNotifications } from "@/hooks/useNotifications";
-import { formatDistanceToNow } from "date-fns";
-import { fr, enUS } from "date-fns/locale";
-import { cn } from "@/lib/utils";
 
 interface UnifiedProfileDropdownProps {
   manager: {
@@ -40,11 +35,9 @@ export function UnifiedProfileDropdown({
 }: UnifiedProfileDropdownProps) {
   const { t, i18n } = useTranslation(['dashboard', 'navigation']);
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [open, setOpen] = useState(false);
 
   const currentLang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
-  const dateLocale = currentLang === 'fr' ? fr : enUS;
 
   const getInitials = (name?: string) => {
     if (!name) return "?";
@@ -55,30 +48,6 @@ export function UnifiedProfileDropdown({
     i18n.changeLanguage(lang);
   };
 
-  const handleNotificationClick = (notification: any) => {
-    markAsRead(notification.id);
-    const leagueId = notification.metadata?.league_id;
-    const leagueParam = leagueId ? `?leagueId=${leagueId}` : '';
-    
-    switch (notification.type) {
-      case 'startlist_validated':
-        navigate(`/dashboard/startlist${leagueParam}`);
-        break;
-      case 'results_added':
-        navigate(`/dashboard/resultats${leagueParam}`);
-        break;
-      case 'auction_opened':
-      case 'auction_closed':
-        navigate(`/dashboard/encheres${leagueParam}`);
-        break;
-      default:
-        break;
-    }
-    setOpen(false);
-  };
-
-  const recentNotifications = notifications.slice(0, 4);
-
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
@@ -86,17 +55,12 @@ export function UnifiedProfileDropdown({
           variant="ghost"
           className="relative h-10 px-2 gap-2 hover:bg-yellow-500/10"
         >
-          <div className="relative">
-            <Avatar className="h-8 w-8 border border-yellow-500/30">
-              <AvatarImage src={manager.avatar_url} alt={manager.nom} />
-              <AvatarFallback className="bg-yellow-500/20 text-yellow-500 text-xs font-medium">
-                {getInitials(manager.nom)}
-              </AvatarFallback>
-            </Avatar>
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-black" />
-            )}
-          </div>
+          <Avatar className="h-8 w-8 border border-yellow-500/30">
+            <AvatarImage src={manager.avatar_url} alt={manager.nom} />
+            <AvatarFallback className="bg-yellow-500/20 text-yellow-500 text-xs font-medium">
+              {getInitials(manager.nom)}
+            </AvatarFallback>
+          </Avatar>
           <span className="hidden md:inline text-white font-medium text-sm max-w-[100px] truncate">
             {manager.nom}
           </span>
@@ -126,73 +90,6 @@ export function UnifiedProfileDropdown({
             </div>
           </div>
         </DropdownMenuLabel>
-
-        <DropdownMenuSeparator />
-
-        {/* Notifications section */}
-        <div className="px-2 py-1.5">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Bell className="h-4 w-4" />
-              {t('navigation:notifications.title')}
-              {unreadCount > 0 && (
-                <Badge variant="destructive" className="h-5 px-1.5 text-xs">
-                  {unreadCount}
-                </Badge>
-              )}
-            </div>
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 text-xs px-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  markAllAsRead();
-                }}
-              >
-                <Check className="h-3 w-3 mr-1" />
-                {t('navigation:notifications.markAllRead')}
-              </Button>
-            )}
-          </div>
-
-          {recentNotifications.length > 0 ? (
-            <ScrollArea className="h-[140px]">
-              <div className="space-y-1">
-                {recentNotifications.map((notification) => (
-                  <button
-                    key={notification.id}
-                    onClick={() => handleNotificationClick(notification)}
-                    className={cn(
-                      "w-full text-left p-2 rounded-md text-sm transition-colors hover:bg-muted",
-                      !notification.is_read && "bg-muted/50"
-                    )}
-                  >
-                    <div className="flex items-start gap-2">
-                      {!notification.is_read && (
-                        <span className="h-2 w-2 mt-1.5 rounded-full bg-yellow-500 flex-shrink-0" />
-                      )}
-                      <div className={cn("flex-1 min-w-0", notification.is_read && "ml-4")}>
-                        <p className="font-medium truncate">{notification.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(notification.created_at), {
-                            addSuffix: true,
-                            locale: dateLocale,
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              {t('navigation:notifications.empty')}
-            </p>
-          )}
-        </div>
 
         <DropdownMenuSeparator />
 
