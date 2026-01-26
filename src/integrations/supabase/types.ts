@@ -1422,7 +1422,7 @@ export type Database = {
           created_at: string
           id: string
           league_id: string
-          race_id: string | null
+          race_id: string
           startlist_id: string
           updated_at: string
         }
@@ -1432,7 +1432,7 @@ export type Database = {
           created_at?: string
           id?: string
           league_id: string
-          race_id?: string | null
+          race_id: string
           startlist_id: string
           updated_at?: string
         }
@@ -1442,7 +1442,7 @@ export type Database = {
           created_at?: string
           id?: string
           league_id?: string
-          race_id?: string | null
+          race_id?: string
           startlist_id?: string
           updated_at?: string
         }
