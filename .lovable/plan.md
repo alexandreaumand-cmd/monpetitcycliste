@@ -1,161 +1,196 @@
 
+# Configuration PWA pour Mon Petit Cycliste
 
-## Diagnostic : Doublons de bonus coureurs (+25%)
+## Objectif
 
-### Problème identifié
+Transformer l'application en Progressive Web App (PWA) installable avec :
+- Fonctionnement hors-ligne
+- Icône sur l'écran d'accueil
+- Écran de lancement (splash screen)
+- Page d'installation dédiée `/install`
 
-Le trigger `trigger_calculate_bonus_rider()` n'a **aucune protection contre les doublons**. À chaque recalcul des points (via l'interface Super Admin), le trigger insère un nouveau bonus au lieu de vérifier s'il existe déjà.
+---
 
-### Preuve dans les données
+## Apercu de l'architecture
 
-| Coureur | Commentaire | Créé le 1 | Créé le 2 | Écart |
-|---------|------------|-----------|-----------|-------|
-| SOBRERO | General | 05:06:53 | 06:53:06 | ~2h |
-| BRENNER | General | 05:06:53 | 06:53:06 | ~2h |
-| BRENNER | Etape | 06:48:44 | 08:35:50 | ~2h |
-
-Les doublons correspondent à des recalculs de points effectués à différents moments.
-
-### Code défaillant (trigger actif)
-
-```sql
--- trigger_calculate_bonus_rider() - PAS DE VÉRIFICATION
-INSERT INTO bonus_points (...) VALUES (...);
-```
-
-### Code correct (migration existante mais non utilisée)
-
-```sql
--- calculate_rider_bonus_on_points_insert() - AVEC VÉRIFICATION
-IF NOT EXISTS (
-  SELECT 1 FROM bonus_points bp
-  WHERE bp.phase_id = NEW.phase_id
-  AND bp.coureur_id = NEW.coureur_id
-  AND bp.manager_id = v_bonus_record.manager_id
-  AND bp.league_id = v_bonus_record.league_id
-  AND bp.bonus_type = 'coureur_bonuse'
-  AND bp.commentaire LIKE '%' || COALESCE(NEW.course_id, 'Course') || ' - ' || NEW.type_classement::text || '%'
-) THEN
-  INSERT INTO bonus_points ...
-END IF;
+```text
++------------------+     +-------------------+     +------------------+
+|   vite-plugin-pwa |---->|  Service Worker  |---->| Cache hors-ligne |
++------------------+     +-------------------+     +------------------+
+        |
+        v
++------------------+     +-------------------+
+|   manifest.json  |---->| Icônes PWA (512px)|
++------------------+     +-------------------+
+        |
+        v
++------------------+     +-------------------+
+|  usePWAInstall   |---->|  Page /install   |
+|     (hook)       |     |   avec guide     |
++------------------+     +-------------------+
 ```
 
 ---
 
-## Solution proposée
+## Modifications prevues
 
-### Étape 1 : Corriger le trigger
+### 1. Installation de la dependance
 
-Mettre à jour la fonction `trigger_calculate_bonus_rider()` pour ajouter la vérification `IF NOT EXISTS` :
+Ajouter `vite-plugin-pwa` au projet :
+- Package : `vite-plugin-pwa`
+- Inclut automatiquement `workbox-build` pour le service worker
 
-```sql
-CREATE OR REPLACE FUNCTION public.trigger_calculate_bonus_rider()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  v_bonus_record RECORD;
-  v_bonus_amount INTEGER;
-  v_saison_id uuid;
-  v_cote_initiale NUMERIC;
-  v_comment text;
-BEGIN
-  IF NEW.points <= 0 THEN
-    RETURN NEW;
-  END IF;
+### 2. Configuration Vite (`vite.config.ts`)
 
-  SELECT p.saison_id INTO v_saison_id
-  FROM phases p WHERE p.id = NEW.phase_id;
+Integrer le plugin PWA avec :
+- Mode `generateSW` (generation automatique du service worker)
+- Strategie de cache `CacheFirst` pour les assets
+- Configuration du manifest inline
 
-  FOR v_bonus_record IN
-    SELECT 
-      r.manager_id,
-      r.league_id,
-      brs.coureur_id IS NOT NULL AS is_bonus_rider
-    FROM rosters r
-    LEFT JOIN bonus_rider_selections brs 
-      ON brs.manager_id = r.manager_id 
-      AND brs.phase_id = r.phase_id 
-      AND brs.coureur_id = r.coureur_id
-    WHERE r.coureur_id = NEW.coureur_id
-      AND r.phase_id = NEW.phase_id
-  LOOP
-    IF v_bonus_record.is_bonus_rider THEN
-      SELECT prix_initial INTO v_cote_initiale
-      FROM coureurs_saisons
-      WHERE coureur_id = NEW.coureur_id AND saison_id = v_saison_id;
-      
-      IF v_cote_initiale IS NULL THEN
-        SELECT prix_initial INTO v_cote_initiale 
-        FROM coureurs WHERE id = NEW.coureur_id;
-      END IF;
-      
-      IF v_cote_initiale IN (10, 20) THEN
-        v_bonus_amount := FLOOR(NEW.points * 0.25);
-        v_comment := 'Bonus coureur automatique (25%) - ' 
-                     || COALESCE(NEW.course_id, 'Course') 
-                     || ' - ' || NEW.type_classement::text;
-        
-        -- NOUVEAU : Vérification anti-doublon
-        IF NOT EXISTS (
-          SELECT 1 FROM bonus_points bp
-          WHERE bp.phase_id = NEW.phase_id
-            AND bp.coureur_id = NEW.coureur_id
-            AND bp.manager_id = v_bonus_record.manager_id
-            AND bp.league_id = v_bonus_record.league_id
-            AND bp.bonus_type = 'coureur_bonuse'
-            AND bp.commentaire = v_comment
-        ) THEN
-          INSERT INTO bonus_points (
-            phase_id, coureur_id, manager_id, bonus_type, points,
-            commentaire, created_by, league_id
-          ) VALUES (
-            NEW.phase_id, NEW.coureur_id, v_bonus_record.manager_id,
-            'coureur_bonuse', v_bonus_amount,
-            v_comment,
-            v_bonus_record.manager_id,
-            v_bonus_record.league_id
-          );
-        END IF;
-      END IF;
-    END IF;
-  END LOOP;
-
-  RETURN NEW;
-END;
-$$;
+```text
+Parametres cles :
+- registerType: 'autoUpdate' (mise a jour automatique)
+- includeAssets: ['favicon.png', 'favicon.ico']
+- Cache: images, fonts, CSS, JS
 ```
 
-### Étape 2 : Nettoyer les données existantes
+### 3. Mise a jour de `index.html`
 
-Supprimer les doublons en conservant l'entrée la plus ancienne :
+Ajouter les meta tags PWA essentiels :
+- `<meta name="theme-color">` (jaune #FBBF24 pour cohérence Tour de France)
+- `<meta name="apple-mobile-web-app-capable">`
+- `<meta name="apple-mobile-web-app-status-bar-style">`
+- Liens vers les icones Apple Touch
 
-```sql
-DELETE FROM bonus_points a
-USING bonus_points b
-WHERE a.id > b.id
-  AND a.phase_id = b.phase_id
-  AND a.coureur_id = b.coureur_id
-  AND a.manager_id = b.manager_id
-  AND a.league_id = b.league_id
-  AND a.bonus_type = b.bonus_type
-  AND a.commentaire = b.commentaire;
+### 4. Creation des icones PWA
+
+Generer a partir du `favicon.png` existant :
+- `/public/pwa-192x192.png` (icone standard)
+- `/public/pwa-512x512.png` (icone grande / splash)
+- `/public/apple-touch-icon-180x180.png` (iOS)
+
+Note : Comme le `favicon.png` actuel est deja en haute resolution, il servira de source.
+
+### 5. Hook personnalise `usePWAInstall`
+
+Nouveau fichier : `src/hooks/usePWAInstall.ts`
+
+Fonctionnalites :
+- Capture de l'evenement `beforeinstallprompt`
+- Detection si deja installe (mode `standalone`)
+- Detection du navigateur (iOS Safari, Android Chrome, etc.)
+- Declenchement de l'installation native quand possible
+
+```text
+Interface retournee :
+{
+  isInstallable: boolean      // Prompt disponible
+  isInstalled: boolean        // Deja installe
+  isIOS: boolean              // Detection iOS
+  isAndroid: boolean          // Detection Android
+  install: () => Promise      // Declencher l'installation
+}
+```
+
+### 6. Page d'installation `/install`
+
+Nouveau fichier : `src/pages/InstallPage.tsx`
+
+Design :
+- Logo MPC en grand
+- Titre accrocheur
+- Bouton d'installation (si supporté nativement)
+- Instructions manuelles pour iOS (Partager > Ajouter a l'ecran d'accueil)
+- Instructions pour Android/Chrome
+- Indication si deja installe
+
+Sections :
+1. En-tete avec logo
+2. Avantages de l'installation (acces rapide, hors-ligne, notifications)
+3. Bouton principal ou instructions selon la plateforme
+4. Lien pour continuer sur le web
+
+### 7. Mise a jour du routeur (`App.tsx`)
+
+Ajouter la route :
+```text
+/install -> InstallPage
+```
+
+### 8. Traductions i18n
+
+Nouveaux fichiers :
+- `src/i18n/locales/fr/install.json`
+- `src/i18n/locales/en/install.json`
+
+Cles a traduire :
+- Titre de la page
+- Description des avantages
+- Instructions iOS/Android
+- Boutons et messages d'etat
+
+Mise a jour de `src/i18n/index.ts` pour inclure le namespace `install`.
+
+---
+
+## Details techniques
+
+### Configuration du manifest (via vite-plugin-pwa)
+
+```text
+{
+  name: "Mon Petit Cycliste",
+  short_name: "MPC",
+  description: "Fantasy Cycling - Joue la saison, gagne la gloire",
+  theme_color: "#FBBF24",
+  background_color: "#000000",
+  display: "standalone",
+  orientation: "portrait",
+  start_url: "/",
+  scope: "/",
+  icons: [...]
+}
+```
+
+### Strategie de cache
+
+- **Assets statiques** : Cache First (images, fonts, CSS, JS)
+- **API calls** : Network First (donnees fraiches prioritaires)
+- **Navigation** : Network First avec fallback offline
+
+### Detection de plateforme
+
+```text
+iOS       : navigator.userAgent.includes('iPhone') || 'iPad'
+Android   : navigator.userAgent.includes('Android')
+Standalone: window.matchMedia('(display-mode: standalone)').matches
 ```
 
 ---
 
-## Résumé des modifications
+## Fichiers a creer/modifier
 
-| Type | Action | Fichier/Table |
-|------|--------|---------------|
-| DB | Mettre à jour la fonction trigger | `trigger_calculate_bonus_rider()` |
-| DB | Supprimer les doublons existants | `bonus_points` |
+| Fichier | Action |
+|---------|--------|
+| `package.json` | Ajouter `vite-plugin-pwa` |
+| `vite.config.ts` | Configurer le plugin PWA |
+| `index.html` | Ajouter meta tags PWA |
+| `public/pwa-192x192.png` | Creer icone (copie redimensionnee) |
+| `public/pwa-512x512.png` | Creer icone (copie source) |
+| `src/hooks/usePWAInstall.ts` | Nouveau hook |
+| `src/pages/InstallPage.tsx` | Nouvelle page |
+| `src/App.tsx` | Ajouter route /install |
+| `src/i18n/locales/fr/install.json` | Traductions FR |
+| `src/i18n/locales/en/install.json` | Traductions EN |
+| `src/i18n/index.ts` | Importer namespace install |
 
-## Impact
+---
 
-- **Correction immédiate** des doublons pour SOBRERO et BRENNER
-- **Prévention future** de la création de doublons lors des recalculs de points
-- **Aucun changement de code frontend** nécessaire
+## Resultat attendu
 
+Apres implementation :
+1. L'app sera installable depuis Chrome/Edge sur desktop et mobile
+2. Sur iOS, la page `/install` guidera l'utilisateur etape par etape
+3. Un service worker cachera les assets pour un chargement rapide
+4. L'app s'ouvrira en mode plein ecran (sans barre d'adresse)
+5. Une icone MPC apparaitra sur l'ecran d'accueil
