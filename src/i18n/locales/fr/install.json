@@ -1,0 +1,43 @@
+{
+  "title": "Installer Mon Petit Cycliste",
+  "subtitle": "Accède à l'app en un clic depuis ton écran d'accueil",
+  "alreadyInstalled": "✓ App déjà installée !",
+  "alreadyInstalledDesc": "Tu peux fermer cette page et ouvrir l'app depuis ton écran d'accueil.",
+  "installButton": "Installer l'application",
+  "continueWeb": "Continuer sur le web",
+  "advantages": {
+    "title": "Pourquoi installer ?",
+    "fast": {
+      "title": "Accès instantané",
+      "desc": "Lance l'app en un tap depuis ton écran d'accueil"
+    },
+    "offline": {
+      "title": "Mode hors-ligne",
+      "desc": "Consulte tes données même sans connexion"
+    },
+    "fullscreen": {
+      "title": "Plein écran",
+      "desc": "Expérience immersive sans barre d'adresse"
+    }
+  },
+  "ios": {
+    "title": "Comment installer sur iPhone/iPad",
+    "step1": "Appuie sur le bouton Partager",
+    "step1Icon": "📤",
+    "step2": "Fais défiler et appuie sur \"Sur l'écran d'accueil\"",
+    "step2Icon": "➕",
+    "step3": "Appuie sur \"Ajouter\" en haut à droite",
+    "step3Icon": "✓"
+  },
+  "android": {
+    "title": "Comment installer sur Android",
+    "step1": "Appuie sur le menu ⋮ en haut à droite",
+    "step2": "Appuie sur \"Installer l'application\" ou \"Ajouter à l'écran d'accueil\"",
+    "step3": "Confirme l'installation"
+  },
+  "desktop": {
+    "title": "Comment installer sur ordinateur",
+    "step1": "Clique sur l'icône d'installation dans la barre d'adresse",
+    "step2": "Ou utilise le menu du navigateur → \"Installer Mon Petit Cycliste\""
+  }
+}
