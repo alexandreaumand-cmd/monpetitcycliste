@@ -14,6 +14,7 @@ import NotFound from "./pages/NotFound";
 import { JoinLeaguePage } from "./pages/JoinLeaguePage";
 import { InvitePage } from "./pages/InvitePage";
 import { InviteShortPage } from "./pages/InviteShortPage";
+import InstallPage from "./pages/InstallPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +37,7 @@ const App = () => {
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/install" element={<InstallPage />} />
                 <Route path="/i/:token" element={<InviteShortPage />} />
                 <Route path="/invite" element={<InvitePage />} />
                 <Route path="/join" element={<JoinLeaguePage />} />

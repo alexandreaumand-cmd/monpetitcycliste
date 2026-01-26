@@ -1,0 +1,43 @@
+{
+  "title": "Install Mon Petit Cycliste",
+  "subtitle": "Access the app with one tap from your home screen",
+  "alreadyInstalled": "✓ App already installed!",
+  "alreadyInstalledDesc": "You can close this page and open the app from your home screen.",
+  "installButton": "Install the app",
+  "continueWeb": "Continue on web",
+  "advantages": {
+    "title": "Why install?",
+    "fast": {
+      "title": "Instant access",
+      "desc": "Launch the app with one tap from your home screen"
+    },
+    "offline": {
+      "title": "Offline mode",
+      "desc": "Check your data even without connection"
+    },
+    "fullscreen": {
+      "title": "Full screen",
+      "desc": "Immersive experience without address bar"
+    }
+  },
+  "ios": {
+    "title": "How to install on iPhone/iPad",
+    "step1": "Tap the Share button",
+    "step1Icon": "📤",
+    "step2": "Scroll down and tap \"Add to Home Screen\"",
+    "step2Icon": "➕",
+    "step3": "Tap \"Add\" in the top right",
+    "step3Icon": "✓"
+  },
+  "android": {
+    "title": "How to install on Android",
+    "step1": "Tap the menu ⋮ in the top right",
+    "step2": "Tap \"Install app\" or \"Add to Home Screen\"",
+    "step3": "Confirm the installation"
+  },
+  "desktop": {
+    "title": "How to install on desktop",
+    "step1": "Click the install icon in the address bar",
+    "step2": "Or use the browser menu → \"Install Mon Petit Cycliste\""
+  }
+}
