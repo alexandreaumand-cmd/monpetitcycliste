@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 type LeagueContextType = {
   leagueId: string | null;
@@ -22,20 +23,63 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [leagueId, setLeagueIdState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasAutoSelected, setHasAutoSelected] = useState(false);
+
+  // Fetch user leagues directly in context to avoid circular dependency
+  const { data: userLeagues, isLoading: leaguesLoading } = useQuery({
+    queryKey: ['user-leagues-for-context'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data: memberships } = await supabase
+        .from('league_members')
+        .select(`
+          league_id,
+          leagues:league_id (
+            id,
+            name,
+            status
+          )
+        `)
+        .eq('user_id', user.id);
+
+      return (memberships || [])
+        .filter(m => m.leagues)
+        .map(m => m.leagues as { id: string; name: string; status: string });
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 
   useEffect(() => {
-    const initLeague = () => {
-      setIsLoading(true);
+    if (leaguesLoading) return;
 
-      // Only check URL param - no localStorage, no Legacy fallback
-      const fromUrl = searchParams.get("leagueId");
+    const fromUrl = searchParams.get("leagueId");
+
+    if (fromUrl) {
+      // URL has priority - use it
       setLeagueIdState(fromUrl);
-      
       setIsLoading(false);
-    };
+      setHasAutoSelected(false);
+    } else if (userLeagues && userLeagues.length > 0 && !hasAutoSelected) {
+      // No URL param - auto-select first active league
+      const activeLeagues = userLeagues.filter(l => l.status !== 'completed');
+      const defaultLeague = activeLeagues[0] || userLeagues[0];
 
-    initLeague();
-  }, [searchParams]);
+      if (defaultLeague) {
+        // Update URL with default league
+        const params = new URLSearchParams(searchParams);
+        params.set("leagueId", defaultLeague.id);
+        navigate({ search: params.toString() }, { replace: true });
+        setLeagueIdState(defaultLeague.id);
+        setHasAutoSelected(true);
+      }
+      setIsLoading(false);
+    } else if (!leaguesLoading) {
+      // No leagues available
+      setIsLoading(false);
+    }
+  }, [searchParams, userLeagues, leaguesLoading, navigate, hasAutoSelected]);
 
   // Invalidate all queries when league changes
   useEffect(() => {
@@ -46,6 +90,7 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
 
   const setLeagueId = (id: string) => {
     setLeagueIdState(id);
+    setHasAutoSelected(false);
 
     // Update URL param only
     const params = new URLSearchParams(searchParams);
