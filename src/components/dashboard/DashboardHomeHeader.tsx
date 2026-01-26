@@ -121,16 +121,19 @@ export function DashboardHomeHeader({
           </button>
         </nav>
 
-        {/* Right: Unified Profile Dropdown */}
-        {manager && (
-          <UnifiedProfileDropdown
-            manager={manager}
-            isAdmin={isAnyAdmin}
-            isSuperAdmin={isSuperAdmin}
-            onSignOut={onSignOut}
-            onNavigateAdmin={onNavigateAdmin}
-          />
-        )}
+        {/* Right: Notifications + Profile Dropdown */}
+        <div className="flex items-center gap-2">
+          <NotificationCenter variant="dark" />
+          {manager && (
+            <UnifiedProfileDropdown
+              manager={manager}
+              isAdmin={isAnyAdmin}
+              isSuperAdmin={isSuperAdmin}
+              onSignOut={onSignOut}
+              onNavigateAdmin={onNavigateAdmin}
+            />
+          )}
+        </div>
       </div>
     </header>
   );
