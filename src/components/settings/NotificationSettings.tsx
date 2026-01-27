@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Bell, Loader2, AlertCircle, Trophy, ListChecks, Gavel, Send } from "lucide-react";
+import { Bell, Loader2, AlertCircle, Trophy, ListChecks, Gavel, Send, RotateCcw } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,10 +17,14 @@ export function NotificationSettings() {
     isSubscribed,
     preferences,
     isLoading,
+    debugInfo,
     subscribe,
     unsubscribe,
-    updatePreferences
+    updatePreferences,
+    resetSubscription
   } = usePushNotifications();
+
+  const [isResetting, setIsResetting] = useState(false);
 
   const [isSendingTest, setIsSendingTest] = useState(false);
 
@@ -96,6 +100,23 @@ export function NotificationSettings() {
     const success = await updatePreferences({ [key]: value });
     if (!success) {
       toast.error(t('notifications.updateError'));
+    }
+  };
+
+  const handleResetSubscription = async () => {
+    setIsResetting(true);
+    try {
+      const success = await resetSubscription();
+      if (success) {
+        toast.success("Abonnement réinitialisé avec succès !");
+      } else {
+        toast.error("Échec de la réinitialisation");
+      }
+    } catch (error) {
+      console.error('Reset error:', error);
+      toast.error("Erreur lors de la réinitialisation");
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -231,7 +252,7 @@ export function NotificationSettings() {
                 </div>
 
                 {/* Test notification button */}
-                <div className="pt-4 border-t">
+                <div className="pt-4 border-t space-y-3">
                   <Button
                     variant="outline"
                     onClick={handleSendTestNotification}
@@ -245,6 +266,31 @@ export function NotificationSettings() {
                     )}
                     Envoyer une notification test
                   </Button>
+
+                  {/* Debug info and reset button */}
+                  <div className="text-xs text-muted-foreground bg-muted p-3 rounded space-y-2">
+                    <p className="font-medium">Debug Info:</p>
+                    <p>Permission: <span className="font-mono">{permission}</span></p>
+                    <p>SW State: <span className="font-mono">{debugInfo.swState}</span></p>
+                    <p>Endpoint: <span className="font-mono break-all">
+                      {debugInfo.endpoint ? `${debugInfo.endpoint.substring(0, 60)}...` : 'none'}
+                    </span></p>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleResetSubscription}
+                      disabled={isResetting || isLoading}
+                      className="w-full mt-2"
+                    >
+                      {isResetting ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                      )}
+                      Réinitialiser l'abonnement
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
