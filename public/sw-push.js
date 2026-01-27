@@ -41,7 +41,7 @@ self.addEventListener('push', function(event) {
   const options = {
     body: message || '',
     icon: '/pwa-192x192.png',
-    badge: '/pwa-192x192.png',
+    badge: '/notification-badge-96x96.png',
     vibrate: [100, 50, 100],
     data: {
       type: type || 'general',
