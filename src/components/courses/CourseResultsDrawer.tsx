@@ -71,18 +71,23 @@ const JerseyHoldersBar = ({ courseId, etapeNumero, leagueId }: { courseId: strin
   }
 
   return (
-    <div className="bg-muted/30 rounded-lg p-3 border">
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span className="font-semibold text-muted-foreground">Maillots :</span>
+    <div className="bg-muted/30 rounded-lg p-3 border space-y-2">
+      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+        Maillots
+      </span>
+      <div className="space-y-1.5">
         {holders.map((holder: any, idx: number) => (
-          <div key={idx} className="flex items-center gap-1.5">
-            <span className="text-base">{holder.icon}</span>
-            <span className="font-medium">{holder.coureur_nom}</span>
-            <span className="text-muted-foreground text-xs">({holder.equipe})</span>
+          <div key={idx} className="flex items-center gap-2 text-sm">
+            <span className="text-lg w-6 flex-shrink-0">{holder.icon}</span>
+            <span className="font-medium truncate flex-1">{holder.coureur_nom}</span>
+            <span className="text-xs text-muted-foreground truncate max-w-[80px]">
+              ({holder.equipe})
+            </span>
             {holder.manager_nom && (
-              <span className="text-primary text-xs font-medium">• {holder.manager_nom}</span>
+              <span className="text-xs text-primary font-medium flex-shrink-0">
+                {holder.manager_nom}
+              </span>
             )}
-            {idx < holders.length - 1 && <span className="text-muted-foreground mx-1">|</span>}
           </div>
         ))}
       </div>
@@ -724,11 +729,6 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                   </SelectContent>
                 </Select>
 
-                {/* Jersey holders for selected stage */}
-                {selectedEtape && (
-                  <JerseyHoldersBar courseId={courseId} etapeNumero={selectedEtape} leagueId={leagueId} />
-                )}
-
                 {/* Barème des points */}
                 <PointsBaremeSection courseId={courseId} typeClassement="Etape" />
 
@@ -737,14 +737,13 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                   <Skeleton className="h-96 w-full" />
                 ) : displayedResults.length > 0 ? (
                   <div className="border rounded-lg overflow-hidden">
-                    <Table>
+                    <Table className="text-[11px] table-fixed w-full">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-20">Pos./Statut</TableHead>
-                          <TableHead>Coureur</TableHead>
-                          <TableHead className="hidden md:table-cell">Équipe</TableHead>
-                          <TableHead className="text-right">Points</TableHead>
-                          <TableHead>Manager</TableHead>
+                          <TableHead className="w-7 px-1 text-center">#</TableHead>
+                          <TableHead className="px-1">Coureur</TableHead>
+                          <TableHead className="text-right px-1 w-10">Pts</TableHead>
+                          <TableHead className="px-1 w-16 text-right">Manager</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -766,67 +765,48 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                     : ""
                               }
                             >
-                              <TableCell className="font-medium">
+                              <TableCell className="px-1 py-1 text-center font-medium">
                                 {isFinished ? (
-                                  <div className="flex items-center gap-2">
-                                    {isTeamHeader ? (
-                                      <>
-                                        {displayPosition <= 3 && (
-                                          <span className={`text-lg ${
-                                            displayPosition === 1 ? "text-yellow-500" :
-                                            displayPosition === 2 ? "text-gray-400" :
-                                            "text-amber-600"
-                                          }`}>
-                                            {displayPosition === 1 ? "🥇" : 
-                                             displayPosition === 2 ? "🥈" : "🥉"}
-                                          </span>
-                                        )}
-                                        <span>{displayPosition}</span>
-                                      </>
-                                    ) : (
-                                      <span className="text-muted-foreground ml-6">
-                                        {displayPosition}
-                                      </span>
-                                    )}
-                                  </div>
+                                  isTeamHeader ? (
+                                    <div className="flex items-center justify-center gap-1">
+                                      {displayPosition <= 3 && (
+                                        <span className="text-sm">
+                                          {displayPosition === 1 ? "🥇" : displayPosition === 2 ? "🥈" : "🥉"}
+                                        </span>
+                                      )}
+                                      <span className="text-xs">{displayPosition}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">
+                                      {displayPosition}
+                                    </span>
+                                  )
                                 ) : statutBadge ? (
-                                  <Badge variant={statutBadge.variant}>
+                                  <Badge variant={statutBadge.variant} className="text-[9px] px-1">
                                     {statutBadge.label}
                                   </Badge>
                                 ) : (
                                   "—"
                                 )}
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="px-1 py-1">
                                 {isTeamHeader ? (
-                                  <span className="font-bold">{row.coureur_nom}</span>
+                                  <span className="font-bold text-xs truncate block">{row.coureur_nom}</span>
                                 ) : (
                                   <div className="flex flex-col">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-semibold">{row.coureur_nom}</span>
-                                      {row.is_my_rider && (
-                                        <Badge variant="default" className="text-xs">Mon équipe</Badge>
-                                      )}
-                                    </div>
-                                    <span className="text-xs text-muted-foreground md:hidden">{row.equipe}</span>
+                                    <span className="font-semibold leading-tight truncate">{row.coureur_nom}</span>
+                                    <span className="text-[9px] text-muted-foreground truncate">{row.equipe}</span>
                                   </div>
                                 )}
                               </TableCell>
-                              <TableCell className="hidden md:table-cell">
-                                {!isTeamHeader && row.equipe && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {row.equipe}
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right font-bold">
+                              <TableCell className="text-right font-bold px-1 py-1">
                                 {points > 0 ? points : "—"}
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="px-1 py-1 text-right">
                                 {row.manager_nom && (
-                                  <Badge variant="secondary" className="text-xs">
+                                  <span className="text-[9px] text-muted-foreground truncate block">
                                     {row.manager_nom}
-                                  </Badge>
+                                  </span>
                                 )}
                               </TableCell>
                             </TableRow>
@@ -841,6 +821,11 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                       ? "Aucun résultat disponible pour cette étape" 
                       : "Veuillez sélectionner une étape"}
                   </p>
+                )}
+
+                {/* Jersey holders - moved to bottom */}
+                {selectedEtape && (
+                  <JerseyHoldersBar courseId={courseId} etapeNumero={selectedEtape} leagueId={leagueId} />
                 )}
               </div>
             </TabsContent>
