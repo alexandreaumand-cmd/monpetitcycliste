@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, User, Lock, Palette } from "lucide-react";
 import { AvatarUploader } from "@/components/account/AvatarUploader";
+import { NotificationSettings } from "@/components/settings/NotificationSettings";
 
 export default function AccountPage() {
   const { t } = useTranslation('account');
@@ -246,6 +247,9 @@ export default function AccountPage() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Section Notifications Push */}
+      <NotificationSettings />
       
       {/* Section Personnalisation */}
       <Card className="mb-6">
