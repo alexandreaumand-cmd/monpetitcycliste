@@ -69,7 +69,7 @@ export const StageJerseyBonuses = ({ courseId, etapeNumero }: StageJerseyBonuses
             className={`
               rounded-lg border p-4 space-y-2 transition-all
               ${bonus.is_my_rider 
-                ? 'bg-primary/5 border-primary border-2' 
+                ? 'bg-yellow-100/60 dark:bg-yellow-900/20 border-yellow-400 border-2' 
                 : 'bg-card hover:bg-muted/50'}
             `}
           >
@@ -81,16 +81,9 @@ export const StageJerseyBonuses = ({ courseId, etapeNumero }: StageJerseyBonuses
             </div>
             
             <div className="space-y-1">
-              <div className="flex items-center gap-1 flex-wrap">
-                <p className="font-semibold text-sm leading-tight">
-                  {bonus.coureur_nom}
-                </p>
-                {bonus.is_my_rider && (
-                  <Badge variant="default" className="text-[10px] px-1 py-0">
-                    Mon équipe
-                  </Badge>
-                )}
-              </div>
+              <p className="font-semibold text-sm leading-tight">
+                {bonus.coureur_nom}
+              </p>
               
               {bonus.manager_nom && (
                 <p className="text-xs text-muted-foreground">

@@ -640,8 +640,8 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                 className={
                                   isTeamHeader 
                                     ? "bg-muted/50 font-bold" 
-                                    : row.is_my_rider 
-                                      ? "bg-primary/5 border-l-2 border-l-primary" 
+                              : row.is_my_rider 
+                                      ? "bg-yellow-100/60 dark:bg-yellow-900/20 border-l-2 border-l-yellow-400" 
                                       : ""
                                 }
                               >
@@ -673,10 +673,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                     <span className="font-bold text-[10px]">{row.coureur_nom}</span>
                                   ) : (
                                     <div className="flex flex-col">
-                                      <div className="flex items-center gap-0.5">
-                                        <span className="font-semibold leading-tight truncate">{row.coureur_nom}</span>
-                                        {row.is_my_rider && <span className="text-[8px]">⭐</span>}
-                                      </div>
+                                      <span className="font-semibold leading-tight truncate">{row.coureur_nom}</span>
                                       <span className="text-[9px] text-muted-foreground truncate">{row.equipe}</span>
                                     </div>
                                   )}
@@ -760,8 +757,8 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                               className={
                                 isTeamHeader 
                                   ? "bg-muted/50 font-bold" 
-                                  : row.is_my_rider 
-                                    ? "bg-primary/5 border-l-2 border-l-primary" 
+                                : row.is_my_rider 
+                                    ? "bg-yellow-100/60 dark:bg-yellow-900/20 border-l-2 border-l-yellow-400" 
                                     : ""
                               }
                             >
@@ -993,8 +990,8 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                             className={
                               isTeamHeader 
                                 ? "bg-muted/50 font-bold" 
-                                : row.is_my_rider 
-                                  ? "bg-primary/5 border-l-2 border-l-primary" 
+                              : row.is_my_rider 
+                                  ? "bg-yellow-100/60 dark:bg-yellow-900/20 border-l-2 border-l-yellow-400" 
                                   : ""
                             }
                           >
@@ -1030,14 +1027,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                 <span className="font-bold text-xs">{row.coureur_nom}</span>
                               ) : (
                                 <div className="flex flex-col gap-0.5">
-                                  <div className="flex items-center gap-1 flex-wrap">
-                                    <span className="font-semibold leading-tight">{row.coureur_nom}</span>
-                                    {row.is_my_rider && (
-                                      <Badge variant="default" className="text-[9px] px-1 py-0 leading-tight">
-                                        Mon équipe
-                                      </Badge>
-                                    )}
-                                  </div>
+                                  <span className="font-semibold leading-tight">{row.coureur_nom}</span>
                                   <span className="text-[10px] text-muted-foreground">{row.equipe}</span>
                                 </div>
                               )}
