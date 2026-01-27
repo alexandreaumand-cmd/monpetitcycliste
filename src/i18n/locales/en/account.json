@@ -1,6 +1,32 @@
 {
   "title": "My Account",
   "backToDashboard": "Back to dashboard",
+  "notifications": {
+    "title": "Push Notifications",
+    "description": "Receive alerts directly on your device",
+    "enablePush": "Enable push notifications",
+    "enablePushDescription": "Receive notifications even when the app is closed",
+    "preferencesTitle": "Notification types",
+    "notSupported": "Notifications not supported",
+    "browserInstructions": "Your browser does not support push notifications.",
+    "iosInstructions": "On iOS, first add the app to your home screen via Share menu > Add to Home Screen.",
+    "permissionBlocked": "Notifications blocked",
+    "permissionBlockedInstructions": "You have blocked notifications. To re-enable them, change your browser settings for this site.",
+    "permissionDenied": "Permission denied. Allow notifications in your browser settings.",
+    "enabledSuccess": "Push notifications enabled!",
+    "disabledSuccess": "Push notifications disabled",
+    "enableError": "Error enabling notifications",
+    "disableError": "Error disabling notifications",
+    "updateError": "Error updating preferences",
+    "types": {
+      "results": "Race results",
+      "resultsDescription": "When your riders score points",
+      "startlists": "Validated startlists",
+      "startlistsDescription": "When a new startlist is available",
+      "auctions": "Auctions",
+      "auctionsDescription": "Auction opening, closing and validation"
+    }
+  },
   "profile": {
     "title": "Profile",
     "description": "Manage your personal information",

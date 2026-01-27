@@ -1,3 +1,38 @@
+// Helper function to send push notifications to users
+async function sendPushNotifications(
+  supabaseUrl: string,
+  supabaseServiceKey: string,
+  userIds: string[],
+  notification: { title: string; message: string; type: string; metadata?: any }
+) {
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseServiceKey}`
+      },
+      body: JSON.stringify({
+        user_ids: userIds,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+        metadata: notification.metadata || {}
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Push notification failed:', errorText);
+    } else {
+      const result = await response.json();
+      console.log(`📲 Push notifications sent: ${result.sent} success, ${result.failed} failed`);
+    }
+  } catch (error) {
+    console.error('Error sending push notifications:', error);
+  }
+}
+
 export async function notifyLeagueMembers(
   supabase: any,
   leagueId: string,
@@ -66,6 +101,19 @@ export async function notifyLeagueMembers(
       console.error('Error inserting notifications:', insertError);
     } else {
       console.log(`✅ Created ${notifications.length} notifications for league ${leagueId}`);
+    }
+
+    // Send push notifications to all league members
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (supabaseUrl && supabaseServiceKey) {
+      await sendPushNotifications(
+        supabaseUrl,
+        supabaseServiceKey,
+        userIds,
+        notification
+      );
     }
   } catch (error) {
     console.error('Error in notifyLeagueMembers:', error);

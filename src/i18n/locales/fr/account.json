@@ -1,6 +1,32 @@
 {
   "title": "Mon Compte",
   "backToDashboard": "Retour au dashboard",
+  "notifications": {
+    "title": "Notifications Push",
+    "description": "Recevez des alertes directement sur votre appareil",
+    "enablePush": "Activer les notifications push",
+    "enablePushDescription": "Recevez des notifications même quand l'app est fermée",
+    "preferencesTitle": "Types de notifications",
+    "notSupported": "Notifications non supportées",
+    "browserInstructions": "Votre navigateur ne supporte pas les notifications push.",
+    "iosInstructions": "Sur iOS, ajoutez d'abord l'app à l'écran d'accueil via le menu Partager > Sur l'écran d'accueil.",
+    "permissionBlocked": "Notifications bloquées",
+    "permissionBlockedInstructions": "Vous avez bloqué les notifications. Pour les réactiver, modifiez les paramètres de votre navigateur pour ce site.",
+    "permissionDenied": "Permission refusée. Autorisez les notifications dans les paramètres de votre navigateur.",
+    "enabledSuccess": "Notifications push activées !",
+    "disabledSuccess": "Notifications push désactivées",
+    "enableError": "Erreur lors de l'activation des notifications",
+    "disableError": "Erreur lors de la désactivation des notifications",
+    "updateError": "Erreur lors de la mise à jour des préférences",
+    "types": {
+      "results": "Résultats de course",
+      "resultsDescription": "Quand vos coureurs marquent des points",
+      "startlists": "Startlists validées",
+      "startlistsDescription": "Quand une nouvelle startlist est disponible",
+      "auctions": "Enchères",
+      "auctionsDescription": "Ouverture, fermeture et validation des enchères"
+    }
+  },
   "profile": {
     "title": "Profil",
     "description": "Gérez vos informations personnelles",
