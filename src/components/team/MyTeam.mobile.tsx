@@ -3,9 +3,7 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  ChipGroup,
   MobileCard,
-  KPIRow,
   MobileEmptyState,
 } from "@/components/mobile";
 import { RiderPointsDetail } from "./RiderPointsDetail";
@@ -253,14 +251,6 @@ export const MyTeamMobile = () => {
     return `${t('phase')} ${phase.index_dans_saison}`;
   };
 
-  const sortChips = [
-    { label: t('sort.points'), value: "points" as SortBy },
-    { label: t('sort.ratio'), value: "ratio" as SortBy },
-    { label: t('sort.price'), value: "prix" as SortBy },
-    { label: t('sort.rating'), value: "cote" as SortBy },
-    { label: t('sort.rider'), value: "nom" as SortBy },
-    { label: t('sort.team'), value: "equipe" as SortBy },
-  ];
 
   const loadTeamWithKpis = async () => {
     if (!leagueId) {
@@ -443,51 +433,57 @@ export const MyTeamMobile = () => {
       </div>
 
 
-      {/* KPIs compacts */}
-      <KPIRow
-        items={[
-          { label: t('points'), value: kpis.total_points, icon: <Trophy className="h-4 w-4" /> },
-          { label: t('bonusPts'), value: kpis.bonus_points, icon: <Star className="h-4 w-4" />, onClick: () => setBonusDetailsOpen(true) },
-          { label: t('scorers'), value: kpis.scorers_count, icon: <TrendingUp className="h-4 w-4" /> },
-        ]}
-      />
-
-      {/* Boutons coureur bonus */}
-      <div className="flex gap-2 flex-wrap">
-        {!hasSelectedBonusRider && !selectedManagerId && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowBonusRiderDialog(true)}
-            className="flex-1 gap-2"
-          >
-            <Star className="h-4 w-4" />
-            {t('bonusRider.select')}
-          </Button>
-        )}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowLeagueBonusDialog(true)}
-          className="gap-2"
+      {/* Stats compactes - une seule ligne */}
+      <div className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-xl text-sm">
+        <div className="flex items-center gap-1">
+          <Trophy className="h-4 w-4 text-primary" />
+          <span className="font-semibold">{kpis.total_points}</span>
+          <span className="text-muted-foreground">pts</span>
+        </div>
+        
+        <div 
+          className="flex items-center gap-1 cursor-pointer" 
+          onClick={() => setBonusDetailsOpen(true)}
         >
-          <Eye className="h-4 w-4" />
-          {t('bonusRider.viewOthers')}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowRostersOverviewDialog(true)}
-          className="gap-2"
-        >
-          <Users className="h-4 w-4" />
-          Effectifs
-        </Button>
+          <Star className="h-4 w-4 text-amber-500" />
+          <span className="font-semibold">{kpis.bonus_points}</span>
+          <span className="text-muted-foreground">bonus</span>
+        </div>
+        
+        <div className="flex items-center gap-1 text-muted-foreground">
+          <TrendingUp className="h-4 w-4" />
+          <span>{kpis.scorers_count}/{coureurs.length}</span>
+        </div>
       </div>
 
-
-      {/* Sort chips */}
-      <ChipGroup items={sortChips} selected={sortBy} onSelect={(v) => setSortBy(v as SortBy)} />
+      {/* Barre tri + actions */}
+      <div className="flex items-center gap-2">
+        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+          <SelectTrigger className="flex-1 h-9">
+            <SelectValue placeholder={t('sort.points')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="points">{t('sort.points')}</SelectItem>
+            <SelectItem value="ratio">{t('sort.ratio')}</SelectItem>
+            <SelectItem value="prix">{t('sort.price')}</SelectItem>
+            <SelectItem value="cote">{t('sort.rating')}</SelectItem>
+            <SelectItem value="nom">{t('sort.rider')}</SelectItem>
+            <SelectItem value="equipe">{t('sort.team')}</SelectItem>
+          </SelectContent>
+        </Select>
+        
+        <Button variant="ghost" size="icon" onClick={() => setShowRostersOverviewDialog(true)}>
+          <Users className="h-5 w-5" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => setShowLeagueBonusDialog(true)}>
+          <Eye className="h-5 w-5" />
+        </Button>
+        {!hasSelectedBonusRider && !selectedManagerId && (
+          <Button variant="ghost" size="icon" onClick={() => setShowBonusRiderDialog(true)}>
+            <Star className="h-5 w-5" />
+          </Button>
+        )}
+      </div>
 
       {/* Coureurs list */}
       {coureurs.length === 0 ? (
@@ -502,39 +498,29 @@ export const MyTeamMobile = () => {
             <MobileCard
               key={coureur.coureur_id}
               title={
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   {bonusRiderSelection?.coureur_id === coureur.coureur_id && (
-                    <Star className="h-4 w-4 text-[#FFD500] fill-[#FFD500]" />
+                    <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
                   )}
-                  {coureur.nom}
+                  <span className="truncate">{coureur.nom}</span>
                   <RiderRaceIcons 
                     currentRaces={riderRacesData?.races_by_rider?.[coureur.coureur_id]?.current_races}
                     upcomingRaces={riderRacesData?.races_by_rider?.[coureur.coureur_id]?.upcoming_races}
                   />
                 </div>
               }
-              subtitle={coureur.equipe}
-              meta={
-                <span className="flex items-center flex-wrap gap-x-1">
-                  {coureur.prix_achat.toFixed(0)}
-                  {coureur.winning_round && (
-                    <span className="text-[10px] bg-muted px-1 py-0.5 rounded text-muted-foreground/70">
-                      R{coureur.winning_round}
-                    </span>
-                  )}
+              subtitle={
+                <span className="text-xs text-muted-foreground">
+                  {coureur.equipe} • {coureur.prix_achat.toFixed(0)}
+                  {coureur.winning_round && <span className="opacity-60"> (R{coureur.winning_round})</span>}
                   {' / '}{coureur.cote_initiale.toFixed(0)}
-                  {' • '}Ratio: {formatROICompact(computeRiderROI({
-                    pointsTotal: coureur.points_total,
-                    purchasePriceTotal: coureur.prix_achat
-                  }))}
                 </span>
               }
-              className="p-3"
+              className="py-2.5"
               badge={
-                <div className="flex items-center gap-1">
-                  <Trophy className="h-4 w-4 text-primary" />
-                  <span className="font-bold text-lg">{coureur.points_total}</span>
-                </div>
+                <span className="font-bold text-base text-primary">
+                  {coureur.points_total} pts
+                </span>
               }
               onClick={() => openCoureurDetail(coureur)}
             />
