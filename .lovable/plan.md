@@ -1,17 +1,18 @@
 
-# Ouvrir la course concernée depuis une notification de résultat
+
+# Ouvrir la startlist concernee depuis une notification
 
 ## Contexte
 
-Actuellement, quand on clique sur une notification de type `results_added` (ex: "Victoire de Jonathan MILAN - AlUla Tour"), la navigation se fait vers `/dashboard/resultats` sans ouvrir automatiquement la course concernée.
+Actuellement, quand on clique sur une notification de type `startlist_validated`, la navigation se fait vers `/dashboard/startlist` sans ouvrir automatiquement la startlist concernee.
 
-Les notifications contiennent déjà le `course_id` dans leurs métadonnées :
+Les notifications contiennent deja le `startlist_id` dans leurs metadonnees :
 ```json
 {
   "metadata": {
-    "course_id": "alula_tour",
-    "race_name": "AlUla Tour",
-    "league_id": "85d46f9b-..."
+    "race_id": "alula_tour",
+    "startlist_id": "fd22cf05-18c7-4b98-9b3c-6f6802f7e95d",
+    "race_name": "AlUla Tour"
   }
 }
 ```
@@ -20,7 +21,7 @@ Les notifications contiennent déjà le `course_id` dans leurs métadonnées :
 
 ## Solution
 
-Ajouter un paramètre `courseId` dans l'URL et faire en sorte que les pages Résultats (desktop et mobile) ouvrent automatiquement le drawer de la course correspondante.
+Ajouter un parametre `startlistId` dans l'URL et faire en sorte que les pages Startlist (desktop et mobile) ouvrent automatiquement la vue de la startlist correspondante.
 
 ---
 
@@ -28,90 +29,90 @@ Ajouter un paramètre `courseId` dans l'URL et faire en sorte que les pages Rés
 
 ### 1. Fichier : `src/components/layout/NotificationCenter.tsx`
 
-**Modifier la navigation pour inclure le `courseId` (ligne 96-97)**
+**Modifier la navigation pour inclure le `startlistId` (ligne 94-95)**
 
-| Avant | Après |
+| Avant | Apres |
 |-------|-------|
-| `navigate('/dashboard/resultats')` | `navigate('/dashboard/resultats?courseId=...')` |
+| `navigate('/dashboard/startlist')` | `navigate('/dashboard/startlist?startlistId=...')` |
 
 ```tsx
-} else if (notification.type === 'results_added') {
-  const courseId = notification.metadata?.course_id;
+if (notification.type === 'startlist_validated') {
+  const startlistId = notification.metadata?.startlist_id;
   const leagueId = notification.metadata?.league_id;
   const params = new URLSearchParams();
   if (leagueId) params.set('leagueId', leagueId);
-  if (courseId) params.set('courseId', courseId);
-  navigate(`/dashboard/resultats?${params.toString()}`);
+  if (startlistId) params.set('startlistId', startlistId);
+  navigate(`/dashboard/startlist?${params.toString()}`);
 }
 ```
 
 ---
 
-### 2. Fichier : `src/pages/ResultsPage.desktop.tsx`
+### 2. Fichier : `src/pages/Startlist.desktop.tsx`
 
-**Ajouter la lecture du query param `courseId` et ouvrir le drawer automatiquement**
+**Ajouter la lecture du query param `startlistId` et ouvrir la vue automatiquement**
 
 ```tsx
 // Import
 import { useSearchParams } from "react-router-dom";
 
-// Dans le composant
+// Dans le composant (apres ligne 46)
 const [searchParams, setSearchParams] = useSearchParams();
-const courseIdFromUrl = searchParams.get('courseId');
+const startlistIdFromUrl = searchParams.get('startlistId');
 
-// Effect pour ouvrir le drawer si courseId présent
+// Effect pour ouvrir la vue si startlistId present (apres ligne 63)
 useEffect(() => {
-  if (courseIdFromUrl) {
-    setSelectedCourseId(courseIdFromUrl);
-    setDrawerOpen(true);
-    // Nettoyer l'URL après ouverture
-    searchParams.delete('courseId');
+  if (startlistIdFromUrl) {
+    setSelectedStartlistId(startlistIdFromUrl);
+    setViewMode('view');
+    // Nettoyer l'URL apres ouverture
+    searchParams.delete('startlistId');
     setSearchParams(searchParams, { replace: true });
   }
-}, [courseIdFromUrl]);
+}, [startlistIdFromUrl]);
 ```
 
 ---
 
-### 3. Fichier : `src/pages/ResultsPage.mobile.tsx`
+### 3. Fichier : `src/pages/Startlist.mobile.tsx`
 
-**Même logique pour la version mobile**
+**Meme logique pour la version mobile**
 
 ```tsx
 // Import
 import { useSearchParams } from "react-router-dom";
 
-// Dans le composant
+// Dans le composant (apres ligne 52)
 const [searchParams, setSearchParams] = useSearchParams();
-const courseIdFromUrl = searchParams.get('courseId');
+const startlistIdFromUrl = searchParams.get('startlistId');
 
-// Effect pour ouvrir le drawer si courseId présent
+// Effect pour ouvrir la vue si startlistId present (apres ligne 53)
 useEffect(() => {
-  if (courseIdFromUrl) {
-    setSelectedCourseId(courseIdFromUrl);
-    setDrawerOpen(true);
-    // Nettoyer l'URL après ouverture
-    searchParams.delete('courseId');
+  if (startlistIdFromUrl) {
+    setSelectedStartlistId(startlistIdFromUrl);
+    setViewMode('view');
+    // Nettoyer l'URL apres ouverture
+    searchParams.delete('startlistId');
     setSearchParams(searchParams, { replace: true });
   }
-}, [courseIdFromUrl]);
+}, [startlistIdFromUrl]);
 ```
 
 ---
 
 ### 4. Fichier : `public/sw-push.js`
 
-**Mettre à jour la fonction `getUrlForNotificationType` pour les push notifications (ligne 91)**
+**Mettre a jour la fonction `getUrlForNotificationType` pour les push notifications (ligne 110)**
 
 ```javascript
-case 'results_added':
-  if (metadata?.course_id) {
+case 'startlist_validated':
+  if (metadata?.startlist_id) {
     const params = new URLSearchParams();
     if (metadata.league_id) params.set('leagueId', metadata.league_id);
-    params.set('courseId', metadata.course_id);
-    return `${baseUrl}/resultats?${params.toString()}`;
+    params.set('startlistId', metadata.startlist_id);
+    return `${baseUrl}/startlist?${params.toString()}`;
   }
-  return `${baseUrl}/resultats`;
+  return `${baseUrl}/startlist`;
 ```
 
 ---
@@ -119,40 +120,40 @@ case 'results_added':
 ## Flux utilisateur
 
 ```text
-┌────────────────────────────────────┐
-│  🏆 Victoire de Jonathan MILAN    │
-│     AlUla Tour                     │
-│     il y a environ 7 heures        │
-└────────────────────────────────────┘
-                  │
-                  │ Clic
-                  ▼
-┌────────────────────────────────────┐
-│  Navigation vers :                 │
-│  /dashboard/resultats?             │
-│    leagueId=85d46f9b-...&          │
-│    courseId=alula_tour             │
-└────────────────────────────────────┘
-                  │
-                  ▼
-┌────────────────────────────────────┐
-│  Drawer "AlUla Tour" s'ouvre       │
-│  automatiquement                   │
-│  ┌──────────────────────────────┐  │
-│  │ AlUla Tour                   │  │
-│  │ Étape 1 - Jonathan MILAN 🏆  │  │
-│  │ ...                          │  │
-│  └──────────────────────────────┘  │
-└────────────────────────────────────┘
++------------------------------------+
+|  Startlist validee                 |
+|     AlUla Tour                     |
+|     il y a 2 heures                |
++------------------------------------+
+                  |
+                  | Clic
+                  v
++------------------------------------+
+|  Navigation vers :                 |
+|  /dashboard/startlist?             |
+|    startlistId=fd22cf05-...        |
++------------------------------------+
+                  |
+                  v
++------------------------------------+
+|  Vue startlist "AlUla Tour"        |
+|  s'ouvre automatiquement           |
+|  +------------------------------+  |
+|  | AlUla Tour                   |  |
+|  | Parcours + Managers          |  |
+|  | ...                          |  |
+|  +------------------------------+  |
++------------------------------------+
 ```
 
 ---
 
-## Résumé des fichiers à modifier
+## Resume des fichiers a modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/layout/NotificationCenter.tsx` | Ajouter `courseId` dans l'URL de navigation |
-| `src/pages/ResultsPage.desktop.tsx` | Lire `courseId` et ouvrir le drawer |
-| `src/pages/ResultsPage.mobile.tsx` | Lire `courseId` et ouvrir le drawer |
-| `public/sw-push.js` | Mettre à jour l'URL pour les push notifications |
+| `src/components/layout/NotificationCenter.tsx` | Ajouter `startlistId` dans l'URL de navigation |
+| `src/pages/Startlist.desktop.tsx` | Lire `startlistId` et ouvrir la vue |
+| `src/pages/Startlist.mobile.tsx` | Lire `startlistId` et ouvrir la vue |
+| `public/sw-push.js` | Mettre a jour l'URL pour les push notifications |
+
