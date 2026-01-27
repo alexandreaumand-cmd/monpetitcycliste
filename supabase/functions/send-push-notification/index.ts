@@ -55,11 +55,35 @@ function uint8ArrayToBase64Url(uint8Array: Uint8Array): string {
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
-// Generate VAPID JWT
-async function generateVapidJwt(endpoint: string, vapidPrivateKey: string, vapidSubject: string): Promise<string> {
+// Convert Uint8Array to ArrayBuffer safely
+function toArrayBuffer(arr: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(arr.length);
+  new Uint8Array(buffer).set(arr);
+  return buffer;
+}
+
+// Extract X and Y coordinates from uncompressed public key (65 bytes: 0x04 || X || Y)
+function extractPublicKeyCoordinates(publicKeyBase64Url: string): { x: string; y: string } {
+  const publicKeyBytes = base64UrlToUint8Array(publicKeyBase64Url);
+  // Uncompressed public key format: 0x04 || X (32 bytes) || Y (32 bytes)
+  if (publicKeyBytes.length !== 65 || publicKeyBytes[0] !== 0x04) {
+    throw new Error('Invalid public key format - expected uncompressed P-256 key');
+  }
+  const x = uint8ArrayToBase64Url(publicKeyBytes.slice(1, 33));
+  const y = uint8ArrayToBase64Url(publicKeyBytes.slice(33, 65));
+  return { x, y };
+}
+
+// Generate VAPID JWT using JWK format
+async function generateVapidJwt(
+  endpoint: string,
+  vapidPrivateKey: string,
+  vapidPublicKey: string,
+  vapidSubject: string
+): Promise<string> {
   const endpointUrl = new URL(endpoint);
   const audience = `${endpointUrl.protocol}//${endpointUrl.host}`;
-  
+
   const header = { alg: 'ES256', typ: 'JWT' };
   const payload = {
     aud: audience,
@@ -71,22 +95,21 @@ async function generateVapidJwt(endpoint: string, vapidPrivateKey: string, vapid
   const payloadB64 = uint8ArrayToBase64Url(new TextEncoder().encode(JSON.stringify(payload)));
   const unsignedToken = `${headerB64}.${payloadB64}`;
 
-  // Import the private key
-  const privateKeyBytes = base64UrlToUint8Array(vapidPrivateKey);
-  
-  // Create PKCS8 format for the key
-  const pkcs8Header = new Uint8Array([
-    0x30, 0x41, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48,
-    0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03,
-    0x01, 0x07, 0x04, 0x27, 0x30, 0x25, 0x02, 0x01, 0x01, 0x04, 0x20
-  ]);
-  const pkcs8Key = new Uint8Array(pkcs8Header.length + privateKeyBytes.length);
-  pkcs8Key.set(pkcs8Header);
-  pkcs8Key.set(privateKeyBytes, pkcs8Header.length);
+  // Extract X and Y from public key for JWK
+  const { x, y } = extractPublicKeyCoordinates(vapidPublicKey);
+
+  // Import private key using JWK format
+  const jwk: JsonWebKey = {
+    kty: 'EC',
+    crv: 'P-256',
+    d: vapidPrivateKey,
+    x: x,
+    y: y
+  };
 
   const cryptoKey = await crypto.subtle.importKey(
-    'pkcs8',
-    pkcs8Key,
+    'jwk',
+    jwk,
     { name: 'ECDSA', namedCurve: 'P-256' },
     false,
     ['sign']
@@ -98,40 +121,229 @@ async function generateVapidJwt(endpoint: string, vapidPrivateKey: string, vapid
     new TextEncoder().encode(unsignedToken)
   );
 
-  // Convert DER signature to raw format (r || s)
+  // Convert DER signature to raw format (r || s) if needed
   const signatureArray = new Uint8Array(signature);
-  let r: Uint8Array, s: Uint8Array;
-  
+  let rawSignature: Uint8Array;
+
   if (signatureArray[0] === 0x30) {
     // DER format - parse it
     let offset = 2;
     const rLength = signatureArray[offset + 1];
-    r = signatureArray.slice(offset + 2, offset + 2 + rLength);
+    let r = signatureArray.slice(offset + 2, offset + 2 + rLength);
     offset += 2 + rLength;
     const sLength = signatureArray[offset + 1];
-    s = signatureArray.slice(offset + 2, offset + 2 + sLength);
-    
+    let s = signatureArray.slice(offset + 2, offset + 2 + sLength);
+
     // Remove leading zeros if present
     if (r[0] === 0) r = r.slice(1);
     if (s[0] === 0) s = s.slice(1);
-    
+
     // Pad to 32 bytes
     const rPadded = new Uint8Array(32);
     const sPadded = new Uint8Array(32);
     rPadded.set(r, 32 - r.length);
     sPadded.set(s, 32 - s.length);
-    
-    const rawSignature = new Uint8Array(64);
+
+    rawSignature = new Uint8Array(64);
     rawSignature.set(rPadded);
     rawSignature.set(sPadded, 32);
-    
-    return `${unsignedToken}.${uint8ArrayToBase64Url(rawSignature)}`;
+  } else {
+    rawSignature = signatureArray;
   }
 
-  return `${unsignedToken}.${uint8ArrayToBase64Url(signatureArray)}`;
+  return `${unsignedToken}.${uint8ArrayToBase64Url(rawSignature)}`;
 }
 
-// Send push notification using Web Push protocol
+// HKDF implementation for Web Push encryption
+async function hkdf(
+  salt: ArrayBuffer,
+  ikm: ArrayBuffer,
+  info: ArrayBuffer,
+  length: number
+): Promise<ArrayBuffer> {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    ikm,
+    { name: 'HKDF' },
+    false,
+    ['deriveBits']
+  );
+
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'HKDF',
+      salt: salt,
+      info: info,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    length * 8
+  );
+
+  return derivedBits;
+}
+
+// Create info for HKDF as per Web Push encryption spec
+function createInfo(type: string, clientPublicKey: Uint8Array, serverPublicKey: Uint8Array): ArrayBuffer {
+  const encoder = new TextEncoder();
+  const typeBytes = encoder.encode(type);
+  
+  // "Content-Encoding: " + type + "\0" + "P-256" + "\0" + client_public_key_length + client_public_key + server_public_key_length + server_public_key
+  const info = new Uint8Array(
+    18 + typeBytes.length + 1 + 5 + 1 + 2 + clientPublicKey.length + 2 + serverPublicKey.length
+  );
+  
+  let offset = 0;
+  
+  // "Content-Encoding: "
+  const prefix = encoder.encode('Content-Encoding: ');
+  info.set(prefix, offset);
+  offset += prefix.length;
+  
+  // type
+  info.set(typeBytes, offset);
+  offset += typeBytes.length;
+  
+  // null byte
+  info[offset++] = 0;
+  
+  // "P-256"
+  const curve = encoder.encode('P-256');
+  info.set(curve, offset);
+  offset += curve.length;
+  
+  // null byte
+  info[offset++] = 0;
+  
+  // client public key length (2 bytes, big endian)
+  info[offset++] = 0;
+  info[offset++] = clientPublicKey.length;
+  
+  // client public key
+  info.set(clientPublicKey, offset);
+  offset += clientPublicKey.length;
+  
+  // server public key length (2 bytes, big endian)
+  info[offset++] = 0;
+  info[offset++] = serverPublicKey.length;
+  
+  // server public key
+  info.set(serverPublicKey, offset);
+  
+  return toArrayBuffer(info);
+}
+
+// Encrypt payload using aes128gcm content encoding
+async function encryptPayload(
+  payload: string,
+  p256dhKey: string,
+  authSecret: string
+): Promise<{ encrypted: ArrayBuffer; serverPublicKey: Uint8Array }> {
+  const clientPublicKeyBytes = base64UrlToUint8Array(p256dhKey);
+  const authSecretBytes = base64UrlToUint8Array(authSecret);
+  const payloadBytes = new TextEncoder().encode(payload);
+
+  // Generate ephemeral ECDH key pair
+  const serverKeyPair = await crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true,
+    ['deriveBits']
+  );
+
+  // Export server public key
+  const serverPublicKeyRaw = await crypto.subtle.exportKey('raw', serverKeyPair.publicKey);
+  const serverPublicKey = new Uint8Array(serverPublicKeyRaw);
+
+  // Import client public key
+  const clientPublicKey = await crypto.subtle.importKey(
+    'raw',
+    toArrayBuffer(clientPublicKeyBytes),
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    []
+  );
+
+  // Derive shared secret
+  const sharedSecretBits = await crypto.subtle.deriveBits(
+    { name: 'ECDH', public: clientPublicKey },
+    serverKeyPair.privateKey,
+    256
+  );
+
+  // Generate salt (16 bytes)
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+
+  // Key derivation for aes128gcm
+  // IKM = HKDF(auth_secret, ecdh_secret, "WebPush: info\0" || client_public_key || server_public_key)
+  const keyInfoPrefix = new TextEncoder().encode('WebPush: info\0');
+  const keyInfo = new Uint8Array(keyInfoPrefix.length + clientPublicKeyBytes.length + serverPublicKey.length);
+  keyInfo.set(keyInfoPrefix, 0);
+  keyInfo.set(clientPublicKeyBytes, keyInfoPrefix.length);
+  keyInfo.set(serverPublicKey, keyInfoPrefix.length + clientPublicKeyBytes.length);
+
+  const ikm = await hkdf(toArrayBuffer(authSecretBytes), sharedSecretBits, toArrayBuffer(keyInfo), 32);
+
+  // Derive content encryption key
+  const cekInfo = createInfo('aes128gcm', clientPublicKeyBytes, serverPublicKey);
+  const contentEncryptionKey = await hkdf(toArrayBuffer(salt), ikm, cekInfo, 16);
+
+  // Derive nonce
+  const nonceInfo = createInfo('nonce', clientPublicKeyBytes, serverPublicKey);
+  const nonce = await hkdf(toArrayBuffer(salt), ikm, nonceInfo, 12);
+
+  // Pad the payload (add padding delimiter 0x02 followed by zeros)
+  const paddingLength = 0; // Minimal padding
+  const paddedPayload = new Uint8Array(payloadBytes.length + 1 + paddingLength);
+  paddedPayload.set(payloadBytes, 0);
+  paddedPayload[payloadBytes.length] = 0x02; // Padding delimiter
+
+  // Encrypt with AES-128-GCM
+  const key = await crypto.subtle.importKey(
+    'raw',
+    contentEncryptionKey,
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt']
+  );
+
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: nonce, tagLength: 128 },
+    key,
+    paddedPayload
+  );
+
+  // Build aes128gcm encrypted content encoding header + ciphertext
+  // Format: salt (16 bytes) || rs (4 bytes) || idlen (1 byte) || keyid (idlen bytes) || ciphertext
+  const recordSize = 4096;
+  const idlen = serverPublicKey.length;
+  
+  const encryptedContent = new Uint8Array(16 + 4 + 1 + idlen + ciphertext.byteLength);
+  let offset = 0;
+  
+  // Salt (16 bytes)
+  encryptedContent.set(salt, offset);
+  offset += 16;
+  
+  // Record size (4 bytes, big endian)
+  encryptedContent[offset++] = (recordSize >> 24) & 0xff;
+  encryptedContent[offset++] = (recordSize >> 16) & 0xff;
+  encryptedContent[offset++] = (recordSize >> 8) & 0xff;
+  encryptedContent[offset++] = recordSize & 0xff;
+  
+  // ID length (1 byte)
+  encryptedContent[offset++] = idlen;
+  
+  // Key ID (server public key)
+  encryptedContent.set(serverPublicKey, offset);
+  offset += idlen;
+  
+  // Ciphertext
+  encryptedContent.set(new Uint8Array(ciphertext), offset);
+
+  return { encrypted: toArrayBuffer(encryptedContent), serverPublicKey };
+}
+
+// Send push notification using Web Push protocol with proper encryption
 async function sendWebPush(
   subscription: PushSubscription,
   payload: object,
@@ -140,20 +352,34 @@ async function sendWebPush(
   vapidSubject: string
 ): Promise<{ success: boolean; statusCode?: number; error?: string }> {
   try {
-    const jwt = await generateVapidJwt(subscription.endpoint, vapidPrivateKey, vapidSubject);
+    const payloadString = JSON.stringify(payload);
     
-    const body = JSON.stringify(payload);
-    
+    // Encrypt the payload
+    const { encrypted } = await encryptPayload(
+      payloadString,
+      subscription.p256dh,
+      subscription.auth
+    );
+
+    // Generate VAPID JWT
+    const jwt = await generateVapidJwt(
+      subscription.endpoint,
+      vapidPrivateKey,
+      vapidPublicKey,
+      vapidSubject
+    );
+
     const response = await fetch(subscription.endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/octet-stream',
         'Content-Encoding': 'aes128gcm',
+        'Content-Length': encrypted.byteLength.toString(),
         'TTL': '86400',
         'Authorization': `vapid t=${jwt}, k=${vapidPublicKey}`,
         'Urgency': 'normal'
       },
-      body: body
+      body: encrypted
     });
 
     if (!response.ok) {
