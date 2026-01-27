@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +69,22 @@ export const ResultsPageMobile = () => {
   } = useManagerJerseys(allPodiumManagerIds, selectedSeason?.id);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  
+  // URL params for deep linking from notifications
+  const [searchParams, setSearchParams] = useSearchParams();
+  const courseIdFromUrl = searchParams.get('courseId');
+
+  // Open drawer automatically if courseId is in URL
+  useEffect(() => {
+    if (courseIdFromUrl) {
+      setSelectedCourseId(courseIdFromUrl);
+      setDrawerOpen(true);
+      // Clean up URL after opening
+      searchParams.delete('courseId');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [courseIdFromUrl]);
+
   useEffect(() => {
     if (!isLoadingContext) {
       loadRaces(true);
