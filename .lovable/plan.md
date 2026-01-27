@@ -1,4 +1,5 @@
 
+
 # Implémentation Complète des Notifications Push PWA
 
 ## Résumé
@@ -103,7 +104,7 @@ Créer `src/components/settings/NotificationSettings.tsx` avec l'interface suiva
 
 ```text
 +--------------------------------------------------+
-| 🔔 Notifications                                 |
+| Notifications                                    |
 | Gérez vos préférences de notification            |
 +--------------------------------------------------+
 |                                                  |
@@ -227,7 +228,7 @@ Ajouter les traductions dans les fichiers account.json (FR et EN) :
 
 ### Protocole Web Push
 
-L'edge function `send-push-notification` utilisera la librairie `web-push` pour :
+L'edge function `send-push-notification` utilisera le protocole Web Push natif avec la Web Crypto API pour :
 1. Chiffrer le payload avec les clés `p256dh` et `auth` de chaque subscription
 2. Signer la requête avec la clé privée VAPID
 3. Envoyer via POST à l'endpoint du navigateur
