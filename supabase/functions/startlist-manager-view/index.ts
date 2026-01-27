@@ -25,7 +25,6 @@ Deno.serve(async (req) => {
       .select(`
         id,
         race_id,
-        route_image_url,
         startlisteur_note,
         courses!inner(
           id,
@@ -33,6 +32,7 @@ Deno.serve(async (req) => {
           date_debut,
           phase_id,
           categorie,
+          route_image_url,
           phases!inner(
             id,
             saison_id
@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
           phase_id: phaseId,
           categorie: race.categorie
         },
-        route_image_url: startlist.route_image_url || null,
+        route_image_url: race.route_image_url || null,
         startlisteur_note: startlist.startlisteur_note || null,
         admin_rating_note: null,
         admin_rating_author: null,
@@ -441,7 +441,7 @@ Deno.serve(async (req) => {
         phase_id: phaseId,
         categorie: race.categorie
       },
-      route_image_url: startlist.route_image_url || null,
+      route_image_url: race.route_image_url || null,
       startlisteur_note: startlist.startlisteur_note || null,
       admin_rating_note: leagueNote || null,
       admin_rating_author: ratingAuthorName,

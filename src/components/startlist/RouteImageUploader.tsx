@@ -5,12 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface RouteImageUploaderProps {
-  startlistId: string;
+  raceId: string;
   currentImageUrl: string | null;
   onUploadComplete: (url: string) => void;
 }
 
-export function RouteImageUploader({ startlistId, currentImageUrl, onUploadComplete }: RouteImageUploaderProps) {
+export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete }: RouteImageUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,7 +38,7 @@ export function RouteImageUploader({ startlistId, currentImageUrl, onUploadCompl
 
     try {
       const formData = new FormData();
-      formData.append('startlist_id', startlistId);
+      formData.append('race_id', raceId);
       formData.append('file', file);
 
       // Get session for auth token
