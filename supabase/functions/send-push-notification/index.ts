@@ -7,7 +7,8 @@ const corsHeaders = {
 };
 
 interface PushPayload {
-  user_ids: string[];
+  user_ids?: string[];
+  broadcast?: boolean;
   title: string;
   message: string;
   type: string;
@@ -379,26 +380,33 @@ Deno.serve(async (req) => {
     console.log('[push] VAPID keys loaded');
 
     const payload: PushPayload = await req.json();
-    const { user_ids, title, message, type, metadata } = payload;
+    const { user_ids, broadcast, title, message, type, metadata } = payload;
 
-    if (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0) {
-      console.error('[push] Invalid payload: missing user_ids');
-      return new Response(JSON.stringify({ error: 'user_ids array is required', code: 'INVALID_PAYLOAD' }), {
+    // Validate: either broadcast mode or user_ids must be provided
+    if (!broadcast && (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0)) {
+      console.error('[push] Invalid payload: missing user_ids or broadcast flag');
+      return new Response(JSON.stringify({ error: 'user_ids array or broadcast flag is required', code: 'INVALID_PAYLOAD' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    console.log(`[push] Processing for ${user_ids.length} user(s), type: ${type}`);
+    console.log(`[push] Processing ${broadcast ? 'BROADCAST' : `for ${user_ids?.length} user(s)`}, type: ${type}`);
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch all subscriptions for the given user_ids
+    // Fetch subscriptions: all if broadcast, or specific user_ids
     console.log('[push] Fetching subscriptions...');
-    const { data: subscriptions, error: fetchError } = await supabase
+    let subscriptionsQuery = supabase
       .from('push_subscriptions')
-      .select('id, user_id, endpoint, p256dh, auth, preferences')
-      .in('user_id', user_ids);
+      .select('id, user_id, endpoint, p256dh, auth, preferences');
+    
+    // Only filter by user_ids if not in broadcast mode
+    if (!broadcast && user_ids) {
+      subscriptionsQuery = subscriptionsQuery.in('user_id', user_ids);
+    }
+    
+    const { data: subscriptions, error: fetchError } = await subscriptionsQuery;
 
     if (fetchError) {
       console.error('[push] Error fetching subscriptions:', fetchError);
