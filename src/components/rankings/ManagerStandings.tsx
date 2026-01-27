@@ -308,7 +308,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
                   {previousGlobalStandings && (
                     <TableCell className="text-center py-2">
                       {isNew ? (
-                        <Badge className="bg-[#FFD500] text-black border-2 border-black text-xs font-bold">NEW</Badge>
+                        <span className="text-xs text-muted-foreground">—</span>
                       ) : evolution !== null && evolution !== 0 ? (
                         <div className={cn(
                           "flex items-center justify-center gap-1 text-xs font-semibold px-2 py-1 rounded-md",
