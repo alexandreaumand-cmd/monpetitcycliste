@@ -1,71 +1,72 @@
 
-# Correction du chevauchement iOS sur tout le site
 
-## Problème
-La classe `safe-top` a été ajoutée uniquement sur `DashboardHomeHeader`, mais tous les autres headers du site ont le même problème : ils utilisent `sticky top-0` sans gérer le safe-area iOS.
+# Redirection automatique depuis la page d'accueil
 
-## Solution
-Ajouter la classe `safe-top` à **tous** les éléments sticky en haut de page pour garantir que le contenu ne soit jamais coupé par la barre de statut iOS.
+## Objectif
+Supprimer la page de présentation comme point d'entrée pour les utilisateurs de la PWA et rediriger automatiquement vers :
+- **Le dashboard** si l'utilisateur est déjà connecté
+- **La page de connexion/inscription** si l'utilisateur n'est pas connecté
 
-## Fichiers à modifier
+## Solution proposée
 
-### 1. Headers principaux (priorité haute)
+### Option retenue : Modifier `Index.tsx` pour rediriger automatiquement
 
-| Fichier | Ligne | Changement |
-|---------|-------|------------|
-| `src/components/layout/Header.tsx` | 90 | Ajouter `safe-top` |
-| `src/components/layout/TopBar.tsx` | 20 | Ajouter `safe-top` |
-| `src/components/admin/SuperAdminHeader.tsx` | 17 | Ajouter `safe-top` |
+C'est la solution la plus simple et la plus propre. On garde la page de présentation dans le code (elle reste accessible via un lien "En savoir plus" sur la page Auth si besoin), mais on redirige immédiatement.
 
-### 2. Headers Enchères (priorité haute - pages très utilisées)
+### Fichier à modifier
 
-| Fichier | Ligne | Changement |
-|---------|-------|------------|
-| `src/components/auction/AuctionHeader.tsx` | 48 | Ajouter `safe-top` |
-| `src/components/auction/v2/AuctionHeader.tsx` | 96 | Ajouter `safe-top` |
-| `src/components/auction/v2/AuctionHeaderMobile.tsx` | 91 | Ajouter `safe-top` |
+**`src/pages/Index.tsx`**
 
-### 3. Éléments sticky secondaires (priorité moyenne)
+Ajouter une redirection automatique dans le `useEffect` existant :
 
-Ces éléments sont positionnés sous un header principal, donc ils n'ont pas besoin de `safe-top` car ils ne sont jamais directement sous la status bar.
+```text
+Logique actuelle :
+- Vérifie si l'utilisateur est connecté
+- Affiche la page de présentation avec un bouton pour aller au dashboard ou à /auth
 
-| Fichier | Ligne | Action |
-|---------|-------|--------|
-| `src/components/auction/v2/AuctionTabs.tsx` | 107 | Pas de changement (sous le header) |
-| `src/components/auction/v2/AuctionBudgetBanner.tsx` | 32 | Pas de changement (sous le header) |
-| `src/components/auction/v2/AuctionRoundsHistory.tsx` | 100 | Ajouter `safe-top` (header de page) |
-| `src/pages/ResultsPage.desktop.tsx` | 162 | Pas de changement (sous le header principal) |
-
-## Détails techniques
-
-### Exemple de modification
-
-```tsx
-// Avant (Header.tsx ligne 90)
-<header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
-
-// Après
-<header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30 safe-top">
+Nouvelle logique :
+- Vérifie si l'utilisateur est connecté
+- État de chargement pendant la vérification
+- Si connecté → redirection immédiate vers /dashboard/home
+- Si non connecté → redirection immédiate vers /auth
 ```
 
-### Récapitulatif des 7 fichiers à modifier
+### Détails techniques
 
-1. `src/components/layout/Header.tsx` - ligne 90
-2. `src/components/layout/TopBar.tsx` - ligne 20
-3. `src/components/admin/SuperAdminHeader.tsx` - ligne 17
-4. `src/components/auction/AuctionHeader.tsx` - ligne 48
-5. `src/components/auction/v2/AuctionHeader.tsx` - ligne 96
-6. `src/components/auction/v2/AuctionHeaderMobile.tsx` - ligne 91
-7. `src/components/auction/v2/AuctionRoundsHistory.tsx` - ligne 100
+1. Ajouter un état `isLoading` pour gérer le temps de vérification de la session
+2. Dans le `useEffect`, après avoir vérifié la session :
+   - Si `session` existe → `navigate("/dashboard/home")`
+   - Sinon → `navigate("/auth")`
+3. Pendant le chargement, afficher un spinner ou écran de chargement avec le logo
+
+### Exemple de flux
+
+```text
+Utilisateur ouvre l'app
+        ↓
+   [Écran de chargement avec logo]
+        ↓
+   Vérification session Supabase
+        ↓
+    ┌───────────────────┐
+    │                   │
+Connecté?           Non connecté?
+    │                   │
+    ↓                   ↓
+/dashboard/home      /auth
+```
+
+### Avantages
+- Pas de changement dans `App.tsx` (les routes restent les mêmes)
+- La page de présentation peut toujours être utilisée pour le SEO ou le marketing
+- Transition fluide avec écran de chargement
+- Pas de "flash" de contenu
+
+### Conservation de la page de présentation
+La page de présentation reste techniquement accessible (ex: via un lien `/landing` si on le souhaite plus tard), mais elle n'est plus le point d'entrée par défaut.
 
 ## Impact
+- Les utilisateurs de la PWA arrivent directement sur le contenu utile
+- Expérience plus fluide, moins de clics
+- Pas de régression pour les autres fonctionnalités (invitations, etc.)
 
-- Sur iOS PWA : tous les headers respecteront l'espace de la barre de statut
-- Sur desktop/Android : aucun changement visible (`env(safe-area-inset-top)` retourne 0)
-- Cohérence totale sur toutes les pages de l'application
-
-## Rappel important pour les utilisateurs iOS
-
-Après déploiement, les utilisateurs iOS devront :
-1. Supprimer l'app de l'écran d'accueil
-2. Réinstaller via Safari → Partager → Sur l'écran d'accueil
