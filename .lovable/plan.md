@@ -1,12 +1,12 @@
 
 
-# Repositionnement des boutons sur la startlist mobile
+# Simplification de l'affichage mobile des classements
 
 ## Objectif
 
-Améliorer l'esthétique de la page startlist mobile :
-- **Bouton Partager** : Discret en haut à droite avec juste une icône
-- **Bouton Noter** : En bas de page sans le fond noir
+Améliorer l'affichage étendu des classements managers sur mobile :
+- Remplacer le badge "NEW" par un tiret discret
+- Remplacer "Position" par "Évolution" dans la grille 2x2
 
 ---
 
@@ -15,117 +15,107 @@ Améliorer l'esthétique de la page startlist mobile :
 ### Avant
 
 ```text
-┌─────────────────────────────────────────┐
-│ ← Retour              [SL officielle]   │
-├─────────────────────────────────────────┤
-│      ...contenu...                      │
-├─────────────────────────────────────────┤
-│  ┌─────────────────────────────────┐    │
-│  │ 🔗 Partager la startlist        │    │  ← Bouton gradient pleine largeur
-│  └─────────────────────────────────┘    │
-├─────────────────────────────────────────┤
-│▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│
-│▓▓▓▓▓ ⭐ Noter les managers ▓▓▓▓▓▓▓▓▓▓▓▓▓│  ← Fond noir sticky
-│▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│
-└─────────────────────────────────────────┘
+Évolution: [NEW]              ← Ligne séparée
+Position      % du total
+3e            17.0%
+Scoreurs      Victoires
+8             2
 ```
 
 ### Après
 
 ```text
-┌─────────────────────────────────────────┐
-│ ← Retour    [SL officielle]  [📤]       │  ← Icône partage discrète
-├─────────────────────────────────────────┤
-│      ...contenu...                      │
-│                                         │
-│  ┌─────────────────────────────────┐    │
-│  │ ⭐ Noter les managers           │    │  ← Bouton jaune classique
-│  └─────────────────────────────────┘    │
-└─────────────────────────────────────────┘
+Évolution     % du total      ← Intégré à la grille
+—             17.0%
+Scoreurs      Victoires
+8             2
 ```
 
 ---
 
 ## Modifications techniques
 
-### Fichier : `src/pages/Startlist.mobile.tsx`
+### Fichier : `src/pages/Rankings.mobile.tsx`
 
-#### 1. Déplacer l'icône partage dans le header (lignes 364-373)
+#### 1. Remplacer le badge NEW par un tiret (lignes 354-374)
 
-Remplacer le header actuel par une version avec 3 éléments :
+Changer le `evolutionBadge` pour afficher un tiret discret au lieu du badge NEW :
 
 ```tsx
-<div className="flex items-center justify-between">
-  <Button variant="ghost" size="sm" onClick={() => setViewMode("list")}>
-    <ArrowLeft className="h-4 w-4 mr-2" />
-    {t('startlist.back')}
-  </Button>
-  
-  <div className="flex items-center gap-2">
-    {startlistViewData.pcs_validated && (
-      <Badge className="bg-green-600 text-white">
-        <CheckCircle2 className="h-3 w-3 mr-1" />
-        SL officielle
-      </Badge>
-    )}
-    
-    {/* Bouton partage discret */}
-    <Button 
-      variant="ghost" 
-      size="icon" 
-      onClick={handleShareStartlist} 
-      disabled={isExporting}
-      className="h-8 w-8"
-    >
-      {isExporting ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
+const evolutionBadge = !selectedPhase && previousGlobalStandings ? (
+  isNew ? (
+    <span className="text-muted-foreground">—</span>
+  ) : evolution !== null && evolution !== 0 ? (
+    <div className={`flex items-center gap-1 text-xs font-semibold ${
+      evolution > 0 ? "text-green-600" : "text-red-600"
+    }`}>
+      {evolution > 0 ? (
+        <>
+          <TrendingUp className="h-3.5 w-3.5" />
+          <span>+{evolution}</span>
+        </>
       ) : (
-        <Share2 className="h-4 w-4 text-muted-foreground" />
+        <>
+          <TrendingUp className="h-3.5 w-3.5 rotate-180" />
+          <span>{Math.abs(evolution)}</span>
+        </>
       )}
-    </Button>
-  </div>
-</div>
+    </div>
+  ) : (
+    <span className="text-muted-foreground">—</span>
+  )
+) : null;
 ```
 
-#### 2. Supprimer le bouton partage pleine largeur (lignes 529-540)
+#### 2. Supprimer la ligne "Évolution" séparée (lignes 406-412)
 
-Supprimer entièrement ce bloc :
+Supprimer ce bloc :
 
 ```tsx
-{/* Bouton Partager - À SUPPRIMER */}
-<div className="mt-4">
-  <Button onClick={handleShareStartlist} ...>
-    ...
-  </Button>
-</div>
+{/* Evolution badge */}
+{evolutionBadge && (
+  <div className="flex items-center gap-2">
+    <span className="text-muted-foreground text-xs">{t('mobile.evolution')}:</span>
+    {evolutionBadge}
+  </div>
+)}
 ```
 
-#### 3. Remplacer MobileStickyBottom par un bouton simple (lignes 548-554)
+#### 3. Remplacer "Position" par "Évolution" dans la grille (lignes 415-432)
 
 Remplacer :
 
 ```tsx
-{isAdmin && startlistViewData.managers.length > 0 && (
-  <MobileStickyBottom>
-    <Button className="w-full touch-target" onClick={() => setShowRatingModal(true)}>
-      <Star className="h-4 w-4 mr-2" />
-      {t('startlist.rateManagers')}
-    </Button>
-  </MobileStickyBottom>
-)}
+<div className="grid grid-cols-2 gap-3 text-xs">
+  <div className="flex flex-col gap-1">
+    <span className="text-muted-foreground">{t('mobile.position')}</span>
+    <span className="font-semibold">{getRankLabel(rank)}</span>
+  </div>
+  ...
+</div>
 ```
 
-Par un bouton classique en bas du contenu (avant la fermeture du div principal) :
+Par :
 
 ```tsx
-{isAdmin && startlistViewData.managers.length > 0 && (
-  <div className="mt-6 mb-4">
-    <Button className="w-full touch-target" onClick={() => setShowRatingModal(true)}>
-      <Star className="h-4 w-4 mr-2" />
-      {t('startlist.rateManagers')}
-    </Button>
+<div className="grid grid-cols-2 gap-3 text-xs">
+  <div className="flex flex-col gap-1">
+    <span className="text-muted-foreground">{t('mobile.evolution')}</span>
+    <span className="font-semibold">{evolutionBadge || <span className="text-muted-foreground">—</span>}</span>
   </div>
-)}
+  <div className="flex flex-col gap-1">
+    <span className="text-muted-foreground">{t('mobile.totalPercent')}</span>
+    <span className="font-semibold">{percentage}%</span>
+  </div>
+  <div className="flex flex-col gap-1">
+    <span className="text-muted-foreground">{t('mobile.scorers')}</span>
+    <span className="font-semibold">{standing.nb_scoreurs ?? 0}</span>
+  </div>
+  <div className="flex flex-col gap-1">
+    <span className="text-muted-foreground">{t('mobile.victories')}</span>
+    <span className="font-semibold">{standing.nb_victoires ?? 0}</span>
+  </div>
+</div>
 ```
 
 ---
@@ -134,15 +124,8 @@ Par un bouton classique en bas du contenu (avant la fermeture du div principal) 
 
 | Élément | Avant | Après |
 |---------|-------|-------|
-| Bouton Partager | Gradient, pleine largeur, en bas du contenu | Icône ghost, discret, en haut à droite |
-| Bouton Noter | Sticky avec fond noir `MobileStickyBottom` | Bouton jaune classique en bas du contenu |
-| Padding bottom | `pb-20` pour laisser place au sticky | `pb-4` suffisant |
-
----
-
-## Comportement attendu
-
-1. **Icône partage** : Apparaît toujours en haut à droite, devient un loader pendant l'export
-2. **Bouton noter** : Visible uniquement pour les admins, style jaune standard, intégré au flux de la page
-3. **Pas de sticky** : Plus de barre noire fixe en bas de l'écran
+| Badge NEW | Badge jaune avec bordure noire | Tiret discret `—` |
+| Position | Affiché dans la grille (redondant) | Supprimé |
+| Évolution | Ligne séparée au-dessus de la grille | Intégré dans la grille 2x2 |
+| Grille | 2 colonnes, 4 éléments (Position, %, Scoreurs, Victoires) | 2 colonnes, 4 éléments (Évolution, %, Scoreurs, Victoires) |
 
