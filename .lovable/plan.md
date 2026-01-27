@@ -1,122 +1,121 @@
 
 
-# Grille 3x2 avec Round et Ratio
+# Amélioration des onglets sur la page Classement
 
-## Disposition finale
+## Problème actuel
+
+Les onglets "Managers", "Top Coureurs", "Chrono" et "Comparaison" utilisent le composant `ChipGroup` avec des `Badge` qui ressemblent à des boutons/pills plutôt qu'à de véritables onglets de navigation.
 
 ```text
-┌──────────┐ ┌──────────┐ ┌──────────┐
-│   415    │ │    55    │ │    R3    │
-│  Points  │ │   Prix   │ │  Round   │
-└──────────┘ └──────────┘ └──────────┘
-┌──────────┐ ┌──────────┐ ┌──────────┐
-│    2     │ │    20    │ │   7.55   │
-│ Victoires│ │   Cote   │ │  Ratio   │
-└──────────┘ └──────────┘ └──────────┘
+Actuel (Badges arrondis style "pills") :
+┌──────────┐ ┌─────────────┐ ┌────────┐ ┌─────────────┐
+│ Managers │ │Top Coureurs │ │ Chrono │ │ Comparaison │
+└──────────┘ └─────────────┘ └────────┘ └─────────────┘
+```
+
+---
+
+## Solution proposée
+
+Créer un nouveau composant `TabGroup` dédié aux onglets avec un style plus clair :
+- Fond commun (barre d'onglets) pour regrouper visuellement
+- Style plus "plat" sans bordures arrondies prononcées
+- Indicateur visuel clair pour l'onglet actif (fond contrasté + bordure inférieure)
+
+```text
+Nouveau (Style onglets classique) :
+┌─────────────────────────────────────────────────────┐
+│ ▼Managers │ Top Coureurs │  Chrono  │ Comparaison  │
+│ ═══════════                                         │
+└─────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Modifications
 
-### 1. Ajouter `round` au state et aux props
+### 1. Créer un composant `TabGroup`
 
-**Fichier** : `src/components/team/MyTeam.mobile.tsx`
+**Fichier** : `src/components/mobile/TabGroup.tsx`
 
-Mettre à jour le state `selectedRider` et la fonction `openCoureurDetail` :
+Nouveau composant dédié aux onglets avec :
+- Container avec fond `bg-muted` et coins arrondis
+- Onglets avec coins moins arrondis (`rounded-md` au lieu de `rounded-full`)
+- Onglet actif avec fond `bg-background`, ombre légère et bordure inférieure jaune
+- Padding interne pour l'effet "barre d'onglets"
 
-```typescript
-const [selectedRider, setSelectedRider] = useState<{
-  id: string;
-  nom: string;
-  equipe: string;
-  prix: number;
-  cote: number;
-  round?: number;  // Ajouter
-} | null>(null);
+```tsx
+interface TabGroupProps {
+  items: Array<{
+    label: string;
+    value: string;
+  }>;
+  selected?: string;
+  onSelect?: (value: string) => void;
+  className?: string;
+}
 
-const openCoureurDetail = (coureur: Coureur) => {
-  setSelectedRider({
-    id: coureur.coureur_id,
-    nom: coureur.nom,
-    equipe: coureur.equipe,
-    prix: coureur.prix_achat,
-    cote: coureur.cote_initiale,
-    round: coureur.winning_round  // Ajouter
-  });
+export const TabGroup = ({ items, selected, onSelect, className }: TabGroupProps) => {
+  return (
+    <div className={cn(
+      "flex gap-1 p-1 bg-muted rounded-lg overflow-x-auto scrollbar-hide",
+      className
+    )}>
+      {items.map((item) => {
+        const isSelected = selected === item.value;
+        
+        return (
+          <button
+            key={item.value}
+            className={cn(
+              "flex-1 min-w-fit px-3 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              isSelected
+                ? "bg-background text-foreground shadow-sm border-b-2 border-[#FFD500]"
+                : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+            )}
+            onClick={() => onSelect?.(item.value)}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 };
 ```
 
-Passer la prop au composant :
+### 2. Mettre à jour Rankings.mobile.tsx
+
+**Fichier** : `src/pages/Rankings.mobile.tsx`
+
+Remplacer `ChipGroup` par `TabGroup` pour les onglets principaux :
 
 ```tsx
-<RiderPointsDetail
-  ...
-  riderRound={selectedRider?.round}  // Ajouter
+// Import
+import { TabGroup } from "@/components/mobile/TabGroup";
+
+// Usage (lignes 317-321)
+<TabGroup
+  items={tabChips}
+  selected={activeTab}
+  onSelect={(value) => setActiveTab(value as TabView)}
 />
 ```
 
-### 2. Modifier RiderPointsDetail
-
-**Fichier** : `src/components/team/RiderPointsDetail.tsx`
-
-Ajouter la prop `riderRound` et mettre à jour la grille :
-
-```typescript
-interface RiderPointsDetailProps {
-  // ... existing props
-  riderRound?: number;
-}
-```
-
-Nouvelle grille 3x2 :
-
-```tsx
-<div className="grid grid-cols-3 gap-2">
-  {/* Ligne 1: Points | Prix | Round */}
-  <div className="text-center p-2 rounded-lg border bg-card">
-    <div className="text-xl font-bold text-primary">{riderStats.totalPoints}</div>
-    <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Points</div>
-  </div>
-  <div className="text-center p-2 rounded-lg border bg-card">
-    <div className="text-xl font-bold">{riderPrice}</div>
-    <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Prix</div>
-  </div>
-  <div className="text-center p-2 rounded-lg border bg-card">
-    <div className="text-xl font-bold">{riderRound ? `R${riderRound}` : '-'}</div>
-    <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Round</div>
-  </div>
-  
-  {/* Ligne 2: Victoires | Cote | Ratio */}
-  <div className="text-center p-2 rounded-lg border bg-card">
-    <div className="text-xl font-bold text-yellow-600">{riderStats.wins}</div>
-    <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Victoires</div>
-  </div>
-  <div className="text-center p-2 rounded-lg border bg-card">
-    <div className="text-xl font-bold">{riderCote || '-'}</div>
-    <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Cote</div>
-  </div>
-  <div className="text-center p-2 rounded-lg border bg-card">
-    <div className={`text-xl font-bold ${getRatioColor(riderStats.ratio)}`}>
-      {riderStats.ratio}
-    </div>
-    <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Ratio</div>
-  </div>
-</div>
-```
+Supprimer les dégradés gauche/droite qui ne sont plus nécessaires avec le nouveau style.
 
 ---
 
-## Résumé
+## Comparaison visuelle
 
-| Position | Stat | Description |
-|----------|------|-------------|
-| 1 | Points | Total des points marqués |
-| 2 | Prix | Prix d'achat |
-| 3 | Round | Tour d'enchères (R1, R2, R3...) |
-| 4 | Victoires | Nombre de victoires |
-| 5 | Cote | Cote initiale |
-| 6 | Ratio | Points / Prix (coloré selon performance) |
+| Aspect | Avant (ChipGroup) | Après (TabGroup) |
+|--------|-------------------|------------------|
+| Forme | Badges arrondis (pills) | Rectangles avec coins doux |
+| Container | Aucun fond commun | Fond `muted` qui regroupe |
+| Actif | Fond jaune | Fond blanc + bordure inférieure jaune |
+| Inactif | Bordure noire | Texte grisé, pas de bordure |
+| Espacement | Gaps entre badges | Padding interne dans la barre |
 
 ---
 
@@ -124,6 +123,6 @@ Nouvelle grille 3x2 :
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/team/RiderPointsDetail.tsx` | Nouvelle prop `riderRound`, grille 3x2 réorganisée |
-| `src/components/team/MyTeam.mobile.tsx` | Passer `round` dans le state et au composant |
+| `src/components/mobile/TabGroup.tsx` | Nouveau composant |
+| `src/pages/Rankings.mobile.tsx` | Remplacer ChipGroup par TabGroup |
 
