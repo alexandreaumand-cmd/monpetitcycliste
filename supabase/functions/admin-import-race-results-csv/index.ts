@@ -190,6 +190,79 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Send push notifications for each affected course
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (supabaseUrl && serviceRoleKey) {
+      for (const courseId of courseIds) {
+        try {
+          // Get course name for the notification
+          const { data: courseData } = await supabaseClient
+            .from('courses')
+            .select('nom')
+            .eq('id', courseId)
+            .single();
+          
+          const courseName = courseData?.nom || courseId;
+          
+          // Find the distinct type_classement values for this course in the import
+          const typesForCourse = results
+            .filter(r => r.course_id === courseId)
+            .map(r => r.type_classement)
+            .filter((v, i, a) => a.indexOf(v) === i); // unique values
+          
+          for (const typeClassement of typesForCourse) {
+            // Find if there's an etape_numero for this type
+            const etapeNumero = results.find(
+              r => r.course_id === courseId && r.type_classement === typeClassement
+            )?.etape_numero;
+            
+            // Format the type label
+            let typeLabel = typeClassement;
+            if (typeClassement === 'Etape' && etapeNumero) {
+              typeLabel = `Étape ${etapeNumero}`;
+            } else if (typeClassement === 'General' || typeClassement === 'GC') {
+              typeLabel = 'Classement Général';
+            }
+            
+            console.log(`[admin-import-race-results-csv] Sending push notification for ${courseName} - ${typeLabel}`);
+            
+            // Call the push notification edge function
+            const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${serviceRoleKey}`
+              },
+              body: JSON.stringify({
+                broadcast: true,
+                title: '🏁 Nouveaux résultats',
+                message: `${typeLabel} - ${courseName}`,
+                type: 'results_added',
+                metadata: {
+                  course_id: courseId,
+                  course_name: courseName,
+                  type_classement: typeClassement,
+                  etape_numero: etapeNumero
+                }
+              })
+            });
+            
+            if (!pushResponse.ok) {
+              console.error(`[admin-import-race-results-csv] Push notification failed:`, await pushResponse.text());
+            } else {
+              const pushResult = await pushResponse.json();
+              console.log(`[admin-import-race-results-csv] Push notification sent:`, pushResult);
+            }
+          }
+        } catch (pushError) {
+          console.error(`[admin-import-race-results-csv] Error sending push notification for ${courseId}:`, pushError);
+          // Don't fail the import if push fails
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
