@@ -92,7 +92,12 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
     markAsRead(notification.id);
     
     if (notification.type === 'startlist_validated') {
-      navigate('/dashboard/startlist');
+      const startlistId = notification.metadata?.startlist_id;
+      const leagueId = notification.metadata?.league_id;
+      const params = new URLSearchParams();
+      if (leagueId) params.set('leagueId', leagueId);
+      if (startlistId) params.set('startlistId', startlistId);
+      navigate(`/dashboard/startlist?${params.toString()}`);
     } else if (notification.type === 'results_added') {
       const courseId = notification.metadata?.course_id;
       const leagueId = notification.metadata?.league_id;

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,11 +45,24 @@ const StartlistDesktop = () => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const startlistIdFromUrl = searchParams.get('startlistId');
 
 
   useEffect(() => {
     loadCurrentUser();
   }, []);
+
+  // Open startlist from URL param (deep linking from notifications)
+  useEffect(() => {
+    if (startlistIdFromUrl) {
+      setSelectedStartlistId(startlistIdFromUrl);
+      setViewMode('view');
+      // Clean up URL after opening
+      searchParams.delete('startlistId');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [startlistIdFromUrl]);
 
   const loadCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
