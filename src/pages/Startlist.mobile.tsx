@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -51,6 +52,19 @@ export const StartlistMobile = () => {
   const exportRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const seasonPhaseIds = phases?.map(p => p.id) || [];
+  const [searchParams, setSearchParams] = useSearchParams();
+  const startlistIdFromUrl = searchParams.get('startlistId');
+
+  // Open startlist from URL param (deep linking from notifications)
+  useEffect(() => {
+    if (startlistIdFromUrl) {
+      setSelectedStartlistId(startlistIdFromUrl);
+      setViewMode('view');
+      // Clean up URL after opening
+      searchParams.delete('startlistId');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [startlistIdFromUrl]);
 
   // Fetch current user's manager ID
   const {

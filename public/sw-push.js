@@ -111,6 +111,12 @@ function getUrlForNotificationType(type, metadata) {
       return `${baseUrl}/resultats`;
     
     case 'startlist_validated':
+      if (metadata?.startlist_id) {
+        const params = new URLSearchParams();
+        if (metadata.league_id) params.set('leagueId', metadata.league_id);
+        params.set('startlistId', metadata.startlist_id);
+        return `${baseUrl}/startlist?${params.toString()}`;
+      }
       return `${baseUrl}/startlist`;
     
     case 'auction_opened':
