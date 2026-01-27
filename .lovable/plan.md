@@ -1,13 +1,13 @@
 
 
-# Refactoring de la page Résultats Mobile
+# Amélioration de l'équilibre visuel des vignettes Résultats
 
-## Objectif
+## Problème identifié
 
-Simplifier l'interface de la page Résultats mobile :
-- Supprimer le titre "Résultats"
-- Supprimer le filtre par phase
-- Harmoniser visuellement les vignettes de courses
+Les informations de dates sont trop proéminentes visuellement :
+- Icône calendrier qui ajoute du poids visuel
+- Texte trop grand (text-sm)
+- La flèche "→" ajoute de la longueur
 
 ---
 
@@ -16,43 +16,21 @@ Simplifier l'interface de la page Résultats mobile :
 ### Avant
 
 ```text
-┌─────────────────────────────┐
-│ Résultats                   │  ← Titre
-│ [Sélectionner une phase ▼]  │  ← Filtre phase
-│ [🔍 Rechercher...]          │  ← Barre recherche
-├─────────────────────────────┤
-│ ┌─────────────────────────┐ │
-│ │ Course Name    [WT]     │ │
-│ │ 📅 1 Jan → 21 Jan       │ │
-│ │ ┌─────────────────────┐ │ │
-│ │ │ 🏆 Tadej Pogacar    │ │ │  ← Fond jaune/amber
-│ │ └─────────────────────┘ │ │
-│ │ PODIUM MANAGERS         │ │  ← Label en majuscules
-│ │ 🥇 Manager 1    120 pts │ │
-│ │ 🥈 Manager 2    95 pts  │ │
-│ │ 🥉 Manager 3    80 pts  │ │
-│ └─────────────────────────┘ │
-└─────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ Clàssica Comunitat Valencian    [1.1]   │
+│ 📅 25 janv. → 25 janv.                  │  ← Trop visible
+│ 🏆 Dylan GROENEWEGEN                    │
+└─────────────────────────────────────────┘
 ```
 
 ### Après
 
 ```text
-┌─────────────────────────────┐
-│ [🔍 Rechercher...]          │  ← Seulement la recherche
-├─────────────────────────────┤
-│ ┌─────────────────────────┐ │
-│ │ Course Name    [WT]     │ │
-│ │ 📅 1 Jan → 21 Jan       │ │
-│ │                         │ │
-│ │ 🏆 Tadej Pogacar        │ │  ← Style simplifié
-│ │                         │ │
-│ │ ─────────────────────── │ │  ← Séparateur discret
-│ │ 🥇 Manager 1    120 pts │ │  ← Sans label "PODIUM"
-│ │ 🥈 Manager 2    95 pts  │ │
-│ │ 🥉 Manager 3    80 pts  │ │
-│ └─────────────────────────┘ │
-└─────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ Clàssica Comunitat Valencian    [1.1]   │
+│ 25 janv.                                │  ← Discret, sans icône
+│ 🏆 Dylan GROENEWEGEN                    │
+└─────────────────────────────────────────┘
 ```
 
 ---
@@ -61,101 +39,54 @@ Simplifier l'interface de la page Résultats mobile :
 
 ### Fichier : `src/pages/ResultsPage.mobile.tsx`
 
-#### 1. Supprimer le titre (lignes 170-174)
+#### Simplifier l'affichage des dates (lignes 208-216)
 
-Supprimer le bloc :
+Remplacer :
 ```tsx
-<div className="flex items-center justify-between">
-  <div>
-    <h1 className="text-xl font-bold">{t('title')}</h1>
-  </div>
-</div>
-```
-
-#### 2. Supprimer le filtre phase (lignes 176-190)
-
-Supprimer le bloc `Select` complet pour les phases.
-
-Aussi supprimer l'état `selectedPhaseId` (ligne 60) et les imports `Select*` (ligne 10).
-
-#### 3. Simplifier le style du vainqueur (lignes 257-262)
-
-Remplacer le style gradient jaune par un style plus discret :
-
-```tsx
-{/* Winner section - clean and simple */}
-{raceWinner && (
-  <div className="flex items-center gap-2 mt-3">
-    <Trophy className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-    <span className="font-medium text-sm text-foreground">{raceWinner.coureur_nom}</span>
-  </div>
-)}
-```
-
-#### 4. Supprimer le label "PODIUM MANAGERS" (lignes 267-268)
-
-Supprimer :
-```tsx
-<div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-  {t('podium.managers')}
-</div>
-```
-
-#### 5. Harmoniser les items du podium (lignes 270-297)
-
-Simplifier le style des lignes podium :
-```tsx
-{racePodium.slice(0, 3).map((manager, idx) => (
-  <div 
-    key={manager.manager_nom} 
-    className="flex items-center justify-between py-1"
-  >
-    <div className="flex items-center gap-2">
-      {jerseys[manager.manager_id] ? (
-        <img 
-          src={jerseys[manager.manager_id]} 
-          alt="Maillot" 
-          className="h-5 w-5 object-contain" 
-        />
-      ) : (
-        <span className="text-sm">
-          {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
-        </span>
-      )}
-      <span className="text-sm text-muted-foreground truncate max-w-[140px]">
-        {manager.manager_nom}
-      </span>
-    </div>
-    <span className="text-sm font-medium tabular-nums">
-      {manager.points} pts
+subtitle={
+  <div className="flex items-center gap-2 text-muted-foreground mt-1">
+    <Calendar className="h-4 w-4" />
+    <span className="text-sm">
+      {format(new Date(race.date_debut), 'd MMM', { locale: dateLocale })}
+      {' → '}
+      {format(new Date(race.date_fin), 'd MMM', { locale: dateLocale })}
     </span>
   </div>
-))}
+}
 ```
 
-#### 6. Nettoyer les imports inutilisés
+Par :
+```tsx
+subtitle={
+  <span className="text-xs text-muted-foreground/70">
+    {race.date_debut === race.date_fin 
+      ? format(new Date(race.date_debut), 'd MMM', { locale: dateLocale })
+      : `${format(new Date(race.date_debut), 'd MMM', { locale: dateLocale })} - ${format(new Date(race.date_fin), 'd MMM', { locale: dateLocale })}`
+    }
+  </span>
+}
+```
 
-Supprimer de la ligne 10 :
-- `Select, SelectContent, SelectItem, SelectTrigger, SelectValue`
+#### Supprimer l'import Calendar inutilisé (ligne 7)
+
+Retirer `Calendar` de la liste des imports lucide-react.
 
 ---
 
-## Résumé des changements
+## Changements appliqués
 
 | Élément | Avant | Après |
 |---------|-------|-------|
-| Titre | "Résultats" en h1 | Supprimé |
-| Filtre phase | Select dropdown | Supprimé (toujours "global") |
-| Vainqueur | Fond gradient jaune/amber | Style simple avec icône |
-| Label podium | "PODIUM MANAGERS" en majuscules | Supprimé |
-| Lignes podium | Fond hover, texte gras, couleur primaire | Style discret, texte gris, taille uniforme |
-| Espacement | Padding/marges importants | Plus compact |
+| Icône calendrier | Présente (📅) | Supprimée |
+| Taille texte | `text-sm` | `text-xs` |
+| Opacité | `text-muted-foreground` | `text-muted-foreground/70` |
+| Flèche | `→` | `-` (tiret) |
+| Course 1 jour | "25 janv. → 25 janv." | "25 janv." (pas de duplication) |
+| Espacement | `mt-1` + `gap-2` | Aucun (inline simple) |
 
 ---
 
-## Impact technique
+## Résultat attendu
 
-- **selectedPhaseId** devient hardcodé à `"global"` dans l'appel API (ligne 95)
-- Aucun changement backend nécessaire
-- Les traductions `phase.*` ne seront plus utilisées sur mobile
+Les dates seront plus discrètes et l'attention sera portée sur le nom de la course et le vainqueur, créant un meilleur équilibre visuel.
 
