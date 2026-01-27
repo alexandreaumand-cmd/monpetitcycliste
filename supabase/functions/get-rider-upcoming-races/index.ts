@@ -35,13 +35,13 @@ Deno.serve(async (req) => {
 
     console.log('Fetching upcoming races for rider:', rider_id);
 
-    // Query to get upcoming races for the rider
-    const { data: races, error } = await supabase
-      .from('startlist_entries')
+    const today = new Date().toISOString().split('T')[0];
+
+    // Step 1: Get all future races with their latest startlist import
+    const { data: latestStartlists, error: latestError } = await supabase
+      .from('startlist_imports')
       .select(`
-        startlist_id,
-        status,
-      startlist_imports!inner(
+        id,
         race_id,
         pcs_validated,
         created_at,
@@ -52,51 +52,72 @@ Deno.serve(async (req) => {
           date_debut,
           date_fin
         )
-      )
       `)
-      .eq('coureur_id', rider_id)
-      .gte('startlist_imports.courses.date_debut', new Date().toISOString().split('T')[0]);
+      .gte('courses.date_debut', today)
+      .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching upcoming races:', error);
-      throw error;
+    if (latestError) {
+      console.error('Error fetching latest startlists:', latestError);
+      throw latestError;
     }
 
-    console.log(`Found ${races?.length || 0} raw entries for rider ${rider_id}`);
-
-    // Transform the data to flatten the structure and add is_confirmed from pcs_validated
-    const transformedRaces = races?.map((entry: any) => ({
-      race_id: entry.startlist_imports.courses.id,
-      race_nom: entry.startlist_imports.courses.nom,
-      categorie: entry.startlist_imports.courses.categorie,
-      date_debut: entry.startlist_imports.courses.date_debut,
-      date_fin: entry.startlist_imports.courses.date_fin,
-      is_confirmed: entry.startlist_imports.pcs_validated,
-      created_at: entry.startlist_imports.created_at
-    })) || [];
-
-    // Remove duplicates and keep the most recent startlist for each race
-    const uniqueRaces = transformedRaces.reduce((acc: any[], race: any) => {
-      const existing = acc.find(r => r.race_id === race.race_id);
-      if (!existing) {
-        acc.push(race);
-      } else if (new Date(race.created_at) > new Date(existing.created_at)) {
-        // Keep the most recent startlist (by created_at)
-        const index = acc.findIndex(r => r.race_id === race.race_id);
-        acc[index] = race;
+    // Build a map of race_id -> latest startlist_id
+    const latestStartlistByRace = new Map<string, string>();
+    const startlistInfoMap = new Map<string, any>();
+    
+    for (const sl of latestStartlists || []) {
+      const raceId = sl.race_id;
+      if (!latestStartlistByRace.has(raceId)) {
+        latestStartlistByRace.set(raceId, sl.id);
+        startlistInfoMap.set(sl.id, sl);
       }
-      return acc;
-    }, []);
+    }
 
-    // Remove created_at from final output (not needed in frontend)
-    const cleanedRaces = uniqueRaces.map(({ created_at, ...race }) => race);
+    const latestStartlistIds = Array.from(latestStartlistByRace.values());
 
-    // Sort by date_debut ascending (client-side sorting)
-    cleanedRaces.sort((a, b) => new Date(a.date_debut).getTime() - new Date(b.date_debut).getTime());
+    if (latestStartlistIds.length === 0) {
+      console.log('No future startlists found');
+      return new Response(JSON.stringify({ races: [] }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    console.log(`Returning ${cleanedRaces.length} unique upcoming races`);
+    // Step 2: Check if rider exists in any of these latest startlists
+    const { data: riderEntries, error: entriesError } = await supabase
+      .from('startlist_entries')
+      .select('startlist_id')
+      .eq('coureur_id', rider_id)
+      .in('startlist_id', latestStartlistIds);
 
-    return new Response(JSON.stringify({ races: cleanedRaces }), {
+    if (entriesError) {
+      console.error('Error fetching rider entries:', entriesError);
+      throw entriesError;
+    }
+
+    console.log(`Found ${riderEntries?.length || 0} entries for rider ${rider_id} in latest startlists`);
+
+    // Step 3: Build final race list from rider's entries in latest startlists only
+    const races = (riderEntries || []).map((entry: any) => {
+      const startlistInfo = startlistInfoMap.get(entry.startlist_id);
+      if (!startlistInfo) return null;
+      
+      const course = startlistInfo.courses;
+      return {
+        race_id: course.id,
+        race_nom: course.nom,
+        categorie: course.categorie,
+        date_debut: course.date_debut,
+        date_fin: course.date_fin,
+        is_confirmed: startlistInfo.pcs_validated,
+      };
+    }).filter(Boolean);
+
+    // Sort by date_debut ascending
+    races.sort((a: any, b: any) => new Date(a.date_debut).getTime() - new Date(b.date_debut).getTime());
+
+    console.log(`Returning ${races.length} upcoming races for rider ${rider_id}`);
+
+    return new Response(JSON.stringify({ races }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
