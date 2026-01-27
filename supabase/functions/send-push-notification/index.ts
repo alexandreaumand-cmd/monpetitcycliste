@@ -1,4 +1,3 @@
-import { Hono } from "https://deno.land/x/hono@v4.3.11/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
@@ -27,8 +26,6 @@ interface PushSubscription {
     auctions?: boolean;
   } | null;
 }
-
-const app = new Hono();
 
 // Helper to determine preference key from notification type
 function getPreferenceKey(type: string): 'results' | 'startlists' | 'auctions' | null {
@@ -319,27 +316,27 @@ async function encryptPayload(
   const idlen = serverPublicKey.length;
   
   const encryptedContent = new Uint8Array(16 + 4 + 1 + idlen + ciphertext.byteLength);
-  let offset = 0;
+  let encOffset = 0;
   
   // Salt (16 bytes)
-  encryptedContent.set(salt, offset);
-  offset += 16;
+  encryptedContent.set(salt, encOffset);
+  encOffset += 16;
   
   // Record size (4 bytes, big endian)
-  encryptedContent[offset++] = (recordSize >> 24) & 0xff;
-  encryptedContent[offset++] = (recordSize >> 16) & 0xff;
-  encryptedContent[offset++] = (recordSize >> 8) & 0xff;
-  encryptedContent[offset++] = recordSize & 0xff;
+  encryptedContent[encOffset++] = (recordSize >> 24) & 0xff;
+  encryptedContent[encOffset++] = (recordSize >> 16) & 0xff;
+  encryptedContent[encOffset++] = (recordSize >> 8) & 0xff;
+  encryptedContent[encOffset++] = recordSize & 0xff;
   
   // ID length (1 byte)
-  encryptedContent[offset++] = idlen;
+  encryptedContent[encOffset++] = idlen;
   
   // Key ID (server public key)
-  encryptedContent.set(serverPublicKey, offset);
-  offset += idlen;
+  encryptedContent.set(serverPublicKey, encOffset);
+  encOffset += idlen;
   
   // Ciphertext
-  encryptedContent.set(new Uint8Array(ciphertext), offset);
+  encryptedContent.set(new Uint8Array(ciphertext), encOffset);
 
   return { encrypted: toArrayBuffer(encryptedContent), serverPublicKey };
 }
@@ -396,23 +393,22 @@ async function sendWebPush(
   }
 }
 
-// CORS middleware - apply to ALL responses
-app.use('*', async (c, next) => {
-  // Handle preflight
-  if (c.req.method === 'OPTIONS') {
+Deno.serve(async (req) => {
+  console.log('[push] Request received:', req.method);
+  
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  
-  await next();
-  
-  // Add CORS headers to all responses
-  Object.entries(corsHeaders).forEach(([key, value]) => {
-    c.res.headers.set(key, value);
-  });
-});
 
-app.post('/', async (c) => {
-  console.log('[push] Request received');
+  // Only accept POST
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed', code: 'METHOD_NOT_ALLOWED' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -422,17 +418,23 @@ app.post('/', async (c) => {
 
     if (!vapidPublicKey || !vapidPrivateKey || !vapidSubject) {
       console.error('[push] VAPID keys not configured');
-      return c.json({ error: 'VAPID keys not configured', code: 'VAPID_MISSING' }, 500, corsHeaders);
+      return new Response(JSON.stringify({ error: 'VAPID keys not configured', code: 'VAPID_MISSING' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     console.log('[push] VAPID keys loaded');
 
-    const payload: PushPayload = await c.req.json();
+    const payload: PushPayload = await req.json();
     const { user_ids, title, message, type, metadata } = payload;
 
     if (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0) {
       console.error('[push] Invalid payload: missing user_ids');
-      return c.json({ error: 'user_ids array is required', code: 'INVALID_PAYLOAD' }, 400, corsHeaders);
+      return new Response(JSON.stringify({ error: 'user_ids array is required', code: 'INVALID_PAYLOAD' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     console.log(`[push] Processing for ${user_ids.length} user(s), type: ${type}`);
@@ -448,12 +450,18 @@ app.post('/', async (c) => {
 
     if (fetchError) {
       console.error('[push] Error fetching subscriptions:', fetchError);
-      return c.json({ error: 'Failed to fetch subscriptions', code: 'DB_ERROR', details: fetchError.message }, 500, corsHeaders);
+      return new Response(JSON.stringify({ error: 'Failed to fetch subscriptions', code: 'DB_ERROR', details: fetchError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     if (!subscriptions || subscriptions.length === 0) {
       console.log('[push] No subscriptions found for users:', user_ids);
-      return c.json({ sent: 0, message: 'No subscriptions found', code: 'NO_SUBS' }, 200, corsHeaders);
+      return new Response(JSON.stringify({ sent: 0, message: 'No subscriptions found', code: 'NO_SUBS' }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     console.log(`[push] Found ${subscriptions.length} subscription(s)`);
@@ -516,22 +524,26 @@ app.post('/', async (c) => {
 
     console.log(`[push] Complete: ${successCount} sent, ${failCount} failed`);
 
-    return c.json({
+    return new Response(JSON.stringify({
       sent: successCount,
       failed: failCount,
       expiredRemoved: expiredSubscriptionIds.length,
       total: filteredSubscriptions.length,
       errors: errors.length > 0 ? errors : undefined
-    }, 200, corsHeaders);
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
 
   } catch (error) {
     console.error('[push] Unhandled error:', error);
-    return c.json({ 
+    return new Response(JSON.stringify({ 
       error: 'Internal server error', 
       code: 'INTERNAL_ERROR',
       message: error instanceof Error ? error.message : String(error) 
-    }, 500, corsHeaders);
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 });
-
-Deno.serve(app.fetch);
