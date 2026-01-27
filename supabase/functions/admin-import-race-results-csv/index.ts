@@ -190,13 +190,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Send push notifications for each affected course
+    // Send ONE push notification per course (not per type_classement)
+    // Only for Etape and General types (not jersey wearers)
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (supabaseUrl && serviceRoleKey) {
       for (const courseId of courseIds) {
         try {
+          // Check if this course has any Etape or General results in the import
+          const relevantResults = results.filter(
+            r => r.course_id === courseId && 
+            (r.type_classement === 'Etape' || r.type_classement === 'General' || r.type_classement === 'GC')
+          );
+          
+          if (relevantResults.length === 0) {
+            console.log(`[admin-import-race-results-csv] Skipping push for ${courseId} - no Etape/General results`);
+            continue;
+          }
+          
           // Get course name for the notification
           const { data: courseData } = await supabaseClient
             .from('courses')
@@ -206,55 +218,54 @@ Deno.serve(async (req) => {
           
           const courseName = courseData?.nom || courseId;
           
-          // Find the distinct type_classement values for this course in the import
-          const typesForCourse = results
-            .filter(r => r.course_id === courseId)
-            .map(r => r.type_classement)
-            .filter((v, i, a) => a.indexOf(v) === i); // unique values
+          // Find the first Etape result for the label (prioritize Etape over General)
+          const etapeResult = relevantResults.find(r => r.type_classement === 'Etape');
+          const gcResult = relevantResults.find(r => r.type_classement === 'General' || r.type_classement === 'GC');
           
-          for (const typeClassement of typesForCourse) {
-            // Find if there's an etape_numero for this type
-            const etapeNumero = results.find(
-              r => r.course_id === courseId && r.type_classement === typeClassement
-            )?.etape_numero;
-            
-            // Format the type label
-            let typeLabel = typeClassement;
-            if (typeClassement === 'Etape' && etapeNumero) {
-              typeLabel = `Étape ${etapeNumero}`;
-            } else if (typeClassement === 'General' || typeClassement === 'GC') {
-              typeLabel = 'Classement Général';
-            }
-            
-            console.log(`[admin-import-race-results-csv] Sending push notification for ${courseName} - ${typeLabel}`);
-            
-            // Call the push notification edge function
-            const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${serviceRoleKey}`
-              },
-              body: JSON.stringify({
-                broadcast: true,
-                title: '🏁 Nouveaux résultats',
-                message: `${typeLabel} - ${courseName}`,
-                type: 'results_added',
-                metadata: {
-                  course_id: courseId,
-                  course_name: courseName,
-                  type_classement: typeClassement,
-                  etape_numero: etapeNumero
-                }
-              })
-            });
-            
-            if (!pushResponse.ok) {
-              console.error(`[admin-import-race-results-csv] Push notification failed:`, await pushResponse.text());
-            } else {
-              const pushResult = await pushResponse.json();
-              console.log(`[admin-import-race-results-csv] Push notification sent:`, pushResult);
-            }
+          // Format the type label - prefer Etape if available
+          let typeLabel: string;
+          let typeClassement: string;
+          let etapeNumero: number | null = null;
+          
+          if (etapeResult) {
+            etapeNumero = etapeResult.etape_numero;
+            typeLabel = etapeNumero ? `Étape ${etapeNumero}` : 'Étape';
+            typeClassement = 'Etape';
+          } else if (gcResult) {
+            typeLabel = 'Classement Général';
+            typeClassement = 'General';
+          } else {
+            continue; // Should not happen given the filter above
+          }
+          
+          console.log(`[admin-import-race-results-csv] Sending ONE push notification for ${courseName} - ${typeLabel}`);
+          
+          // Call the push notification edge function - ONE per course
+          const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${serviceRoleKey}`
+            },
+            body: JSON.stringify({
+              broadcast: true,
+              title: '🏁 Nouveaux résultats',
+              message: `${typeLabel} - ${courseName}`,
+              type: 'results_added',
+              metadata: {
+                course_id: courseId,
+                course_name: courseName,
+                type_classement: typeClassement,
+                etape_numero: etapeNumero
+              }
+            })
+          });
+          
+          if (!pushResponse.ok) {
+            console.error(`[admin-import-race-results-csv] Push notification failed:`, await pushResponse.text());
+          } else {
+            const pushResult = await pushResponse.json();
+            console.log(`[admin-import-race-results-csv] Push notification sent:`, pushResult);
           }
         } catch (pushError) {
           console.error(`[admin-import-race-results-csv] Error sending push notification for ${courseId}:`, pushError);
