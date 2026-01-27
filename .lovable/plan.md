@@ -1,34 +1,122 @@
 
-# Génération d'un badge monochrome pour les notifications Android
+# Implémentation des notifications push pour les résultats
 
 ## Objectif
-Créer une version monochrome (silhouette blanche sur fond transparent) du logo MPC pour résoudre le problème du "carré blanc" dans la barre de statut Android.
+Ajouter l'envoi de notifications push PWA quand de nouveaux résultats de course sont ajoutés, en complément des notifications in-app déjà existantes.
 
-## Ce que je vais faire
+## Analyse technique
 
-### 1. Générer l'image monochrome
-Utiliser l'IA de génération d'images pour créer une version du logo MPC :
-- **Format** : 96x96 pixels PNG
-- **Style** : Silhouette blanche sur fond transparent
-- **Contenu** : L'écusson MPC avec les lettres et la roue de vélo
+### Situation actuelle
+- Le trigger PostgreSQL `notify_results_added` crée des notifications in-app dans la table `notifications`
+- La préférence utilisateur "résultats" existe et est mappée dans l'Edge Function
+- **Mais** aucun appel à `send-push-notification` n'est effectué pour les résultats
 
-### 2. Ajouter l'image au projet
-- Sauvegarder l'image générée dans `public/notification-badge-96x96.png`
+### Approche recommandée
+Utiliser un **trigger PostgreSQL avec `pg_net`** pour appeler l'Edge Function directement depuis la base de données. C'est plus fiable qu'un appel frontend car les résultats sont généralement importés par des processus automatiques/admin.
 
-### 3. Modifier le Service Worker
-Mettre à jour `public/sw-push.js` pour utiliser cette nouvelle image :
+## Plan d'implémentation
 
-```javascript
-const options = {
-  icon: '/pwa-192x192.png',           // Logo couleur (notification principale)
-  badge: '/notification-badge-96x96.png', // Logo monochrome (barre de statut)
-  // ...
-};
+### 1. Créer une migration SQL pour le trigger push
+
+Ajouter une fonction et un trigger qui appellent l'Edge Function `send-push-notification` via `pg_net.http_post` :
+
+```sql
+-- Fonction pour envoyer les push notifications quand des résultats sont ajoutés
+CREATE OR REPLACE FUNCTION public.send_results_push_notification()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_course_name TEXT;
+  v_type_label TEXT;
+  v_supabase_url TEXT;
+  v_service_key TEXT;
+BEGIN
+  -- Anti-spam: ne notifier que pour le premier résultat d'un type donné
+  IF EXISTS (
+    SELECT 1 FROM notifications 
+    WHERE type = 'results_added' 
+    AND metadata->>'course_id' = NEW.course_id
+    AND metadata->>'type_classement' = NEW.type_classement::TEXT
+    AND COALESCE((metadata->>'etape_numero')::INTEGER, -1) = COALESCE(NEW.etape_numero, -1)
+    AND created_at > NOW() - INTERVAL '1 hour'
+    AND created_at < NOW() - INTERVAL '1 second' -- Exclure la notification qu'on vient de créer
+  ) THEN
+    RETURN NEW;
+  END IF;
+
+  -- Récupérer le nom de la course
+  SELECT nom INTO v_course_name FROM courses WHERE id = NEW.course_id;
+  
+  -- Formater le type de classement
+  v_type_label := CASE
+    WHEN NEW.type_classement = 'Etape' THEN 'Étape ' || COALESCE(NEW.etape_numero::TEXT, '')
+    WHEN NEW.type_classement = 'GC' THEN 'Classement Général'
+    ELSE NEW.type_classement::TEXT
+  END;
+
+  -- Appeler l'Edge Function via pg_net (broadcast à tous les utilisateurs)
+  PERFORM net.http_post(
+    url := current_setting('app.supabase_url') || '/functions/v1/send-push-notification',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || current_setting('app.service_role_key')
+    ),
+    body := jsonb_build_object(
+      'broadcast', true,
+      'title', '🏁 Nouveaux résultats',
+      'message', v_type_label || ' - ' || COALESCE(v_course_name, 'Course'),
+      'type', 'results_added',
+      'metadata', jsonb_build_object(
+        'course_id', NEW.course_id,
+        'type_classement', NEW.type_classement::TEXT,
+        'etape_numero', NEW.etape_numero
+      )
+    )
+  );
+  
+  RETURN NEW;
+END;
+$$;
+
+-- Créer le trigger (après le trigger existant des notifications in-app)
+CREATE TRIGGER trigger_send_results_push
+  AFTER INSERT ON public.race_results
+  FOR EACH ROW
+  EXECUTE FUNCTION public.send_results_push_notification();
 ```
 
-## Résultat attendu
-- **Panneau de notifications** : Le logo couleur jaune/noir s'affichera
-- **Barre de statut** : L'icône monochrome blanche s'affichera correctement (plus de carré blanc)
+### 2. Alternative plus simple : modifier le trigger existant
 
-## Note technique
-Après déploiement, il faudra peut-être réinstaller l'app sur l'écran d'accueil pour forcer le rafraîchissement du Service Worker et des assets.
+Si `pg_net` n'est pas disponible, on peut ajouter l'appel push directement dans le code d'import des résultats (côté admin ou Edge Function d'import), similaire à ce qui est fait pour les startlists.
+
+Chercher où les résultats sont importés/créés et ajouter :
+
+```typescript
+// Après l'import des résultats
+await supabase.functions.invoke('send-push-notification', {
+  body: {
+    broadcast: true,
+    title: '🏁 Nouveaux résultats',
+    message: `${typeLabel} - ${courseName}`,
+    type: 'results_added',
+    metadata: { course_id, type_classement, etape_numero }
+  }
+});
+```
+
+## Fichiers à modifier
+
+1. **Nouvelle migration SQL** : Créer le trigger `send_results_push_notification`
+   - OU identifier le code d'import des résultats et y ajouter l'appel
+
+2. **Aucun changement requis** sur :
+   - `send-push-notification/index.ts` (déjà prêt avec `getPreferenceKey`)
+   - `usePushNotifications.ts` (préférences déjà gérées)
+   - `sw-push.js` (gère déjà `results_added`)
+
+## Résultat attendu
+- Les utilisateurs avec les notifications push activées et la préférence "résultats" cochée recevront une notification push quand de nouveaux résultats sont ajoutés
+- Anti-spam : une seule notification par course/étape/type de classement par heure
