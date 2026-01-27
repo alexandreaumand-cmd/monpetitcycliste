@@ -662,19 +662,11 @@ export const StartlistMobile = () => {
                     </AccordionTrigger>
                     
                     <AccordionContent>
-                      <div className="space-y-1.5 pt-2">
+                      <div className="pt-1">
                         {sortedStarters.map((starter: any) => (
-                          <div 
-                            key={starter.coureur_id} 
-                            className="flex items-center justify-between text-sm py-1 px-2 rounded bg-muted/50"
-                          >
-                            <span className="font-medium truncate">{starter.nom}</span>
-                            {starter.equipe && (
-                              <span className="text-xs text-muted-foreground truncate ml-2">
-                                {starter.equipe}
-                              </span>
-                            )}
-                          </div>
+                          <p key={starter.coureur_id} className="text-sm">
+                            {starter.nom}
+                          </p>
                         ))}
                       </div>
                     </AccordionContent>
