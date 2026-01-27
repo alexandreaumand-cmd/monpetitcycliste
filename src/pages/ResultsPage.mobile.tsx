@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Trophy, Calendar, Search, Shirt } from "lucide-react";
+import { Loader2, Trophy, Search } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { CourseResultsDrawer } from "@/components/courses/CourseResultsDrawer";
 
@@ -206,14 +206,12 @@ export const ResultsPageMobile = () => {
                     </span>
                   }
                   subtitle={
-                    <div className="flex items-center gap-2 text-muted-foreground mt-1">
-                      <Calendar className="h-4 w-4" />
-                      <span className="text-sm">
-                        {format(new Date(race.date_debut), 'd MMM', { locale: dateLocale })}
-                        {' → '}
-                        {format(new Date(race.date_fin), 'd MMM', { locale: dateLocale })}
-                      </span>
-                    </div>
+                    <span className="text-xs text-muted-foreground/70">
+                      {race.date_debut === race.date_fin 
+                        ? format(new Date(race.date_debut), 'd MMM', { locale: dateLocale })
+                        : `${format(new Date(race.date_debut), 'd MMM', { locale: dateLocale })} - ${format(new Date(race.date_fin), 'd MMM', { locale: dateLocale })}`
+                      }
+                    </span>
                   }
                   badge={
                     <Badge variant="secondary" className="text-xs font-semibold px-2.5 py-1">
