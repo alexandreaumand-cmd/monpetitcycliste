@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useLeague } from "@/contexts/LeagueContext";
 import { toast } from "sonner";
@@ -62,7 +63,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
           id,
           award_type,
           manager_id,
-          managers!manager_fun_awards_manager_id_fkey(nom)
+          managers!manager_fun_awards_manager_id_fkey(nom, avatar_url)
         `)
         .eq("league_id", leagueId);
 
@@ -79,9 +80,10 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
         acc[award.award_type as AwardType] = {
           managerId: award.manager_id,
           managerName: award.managers?.nom || "Unknown",
+          avatarUrl: award.managers?.avatar_url || null,
         };
         return acc;
-      }, {} as Record<AwardType, { managerId: string; managerName: string }>);
+      }, {} as Record<AwardType, { managerId: string; managerName: string; avatarUrl: string | null }>);
     },
   });
 
@@ -220,9 +222,13 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                       <div className="cursor-pointer hover:scale-105 transition-transform">
                         {award?.managerName ? (
                           <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-[#FFD500] shadow-md">
-                            <p className="text-xl font-bold text-center">
-                              {award.managerName}
-                            </p>
+                            <div className="flex items-center justify-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={award.avatarUrl || undefined} alt={award.managerName} />
+                                <AvatarFallback className="text-xs">{award.managerName[0]}</AvatarFallback>
+                              </Avatar>
+                              <p className="text-xl font-bold">{award.managerName}</p>
+                            </div>
                           </div>
                         ) : (
                           <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3 border-2 border-dashed border-gray-300">
@@ -262,9 +268,13 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                   <>
                     {award?.managerName ? (
                       <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-[#FFD500] shadow-md">
-                        <p className="text-xl font-bold text-center">
-                          {award.managerName}
-                        </p>
+                        <div className="flex items-center justify-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={award.avatarUrl || undefined} alt={award.managerName} />
+                            <AvatarFallback className="text-xs">{award.managerName[0]}</AvatarFallback>
+                          </Avatar>
+                          <p className="text-xl font-bold">{award.managerName}</p>
+                        </div>
                       </div>
                     ) : (
                       <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3 border-2 border-dashed border-gray-300">

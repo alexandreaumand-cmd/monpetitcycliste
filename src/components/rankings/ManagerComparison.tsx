@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Tooltip, ResponsiveContainer } from "recharts";
 import { ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,7 +34,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       
       const { data, error } = await supabase
         .from("managers")
-        .select("id, nom")
+        .select("id, nom, avatar_url")
         .in("id", ids);
       
       if (error) throw error;
@@ -816,8 +817,12 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
   const victoiresA = victoriesA?.length || 0;
   const victoiresB = victoriesB?.length || 0;
 
-  const managerAName = selectedManagers?.find(m => m.id === managerA)?.nom || "Manager A";
-  const managerBName = selectedManagers?.find(m => m.id === managerB)?.nom || "Manager B";
+  const managerAData = selectedManagers?.find(m => m.id === managerA);
+  const managerBData = selectedManagers?.find(m => m.id === managerB);
+  const managerAName = managerAData?.nom || "Manager A";
+  const managerBName = managerBData?.nom || "Manager B";
+  const managerAAvatar = managerAData?.avatar_url;
+  const managerBAvatar = managerBData?.avatar_url;
 
   const scopeLabel = phaseId ? "Phase" : saisonId ? "Saison" : "Global";
 
@@ -841,6 +846,15 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
                 placeholder="Sélectionner un manager"
                 leagueId={leagueId}
               />
+              {managerA && (
+                <div className="flex items-center gap-2 mt-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={managerAAvatar || undefined} alt={managerAName} />
+                    <AvatarFallback className="text-xs">{managerAName[0]}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium">{managerAName}</span>
+                </div>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Manager B</label>
@@ -850,6 +864,15 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
                 placeholder="Sélectionner un manager"
                 leagueId={leagueId}
               />
+              {managerB && (
+                <div className="flex items-center gap-2 mt-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={managerBAvatar || undefined} alt={managerBName} />
+                    <AvatarFallback className="text-xs">{managerBName[0]}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium">{managerBName}</span>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
