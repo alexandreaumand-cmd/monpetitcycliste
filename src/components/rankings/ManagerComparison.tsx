@@ -848,7 +848,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
               />
               {managerA && (
                 <div className="flex items-center gap-2 mt-2">
-                  <Avatar className="h-6 w-6">
+                  <Avatar className="h-16 w-16">
                     <AvatarImage src={managerAAvatar || undefined} alt={managerAName} />
                     <AvatarFallback className="text-xs">{managerAName[0]}</AvatarFallback>
                   </Avatar>
@@ -866,7 +866,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
               />
               {managerB && (
                 <div className="flex items-center gap-2 mt-2">
-                  <Avatar className="h-6 w-6">
+                  <Avatar className="h-16 w-16">
                     <AvatarImage src={managerBAvatar || undefined} alt={managerBName} />
                     <AvatarFallback className="text-xs">{managerBName[0]}</AvatarFallback>
                   </Avatar>
