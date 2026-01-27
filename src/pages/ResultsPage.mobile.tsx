@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Trophy, Calendar, Search, Shirt } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { CourseResultsDrawer } from "@/components/courses/CourseResultsDrawer";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { MobileCard, MobileEmptyState } from "@/components/mobile";
 import { AdminMaintenance } from "@/components/admin/AdminMaintenance";
 import { useSeasonContext } from "@/contexts/SeasonContext";
@@ -57,7 +57,7 @@ export const ResultsPageMobile = () => {
   const [debouncedSearch] = useDebounce(searchQuery, 300);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>("global");
+  
   const [podiums, setPodiums] = useState<Record<string, ManagerPodium[]>>({});
   const [winners, setWinners] = useState<Record<string, RaceWinner>>({});
   
@@ -73,7 +73,7 @@ export const ResultsPageMobile = () => {
     if (!isLoadingContext) {
       loadRaces(true);
     }
-  }, [selectedPhaseId, debouncedSearch, isLoadingContext, leagueId]);
+  }, [debouncedSearch, isLoadingContext, leagueId]);
 
 
   const loadRaces = async (reset = false) => {
@@ -92,7 +92,7 @@ export const ResultsPageMobile = () => {
           search: debouncedSearch || null,
           limit: 24,
           offset: currentOffset,
-          phase_id: selectedPhaseId === "global" ? null : selectedPhaseId,
+          phase_id: null,
           saison_id: selectedSeason?.id,
           league_id: leagueId
         }
@@ -147,15 +147,6 @@ export const ResultsPageMobile = () => {
     setDrawerOpen(true);
   };
 
-  const getPhaseLabel = (phase: any) => {
-    const start = format(new Date(phase.date_debut), 'MMM', { locale: dateLocale });
-    const end = format(new Date(phase.date_fin), 'MMM', { locale: dateLocale });
-    
-    const today = new Date();
-    const isActive = today >= new Date(phase.date_debut) && today <= new Date(phase.date_fin);
-    
-    return `${t('phase.label', { index: phase.index_dans_saison, start, end })}${isActive ? ` ${t('phase.active')}` : ''}`;
-  };
 
   return (
     <div className="flex flex-col h-full">
@@ -166,29 +157,7 @@ export const ResultsPageMobile = () => {
       
       {/* Header */}
       <div className="sticky top-14 z-10 bg-background border-b safe-top">
-        <div className="p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold">{t('title')}</h1>
-            </div>
-          </div>
-
-          <Select value={selectedPhaseId || 'global'} onValueChange={setSelectedPhaseId}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={t('phase.select')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="global">
-                🌍 {t('phase.global')}
-              </SelectItem>
-              {phases.map((phase) => (
-                <SelectItem key={phase.id} value={phase.id}>
-                  {getPhaseLabel(phase)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
+        <div className="p-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -253,44 +222,39 @@ export const ResultsPageMobile = () => {
                   }
                   onClick={() => openRaceDrawer(race)}
                 >
-                  {/* Winner section - more prominent */}
+                  {/* Winner section */}
                   {raceWinner && (
-                    <div className="flex items-center gap-2 mt-3 py-2.5 px-3 bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-950/30 dark:to-amber-950/30 rounded-xl border border-yellow-200/50 dark:border-yellow-800/50">
-                      <Trophy className="h-5 w-5 text-yellow-500 flex-shrink-0" />
-                      <span className="font-semibold text-sm text-foreground">{raceWinner.coureur_nom}</span>
+                    <div className="flex items-center gap-2 mt-3">
+                      <Trophy className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                      <span className="font-medium text-sm text-foreground">{raceWinner.coureur_nom}</span>
                     </div>
                   )}
                   
-                  {/* Manager podium - cleaner layout */}
+                  {/* Manager podium */}
                   {racePodium.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
-                      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                        {t('podium.managers')}
-                      </div>
+                    <div className="mt-3 pt-3 border-t border-border/50">
                       {racePodium.slice(0, 3).map((manager, idx) => (
                         <div 
                           key={manager.manager_nom} 
-                          className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted/30 transition-colors"
+                          className="flex items-center justify-between py-1"
                         >
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 flex items-center justify-center rounded-full bg-muted/50">
-                              {jerseys[manager.manager_id] ? (
-                                <img 
-                                  src={jerseys[manager.manager_id]} 
-                                  alt="Maillot" 
-                                  className="h-5 w-5 object-contain" 
-                                />
-                              ) : (
-                                <span className="text-base">
-                                  {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
-                                </span>
-                              )}
-                            </div>
-                            <span className="font-medium text-sm truncate max-w-[140px]">
+                          <div className="flex items-center gap-2">
+                            {jerseys[manager.manager_id] ? (
+                              <img 
+                                src={jerseys[manager.manager_id]} 
+                                alt="Maillot" 
+                                className="h-5 w-5 object-contain" 
+                              />
+                            ) : (
+                              <span className="text-sm">
+                                {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
+                              </span>
+                            )}
+                            <span className="text-sm text-muted-foreground truncate max-w-[140px]">
                               {manager.manager_nom}
                             </span>
                           </div>
-                          <span className="text-sm font-semibold text-primary tabular-nums">
+                          <span className="text-sm font-medium tabular-nums">
                             {manager.points} pts
                           </span>
                         </div>
