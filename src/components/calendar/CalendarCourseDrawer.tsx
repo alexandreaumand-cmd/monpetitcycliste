@@ -60,20 +60,36 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
     enabled: open && !!course?.course_id,
   });
 
-  // Fetch latest startlist import for this course
+  // Fetch latest startlist import for this course (only for startlist entries, not for route image)
   const { data: startlistImport } = useQuery({
     queryKey: ["calendar-startlist-import", course?.course_id],
     queryFn: async () => {
       if (!course?.course_id) return null;
       const { data, error } = await supabase
         .from("startlist_imports")
-        .select("id, route_image_url, created_at")
+        .select("id, created_at")
         .eq("race_id", course.course_id)
         .order("created_at", { ascending: false })
         .limit(1)
         .single();
       if (error && error.code !== "PGRST116") throw error;
       return data;
+    },
+    enabled: open && !!course?.course_id,
+  });
+
+  // Fetch route image directly from courses table (persistent across re-imports)
+  const { data: courseRouteImage } = useQuery({
+    queryKey: ["calendar-course-route-image", course?.course_id],
+    queryFn: async () => {
+      if (!course?.course_id) return null;
+      const { data, error } = await supabase
+        .from("courses")
+        .select("route_image_url")
+        .eq("id", course.course_id)
+        .single();
+      if (error) throw error;
+      return data?.route_image_url;
     },
     enabled: open && !!course?.course_id,
   });
@@ -258,21 +274,21 @@ export const CalendarCourseDrawer = ({ course, open, onOpenChange }: CalendarCou
               </Collapsible>
             )}
 
-            {/* Route Image */}
-            {startlistImport?.route_image_url && !imageError && (
+            {/* Route Image - Now fetched from courses table (persistent across re-imports) */}
+            {courseRouteImage && !imageError && (
               <div className="space-y-3">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Image className="h-4 w-4" />
                   {t('drawer.route')}
                 </h3>
                 <a 
-                  href={startlistImport.route_image_url} 
+                  href={courseRouteImage} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="block"
                 >
                   <img 
-                    src={startlistImport.route_image_url} 
+                    src={courseRouteImage} 
                     alt={t('drawer.route')}
                     className="w-full rounded-lg border hover:opacity-90 transition-opacity cursor-zoom-in"
                     onError={() => setImageError(true)}

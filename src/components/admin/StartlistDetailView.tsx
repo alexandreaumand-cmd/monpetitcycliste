@@ -179,9 +179,9 @@ export const StartlistDetailView = ({ startlistId, onBack, isSuperAdmin, onImpor
             <Camera className="h-3 w-3 mr-1" />
             Exporter la SL
           </Button>
-          {isSuperAdmin && (
+          {isSuperAdmin && startlistViewData.race?.id && (
             <RouteImageUploader
-              startlistId={startlistId}
+              raceId={startlistViewData.race.id}
               currentImageUrl={startlistViewData.route_image_url}
               onUploadComplete={() => queryClient.invalidateQueries({ queryKey: ['startlist-view', startlistId] })}
             />

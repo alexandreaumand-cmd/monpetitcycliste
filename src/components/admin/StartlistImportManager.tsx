@@ -460,14 +460,16 @@ export const StartlistImportManager = () => {
                       </>
                     )}
                     <div className="flex gap-2 pt-2 border-t">
-                      <RouteImageUploader
-                        startlistId={importedStartlistId}
-                        currentImageUrl={null}
-                        onUploadComplete={() => {
-                          queryClient.invalidateQueries({ queryKey: ['startlist-imports'] });
-                          toast.success("Image du parcours uploadée !");
-                        }}
-                      />
+                      {selectedRaceId && selectedRaceId !== 'all' && (
+                        <RouteImageUploader
+                          raceId={selectedRaceId}
+                          currentImageUrl={null}
+                          onUploadComplete={() => {
+                            queryClient.invalidateQueries({ queryKey: ['startlist-imports'] });
+                            toast.success("Image du parcours uploadée !");
+                          }}
+                        />
+                      )}
                       <Button 
                         onClick={handlePcsValidation} 
                         variant="default" 

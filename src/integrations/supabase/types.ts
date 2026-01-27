@@ -1111,6 +1111,7 @@ export type Database = {
           nom: string
           pays: string | null
           phase_id: string | null
+          route_image_url: string | null
           statut: Database["public"]["Enums"]["race_statut"] | null
           type_course: string | null
           uci_code: string | null
@@ -1124,6 +1125,7 @@ export type Database = {
           nom: string
           pays?: string | null
           phase_id?: string | null
+          route_image_url?: string | null
           statut?: Database["public"]["Enums"]["race_statut"] | null
           type_course?: string | null
           uci_code?: string | null
@@ -1137,6 +1139,7 @@ export type Database = {
           nom?: string
           pays?: string | null
           phase_id?: string | null
+          route_image_url?: string | null
           statut?: Database["public"]["Enums"]["race_statut"] | null
           type_course?: string | null
           uci_code?: string | null

@@ -62,12 +62,12 @@ serve(async (req) => {
 
     // Parse the multipart form data
     const formData = await req.formData();
-    const startlistId = formData.get('startlist_id') as string;
+    const raceId = formData.get('race_id') as string;
     const file = formData.get('file') as File;
 
-    if (!startlistId || !file) {
+    if (!raceId || !file) {
       return new Response(
-        JSON.stringify({ error: 'startlist_id and file are required' }),
+        JSON.stringify({ error: 'race_id and file are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -81,11 +81,11 @@ serve(async (req) => {
       );
     }
 
-    // Generate unique filename
+    // Generate unique filename using race_id instead of startlist_id
     const timestamp = Date.now();
     const ext = file.name.split('.').pop();
-    const filename = `${startlistId}_${timestamp}.${ext}`;
-    const path = `${startlistId}/${filename}`;
+    const filename = `${raceId}_${timestamp}.${ext}`;
+    const path = `courses/${raceId}/${filename}`;
 
     // Upload to storage using admin client
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
@@ -108,19 +108,21 @@ serve(async (req) => {
       .from('startlist-route-images')
       .getPublicUrl(path);
 
-    // Update startlist_imports with the new URL using admin client
+    // Update courses table with the new URL (linked to the race, not the import)
     const { error: updateError } = await supabaseAdmin
-      .from('startlist_imports')
+      .from('courses')
       .update({ route_image_url: publicUrl })
-      .eq('id', startlistId);
+      .eq('id', raceId);
 
     if (updateError) {
       console.error('Update error:', updateError);
       return new Response(
-        JSON.stringify({ error: `Failed to update startlist: ${updateError.message}` }),
+        JSON.stringify({ error: `Failed to update course: ${updateError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`Route image uploaded for course ${raceId}: ${publicUrl}`);
 
     return new Response(
       JSON.stringify({ route_image_url: publicUrl }),
