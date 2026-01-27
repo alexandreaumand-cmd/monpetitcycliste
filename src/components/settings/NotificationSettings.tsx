@@ -33,6 +33,8 @@ export function NotificationSettings() {
         return;
       }
 
+      console.log('[Test Push] Sending test notification for user:', user.id);
+
       const response = await supabase.functions.invoke('send-push-notification', {
         body: {
           user_ids: [user.id],
@@ -42,16 +44,29 @@ export function NotificationSettings() {
         }
       });
 
+      console.log('[Test Push] Response:', response);
+
       if (response.error) {
-        console.error('Test notification error:', response.error);
-        toast.error("Erreur lors de l'envoi du test");
+        console.error('[Test Push] Error:', response.error);
+        const errorMsg = response.error.message || response.error.code || "Erreur inconnue";
+        toast.error(`Échec: ${errorMsg}`);
       } else {
-        console.log('Test notification response:', response.data);
-        toast.success(`Notification envoyée ! (${response.data?.sent || 0} envoyée(s))`);
+        console.log('[Test Push] Success:', response.data);
+        const data = response.data;
+        
+        if (data?.sent > 0) {
+          toast.success(`Notification envoyée ! (${data.sent} envoyée(s))`);
+        } else if (data?.code === 'NO_SUBS') {
+          toast.error("Aucun abonnement trouvé. Réactivez les notifications.");
+        } else if (data?.failed > 0) {
+          toast.error(`Échec d'envoi: ${data.errors?.[0]?.error || 'Erreur push'}`);
+        } else {
+          toast.info(`Résultat: ${data?.sent || 0} envoyée(s), ${data?.failed || 0} échec(s)`);
+        }
       }
     } catch (error) {
-      console.error('Test notification error:', error);
-      toast.error("Erreur lors de l'envoi du test");
+      console.error('[Test Push] Exception:', error);
+      toast.error("Erreur réseau lors de l'envoi");
     } finally {
       setIsSendingTest(false);
     }

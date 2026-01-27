@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 interface PushPayload {
@@ -395,12 +396,23 @@ async function sendWebPush(
   }
 }
 
-app.options('*', (c) => {
-  return new Response(null, { headers: corsHeaders });
+// CORS middleware - apply to ALL responses
+app.use('*', async (c, next) => {
+  // Handle preflight
+  if (c.req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+  
+  await next();
+  
+  // Add CORS headers to all responses
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    c.res.headers.set(key, value);
+  });
 });
 
 app.post('/', async (c) => {
-  console.log('Received push notification request');
+  console.log('[push] Request received');
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -409,36 +421,42 @@ app.post('/', async (c) => {
     const vapidSubject = Deno.env.get('VAPID_SUBJECT');
 
     if (!vapidPublicKey || !vapidPrivateKey || !vapidSubject) {
-      console.error('VAPID keys not configured');
-      return c.json({ error: 'VAPID keys not configured' }, 500);
+      console.error('[push] VAPID keys not configured');
+      return c.json({ error: 'VAPID keys not configured', code: 'VAPID_MISSING' }, 500, corsHeaders);
     }
+
+    console.log('[push] VAPID keys loaded');
 
     const payload: PushPayload = await c.req.json();
     const { user_ids, title, message, type, metadata } = payload;
 
     if (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0) {
-      return c.json({ error: 'user_ids array is required' }, 400);
+      console.error('[push] Invalid payload: missing user_ids');
+      return c.json({ error: 'user_ids array is required', code: 'INVALID_PAYLOAD' }, 400, corsHeaders);
     }
+
+    console.log(`[push] Processing for ${user_ids.length} user(s), type: ${type}`);
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch all subscriptions for the given user_ids
+    console.log('[push] Fetching subscriptions...');
     const { data: subscriptions, error: fetchError } = await supabase
       .from('push_subscriptions')
       .select('id, user_id, endpoint, p256dh, auth, preferences')
       .in('user_id', user_ids);
 
     if (fetchError) {
-      console.error('Error fetching subscriptions:', fetchError);
-      return c.json({ error: 'Failed to fetch subscriptions' }, 500);
+      console.error('[push] Error fetching subscriptions:', fetchError);
+      return c.json({ error: 'Failed to fetch subscriptions', code: 'DB_ERROR', details: fetchError.message }, 500, corsHeaders);
     }
 
     if (!subscriptions || subscriptions.length === 0) {
-      console.log('No push subscriptions found for users:', user_ids);
-      return c.json({ sent: 0, message: 'No subscriptions found' }, 200);
+      console.log('[push] No subscriptions found for users:', user_ids);
+      return c.json({ sent: 0, message: 'No subscriptions found', code: 'NO_SUBS' }, 200, corsHeaders);
     }
 
-    console.log(`Found ${subscriptions.length} push subscriptions`);
+    console.log(`[push] Found ${subscriptions.length} subscription(s)`);
 
     // Filter by preferences
     const preferenceKey = getPreferenceKey(type);
@@ -448,15 +466,18 @@ app.post('/', async (c) => {
       return sub.preferences[preferenceKey] !== false; // Send unless explicitly disabled
     });
 
-    console.log(`After preference filtering: ${filteredSubscriptions.length} subscriptions`);
+    console.log(`[push] After preference filter: ${filteredSubscriptions.length} subscription(s)`);
 
     const pushPayload = { title, message, type, metadata };
     const expiredSubscriptionIds: string[] = [];
     let successCount = 0;
     let failCount = 0;
+    const errors: { endpoint: string; error: string; statusCode?: number }[] = [];
 
     // Send notifications
     for (const subscription of filteredSubscriptions as PushSubscription[]) {
+      console.log(`[push] Sending to endpoint: ${subscription.endpoint.substring(0, 60)}...`);
+      
       const result = await sendWebPush(
         subscription,
         pushPayload,
@@ -467,8 +488,16 @@ app.post('/', async (c) => {
 
       if (result.success) {
         successCount++;
+        console.log(`[push] Success for user ${subscription.user_id}`);
       } else {
         failCount++;
+        errors.push({
+          endpoint: subscription.endpoint.substring(0, 50),
+          error: result.error || 'Unknown error',
+          statusCode: result.statusCode
+        });
+        console.error(`[push] Failed for user ${subscription.user_id}: ${result.statusCode} - ${result.error}`);
+        
         // Mark expired subscriptions for deletion
         if (result.statusCode === 404 || result.statusCode === 410) {
           expiredSubscriptionIds.push(subscription.id);
@@ -478,23 +507,30 @@ app.post('/', async (c) => {
 
     // Clean up expired subscriptions
     if (expiredSubscriptionIds.length > 0) {
-      console.log(`Removing ${expiredSubscriptionIds.length} expired subscriptions`);
+      console.log(`[push] Removing ${expiredSubscriptionIds.length} expired subscription(s)`);
       await supabase
         .from('push_subscriptions')
         .delete()
         .in('id', expiredSubscriptionIds);
     }
 
+    console.log(`[push] Complete: ${successCount} sent, ${failCount} failed`);
+
     return c.json({
       sent: successCount,
       failed: failCount,
       expiredRemoved: expiredSubscriptionIds.length,
-      total: filteredSubscriptions.length
-    }, 200);
+      total: filteredSubscriptions.length,
+      errors: errors.length > 0 ? errors : undefined
+    }, 200, corsHeaders);
 
   } catch (error) {
-    console.error('Send push notification error:', error);
-    return c.json({ error: String(error) }, 500);
+    console.error('[push] Unhandled error:', error);
+    return c.json({ 
+      error: 'Internal server error', 
+      code: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : String(error) 
+    }, 500, corsHeaders);
   }
 });
 
