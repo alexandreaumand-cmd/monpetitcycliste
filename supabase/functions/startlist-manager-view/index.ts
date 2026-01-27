@@ -303,10 +303,11 @@ Deno.serve(async (req) => {
     const { data: phaseStandings } = await phaseStandingsQuery
       .order('total_points', { ascending: false });
 
-    // Get total standings
+    // Get total standings (season-wide)
     let totalStandingsQuery = supabase
-      .from('v_manager_standings_total_v2')
-      .select('*');
+      .from('v_manager_standings_by_season_v2')
+      .select('*')
+      .eq('saison_id', saisonId);
     
     if (league_id) {
       totalStandingsQuery = totalStandingsQuery.eq('league_id', league_id);
