@@ -4,6 +4,7 @@ import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { useLeague } from "@/contexts/LeagueContext";
@@ -97,6 +98,21 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
       return data || [];
     },
     enabled: !leagueLoading && !!leagueId,
+  });
+
+  // Fetch manager info (for avatar)
+  const { data: managerInfo } = useQuery({
+    queryKey: ["manager-info", managerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("managers")
+        .select("nom, avatar_url")
+        .eq("id", managerId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!managerId,
   });
 
   // Fetch TTT info for courses
@@ -230,7 +246,11 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-3">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={managerInfo?.avatar_url || undefined} alt={managerName} />
+              <AvatarFallback>{managerName.substring(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
             {t('breakdown.details', { name: managerName })}
           </CardTitle>
           <Badge variant="default" className="text-lg px-4 py-1">
