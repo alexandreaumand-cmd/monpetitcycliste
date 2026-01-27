@@ -353,7 +353,7 @@ export const RankingsMobile = () => {
                 // Only show evolution badge in global view
                 const evolutionBadge = !selectedPhase && previousGlobalStandings ? (
                   isNew ? (
-                    <Badge className="bg-[#FFD500] text-black border-2 border-black text-xs font-bold">NEW</Badge>
+                    <span className="text-muted-foreground">—</span>
                   ) : evolution !== null && evolution !== 0 ? (
                     <div className={`flex items-center gap-1 text-xs font-semibold ${
                       evolution > 0 ? "text-green-600" : "text-red-600"
@@ -370,7 +370,9 @@ export const RankingsMobile = () => {
                         </>
                       )}
                     </div>
-                  ) : null
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )
                 ) : null;
 
                 const getRankLabel = (r: number) => {
@@ -403,19 +405,11 @@ export const RankingsMobile = () => {
                           {rank === 10 && <span className="text-lg">🤡</span>}
                         </div>
 
-                        {/* Evolution badge */}
-                        {evolutionBadge && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground text-xs">{t('mobile.evolution')}:</span>
-                            {evolutionBadge}
-                          </div>
-                        )}
-
                         {/* Statistics grid */}
                         <div className="grid grid-cols-2 gap-3 text-xs">
                           <div className="flex flex-col gap-1">
-                            <span className="text-muted-foreground">{t('mobile.position')}</span>
-                            <span className="font-semibold">{getRankLabel(rank)}</span>
+                            <span className="text-muted-foreground">{t('mobile.evolution')}</span>
+                            <span className="font-semibold">{evolutionBadge || <span className="text-muted-foreground">—</span>}</span>
                           </div>
                           <div className="flex flex-col gap-1">
                             <span className="text-muted-foreground">{t('mobile.totalPercent')}</span>
