@@ -1,131 +1,80 @@
 
+# Correction de l'affichage mobile des startlists
 
-# Simplification de l'affichage mobile des classements
+## Problemes identifies
 
-## Objectif
+### 1. Couleur des coureurs
+La liste des coureurs est affichee en noir (couleur par defaut). L'utilisateur souhaite un gris discret.
 
-Améliorer l'affichage étendu des classements managers sur mobile :
-- Remplacer le badge "NEW" par un tiret discret
-- Remplacer "Position" par "Évolution" dans la grille 2x2
+**Fichier** : `src/pages/Startlist.mobile.tsx` ligne 522
 
----
+### 2. Place au CG non affichee
+Le classement general (CG) ne s'affiche pas car la fonction Edge appelle une vue qui n'existe pas.
 
-## Aperçu visuel
-
-### Avant
-
-```text
-Évolution: [NEW]              ← Ligne séparée
-Position      % du total
-3e            17.0%
-Scoreurs      Victoires
-8             2
-```
-
-### Après
-
-```text
-Évolution     % du total      ← Intégré à la grille
-—             17.0%
-Scoreurs      Victoires
-8             2
-```
+**Cause** : La fonction Edge `startlist-manager-view` (ligne 308) appelle `v_manager_standings_total_v2` mais cette vue n'existe pas. La vue correcte est `v_manager_standings_by_season_v2`.
 
 ---
 
-## Modifications techniques
+## Modifications
 
-### Fichier : `src/pages/Rankings.mobile.tsx`
+### 1. Couleur grise pour les coureurs
 
-#### 1. Remplacer le badge NEW par un tiret (lignes 354-374)
+**Fichier** : `src/pages/Startlist.mobile.tsx`
 
-Changer le `evolutionBadge` pour afficher un tiret discret au lieu du badge NEW :
+Ligne 522, ajouter `text-muted-foreground` :
 
 ```tsx
-const evolutionBadge = !selectedPhase && previousGlobalStandings ? (
-  isNew ? (
-    <span className="text-muted-foreground">—</span>
-  ) : evolution !== null && evolution !== 0 ? (
-    <div className={`flex items-center gap-1 text-xs font-semibold ${
-      evolution > 0 ? "text-green-600" : "text-red-600"
-    }`}>
-      {evolution > 0 ? (
-        <>
-          <TrendingUp className="h-3.5 w-3.5" />
-          <span>+{evolution}</span>
-        </>
-      ) : (
-        <>
-          <TrendingUp className="h-3.5 w-3.5 rotate-180" />
-          <span>{Math.abs(evolution)}</span>
-        </>
-      )}
-    </div>
-  ) : (
-    <span className="text-muted-foreground">—</span>
-  )
-) : null;
+// Avant
+<p key={starter.coureur_id} className="text-sm mx-[60px]">
+  {starter.nom}
+</p>
+
+// Apres
+<p key={starter.coureur_id} className="text-sm mx-[60px] text-muted-foreground">
+  {starter.nom}
+</p>
 ```
 
-#### 2. Supprimer la ligne "Évolution" séparée (lignes 406-412)
+### 2. Corriger la requete CG dans la fonction Edge
 
-Supprimer ce bloc :
+**Fichier** : `supabase/functions/startlist-manager-view/index.ts`
 
-```tsx
-{/* Evolution badge */}
-{evolutionBadge && (
-  <div className="flex items-center gap-2">
-    <span className="text-muted-foreground text-xs">{t('mobile.evolution')}:</span>
-    {evolutionBadge}
-  </div>
-)}
-```
+Lignes 306-316, remplacer l'appel a la vue inexistante par la bonne vue avec filtre `saison_id` :
 
-#### 3. Remplacer "Position" par "Évolution" dans la grille (lignes 415-432)
+```typescript
+// Avant
+let totalStandingsQuery = supabase
+  .from('v_manager_standings_total_v2')
+  .select('*');
 
-Remplacer :
+if (league_id) {
+  totalStandingsQuery = totalStandingsQuery.eq('league_id', league_id);
+}
 
-```tsx
-<div className="grid grid-cols-2 gap-3 text-xs">
-  <div className="flex flex-col gap-1">
-    <span className="text-muted-foreground">{t('mobile.position')}</span>
-    <span className="font-semibold">{getRankLabel(rank)}</span>
-  </div>
-  ...
-</div>
-```
+const { data: totalStandings } = await totalStandingsQuery
+  .order('total_points', { ascending: false });
 
-Par :
+// Apres
+let totalStandingsQuery = supabase
+  .from('v_manager_standings_by_season_v2')
+  .select('*')
+  .eq('saison_id', saisonId);
 
-```tsx
-<div className="grid grid-cols-2 gap-3 text-xs">
-  <div className="flex flex-col gap-1">
-    <span className="text-muted-foreground">{t('mobile.evolution')}</span>
-    <span className="font-semibold">{evolutionBadge || <span className="text-muted-foreground">—</span>}</span>
-  </div>
-  <div className="flex flex-col gap-1">
-    <span className="text-muted-foreground">{t('mobile.totalPercent')}</span>
-    <span className="font-semibold">{percentage}%</span>
-  </div>
-  <div className="flex flex-col gap-1">
-    <span className="text-muted-foreground">{t('mobile.scorers')}</span>
-    <span className="font-semibold">{standing.nb_scoreurs ?? 0}</span>
-  </div>
-  <div className="flex flex-col gap-1">
-    <span className="text-muted-foreground">{t('mobile.victories')}</span>
-    <span className="font-semibold">{standing.nb_victoires ?? 0}</span>
-  </div>
-</div>
+if (league_id) {
+  totalStandingsQuery = totalStandingsQuery.eq('league_id', league_id);
+}
+
+const { data: totalStandings } = await totalStandingsQuery
+  .order('total_points', { ascending: false });
 ```
 
 ---
 
-## Résumé des changements
+## Resultat attendu
 
-| Élément | Avant | Après |
+| Element | Avant | Apres |
 |---------|-------|-------|
-| Badge NEW | Badge jaune avec bordure noire | Tiret discret `—` |
-| Position | Affiché dans la grille (redondant) | Supprimé |
-| Évolution | Ligne séparée au-dessus de la grille | Intégré dans la grille 2x2 |
-| Grille | 2 colonnes, 4 éléments (Position, %, Scoreurs, Victoires) | 2 colonnes, 4 éléments (Évolution, %, Scoreurs, Victoires) |
+| Couleur coureurs | Noir (defaut) | Gris (`text-muted-foreground`) |
+| Affichage CG | `CG: #-` (toujours vide) | `CG: #1`, `CG: #2`, etc. |
 
+En Phase 1, le CG et la Phase afficheront le meme rang (ce qui est logique puisqu'il n'y a qu'une seule phase).
