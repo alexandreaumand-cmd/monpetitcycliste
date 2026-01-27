@@ -19,6 +19,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+import {
   Trophy,
   FileText,
   Loader2,
@@ -62,6 +68,23 @@ export const StartlistMobile = () => {
   const [isExporting, setIsExporting] = useState(false);
 
   const seasonPhaseIds = phases?.map(p => p.id) || [];
+
+  // Fetch current user's manager ID
+  const { data: currentUserManagerId } = useQuery({
+    queryKey: ["current-user-manager"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data: manager } = await supabase
+        .from("managers")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      return manager?.id || null;
+    },
+  });
 
   // Fetch races filtered by league scope
   const { data: races } = useQuery({
@@ -156,6 +179,18 @@ export const StartlistMobile = () => {
     },
     enabled: !!selectedStartlistId && viewMode === "view",
   });
+
+  // Auto-expand current user's manager accordion when data loads
+  useEffect(() => {
+    if (startlistViewData?.managers && currentUserManagerId) {
+      const userManager = startlistViewData.managers.find(
+        (m: any) => m.manager_id === currentUserManagerId
+      );
+      if (userManager) {
+        setExpandedManagers(new Set([currentUserManagerId]));
+      }
+    }
+  }, [startlistViewData, currentUserManagerId]);
 
   const handleShareStartlist = async () => {
     if (!startlistViewData || !exportRef.current) return;
@@ -558,81 +593,95 @@ export const StartlistMobile = () => {
           {/* Managers */}
           <div>
             <h3 className="text-lg font-semibold mb-3">{t('startlist.managersAtStart')}</h3>
-            <div className="space-y-3">
+            <Accordion 
+              type="multiple" 
+              value={Array.from(expandedManagers)}
+              onValueChange={(values) => setExpandedManagers(new Set(values))}
+              className="space-y-2"
+            >
               {startlistViewData.managers.map((manager: any) => {
-                const isExpanded = expandedManagers.has(manager.manager_id);
-                const sortedStarters = [...manager.starters].sort((a: any, b: any) => (b.cote || 0) - (a.cote || 0));
-                const displayedStarters = isExpanded ? sortedStarters : sortedStarters.slice(0, 3);
-                const hasMore = manager.starters.length > 3;
+                const sortedStarters = [...manager.starters].sort(
+                  (a: any, b: any) => (b.cote || 0) - (a.cote || 0)
+                );
 
                 return (
-                  <MobileCard
+                  <AccordionItem
                     key={manager.manager_id}
-                    title={manager.manager_nom}
-                    subtitle={
-                      <div className="space-y-1">
-                        <ManagerStars avgStars={manager.avg_stars} votes={manager.votes} showVotes={manager.votes > 1} />
-                        <div className="flex gap-3 text-xs text-muted-foreground">
-                          <span>{t('startlist.phaseRank')}: #{manager.rank_phase || "-"}</span>
-                          <span>{t('startlist.gcRank')}: #{manager.rank_total || "-"}</span>
+                    value={manager.manager_id}
+                    className="border rounded-2xl px-3 bg-card"
+                  >
+                    <AccordionTrigger className="hover:no-underline py-3">
+                      <div className="flex items-center gap-3 w-full">
+                        {/* Maillot */}
+                        {manager.jersey_image_url ? (
+                          <img 
+                            src={manager.jersey_image_url} 
+                            alt="Maillot" 
+                            className="h-12 w-12 object-contain flex-shrink-0"
+                          />
+                        ) : (
+                          <Avatar className="h-12 w-12 flex-shrink-0">
+                            <AvatarFallback className="bg-primary/10">
+                              {manager.manager_nom.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                        
+                        {/* Infos manager */}
+                        <div className="flex-1 min-w-0 text-left">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-sm truncate">
+                              {manager.manager_nom}
+                            </span>
+                            <Badge variant="outline" className="text-xs flex-shrink-0">
+                              {manager.starters_count} {t('startlist.riders')}
+                            </Badge>
+                          </div>
+                          
+                          {/* Equipe (sponsor) si disponible */}
+                          {manager.sponsor && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {manager.sponsor}
+                            </p>
+                          )}
+                          
+                          {/* Etoiles + Classements */}
+                          <div className="flex items-center justify-between gap-2 mt-1">
+                            <ManagerStars 
+                              avgStars={manager.avg_stars} 
+                              votes={manager.votes} 
+                              showVotes={manager.votes > 1} 
+                            />
+                            <div className="flex gap-2 text-xs text-muted-foreground">
+                              <span>Ph: #{manager.rank_phase || "-"}</span>
+                              <span>CG: #{manager.rank_total || "-"}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    }
-                    avatar={
-                      manager.jersey_image_url ? (
-                        <img 
-                          src={manager.jersey_image_url} 
-                          alt="Maillot" 
-                          className="h-20 w-20 object-contain"
-                        />
-                      ) : (
-                        <Avatar className="h-20 w-20">
-                          <AvatarFallback className="bg-primary/10">
-                            {manager.manager_nom
-                              .split(" ")
-                              .map((n: string) => n[0])
-                              .join("")
-                              .slice(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                      )
-                    }
-                    badge={
-                      <Badge variant="outline" className="text-xs">
-                        {manager.starters_count} {t('startlist.riders')}
-                      </Badge>
-                    }
-                  >
-                    <div className="mt-2 space-y-1">
-                      {displayedStarters.map((starter: any) => (
-                        <div key={starter.coureur_id} className="flex items-center justify-between gap-2 text-xs">
-                          <span className="font-medium truncate flex-1">{starter.nom}</span>
-                        </div>
-                      ))}
-                      {hasMore && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const newExpanded = new Set(expandedManagers);
-                            if (isExpanded) {
-                              newExpanded.delete(manager.manager_id);
-                            } else {
-                              newExpanded.add(manager.manager_id);
-                            }
-                            setExpandedManagers(newExpanded);
-                          }}
-                          className="text-xs text-primary font-medium hover:underline w-full text-left"
-                        >
-                          {isExpanded 
-                            ? t('startlist.reduce') 
-                            : t('startlist.moreOthers', { count: manager.starters.length - 3 })}
-                        </button>
-                      )}
-                    </div>
-                  </MobileCard>
+                    </AccordionTrigger>
+                    
+                    <AccordionContent>
+                      <div className="space-y-1.5 pt-2">
+                        {sortedStarters.map((starter: any) => (
+                          <div 
+                            key={starter.coureur_id} 
+                            className="flex items-center justify-between text-sm py-1 px-2 rounded bg-muted/50"
+                          >
+                            <span className="font-medium truncate">{starter.nom}</span>
+                            {starter.equipe && (
+                              <span className="text-xs text-muted-foreground truncate ml-2">
+                                {starter.equipe}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
                 );
               })}
-            </div>
+            </Accordion>
           </div>
 
           {/* Sans propriétaire */}
