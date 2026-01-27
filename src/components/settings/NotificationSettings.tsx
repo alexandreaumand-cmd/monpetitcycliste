@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Bell, Loader2, AlertCircle, Trophy, ListChecks, Gavel } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Bell, Loader2, AlertCircle, Trophy, ListChecks, Gavel, Send } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export function NotificationSettings() {
@@ -18,6 +21,41 @@ export function NotificationSettings() {
     unsubscribe,
     updatePreferences
   } = usePushNotifications();
+
+  const [isSendingTest, setIsSendingTest] = useState(false);
+
+  const handleSendTestNotification = async () => {
+    setIsSendingTest(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Vous devez être connecté");
+        return;
+      }
+
+      const response = await supabase.functions.invoke('send-push-notification', {
+        body: {
+          user_ids: [user.id],
+          title: "🚴 Test Notification",
+          message: "Si vous voyez ceci, les notifications fonctionnent !",
+          type: "results_added"
+        }
+      });
+
+      if (response.error) {
+        console.error('Test notification error:', response.error);
+        toast.error("Erreur lors de l'envoi du test");
+      } else {
+        console.log('Test notification response:', response.data);
+        toast.success(`Notification envoyée ! (${response.data?.sent || 0} envoyée(s))`);
+      }
+    } catch (error) {
+      console.error('Test notification error:', error);
+      toast.error("Erreur lors de l'envoi du test");
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
 
   const handleTogglePush = async (enabled: boolean) => {
     if (enabled) {
@@ -175,6 +213,23 @@ export function NotificationSettings() {
                     checked={preferences.auctions}
                     onCheckedChange={(checked) => handlePreferenceChange('auctions', checked)}
                   />
+                </div>
+
+                {/* Test notification button */}
+                <div className="pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={handleSendTestNotification}
+                    disabled={isSendingTest}
+                    className="w-full"
+                  >
+                    {isSendingTest ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4 mr-2" />
+                    )}
+                    Envoyer une notification test
+                  </Button>
                 </div>
               </div>
             )}
