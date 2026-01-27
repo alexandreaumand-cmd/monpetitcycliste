@@ -28,6 +28,7 @@ interface RiderPointsDetailProps {
   riderName: string;
   riderTeam: string;
   riderPrice: number;
+  riderCote?: number;
   phaseId: string;
   saisonId?: string;
 }
@@ -39,6 +40,7 @@ export const RiderPointsDetail = ({
   riderName,
   riderTeam,
   riderPrice,
+  riderCote,
   phaseId,
   saisonId,
 }: RiderPointsDetailProps) => {
@@ -120,43 +122,49 @@ export const RiderPointsDetail = ({
       open={isOpen}
       onOpenChange={onClose}
       title={riderName}
-      description={`${riderTeam} - Prix: ${riderPrice}`}
+      description={riderTeam}
     >
       <div className="space-y-6">
         {/* Statistics Overview */}
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
+          <div className="grid grid-cols-3 gap-2">
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-4 rounded-lg border bg-card">
-              <div className="text-3xl font-bold text-primary">{riderStats.totalPoints}</div>
-              <div className="text-sm text-muted-foreground">Points totaux</div>
+          <div className="grid grid-cols-3 gap-2">
+            {/* Ligne 1: Points | Prix | Victoires */}
+            <div className="text-center p-2 rounded-lg border bg-card">
+              <div className="text-xl font-bold text-primary">{riderStats.totalPoints}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Points</div>
             </div>
-            <div className="text-center p-4 rounded-lg border bg-card">
-              <div className="text-3xl font-bold">{riderStats.totalRaces}</div>
-              <div className="text-sm text-muted-foreground">Courses avec points</div>
+            <div className="text-center p-2 rounded-lg border bg-card">
+              <div className="text-xl font-bold">{riderPrice}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Prix</div>
             </div>
-            <div className="text-center p-4 rounded-lg border bg-card">
-              <div className="text-3xl font-bold text-yellow-600">{riderStats.wins}</div>
-              <div className="text-sm text-muted-foreground">Victoires</div>
+            <div className="text-center p-2 rounded-lg border bg-card">
+              <div className="text-xl font-bold text-yellow-600">{riderStats.wins}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Victoires</div>
             </div>
-            <div className="text-center p-4 rounded-lg border bg-card">
-              <div className="flex items-center justify-center gap-2">
-                <div className={`text-3xl font-bold ${getRatioColor(riderStats.ratio)}`}>
-                  {riderStats.ratio}
-                </div>
-                {riderStats.ratio >= 1.5 ? (
-                  <TrendingUp className="h-5 w-5 text-green-500" />
-                ) : riderStats.ratio < 0.8 ? (
-                  <TrendingDown className="h-5 w-5 text-red-500" />
-                ) : null}
+            
+            {/* Ligne 2: Cote | Ratio | Courses */}
+            <div className="text-center p-2 rounded-lg border bg-card">
+              <div className="text-xl font-bold">{riderCote || '-'}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Cote</div>
+            </div>
+            <div className="text-center p-2 rounded-lg border bg-card">
+              <div className={`text-xl font-bold ${getRatioColor(riderStats.ratio)}`}>
+                {riderStats.ratio}
               </div>
-              <div className="text-sm text-muted-foreground">Ratio pts/prix</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Ratio</div>
+            </div>
+            <div className="text-center p-2 rounded-lg border bg-card">
+              <div className="text-xl font-bold">{riderStats.totalRaces}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Courses</div>
             </div>
           </div>
         )}
