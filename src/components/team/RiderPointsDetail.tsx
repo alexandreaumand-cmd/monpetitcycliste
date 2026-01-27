@@ -29,6 +29,7 @@ interface RiderPointsDetailProps {
   riderTeam: string;
   riderPrice: number;
   riderCote?: number;
+  riderRound?: number;
   phaseId: string;
   saisonId?: string;
 }
@@ -41,6 +42,7 @@ export const RiderPointsDetail = ({
   riderTeam,
   riderPrice,
   riderCote,
+  riderRound,
   phaseId,
   saisonId,
 }: RiderPointsDetailProps) => {
@@ -137,7 +139,7 @@ export const RiderPointsDetail = ({
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2">
-            {/* Ligne 1: Points | Prix | Victoires */}
+            {/* Ligne 1: Points | Prix | Round */}
             <div className="text-center p-2 rounded-lg border bg-card">
               <div className="text-xl font-bold text-primary">{riderStats.totalPoints}</div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Points</div>
@@ -147,11 +149,15 @@ export const RiderPointsDetail = ({
               <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Prix</div>
             </div>
             <div className="text-center p-2 rounded-lg border bg-card">
+              <div className="text-xl font-bold">{riderRound ? `R${riderRound}` : '-'}</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Round</div>
+            </div>
+            
+            {/* Ligne 2: Victoires | Cote | Ratio */}
+            <div className="text-center p-2 rounded-lg border bg-card">
               <div className="text-xl font-bold text-yellow-600">{riderStats.wins}</div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Victoires</div>
             </div>
-            
-            {/* Ligne 2: Cote | Ratio | Courses */}
             <div className="text-center p-2 rounded-lg border bg-card">
               <div className="text-xl font-bold">{riderCote || '-'}</div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Cote</div>
@@ -161,10 +167,6 @@ export const RiderPointsDetail = ({
                 {riderStats.ratio}
               </div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Ratio</div>
-            </div>
-            <div className="text-center p-2 rounded-lg border bg-card">
-              <div className="text-xl font-bold">{riderStats.totalRaces}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Courses</div>
             </div>
           </div>
         )}
