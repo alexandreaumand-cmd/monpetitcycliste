@@ -127,23 +127,23 @@ export function AvatarUploader({
   const initials = managerName.substring(0, 2).toUpperCase();
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <Avatar className="h-32 w-32">
+    <div className="flex flex-col items-center gap-2">
+      <Avatar className="h-20 w-20">
         {displayUrl ? (
           <AvatarImage src={displayUrl} alt={managerName} />
         ) : null}
-        <AvatarFallback className="text-4xl">{initials}</AvatarFallback>
+        <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
       </Avatar>
 
-      <div className="flex gap-2">
+      <div className="flex gap-1">
         <Button
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading || deleting}
           size="sm"
-          variant="outline"
+          variant="ghost"
+          className="h-8 px-2"
         >
-          <Camera className="mr-2 h-4 w-4" />
-          {uploading ? "Envoi..." : currentAvatarUrl ? "Changer" : "Ajouter"}
+          <Camera className="h-4 w-4" />
         </Button>
 
         {currentAvatarUrl && (
@@ -151,10 +151,10 @@ export function AvatarUploader({
             onClick={handleDeleteAvatar}
             disabled={uploading || deleting}
             size="sm"
-            variant="outline"
+            variant="ghost"
+            className="h-8 px-2 text-destructive"
           >
-            <Trash2 className="mr-2 h-4 w-4" />
-            {deleting ? "Suppression..." : "Supprimer"}
+            <Trash2 className="h-4 w-4" />
           </Button>
         )}
       </div>
@@ -166,10 +166,6 @@ export function AvatarUploader({
         onChange={handleFileSelect}
         className="hidden"
       />
-
-      <p className="text-xs text-muted-foreground text-center">
-        JPG, PNG ou WEBP. Maximum 2MB.
-      </p>
     </div>
   );
 }
