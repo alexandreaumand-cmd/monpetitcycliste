@@ -1,71 +1,134 @@
 
-# Correction de l'erreur 404 sur send-push-notification
 
-## Problème Identifié
+# Plan : Diagnostiquer et corriger la non-réception des notifications push
 
-Les logs Analytics montrent clairement :
-- OPTIONS → 200 (preflight CORS OK)
-- POST → 404 (route non trouvée)
+## Problème identifié
 
-Le middleware Hono actuel a deux problèmes :
-1. Il modifie `c.res.headers` après `await next()`, ce qui ne fonctionne pas correctement en Hono car la réponse est déjà construite
-2. La structure du middleware peut empêcher Hono de router correctement vers `app.post('/')`
+Les logs serveur montrent que la notification est **acceptée par FCM** (`sent: 1, Success`) mais elle n'arrive jamais sur ton appareil (mobile ou desktop).
 
-## Solution Proposée
+## Causes probables (par ordre de probabilité)
 
-Simplifier le code en utilisant le pattern `Deno.serve()` natif (comme toutes les autres Edge Functions du projet) au lieu de Hono. Cela garantit la compatibilité et simplifie le debugging.
+### 1. Désynchronisation de la clé VAPID publique (cause la plus probable)
 
-### Changements dans `supabase/functions/send-push-notification/index.ts`
+La clé VAPID publique doit être **identique** à 3 endroits :
+- Dans le code frontend (`usePushNotifications.ts` ligne 6)
+- Dans le secret Edge `VAPID_PUBLIC_KEY`
+- Utilisée lors de la création de la subscription dans le navigateur
 
-Réécrire la fonction pour utiliser `Deno.serve()` directement :
+Si ces clés diffèrent, FCM accepte le message (status 201) mais ne peut pas le router vers le bon service worker → la notification est perdue silencieusement.
 
-```text
-Structure simplifiée :
-1. Import des dépendances (sans Hono)
-2. CORS headers constants
-3. Fonctions utilitaires (inchangées)
-4. Deno.serve() avec:
-   - Gestion OPTIONS → retour CORS
-   - Gestion POST → logique existante
-   - Inclusion des corsHeaders dans TOUTES les réponses
+### 2. Subscription créée depuis une origin différente
+
+Si tu t'es abonné depuis l'URL preview (`id-preview--...`) mais que tu testes depuis l'URL publiée (`monpetitcycliste.lovable.app`), la subscription ne sera pas valide pour l'autre origin.
+
+### 3. Service Worker push non chargé
+
+Le fichier `sw-push.js` est importé via `importScripts` dans le service worker Workbox. Si le SW n'est pas actif ou si l'événement `push` n'est jamais déclenché, rien ne s'affiche.
+
+## Solution proposée
+
+### Étape 1 : Forcer la re-synchronisation de l'abonnement
+
+Modifier `usePushNotifications.ts` pour ajouter une fonction de "réinitialisation" qui :
+1. Supprime l'ancienne subscription côté navigateur
+2. Supprime l'entrée dans la base de données
+3. Recrée une nouvelle subscription avec la clé VAPID actuelle
+
+### Étape 2 : Ajouter un diagnostic visible dans l'UI
+
+Dans `NotificationSettings.tsx`, afficher un petit bloc de debug (quand isSubscribed est true) montrant :
+- L'endpoint tronqué de la subscription actuelle
+- La permission actuelle (`Notification.permission`)
+- L'état du service worker
+
+Cela permet de vérifier que la subscription est bien active.
+
+### Étape 3 : Améliorer le logging dans le service worker
+
+Dans `sw-push.js`, ajouter des logs plus détaillés et un fallback si `event.data.json()` échoue (essayer `event.data.text()`).
+
+### Étape 4 : Vérifier la cohérence des clés VAPID
+
+Demander confirmation que la clé VAPID_PUBLIC_KEY dans les secrets Edge correspond exactement à celle dans le code frontend :
+```
+BCfsjfWS47JE_QBAn1vRb72fPsfHbg6DeGYx7M0zZLb8FDj9zG3Ezk24TP6kb_OhJ5EMLzClH1NbayZ2ehMsp7U
 ```
 
-### Points Clés de la Réécriture
+## Fichiers à modifier
 
-1. **Supprimer Hono** - Utiliser `Deno.serve(async (req) => {...})`
+1. **`src/hooks/usePushNotifications.ts`**
+   - Ajouter une fonction `resetSubscription()` pour forcer une ré-inscription complète
+   - Exposer des infos de debug (endpoint, état SW)
 
-2. **CORS systématique** - Inclure les headers dans chaque `return new Response(...)`
+2. **`src/components/settings/NotificationSettings.tsx`**
+   - Ajouter un bouton "Réinitialiser l'abonnement" qui appelle `resetSubscription()`
+   - Afficher un bloc de debug avec l'endpoint tronqué et l'état du SW
 
-3. **Conserver toute la logique métier** :
-   - Validation VAPID
-   - Récupération des subscriptions
-   - Filtrage par préférences
-   - Envoi Web Push avec encryption aes128gcm
-   - Nettoyage des subscriptions expirées
+3. **`public/sw-push.js`**
+   - Améliorer le parsing du payload avec un fallback `text()`
+   - Ajouter un log visible même en cas d'erreur
 
-4. **Structure des réponses JSON** :
-   ```typescript
-   // Erreur
-   return new Response(JSON.stringify({ error: '...', code: '...' }), { 
-     status: 500, 
-     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-   });
-   
-   // Succès
-   return new Response(JSON.stringify({ sent: X, failed: Y }), {
-     status: 200,
-     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-   });
-   ```
+## Détails techniques
 
-## Fichiers Modifiés
+### Nouvelle fonction `resetSubscription()` dans usePushNotifications.ts
 
-- `supabase/functions/send-push-notification/index.ts` : Réécriture sans Hono
+```typescript
+const resetSubscription = useCallback(async (): Promise<boolean> => {
+  setIsLoading(true);
+  try {
+    // 1. Unsubscribe from browser push
+    const registration = await navigator.serviceWorker.ready;
+    const existingSub = await registration.pushManager.getSubscription();
+    if (existingSub) {
+      await existingSub.unsubscribe();
+    }
+
+    // 2. Delete from database
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      await supabase
+        .from('push_subscriptions')
+        .delete()
+        .eq('user_id', session.user.id);
+    }
+
+    // 3. Re-subscribe with current VAPID key
+    setIsSubscribed(false);
+    return await subscribe();
+  } catch (error) {
+    console.error('Error resetting subscription:', error);
+    return false;
+  } finally {
+    setIsLoading(false);
+  }
+}, [subscribe]);
+```
+
+### Bloc de debug dans NotificationSettings.tsx
+
+```tsx
+{isSubscribed && (
+  <div className="text-xs text-muted-foreground bg-muted p-2 rounded mt-2">
+    <p>Debug: Permission = {permission}</p>
+    <p>Endpoint: {subscriptionEndpoint?.substring(0, 50)}...</p>
+    <Button variant="ghost" size="sm" onClick={handleResetSubscription}>
+      Réinitialiser l'abonnement
+    </Button>
+  </div>
+)}
+```
 
 ## Validation
 
-Après déploiement :
-1. Test via curl direct vers l'edge function
-2. Test via le bouton "Envoyer une notification test" dans la PWA
-3. Vérification que le status passe de 404 à 200
-4. Vérification de la réception de la notification sur Android
+Après implémentation :
+1. Aller dans /dashboard/compte → Notifications
+2. Cliquer sur "Réinitialiser l'abonnement"
+3. Vérifier que le nouvel endpoint s'affiche
+4. Cliquer sur "Envoyer une notification test"
+5. La notification devrait apparaître sur ton appareil
+
+## Risques
+
+- La réinitialisation de l'abonnement est sans danger, elle recrée simplement la subscription avec les bonnes clés
+- Le bloc de debug peut être masqué plus tard (derrière un toggle "Mode expert" par exemple)
+
