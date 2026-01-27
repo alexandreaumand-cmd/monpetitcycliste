@@ -185,20 +185,20 @@ export function SponsorJerseyEditor({ managerId, managerName }: SponsorJerseyEdi
   const noSeason = !selectedSeason && !seasonLoading;
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-4 md:mb-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Shirt className="h-5 w-5" />
           {t('sponsorJersey.title')}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="hidden sm:block">
           {selectedSeason 
             ? t('sponsorJersey.descriptionWithSeason', { season: selectedSeason.annee })
             : t('sponsorJersey.description')
           }
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 sm:space-y-6">
         {noSeason ? (
           <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
             <AlertCircle className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -216,7 +216,7 @@ export function SponsorJerseyEditor({ managerId, managerName }: SponsorJerseyEdi
             <div className="flex flex-col sm:flex-row gap-6">
               {/* Jersey preview */}
               <div className="flex flex-col items-center gap-3">
-                <Avatar className="h-24 w-24 border-2 border-dashed border-border">
+                <Avatar className="h-16 w-16 sm:h-24 sm:w-24 border-2 border-dashed border-border">
                   {jerseyUrl ? (
                     <AvatarImage src={jerseyUrl} alt={sponsorName || managerName} />
                   ) : null}
