@@ -87,7 +87,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
+    <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30 safe-top">
       {/* Top Bar */}
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-12 border-b border-yellow-500/20">

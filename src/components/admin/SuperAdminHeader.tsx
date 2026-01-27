@@ -14,7 +14,7 @@ export function SuperAdminHeader({ manager, onSignOut }: SuperAdminHeaderProps) 
   const navigate = useNavigate();
   const location = useLocation();
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background">
+    <header className="sticky top-0 z-40 w-full border-b bg-background safe-top">
       <div className="flex h-14 items-center justify-between px-6">
         {/* Bouton retour */}
         <Button 
