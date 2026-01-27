@@ -519,7 +519,7 @@ export const StartlistMobile = () => {
                     
                     <AccordionContent>
                       <div className="pt-1">
-                        {sortedStarters.map((starter: any) => <p key={starter.coureur_id} className="text-sm mx-[60px]">
+                        {sortedStarters.map((starter: any) => <p key={starter.coureur_id} className="text-sm mx-[60px] text-muted-foreground">
                             {starter.nom}
                           </p>)}
                       </div>
