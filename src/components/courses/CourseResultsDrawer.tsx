@@ -829,28 +829,33 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
 
             {/* Tab: Résultats (for simple races only) */}
             <TabsContent value="results" className="space-y-4 mt-4">
-              {/* Type selector pills */}
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  variant={selectedType === 'Total' ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleTypeChange('Total')}
-                >
-                  Total
-                </Button>
-                {meta?.types_disponibles
-                  ?.filter(type => !type.startsWith('Porteur'))
-                  .map((type) => (
+              {/* Type selector pills - Only show if multiple types available */}
+              {(() => {
+                const filteredTypes = (meta?.types_disponibles || []).filter(type => !type.startsWith('Porteur'));
+                const showTypeSelector = filteredTypes.length > 1;
+                
+                return showTypeSelector ? (
+                  <div className="flex gap-2 flex-wrap">
                     <Button
-                      key={type}
-                      variant={selectedType === type ? "default" : "outline"}
+                      variant={selectedType === 'Total' ? "default" : "outline"}
                       size="sm"
-                      onClick={() => handleTypeChange(type)}
+                      onClick={() => handleTypeChange('Total')}
                     >
-                      {type}
+                      Total
                     </Button>
-                  ))}
-              </div>
+                    {filteredTypes.map((type) => (
+                      <Button
+                        key={type}
+                        variant={selectedType === type ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleTypeChange(type)}
+                      >
+                        {type}
+                      </Button>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
 
               {/* Total riders table */}
               {selectedType === 'Total' && !loading && totalRiders.length > 0 && (
