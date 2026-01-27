@@ -2,21 +2,40 @@
 // This file is imported by the main service worker via workbox importScripts
 
 self.addEventListener('push', function(event) {
-  console.log('[SW Push] Push event received');
+  console.log('[SW Push] Push event received at', new Date().toISOString());
   
   if (!event.data) {
     console.log('[SW Push] No data in push event');
+    // Show a fallback notification even without data
+    event.waitUntil(
+      self.registration.showNotification('Mon Petit Cycliste', {
+        body: 'Nouvelle notification reçue',
+        icon: '/pwa-192x192.png'
+      })
+    );
     return;
   }
 
   let data;
+  let rawText = '';
   try {
-    data = event.data.json();
+    // Try to get text first for logging
+    rawText = event.data.text();
+    console.log('[SW Push] Raw payload:', rawText);
+    data = JSON.parse(rawText);
   } catch (e) {
-    console.error('[SW Push] Failed to parse push data:', e);
+    console.error('[SW Push] Failed to parse push data:', e, 'Raw:', rawText);
+    // Show fallback notification on parse error
+    event.waitUntil(
+      self.registration.showNotification('Mon Petit Cycliste', {
+        body: rawText || 'Notification reçue (format inconnu)',
+        icon: '/pwa-192x192.png'
+      })
+    );
     return;
   }
 
+  console.log('[SW Push] Parsed data:', JSON.stringify(data));
   const { title, message, type, metadata } = data;
 
   const options = {

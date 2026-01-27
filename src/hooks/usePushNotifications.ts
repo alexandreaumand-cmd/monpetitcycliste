@@ -11,15 +11,22 @@ export interface PushPreferences {
   auctions: boolean;
 }
 
+export interface PushDebugInfo {
+  endpoint: string | null;
+  swState: string;
+}
+
 interface UsePushNotificationsReturn {
   isSupported: boolean;
   permission: NotificationPermission | 'unsupported';
   isSubscribed: boolean;
   preferences: PushPreferences;
   isLoading: boolean;
+  debugInfo: PushDebugInfo;
   subscribe: () => Promise<boolean>;
   unsubscribe: () => Promise<boolean>;
   updatePreferences: (newPreferences: Partial<PushPreferences>) => Promise<boolean>;
+  resetSubscription: () => Promise<boolean>;
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -47,6 +54,10 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     auctions: true
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<PushDebugInfo>({
+    endpoint: null,
+    swState: 'unknown'
+  });
 
   // Check if push notifications are supported
   useEffect(() => {
@@ -64,7 +75,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     checkSupport();
   }, []);
 
-  // Load current subscription state from database
+  // Load current subscription state from database and browser
   useEffect(() => {
     const loadSubscriptionState = async () => {
       if (!isSupported) {
@@ -73,6 +84,15 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       }
 
       try {
+        // Get browser subscription info for debug
+        const registration = await navigator.serviceWorker.ready;
+        const browserSub = await registration.pushManager.getSubscription();
+        
+        setDebugInfo({
+          endpoint: browserSub?.endpoint || null,
+          swState: registration.active?.state || 'no-active-sw'
+        });
+
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) {
           setIsLoading(false);
@@ -184,6 +204,13 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       }
 
       setIsSubscribed(true);
+      
+      // Update debug info
+      setDebugInfo({
+        endpoint: subscriptionJson.endpoint || null,
+        swState: 'activated'
+      });
+      
       return true;
     } catch (error) {
       console.error('Error subscribing to push notifications:', error);
@@ -221,6 +248,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       if (error) throw error;
 
       setIsSubscribed(false);
+      setDebugInfo({ endpoint: null, swState: 'unsubscribed' });
       return true;
     } catch (error) {
       console.error('Error unsubscribing from push notifications:', error);
@@ -229,6 +257,48 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       setIsLoading(false);
     }
   }, [isSupported]);
+
+  const resetSubscription = useCallback(async (): Promise<boolean> => {
+    if (!isSupported) return false;
+
+    setIsLoading(true);
+    try {
+      console.log('[Push] Resetting subscription...');
+      
+      // 1. Unsubscribe from browser push
+      const registration = await navigator.serviceWorker.ready;
+      const existingSub = await registration.pushManager.getSubscription();
+      if (existingSub) {
+        console.log('[Push] Unsubscribing existing browser subscription');
+        await existingSub.unsubscribe();
+      }
+
+      // 2. Delete from database
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        console.log('[Push] Deleting subscription from database');
+        await supabase
+          .from('push_subscriptions')
+          .delete()
+          .eq('user_id', session.user.id);
+      }
+
+      // 3. Reset state
+      setIsSubscribed(false);
+      setDebugInfo({ endpoint: null, swState: 'reset' });
+
+      // 4. Re-subscribe with current VAPID key
+      console.log('[Push] Re-subscribing with current VAPID key');
+      const result = await subscribe();
+      console.log('[Push] Reset complete, result:', result);
+      return result;
+    } catch (error) {
+      console.error('Error resetting subscription:', error);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isSupported, subscribe]);
 
   const updatePreferences = useCallback(async (newPreferences: Partial<PushPreferences>): Promise<boolean> => {
     const updatedPreferences = { ...preferences, ...newPreferences };
@@ -269,8 +339,10 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     isSubscribed,
     preferences,
     isLoading,
+    debugInfo,
     subscribe,
     unsubscribe,
-    updatePreferences
+    updatePreferences,
+    resetSubscription
   };
 }
