@@ -1,6 +1,7 @@
 export { MobileCard } from "./MobileCard";
 export { MobileBottomSheet } from "./MobileBottomSheet";
 export { ChipGroup } from "./ChipGroup";
+export { TabGroup } from "./TabGroup";
 export { KPIRow } from "./KPIRow";
 export { MobileEmptyState } from "./MobileEmptyState";
 export { MobileStickyBottom } from "./MobileStickyBottom";

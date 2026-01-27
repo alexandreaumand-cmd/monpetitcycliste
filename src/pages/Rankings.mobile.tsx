@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ChipGroup } from "@/components/mobile/ChipGroup";
+import { TabGroup } from "@/components/mobile/TabGroup";
 import { MobileCard } from "@/components/mobile/MobileCard";
 import { MobileBottomSheet } from "@/components/mobile/MobileBottomSheet";
 import { MobileEmptyState } from "@/components/mobile/MobileEmptyState";
@@ -311,16 +311,12 @@ export const RankingsMobile = () => {
       </div>
 
       <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-sm border-b">
-        <div className="relative">
-          <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background/95 to-transparent z-10 pointer-events-none" />
-          <div className="py-2 px-4">
-            <ChipGroup
-              items={tabChips}
-              selected={activeTab}
-              onSelect={(value) => setActiveTab(value as TabView)}
-            />
-          </div>
-          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background/95 to-transparent z-10 pointer-events-none" />
+        <div className="py-2 px-4">
+          <TabGroup
+            items={tabChips}
+            selected={activeTab}
+            onSelect={(value) => setActiveTab(value as TabView)}
+          />
         </div>
       </div>
 
