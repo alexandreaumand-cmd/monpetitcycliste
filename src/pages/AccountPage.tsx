@@ -117,23 +117,23 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-6">{t('title')}</h1>
+    <div className="container mx-auto px-4 py-4 md:py-8 max-w-4xl">
+      <h1 className="text-2xl font-bold mb-4 md:text-3xl md:mb-6">{t('title')}</h1>
       
       {/* Section Profil */}
-      <Card className="mb-6">
+      <Card className="mb-4 md:mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
             {t('profile.title')}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="hidden sm:block">
             {t('profile.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Layout horizontal : Avatar + Champs */}
-          <div className="flex flex-col sm:flex-row gap-6">
+          <div className="flex flex-row gap-4">
             {/* Avatar compact à gauche */}
             <AvatarUploader
               currentAvatarUrl={avatarUrl || undefined}
@@ -195,7 +195,7 @@ export default function AccountPage() {
       )}
       
       {/* Section Sécurité */}
-      <Card className="mb-6">
+      <Card className="mb-4 md:mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />

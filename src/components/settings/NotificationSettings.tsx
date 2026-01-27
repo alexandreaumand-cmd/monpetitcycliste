@@ -56,11 +56,11 @@ export function NotificationSettings() {
           <Bell className="h-5 w-5" />
           {t('notifications.title')}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="hidden sm:block">
           {t('notifications.description')}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 sm:space-y-6">
         {/* Browser not supported */}
         {!isSupported && (
           <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">

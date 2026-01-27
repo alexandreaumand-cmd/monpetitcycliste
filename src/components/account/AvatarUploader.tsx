@@ -128,11 +128,11 @@ export function AvatarUploader({
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <Avatar className="h-20 w-20">
+      <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
         {displayUrl ? (
           <AvatarImage src={displayUrl} alt={managerName} />
         ) : null}
-        <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
+        <AvatarFallback className="text-xl sm:text-2xl">{initials}</AvatarFallback>
       </Avatar>
 
       <div className="flex gap-1">
