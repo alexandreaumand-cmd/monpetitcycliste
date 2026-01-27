@@ -41,7 +41,7 @@ export function DashboardHomeHeader({
   // Mobile: optimized compact layout
   if (isMobile) {
     return (
-      <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
+      <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30 safe-top">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo only - no title on mobile */}
           <img
@@ -89,7 +89,7 @@ export function DashboardHomeHeader({
 
   // Desktop: new clean layout with 3 zones
   return (
-    <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
+    <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30 safe-top">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         {/* Left: Logo + Title */}
         <div className="flex items-center gap-3">
