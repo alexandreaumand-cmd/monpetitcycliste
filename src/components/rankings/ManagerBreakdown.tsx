@@ -244,18 +244,18 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <Avatar className="h-16 w-16">
               <AvatarImage src={managerInfo?.avatar_url || undefined} alt={managerName} />
               <AvatarFallback>{managerName.substring(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
-            {t('breakdown.details', { name: managerName })}
-          </CardTitle>
-          <Badge variant="default" className="text-lg px-4 py-1">
-            {t('breakdown.total', { points: totalPoints })}
-          </Badge>
+            <span className="font-semibold text-lg">{managerName}</span>
+          </div>
+          <div className="text-2xl font-bold text-primary">
+            {totalPoints} pts
+          </div>
         </div>
       </CardHeader>
       <CardContent>
