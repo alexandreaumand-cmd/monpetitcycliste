@@ -45,11 +45,6 @@
     "passwordMismatch": "Passwords do not match",
     "passwordChanged": "Password changed successfully"
   },
-  "customization": {
-    "title": "Customization",
-    "description": "Customize your experience",
-    "comingSoon": "Coming soon"
-  },
   "sponsorJersey": {
     "title": "Sponsor & Jersey",
     "description": "Manage your sponsor and team jersey",

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, User, Lock, Palette } from "lucide-react";
+import { Loader2, User, Lock } from "lucide-react";
 import { AvatarUploader } from "@/components/account/AvatarUploader";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { SponsorJerseyEditor } from "@/components/account/SponsorJerseyEditor";
@@ -242,31 +242,6 @@ export default function AccountPage() {
       {/* Section Notifications Push */}
       <NotificationSettings />
       
-      {/* Section Personnalisation */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" />
-            {t('customization.title')}
-          </CardTitle>
-          <CardDescription>
-            {t('customization.description')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>{t('buttons.uploadPhoto')}</Label>
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-              <p className="text-sm text-muted-foreground mb-2">
-                {t('customization.comingSoon')}
-              </p>
-              <Button variant="outline" size="sm" disabled>
-                {t('buttons.uploadPhoto')}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
