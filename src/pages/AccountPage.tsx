@@ -131,36 +131,42 @@ export default function AccountPage() {
             {t('profile.description')}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Avatar Uploader */}
-          <AvatarUploader
-            currentAvatarUrl={avatarUrl || undefined}
-            managerName={manager?.nom || ""}
-            userId={user.id}
-            onAvatarChange={setAvatarUrl}
-          />
-
-          {/* Email (read-only) */}
-          <div className="space-y-2">
-            <Label htmlFor="email">{t('profile.email')}</Label>
-            <Input
-              id="email"
-              type="email"
-              value={user?.email || ""}
-              disabled
-              className="bg-muted"
+        <CardContent className="space-y-4">
+          {/* Layout horizontal : Avatar + Champs */}
+          <div className="flex flex-col sm:flex-row gap-6">
+            {/* Avatar compact à gauche */}
+            <AvatarUploader
+              currentAvatarUrl={avatarUrl || undefined}
+              managerName={manager?.nom || ""}
+              userId={user.id}
+              onAvatarChange={setAvatarUrl}
             />
-          </div>
 
-          {/* Nom du manager */}
-          <div className="space-y-2">
-            <Label htmlFor="nom_manager">{t('profile.managerName')}</Label>
-            <Input
-              id="nom_manager"
-              value={nomManager}
-              onChange={(e) => setNomManager(e.target.value)}
-              placeholder={t('profile.managerName')}
-            />
+            {/* Champs à droite */}
+            <div className="flex-1 space-y-4">
+              {/* Email (read-only) */}
+              <div className="space-y-1">
+                <Label htmlFor="email">{t('profile.email')}</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={user?.email || ""}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+
+              {/* Nom du manager */}
+              <div className="space-y-1">
+                <Label htmlFor="nom_manager">{t('profile.managerName')}</Label>
+                <Input
+                  id="nom_manager"
+                  value={nomManager}
+                  onChange={(e) => setNomManager(e.target.value)}
+                  placeholder={t('profile.managerName')}
+                />
+              </div>
+            </div>
           </div>
 
           <Button 
