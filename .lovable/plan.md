@@ -1,170 +1,109 @@
 
+# Correction de l'Edge Function Push Notifications
 
-# Implémentation des Notifications Push PWA
+## Problème Identifié
 
-## Contexte Actuel
+L'erreur `InvalidEncoding` à la ligne 96 indique que l'importation de la clé privée VAPID échoue. L'implémentation actuelle a deux problèmes :
 
-**État de la base :**
-- Table `push_subscriptions` existante avec : `id`, `user_id`, `endpoint`, `p256dh`, `auth`, `created_at`, `updated_at`
-- RLS policies déjà configurées (users can view/insert/delete their own)
-- Manque : colonne `preferences` pour les préférences par type
+1. **Mauvais format PKCS8** : Le header PKCS8 hardcodé n'est pas compatible avec toutes les clés VAPID
+2. **Pas de chiffrement du payload** : Le protocole Web Push exige que le message soit chiffré avec les clés du navigateur (p256dh/auth), ce qui n'est pas fait actuellement
 
-**Secrets configurés :** VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT
+## Solution
 
----
+Réécrire la fonction `sendWebPush` en utilisant une approche simplifiée qui fonctionne avec Deno :
 
-## Étape 1 : Migration Base de Données
+### Option 1 : Utiliser une librairie Web Push pour Deno
 
-Ajouter la colonne `preferences` à la table existante :
+Importer une librairie éprouvée comme `web-push` adaptée pour Deno qui gère correctement :
+- L'importation des clés VAPID
+- Le chiffrement ECE (Encrypted Content-Encoding)
+- La signature JWT
 
-```sql
-ALTER TABLE public.push_subscriptions 
-ADD COLUMN IF NOT EXISTS preferences jsonb 
-DEFAULT '{"results": true, "startlists": true, "auctions": true}'::jsonb;
+### Option 2 : Implémenter le chiffrement ECE complet
 
--- Ajouter une policy pour les updates (manquante actuellement)
-CREATE POLICY "Users can update their own push subscriptions"
-  ON public.push_subscriptions
-  FOR UPDATE
-  TO authenticated
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
+Implémenter manuellement :
+- ECDH key agreement avec p256dh
+- HKDF key derivation
+- AES-128-GCM encryption
+- Signature VAPID avec clé importée en format JWK
+
+## Plan de Correction
+
+### Fichier à modifier : `supabase/functions/send-push-notification/index.ts`
+
+1. **Réécrire l'import de la clé privée** en utilisant le format JWK au lieu de PKCS8 brut
+2. **Ajouter le chiffrement ECE** pour encoder le payload correctement
+3. **Simplifier la signature VAPID** avec une approche JWK
+
+### Changements techniques
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ Flux actuel (bugué)                                             │
+├─────────────────────────────────────────────────────────────────┤
+│ Clé privée (base64url) → PKCS8 header hardcodé → importKey FAIL │
+│ Payload JSON → envoyé non chiffré → rejeté par FCM              │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ Flux corrigé                                                    │
+├─────────────────────────────────────────────────────────────────┤
+│ Clé privée (base64url) → format JWK → importKey OK              │
+│ Payload JSON → ECDH + HKDF + AES-GCM → chiffré → FCM accepte    │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
----
+### Code de la signature VAPID corrigée
 
-## Étape 2 : Fichiers à Créer
+Convertir la clé privée en format JWK :
+```javascript
+const jwk = {
+  kty: 'EC',
+  crv: 'P-256',
+  d: vapidPrivateKey, // base64url direct
+  x: publicKeyX,      // extrait de la clé publique
+  y: publicKeyY       // extrait de la clé publique
+};
+const key = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+```
 
-### 2.1 Service Worker Push (`public/sw-push.js`)
+### Code du chiffrement ECE
 
-Gestionnaire de notifications push qui sera injecté dans le Service Worker PWA :
-- Écoute l'événement `push` pour afficher les notifications système
-- Gère le clic pour naviguer vers la bonne page selon le type
-- Navigation :
-  - `results_added` → `/dashboard/resultats`
-  - `startlist_validated` → `/dashboard/startlist`
-  - `auction_*` → `/dashboard/encheres?leagueId=...`
+```javascript
+// 1. Générer une paire de clés éphémère
+const ephemeralKeys = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
 
-### 2.2 Hook Push Notifications (`src/hooks/usePushNotifications.ts`)
+// 2. Dériver le secret partagé avec p256dh du navigateur
+const sharedSecret = await crypto.subtle.deriveBits({ name: 'ECDH', public: browserPublicKey }, ephemeralKeys.privateKey, 256);
 
-Hook React pour gérer l'abonnement et les préférences :
+// 3. Dériver les clés de chiffrement via HKDF
+const contentEncryptionKey = await hkdf(sharedSecret, authSecret, 'Content-Encoding: aes128gcm');
 
-Interface exposée :
-| Propriété | Type | Description |
-|-----------|------|-------------|
-| `isSupported` | boolean | Navigateur compatible |
-| `permission` | string | 'granted', 'denied', 'default' |
-| `isSubscribed` | boolean | Abonnement actif |
-| `preferences` | object | Préférences par type |
-| `subscribe()` | function | S'abonner aux push |
-| `unsubscribe()` | function | Se désabonner |
-| `updatePreferences()` | function | Mettre à jour les préférences |
-| `isLoading` | boolean | État de chargement |
+// 4. Chiffrer le payload
+const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, tagLength: 128 }, contentEncryptionKey, payload);
+```
 
-### 2.3 Composant UI (`src/components/settings/NotificationSettings.tsx`)
+## Fichiers impactés
 
-Interface utilisateur avec :
-- Switch principal pour activer/désactiver les notifications push
-- Switches secondaires pour chaque type (si push activé) :
-  - Résultats de course
-  - Startlists validées
-  - Enchères
-- Messages d'état : non supporté, permission refusée, instructions iOS
+| Fichier | Action |
+|---------|--------|
+| `supabase/functions/send-push-notification/index.ts` | Réécriture complète des fonctions crypto |
 
-### 2.4 Edge Function (`supabase/functions/send-push-notification/index.ts`)
+## Résultat attendu
 
-Fonction serverless pour envoyer les notifications :
+Après correction :
+- L'edge function pourra signer les JWT VAPID correctement
+- Le payload sera chiffré conformément au protocole Web Push
+- Les notifications apparaîtront sur le navigateur/mobile
 
-Entrée :
+## Test après correction
+
+Relancer le même appel de test :
 ```json
 {
-  "user_ids": ["uuid1", "uuid2"],
-  "title": "Titre",
-  "message": "Corps du message",
-  "type": "results_added",
-  "metadata": { "league_id": "..." }
+  "user_ids": ["84e72276-2ec0-4ae1-8bd2-25026aa2fa97"],
+  "title": "Test Notification",
+  "message": "Ceci est un test!",
+  "type": "results_added"
 }
 ```
-
-Logique :
-1. Récupérer les subscriptions des user_ids
-2. Filtrer selon le type et les préférences utilisateur
-3. Envoyer via Web Push (chiffrement + signature VAPID)
-4. Supprimer les subscriptions expirées (404, 410)
-
----
-
-## Étape 3 : Fichiers à Modifier
-
-### 3.1 vite.config.ts
-
-Ajouter `importScripts` pour charger le SW custom :
-```javascript
-workbox: {
-  importScripts: ['sw-push.js'],
-  // ... config existante
-}
-```
-
-### 3.2 AccountPage.tsx
-
-Ajouter une nouvelle section entre "Sécurité" et "Personnalisation" :
-```jsx
-<NotificationSettings />
-```
-
-### 3.3 _shared/notifications.ts
-
-Ajouter l'appel à `send-push-notification` après la création des notifications in-app :
-```typescript
-// Après l'insertion des notifications in-app
-await sendPushNotifications(userIds, notification);
-```
-
-### 3.4 Traductions i18n
-
-Ajouter dans `account.json` (FR et EN) :
-- `notifications.title`
-- `notifications.description`
-- `notifications.enablePush`
-- `notifications.types.results`, etc.
-
----
-
-## Ordre d'Exécution
-
-1. Migration DB (colonne preferences + policy update)
-2. Création `public/sw-push.js`
-3. Modification `vite.config.ts`
-4. Création `src/hooks/usePushNotifications.ts`
-5. Création `src/components/settings/NotificationSettings.tsx`
-6. Modification `src/pages/AccountPage.tsx`
-7. Création `supabase/functions/send-push-notification/index.ts`
-8. Modification `supabase/functions/_shared/notifications.ts`
-9. Mise à jour traductions i18n
-
----
-
-## Section Technique
-
-### Protocole Web Push (Edge Function)
-
-L'edge function utilisera la Web Crypto API pour :
-1. Importer la clé privée VAPID (format PKCS#8)
-2. Générer les headers JWT signés
-3. Chiffrer le payload avec les clés du navigateur (p256dh, auth)
-4. Envoyer via POST à l'endpoint du navigateur
-
-### Gestion des Erreurs
-
-Les subscriptions retournant ces codes seront supprimées :
-- `404` : Subscription non trouvée
-- `410` : Subscription expirée
-
-### Sécurité
-
-- Clés VAPID en secrets (non accessibles côté client)
-- La clé publique est exposée uniquement pour l'abonnement
-- RLS policies protègent les subscriptions par user_id
-- Edge function vérifie l'autorisation via service role
-
