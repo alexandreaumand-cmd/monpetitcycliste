@@ -5,6 +5,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -92,10 +93,18 @@ export const MobileDrawer = ({
     <Sheet open={open} onOpenChange={onOpenChange} modal={true}>
       <SheetContent side="left" className="w-[280px] safe-bottom flex flex-col bg-background">
         <SheetHeader className="text-left pb-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-6 w-6 text-primary" />
-            </div>
+          <div 
+            className="flex items-center gap-3 mb-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors"
+            onClick={() => handleNavigate('/dashboard/compte')}
+          >
+            <Avatar className="w-12 h-12">
+              {manager?.avatar_url ? (
+                <AvatarImage src={manager.avatar_url} alt={manager.nom} />
+              ) : null}
+              <AvatarFallback className="bg-primary/10">
+                <User className="h-6 w-6 text-primary" />
+              </AvatarFallback>
+            </Avatar>
             <div className="flex-1 min-w-0">
               <SheetTitle className="text-base truncate">
                 {manager?.nom || "Manager"}
