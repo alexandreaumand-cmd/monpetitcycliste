@@ -45,11 +45,6 @@
     "passwordMismatch": "Les mots de passe ne correspondent pas",
     "passwordChanged": "Mot de passe changé avec succès"
   },
-  "customization": {
-    "title": "Personnalisation",
-    "description": "Personnalisez votre expérience",
-    "comingSoon": "Bientôt disponible"
-  },
   "sponsorJersey": {
     "title": "Sponsor & Maillot",
     "description": "Gérez votre sponsor et votre maillot d'équipe",
