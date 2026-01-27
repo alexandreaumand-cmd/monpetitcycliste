@@ -359,17 +359,32 @@ export const StartlistMobile = () => {
           <MobileEmptyState icon={<AlertCircle className="h-12 w-12" />} title={t('startlist.error')} description={t('startlist.loadError')} />
         </div>;
     }
-    return <div className="pb-20">
+    return <div className="pb-4">
         <div className="p-4 space-y-4">
           <div className="flex items-center justify-between">
             <Button variant="ghost" size="sm" onClick={() => setViewMode("list")}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               {t('startlist.back')}
             </Button>
-            {startlistViewData.pcs_validated && <Badge className="bg-green-600 text-white">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                SL officielle
-              </Badge>}
+            <div className="flex items-center gap-2">
+              {startlistViewData.pcs_validated && <Badge className="bg-green-600 text-white">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  SL officielle
+                </Badge>}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleShareStartlist} 
+                disabled={isExporting}
+                className="h-8 w-8"
+              >
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Share2 className="h-4 w-4 text-muted-foreground" />
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* Race info */}
@@ -526,18 +541,15 @@ export const StartlistMobile = () => {
               </div>
             </div>}
 
-          {/* Bouton Partager */}
-          <div className="mt-4">
-            <Button onClick={handleShareStartlist} disabled={isExporting} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
-              {isExporting ? <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {t('startlist.generating')}
-                </> : <>
-                  <Share2 className="h-4 w-4 mr-2" />
-                  {t('startlist.share')}
-                </>}
-            </Button>
-          </div>
+          {/* Bouton Noter les managers */}
+          {isAdmin && startlistViewData.managers.length > 0 && (
+            <div className="mt-6 mb-4">
+              <Button className="w-full touch-target" onClick={() => setShowRatingModal(true)}>
+                <Star className="h-4 w-4 mr-2" />
+                {t('startlist.rateManagers')}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Composant caché pour l'export desktop */}
@@ -545,13 +557,6 @@ export const StartlistMobile = () => {
           {startlistViewData && <StartlistDesktopExport ref={exportRef} startlistData={startlistViewData} />}
         </div>
 
-        {/* Sticky button Noter */}
-        {isAdmin && startlistViewData.managers.length > 0 && <MobileStickyBottom>
-            <Button className="w-full touch-target" onClick={() => setShowRatingModal(true)}>
-              <Star className="h-4 w-4 mr-2" />
-              {t('startlist.rateManagers')}
-            </Button>
-          </MobileStickyBottom>}
 
         {/* Modal de notation */}
         {isAdmin && startlistViewData.managers.length > 0 && <ManagerRatingModal open={showRatingModal} onOpenChange={setShowRatingModal} startlistId={selectedStartlistId!} leagueId={leagueId} managers={startlistViewData.managers} initialGlobalNote={startlistViewData.admin_rating_note || ""} onRatingsUpdated={() => queryClient.invalidateQueries({
