@@ -1,177 +1,158 @@
 
+# Ouvrir la course concernée depuis une notification de résultat
 
-# Optimiser l'affichage de la page Mon Compte sur mobile
+## Contexte
 
-## Problemes identifies
+Actuellement, quand on clique sur une notification de type `results_added` (ex: "Victoire de Jonathan MILAN - AlUla Tour"), la navigation se fait vers `/dashboard/resultats` sans ouvrir automatiquement la course concernée.
 
-D'apres la capture d'ecran, la page "Mon Compte" presente plusieurs problemes sur mobile :
-
-1. **Titre trop volumineux** - `text-3xl` avec `py-8` cree beaucoup d'espace vide
-2. **Descriptions redondantes** - Les `CardDescription` sont inutiles sur petit ecran
-3. **Avatar mal positionne** - Centre avec beaucoup d'espace blanc autour
-4. **Layout inefficace** - Avatar et champs empiles verticalement au lieu d'etre cote a cote
-5. **Espacements excessifs** - `mb-6`, `space-y-6`, `gap-6` trop genereux sur mobile
+Les notifications contiennent déjà le `course_id` dans leurs métadonnées :
+```json
+{
+  "metadata": {
+    "course_id": "alula_tour",
+    "race_name": "AlUla Tour",
+    "league_id": "85d46f9b-..."
+  }
+}
+```
 
 ---
 
-## Solution proposee
+## Solution
 
-Creer un layout compact pour mobile avec :
-- Reduction des marges et paddings
-- Masquage des descriptions sur mobile
-- Layout horizontal Avatar + Champs meme sur mobile
-- Titre plus compact
+Ajouter un paramètre `courseId` dans l'URL et faire en sorte que les pages Résultats (desktop et mobile) ouvrent automatiquement le drawer de la course correspondante.
 
 ---
 
 ## Modifications techniques
 
-### Fichier : `src/pages/AccountPage.tsx`
+### 1. Fichier : `src/components/layout/NotificationCenter.tsx`
 
-**1. Reduire le padding du container (ligne 120)**
+**Modifier la navigation pour inclure le `courseId` (ligne 96-97)**
 
-| Avant | Apres |
+| Avant | Après |
 |-------|-------|
-| `px-4 py-8` | `px-4 py-4 md:py-8` |
-
-**2. Reduire la taille du titre (ligne 121)**
-
-| Avant | Apres |
-|-------|-------|
-| `text-3xl font-bold mb-6` | `text-2xl font-bold mb-4 md:text-3xl md:mb-6` |
-
-**3. Masquer CardDescription sur mobile (lignes 130-132)**
+| `navigate('/dashboard/resultats')` | `navigate('/dashboard/resultats?courseId=...')` |
 
 ```tsx
-<CardDescription className="hidden sm:block">
-  {t('profile.description')}
-</CardDescription>
+} else if (notification.type === 'results_added') {
+  const courseId = notification.metadata?.course_id;
+  const leagueId = notification.metadata?.league_id;
+  const params = new URLSearchParams();
+  if (leagueId) params.set('leagueId', leagueId);
+  if (courseId) params.set('courseId', courseId);
+  navigate(`/dashboard/resultats?${params.toString()}`);
+}
 ```
 
-**4. Layout horizontal sur mobile pour le profil (ligne 136)**
-
-| Avant | Apres |
-|-------|-------|
-| `flex flex-col sm:flex-row gap-6` | `flex flex-row gap-4` |
-
-**5. Reduire les marges entre les cartes (ligne 124, 198)**
-
-| Avant | Apres |
-|-------|-------|
-| `className="mb-6"` | `className="mb-4 md:mb-6"` |
-
 ---
 
-### Fichier : `src/components/account/AvatarUploader.tsx`
+### 2. Fichier : `src/pages/ResultsPage.desktop.tsx`
 
-**6. Reduire la taille de l'avatar sur mobile (ligne 131)**
-
-| Avant | Apres |
-|-------|-------|
-| `h-20 w-20` | `h-16 w-16 sm:h-20 sm:w-20` |
-
-**7. Ajuster le fallback text (ligne 135)**
-
-| Avant | Apres |
-|-------|-------|
-| `text-2xl` | `text-xl sm:text-2xl` |
-
----
-
-### Fichier : `src/components/account/SponsorJerseyEditor.tsx`
-
-**8. Masquer CardDescription sur mobile (lignes 194-199)**
+**Ajouter la lecture du query param `courseId` et ouvrir le drawer automatiquement**
 
 ```tsx
-<CardDescription className="hidden sm:block">
-  {selectedSeason 
-    ? t('sponsorJersey.descriptionWithSeason', { season: selectedSeason.annee })
-    : t('sponsorJersey.description')
+// Import
+import { useSearchParams } from "react-router-dom";
+
+// Dans le composant
+const [searchParams, setSearchParams] = useSearchParams();
+const courseIdFromUrl = searchParams.get('courseId');
+
+// Effect pour ouvrir le drawer si courseId présent
+useEffect(() => {
+  if (courseIdFromUrl) {
+    setSelectedCourseId(courseIdFromUrl);
+    setDrawerOpen(true);
+    // Nettoyer l'URL après ouverture
+    searchParams.delete('courseId');
+    setSearchParams(searchParams, { replace: true });
   }
-</CardDescription>
+}, [courseIdFromUrl]);
 ```
-
-**9. Reduire la taille de l'avatar maillot (ligne 219)**
-
-| Avant | Apres |
-|-------|-------|
-| `h-24 w-24` | `h-16 w-16 sm:h-24 sm:w-24` |
-
-**10. Reduire les espacements internes (ligne 201)**
-
-| Avant | Apres |
-|-------|-------|
-| `space-y-6` | `space-y-4 sm:space-y-6` |
 
 ---
 
-### Fichier : `src/components/settings/NotificationSettings.tsx`
+### 3. Fichier : `src/pages/ResultsPage.mobile.tsx`
 
-**11. Masquer CardDescription sur mobile (lignes 59-61)**
+**Même logique pour la version mobile**
 
 ```tsx
-<CardDescription className="hidden sm:block">
-  {t('notifications.description')}
-</CardDescription>
-```
+// Import
+import { useSearchParams } from "react-router-dom";
 
-**12. Reduire les espacements internes (ligne 63)**
+// Dans le composant
+const [searchParams, setSearchParams] = useSearchParams();
+const courseIdFromUrl = searchParams.get('courseId');
 
-| Avant | Apres |
-|-------|-------|
-| `space-y-6` | `space-y-4 sm:space-y-6` |
-
----
-
-## Resultat visuel attendu
-
-### Avant (screenshot actuel)
-```text
-┌─────────────────────────────┐
-│                             │
-│  Mon Compte                 │  ← Grand titre
-│                             │
-│ ┌─────────────────────────┐ │
-│ │ Profil                  │ │
-│ │ Gérez vos infos...      │ │  ← Description inutile
-│ │                         │ │
-│ │      [Avatar]           │ │  ← Centré, espace perdu
-│ │        📷 🗑             │ │
-│ │                         │ │
-│ │ Email                   │ │
-│ │ [input]                 │ │
-│ │                         │ │
-│ │ Nom du manager          │ │
-│ │ [input]                 │ │
-│ └─────────────────────────┘ │
-└─────────────────────────────┘
-```
-
-### Apres (optimise)
-```text
-┌─────────────────────────────┐
-│  Mon Compte                 │  ← Titre compact
-│ ┌─────────────────────────┐ │
-│ │ Profil                  │ │  ← Pas de description
-│ │ [Avatar]  Email         │ │  ← Layout horizontal
-│ │  📷 🗑    [input]        │ │
-│ │          Nom manager    │ │
-│ │          [input]        │ │
-│ └─────────────────────────┘ │
-│ ┌─────────────────────────┐ │
-│ │ Sponsor & Maillot       │ │  ← Moins d'espace
-│ │ ...                     │ │
-└─────────────────────────────┘
+// Effect pour ouvrir le drawer si courseId présent
+useEffect(() => {
+  if (courseIdFromUrl) {
+    setSelectedCourseId(courseIdFromUrl);
+    setDrawerOpen(true);
+    // Nettoyer l'URL après ouverture
+    searchParams.delete('courseId');
+    setSearchParams(searchParams, { replace: true });
+  }
+}, [courseIdFromUrl]);
 ```
 
 ---
 
-## Resume des fichiers a modifier
+### 4. Fichier : `public/sw-push.js`
 
-| Fichier | Modifications |
-|---------|---------------|
-| `src/pages/AccountPage.tsx` | Padding, titre, layout horizontal, marges reduites |
-| `src/components/account/AvatarUploader.tsx` | Taille avatar responsive |
-| `src/components/account/SponsorJerseyEditor.tsx` | Description masquee, espacements reduits |
-| `src/components/settings/NotificationSettings.tsx` | Description masquee, espacements reduits |
+**Mettre à jour la fonction `getUrlForNotificationType` pour les push notifications (ligne 91)**
 
+```javascript
+case 'results_added':
+  if (metadata?.course_id) {
+    const params = new URLSearchParams();
+    if (metadata.league_id) params.set('leagueId', metadata.league_id);
+    params.set('courseId', metadata.course_id);
+    return `${baseUrl}/resultats?${params.toString()}`;
+  }
+  return `${baseUrl}/resultats`;
+```
+
+---
+
+## Flux utilisateur
+
+```text
+┌────────────────────────────────────┐
+│  🏆 Victoire de Jonathan MILAN    │
+│     AlUla Tour                     │
+│     il y a environ 7 heures        │
+└────────────────────────────────────┘
+                  │
+                  │ Clic
+                  ▼
+┌────────────────────────────────────┐
+│  Navigation vers :                 │
+│  /dashboard/resultats?             │
+│    leagueId=85d46f9b-...&          │
+│    courseId=alula_tour             │
+└────────────────────────────────────┘
+                  │
+                  ▼
+┌────────────────────────────────────┐
+│  Drawer "AlUla Tour" s'ouvre       │
+│  automatiquement                   │
+│  ┌──────────────────────────────┐  │
+│  │ AlUla Tour                   │  │
+│  │ Étape 1 - Jonathan MILAN 🏆  │  │
+│  │ ...                          │  │
+│  └──────────────────────────────┘  │
+└────────────────────────────────────┘
+```
+
+---
+
+## Résumé des fichiers à modifier
+
+| Fichier | Modification |
+|---------|--------------|
+| `src/components/layout/NotificationCenter.tsx` | Ajouter `courseId` dans l'URL de navigation |
+| `src/pages/ResultsPage.desktop.tsx` | Lire `courseId` et ouvrir le drawer |
+| `src/pages/ResultsPage.mobile.tsx` | Lire `courseId` et ouvrir le drawer |
+| `public/sw-push.js` | Mettre à jour l'URL pour les push notifications |
