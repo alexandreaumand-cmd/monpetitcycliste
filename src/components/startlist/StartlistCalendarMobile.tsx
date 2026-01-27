@@ -83,6 +83,12 @@ export const StartlistCalendarMobile = ({
     return map;
   }, [courses]);
 
+  // Get today's courses for quick access
+  const todayCourses = useMemo(() => {
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+    return coursesByDay.get(todayKey) || [];
+  }, [coursesByDay]);
+
   // Get course color based on category - aligned with desktop legend
   const getCourseColor = (course: Course) => {
     const cat = course.categorie?.toLowerCase() || "";
@@ -267,6 +273,28 @@ export const StartlistCalendarMobile = ({
           <span>SL partielles</span>
         </div>
       </div>
+
+      {/* Today's races - quick access */}
+      {todayCourses.length > 0 && (
+        <div className="space-y-2 mt-4">
+          <h4 className="text-sm font-medium text-muted-foreground">Aujourd'hui</h4>
+          {todayCourses.map((course) => {
+            const isValidated = isPcsValidated(course.id);
+            return (
+              <button
+                key={course.id}
+                onClick={() => onSelectRace(course)}
+                className="w-full flex items-center gap-3 p-3 rounded-xl border bg-card hover:bg-muted/50 transition-colors text-left"
+              >
+                <span className="font-medium truncate flex-1">{course.nom}</span>
+                {isValidated && (
+                  <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Bottom sheet for day with multiple courses */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
