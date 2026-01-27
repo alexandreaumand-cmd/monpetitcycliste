@@ -1,76 +1,101 @@
 
-
-# Correction de l'encryption Web Push RFC 8291
+# Plan : Ajouter les notifications push pour la validation des startlists
 
 ## Problème identifié
 
-L'encryption du payload utilise le **mauvais format info** pour dériver la CEK (Content Encryption Key) et le Nonce. Le code actuel utilise un format complexe avec les clés publiques, mais RFC 8291 spécifie un format simple.
+La validation de startlist par un admin déclenche un **trigger PostgreSQL** qui crée des notifications in-app, mais **ne déclenche aucune notification push**. Le système push existe et fonctionne (comme prouvé par les logs `results_added`), mais il n'est simplement pas appelé pour ce type d'événement.
 
-### Pourquoi ça ne marche pas
+## Cause racine
 
-1. **FCM accepte** la notification car l'enveloppe VAPID et le transport sont valides (status 201)
-2. **Le navigateur ne peut pas décrypter** car il utilise RFC 8291 pour dériver CEK/Nonce, mais le serveur utilise un format incompatible
-3. **Résultat** : L'événement `push` n'est jamais déclenché dans le Service Worker, ou le payload est corrompu
+Le trigger SQL `notify_startlist_validated` ne peut pas appeler une Edge Function directement. Les enchères fonctionnent car elles passent par une Edge Function (`ouvrir-nouveau-round`) qui appelle `notifyLeagueMembers()` incluant l'envoi push.
 
-### Format correct (RFC 8291)
+## Solution proposée
 
-```text
-IKM = HKDF(auth_secret, ecdh_secret, "WebPush: info\0" || ua_public || as_public)
-CEK = HKDF(salt, IKM, "Content-Encoding: aes128gcm\0", 16)
-NONCE = HKDF(salt, IKM, "Content-Encoding: nonce\0", 12)
-```
+### Option A : Appeler l'Edge Function depuis le frontend (rapide à implémenter)
 
-La dérivation de l'IKM est correcte dans le code actuel. Seuls **cek_info** et **nonce_info** doivent être simplifiés.
+Modifier `StartlistDetailView.tsx` pour appeler l'Edge Function `send-push-notification` après la validation réussie.
 
-## Solution
+### Option B : Utiliser un webhook PostgreSQL (plus robuste)
 
-Modifier la fonction `encryptPayload` dans `send-push-notification/index.ts` pour utiliser le format RFC 8291 correct.
+Créer un trigger qui utilise `pg_net` pour appeler l'Edge Function. Plus complexe mais garantit l'envoi même si la validation vient d'ailleurs.
 
-## Fichier modifié
+**Recommandation** : Option A - plus simple et suffisante puisque la validation se fait uniquement depuis l'UI admin.
 
-**`supabase/functions/send-push-notification/index.ts`**
+## Fichier à modifier
 
-### Changement 1 : Supprimer la fonction `createInfo` (lignes 184-232)
+**`src/components/admin/StartlistDetailView.tsx`**
 
-Cette fonction n'est plus nécessaire car le format RFC 8291 est beaucoup plus simple.
+### Changement : Ajouter l'envoi push après validation
 
-### Changement 2 : Modifier `encryptPayload` (lignes 284-290)
-
-Remplacer :
+Après la mise à jour réussie de `pcs_validated = true`, appeler l'Edge Function pour notifier tous les utilisateurs qui ont activé les notifications startlist.
 
 ```typescript
-// Derive content encryption key
-const cekInfo = createInfo('aes128gcm', clientPublicKeyBytes, serverPublicKey);
-const contentEncryptionKey = await hkdf(toArrayBuffer(salt), ikm, cekInfo, 16);
+const handlePcsValidation = async () => {
+  if (!startlistId || !currentUser) return;
+  
+  const currentStatus = startlistViewData?.pcs_validated || false;
+  const newStatus = !currentStatus;
+  
+  try {
+    const { error } = await supabase
+      .from('startlist_imports')
+      .update({ 
+        pcs_validated: newStatus,
+        pcs_validated_at: newStatus ? new Date().toISOString() : null,
+        pcs_validated_by_manager_id: newStatus ? currentUser.id : null
+      })
+      .eq('id', startlistId);
 
-// Derive nonce
-const nonceInfo = createInfo('nonce', clientPublicKeyBytes, serverPublicKey);
-const nonce = await hkdf(toArrayBuffer(salt), ikm, nonceInfo, 12);
+    if (error) throw error;
+
+    // === NOUVEAU : Envoyer les notifications push ===
+    if (newStatus) {
+      // Récupérer tous les user_ids qui ont une subscription push
+      const { data: subscriptions } = await supabase
+        .from('push_subscriptions')
+        .select('user_id');
+      
+      if (subscriptions && subscriptions.length > 0) {
+        const userIds = [...new Set(subscriptions.map(s => s.user_id))];
+        const raceName = startlistViewData?.race_name || 'la course';
+        
+        // Appeler l'Edge Function
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            user_ids: userIds,
+            title: '📋 Startlist validée',
+            message: `La startlist de ${raceName} a été validée`,
+            type: 'startlist_validated',
+            metadata: {
+              race_id: startlistViewData?.race_id,
+              startlist_id: startlistId,
+              race_name: raceName
+            }
+          }
+        });
+      }
+    }
+
+    toast.success(newStatus ? "SL validée ✓" : "Validation retirée");
+    queryClient.invalidateQueries({ queryKey: ['startlist-view'] });
+    queryClient.invalidateQueries({ queryKey: ['startlist-imports'] });
+  } catch (error: any) {
+    toast.error("Erreur : " + error.message);
+  }
+};
 ```
 
-Par :
+## Comportement attendu
 
-```typescript
-// Derive content encryption key (RFC 8291: "Content-Encoding: aes128gcm\0")
-const cekInfo = new TextEncoder().encode('Content-Encoding: aes128gcm\0');
-const contentEncryptionKey = await hkdf(toArrayBuffer(salt), ikm, toArrayBuffer(cekInfo), 16);
-
-// Derive nonce (RFC 8291: "Content-Encoding: nonce\0")
-const nonceInfo = new TextEncoder().encode('Content-Encoding: nonce\0');
-const nonce = await hkdf(toArrayBuffer(salt), ikm, toArrayBuffer(nonceInfo), 12);
-```
-
-## Impact
-
-- La fonction `createInfo` peut être supprimée (simplification du code)
-- Le payload sera correctement décrypté par le navigateur
-- Les notifications apparaîtront enfin sur l'appareil
+1. Admin valide une startlist
+2. Le trigger SQL crée les notifications in-app (existant)
+3. Le code frontend appelle `send-push-notification` avec tous les `user_ids` abonnés
+4. L'Edge Function filtre par préférences (`startlists: true`) et envoie les push
+5. Les utilisateurs reçoivent la notification sur leur téléphone
 
 ## Validation
 
-Après déploiement :
-1. Aller dans Compte > Notifications
-2. Cliquer sur "Réinitialiser l'abonnement" (pour être sûr d'avoir une subscription propre)
-3. Cliquer sur "Envoyer une notification test"
-4. La notification devrait apparaître immédiatement sur l'appareil
-
+Après implémentation :
+1. Aller dans l'admin startlist
+2. Valider une startlist
+3. Les utilisateurs avec les notifications push activées (et préférence "startlists" active) recevront un push
