@@ -1,189 +1,181 @@
 
+# Réorganisation de la fiche coureur (RiderPointsDetail)
 
-# Optimisation UX de la page Mon Équipe (Mobile)
+## Objectif
 
-## Analyse des problèmes actuels
-
-En regardant la capture d'écran, voici les problèmes identifiés :
-
-| Problème | Impact UX |
-|----------|-----------|
-| **Header trop dense** | Maillot + 2 sélecteurs côte à côte = difficile à scanner |
-| **3 KPIs en cartes séparées** | Prennent beaucoup d'espace vertical |
-| **3 boutons d'action empilés** | Zone d'action floue, pas de hiérarchie |
-| **6 chips de tri** | Trop d'options visibles, surcharge cognitive |
-| **Cartes coureurs volumineuses** | Informations métier (R3, ratio) en ligne dense |
+Réorganiser l'affichage des informations du coureur avec :
+1. Nom et équipe en header
+2. 6 vignettes compactes pour les stats
+3. Détail des points par course
+4. Programme à venir
 
 ---
 
-## Solution proposée
+## Aperçu visuel
 
-### Aperçu avant/après
+### Avant
 
-**AVANT**
 ```text
 ┌─────────────────────────────────────────┐
-│ [🎽]  [Mon équipe ▼]  [Phase 1 ▼]       │
+│ Pierre GAUTHERAT                        │
+│ Decathlon CMA CGM Team - Prix: 55       │  ← Prix dans le header
 ├─────────────────────────────────────────┤
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
-│ │ Points   │ │ Bonus    │ │ Scoreurs │  │
-│ │ 415      │ │ 0        │ │ 5        │  │
-│ └──────────┘ └──────────┘ └──────────┘  │
-├─────────────────────────────────────────┤
-│ [⭐ Coureurs bonusés] [👁 Voir] [👥 Eff]│
-├─────────────────────────────────────────┤
-│ [Ratio][Prix][Cote][Coureur][Équipe]    │
-├─────────────────────────────────────────┤
-│ ┌─────────────────────────────────────┐ │
-│ │ Pierre GAUTHERAT 📅   🏆 110        │ │
-│ │ Decathlon CMA CGM Team              │ │
-│ │ 55 R3 / 20 • Ratio: 2.00            │ │
-│ └─────────────────────────────────────┘ │
+│ ┌──────────┐    ┌──────────┐            │
+│ │   415    │    │    5     │            │  ← Cartes volumineuses
+│ │ Points   │    │ Courses  │            │
+│ └──────────┘    └──────────┘            │
+│ ┌──────────┐    ┌──────────┐            │
+│ │    2     │    │   7.55   │            │
+│ │ Victoires│    │ Ratio    │            │
+│ └──────────┘    └──────────┘            │
 └─────────────────────────────────────────┘
 ```
 
-**APRÈS**
+### Après
+
 ```text
 ┌─────────────────────────────────────────┐
-│ [🎽]  [Mon équipe ▼]  [Phase 1 ▼]       │  ← Garde l'essentiel
+│ Pierre GAUTHERAT                        │
+│ Decathlon CMA CGM Team                  │  ← Équipe seule
 ├─────────────────────────────────────────┤
-│  415 pts    │   0 bonus   │   5/8       │  ← Bande compacte
+│ ┌─────┐ ┌─────┐ ┌─────┐                 │
+│ │ 415 │ │ 55  │ │  2  │                 │  ← Grille 3 colonnes
+│ │ pts │ │ prix│ │ vic │                 │     compacte
+│ └─────┘ └─────┘ └─────┘                 │
+│ ┌─────┐ ┌─────┐ ┌─────┐                 │
+│ │ 20  │ │7.55 │ │  5  │                 │
+│ │ cote│ │ratio│ │cours│                 │
+│ └─────┘ └─────┘ └─────┘                 │
 ├─────────────────────────────────────────┤
-│ [Points ▼] ───────────── [👥] [⭐] [📊] │  ← Tri + icônes
+│ Détails par course                      │
+│ ...                                     │
 ├─────────────────────────────────────────┤
-│ ┌─────────────────────────────────────┐ │
-│ │ Pierre GAUTHERAT ⭐📅     110 pts   │ │  ← Nom + badge pts
-│ │ Decathlon • 55 (R3) / 20            │ │  ← Infos simplifiées
-│ └─────────────────────────────────────┘ │
+│ Programme à venir                       │
+│ ...                                     │
 └─────────────────────────────────────────┘
 ```
 
 ---
 
-## Modifications détaillées
+## Modifications
 
-### 1. Remplacer KPIRow par une bande compacte inline
+### Fichier : `src/components/team/RiderPointsDetail.tsx`
 
-**Fichier** : `src/components/team/MyTeamMobile.tsx`
+#### 1. Ajouter la cote comme prop
 
-Remplacer les 3 cartes KPI par une simple ligne de texte :
+La cote (`cote_initiale`) doit être passée au composant :
 
-```tsx
-{/* Stats compactes - une seule ligne */}
-<div className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-xl text-sm">
-  <div className="flex items-center gap-1">
-    <Trophy className="h-4 w-4 text-primary" />
-    <span className="font-semibold">{kpis.total_points}</span>
-    <span className="text-muted-foreground">pts</span>
-  </div>
-  
-  <div 
-    className="flex items-center gap-1 cursor-pointer" 
-    onClick={() => setBonusDetailsOpen(true)}
-  >
-    <Star className="h-4 w-4 text-amber-500" />
-    <span className="font-semibold">{kpis.bonus_points}</span>
-    <span className="text-muted-foreground">bonus</span>
-  </div>
-  
-  <div className="flex items-center gap-1 text-muted-foreground">
-    <TrendingUp className="h-4 w-4" />
-    <span>{kpis.scorers_count}/{coureurs.length}</span>
-  </div>
-</div>
+```typescript
+interface RiderPointsDetailProps {
+  // ... existing props
+  riderCote?: number;  // Nouvelle prop
+}
 ```
 
-### 2. Simplifier la zone d'actions en icônes
+#### 2. Modifier le header du MobileBottomSheet
 
-Remplacer les 3 boutons textuels par des icônes compactes à droite d'un Select de tri :
+Retirer le prix du header pour ne garder que l'équipe :
 
 ```tsx
-{/* Barre tri + actions */}
-<div className="flex items-center gap-2">
-  {/* Select de tri (remplace les 6 chips) */}
-  <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
-    <SelectTrigger className="flex-1 h-9">
-      <SelectValue placeholder="Trier par..." />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="points">Points</SelectItem>
-      <SelectItem value="ratio">Ratio</SelectItem>
-      <SelectItem value="prix">Prix</SelectItem>
-      <SelectItem value="cote">Cote</SelectItem>
-      <SelectItem value="nom">Coureur</SelectItem>
-      <SelectItem value="equipe">Équipe</SelectItem>
-    </SelectContent>
-  </Select>
-  
-  {/* Boutons icônes */}
-  <Button variant="ghost" size="icon" onClick={() => setShowRostersOverviewDialog(true)}>
-    <Users className="h-5 w-5" />
-  </Button>
-  <Button variant="ghost" size="icon" onClick={() => setShowLeagueBonusDialog(true)}>
-    <Eye className="h-5 w-5" />
-  </Button>
-  {!hasSelectedBonusRider && !selectedManagerId && (
-    <Button variant="ghost" size="icon" onClick={() => setShowBonusRiderDialog(true)}>
-      <Star className="h-5 w-5" />
-    </Button>
-  )}
-</div>
+<MobileBottomSheet
+  open={isOpen}
+  onOpenChange={onClose}
+  title={riderName}
+  description={riderTeam}  // Équipe seule, sans le prix
+>
 ```
 
-### 3. Simplifier les cartes coureurs
+#### 3. Remplacer la grille 2x2 par une grille 3x2 compacte
 
-Réduire la densité d'information dans les cartes :
+Ordre des stats selon la demande :
+1. Points | Prix | Victoires
+2. Cote | Ratio | Courses avec points
 
 ```tsx
-<MobileCard
-  key={coureur.coureur_id}
-  title={
-    <div className="flex items-center gap-1.5">
-      {bonusRiderSelection?.coureur_id === coureur.coureur_id && (
-        <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-      )}
-      <span className="truncate">{coureur.nom}</span>
-      <RiderRaceIcons ... />
+<div className="grid grid-cols-3 gap-2">
+  {/* Ligne 1 */}
+  <div className="text-center p-2 rounded-lg border bg-card">
+    <div className="text-xl font-bold text-primary">{riderStats.totalPoints}</div>
+    <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Points</div>
+  </div>
+  <div className="text-center p-2 rounded-lg border bg-card">
+    <div className="text-xl font-bold">{riderPrice}</div>
+    <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Prix</div>
+  </div>
+  <div className="text-center p-2 rounded-lg border bg-card">
+    <div className="text-xl font-bold text-yellow-600">{riderStats.wins}</div>
+    <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Victoires</div>
+  </div>
+  
+  {/* Ligne 2 */}
+  <div className="text-center p-2 rounded-lg border bg-card">
+    <div className="text-xl font-bold">{riderCote || '-'}</div>
+    <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Cote</div>
+  </div>
+  <div className="text-center p-2 rounded-lg border bg-card">
+    <div className={`text-xl font-bold ${getRatioColor(riderStats.ratio)}`}>
+      {riderStats.ratio}
     </div>
-  }
-  subtitle={
-    <span className="text-xs text-muted-foreground">
-      {coureur.equipe} • {coureur.prix_achat}
-      {coureur.winning_round && <span className="opacity-60"> (R{coureur.winning_round})</span>}
-      {' / '}{coureur.cote_initiale}
-    </span>
-  }
-  badge={
-    <span className="font-bold text-base text-primary">
-      {coureur.points_total} pts
-    </span>
-  }
-  onClick={() => openCoureurDetail(coureur)}
-  className="py-2.5"
+    <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Ratio</div>
+  </div>
+  <div className="text-center p-2 rounded-lg border bg-card">
+    <div className="text-xl font-bold">{riderStats.totalRaces}</div>
+    <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Courses</div>
+  </div>
+</div>
+```
+
+#### 4. Mettre à jour l'appel dans MyTeam.mobile.tsx
+
+Passer la cote au composant :
+
+```tsx
+<RiderPointsDetail
+  isOpen={!!selectedRider}
+  onClose={() => setSelectedRider(null)}
+  riderId={selectedRider?.id || ''}
+  riderName={selectedRider?.nom || ''}
+  riderTeam={selectedRider?.equipe || ''}
+  riderPrice={selectedRider?.prix || 0}
+  riderCote={selectedRider?.cote || 0}  // Nouvelle prop
+  phaseId={selectedPhaseId || ''}
 />
 ```
 
-**Ce qui change** :
-- Suppression du label "Ratio: X.XX" de la ligne meta
-- Fusion équipe + prix + cote sur une seule ligne subtitle
-- Badge simplifié sans icône Trophy
+Et mettre à jour l'état `selectedRider` pour inclure la cote :
 
-### 4. Supprimer les imports inutilisés
+```tsx
+const [selectedRider, setSelectedRider] = useState<{
+  id: string;
+  nom: string;
+  equipe: string;
+  prix: number;
+  cote: number;  // Ajouter
+} | null>(null);
 
-- Supprimer `ChipGroup` car remplacé par un Select
-- Supprimer `KPIRow` car remplacé par la bande inline
+const openCoureurDetail = (coureur: Coureur) => {
+  setSelectedRider({
+    id: coureur.coureur_id,
+    nom: coureur.nom,
+    equipe: coureur.equipe,
+    prix: coureur.prix_achat,
+    cote: coureur.cote_initiale  // Ajouter
+  });
+};
+```
 
 ---
 
-## Résumé des gains
+## Résumé des changements
 
 | Élément | Avant | Après |
 |---------|-------|-------|
-| Lignes KPI | 3 cartes (≈80px hauteur) | 1 ligne (≈40px) |
-| Boutons action | 3 boutons avec texte | 2-3 icônes compactes |
-| Chips de tri | 6 badges scrollables | 1 Select dropdown |
-| Carte coureur | 3 lignes d'info | 2 lignes |
-| **Gain total** | | **≈120px économisés** |
+| Header description | `Équipe - Prix: X` | `Équipe` seule |
+| Grille stats | 2 colonnes, 4 cases | 3 colonnes, 6 cases |
+| Taille texte valeurs | `text-3xl` | `text-xl` |
+| Taille labels | `text-sm` | `text-[10px] uppercase` |
+| Padding cards | `p-4` | `p-2` |
+| Hauteur totale stats | ~160px | ~100px |
 
 ---
 
@@ -191,7 +183,5 @@ Réduire la densité d'information dans les cartes :
 
 | Fichier | Modification |
 |---------|--------------|
-| `src/components/team/MyTeam.mobile.tsx` | Refactoring header, KPIs, actions, cartes |
-
-Aucune modification backend nécessaire.
-
+| `src/components/team/RiderPointsDetail.tsx` | Nouvelle prop `riderCote`, header simplifié, grille 3x2 compacte |
+| `src/components/team/MyTeam.mobile.tsx` | Passer `riderCote` au composant, état `selectedRider` étendu |
