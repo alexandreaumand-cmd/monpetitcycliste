@@ -1,196 +1,247 @@
 
-# Configuration PWA pour Mon Petit Cycliste
+# Implementation des Notifications Push (Web Push API)
 
 ## Objectif
 
-Transformer l'application en Progressive Web App (PWA) installable avec :
-- Fonctionnement hors-ligne
-- Icône sur l'écran d'accueil
-- Écran de lancement (splash screen)
-- Page d'installation dédiée `/install`
+Ajouter la capacite d'envoyer des notifications natives (banniere systeme) aux utilisateurs de la PWA, en complement du systeme de notifications in-app existant.
 
 ---
 
-## Apercu de l'architecture
+## Architecture proposee
 
 ```text
-+------------------+     +-------------------+     +------------------+
-|   vite-plugin-pwa |---->|  Service Worker  |---->| Cache hors-ligne |
-+------------------+     +-------------------+     +------------------+
-        |
-        v
-+------------------+     +-------------------+
-|   manifest.json  |---->| Icônes PWA (512px)|
-+------------------+     +-------------------+
-        |
-        v
-+------------------+     +-------------------+
-|  usePWAInstall   |---->|  Page /install   |
-|     (hook)       |     |   avec guide     |
-+------------------+     +-------------------+
++------------------+     +---------------------+     +------------------+
+|   Frontend       |     |   Supabase          |     |   Push Service   |
+|   (React)        |     |   (Backend)         |     |   (FCM/APNS)     |
++------------------+     +---------------------+     +------------------+
+        |                         |                         |
+        |  1. Demander permission |                         |
+        |------------------------>|                         |
+        |                         |                         |
+        |  2. Obtenir subscription|                         |
+        |<------------------------|                         |
+        |                         |                         |
+        |  3. Enregistrer sub     |                         |
+        |------------------------>|                         |
+        |         [push_subscriptions table]                |
+        |                         |                         |
+        |                         |  4. Envoyer notification|
+        |                         |------------------------>|
+        |                         |                         |
+        |  5. Recevoir push       |                         |
+        |<--------------------------------------------------|
+        |                         |                         |
+        |  [Service Worker]       |                         |
+        |  affiche notification   |                         |
++------------------+     +---------------------+     +------------------+
 ```
 
 ---
 
-## Modifications prevues
+## Composants a creer/modifier
 
-### 1. Installation de la dependance
+### 1. Base de donnees - Table `push_subscriptions`
 
-Ajouter `vite-plugin-pwa` au projet :
-- Package : `vite-plugin-pwa`
-- Inclut automatiquement `workbox-build` pour le service worker
+Nouvelle table pour stocker les abonnements push de chaque utilisateur/appareil.
 
-### 2. Configuration Vite (`vite.config.ts`)
+```sql
+CREATE TABLE public.push_subscriptions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  endpoint text NOT NULL,
+  p256dh text NOT NULL,
+  auth text NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE(user_id, endpoint)
+);
 
-Integrer le plugin PWA avec :
-- Mode `generateSW` (generation automatique du service worker)
-- Strategie de cache `CacheFirst` pour les assets
-- Configuration du manifest inline
+ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
 
-```text
-Parametres cles :
-- registerType: 'autoUpdate' (mise a jour automatique)
-- includeAssets: ['favicon.png', 'favicon.ico']
-- Cache: images, fonts, CSS, JS
+-- Politique: les utilisateurs ne peuvent gerer que leurs propres subscriptions
+CREATE POLICY "Users can manage their own subscriptions"
+  ON public.push_subscriptions
+  FOR ALL
+  TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 ```
 
-### 3. Mise a jour de `index.html`
+### 2. Secrets - Cles VAPID
 
-Ajouter les meta tags PWA essentiels :
-- `<meta name="theme-color">` (jaune #FBBF24 pour cohérence Tour de France)
-- `<meta name="apple-mobile-web-app-capable">`
-- `<meta name="apple-mobile-web-app-status-bar-style">`
-- Liens vers les icones Apple Touch
+Les cles VAPID (Voluntary Application Server Identification) sont necessaires pour identifier le serveur aupres des services push.
 
-### 4. Creation des icones PWA
+Secrets a configurer :
+- `VAPID_PUBLIC_KEY` : Cle publique (partagee avec le frontend)
+- `VAPID_PRIVATE_KEY` : Cle privee (serveur uniquement)
+- `VAPID_SUBJECT` : Email ou URL du responsable (ex: `mailto:contact@monpetitcycliste.com`)
 
-Generer a partir du `favicon.png` existant :
-- `/public/pwa-192x192.png` (icone standard)
-- `/public/pwa-512x512.png` (icone grande / splash)
-- `/public/apple-touch-icon-180x180.png` (iOS)
+Note : Je demanderai la generation de ces cles lors de l'implementation.
 
-Note : Comme le `favicon.png` actuel est deja en haute resolution, il servira de source.
+### 3. Hook Frontend - `usePushNotifications.ts`
 
-### 5. Hook personnalise `usePWAInstall`
-
-Nouveau fichier : `src/hooks/usePWAInstall.ts`
+Nouveau fichier : `src/hooks/usePushNotifications.ts`
 
 Fonctionnalites :
-- Capture de l'evenement `beforeinstallprompt`
-- Detection si deja installe (mode `standalone`)
-- Detection du navigateur (iOS Safari, Android Chrome, etc.)
-- Declenchement de l'installation native quand possible
+- Verifier si les notifications push sont supportees
+- Demander la permission a l'utilisateur
+- S'abonner aux notifications push via le Service Worker
+- Enregistrer/supprimer l'abonnement en base de donnees
+- Detecter l'etat actuel (permission accordee, abonne, etc.)
 
 ```text
 Interface retournee :
 {
-  isInstallable: boolean      // Prompt disponible
-  isInstalled: boolean        // Deja installe
-  isIOS: boolean              // Detection iOS
-  isAndroid: boolean          // Detection Android
-  install: () => Promise      // Declencher l'installation
+  isSupported: boolean          // Navigateur compatible
+  permission: NotificationPermission  // 'granted', 'denied', 'default'
+  isSubscribed: boolean         // Abonnement actif
+  subscribe: () => Promise      // S'abonner
+  unsubscribe: () => Promise    // Se desabonner
+  isLoading: boolean
 }
 ```
 
-### 6. Page d'installation `/install`
+### 4. Configuration PWA - Service Worker personnalise
 
-Nouveau fichier : `src/pages/InstallPage.tsx`
+Modification de `vite.config.ts` pour injecter un Service Worker custom qui gere les evenements `push` et `notificationclick`.
 
-Design :
-- Logo MPC en grand
-- Titre accrocheur
-- Bouton d'installation (si supporté nativement)
-- Instructions manuelles pour iOS (Partager > Ajouter a l'ecran d'accueil)
-- Instructions pour Android/Chrome
-- Indication si deja installe
+Fichier custom SW : `public/sw-push.js`
 
-Sections :
-1. En-tete avec logo
-2. Avantages de l'installation (acces rapide, hors-ligne, notifications)
-3. Bouton principal ou instructions selon la plateforme
-4. Lien pour continuer sur le web
+```javascript
+// Ecouter les notifications push
+self.addEventListener('push', (event) => {
+  const data = event.data?.json() || {};
+  const title = data.title || 'Mon Petit Cycliste';
+  const options = {
+    body: data.message,
+    icon: '/pwa-192x192.png',
+    badge: '/pwa-192x192.png',
+    data: data.metadata
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
 
-### 7. Mise a jour du routeur (`App.tsx`)
-
-Ajouter la route :
-```text
-/install -> InstallPage
+// Gerer le clic sur la notification
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/dashboard';
+  event.waitUntil(clients.openWindow(url));
+});
 ```
 
-### 8. Traductions i18n
+### 5. Edge Function - `send-push-notification`
 
-Nouveaux fichiers :
-- `src/i18n/locales/fr/install.json`
-- `src/i18n/locales/en/install.json`
+Nouvelle fonction : `supabase/functions/send-push-notification/index.ts`
 
-Cles a traduire :
-- Titre de la page
-- Description des avantages
-- Instructions iOS/Android
-- Boutons et messages d'etat
+Responsabilites :
+- Recevoir le payload de notification (titre, message, metadata)
+- Recuperer les subscriptions push des destinataires
+- Envoyer les notifications via le protocole Web Push
+- Gerer les erreurs (subscriptions expirees, etc.)
 
-Mise a jour de `src/i18n/index.ts` pour inclure le namespace `install`.
+Utilisation de la librairie `web-push` compatible Deno.
+
+### 6. Integration avec les notifications existantes
+
+Modifier le trigger `notify_results_added` et la fonction `notifyLeagueMembers` pour :
+1. Creer la notification in-app (comme actuellement)
+2. Appeler `send-push-notification` pour envoyer la notification push
+
+Options :
+- Declenchement via trigger PostgreSQL (appel HTTP vers edge function)
+- Ou appel direct depuis les edge functions existantes
+
+### 7. UI - Parametres de notification
+
+Nouveau composant ou section dans les parametres utilisateur pour :
+- Activer/desactiver les notifications push
+- Afficher l'etat actuel (permission, abonnement)
+- Bouton pour se (des)abonner
+
+Emplacement suggere : Page de profil ou parametres du dashboard.
+
+---
+
+## Fichiers a creer
+
+| Fichier | Description |
+|---------|-------------|
+| `src/hooks/usePushNotifications.ts` | Hook pour gerer les subscriptions push |
+| `public/sw-push.js` | Service Worker custom pour recevoir les push |
+| `supabase/functions/send-push-notification/index.ts` | Edge function pour envoyer les push |
+| `src/components/settings/NotificationSettings.tsx` | UI pour gerer les preferences |
+
+## Fichiers a modifier
+
+| Fichier | Modification |
+|---------|--------------|
+| `vite.config.ts` | Configurer l'import du SW custom |
+| `supabase/functions/_shared/notifications.ts` | Ajouter appel push apres notification in-app |
+| Migration SQL | Creer table `push_subscriptions` |
 
 ---
 
 ## Details techniques
 
-### Configuration du manifest (via vite-plugin-pwa)
+### Generation des cles VAPID
 
-```text
-{
-  name: "Mon Petit Cycliste",
-  short_name: "MPC",
-  description: "Fantasy Cycling - Joue la saison, gagne la gloire",
-  theme_color: "#FBBF24",
-  background_color: "#000000",
-  display: "standalone",
-  orientation: "portrait",
-  start_url: "/",
-  scope: "/",
-  icons: [...]
-}
+Les cles peuvent etre generees via :
+```bash
+npx web-push generate-vapid-keys
 ```
 
-### Strategie de cache
-
-- **Assets statiques** : Cache First (images, fonts, CSS, JS)
-- **API calls** : Network First (donnees fraiches prioritaires)
-- **Navigation** : Network First avec fallback offline
-
-### Detection de plateforme
-
-```text
-iOS       : navigator.userAgent.includes('iPhone') || 'iPad'
-Android   : navigator.userAgent.includes('Android')
-Standalone: window.matchMedia('(display-mode: standalone)').matches
+Resultat exemple :
 ```
+Public Key: BLxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Private Key: yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+```
+
+### Protocole Web Push
+
+Le serveur envoie une requete HTTP POST au endpoint fourni par le navigateur, avec :
+- Headers d'autorisation VAPID
+- Payload chiffre avec les cles p256dh et auth
+
+### Compatibilite iOS
+
+- iOS 16.4+ supporte les notifications push pour les PWA
+- L'app doit etre installee sur l'ecran d'accueil
+- L'utilisateur doit accorder explicitement la permission
+
+### Gestion des erreurs
+
+- `410 Gone` : Subscription expiree, supprimer de la base
+- `404 Not Found` : Endpoint invalide, supprimer
+- `413 Payload Too Large` : Reduire la taille du message
 
 ---
 
-## Fichiers a creer/modifier
+## Flux utilisateur
 
-| Fichier | Action |
-|---------|--------|
-| `package.json` | Ajouter `vite-plugin-pwa` |
-| `vite.config.ts` | Configurer le plugin PWA |
-| `index.html` | Ajouter meta tags PWA |
-| `public/pwa-192x192.png` | Creer icone (copie redimensionnee) |
-| `public/pwa-512x512.png` | Creer icone (copie source) |
-| `src/hooks/usePWAInstall.ts` | Nouveau hook |
-| `src/pages/InstallPage.tsx` | Nouvelle page |
-| `src/App.tsx` | Ajouter route /install |
-| `src/i18n/locales/fr/install.json` | Traductions FR |
-| `src/i18n/locales/en/install.json` | Traductions EN |
-| `src/i18n/index.ts` | Importer namespace install |
+1. L'utilisateur visite la page de parametres ou recoit une invite
+2. Il clique sur "Activer les notifications"
+3. Le navigateur demande la permission
+4. Si accepte, le Service Worker s'abonne au push
+5. La subscription est envoyee et stockee en base
+6. Quand un evenement se produit (resultat, enchere...) :
+   - Notification in-app creee (comme avant)
+   - Push notification envoyee a tous les appareils abonnes
+7. L'utilisateur recoit une banniere systeme meme si l'app est fermee
+8. Au clic, l'app s'ouvre sur la page pertinente
 
 ---
 
-## Resultat attendu
+## Estimation
 
-Apres implementation :
-1. L'app sera installable depuis Chrome/Edge sur desktop et mobile
-2. Sur iOS, la page `/install` guidera l'utilisateur etape par etape
-3. Un service worker cachera les assets pour un chargement rapide
-4. L'app s'ouvrira en mode plein ecran (sans barre d'adresse)
-5. Une icone MPC apparaitra sur l'ecran d'accueil
+- **Complexite** : Moyenne a elevee (Service Worker, chiffrement, gestion d'erreurs)
+- **Fichiers impactes** : ~8-10 fichiers
+- **Dependances** : Aucune nouvelle dependance npm (utilisation native de l'API Web Push dans le SW, et Deno pour l'edge function)
+
+---
+
+## Limitations connues
+
+1. **iOS Safari** : Requiert iOS 16.4+, PWA installee, et permission explicite
+2. **Firefox** : Support complet mais implementation legerement differente
+3. **Incognito/Private** : Push non disponible en navigation privee
+4. **Batterie** : Les notifications push peuvent affecter l'autonomie sur mobile
