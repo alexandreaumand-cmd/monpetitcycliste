@@ -90,29 +90,22 @@ export const StartlistDetailView = ({ startlistId, onBack, isSuperAdmin, onImpor
 
       // Send push notifications when validating (not when removing validation)
       if (newStatus) {
-        const { data: subscriptions } = await supabase
-          .from('push_subscriptions')
-          .select('user_id');
+        const raceName = startlistViewData?.race?.nom || 'la course';
         
-        if (subscriptions && subscriptions.length > 0) {
-          const userIds = [...new Set(subscriptions.map(s => s.user_id))];
-          const raceName = startlistViewData?.race?.nom || 'la course';
-          
-          // Fire and forget - don't block on push notification
-          supabase.functions.invoke('send-push-notification', {
-            body: {
-              user_ids: userIds,
-              title: '📋 Startlist validée',
-              message: `La startlist de ${raceName} a été validée`,
-              type: 'startlist_validated',
-              metadata: {
-                race_id: startlistViewData?.race?.id,
-                startlist_id: startlistId,
-                race_name: raceName
-              }
+        // Fire and forget - use broadcast mode to notify ALL users (bypasses RLS)
+        supabase.functions.invoke('send-push-notification', {
+          body: {
+            broadcast: true,
+            title: '📋 Startlist validée',
+            message: `La startlist de ${raceName} a été validée`,
+            type: 'startlist_validated',
+            metadata: {
+              race_id: startlistViewData?.race?.id,
+              startlist_id: startlistId,
+              race_name: raceName
             }
-          }).catch(err => console.error('[Push] Error sending startlist notification:', err));
-        }
+          }
+        }).catch(err => console.error('[Push] Error sending startlist notification:', err));
       }
 
       toast.success(newStatus ? "SL validée ✓" : "Validation retirée");
