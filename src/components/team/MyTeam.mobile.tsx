@@ -83,7 +83,7 @@ export const MyTeamMobile = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   // Detail drawer
-  const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string; equipe: string; prix: number } | null>(null);
+  const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string; equipe: string; prix: number; cote: number } | null>(null);
   
   // KPIs state
   const [kpis, setKpis] = useState({ 
@@ -208,7 +208,8 @@ export const MyTeamMobile = () => {
       id: coureur.coureur_id,
       nom: coureur.nom,
       equipe: coureur.equipe,
-      prix: coureur.prix_achat
+      prix: coureur.prix_achat,
+      cote: coureur.cote_initiale
     });
   };
 
@@ -590,6 +591,7 @@ export const MyTeamMobile = () => {
         riderName={selectedRider?.nom || ''}
         riderTeam={selectedRider?.equipe || ''}
         riderPrice={selectedRider?.prix || 0}
+        riderCote={selectedRider?.cote || 0}
         phaseId={selectedPhaseId || ''}
       />
 
