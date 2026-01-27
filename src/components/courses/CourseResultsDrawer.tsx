@@ -70,20 +70,20 @@ const JerseyHoldersBar = ({ courseId, etapeNumero, leagueId }: { courseId: strin
   }
 
   return (
-    <div className="bg-muted/30 rounded-lg p-3 border space-y-2">
-      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+    <div className="bg-muted/30 rounded-lg p-2 border space-y-1.5">
+      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
         Maillots
       </span>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         {holders.map((holder: any, idx: number) => (
-          <div key={idx} className="flex items-center gap-2 text-sm">
-            <span className="text-lg w-6 flex-shrink-0">{holder.icon}</span>
+          <div key={idx} className="flex items-center gap-1.5 text-xs">
+            <span className="text-sm w-5 flex-shrink-0">{holder.icon}</span>
             <span className="font-medium truncate flex-1">{holder.coureur_nom}</span>
-            <span className="text-xs text-muted-foreground truncate max-w-[80px]">
+            <span className="text-[10px] text-muted-foreground truncate max-w-[70px]">
               ({holder.equipe})
             </span>
             {holder.manager_nom && (
-              <span className="text-xs text-primary font-medium flex-shrink-0">
+              <span className="text-[10px] text-muted-foreground flex-shrink-0">
                 {holder.manager_nom}
               </span>
             )}
