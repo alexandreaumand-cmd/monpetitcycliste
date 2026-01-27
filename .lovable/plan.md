@@ -1,247 +1,263 @@
 
-# Implementation des Notifications Push (Web Push API)
 
-## Objectif
+# Implementation Complete des Notifications Push
 
-Ajouter la capacite d'envoyer des notifications natives (banniere systeme) aux utilisateurs de la PWA, en complement du systeme de notifications in-app existant.
+## Resume
+
+Ce plan couvre l'implementation complete des notifications push PWA, incluant les preferences utilisateur pour activer/desactiver les types de notifications (resultats, startlists, encheres).
 
 ---
 
-## Architecture proposee
+## Etape 1 : Configuration des Secrets VAPID
 
+### Prerequis
+Avant toute implementation, les cles VAPID doivent etre configurees :
+- `VAPID_PUBLIC_KEY` : Cle publique (utilisee par le frontend pour s'abonner)
+- `VAPID_PRIVATE_KEY` : Cle privee (utilisee par le serveur pour signer les notifications)
+- `VAPID_SUBJECT` : Email de contact (ex: `mailto:contact@monpetitcycliste.com`)
+
+Pour generer ces cles, executez localement :
 ```text
-+------------------+     +---------------------+     +------------------+
-|   Frontend       |     |   Supabase          |     |   Push Service   |
-|   (React)        |     |   (Backend)         |     |   (FCM/APNS)     |
-+------------------+     +---------------------+     +------------------+
-        |                         |                         |
-        |  1. Demander permission |                         |
-        |------------------------>|                         |
-        |                         |                         |
-        |  2. Obtenir subscription|                         |
-        |<------------------------|                         |
-        |                         |                         |
-        |  3. Enregistrer sub     |                         |
-        |------------------------>|                         |
-        |         [push_subscriptions table]                |
-        |                         |                         |
-        |                         |  4. Envoyer notification|
-        |                         |------------------------>|
-        |                         |                         |
-        |  5. Recevoir push       |                         |
-        |<--------------------------------------------------|
-        |                         |                         |
-        |  [Service Worker]       |                         |
-        |  affiche notification   |                         |
-+------------------+     +---------------------+     +------------------+
+npx web-push generate-vapid-keys
 ```
 
 ---
 
-## Composants a creer/modifier
+## Etape 2 : Base de Donnees - Preferences Utilisateur
 
-### 1. Base de donnees - Table `push_subscriptions`
+### Nouvelle colonne sur `push_subscriptions`
 
-Nouvelle table pour stocker les abonnements push de chaque utilisateur/appareil.
+Ajouter une colonne JSON pour stocker les preferences de notification par type :
 
 ```sql
-CREATE TABLE public.push_subscriptions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  endpoint text NOT NULL,
-  p256dh text NOT NULL,
-  auth text NOT NULL,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now(),
-  UNIQUE(user_id, endpoint)
-);
-
-ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
-
--- Politique: les utilisateurs ne peuvent gerer que leurs propres subscriptions
-CREATE POLICY "Users can manage their own subscriptions"
-  ON public.push_subscriptions
-  FOR ALL
-  TO authenticated
-  USING (user_id = auth.uid())
-  WITH CHECK (user_id = auth.uid());
+ALTER TABLE public.push_subscriptions 
+ADD COLUMN preferences jsonb DEFAULT '{"results": true, "startlists": true, "auctions": true}'::jsonb;
 ```
 
-### 2. Secrets - Cles VAPID
+Cette structure permet :
+- `results`: Notifications de victoire (type `results_added`)
+- `startlists`: Notifications de validation de startlist (type `startlist_validated`)
+- `auctions`: Notifications d'encheres (types `auction_opened`, `auction_closed`, `auction_validation`)
 
-Les cles VAPID (Voluntary Application Server Identification) sont necessaires pour identifier le serveur aupres des services push.
+---
 
-Secrets a configurer :
-- `VAPID_PUBLIC_KEY` : Cle publique (partagee avec le frontend)
-- `VAPID_PRIVATE_KEY` : Cle privee (serveur uniquement)
-- `VAPID_SUBJECT` : Email ou URL du responsable (ex: `mailto:contact@monpetitcycliste.com`)
+## Etape 3 : Service Worker Custom
 
-Note : Je demanderai la generation de ces cles lors de l'implementation.
+### Fichier : `public/sw-push.js`
 
-### 3. Hook Frontend - `usePushNotifications.ts`
-
-Nouveau fichier : `src/hooks/usePushNotifications.ts`
+Ce Service Worker sera injecte dans le SW genere par vite-plugin-pwa pour gerer les evenements push.
 
 Fonctionnalites :
-- Verifier si les notifications push sont supportees
-- Demander la permission a l'utilisateur
-- S'abonner aux notifications push via le Service Worker
-- Enregistrer/supprimer l'abonnement en base de donnees
-- Detecter l'etat actuel (permission accordee, abonne, etc.)
+- Ecouter l'evenement `push` pour afficher les notifications systeme
+- Gerer le clic sur la notification pour ouvrir l'app sur la bonne page
+- Personnalisation de l'icone et du badge
 
 ```text
+Logique du clic :
+- results_added -> /dashboard/resultats
+- startlist_validated -> /dashboard/startlist
+- auction_* -> /dashboard/encheres?leagueId=...
+```
+
+---
+
+## Etape 4 : Configuration Vite
+
+### Modification : `vite.config.ts`
+
+Configurer `vite-plugin-pwa` pour importer le Service Worker custom via `importScripts`.
+
+```text
+workbox: {
+  importScripts: ['sw-push.js']
+}
+```
+
+---
+
+## Etape 5 : Hook Frontend
+
+### Nouveau fichier : `src/hooks/usePushNotifications.ts`
+
 Interface retournee :
+```text
 {
-  isSupported: boolean          // Navigateur compatible
-  permission: NotificationPermission  // 'granted', 'denied', 'default'
-  isSubscribed: boolean         // Abonnement actif
-  subscribe: () => Promise      // S'abonner
-  unsubscribe: () => Promise    // Se desabonner
+  isSupported: boolean         // Navigateur compatible
+  permission: string           // 'granted', 'denied', 'default'
+  isSubscribed: boolean        // Abonnement actif
+  preferences: {               // Preferences par type
+    results: boolean
+    startlists: boolean
+    auctions: boolean
+  }
+  subscribe: () => Promise<void>
+  unsubscribe: () => Promise<void>
+  updatePreferences: (prefs) => Promise<void>
   isLoading: boolean
 }
 ```
 
-### 4. Configuration PWA - Service Worker personnalise
-
-Modification de `vite.config.ts` pour injecter un Service Worker custom qui gere les evenements `push` et `notificationclick`.
-
-Fichier custom SW : `public/sw-push.js`
-
-```javascript
-// Ecouter les notifications push
-self.addEventListener('push', (event) => {
-  const data = event.data?.json() || {};
-  const title = data.title || 'Mon Petit Cycliste';
-  const options = {
-    body: data.message,
-    icon: '/pwa-192x192.png',
-    badge: '/pwa-192x192.png',
-    data: data.metadata
-  };
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
-// Gerer le clic sur la notification
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const url = event.notification.data?.url || '/dashboard';
-  event.waitUntil(clients.openWindow(url));
-});
-```
-
-### 5. Edge Function - `send-push-notification`
-
-Nouvelle fonction : `supabase/functions/send-push-notification/index.ts`
-
-Responsabilites :
-- Recevoir le payload de notification (titre, message, metadata)
-- Recuperer les subscriptions push des destinataires
-- Envoyer les notifications via le protocole Web Push
-- Gerer les erreurs (subscriptions expirees, etc.)
-
-Utilisation de la librairie `web-push` compatible Deno.
-
-### 6. Integration avec les notifications existantes
-
-Modifier le trigger `notify_results_added` et la fonction `notifyLeagueMembers` pour :
-1. Creer la notification in-app (comme actuellement)
-2. Appeler `send-push-notification` pour envoyer la notification push
-
-Options :
-- Declenchement via trigger PostgreSQL (appel HTTP vers edge function)
-- Ou appel direct depuis les edge functions existantes
-
-### 7. UI - Parametres de notification
-
-Nouveau composant ou section dans les parametres utilisateur pour :
-- Activer/desactiver les notifications push
-- Afficher l'etat actuel (permission, abonnement)
-- Bouton pour se (des)abonner
-
-Emplacement suggere : Page de profil ou parametres du dashboard.
+Le hook utilise :
+- `navigator.serviceWorker.ready` pour obtenir le SW actif
+- `pushManager.subscribe()` avec la cle publique VAPID
+- Stockage/suppression de la subscription dans `push_subscriptions`
 
 ---
 
-## Fichiers a creer
+## Etape 6 : Composant UI de Preferences
+
+### Nouveau fichier : `src/components/settings/NotificationSettings.tsx`
+
+Ce composant sera integre dans la page de profil (`AccountPage.tsx`) comme nouvelle section.
+
+Design propose :
+```text
++--------------------------------------------------+
+| 🔔 Notifications                                 |
+| Gerez vos preferences de notification            |
++--------------------------------------------------+
+|                                                  |
+| [Switch] Activer les notifications push          |
+|          Recevez des alertes meme hors de l'app  |
+|                                                  |
+| --- Types de notifications ---                   |
+|                                                  |
+| [Switch] Resultats de course                     |
+|          Victoires de vos coureurs               |
+|                                                  |
+| [Switch] Startlists validees                     |
+|          Nouvelles startlists disponibles        |
+|                                                  |
+| [Switch] Encheres                                |
+|          Ouverture et cloture des rounds         |
+|                                                  |
++--------------------------------------------------+
+```
+
+Etats possibles :
+- Push non supporte : Message explicatif
+- Permission refusee : Instructions pour reactiver
+- Non abonne : Bouton pour activer
+- Abonne : Switches pour chaque type
+
+---
+
+## Etape 7 : Edge Function d'Envoi
+
+### Nouveau fichier : `supabase/functions/send-push-notification/index.ts`
+
+Responsabilites :
+1. Recevoir le payload (user_ids, title, message, type, metadata)
+2. Filtrer les subscriptions selon le type et les preferences
+3. Envoyer les notifications via Web Push
+4. Supprimer les subscriptions expirees (codes 404, 410)
+
+Protocole Web Push :
+- Chiffrement du payload avec les cles p256dh/auth
+- Signature VAPID avec la cle privee
+- POST vers l'endpoint du navigateur
+
+---
+
+## Etape 8 : Integration avec Notifications Existantes
+
+### Modification : `supabase/functions/_shared/notifications.ts`
+
+Apres l'insertion des notifications in-app, appeler l'edge function `send-push-notification` pour envoyer les push.
+
+```text
+Flux :
+1. Creer notification in-app (comme avant)
+2. Appeler send-push-notification avec :
+   - user_ids des destinataires
+   - type de notification
+   - titre et message
+   - metadata (pour le deep link)
+```
+
+### Triggers PostgreSQL
+
+Pour les triggers `notify_results_added` et `notify_startlist_validated`, ajouter un appel HTTP vers l'edge function apres l'insertion des notifications.
+
+Option alternative : Creer un trigger `AFTER INSERT ON notifications` qui appelle automatiquement l'edge function.
+
+---
+
+## Etape 9 : Traductions i18n
+
+### Modifications : `src/i18n/locales/fr/account.json` et `en/account.json`
+
+Nouvelles cles :
+```json
+{
+  "notifications": {
+    "title": "Notifications",
+    "description": "Gerez vos preferences de notification",
+    "enablePush": "Activer les notifications push",
+    "enablePushDescription": "Recevez des alertes meme hors de l'application",
+    "types": {
+      "results": "Resultats de course",
+      "resultsDescription": "Victoires de vos coureurs",
+      "startlists": "Startlists validees",
+      "startlistsDescription": "Nouvelles startlists disponibles",
+      "auctions": "Encheres",
+      "auctionsDescription": "Ouverture et cloture des rounds"
+    },
+    "notSupported": "Votre navigateur ne supporte pas les notifications push",
+    "denied": "Vous avez bloque les notifications. Pour les reactiver, modifiez les parametres de votre navigateur.",
+    "iosInstructions": "Sur iOS, installez d'abord l'app sur votre ecran d'accueil"
+  }
+}
+```
+
+---
+
+## Resume des Fichiers
+
+### Fichiers a creer
 
 | Fichier | Description |
 |---------|-------------|
-| `src/hooks/usePushNotifications.ts` | Hook pour gerer les subscriptions push |
-| `public/sw-push.js` | Service Worker custom pour recevoir les push |
-| `supabase/functions/send-push-notification/index.ts` | Edge function pour envoyer les push |
-| `src/components/settings/NotificationSettings.tsx` | UI pour gerer les preferences |
+| `public/sw-push.js` | Service Worker pour recevoir les push |
+| `src/hooks/usePushNotifications.ts` | Hook de gestion des abonnements |
+| `src/components/settings/NotificationSettings.tsx` | UI des preferences |
+| `supabase/functions/send-push-notification/index.ts` | Edge function d'envoi |
 
-## Fichiers a modifier
+### Fichiers a modifier
 
 | Fichier | Modification |
 |---------|--------------|
-| `vite.config.ts` | Configurer l'import du SW custom |
-| `supabase/functions/_shared/notifications.ts` | Ajouter appel push apres notification in-app |
-| Migration SQL | Creer table `push_subscriptions` |
+| `vite.config.ts` | Ajouter `importScripts` pour le SW custom |
+| `src/pages/AccountPage.tsx` | Integrer NotificationSettings |
+| `supabase/functions/_shared/notifications.ts` | Appeler send-push-notification |
+| `src/i18n/locales/fr/account.json` | Traductions FR |
+| `src/i18n/locales/en/account.json` | Traductions EN |
+| Migration SQL | Ajouter colonne `preferences` |
 
 ---
 
-## Details techniques
+## Flux Complet
 
-### Generation des cles VAPID
-
-Les cles peuvent etre generees via :
-```bash
-npx web-push generate-vapid-keys
+```text
+1. Utilisateur va sur /dashboard/compte
+2. Section "Notifications" affichee
+3. Clic "Activer les notifications push"
+4. Navigateur demande la permission
+5. Si accepte :
+   a. Service Worker s'abonne au push
+   b. Subscription stockee en base avec preferences par defaut
+6. Utilisateur peut basculer chaque type (resultats, startlists, encheres)
+7. Quand un evenement se produit :
+   a. Trigger/Edge function cree notification in-app
+   b. send-push-notification verifie les preferences
+   c. Push envoye aux abonnes ayant active ce type
+8. Utilisateur recoit banniere systeme meme app fermee
+9. Clic sur notification ouvre l'app sur la bonne page
 ```
 
-Resultat exemple :
-```
-Public Key: BLxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-Private Key: yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
-```
-
-### Protocole Web Push
-
-Le serveur envoie une requete HTTP POST au endpoint fourni par le navigateur, avec :
-- Headers d'autorisation VAPID
-- Payload chiffre avec les cles p256dh et auth
-
-### Compatibilite iOS
-
-- iOS 16.4+ supporte les notifications push pour les PWA
-- L'app doit etre installee sur l'ecran d'accueil
-- L'utilisateur doit accorder explicitement la permission
-
-### Gestion des erreurs
-
-- `410 Gone` : Subscription expiree, supprimer de la base
-- `404 Not Found` : Endpoint invalide, supprimer
-- `413 Payload Too Large` : Reduire la taille du message
-
 ---
 
-## Flux utilisateur
+## Dependance Critique
 
-1. L'utilisateur visite la page de parametres ou recoit une invite
-2. Il clique sur "Activer les notifications"
-3. Le navigateur demande la permission
-4. Si accepte, le Service Worker s'abonne au push
-5. La subscription est envoyee et stockee en base
-6. Quand un evenement se produit (resultat, enchere...) :
-   - Notification in-app creee (comme avant)
-   - Push notification envoyee a tous les appareils abonnes
-7. L'utilisateur recoit une banniere systeme meme si l'app est fermee
-8. Au clic, l'app s'ouvre sur la page pertinente
+**Rappel** : Cette implementation necessite d'abord la configuration des secrets VAPID. Sans ces cles, les notifications push ne peuvent pas fonctionner.
 
----
-
-## Estimation
-
-- **Complexite** : Moyenne a elevee (Service Worker, chiffrement, gestion d'erreurs)
-- **Fichiers impactes** : ~8-10 fichiers
-- **Dependances** : Aucune nouvelle dependance npm (utilisation native de l'API Web Push dans le SW, et Deno pour l'edge function)
-
----
-
-## Limitations connues
-
-1. **iOS Safari** : Requiert iOS 16.4+, PWA installee, et permission explicite
-2. **Firefox** : Support complet mais implementation legerement differente
-3. **Incognito/Private** : Push non disponible en navigation privee
-4. **Batterie** : Les notifications push peuvent affecter l'autonomie sur mobile
