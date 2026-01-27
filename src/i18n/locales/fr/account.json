@@ -32,8 +32,6 @@
     "description": "Gérez vos informations personnelles",
     "email": "Email",
     "managerName": "Nom du manager",
-    "sponsor": "Sponsor",
-    "sponsorPlaceholder": "Nom de votre sponsor",
     "updating": "Mise à jour...",
     "updateSuccess": "Profil mis à jour avec succès"
   },
@@ -51,6 +49,27 @@
     "title": "Personnalisation",
     "description": "Personnalisez votre expérience",
     "comingSoon": "Bientôt disponible"
+  },
+  "sponsorJersey": {
+    "title": "Sponsor & Maillot",
+    "description": "Gérez votre sponsor et votre maillot d'équipe",
+    "descriptionWithSeason": "Saison {{season}} - Gérez votre sponsor et votre maillot d'équipe",
+    "noSeason": "Aucune saison sélectionnée. Veuillez sélectionner une saison pour gérer votre sponsor.",
+    "sponsorName": "Nom du sponsor",
+    "sponsorPlaceholder": "Entrez le nom de votre sponsor",
+    "sponsorHint": "Ce nom sera affiché à côté de votre équipe.",
+    "uploadJersey": "Importer",
+    "changeJersey": "Changer",
+    "update": "Mettre à jour",
+    "updating": "Mise à jour...",
+    "updateSuccess": "Sponsor mis à jour avec succès",
+    "updateError": "Erreur lors de la mise à jour du sponsor",
+    "uploadSuccess": "Maillot importé avec succès",
+    "uploadError": "Erreur lors de l'import du maillot",
+    "deleteSuccess": "Maillot supprimé",
+    "deleteError": "Erreur lors de la suppression du maillot",
+    "invalidFileType": "Veuillez importer un fichier image",
+    "fileTooLarge": "Fichier trop volumineux (max 2 Mo)"
   },
   "buttons": {
     "updateProfile": "Mettre à jour le profil",

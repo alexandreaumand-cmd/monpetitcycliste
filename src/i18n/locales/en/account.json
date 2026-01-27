@@ -32,8 +32,6 @@
     "description": "Manage your personal information",
     "email": "Email",
     "managerName": "Manager Name",
-    "sponsor": "Sponsor",
-    "sponsorPlaceholder": "Your sponsor name",
     "updating": "Updating...",
     "updateSuccess": "Profile updated successfully"
   },
@@ -51,6 +49,27 @@
     "title": "Customization",
     "description": "Customize your experience",
     "comingSoon": "Coming soon"
+  },
+  "sponsorJersey": {
+    "title": "Sponsor & Jersey",
+    "description": "Manage your sponsor and team jersey",
+    "descriptionWithSeason": "Season {{season}} - Manage your sponsor and team jersey",
+    "noSeason": "No season selected. Please select a season to manage your sponsor.",
+    "sponsorName": "Sponsor Name",
+    "sponsorPlaceholder": "Enter your sponsor name",
+    "sponsorHint": "This name will be displayed alongside your team.",
+    "uploadJersey": "Upload",
+    "changeJersey": "Change",
+    "update": "Update Sponsor",
+    "updating": "Updating...",
+    "updateSuccess": "Sponsor updated successfully",
+    "updateError": "Error updating sponsor",
+    "uploadSuccess": "Jersey uploaded successfully",
+    "uploadError": "Error uploading jersey",
+    "deleteSuccess": "Jersey removed",
+    "deleteError": "Error removing jersey",
+    "invalidFileType": "Please upload an image file",
+    "fileTooLarge": "File is too large (max 2MB)"
   },
   "buttons": {
     "updateProfile": "Update Profile",

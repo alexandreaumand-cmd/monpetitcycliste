@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Loader2, User, Lock, Palette } from "lucide-react";
 import { AvatarUploader } from "@/components/account/AvatarUploader";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
+import { SponsorJerseyEditor } from "@/components/account/SponsorJerseyEditor";
 
 export default function AccountPage() {
   const { t } = useTranslation('account');
@@ -19,9 +20,7 @@ export default function AccountPage() {
   
   // Form states
   const [nomManager, setNomManager] = useState("");
-  const [sponsor, setSponsor] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -45,7 +44,6 @@ export default function AccountPage() {
       if (managerData) {
         setManager(managerData);
         setNomManager(managerData.nom || "");
-        setSponsor(managerData.sponsor || "");
         setAvatarUrl(managerData.avatar_url || null);
       }
     } catch (error) {
@@ -65,7 +63,6 @@ export default function AccountPage() {
         .from("managers")
         .update({
           nom: nomManager,
-          sponsor: sponsor,
         })
         .eq("id", manager.id);
 
@@ -101,7 +98,6 @@ export default function AccountPage() {
       if (error) throw error;
 
       toast.success(t('security.passwordChanged'));
-      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (error) {
@@ -119,8 +115,6 @@ export default function AccountPage() {
       </div>
     );
   }
-
-  const userInitials = manager?.nom ? manager.nom.substring(0, 2).toUpperCase() : "?";
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -169,17 +163,6 @@ export default function AccountPage() {
             />
           </div>
 
-          {/* Sponsor */}
-          <div className="space-y-2">
-            <Label htmlFor="sponsor">{t('profile.sponsor')}</Label>
-            <Input
-              id="sponsor"
-              value={sponsor}
-              onChange={(e) => setSponsor(e.target.value)}
-              placeholder={t('profile.sponsorPlaceholder')}
-            />
-          </div>
-
           <Button 
             onClick={handleUpdateProfile} 
             disabled={updating}
@@ -196,6 +179,14 @@ export default function AccountPage() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Section Sponsor & Maillot */}
+      {manager && (
+        <SponsorJerseyEditor 
+          managerId={manager.id} 
+          managerName={manager.nom || ""} 
+        />
+      )}
       
       {/* Section Sécurité */}
       <Card className="mb-6">
