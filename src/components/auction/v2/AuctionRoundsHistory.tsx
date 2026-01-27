@@ -97,7 +97,7 @@ export function AuctionRoundsHistory({ phaseId, managerId, leagueId, onBack }: A
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background border-b p-4">
+      <div className="sticky top-0 z-10 bg-background border-b p-4 safe-top">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />

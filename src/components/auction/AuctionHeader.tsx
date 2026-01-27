@@ -45,7 +45,7 @@ export const AuctionHeader = ({ auction, phaseStatus, onRefresh }: AuctionHeader
   }, [auction.deadline_at]);
 
   return (
-    <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+    <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b safe-top">
       <div className="container py-3 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2">

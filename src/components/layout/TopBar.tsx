@@ -17,7 +17,7 @@ export function TopBar({ onSignOut, manager, isAdmin }: TopBarProps) {
   const { leagueId } = useLeague();
   
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background">
+    <header className="sticky top-0 z-40 w-full border-b bg-background safe-top">
       <div className="flex h-14 items-center gap-4 px-4">
         <SidebarTrigger />
         

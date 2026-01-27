@@ -93,7 +93,7 @@ export function AuctionHeader({
   };
 
   return (
-    <div className="sticky top-0 z-20 border-b bg-gradient-to-r from-background via-background/95 to-background backdrop-blur-sm shadow-sm">
+    <div className="sticky top-0 z-20 border-b bg-gradient-to-r from-background via-background/95 to-background backdrop-blur-sm shadow-sm safe-top">
       <div className="container mx-auto max-w-7xl px-4 py-4">
         {/* Phase indicator */}
         {phase_index && (

@@ -88,7 +88,7 @@ export function AuctionHeaderMobile({
   }, [deadline_at]);
 
   return (
-    <div className="sticky top-0 z-10 bg-background">
+    <div className="sticky top-0 z-10 bg-background safe-top">
       {/* Logo Header */}
       <div className="flex flex-col items-center py-2 border-b border-border/50 bg-background/95 backdrop-blur gap-1">
         <Link to="/dashboard/home" className="flex items-center">
