@@ -1,122 +1,109 @@
 
-# Implémentation des notifications push pour les résultats
+# Correction des notifications dupliquées pour les résultats
 
-## Objectif
-Ajouter l'envoi de notifications push PWA quand de nouveaux résultats de course sont ajoutés, en complément des notifications in-app déjà existantes.
+## Problème identifié
 
-## Analyse technique
+Ludo est dans 3 ligues (Legacy, Early Adopters, MPC 2026). Le système actuel crée une notification **par ligue** où le manager est membre, car le `DISTINCT ON (m.id)` est appliqué à chaque itération de boucle séparément.
 
-### Situation actuelle
-- Le trigger PostgreSQL `notify_results_added` crée des notifications in-app dans la table `notifications`
-- La préférence utilisateur "résultats" existe et est mappée dans l'Edge Function
-- **Mais** aucun appel à `send-push-notification` n'est effectué pour les résultats
+## Solution technique
 
-### Approche recommandée
-Utiliser un **trigger PostgreSQL avec `pg_net`** pour appeler l'Edge Function directement depuis la base de données. C'est plus fiable qu'un appel frontend car les résultats sont généralement importés par des processus automatiques/admin.
+### 1. Refactoriser le trigger `notify_results_added`
 
-## Plan d'implémentation
-
-### 1. Créer une migration SQL pour le trigger push
-
-Ajouter une fonction et un trigger qui appellent l'Edge Function `send-push-notification` via `pg_net.http_post` :
+Au lieu de boucler sur chaque ligue et insérer des notifications avec `DISTINCT ON`, on doit:
+- Collecter d'abord tous les managers uniques concernés
+- Puis créer une seule notification par manager (avec la première ligue trouvée dans les metadata)
 
 ```sql
--- Fonction pour envoyer les push notifications quand des résultats sont ajoutés
-CREATE OR REPLACE FUNCTION public.send_results_push_notification()
-RETURNS TRIGGER
+CREATE OR REPLACE FUNCTION public.notify_results_added()
+RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_course_name TEXT;
-  v_type_label TEXT;
-  v_supabase_url TEXT;
-  v_service_key TEXT;
+  v_course_nom text;
+  v_coureur_nom text;
+  v_phase_id uuid;
+  v_saison_id uuid;
+  v_etape_label text;
+  v_points integer;
 BEGIN
-  -- Anti-spam: ne notifier que pour le premier résultat d'un type donné
-  IF EXISTS (
-    SELECT 1 FROM notifications 
-    WHERE type = 'results_added' 
-    AND metadata->>'course_id' = NEW.course_id
-    AND metadata->>'type_classement' = NEW.type_classement::TEXT
-    AND COALESCE((metadata->>'etape_numero')::INTEGER, -1) = COALESCE(NEW.etape_numero, -1)
-    AND created_at > NOW() - INTERVAL '1 hour'
-    AND created_at < NOW() - INTERVAL '1 second' -- Exclure la notification qu'on vient de créer
-  ) THEN
-    RETURN NEW;
+  -- Filtres existants (position = 1, type = Etape ou General)
+  IF NEW.position != 1 THEN RETURN NEW; END IF;
+  IF NEW.type_classement::text NOT IN ('Etape', 'General') THEN RETURN NEW; END IF;
+
+  -- Récupérer les infos de la course
+  SELECT c.nom, c.phase_id, p.saison_id 
+  INTO v_course_nom, v_phase_id, v_saison_id
+  FROM courses c
+  LEFT JOIN phases p ON p.id = c.phase_id
+  WHERE c.id = NEW.course_id;
+
+  -- Récupérer le nom du coureur
+  SELECT nom INTO v_coureur_nom FROM coureurs WHERE id = NEW.coureur_id;
+
+  -- Construire le label d'étape
+  IF NEW.type_classement::text = 'Etape' AND NEW.etape_numero IS NOT NULL THEN
+    v_etape_label := 'Étape ' || NEW.etape_numero;
+  ELSIF NEW.type_classement::text = 'General' THEN
+    v_etape_label := 'Classement Général';
+  ELSE
+    v_etape_label := NEW.type_classement::text;
   END IF;
 
-  -- Récupérer le nom de la course
-  SELECT nom INTO v_course_name FROM courses WHERE id = NEW.course_id;
-  
-  -- Formater le type de classement
-  v_type_label := CASE
-    WHEN NEW.type_classement = 'Etape' THEN 'Étape ' || COALESCE(NEW.etape_numero::TEXT, '')
-    WHEN NEW.type_classement = 'GC' THEN 'Classement Général'
-    ELSE NEW.type_classement::TEXT
-  END;
+  v_points := NEW.points;
 
-  -- Appeler l'Edge Function via pg_net (broadcast à tous les utilisateurs)
-  PERFORM net.http_post(
-    url := current_setting('app.supabase_url') || '/functions/v1/send-push-notification',
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || current_setting('app.service_role_key')
-    ),
-    body := jsonb_build_object(
-      'broadcast', true,
-      'title', '🏁 Nouveaux résultats',
-      'message', v_type_label || ' - ' || COALESCE(v_course_name, 'Course'),
-      'type', 'results_added',
-      'metadata', jsonb_build_object(
-        'course_id', NEW.course_id,
-        'type_classement', NEW.type_classement::TEXT,
-        'etape_numero', NEW.etape_numero
-      )
+  -- Insérer UNE SEULE notification par manager (première ligue trouvée)
+  INSERT INTO notifications (manager_id, type, title, message, metadata)
+  SELECT DISTINCT ON (m.id)
+    m.id,
+    'results_added',
+    '🏆 Victoire de ' || v_coureur_nom,
+    v_coureur_nom || ' remporte ' || v_etape_label || ' sur ' || v_course_nom || 
+      ' (' || COALESCE(v_points::text || ' pts', '0 pts') || ')',
+    jsonb_build_object(
+      'course_id', NEW.course_id,
+      'coureur_id', NEW.coureur_id,
+      'type_classement', NEW.type_classement::text,
+      'etape_numero', NEW.etape_numero,
+      'points', v_points,
+      'race_name', COALESCE(v_course_nom, 'la course'),
+      'league_id', ls.league_id,
+      'league_name', l.name
     )
-  );
-  
+  FROM league_scopes ls
+  JOIN leagues l ON l.id = ls.league_id
+  JOIN league_members lm ON lm.league_id = ls.league_id
+  JOIN managers m ON m.user_id = lm.user_id
+  WHERE l.status = 'active'
+    AND ls.season_id = v_saison_id
+    AND (ls.phases IS NULL OR array_length(ls.phases, 1) IS NULL OR v_phase_id = ANY(ls.phases))
+  ORDER BY m.id, ls.league_id  -- ORDER BY manager puis ligue pour DISTINCT ON
+  ON CONFLICT DO NOTHING;
+
   RETURN NEW;
 END;
 $$;
-
--- Créer le trigger (après le trigger existant des notifications in-app)
-CREATE TRIGGER trigger_send_results_push
-  AFTER INSERT ON public.race_results
-  FOR EACH ROW
-  EXECUTE FUNCTION public.send_results_push_notification();
 ```
 
-### 2. Alternative plus simple : modifier le trigger existant
+### 2. Améliorer les push notifications dans l'import CSV
 
-Si `pg_net` n'est pas disponible, on peut ajouter l'appel push directement dans le code d'import des résultats (côté admin ou Edge Function d'import), similaire à ce qui est fait pour les startlists.
+Le code actuel envoie potentiellement plusieurs push si plusieurs types de classement sont importés. On devrait:
+- Limiter à 1 push par course (pas par type de classement)
+- Ou au moins ne pas envoyer de push pour les porteurs de maillots (cohérent avec le trigger in-app)
 
-Chercher où les résultats sont importés/créés et ajouter :
+Modification dans `admin-import-race-results-csv/index.ts`:
+- Filtrer pour n'envoyer que pour 'Etape' et 'General' (pas les porteurs de maillots)
+- Envoyer 1 seul push par course si plusieurs types sont importés
 
-```typescript
-// Après l'import des résultats
-await supabase.functions.invoke('send-push-notification', {
-  body: {
-    broadcast: true,
-    title: '🏁 Nouveaux résultats',
-    message: `${typeLabel} - ${courseName}`,
-    type: 'results_added',
-    metadata: { course_id, type_classement, etape_numero }
-  }
-});
-```
+## Résumé des modifications
 
-## Fichiers à modifier
-
-1. **Nouvelle migration SQL** : Créer le trigger `send_results_push_notification`
-   - OU identifier le code d'import des résultats et y ajouter l'appel
-
-2. **Aucun changement requis** sur :
-   - `send-push-notification/index.ts` (déjà prêt avec `getPreferenceKey`)
-   - `usePushNotifications.ts` (préférences déjà gérées)
-   - `sw-push.js` (gère déjà `results_added`)
+| Fichier | Changement |
+|---------|------------|
+| Migration SQL | Refactoriser `notify_results_added` pour dédupliquer globalement par manager |
+| `admin-import-race-results-csv/index.ts` | Filtrer les push pour Etape/General uniquement, 1 push max par course |
 
 ## Résultat attendu
-- Les utilisateurs avec les notifications push activées et la préférence "résultats" cochée recevront une notification push quand de nouveaux résultats sont ajoutés
-- Anti-spam : une seule notification par course/étape/type de classement par heure
+
+- **Notifications in-app** : 1 seule notification par manager, quel que soit le nombre de ligues
+- **Notifications push** : 1 seule notification par course/type de classement pertinent (Etape ou General)
