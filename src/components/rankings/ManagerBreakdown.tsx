@@ -247,7 +247,7 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-3">
-            <Avatar className="h-8 w-8">
+            <Avatar className="h-16 w-16">
               <AvatarImage src={managerInfo?.avatar_url || undefined} alt={managerName} />
               <AvatarFallback>{managerName.substring(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
