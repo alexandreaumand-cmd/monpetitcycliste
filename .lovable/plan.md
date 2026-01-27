@@ -1,35 +1,34 @@
 
+# Ajout des boutons "Courses du jour" sous le calendrier mobile
 
-# Amélioration de l'équilibre visuel des vignettes Résultats
+## Objectif
 
-## Problème identifié
-
-Les informations de dates sont trop proéminentes visuellement :
-- Icône calendrier qui ajoute du poids visuel
-- Texte trop grand (text-sm)
-- La flèche "→" ajoute de la longueur
+Ajouter une section sous le calendrier mobile avec un titre "Aujourd'hui" et un bouton par course se déroulant ce jour.
 
 ---
 
 ## Aperçu visuel
 
-### Avant
-
 ```text
 ┌─────────────────────────────────────────┐
-│ Clàssica Comunitat Valencian    [1.1]   │
-│ 📅 25 janv. → 25 janv.                  │  ← Trop visible
-│ 🏆 Dylan GROENEWEGEN                    │
+│           Janvier 2026                  │
+│   [< ]      Aujourd'hui      [ >]       │
+├─────────────────────────────────────────┤
+│  L   M   M   J   V   S   D              │
+│ ...                                     │
+│ 26  27● 28  29  30  31                  │
+├─────────────────────────────────────────┤
+│  ● WorldTour  ● ProSeries  ● .1  ...    │
 └─────────────────────────────────────────┘
-```
 
-### Après
+        ⬇️ NOUVELLE SECTION ⬇️
 
-```text
+  Aujourd'hui                    ← Titre unique
 ┌─────────────────────────────────────────┐
-│ Clàssica Comunitat Valencian    [1.1]   │
-│ 25 janv.                                │  ← Discret, sans icône
-│ 🏆 Dylan GROENEWEGEN                    │
+│  Volta ao Algarve              ✓        │
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│  AlUla Tour                             │
 └─────────────────────────────────────────┘
 ```
 
@@ -37,56 +36,53 @@ Les informations de dates sont trop proéminentes visuellement :
 
 ## Modifications
 
-### Fichier : `src/pages/ResultsPage.mobile.tsx`
+### Fichier : `src/components/startlist/StartlistCalendarMobile.tsx`
 
-#### Simplifier l'affichage des dates (lignes 208-216)
+#### 1. Calculer les courses du jour
 
-Remplacer :
+Ajouter un `useMemo` pour filtrer les courses d'aujourd'hui :
+
+```typescript
+const todayCourses = useMemo(() => {
+  const todayKey = format(new Date(), "yyyy-MM-dd");
+  return coursesByDay.get(todayKey) || [];
+}, [coursesByDay]);
+```
+
+#### 2. Ajouter la section après la légende
+
 ```tsx
-subtitle={
-  <div className="flex items-center gap-2 text-muted-foreground mt-1">
-    <Calendar className="h-4 w-4" />
-    <span className="text-sm">
-      {format(new Date(race.date_debut), 'd MMM', { locale: dateLocale })}
-      {' → '}
-      {format(new Date(race.date_fin), 'd MMM', { locale: dateLocale })}
-    </span>
+{/* Today's races - quick access */}
+{todayCourses.length > 0 && (
+  <div className="space-y-2 mt-4">
+    <h4 className="text-sm font-medium text-muted-foreground">Aujourd'hui</h4>
+    {todayCourses.map((course) => {
+      const isValidated = isPcsValidated(course.id);
+      return (
+        <button
+          key={course.id}
+          onClick={() => onSelectRace(course)}
+          className="w-full flex items-center gap-3 p-3 rounded-xl border bg-card hover:bg-muted/50 transition-colors text-left"
+        >
+          <span className="font-medium truncate flex-1">{course.nom}</span>
+          {isValidated && (
+            <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+          )}
+        </button>
+      );
+    })}
   </div>
-}
+)}
 ```
-
-Par :
-```tsx
-subtitle={
-  <span className="text-xs text-muted-foreground/70">
-    {race.date_debut === race.date_fin 
-      ? format(new Date(race.date_debut), 'd MMM', { locale: dateLocale })
-      : `${format(new Date(race.date_debut), 'd MMM', { locale: dateLocale })} - ${format(new Date(race.date_fin), 'd MMM', { locale: dateLocale })}`
-    }
-  </span>
-}
-```
-
-#### Supprimer l'import Calendar inutilisé (ligne 7)
-
-Retirer `Calendar` de la liste des imports lucide-react.
 
 ---
 
-## Changements appliqués
+## Résumé
 
-| Élément | Avant | Après |
-|---------|-------|-------|
-| Icône calendrier | Présente (📅) | Supprimée |
-| Taille texte | `text-sm` | `text-xs` |
-| Opacité | `text-muted-foreground` | `text-muted-foreground/70` |
-| Flèche | `→` | `-` (tiret) |
-| Course 1 jour | "25 janv. → 25 janv." | "25 janv." (pas de duplication) |
-| Espacement | `mt-1` + `gap-2` | Aucun (inline simple) |
-
----
-
-## Résultat attendu
-
-Les dates seront plus discrètes et l'attention sera portée sur le nom de la course et le vainqueur, créant un meilleur équilibre visuel.
+| Élément | Description |
+|---------|-------------|
+| Titre | "Aujourd'hui" affiché une seule fois |
+| Boutons | Un par course, avec le nom uniquement |
+| Validation | Icône verte si startlist validée |
+| Visibilité | Section masquée si aucune course aujourd'hui |
 
