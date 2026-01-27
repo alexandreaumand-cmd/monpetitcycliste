@@ -181,55 +181,7 @@ async function hkdf(
   return derivedBits;
 }
 
-// Create info for HKDF as per Web Push encryption spec
-function createInfo(type: string, clientPublicKey: Uint8Array, serverPublicKey: Uint8Array): ArrayBuffer {
-  const encoder = new TextEncoder();
-  const typeBytes = encoder.encode(type);
-  
-  // "Content-Encoding: " + type + "\0" + "P-256" + "\0" + client_public_key_length + client_public_key + server_public_key_length + server_public_key
-  const info = new Uint8Array(
-    18 + typeBytes.length + 1 + 5 + 1 + 2 + clientPublicKey.length + 2 + serverPublicKey.length
-  );
-  
-  let offset = 0;
-  
-  // "Content-Encoding: "
-  const prefix = encoder.encode('Content-Encoding: ');
-  info.set(prefix, offset);
-  offset += prefix.length;
-  
-  // type
-  info.set(typeBytes, offset);
-  offset += typeBytes.length;
-  
-  // null byte
-  info[offset++] = 0;
-  
-  // "P-256"
-  const curve = encoder.encode('P-256');
-  info.set(curve, offset);
-  offset += curve.length;
-  
-  // null byte
-  info[offset++] = 0;
-  
-  // client public key length (2 bytes, big endian)
-  info[offset++] = 0;
-  info[offset++] = clientPublicKey.length;
-  
-  // client public key
-  info.set(clientPublicKey, offset);
-  offset += clientPublicKey.length;
-  
-  // server public key length (2 bytes, big endian)
-  info[offset++] = 0;
-  info[offset++] = serverPublicKey.length;
-  
-  // server public key
-  info.set(serverPublicKey, offset);
-  
-  return toArrayBuffer(info);
-}
+// Note: createInfo function removed - RFC 8291 uses simple string format for CEK/Nonce derivation
 
 // Encrypt payload using aes128gcm content encoding
 async function encryptPayload(
@@ -281,13 +233,13 @@ async function encryptPayload(
 
   const ikm = await hkdf(toArrayBuffer(authSecretBytes), sharedSecretBits, toArrayBuffer(keyInfo), 32);
 
-  // Derive content encryption key
-  const cekInfo = createInfo('aes128gcm', clientPublicKeyBytes, serverPublicKey);
-  const contentEncryptionKey = await hkdf(toArrayBuffer(salt), ikm, cekInfo, 16);
+  // Derive content encryption key (RFC 8291: "Content-Encoding: aes128gcm\0")
+  const cekInfo = new TextEncoder().encode('Content-Encoding: aes128gcm\0');
+  const contentEncryptionKey = await hkdf(toArrayBuffer(salt), ikm, toArrayBuffer(cekInfo), 16);
 
-  // Derive nonce
-  const nonceInfo = createInfo('nonce', clientPublicKeyBytes, serverPublicKey);
-  const nonce = await hkdf(toArrayBuffer(salt), ikm, nonceInfo, 12);
+  // Derive nonce (RFC 8291: "Content-Encoding: nonce\0")
+  const nonceInfo = new TextEncoder().encode('Content-Encoding: nonce\0');
+  const nonce = await hkdf(toArrayBuffer(salt), ikm, toArrayBuffer(nonceInfo), 12);
 
   // Pad the payload (add padding delimiter 0x02 followed by zeros)
   const paddingLength = 0; // Minimal padding
