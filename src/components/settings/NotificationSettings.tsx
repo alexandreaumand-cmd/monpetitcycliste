@@ -1,12 +1,9 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Bell, Loader2, AlertCircle, Trophy, ListChecks, Gavel, Send, RotateCcw } from "lucide-react";
+import { Bell, Loader2, AlertCircle, Trophy, ListChecks, Gavel } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export function NotificationSettings() {
@@ -17,64 +14,10 @@ export function NotificationSettings() {
     isSubscribed,
     preferences,
     isLoading,
-    debugInfo,
     subscribe,
     unsubscribe,
     updatePreferences,
-    resetSubscription
   } = usePushNotifications();
-
-  const [isResetting, setIsResetting] = useState(false);
-
-  const [isSendingTest, setIsSendingTest] = useState(false);
-
-  const handleSendTestNotification = async () => {
-    setIsSendingTest(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Vous devez être connecté");
-        return;
-      }
-
-      console.log('[Test Push] Sending test notification for user:', user.id);
-
-      const response = await supabase.functions.invoke('send-push-notification', {
-        body: {
-          user_ids: [user.id],
-          title: "🚴 Test Notification",
-          message: "Si vous voyez ceci, les notifications fonctionnent !",
-          type: "results_added"
-        }
-      });
-
-      console.log('[Test Push] Response:', response);
-
-      if (response.error) {
-        console.error('[Test Push] Error:', response.error);
-        const errorMsg = response.error.message || response.error.code || "Erreur inconnue";
-        toast.error(`Échec: ${errorMsg}`);
-      } else {
-        console.log('[Test Push] Success:', response.data);
-        const data = response.data;
-        
-        if (data?.sent > 0) {
-          toast.success(`Notification envoyée ! (${data.sent} envoyée(s))`);
-        } else if (data?.code === 'NO_SUBS') {
-          toast.error("Aucun abonnement trouvé. Réactivez les notifications.");
-        } else if (data?.failed > 0) {
-          toast.error(`Échec d'envoi: ${data.errors?.[0]?.error || 'Erreur push'}`);
-        } else {
-          toast.info(`Résultat: ${data?.sent || 0} envoyée(s), ${data?.failed || 0} échec(s)`);
-        }
-      }
-    } catch (error) {
-      console.error('[Test Push] Exception:', error);
-      toast.error("Erreur réseau lors de l'envoi");
-    } finally {
-      setIsSendingTest(false);
-    }
-  };
 
   const handleTogglePush = async (enabled: boolean) => {
     if (enabled) {
@@ -100,23 +43,6 @@ export function NotificationSettings() {
     const success = await updatePreferences({ [key]: value });
     if (!success) {
       toast.error(t('notifications.updateError'));
-    }
-  };
-
-  const handleResetSubscription = async () => {
-    setIsResetting(true);
-    try {
-      const success = await resetSubscription();
-      if (success) {
-        toast.success("Abonnement réinitialisé avec succès !");
-      } else {
-        toast.error("Échec de la réinitialisation");
-      }
-    } catch (error) {
-      console.error('Reset error:', error);
-      toast.error("Erreur lors de la réinitialisation");
-    } finally {
-      setIsResetting(false);
     }
   };
 
@@ -249,48 +175,6 @@ export function NotificationSettings() {
                     checked={preferences.auctions}
                     onCheckedChange={(checked) => handlePreferenceChange('auctions', checked)}
                   />
-                </div>
-
-                {/* Test notification button */}
-                <div className="pt-4 border-t space-y-3">
-                  <Button
-                    variant="outline"
-                    onClick={handleSendTestNotification}
-                    disabled={isSendingTest}
-                    className="w-full"
-                  >
-                    {isSendingTest ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4 mr-2" />
-                    )}
-                    Envoyer une notification test
-                  </Button>
-
-                  {/* Debug info and reset button */}
-                  <div className="text-xs text-muted-foreground bg-muted p-3 rounded space-y-2">
-                    <p className="font-medium">Debug Info:</p>
-                    <p>Permission: <span className="font-mono">{permission}</span></p>
-                    <p>SW State: <span className="font-mono">{debugInfo.swState}</span></p>
-                    <p>Endpoint: <span className="font-mono break-all">
-                      {debugInfo.endpoint ? `${debugInfo.endpoint.substring(0, 60)}...` : 'none'}
-                    </span></p>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleResetSubscription}
-                      disabled={isResetting || isLoading}
-                      className="w-full mt-2"
-                    >
-                      {isResetting ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                      )}
-                      Réinitialiser l'abonnement
-                    </Button>
-                  </div>
                 </div>
               </div>
             )}
