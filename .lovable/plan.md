@@ -1,91 +1,83 @@
 
+# Implémentation Complète des Notifications Push PWA
 
-# Implementation Complete des Notifications Push
+## Résumé
 
-## Resume
-
-Ce plan couvre l'implementation complete des notifications push PWA, incluant les preferences utilisateur pour activer/desactiver les types de notifications (resultats, startlists, encheres).
-
----
-
-## Etape 1 : Configuration des Secrets VAPID
-
-### Prerequis
-Avant toute implementation, les cles VAPID doivent etre configurees :
-- `VAPID_PUBLIC_KEY` : Cle publique (utilisee par le frontend pour s'abonner)
-- `VAPID_PRIVATE_KEY` : Cle privee (utilisee par le serveur pour signer les notifications)
-- `VAPID_SUBJECT` : Email de contact (ex: `mailto:contact@monpetitcycliste.com`)
-
-Pour generer ces cles, executez localement :
-```text
-npx web-push generate-vapid-keys
-```
+Ce plan implémente les notifications push pour l'application Mon Petit Cycliste. Les utilisateurs pourront recevoir des alertes même lorsque l'application est fermée, avec la possibilité de choisir les types de notifications qu'ils souhaitent recevoir (résultats, startlists, enchères).
 
 ---
 
-## Etape 2 : Base de Donnees - Preferences Utilisateur
+## Étape 1 : Configuration des Secrets VAPID
 
-### Nouvelle colonne sur `push_subscriptions`
+Configurer les 3 secrets nécessaires dans le projet :
 
-Ajouter une colonne JSON pour stocker les preferences de notification par type :
+| Secret | Valeur |
+|--------|--------|
+| VAPID_PUBLIC_KEY | BCfsjfWS47JE_QBAn1vRb72fPsfHbg6DeGYx7M0zZLb8FDj9zG3Ezk24TP6kb_OhJ5EMLzClH1NbayZ2ehMsp7U |
+| VAPID_PRIVATE_KEY | nOTidJr-c4cAFBff8AClqtCYztRR7Ii2hXs9abh2cD4 |
+| VAPID_SUBJECT | mailto:alexandre.aumand@gmail.com |
+
+---
+
+## Étape 2 : Migration Base de Données
+
+Ajouter la colonne `preferences` à la table `push_subscriptions` existante pour stocker les préférences par type de notification :
 
 ```sql
 ALTER TABLE public.push_subscriptions 
-ADD COLUMN preferences jsonb DEFAULT '{"results": true, "startlists": true, "auctions": true}'::jsonb;
+ADD COLUMN IF NOT EXISTS preferences jsonb 
+DEFAULT '{"results": true, "startlists": true, "auctions": true}'::jsonb;
 ```
 
-Cette structure permet :
-- `results`: Notifications de victoire (type `results_added`)
-- `startlists`: Notifications de validation de startlist (type `startlist_validated`)
-- `auctions`: Notifications d'encheres (types `auction_opened`, `auction_closed`, `auction_validation`)
+Structure des préférences :
+- `results` : Notifications de victoire des coureurs
+- `startlists` : Notifications de validation de startlist  
+- `auctions` : Notifications d'ouverture/fermeture des enchères
 
 ---
 
-## Etape 3 : Service Worker Custom
+## Étape 3 : Service Worker Push
 
-### Fichier : `public/sw-push.js`
+Créer le fichier `public/sw-push.js` qui sera injecté dans le Service Worker généré par vite-plugin-pwa.
 
-Ce Service Worker sera injecte dans le SW genere par vite-plugin-pwa pour gerer les evenements push.
+Fonctionnalités :
+- Écouter l'événement `push` pour afficher les notifications système
+- Gérer le clic sur la notification pour naviguer vers la bonne page
+- Personnalisation avec l'icône de l'app
 
-Fonctionnalites :
-- Ecouter l'evenement `push` pour afficher les notifications systeme
-- Gerer le clic sur la notification pour ouvrir l'app sur la bonne page
-- Personnalisation de l'icone et du badge
-
-```text
-Logique du clic :
-- results_added -> /dashboard/resultats
-- startlist_validated -> /dashboard/startlist
-- auction_* -> /dashboard/encheres?leagueId=...
-```
+Logique de navigation au clic :
+| Type | Destination |
+|------|-------------|
+| results_added | /dashboard/resultats |
+| startlist_validated | /dashboard/startlist |
+| auction_* | /dashboard/encheres?leagueId=... |
 
 ---
 
-## Etape 4 : Configuration Vite
+## Étape 4 : Modification vite.config.ts
 
-### Modification : `vite.config.ts`
+Ajouter la configuration `importScripts` dans workbox pour charger le Service Worker custom :
 
-Configurer `vite-plugin-pwa` pour importer le Service Worker custom via `importScripts`.
-
-```text
+```javascript
 workbox: {
-  importScripts: ['sw-push.js']
+  importScripts: ['sw-push.js'],
+  // ... reste de la config existante
 }
 ```
 
 ---
 
-## Etape 5 : Hook Frontend
+## Étape 5 : Hook usePushNotifications
 
-### Nouveau fichier : `src/hooks/usePushNotifications.ts`
+Créer `src/hooks/usePushNotifications.ts` pour gérer l'abonnement et les préférences.
 
-Interface retournee :
+Interface exposée :
 ```text
 {
   isSupported: boolean         // Navigateur compatible
   permission: string           // 'granted', 'denied', 'default'
   isSubscribed: boolean        // Abonnement actif
-  preferences: {               // Preferences par type
+  preferences: {               // Préférences par type
     results: boolean
     startlists: boolean
     auctions: boolean
@@ -97,167 +89,158 @@ Interface retournee :
 }
 ```
 
-Le hook utilise :
-- `navigator.serviceWorker.ready` pour obtenir le SW actif
-- `pushManager.subscribe()` avec la cle publique VAPID
-- Stockage/suppression de la subscription dans `push_subscriptions`
+Le hook :
+- Vérifie le support du navigateur
+- Gère l'abonnement via `pushManager.subscribe()` avec la clé publique VAPID
+- Stocke/supprime la subscription dans `push_subscriptions`
+- Permet la mise à jour des préférences
 
 ---
 
-## Etape 6 : Composant UI de Preferences
+## Étape 6 : Composant NotificationSettings
 
-### Nouveau fichier : `src/components/settings/NotificationSettings.tsx`
+Créer `src/components/settings/NotificationSettings.tsx` avec l'interface suivante :
 
-Ce composant sera integre dans la page de profil (`AccountPage.tsx`) comme nouvelle section.
-
-Design propose :
 ```text
 +--------------------------------------------------+
 | 🔔 Notifications                                 |
-| Gerez vos preferences de notification            |
+| Gérez vos préférences de notification            |
 +--------------------------------------------------+
 |                                                  |
 | [Switch] Activer les notifications push          |
-|          Recevez des alertes meme hors de l'app  |
+|          Recevez des alertes même hors de l'app  |
 |                                                  |
 | --- Types de notifications ---                   |
+| (visibles uniquement si push activé)             |
 |                                                  |
-| [Switch] Resultats de course                     |
+| [Switch] Résultats de course                     |
 |          Victoires de vos coureurs               |
 |                                                  |
-| [Switch] Startlists validees                     |
+| [Switch] Startlists validées                     |
 |          Nouvelles startlists disponibles        |
 |                                                  |
-| [Switch] Encheres                                |
-|          Ouverture et cloture des rounds         |
+| [Switch] Enchères                                |
+|          Ouverture et fermeture des rounds       |
 |                                                  |
 +--------------------------------------------------+
 ```
 
-Etats possibles :
-- Push non supporte : Message explicatif
-- Permission refusee : Instructions pour reactiver
-- Non abonne : Bouton pour activer
-- Abonne : Switches pour chaque type
+États gérés :
+- Push non supporté : Message explicatif
+- Permission refusée : Instructions pour réactiver dans le navigateur
+- Non abonné : Switch pour activer
+- Abonné : Switches pour chaque type de notification
 
 ---
 
-## Etape 7 : Edge Function d'Envoi
+## Étape 7 : Intégration dans AccountPage
 
-### Nouveau fichier : `supabase/functions/send-push-notification/index.ts`
-
-Responsabilites :
-1. Recevoir le payload (user_ids, title, message, type, metadata)
-2. Filtrer les subscriptions selon le type et les preferences
-3. Envoyer les notifications via Web Push
-4. Supprimer les subscriptions expirees (codes 404, 410)
-
-Protocole Web Push :
-- Chiffrement du payload avec les cles p256dh/auth
-- Signature VAPID avec la cle privee
-- POST vers l'endpoint du navigateur
+Ajouter une nouvelle section dans `src/pages/AccountPage.tsx` entre "Sécurité" et "Personnalisation" utilisant le composant `NotificationSettings`.
 
 ---
 
-## Etape 8 : Integration avec Notifications Existantes
+## Étape 8 : Edge Function send-push-notification
 
-### Modification : `supabase/functions/_shared/notifications.ts`
+Créer `supabase/functions/send-push-notification/index.ts` pour envoyer les notifications.
 
-Apres l'insertion des notifications in-app, appeler l'edge function `send-push-notification` pour envoyer les push.
-
-```text
-Flux :
-1. Creer notification in-app (comme avant)
-2. Appeler send-push-notification avec :
-   - user_ids des destinataires
-   - type de notification
-   - titre et message
-   - metadata (pour le deep link)
+Paramètres d'entrée :
+```json
+{
+  "user_ids": ["uuid1", "uuid2"],
+  "title": "Titre de la notification",
+  "message": "Corps du message",
+  "type": "results_added",
+  "metadata": { "course_id": "...", "league_id": "..." }
+}
 ```
 
-### Triggers PostgreSQL
-
-Pour les triggers `notify_results_added` et `notify_startlist_validated`, ajouter un appel HTTP vers l'edge function apres l'insertion des notifications.
-
-Option alternative : Creer un trigger `AFTER INSERT ON notifications` qui appelle automatiquement l'edge function.
+Logique :
+1. Récupérer les subscriptions des user_ids fournis
+2. Filtrer selon le type et les préférences utilisateur
+3. Envoyer les notifications via le protocole Web Push
+4. Supprimer les subscriptions expirées (erreurs 404, 410)
 
 ---
 
-## Etape 9 : Traductions i18n
+## Étape 9 : Intégration avec le système de notifications existant
 
-### Modifications : `src/i18n/locales/fr/account.json` et `en/account.json`
+Modifier `supabase/functions/_shared/notifications.ts` pour appeler l'edge function `send-push-notification` après la création des notifications in-app.
 
-Nouvelles cles :
+Flux complet :
+1. Événement déclenché (résultat, startlist, enchère)
+2. Création notification in-app (existant)
+3. Appel `send-push-notification` avec les user_ids et le type
+4. Utilisateurs abonnés reçoivent la notification système
+
+---
+
+## Étape 10 : Traductions i18n
+
+Ajouter les traductions dans les fichiers account.json (FR et EN) :
+
 ```json
 {
   "notifications": {
     "title": "Notifications",
-    "description": "Gerez vos preferences de notification",
+    "description": "Gérez vos préférences de notification",
     "enablePush": "Activer les notifications push",
-    "enablePushDescription": "Recevez des alertes meme hors de l'application",
+    "enablePushDescription": "Recevez des alertes même hors de l'application",
     "types": {
-      "results": "Resultats de course",
+      "results": "Résultats de course",
       "resultsDescription": "Victoires de vos coureurs",
-      "startlists": "Startlists validees",
+      "startlists": "Startlists validées",
       "startlistsDescription": "Nouvelles startlists disponibles",
-      "auctions": "Encheres",
-      "auctionsDescription": "Ouverture et cloture des rounds"
+      "auctions": "Enchères",
+      "auctionsDescription": "Ouverture et fermeture des rounds"
     },
     "notSupported": "Votre navigateur ne supporte pas les notifications push",
-    "denied": "Vous avez bloque les notifications. Pour les reactiver, modifiez les parametres de votre navigateur.",
-    "iosInstructions": "Sur iOS, installez d'abord l'app sur votre ecran d'accueil"
+    "denied": "Vous avez bloqué les notifications. Pour les réactiver, modifiez les paramètres de votre navigateur.",
+    "iosInstructions": "Sur iOS, installez d'abord l'app sur votre écran d'accueil"
   }
 }
 ```
 
 ---
 
-## Resume des Fichiers
-
-### Fichiers a creer
+## Fichiers à Créer
 
 | Fichier | Description |
 |---------|-------------|
 | `public/sw-push.js` | Service Worker pour recevoir les push |
 | `src/hooks/usePushNotifications.ts` | Hook de gestion des abonnements |
-| `src/components/settings/NotificationSettings.tsx` | UI des preferences |
+| `src/components/settings/NotificationSettings.tsx` | UI des préférences |
 | `supabase/functions/send-push-notification/index.ts` | Edge function d'envoi |
 
-### Fichiers a modifier
+## Fichiers à Modifier
 
 | Fichier | Modification |
 |---------|--------------|
 | `vite.config.ts` | Ajouter `importScripts` pour le SW custom |
-| `src/pages/AccountPage.tsx` | Integrer NotificationSettings |
+| `src/pages/AccountPage.tsx` | Intégrer NotificationSettings |
 | `supabase/functions/_shared/notifications.ts` | Appeler send-push-notification |
 | `src/i18n/locales/fr/account.json` | Traductions FR |
 | `src/i18n/locales/en/account.json` | Traductions EN |
-| Migration SQL | Ajouter colonne `preferences` |
 
 ---
 
-## Flux Complet
+## Section Technique
 
-```text
-1. Utilisateur va sur /dashboard/compte
-2. Section "Notifications" affichee
-3. Clic "Activer les notifications push"
-4. Navigateur demande la permission
-5. Si accepte :
-   a. Service Worker s'abonne au push
-   b. Subscription stockee en base avec preferences par defaut
-6. Utilisateur peut basculer chaque type (resultats, startlists, encheres)
-7. Quand un evenement se produit :
-   a. Trigger/Edge function cree notification in-app
-   b. send-push-notification verifie les preferences
-   c. Push envoye aux abonnes ayant active ce type
-8. Utilisateur recoit banniere systeme meme app fermee
-9. Clic sur notification ouvre l'app sur la bonne page
-```
+### Protocole Web Push
 
----
+L'edge function `send-push-notification` utilisera la librairie `web-push` pour :
+1. Chiffrer le payload avec les clés `p256dh` et `auth` de chaque subscription
+2. Signer la requête avec la clé privée VAPID
+3. Envoyer via POST à l'endpoint du navigateur
 
-## Dependance Critique
+### Gestion des erreurs
 
-**Rappel** : Cette implementation necessite d'abord la configuration des secrets VAPID. Sans ces cles, les notifications push ne peuvent pas fonctionner.
+Les subscriptions retournant les codes suivants seront automatiquement supprimées :
+- `404` : Subscription non trouvée
+- `410` : Subscription expirée
+
+### Sécurité
+
+- Les clés VAPID sont stockées comme secrets (non accessibles côté client)
+- La clé publique est exposée uniquement pour l'abonnement
+- RLS policies existantes protègent les subscriptions par user_id
 
