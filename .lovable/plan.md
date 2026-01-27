@@ -1,91 +1,100 @@
 
 
-# Réduction de la section MAILLOTS et suppression des couleurs
-
-## Problème identifié
-
-D'après la capture d'écran, la section "MAILLOTS" a :
-1. Des polices trop grandes par rapport au classement de l'étape
-2. Les noms des managers ("Bubu", "Max") sont colorés en bleu/primary
-
----
+# Afficher la photo du manager + lien vers le profil dans le MobileDrawer
 
 ## Modifications à apporter
 
-### Fichier : `src/components/courses/CourseResultsDrawer.tsx`
+### Fichier : `src/components/mobile/MobileDrawer.tsx`
 
-**Lignes 73-93** - Composant `JerseyHoldersBar`
+**1. Ajouter les imports nécessaires**
+
+```tsx
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+```
+
+**2. Remplacer le bloc header (lignes 95-114)**
+
+Rendre toute la zone **cliquable** pour naviguer vers `/dashboard/compte` et afficher la **photo du manager**.
 
 | Élément | Avant | Après |
 |---------|-------|-------|
-| Emoji maillot | `text-lg w-6` | `text-sm w-5` |
-| Nom coureur | `font-medium truncate flex-1` | `font-medium truncate flex-1 text-xs` |
-| Équipe | `text-xs text-muted-foreground` | `text-[10px] text-muted-foreground` |
-| Manager | `text-xs text-primary font-medium` | `text-[10px] text-muted-foreground` |
-| Conteneur ligne | `text-sm` | `text-xs` |
-| Padding global | `p-3` | `p-2` |
-| Espacement lignes | `space-y-1.5` | `space-y-1` |
+| Conteneur | `<div>` statique | `<div>` cliquable avec `cursor-pointer` |
+| Icône | `<div>` avec icône User fixe | `<Avatar>` avec photo conditionnelle |
+| Action | Aucune | Navigation vers `/dashboard/compte` |
 
-### Code modifié
+**Code modifié :**
 
 ```tsx
-return (
-  <div className="bg-muted/30 rounded-lg p-2 border space-y-1.5">
-    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-      Maillots
-    </span>
-    <div className="space-y-1">
-      {holders.map((holder: any, idx: number) => (
-        <div key={idx} className="flex items-center gap-1.5 text-xs">
-          <span className="text-sm w-5 flex-shrink-0">{holder.icon}</span>
-          <span className="font-medium truncate flex-1">{holder.coureur_nom}</span>
-          <span className="text-[10px] text-muted-foreground truncate max-w-[70px]">
-            ({holder.equipe})
-          </span>
-          {holder.manager_nom && (
-            <span className="text-[10px] text-muted-foreground flex-shrink-0">
-              {holder.manager_nom}
-            </span>
-          )}
-        </div>
-      ))}
+<SheetHeader className="text-left pb-4">
+  <div 
+    className="flex items-center gap-3 mb-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors"
+    onClick={() => handleNavigate('/dashboard/compte')}
+  >
+    <Avatar className="w-12 h-12">
+      {manager?.avatar_url ? (
+        <AvatarImage src={manager.avatar_url} alt={manager.nom} />
+      ) : null}
+      <AvatarFallback className="bg-primary/10">
+        <User className="h-6 w-6 text-primary" />
+      </AvatarFallback>
+    </Avatar>
+    <div className="flex-1 min-w-0">
+      <SheetTitle className="text-base truncate">
+        {manager?.nom || "Manager"}
+      </SheetTitle>
+      {displaySponsor && (
+        <p className="text-xs text-muted-foreground truncate">
+          {displaySponsor}
+        </p>
+      )}
+      {isAdmin && (
+        <p className="text-xs text-secondary font-semibold">
+          Administrateur
+        </p>
+      )}
     </div>
   </div>
-);
+</SheetHeader>
 ```
 
 ---
 
-## Comparaison visuelle
+## Résultat visuel
 
 ### Avant
 ```text
-┌────────────────────────────────────────────────┐
-│ MAILLOTS                                       │
-│ 🟡  Jonathan MILAN      (Lidl - Trek)  Bubu   │  ← Gros, manager coloré
-│ 🟢  Jonathan MILAN      (Lidl - Trek)  Bubu   │
-│ ⚪  Milan FRETIN        (Cofidis)      Max    │
-└────────────────────────────────────────────────┘
+┌─────────────────────────────┐
+│  [👤]  Alex                 │  ← Pas cliquable, icône fixe
+│        BRU                  │
+├─────────────────────────────┤
+│  Classement                 │
+│  Mon Équipe                 │
+│  ...                        │
+└─────────────────────────────┘
 ```
 
 ### Après
 ```text
-┌───────────────────────────────────────────┐
-│ MAILLOTS                                  │
-│ 🟡 Jonathan MILAN   (Lidl - Trek) Bubu   │  ← Plus compact, manager gris
-│ 🟢 Jonathan MILAN   (Lidl - Trek) Bubu   │
-│ ⚪ Milan FRETIN     (Cofidis)     Max    │
-└───────────────────────────────────────────┘
+┌─────────────────────────────┐
+│  [📷]  Alex              →  │  ← Cliquable → page Mon Compte
+│        BRU                  │     Photo si disponible
+├─────────────────────────────┤
+│  Classement                 │
+│  Mon Équipe                 │
+│  ...                        │
+└─────────────────────────────┘
 ```
+
+- Clic sur la zone = navigation vers `/dashboard/compte`
+- Effet hover pour indiquer que c'est cliquable
+- Photo du manager affichée si `avatar_url` existe
+- Sinon, icône User en fallback (comme avant)
 
 ---
 
 ## Résumé des changements
 
-| Modification | Détail |
-|-------------|--------|
-| Taille polices | Réduites de ~20% |
-| Couleur manager | `text-primary` → `text-muted-foreground` |
-| Padding | `p-3` → `p-2` |
-| Espacement | `space-y-1.5` → `space-y-1` + `gap-1.5` |
+| Fichier | Modification |
+|---------|--------------|
+| `src/components/mobile/MobileDrawer.tsx` | Import Avatar + zone header cliquable avec photo conditionnelle |
 
