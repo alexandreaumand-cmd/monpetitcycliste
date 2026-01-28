@@ -166,47 +166,63 @@ export const ExportResultsImage = ({
     enabled: open && !isOneDay,
   });
 
-  // Query pour le classement des managers sur la course
+  // Query pour le classement des managers sur la course (2 requêtes séparées + agrégation JS)
   const { data: managerRanking, isLoading: loadingManagerRanking } = useQuery({
     queryKey: ["export-manager-ranking", course.course_id, etapeNumero, leagueId],
     queryFn: async () => {
-      let query = supabase
+      // 1. Récupérer tous les points de la course
+      let pointsQuery = supabase
         .from('points_ledger')
-        .select(`
-          points,
-          etape_numero,
-          rosters!inner(manager_id, league_id, managers!inner(nom))
-        `)
-        .eq('course_id', course.course_id)
-        .eq('rosters.phase_id', course.phase_id);
+        .select('coureur_id, points, etape_numero')
+        .eq('course_id', course.course_id);
+      
+      if (etapeNumero) {
+        pointsQuery = pointsQuery.lte('etape_numero', etapeNumero);
+      }
+      
+      const { data: pointsData, error: pointsError } = await pointsQuery;
+      if (pointsError) throw pointsError;
+      
+      // 2. Récupérer tous les rosters de la phase/league avec manager
+      let rostersQuery = supabase
+        .from('rosters')
+        .select('coureur_id, manager_id, managers!inner(nom)')
+        .eq('phase_id', course.phase_id);
       
       if (leagueId) {
-        query = query.eq('rosters.league_id', leagueId);
+        rostersQuery = rostersQuery.eq('league_id', leagueId);
       }
       
-      // Pour les courses à étapes, filtrer jusqu'à l'étape courante
-      if (etapeNumero) {
-        query = query.lte('etape_numero', etapeNumero);
+      const { data: rostersData, error: rostersError } = await rostersQuery;
+      if (rostersError) throw rostersError;
+      
+      // 3. Créer une map coureur -> manager
+      const coureurToManager = new Map<string, { managerId: string; managerNom: string }>();
+      for (const r of rostersData || []) {
+        if (r.coureur_id && r.manager_id) {
+          coureurToManager.set(r.coureur_id, {
+            managerId: r.manager_id,
+            managerNom: (r.managers as any)?.nom || 'Inconnu'
+          });
+        }
       }
       
-      const { data, error } = await query;
-      if (error) throw error;
-      
-      // Agréger par manager
+      // 4. Agréger les points par manager
       const managerTotals = new Map<string, { nom: string; total: number }>();
-      for (const row of data || []) {
-        const roster = row.rosters as any;
-        const managerId = roster.manager_id;
-        const managerNom = roster.managers.nom;
-        const current = managerTotals.get(managerId) || { nom: managerNom, total: 0 };
-        current.total += row.points;
-        managerTotals.set(managerId, current);
+      for (const p of pointsData || []) {
+        const mgr = coureurToManager.get(p.coureur_id);
+        if (mgr) {
+          const current = managerTotals.get(mgr.managerId) || { nom: mgr.managerNom, total: 0 };
+          current.total += p.points;
+          managerTotals.set(mgr.managerId, current);
+        }
       }
       
+      // 5. Trier et retourner top 10
       return Array.from(managerTotals.entries())
         .map(([id, { nom, total }]) => ({ manager_id: id, manager_nom: nom, total_points: total }))
         .sort((a, b) => b.total_points - a.total_points)
-        .slice(0, 5); // Top 5 managers
+        .slice(0, 10);
     },
     enabled: open && !!leagueId,
   });
@@ -566,25 +582,25 @@ export const ExportResultsImage = ({
             </div>
           )}
 
-          {/* CLASSEMENT MANAGERS */}
+          {/* CLASSEMENT MANAGERS - Compact Top 10 */}
           {managerRanking && managerRanking.length > 0 && (
             <div style={{
               marginTop: "30px",
               borderTop: "2px solid #FFD500",
               paddingTop: "20px",
             }}>
-              <p style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px", color: "#1a1a1a" }}>
+              <p style={{ fontSize: "18px", fontWeight: "600", marginBottom: "10px", color: "#1a1a1a" }}>
                 Classement Managers
               </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                 {managerRanking.map((m, idx) => (
                   <div key={m.manager_id} style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    padding: "10px 16px",
+                    padding: "8px 12px",
                     background: idx === 0 ? "#FEF3C7" : "#f9fafb",
-                    borderRadius: "6px",
-                    fontSize: "20px",
+                    borderRadius: "4px",
+                    fontSize: "16px",
                   }}>
                     <span>
                       {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}.`} {m.manager_nom}

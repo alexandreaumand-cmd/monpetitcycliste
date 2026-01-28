@@ -73,8 +73,7 @@ Deno.serve(async (req) => {
         .from('points_ledger')
         .select(`
           coureur_id,
-          points,
-          managers!inner(nom)
+          points
         `)
         .eq('course_id', course_id)
         .eq('type_classement', jersey.type)
@@ -125,6 +124,17 @@ Deno.serve(async (req) => {
           managerId = rosterData?.[0]?.manager_id || null;
         }
 
+        // Get manager name separately
+        let managerNom = null;
+        if (managerId) {
+          const { data: mgrData } = await supabase
+            .from('managers')
+            .select('nom')
+            .eq('id', managerId)
+            .maybeSingle();
+          managerNom = mgrData?.nom || null;
+        }
+
         bonuses.push({
           jersey_type: jersey.label.toLowerCase(),
           icon: jersey.icon,
@@ -132,7 +142,7 @@ Deno.serve(async (req) => {
           coureur_nom: coureurNom,
           equipe: equipe,
           manager_id: managerId,
-          manager_nom: (record.managers as any).nom,
+          manager_nom: managerNom,
           points: record.points,
           is_my_rider: currentManagerId && managerId ? managerId === currentManagerId : false
         });
