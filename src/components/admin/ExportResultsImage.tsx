@@ -160,9 +160,55 @@ export const ExportResultsImage = ({
         icon: jersey.icon,
         coureurs: { nom: jersey.coureur_nom },
         managers: { nom: jersey.manager_nom || null },
+        points: jersey.points,
       }));
     },
     enabled: open && !isOneDay,
+  });
+
+  // Query pour le classement des managers sur la course
+  const { data: managerRanking, isLoading: loadingManagerRanking } = useQuery({
+    queryKey: ["export-manager-ranking", course.course_id, etapeNumero, leagueId],
+    queryFn: async () => {
+      let query = supabase
+        .from('points_ledger')
+        .select(`
+          points,
+          etape_numero,
+          rosters!inner(manager_id, league_id, managers!inner(nom))
+        `)
+        .eq('course_id', course.course_id)
+        .eq('rosters.phase_id', course.phase_id);
+      
+      if (leagueId) {
+        query = query.eq('rosters.league_id', leagueId);
+      }
+      
+      // Pour les courses à étapes, filtrer jusqu'à l'étape courante
+      if (etapeNumero) {
+        query = query.lte('etape_numero', etapeNumero);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      // Agréger par manager
+      const managerTotals = new Map<string, { nom: string; total: number }>();
+      for (const row of data || []) {
+        const roster = row.rosters as any;
+        const managerId = roster.manager_id;
+        const managerNom = roster.managers.nom;
+        const current = managerTotals.get(managerId) || { nom: managerNom, total: 0 };
+        current.total += row.points;
+        managerTotals.set(managerId, current);
+      }
+      
+      return Array.from(managerTotals.entries())
+        .map(([id, { nom, total }]) => ({ manager_id: id, manager_nom: nom, total_points: total }))
+        .sort((a, b) => b.total_points - a.total_points)
+        .slice(0, 5); // Top 5 managers
+    },
+    enabled: open && !!leagueId,
   });
 
   const handleGeneratePreview = async () => {
@@ -325,7 +371,7 @@ export const ExportResultsImage = ({
     toast.success("Image téléchargée !");
   };
 
-  const isLoading = loadingRiders || loadingJerseys || loadingBareme;
+  const isLoading = loadingRiders || loadingJerseys || loadingBareme || loadingManagerRanking;
 
   return (
     <>
@@ -462,11 +508,10 @@ export const ExportResultsImage = ({
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ borderBottom: "2px solid #FFD500", background: "#f9fafb" }}>
-                    <th style={{ textAlign: "left", padding: "16px", fontSize: "22px", fontWeight: "600" }}>#</th>
-                    <th style={{ textAlign: "left", padding: "16px", fontSize: "22px", fontWeight: "600" }}>Coureur</th>
-                    <th style={{ textAlign: "left", padding: "16px", fontSize: "22px", fontWeight: "600" }}>Équipe</th>
-                    <th style={{ textAlign: "left", padding: "16px", fontSize: "22px", fontWeight: "600" }}>Manager</th>
-                    <th style={{ textAlign: "right", padding: "16px", fontSize: "22px", fontWeight: "600" }}>Pts</th>
+                    <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "24px", fontWeight: "600" }}>#</th>
+                    <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "24px", fontWeight: "600" }}>Coureur</th>
+                    <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "24px", fontWeight: "600" }}>Manager</th>
+                    <th style={{ textAlign: "right", padding: "16px 20px", fontSize: "24px", fontWeight: "600" }}>Pts</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -478,7 +523,7 @@ export const ExportResultsImage = ({
                         background: idx % 2 === 0 ? "#ffffff" : "#fafafa",
                       }}
                     >
-                      <td style={{ padding: "14px 16px", fontSize: "24px", fontWeight: "bold" }}>
+                      <td style={{ padding: "16px 20px", fontSize: "28px", fontWeight: "bold" }}>
                         {idx < 3
                           ? idx === 0
                             ? "🥇"
@@ -487,16 +532,13 @@ export const ExportResultsImage = ({
                               : "🥉"
                           : rider.row_position}
                       </td>
-                      <td style={{ padding: "14px 16px", fontSize: "22px", fontWeight: "500" }}>
+                      <td style={{ padding: "16px 20px", fontSize: "26px", fontWeight: "500" }}>
                         {rider.coureur_nom}
                       </td>
-                      <td style={{ padding: "14px 16px", fontSize: "20px", color: "#6b7280" }}>
-                        {rider.equipe}
-                      </td>
-                      <td style={{ padding: "14px 16px", fontSize: "20px", color: "#6b7280" }}>
+                      <td style={{ padding: "16px 20px", fontSize: "24px", color: "#6b7280" }}>
                         {rider.manager_nom || "-"}
                       </td>
-                      <td style={{ padding: "14px 16px", fontSize: "22px", fontWeight: "bold", textAlign: "right" }}>
+                      <td style={{ padding: "16px 20px", fontSize: "26px", fontWeight: "bold", textAlign: "right" }}>
                         {rider.points}
                       </td>
                     </tr>
@@ -506,40 +548,48 @@ export const ExportResultsImage = ({
             </div>
           )}
 
-          {/* PORTEURS DE MAILLOTS */}
+          {/* POINTS MAILLOTS - Discret */}
           {!isOneDay && jerseyHolders && jerseyHolders.length > 0 && (
-            <div style={{ 
-              borderTop: "2px solid #FFD500",
-              paddingTop: "25px",
-              marginTop: "25px"
+            <div style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: "30px",
+              fontSize: "18px",
+              color: "#6b7280",
+              marginTop: "20px",
             }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-                {jerseyHolders.map((jersey: any, idx: number) => (
-                  <div
-                    key={idx}
-                    style={{
-                      padding: "20px",
-                      background: "#f9fafb",
-                      borderRadius: "8px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "20px",
-                    }}
-                  >
-                    <span style={{ fontSize: "40px" }}>
-                      {getJerseyIcon(jersey.type_classement)}
+              {jerseyHolders.map((jersey: any, idx: number) => (
+                <span key={idx}>
+                  {jersey.icon} {jersey.points} pts
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* CLASSEMENT MANAGERS */}
+          {managerRanking && managerRanking.length > 0 && (
+            <div style={{
+              marginTop: "30px",
+              borderTop: "2px solid #FFD500",
+              paddingTop: "20px",
+            }}>
+              <p style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px", color: "#1a1a1a" }}>
+                Classement Managers
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {managerRanking.map((m, idx) => (
+                  <div key={m.manager_id} style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "10px 16px",
+                    background: idx === 0 ? "#FEF3C7" : "#f9fafb",
+                    borderRadius: "6px",
+                    fontSize: "20px",
+                  }}>
+                    <span>
+                      {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}.`} {m.manager_nom}
                     </span>
-                    <div>
-                      <p style={{ fontSize: "18px", color: "#9ca3af", margin: 0 }}>
-                        {getJerseyLabel(jersey.type_classement)}
-                      </p>
-                      <p style={{ fontSize: "22px", fontWeight: "600", margin: 0 }}>
-                        {jersey.coureurs.nom}
-                      </p>
-                      <p style={{ fontSize: "18px", color: "#6b7280", margin: 0 }}>
-                        {jersey.managers?.nom || "-"}
-                      </p>
-                    </div>
+                    <span style={{ fontWeight: "bold" }}>{m.total_points} pts</span>
                   </div>
                 ))}
               </div>
