@@ -1211,6 +1211,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
       open={exportDialogOpen}
       onOpenChange={setExportDialogOpen}
       leagueName={leagueInfo?.name}
+      leagueId={leagueId || undefined}
     />
   );
 

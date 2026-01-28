@@ -28,6 +28,7 @@ type ExportResultsImageProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   leagueName?: string;
+  leagueId?: string;
 };
 
 export const ExportResultsImage = ({
@@ -37,6 +38,7 @@ export const ExportResultsImage = ({
   open,
   onOpenChange,
   leagueName,
+  leagueId,
 }: ExportResultsImageProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [exportRef, setExportRef] = useState<HTMLDivElement | null>(null);
@@ -97,22 +99,34 @@ export const ExportResultsImage = ({
     return "full";
   }, [maxPlace]);
 
-  // Récupération des données
+  // Récupération des données via edge function (inclut manager_nom filtré par ligue)
   const { data: topRiders, isLoading: loadingRiders } = useQuery({
-    queryKey: ["export-top-riders", course.course_id, typeClassement, etapeNumero, scope],
+    queryKey: ["export-top-riders", course.course_id, typeClassement, etapeNumero, scope, leagueId],
     queryFn: async () => {
       const limit = scope === "top10" ? 10 : scope === "top15" ? 15 : scope === "top20" ? 20 : 100;
       
-      // @ts-ignore - Type classement is dynamic, RPC will validate
-      const { data, error } = await supabase.rpc("results_course_top", {
-        p_course_id: course.course_id,
-        // @ts-ignore
-        p_type_classement: typeClassement,
-        p_etape_numero: etapeNumero,
-        p_limit: limit,
+      const { data, error } = await supabase.functions.invoke("results-course-table", {
+        body: {
+          course_id: course.course_id,
+          type_classement: typeClassement,
+          etape_numero: etapeNumero,
+          league_id: leagueId || null
+        }
       });
+      
       if (error) throw error;
-      return data || [];
+      
+      // Transformer et limiter les résultats
+      return (data?.rows || [])
+        .filter((r: any) => r.row_position !== null)
+        .slice(0, limit)
+        .map((r: any) => ({
+          row_position: r.row_position,
+          coureur_nom: r.coureur_nom,
+          equipe: r.equipe,
+          manager_nom: r.manager_nom,
+          points: r.points_officiels ?? r.points_theoriques ?? 0
+        }));
     },
     enabled: open && !loadingBareme,
   });
@@ -172,7 +186,8 @@ export const ExportResultsImage = ({
         width: 1080,
         height: 1920,
         cacheBust: true,
-        backgroundColor: "#ffffff",
+        backgroundColor: "#000000",
+        skipFonts: true, // Évite erreur CORS sur Google Fonts
       });
 
       setGeneratedImageUrl(dataUrl);
@@ -400,30 +415,30 @@ export const ExportResultsImage = ({
         </DialogContent>
       </Dialog>
 
-      {/* Template HTML pour génération (caché) */}
+      {/* Template HTML pour génération (caché) - Thème TdF */}
       <div style={{ position: "fixed", left: "-9999px", top: 0 }}>
         <div
           ref={setExportRef}
           style={{
             width: "1080px",
             height: "1920px",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            background: "linear-gradient(180deg, #000000 0%, #1a1a1a 60%, #FFD500 100%)",
             padding: "40px",
-            fontFamily: "Inter, Arial, sans-serif",
+            fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
             boxSizing: "border-box",
           }}
         >
-          {/* HEADER */}
-          <div style={{ textAlign: "center", color: "white", marginBottom: "40px" }}>
+          {/* HEADER - Thème TdF */}
+          <div style={{ textAlign: "center", color: "#FFD500", marginBottom: "40px" }}>
             <div style={{ fontSize: "64px", marginBottom: "10px" }}>🏆</div>
             <h1 style={{ fontSize: "48px", margin: "10px 0", fontWeight: "bold" }}>
               {course.course_nom}
             </h1>
-            <p style={{ fontSize: "28px", opacity: 0.9, margin: "5px 0" }}>
+            <p style={{ fontSize: "28px", opacity: 0.9, margin: "5px 0", color: "#ffffff" }}>
               {course.categorie} • {typeClassement}
               {etapeNumero && ` Étape ${etapeNumero}`}
             </p>
-            <p style={{ fontSize: "22px", opacity: 0.8 }}>
+            <p style={{ fontSize: "22px", opacity: 0.8, color: "#ffffff" }}>
               {format(new Date(course.date_fin || course.date_debut), "dd MMMM yyyy", {
                 locale: fr,
               })}
@@ -557,9 +572,14 @@ export const ExportResultsImage = ({
             </div>
           )}
 
-          {/* FOOTER */}
-          <div style={{ textAlign: "center", color: "white", marginTop: "40px" }}>
-            <p style={{ fontSize: "24px", fontWeight: "bold", opacity: 0.9 }}>
+          {/* FOOTER - Branding ligue sur fond jaune */}
+          <div style={{ 
+            textAlign: "center", 
+            color: "#000000", 
+            marginTop: "auto",
+            paddingTop: "40px"
+          }}>
+            <p style={{ fontSize: "28px", fontWeight: "bold" }}>
               {leagueName || "Mon Petit Cycliste"}
             </p>
           </div>
