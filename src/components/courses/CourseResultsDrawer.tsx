@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Search, ChevronDown, ChevronRight, X } from "lucide-react";
+import { Calendar, Search, ChevronDown, ChevronRight, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { StageJerseyBonuses } from "./StageJerseyBonuses";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ExportResultsImage } from "@/components/admin/ExportResultsImage";
 
 // Jersey holders compact bar component
 const JerseyHoldersBar = ({ courseId, etapeNumero, leagueId }: { courseId: string | null; etapeNumero: number | null; leagueId: string | null }) => {
@@ -150,6 +151,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [expandedRiders, setExpandedRiders] = useState<Set<string>>(new Set());
   const [totalRiders, setTotalRiders] = useState<any[]>([]);
   const [totalBreakdown, setTotalBreakdown] = useState<any[]>([]);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Fetch leaderboard for the course - always consolidated (all stages, all classifications)
@@ -439,9 +441,21 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     }
   };
 
+  // Share button component
+  const shareButton = meta && courseId && (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => setExportDialogOpen(true)}
+      className="h-8 w-8 flex-shrink-0"
+    >
+      <Share2 className="h-4 w-4" />
+    </Button>
+  );
+
   // Header content - shared between Dialog and Drawer
   const headerContent = meta ? (
-    <div className="flex flex-col items-start gap-1">
+    <div className="flex flex-col items-start gap-1 flex-1">
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xl font-bold">{meta.course_nom}</span>
         <Badge variant="outline">{meta.categorie}</Badge>
@@ -1163,36 +1177,64 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
           </Tabs>
   );
 
+  // Export dialog component (rendered outside of main dialog/drawer to avoid nesting)
+  const exportDialog = meta && courseId && (
+    <ExportResultsImage
+      course={{
+        course_id: courseId,
+        course_nom: meta.course_nom,
+        categorie: meta.categorie,
+        type_course: meta.etapes_disponibles?.length > 0 ? "Stage race" : "One day",
+        date_debut: meta.date_debut,
+        date_fin: meta.date_fin,
+        nb_etapes: meta.etapes_disponibles?.length || 0,
+        phase_id: "",
+      }}
+      currentStage={selectedEtape || undefined}
+      currentClassement={selectedType}
+      open={exportDialogOpen}
+      onOpenChange={setExportDialogOpen}
+    />
+  );
+
   // Desktop: Dialog, Mobile: Drawer
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader>
-            <DrawerTitle className="flex items-center justify-between gap-3">
-              {headerContent}
-            </DrawerTitle>
-          </DrawerHeader>
-          <div className="px-4 pb-4 space-y-4 overflow-y-auto">
-            {bodyContent}
-          </div>
-        </DrawerContent>
-      </Drawer>
+      <>
+        <Drawer open={open} onOpenChange={onOpenChange}>
+          <DrawerContent className="max-h-[90vh]">
+            <DrawerHeader>
+              <DrawerTitle className="flex items-center justify-between gap-3">
+                {headerContent}
+                {shareButton}
+              </DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4 pb-4 space-y-4 overflow-y-auto">
+              {bodyContent}
+            </div>
+          </DrawerContent>
+        </Drawer>
+        {exportDialog}
+      </>
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between gap-3">
-            {headerContent}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          {bodyContent}
-        </div>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between gap-3">
+              {headerContent}
+              {shareButton}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {bodyContent}
+          </div>
+        </DialogContent>
+      </Dialog>
+      {exportDialog}
+    </>
   );
 };
