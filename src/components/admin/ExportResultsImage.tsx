@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
@@ -43,6 +43,13 @@ export const ExportResultsImage = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [exportRef, setExportRef] = useState<HTMLDivElement | null>(null);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+
+  // Reset l'image générée quand le dialog s'ouvre pour forcer un nouveau rendu
+  useEffect(() => {
+    if (open) {
+      setGeneratedImageUrl(null);
+    }
+  }, [open]);
 
   const isOneDay = course.type_course === "One day";
   const etapeNumero = !isOneDay && currentStage ? currentStage : null;
