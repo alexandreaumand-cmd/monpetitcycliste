@@ -4,6 +4,7 @@ import {
   HowItWorksSection,
   LeagueTypesSection,
   ScoringSection,
+  TeamPreviewSection,
   WhyPlaySection,
   TestimonialsSection,
   CTASection,
@@ -19,6 +20,7 @@ const LandingPage = () => {
         <HowItWorksSection />
         <LeagueTypesSection />
         <ScoringSection />
+        <TeamPreviewSection />
         <WhyPlaySection />
         <TestimonialsSection />
         <CTASection />

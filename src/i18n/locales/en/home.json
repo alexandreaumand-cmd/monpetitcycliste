@@ -15,39 +15,59 @@
   },
   "howItWorks": {
     "title": "How does it work?",
-    "subtitle": "In 3 simple steps, start your cycling manager adventure",
+    "subtitle": "From start to finish, live the cycling manager adventure",
     "steps": {
       "step1": {
-        "title": "Create or join a league",
-        "description": "Invite friends or other passionate managers"
+        "title": "Launch your competition",
+        "description": "Create your league in 2 minutes and invite friends"
       },
       "step2": {
-        "title": "Build your team",
-        "description": "Draft riders through auctions and pick your squad"
+        "title": "Draft at auctions",
+        "description": "Recruit your champions and manage your budget"
       },
       "step3": {
-        "title": "Follow real races",
-        "description": "Your riders earn points based on their real performances"
+        "title": "Follow live",
+        "description": "Your riders score in real time"
+      },
+      "step4": {
+        "title": "Aim for the yellow jersey",
+        "description": "Climb the rankings and claim victory"
       }
-    }
+    },
+    "start": "START",
+    "finish": "FINISH"
   },
   "leagues": {
-    "title": "Available leagues",
-    "subtitle": "Each player chooses their league based on their playing style.",
+    "title": "Choose your game mode",
+    "subtitle": "Each format has its own intensity. Your move.",
+    "sprint": {
+      "type": "Sprint",
+      "duration": "1 week",
+      "description": "A classic, a weekend of racing. Perfect to discover.",
+      "cta": "Try it"
+    },
+    "grandTour": {
+      "type": "Grand Tour",
+      "duration": "3 weeks",
+      "description": "Tour de France, Giro, Vuelta. The complete experience.",
+      "cta": "Join"
+    },
+    "season": {
+      "type": "Season",
+      "duration": "Full year",
+      "description": "From Tour Down Under to Giro di Lombardia. For true enthusiasts.",
+      "cta": "Commit"
+    },
+    "friends": {
+      "type": "With friends",
+      "tagline": "Challenge your mates",
+      "description": "Create your private league with 2 to 10 managers",
+      "cta": "Create my league"
+    },
     "quick": {
       "type": "Quick leagues",
       "description": "Play on a single Grand Tour",
       "cta": "Tour de France"
-    },
-    "season": {
-      "type": "Season leagues",
-      "description": "Follow the entire cycling year",
-      "cta": "Full season"
-    },
-    "friends": {
-      "type": "Friends leagues",
-      "description": "Up to 10 managers",
-      "cta": "Create my league"
     },
     "public": {
       "type": "Public leagues",
@@ -56,8 +76,25 @@
     }
   },
   "scoring": {
-    "title": "How to earn points?",
-    "subtitle": "Every action from your riders during real UCI races generates points. The better your riders perform, the higher you climb in the standings!",
+    "title": "Experience the race live",
+    "subtitle": "Every stage, every sprint, every climb... Your riders score points in real time.",
+    "live": "LIVE",
+    "stageName": "Stage 15 - Col du Galibier",
+    "stageResults": "Stage results",
+    "jerseyBonus": "Jersey bonuses",
+    "yourTotal": "Your total today",
+    "riders": {
+      "pogacar": "POGACAR",
+      "vingegaard": "VINGEGAARD",
+      "evenepoel": "EVENEPOEL",
+      "vanAert": "VAN AERT"
+    },
+    "jerseys": {
+      "yellow": "Yellow Jersey",
+      "green": "Green Jersey",
+      "polkaDot": "Polka Dot Jersey",
+      "perDay": "/day"
+    },
     "categories": {
       "stage": "Stage rankings",
       "jerseys": "Distinctive jerseys",
@@ -81,24 +118,53 @@
     },
     "points": "pts"
   },
+  "stats": {
+    "title": "The Mon Petit Cycliste community",
+    "courses": "UCI RACES",
+    "leagues": "ACTIVE LEAGUES",
+    "riders": "PRO RIDERS",
+    "stages": "TOUR STAGES",
+    "features": {
+      "uci": "Official UCI data in real time",
+      "auctions": "Strategic auction system",
+      "private": "Private leagues up to 10 friends",
+      "jerseys": "Customizable jerseys with sponsor"
+    }
+  },
+  "teamPreview": {
+    "title": "Build your dream team",
+    "subtitle": "Pick them at auctions. Manage your budget. Adapt your strategy to each race.",
+    "leaders": "LEADERS",
+    "sprinters": "SPRINTERS",
+    "climbers": "CLIMBERS",
+    "budgetRemaining": "Budget remaining",
+    "cta": "Create my team"
+  },
   "testimonials": {
-    "title": "What they say",
+    "title": "They play, they love it",
     "subtitle": "Thousands of managers compete every season",
+    "featured": {
+      "rank": "1ST",
+      "league": "LEAGUE \"LES FORÇATS\"",
+      "text": "Our league has been running for 3 years. Every Tour, we restart a season and it's always as intense! The atmosphere during auctions is incredible.",
+      "author": "Guillaume R.",
+      "stats": "127 pts ahead"
+    },
     "quotes": {
       "quote1": {
+        "text": "The auctions are the best part! We challenge each other to get Pogacar.",
+        "author": "Marie L.",
+        "location": "Paris"
+      },
+      "quote2": {
+        "text": "Pogacar on my team = +847 pts this season. Best pick ever.",
+        "author": "Thomas B.",
+        "location": "Bordeaux"
+      },
+      "quote3": {
         "text": "An incredible atmosphere in our friends league! We challenge each other every night during the Tour.",
         "author": "Julien M.",
         "location": "Lyon"
-      },
-      "quote2": {
-        "text": "The auction system brings a real strategic dimension. Perfect for cycling fans!",
-        "author": "Marine L.",
-        "location": "Paris"
-      },
-      "quote3": {
-        "text": "Following races takes on a whole new dimension when your riders are fighting for top positions.",
-        "author": "Thomas R.",
-        "location": "Bordeaux"
       }
     }
   },

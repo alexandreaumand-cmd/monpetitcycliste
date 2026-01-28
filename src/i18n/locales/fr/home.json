@@ -15,39 +15,59 @@
   },
   "howItWorks": {
     "title": "Comment ça marche ?",
-    "subtitle": "En 3 étapes simples, lance ton aventure de manager cycliste",
+    "subtitle": "Du départ à l'arrivée, vis l'aventure du manager cycliste",
     "steps": {
       "step1": {
-        "title": "Crée ta ligue ou rejoins-en une",
-        "description": "Invite tes amis ou d'autres managers passionnés"
+        "title": "Lance ta compétition",
+        "description": "Crée ta ligue en 2 minutes et invite tes amis"
       },
       "step2": {
-        "title": "Compose ton équipe",
-        "description": "Fais ton mercato lors des enchères et choisis tes coureurs"
+        "title": "Recrute aux enchères",
+        "description": "Draft tes champions et gère ton budget"
       },
       "step3": {
-        "title": "Suis les vraies courses",
-        "description": "Tes coureurs marquent des points selon leurs performances réelles"
+        "title": "Suis en direct",
+        "description": "Tes coureurs marquent en temps réel"
+      },
+      "step4": {
+        "title": "Vise le maillot jaune",
+        "description": "Grimpe au classement et remporte la victoire"
       }
-    }
+    },
+    "start": "DÉPART",
+    "finish": "ARRIVÉE"
   },
   "leagues": {
-    "title": "Les ligues disponibles",
-    "subtitle": "Chaque joueur choisit sa ligue selon son envie de jeu.",
+    "title": "Choisis ton mode de jeu",
+    "subtitle": "Chaque format a sa propre intensité. À toi de jouer.",
+    "sprint": {
+      "type": "Sprint",
+      "duration": "1 semaine",
+      "description": "Une classique, un week-end de courses. Parfait pour découvrir.",
+      "cta": "Essayer"
+    },
+    "grandTour": {
+      "type": "Grand Tour",
+      "duration": "3 semaines",
+      "description": "Tour de France, Giro, Vuelta. L'expérience complète.",
+      "cta": "Rejoindre"
+    },
+    "season": {
+      "type": "Saison",
+      "duration": "Toute l'année",
+      "description": "Du Tour Down Under au Giro di Lombardia. Pour les vrais passionnés.",
+      "cta": "S'engager"
+    },
+    "friends": {
+      "type": "Entre amis",
+      "tagline": "Défie tes potes",
+      "description": "Crée ta ligue privée avec 2 à 10 managers",
+      "cta": "Créer ma ligue"
+    },
     "quick": {
       "type": "Ligues rapides",
       "description": "Joue sur un seul Grand Tour",
       "cta": "Tour de France"
-    },
-    "season": {
-      "type": "Ligues saison",
-      "description": "Suis toute l'année cycliste",
-      "cta": "Saison complète"
-    },
-    "friends": {
-      "type": "Ligues entre amis",
-      "description": "Jusqu'à 10 managers",
-      "cta": "Créer ma ligue"
     },
     "public": {
       "type": "Ligues publiques",
@@ -56,8 +76,25 @@
     }
   },
   "scoring": {
-    "title": "Comment gagner des points ?",
-    "subtitle": "Chaque action de tes coureurs durant les vraies courses UCI génère des points. Plus tes coureurs performent, plus tu grimpes au classement !",
+    "title": "Vis la course en direct",
+    "subtitle": "Chaque étape, chaque sprint, chaque col... Tes coureurs marquent des points en temps réel.",
+    "live": "EN DIRECT",
+    "stageName": "Étape 15 - Col du Galibier",
+    "stageResults": "Classement d'étape",
+    "jerseyBonus": "Bonus maillots",
+    "yourTotal": "Ton total aujourd'hui",
+    "riders": {
+      "pogacar": "POGACAR",
+      "vingegaard": "VINGEGAARD",
+      "evenepoel": "EVENEPOEL",
+      "vanAert": "VAN AERT"
+    },
+    "jerseys": {
+      "yellow": "Maillot Jaune",
+      "green": "Maillot Vert",
+      "polkaDot": "Maillot à Pois",
+      "perDay": "/jour"
+    },
     "categories": {
       "stage": "Classements d'étape",
       "jerseys": "Maillots distinctifs",
@@ -81,24 +118,53 @@
     },
     "points": "pts"
   },
+  "stats": {
+    "title": "La communauté Mon Petit Cycliste",
+    "courses": "COURSES UCI",
+    "leagues": "LIGUES ACTIVES",
+    "riders": "COUREURS PRO",
+    "stages": "ÉTAPES DU TOUR",
+    "features": {
+      "uci": "Données officielles UCI en temps réel",
+      "auctions": "Système d'enchères stratégique",
+      "private": "Ligues privées jusqu'à 10 amis",
+      "jerseys": "Maillots personnalisables avec sponsor"
+    }
+  },
+  "teamPreview": {
+    "title": "Compose ton équipe de rêve",
+    "subtitle": "Choisis-les aux enchères. Gère ton budget. Adapte ta stratégie à chaque course.",
+    "leaders": "LEADERS",
+    "sprinters": "SPRINTERS",
+    "climbers": "GRIMPEURS",
+    "budgetRemaining": "Budget restant",
+    "cta": "Créer mon équipe"
+  },
   "testimonials": {
-    "title": "Ce qu'ils en pensent",
+    "title": "Ils jouent, ils adorent",
     "subtitle": "Des milliers de managers s'affrontent chaque saison",
+    "featured": {
+      "rank": "1ER",
+      "league": "LIGUE \"LES FORÇATS\"",
+      "text": "Notre ligue existe depuis 3 ans. Chaque Tour, on relance une saison et c'est toujours aussi intense ! L'ambiance pendant les enchères est incroyable.",
+      "author": "Guillaume R.",
+      "stats": "127 pts d'avance"
+    },
     "quotes": {
       "quote1": {
+        "text": "Les enchères, c'est le meilleur moment ! On se challenge entre potes pour récupérer Pogacar.",
+        "author": "Marie L.",
+        "location": "Paris"
+      },
+      "quote2": {
+        "text": "Pogacar dans mon équipe = +847 pts cette saison. Best pick ever.",
+        "author": "Thomas B.",
+        "location": "Bordeaux"
+      },
+      "quote3": {
         "text": "Une ambiance incroyable dans notre ligue entre potes ! On se challenge tous les soirs pendant le Tour.",
         "author": "Julien M.",
         "location": "Lyon"
-      },
-      "quote2": {
-        "text": "Le système d'enchères apporte une vraie dimension stratégique. Parfait pour les fans de cyclisme !",
-        "author": "Marine L.",
-        "location": "Paris"
-      },
-      "quote3": {
-        "text": "Suivre les courses prend une toute nouvelle dimension quand tes coureurs jouent les premières places.",
-        "author": "Thomas R.",
-        "location": "Bordeaux"
       }
     }
   },
