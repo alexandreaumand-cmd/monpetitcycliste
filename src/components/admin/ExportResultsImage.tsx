@@ -564,20 +564,26 @@ export const ExportResultsImage = ({
             </div>
           )}
 
-          {/* POINTS MAILLOTS - Discret */}
+          {/* POINTS MAILLOTS - Avec coureur et manager */}
           {!isOneDay && jerseyHolders && jerseyHolders.length > 0 && (
             <div style={{
               display: "flex",
-              justifyContent: "center",
-              gap: "30px",
-              fontSize: "18px",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "8px",
+              fontSize: "16px",
               color: "#6b7280",
               marginTop: "20px",
             }}>
               {jerseyHolders.map((jersey: any, idx: number) => (
-                <span key={idx}>
-                  {jersey.icon} {jersey.points} pts
-                </span>
+                <div key={idx} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "20px" }}>{jersey.icon}</span>
+                  <span style={{ fontWeight: "500" }}>{jersey.coureurs?.nom || "—"}</span>
+                  {jersey.managers?.nom && (
+                    <span style={{ color: "#9ca3af" }}>({jersey.managers.nom})</span>
+                  )}
+                  <span style={{ fontWeight: "bold" }}>{jersey.points} pts</span>
+                </div>
               ))}
             </div>
           )}

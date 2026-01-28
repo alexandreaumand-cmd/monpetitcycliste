@@ -170,6 +170,22 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
     staleTime: 1000 * 60 * 30,
   });
 
+  // Fetch course phase_id for export
+  const { data: courseDetails } = useQuery({
+    queryKey: ["course-details-phase", courseId],
+    queryFn: async () => {
+      if (!courseId) return null;
+      const { data } = await supabase
+        .from("courses")
+        .select("phase_id")
+        .eq("id", courseId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!courseId,
+    staleTime: 1000 * 60 * 30,
+  });
+
   // Fetch leaderboard for the course - always consolidated (all stages, all classifications)
   const { data: leaderboard, isLoading: leaderboardLoading } = useQuery({
     queryKey: ["course-leaderboard-drawer", courseId, leagueId],
@@ -1204,7 +1220,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
         date_debut: meta.date_debut,
         date_fin: meta.date_fin,
         nb_etapes: meta.etapes_disponibles?.length || 0,
-        phase_id: "",
+        phase_id: courseDetails?.phase_id || "",
       }}
       currentStage={selectedEtape || undefined}
       currentClassement={selectedType}
