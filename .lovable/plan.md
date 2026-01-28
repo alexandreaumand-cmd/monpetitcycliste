@@ -1,10 +1,10 @@
 
 
-# Revenir au format Story (1080x1920)
+# Augmenter la taille des textes pour mobile
 
 ## Objectif
 
-Repasser l'image d'export du format carré (1080x1080) au format story vertical (1080x1920), plus adapte pour afficher un classement complet avec plus d'espace.
+Augmenter les tailles de police de l'image d'export pour une meilleure lisibilite sur telephone.
 
 ---
 
@@ -12,157 +12,68 @@ Repasser l'image d'export du format carré (1080x1080) au format story vertical 
 
 ### Fichier : `src/components/admin/ExportResultsImage.tsx`
 
-**1. Modifier les dimensions dans `toJpeg`** (lignes 193-194)
+**1. Header - Augmenter les tailles** (lignes 446-456)
 
-```typescript
-// AVANT
-width: 1080,
-height: 1080,
+| Element | Avant | Apres |
+|---------|-------|-------|
+| Titre course | 48px | **56px** |
+| Sous-titre (categorie) | 24px | **28px** |
+| Date | 20px | **24px** |
 
-// APRES
-width: 1080,
-height: 1920,
-```
+**2. Tableau - En-tetes** (lignes 465-469)
 
-**2. Modifier les dimensions du template HTML** (lignes 430-431)
+| Element | Avant | Apres |
+|---------|-------|-------|
+| En-tetes colonnes | 18px | **22px** |
+| Padding | 14px | **16px** |
 
-```typescript
-// AVANT
-width: "1080px",
-height: "1080px",
+**3. Tableau - Corps** (lignes 481-501)
 
-// APRES
-width: "1080px",
-height: "1920px",
-```
+| Element | Avant | Apres |
+|---------|-------|-------|
+| Position (#) | 20px | **24px** |
+| Coureur nom | 18px | **22px** |
+| Equipe | 16px | **20px** |
+| Manager | 16px | **20px** |
+| Points | 18px | **22px** |
+| Padding cellules | 12px 14px | **14px 16px** |
 
-**3. Ajuster le padding et les espacements** (ligne 433)
+**4. Section maillots** (lignes 529-541)
 
-```typescript
-// AVANT
-padding: "30px",
+| Element | Avant | Apres |
+|---------|-------|-------|
+| Icone maillot | 32px | **40px** |
+| Label (ex: "Leader") | 14px | **18px** |
+| Nom coureur | 18px | **22px** |
+| Nom manager | 14px | **18px** |
+| Padding carte | 15px | **20px** |
+| Gap entre cartes | 15px | **20px** |
 
-// APRES
-padding: "40px",
-```
+**5. Footer** (ligne 559)
 
-**4. Agrandir les tailles de police du header** (lignes 446-456)
-
-```typescript
-// Titre : 32px → 48px
-fontSize: "48px"
-
-// Sous-titre categorie : 18px → 24px
-fontSize: "24px"
-
-// Date : 16px → 20px
-fontSize: "20px"
-
-// marginBottom : 20px → 40px
-marginBottom: "40px"
-paddingBottom: "25px"
-```
-
-**5. Agrandir le tableau** (lignes 464-498)
-
-```typescript
-// En-tetes : 14px → 18px, padding 8px → 14px
-fontSize: "18px", padding: "14px"
-
-// Corps : 16px/13px → 20px/16px, padding 6px → 12px
-fontSize: "20px" // position
-fontSize: "18px" // coureur
-fontSize: "16px" // equipe, manager
-fontSize: "18px" // points
-padding: "12px 14px"
-
-// marginBottom : 20px → 40px
-marginBottom: "40px"
-```
-
-**6. Agrandir la section maillots** (lignes 502-534)
-
-```typescript
-// Icones : 24px → 32px
-fontSize: "32px"
-
-// Texte label : 12px → 14px
-// Texte nom : 14px → 18px
-// Texte manager : 12px → 14px
-// padding : 10px → 15px
-// gap : 10px → 15px
-```
-
-**7. Ajuster le footer** (lignes 539-552)
-
-```typescript
-// bottom : 20px → 40px
-// left/right : 30px → 40px
-// fontSize : 18px → 24px
-// paddingTop : 15px → 25px
-```
-
-**8. Mettre a jour le texte d'indication** (ligne 346)
-
-```typescript
-// AVANT
-<p>Format: 1080 x 1080 (carre, optimal mobile)</p>
-
-// APRES
-<p>Format: 1080 x 1920 (story, ideal partage)</p>
-```
+| Element | Avant | Apres |
+|---------|-------|-------|
+| Nom ligue | 24px | **28px** |
 
 ---
 
-## Comparaison
+## Comparaison visuelle
 
-| Element | Carre (avant) | Story (apres) |
-|---------|---------------|---------------|
-| Dimensions | 1080 x 1080 | 1080 x 1920 |
-| Ratio | 1:1 | 9:16 |
-| Padding | 30px | 40px |
-| Titre | 32px | 48px |
-| Tableau corps | 13-16px | 16-20px |
-| Maillots icones | 24px | 32px |
-| Footer | 18px | 24px |
+```text
+AVANT (tailles actuelles)        APRES (tailles augmentees)
+─────────────────────────        ──────────────────────────
+Titre: 48px                      Titre: 56px (+17%)
+Sous-titre: 24px                 Sous-titre: 28px (+17%)
+Tableau: 16-20px                 Tableau: 20-24px (+25%)
+Maillots: 14-18px                Maillots: 18-22px (+28%)
+```
 
 ---
 
 ## Resultat attendu
 
-```text
-┌────────────────────────────┐
-│                            │
-│       AlUla Tour           │
-│   2.pro • General • Etape 2│
-│      31 janvier 2026       │
-│ ────────────────────────── │ ← Ligne jaune
-│                            │
-│ #  │ Coureur    │ Equipe │ Manager │ Pts │
-│ ────────────────────────────────────────── │
-│ 🥇 │ MILAN      │ LID    │ Bubu    │ 150 │
-│ 🥈 │ ACKERMANN  │ ISR    │ Fab     │ 120 │
-│ 🥉 │ SKERL      │ ABC    │ Fab     │ 100 │
-│  4 │ ...        │ ...    │ ...     │  80 │
-│  5 │ ...        │ ...    │ ...     │  70 │
-│  6 │ ...        │ ...    │ ...     │  60 │
-│ ...│ ...        │ ...    │ ...     │ ... │
-│ 15 │ ...        │ ...    │ ...     │  10 │
-│                            │
-│ ────────────────────────── │ ← Ligne jaune
-│ 🟡 Leader      │ 🟢 Points   │
-│    Coureur X   │    Coureur Y│
-│    Manager A   │    Manager B│
-│                            │
-│ 🔴 Montagne    │ ⚪ Jeune    │
-│    Coureur Z   │    Coureur W│
-│    Manager C   │    Manager D│
-│                            │
-│ ────────────────────────── │
-│         MPC 2026           │
-│                            │
-└────────────────────────────┘
-```
-
-Format vertical story optimise pour Instagram/WhatsApp stories avec plus d'espace pour le classement complet.
+Textes plus grands et plus lisibles quand l'image est ouverte sur un telephone, notamment :
+- Les noms des coureurs clairement visibles
+- Les points faciles a lire
+- Les porteurs de maillots bien identifies
 
