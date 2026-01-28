@@ -59,6 +59,55 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
+    // Send push notification for relevant result types (Etape or General)
+    if (p_type_classement === 'Etape' || p_type_classement === 'General') {
+      try {
+        // Get course name
+        const { data: courseData } = await supabase
+          .from('courses')
+          .select('nom')
+          .eq('id', p_course_id)
+          .single();
+        
+        const courseName = courseData?.nom || p_course_id;
+        const typeLabel = p_type_classement === 'Etape' 
+          ? (p_etape_numero ? `Étape ${p_etape_numero}` : 'Étape')
+          : 'Classement Général';
+
+        console.log(`[admin-result-save-lot] Sending push notification for ${courseName} - ${typeLabel}`);
+
+        const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`
+          },
+          body: JSON.stringify({
+            broadcast: true,
+            title: '🏁 Nouveaux résultats',
+            message: `${typeLabel} - ${courseName}`,
+            type: 'results_added',
+            metadata: {
+              course_id: p_course_id,
+              course_name: courseName,
+              type_classement: p_type_classement,
+              etape_numero: p_etape_numero
+            }
+          })
+        });
+
+        if (!pushResponse.ok) {
+          console.error(`[admin-result-save-lot] Push notification failed:`, await pushResponse.text());
+        } else {
+          const pushResult = await pushResponse.json();
+          console.log(`[admin-result-save-lot] Push notification sent:`, pushResult);
+        }
+      } catch (pushError) {
+        console.error(`[admin-result-save-lot] Error sending push notification:`, pushError);
+        // Don't fail the save if push notification fails
+      }
+    }
+
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
