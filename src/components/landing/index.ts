@@ -3,6 +3,7 @@ export { default as HeroSection } from "./HeroSection";
 export { default as HowItWorksSection } from "./HowItWorksSection";
 export { default as LeagueTypesSection } from "./LeagueTypesSection";
 export { default as ScoringSection } from "./ScoringSection";
+export { default as TeamPreviewSection } from "./TeamPreviewSection";
 export { default as WhyPlaySection } from "./WhyPlaySection";
 export { default as TestimonialsSection } from "./TestimonialsSection";
 export { default as CTASection } from "./CTASection";
