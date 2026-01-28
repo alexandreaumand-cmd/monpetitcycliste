@@ -1,98 +1,75 @@
 
-# Correction : Classement managers et détails des porteurs de maillots
 
-## Bugs identifiés
+# Générer l'image automatiquement à l'ouverture du dialog
 
-### Bug 1 : `phase_id` vide
-Dans `CourseResultsDrawer.tsx` ligne 1207 :
-```typescript
-phase_id: "",  // ← Chaîne vide !
-```
-La requête réseau échoue avec erreur 400 : `"invalid input syntax for type uuid: \"\""`
+## Objectif
 
-### Bug 2 : Affichage des maillots incomplet
-Dans `ExportResultsImage.tsx` lignes 577-580 :
-```typescript
-{jerseyHolders.map((jersey: any, idx: number) => (
-  <span key={idx}>
-    {jersey.icon} {jersey.points} pts  // ← Manque coureur + manager
-  </span>
-))}
-```
-L'edge function retourne bien `coureur_nom` et `manager_nom` mais ils ne sont pas affichés.
+Supprimer l'étape intermédiaire "Générer l'aperçu" et générer l'image automatiquement dès que le dialog s'ouvre et que les données sont chargées.
 
 ---
 
-## Solution
+## Modification
 
-### Fichier 1 : `src/components/courses/CourseResultsDrawer.tsx`
+### Fichier : `src/components/admin/ExportResultsImage.tsx`
 
-Récupérer le vrai `phase_id` depuis les données de la course.
-
-1. Ajouter une query pour récupérer le `phase_id` depuis la table `courses` (ou le récupérer depuis `meta` si disponible)
-2. Passer le vrai `phase_id` au composant `ExportResultsImage`
+**1. Ajouter un useEffect pour déclencher la génération automatique** (après ligne 52)
 
 ```typescript
-// Ajouter une query pour le phase_id
-const { data: courseDetails } = useQuery({
-  queryKey: ["course-details", courseId],
-  queryFn: async () => {
-    if (!courseId) return null;
-    const { data } = await supabase
-      .from("courses")
-      .select("phase_id")
-      .eq("id", courseId)
-      .maybeSingle();
-    return data;
-  },
-  enabled: !!courseId,
-});
-
-// Puis dans le composant (ligne 1207)
-phase_id: courseDetails?.phase_id || "",
+// Générer l'image automatiquement quand les données sont prêtes
+useEffect(() => {
+  const shouldGenerate = 
+    open && 
+    !isLoading && 
+    !generatedImageUrl && 
+    !isGenerating && 
+    exportRef;
+  
+  if (shouldGenerate) {
+    // Vérifier qu'il y a des données à exporter
+    const hasData = 
+      (topRiders && topRiders.length > 0) ||
+      (jerseyHolders && jerseyHolders.length > 0);
+    
+    if (hasData) {
+      handleGeneratePreview();
+    }
+  }
+}, [open, isLoading, generatedImageUrl, isGenerating, exportRef, topRiders, jerseyHolders]);
 ```
 
-### Fichier 2 : `src/components/admin/ExportResultsImage.tsx`
+**2. Simplifier l'affichage quand l'image n'est pas encore générée** (lignes 400-437)
 
-Enrichir l'affichage des maillots pour inclure le coureur et le manager.
+Remplacer le bloc avec le bouton "Générer l'aperçu" par un simple état de chargement :
 
 ```typescript
-{/* POINTS MAILLOTS - Discret */}
-{!isOneDay && jerseyHolders && jerseyHolders.length > 0 && (
-  <div style={{
-    display: "flex",
-    justifyContent: "center",
-    gap: "30px",
-    fontSize: "18px",
-    color: "#6b7280",
-    marginTop: "20px",
-  }}>
-    {jerseyHolders.map((jersey: any, idx: number) => (
-      <span key={idx}>
-        {jersey.icon} {jersey.points} pts
-        {jersey.coureurs?.nom && (
-          <span style={{ marginLeft: "6px", color: "#9ca3af" }}>
-            ({jersey.coureurs.nom}{jersey.managers?.nom ? ` - ${jersey.managers.nom}` : ""})
-          </span>
-        )}
-      </span>
-    ))}
+{!generatedImageUrl ? (
+  <div className="flex flex-col items-center justify-center py-8 space-y-4">
+    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    <p className="text-sm text-muted-foreground">
+      {isLoading ? "Chargement des données..." : "Génération de l'image..."}
+    </p>
   </div>
+) : (
+  // ... reste du code pour l'affichage de l'image générée
 )}
 ```
 
 ---
 
-## Récapitulatif des modifications
+## Comportement attendu
 
-| Fichier | Ligne | Modification |
-|---------|-------|--------------|
-| `CourseResultsDrawer.tsx` | ~60 | Ajouter query pour récupérer `phase_id` |
-| `CourseResultsDrawer.tsx` | 1207 | Passer `phase_id: courseDetails?.phase_id` |
-| `ExportResultsImage.tsx` | 577-581 | Afficher coureur + manager pour chaque maillot |
+| Étape | Avant | Après |
+|-------|-------|-------|
+| 1 | Clic sur partager → Dialog s'ouvre | Clic sur partager → Dialog s'ouvre |
+| 2 | Voir info + bouton "Générer l'aperçu" | Voir spinner "Génération de l'image..." |
+| 3 | Clic sur "Générer l'aperçu" | (automatique) |
+| 4 | Image générée, boutons partage | Image générée, boutons partage |
 
-## Résultat attendu
+---
 
-Après correction :
-- **Classement Managers** : Top 10 managers avec leurs points sur la course
-- **Porteurs de maillot** : `🟡 6 pts (MILAN - Manou)` au lieu de juste `🟡 6 pts`
+## Récapitulatif
+
+- **Ajout** : useEffect pour trigger automatique de `handleGeneratePreview()`
+- **Suppression** : Bouton "Générer l'aperçu" et texte d'info intermédiaire
+- **Affichage** : Simple spinner pendant le chargement/génération
+
