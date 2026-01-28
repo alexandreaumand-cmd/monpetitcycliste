@@ -1,192 +1,96 @@
 
 
-# Afficher les managers et appliquer l'identite visuelle TdF
+# Corriger l'image d'export des resultats
 
-## Problemes identifies
+## Probleme identifie
 
-### 1. Managers absents
-La fonction RPC `results_course_top` ne retourne PAS le champ `manager_nom`. Elle retourne uniquement :
-- `coureur_id`, `coureur_nom`, `coureur_equipe`, `position`, `points`, `statut`, `has_official_points`
+L'image generee dans ta capture d'ecran ne correspond pas au template defini dans le code actuel (`ExportResultsImage.tsx`). Cela peut etre du a :
 
-La solution est d'utiliser l'edge function `results-course-table` qui :
-- Accepte un `league_id` en parametre
-- Joint la table `rosters` filtree par ligue
-- Retourne `manager_nom` correctement
+1. **Cache navigateur** - Rafraichir la page avec Ctrl+Shift+R
+2. **Template non rendu correctement** - Le code est correct mais l'image montre l'ancien design
 
-### 2. Identite visuelle incorrecte
-Le template actuel utilise un gradient violet/bleu :
-```css
-background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-```
+En analysant les donnees reseau, je confirme que l'edge function `results-course-table` retourne bien les managers :
+- Jonathan MILAN → Bubu
+- Pascal ACKERMANN → Fab
+- Daniel SKERL → Fab
+- etc.
 
-Le site utilise le theme Tour de France :
-- Jaune TdF : `#FFD500` (hsl 48 100% 50%)
-- Noir : `#000000`
-- Gradient hero : noir vers jaune
+Mais l'image montre "-" pour tous.
 
 ---
 
-## Modifications techniques
+## Solution
+
+### 1. Verifier que le template est bien rendu
+
+Le template actuel (lignes 418-586) devrait afficher :
+- Header jaune avec 🏆, nom de course, categorie, date
+- Tableau blanc avec 5 colonnes : Pos, Coureur, Equipe, Manager, Points
+- Section maillots si course par etapes
+- Footer avec nom de la ligue
+
+Mais l'image montre un design completement different (pas de header, 3 colonnes seulement).
+
+### 2. Forcer le re-rendu
+
+Le probleme pourrait etre que le `generatedImageUrl` est mis en cache. Je vais ajouter une logique pour **reset l'image generee** quand le dialog s'ouvre.
 
 ### Fichier : `src/components/admin/ExportResultsImage.tsx`
 
-**1. Ajouter une prop `leagueId`**
+**Modification 1 : Reset l'image quand le dialog s'ouvre**
+
+Ajouter un `useEffect` pour reinitialiser `generatedImageUrl` a `null` quand `open` passe a `true` :
 
 ```typescript
-type ExportResultsImageProps = {
-  // ... existing props
-  leagueName?: string;
-  leagueId?: string;  // NOUVEAU - necessaire pour filtrer les managers
-};
+// Apres la ligne 45
+useEffect(() => {
+  if (open) {
+    setGeneratedImageUrl(null);
+  }
+}, [open]);
 ```
 
-**2. Remplacer la query `topRiders` pour utiliser l'edge function**
+**Modification 2 : Ajouter des logs pour debug**
 
-Utiliser `results-course-table` au lieu de la RPC `results_course_top` :
+Ajouter un console.log temporaire pour verifier que les donnees sont correctement recues :
 
 ```typescript
-const { data: topRiders, isLoading: loadingRiders } = useQuery({
-  queryKey: ["export-top-riders", course.course_id, typeClassement, etapeNumero, scope, leagueId],
-  queryFn: async () => {
-    const limit = scope === "top10" ? 10 : scope === "top15" ? 15 : scope === "top20" ? 20 : 100;
-    
-    const { data, error } = await supabase.functions.invoke("results-course-table", {
-      body: {
-        course_id: course.course_id,
-        type_classement: typeClassement,
-        etape_numero: etapeNumero,
-        league_id: leagueId || null
-      }
-    });
-    
-    if (error) throw error;
-    
-    // Transformer et limiter les resultats
-    return (data?.rows || [])
-      .filter((r: any) => r.row_position !== null)
-      .slice(0, limit)
-      .map((r: any) => ({
-        row_position: r.row_position,
-        coureur_nom: r.coureur_nom,
-        equipe: r.equipe,
-        manager_nom: r.manager_nom, // DISPONIBLE car edge function joint les rosters
-        points: r.points_officiels || r.points_theoriques || 0
-      }));
-  },
-  enabled: open && !loadingBareme,
-});
+// Dans la query topRiders, apres le .map()
+console.log("Export riders data:", data?.rows?.slice(0, 3));
 ```
 
-**3. Appliquer l'identite visuelle TdF au template**
+### 3. Verification des donnees
 
-Remplacer le fond violet par le theme noir/jaune :
-
-```typescript
-// Fond principal - gradient noir vers jaune TdF
-background: "linear-gradient(180deg, #000000 0%, #1a1a1a 60%, #FFD500 100%)"
-
-// Font system-ui pour eviter erreurs CORS
-fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+D'apres les logs reseau, la reponse de `results-course-table` contient bien `manager_nom`. Exemple :
+```json
+{
+  "coureur_nom": "Jonathan MILAN",
+  "manager_nom": "Bubu",
+  "points_officiels": 150
+}
 ```
 
-**4. Ajouter skipFonts pour eviter l'erreur CORS**
-
-```typescript
-const dataUrl = await toJpeg(exportRef, {
-  quality: 0.95,
-  pixelRatio: 2,
-  width: 1080,
-  height: 1920,
-  cacheBust: true,
-  backgroundColor: "#000000",
-  skipFonts: true  // Evite l'erreur CORS sur Google Fonts
-});
-```
-
-**5. Ameliorer le template visuel**
-
-- Header : Texte jaune (#FFD500) sur fond noir
-- Cards coureurs : Fond blanc avec bordure jaune pour le podium
-- Podium visuel : 3 premiers avec medailles doree/argentee/bronze
-- Table : Style epure avec alternance de couleurs
-- Footer : Nom de la ligue en jaune sur noir
+Le template utilise `rider.manager_nom || "-"` ce qui devrait afficher "Bubu" et non "-".
 
 ---
 
-### Fichier : `src/components/courses/CourseResultsDrawer.tsx`
-
-**Passer le `leagueId` au composant export**
-
-```typescript
-<ExportResultsImage
-  course={{...}}
-  currentStage={selectedEtape || undefined}
-  currentClassement={selectedType}
-  open={exportDialogOpen}
-  onOpenChange={setExportDialogOpen}
-  leagueName={leagueInfo?.name}
-  leagueId={leagueId}  // NOUVEAU
-/>
-```
-
----
-
-## Palette de couleurs TdF
-
-| Element | Couleur | Code |
-|---------|---------|------|
-| Fond haut | Noir | `#000000` |
-| Fond bas | Jaune TdF | `#FFD500` |
-| Texte header | Jaune | `#FFD500` |
-| Cards | Blanc | `#FFFFFF` |
-| Texte body | Noir | `#000000` |
-| Bordure podium 1er | Or | `#FFD500` |
-| Bordure podium 2e | Argent | `#C0C0C0` |
-| Bordure podium 3e | Bronze | `#CD7F32` |
-| Footer | Jaune sur noir | `#FFD500` |
-
----
-
-## Structure du template
-
-```text
-┌─────────────────────────────────────┐
-│          FOND NOIR (#000)           │
-│                                     │
-│   🏆 COURSE NAME (jaune #FFD500)    │
-│   Categorie • Classement • Date     │
-│                                     │
-│   ┌─────────────────────────────┐   │
-│   │ TABLEAU COUREURS (blanc)    │   │
-│   │ Pos | Coureur | Equipe | Mgr│   │
-│   │ 🥇  | Pogacar | UAE    | Bob│   │  ← Manager visible !
-│   │ 🥈  | Vingeg. | VIS    | Max│   │
-│   │ 🥉  | Evenep. | SOQ    | Luc│   │
-│   │ 4   | ...     | ...    | ...│   │
-│   └─────────────────────────────┘   │
-│                                     │
-│   ┌─────────────────────────────┐   │
-│   │ MAILLOTS (si course etapes) │   │
-│   │ 🟡 Leader  | 🟢 Points      │   │
-│   │ 🔴 Montagne| ⚪ Jeune       │   │
-│   └─────────────────────────────┘   │
-│                                     │
-│          FOND JAUNE (#FFD500)       │
-│   ┌─────────────────────────────┐   │
-│   │     NOM DE LA LIGUE         │   │  ← Footer branding
-│   └─────────────────────────────┘   │
-└─────────────────────────────────────┘
-```
-
----
-
-## Resume des modifications
+## Actions a effectuer
 
 | Fichier | Modification |
 |---------|--------------|
-| `ExportResultsImage.tsx` | Ajouter prop `leagueId` |
-| | Utiliser edge function `results-course-table` pour avoir les managers |
-| | Appliquer theme TdF (noir/jaune) |
-| | Ajouter `skipFonts: true` |
-| `CourseResultsDrawer.tsx` | Passer `leagueId` au composant |
+| `ExportResultsImage.tsx` | Ajouter `useEffect` pour reset `generatedImageUrl` a l'ouverture |
+| | Verifier que les donnees sont bien chargees avant generation |
+| | S'assurer que le template TdF est rendu (header jaune, 5 colonnes, footer ligue) |
+
+---
+
+## Resultat attendu
+
+Apres ces corrections :
+1. Ouvrir le dialog "Partager les resultats"
+2. Cliquer "Generer l'apercu"
+3. L'image devrait afficher :
+   - Header : 🏆 AlUla Tour - 2.pro - Etape Etape 2 - 31 janvier 2026
+   - Tableau : Position (🥇🥈🥉), Coureur, Equipe, Manager (Bubu, Fab, etc.), Points
+   - Footer : MPC 2026 (ou le nom de ta ligue)
 
