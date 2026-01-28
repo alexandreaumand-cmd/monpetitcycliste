@@ -1,8 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLeagueClient } from "@/lib/supabase/leagueClient";
@@ -39,7 +37,6 @@ export const ExportResultsImage = ({
   open,
   onOpenChange,
 }: ExportResultsImageProps) => {
-  const [scope, setScope] = useState<ExportScope>("top15");
   const [isGenerating, setIsGenerating] = useState(false);
   const [exportRef, setExportRef] = useState<HTMLDivElement | null>(null);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
@@ -49,6 +46,56 @@ export const ExportResultsImage = ({
   const etapeNumero = !isOneDay && currentStage ? currentStage : null;
   // @ts-ignore - Type classement is dynamic from parent
   const typeClassement = currentClassement || "General";
+
+  // Récupérer le scope automatiquement depuis le barème
+  const { data: maxPlace, isLoading: loadingBareme } = useQuery({
+    queryKey: ["export-bareme-scope", course.course_id, typeClassement],
+    queryFn: async () => {
+      // 1. Récupérer la catégorie canonique et la saison
+      const { data: courseInfo } = await supabase
+        .from("courses")
+        .select("categorie, phase_id, phases(saison_id)")
+        .eq("id", course.course_id)
+        .maybeSingle();
+      
+      if (!courseInfo) return 15; // Fallback
+      
+      const { data: normData } = await supabase
+        .from("courses_for_points_norm")
+        .select("cat_canon")
+        .eq("id", course.course_id)
+        .maybeSingle();
+      
+      const categorie = normData?.cat_canon || courseInfo.categorie;
+      const saisonId = (courseInfo.phases as any)?.saison_id;
+      
+      if (!saisonId || !categorie) return 15; // Fallback
+      
+      // 2. Récupérer le max de places du barème
+      // @ts-ignore - typeClassement might not match the exact enum type
+      const { data: bareme } = await supabase
+        .from("scoring_rules_saisons")
+        .select("place")
+        .ilike("categorie", categorie)
+        .eq("type_classement", typeClassement as any)
+        .eq("saison_id", saisonId)
+        .order("place", { ascending: false })
+        .limit(1);
+      
+      return bareme?.[0]?.place || 15; // Fallback 15 si pas de barème
+    },
+    enabled: open,
+  });
+
+  // Dériver le scope depuis le nombre de places du barème
+  const scope: ExportScope = useMemo(() => {
+    const places = maxPlace || 15;
+    
+    if (places <= 10) return "top10";
+    if (places <= 15) return "top15";
+    if (places <= 20) return "top20";
+    return "full";
+  }, [maxPlace]);
 
   // Récupération des données
   const { data: topRiders, isLoading: loadingRiders } = useQuery({
@@ -67,7 +114,7 @@ export const ExportResultsImage = ({
       if (error) throw error;
       return data || [];
     },
-    enabled: open,
+    enabled: open && !loadingBareme,
   });
 
   const { data: managerPoints, isLoading: loadingManagers } = useQuery({
@@ -303,11 +350,7 @@ export const ExportResultsImage = ({
     toast.success("Image téléchargée !");
   };
 
-  const handleReset = () => {
-    setGeneratedImageUrl(null);
-  };
-
-  const isLoading = loadingRiders || loadingManagers || loadingJerseys;
+  const isLoading = loadingRiders || loadingManagers || loadingJerseys || loadingBareme;
 
   return (
     <>
@@ -320,39 +363,12 @@ export const ExportResultsImage = ({
           {!generatedImageUrl ? (
             <>
               <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Portée de l'export</Label>
-                  <RadioGroup value={scope} onValueChange={(v) => setScope(v as ExportScope)}>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="top10" id="top10" />
-                      <Label htmlFor="top10" className="font-normal cursor-pointer">
-                        Top 10 (compact)
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="top15" id="top15" />
-                      <Label htmlFor="top15" className="font-normal cursor-pointer">
-                        Top 15 (courses d'un jour)
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="top20" id="top20" />
-                      <Label htmlFor="top20" className="font-normal cursor-pointer">
-                        Top 20 (courses par étapes)
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="full" id="full" />
-                      <Label htmlFor="full" className="font-normal cursor-pointer">
-                        Complet (tous les coureurs)
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
                 <div className="text-sm text-muted-foreground space-y-1">
+                  <p>
+                    Top {scope === "top10" ? "10" : scope === "top15" ? "15" : scope === "top20" ? "20" : "complet"} coureurs
+                    {" "}(basé sur le barème {typeClassement})
+                  </p>
                   <p>Format: 1080 x 1920 (WhatsApp)</p>
-                  <p>Qualité: Haute (JPEG 95%)</p>
                 </div>
 
                 {isLoading && (
@@ -395,13 +411,6 @@ export const ExportResultsImage = ({
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2">
-                <Button 
-                  onClick={handleReset}
-                  variant="outline"
-                  className="w-full sm:w-auto"
-                >
-                  Modifier options
-                </Button>
                 <Button 
                   onClick={handleShareImage}
                   className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white sm:hidden"
