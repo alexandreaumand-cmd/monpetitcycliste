@@ -1,205 +1,186 @@
 
-# Analyse de la latence mobile (1-2 secondes entre les ecrans)
 
-## Problemes identifies
+# Plan d'optimisation de la latence mobile - Phase 2
 
-Apres analyse du code, j'ai identifie plusieurs facteurs qui contribuent a la latence observee lors de la navigation entre les ecrans sur mobile.
+## Etat des lieux apres Phase 1
+
+**Deja optimise :**
+- `useIsMobile()` - Detection synchrone
+- `LeagueContext` - Invalidation ciblee
+- `MyTeam.mobile.tsx` - Parallelisation initiale
+- `ResultsPage.mobile.tsx` - Guards anti-premature
+
+**Gain realise :** ~250-600ms
 
 ---
 
-## 1. Cascade de chargements asynchrones (probleme principal)
+## Optimisations restantes
 
-Chaque page mobile depend d'une chaine de chargements sequentiels qui ne peuvent pas commencer avant que le precedent soit termine :
+### 1. SeasonContext.tsx - Parallelisation des requetes
 
+**Probleme actuel (lignes 61-121) :**
 ```text
-1. useIsMobile() → retourne undefined puis true (re-render)
-   |
-   2. LeagueContext → charge les ligues utilisateur (~200-500ms)
-      |
-      3. SeasonContext → charge les saisons et phases (~200-400ms)
-         |
-         4. Contenu de la page → charge les donnees specifiques (~500-1000ms)
+1. Attendre leagueLoading → 
+2. Charger saisons → 
+3. Charger league_scopes → 
+4. Charger phases (2e useEffect)
 ```
 
-**Impact** : Chaque etape attend la precedente, ce qui cree une latence cumulee de 1-2 secondes.
+**Solution :** Charger `saisons` et `league_scopes` en parallele avec `Promise.all`, puis enchainer phases immediatement.
 
----
-
-## 2. Hook `useIsMobile()` avec etat initial `undefined`
-
+**Modification :**
 ```typescript
-// src/hooks/use-mobile.tsx
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = useState<boolean | undefined>(undefined);
-  // ...
-  return !!isMobile; // Retourne false au premier render, puis true
+// Charger saisons ET scope en parallele
+const [seasonsResult, scopeResult] = await Promise.all([
+  supabase.from("saisons").select("id, annee").order("annee", { ascending: false }),
+  leagueId 
+    ? supabase.from("league_scopes").select("season_id").eq("league_id", leagueId).maybeSingle()
+    : Promise.resolve({ data: null })
+]);
+
+// Determiner la saison cible
+const targetSeasonId = scopeResult.data?.season_id || seasonsResult.data?.[0]?.id;
+const targetSeason = seasonsResult.data?.find(s => s.id === targetSeasonId);
+
+// Charger les phases immediatement (meme useEffect)
+if (targetSeason) {
+  const { data: phasesData } = await supabase
+    .from("phases")
+    .select("*")
+    .eq("saison_id", targetSeason.id)
+    .order("index_dans_saison", { ascending: true });
+  
+  // Set tout en une fois
+  setSeasons(seasonsResult.data);
+  setSelectedSeasonState(targetSeason);
+  setPhases(phasesData);
+  setActivePhase(computeActivePhase(phasesData));
 }
 ```
 
-**Probleme** : L'etat initial est `undefined`, converti en `false`. Cela cause :
-- Un premier rendu en mode "desktop"
-- Un second rendu en mode "mobile" une fois l'effet execute
-- Double initialisation des composants
+**Gain estime :** 200-400ms (elimination du 2e useEffect sequentiel)
 
 ---
 
-## 3. Chargements redondants dans les Contexts
+### 2. MobileBottomBar.tsx - Prefetch au touch
 
-**LeagueContext** (lignes 29-52) :
-- Charge les ligues utilisateur a chaque montage
-- Appelle `queryClient.invalidateQueries()` a chaque changement de ligue (ligne 87)
+**Probleme actuel :** Aucun prefetch, les donnees sont chargees seulement apres navigation.
 
-**SeasonContext** (lignes 61-121) :
-- Attend que `LeagueContext` soit pret (`if (leagueLoading) return`)
-- Fait plusieurs appels Supabase en cascade
+**Solution :** Utiliser `onTouchStart` pour prefetcher les donnees de la page cible avant le clic.
 
----
-
-## 4. Requetes non-parallelisees dans les pages
-
-**Exemple dans `MyTeam.mobile.tsx`** (lignes 129-149) :
+**Modification :**
 ```typescript
-useEffect(() => { loadCurrentUser(); }, []);
-useEffect(() => { loadManagers(); }, [leagueId]);
-useEffect(() => { loadTeamWithKpis(); }, [selectedPhaseId, ...]);
-```
+import { useQueryClient } from "@tanstack/react-query";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
-Ces effets s'executent en cascade plutot qu'en parallele.
+const queryClient = useQueryClient();
+const { selectedSeason } = useSeasonContext();
 
----
-
-## Solutions proposees
-
-### Solution 1 : Optimiser `useIsMobile()` (impact immediat)
-
-Initialiser l'etat avec une valeur SSR-safe basee sur la detection cote client :
-
-```typescript
-const MOBILE_BREAKPOINT = 768;
-
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = useState<boolean>(() => {
-    // Detection initiale synchrone si disponible
-    if (typeof window !== 'undefined') {
-      return window.innerWidth < MOBILE_BREAKPOINT;
-    }
-    return false; // Fallback SSR
-  });
-
-  useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    const onChange = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    mql.addEventListener("change", onChange);
-    return () => mql.removeEventListener("change", onChange);
-  }, []);
-
-  return isMobile;
-}
-```
-
-**Gain estime** : ~50-100ms (elimination du double render initial)
-
----
-
-### Solution 2 : Pre-fetching des donnees dans LeagueContext
-
-Paralleliser le chargement des saisons avec les ligues :
-
-```typescript
-// Dans LeagueProvider
-const { data: userLeagues } = useQuery({
-  queryKey: ['user-leagues-for-context'],
-  queryFn: async () => {
-    // Charger ligues + saisons en parallele
-    const [membershipsResult, seasonsResult] = await Promise.all([
-      supabase.from('league_members').select(...),
-      supabase.from('saisons').select('id, annee')
-    ]);
-    return { leagues: ..., seasons: seasonsResult.data };
+const prefetchPageData = (path: string) => {
+  if (!currentLeagueId) return;
+  
+  if (path.includes('classement')) {
+    queryClient.prefetchQuery({
+      queryKey: ["manager-standings-mobile", null, selectedSeason?.id, currentLeagueId],
+      staleTime: 30000,
+    });
+  } else if (path.includes('resultats')) {
+    queryClient.prefetchQuery({
+      queryKey: ["mobile-races", currentLeagueId],
+      staleTime: 30000,
+    });
+  } else if (path.includes('startlist')) {
+    queryClient.prefetchQuery({
+      queryKey: ["startlists-info"],
+      staleTime: 30000,
+    });
   }
+};
+
+// Dans le JSX:
+<button
+  onTouchStart={() => prefetchPageData(route.path)}
+  onClick={() => navigate(buildNavUrl(route.path))}
+  ...
+>
+```
+
+**Gain estime :** 100-200ms (donnees deja en cache avant navigation)
+
+---
+
+### 3. Rankings.mobile.tsx - Parallelisation
+
+**Probleme actuel :** Les requetes `standings`, `previousGlobalStandings`, et `topRiders` sont declenchees separement.
+
+**Observation :** Les queries utilisent deja React Query et sont donc deja parallelisees automatiquement. Aucune modification necessaire ici.
+
+**Optimisation possible :** Ajouter `staleTime` pour eviter les re-fetches inutiles.
+
+```typescript
+const { data: standings } = useQuery({
+  queryKey: ["manager-standings-mobile", selectedPhase, selectedSeason?.id, leagueId],
+  staleTime: 60000, // Cache 1 minute
+  // ...
 });
 ```
 
-**Gain estime** : ~200-400ms
-
 ---
 
-### Solution 3 : Supprimer l'invalidation globale des queries
+### 4. Startlist.mobile.tsx - Parallelisation
 
-Remplacer `queryClient.invalidateQueries()` par des invalidations ciblees :
+**Probleme actuel (lignes 69-167) :** 3 queries separees pour `currentUserManagerId`, `races`, et `startlistsInfo`.
 
-```typescript
-// LeagueContext ligne 87 - A remplacer
-queryClient.invalidateQueries({ queryKey: ['league-specific-data'] });
-```
+**Observation :** React Query parallelise deja automatiquement. Optimisation possible via `staleTime`.
 
-**Gain estime** : ~100-300ms (evite les re-fetches inutiles)
-
----
-
-### Solution 4 : Prefetch lors de la navigation
-
-Ajouter du prefetching dans `MobileBottomBar` :
+**Modifications :**
+- Ajouter `staleTime` aux queries
+- Ajouter guard sur `isLoadingContext` pour eviter les fetches prematures
 
 ```typescript
-const prefetchPageData = (path: string) => {
-  if (path.includes('classement')) {
-    queryClient.prefetchQuery(['manager-standings-mobile', ...]);
-  }
-  // etc.
-};
-
-// Sur hover/focus du bouton
-onTouchStart={() => prefetchPageData(route.path)}
+const { data: races } = useQuery({
+  queryKey: ["startlist-races", leagueId, selectedSeason?.id, tabMode],
+  staleTime: 60000, // Cache 1 minute
+  enabled: !!leagueId && !!selectedSeason?.id && !isLoadingContext,
+  // ...
+});
 ```
 
 ---
 
-### Solution 5 : Paralleliser les requetes dans les pages mobiles
+## Resume des modifications
 
-**Exemple pour `MyTeam.mobile.tsx`** :
+| Fichier | Modification | Gain |
+|---------|--------------|------|
+| `SeasonContext.tsx` | Promise.all pour saisons + scope + phases | 200-400ms |
+| `MobileBottomBar.tsx` | Prefetch onTouchStart | 100-200ms |
+| `Rankings.mobile.tsx` | Ajouter staleTime | 50-100ms |
+| `Startlist.mobile.tsx` | Guard + staleTime | 50-100ms |
 
-```typescript
-// Remplacer les 3 useEffect par un seul avec Promise.all
-useEffect(() => {
-  if (!leagueId) return;
-  
-  const loadAll = async () => {
-    const [user, managers, team] = await Promise.all([
-      loadCurrentUser(),
-      loadManagers(),
-      selectedPhaseId ? loadTeamWithKpis() : null
-    ]);
-    // ...
-  };
-  
-  loadAll();
-}, [leagueId, selectedPhaseId]);
-```
+**Gain total Phase 2 :** 400-800ms
+
+**Gain cumule (Phase 1 + 2) :** 650ms - 1.4s
 
 ---
 
-## Plan d'implementation
+## Details techniques
 
-| Priorite | Solution | Fichiers | Gain estime |
-|----------|----------|----------|-------------|
-| 1 | Optimiser `useIsMobile()` | `src/hooks/use-mobile.tsx` | 50-100ms |
-| 2 | Pre-fetching saisons | `src/contexts/LeagueContext.tsx` | 200-400ms |
-| 3 | Invalidation ciblee | `src/contexts/LeagueContext.tsx` | 100-300ms |
-| 4 | Paralleliser requetes pages | `MyTeam.mobile.tsx`, `Rankings.mobile.tsx`, etc. | 200-400ms |
-| 5 | Prefetch navigation | `src/components/mobile/MobileBottomBar.tsx` | 100-200ms |
+### SeasonContext - Nouvelle structure
 
-**Gain total estime** : 650ms - 1.4s (reduction significative de la latence)
+Le useEffect unique chargera tout en sequence optimisee :
+1. `Promise.all([saisons, scope])` - Parallele
+2. Determiner saison cible
+3. Charger phases pour cette saison
+4. Set tous les states en une fois
 
----
+Cela elimine le 2e useEffect qui attendait `selectedSeason` pour charger les phases.
 
-## Resume des fichiers a modifier
+### MobileBottomBar - Queries a prefetcher
 
-- `src/hooks/use-mobile.tsx` - Detection synchrone initiale
-- `src/contexts/LeagueContext.tsx` - Pre-fetch + invalidation ciblee
-- `src/contexts/SeasonContext.tsx` - Parallelisation des requetes
-- `src/components/mobile/MobileBottomBar.tsx` - Prefetch au hover
-- `src/components/team/MyTeam.mobile.tsx` - Parallelisation
-- `src/pages/Rankings.mobile.tsx` - Parallelisation
-- `src/pages/Startlist.mobile.tsx` - Parallelisation
-- `src/pages/ResultsPage.mobile.tsx` - Parallelisation
+Pour chaque route :
+- `/classement` → `manager-standings-mobile`
+- `/resultats` → `mobile-races`
+- `/startlist` → `startlists-info`
+- `/mon-equipe` → Deja gere par MyTeam
+- `/courses` → `startlist-races`
+
