@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { toast } from "sonner";
 import { toJpeg } from "html-to-image";
 import { format } from "date-fns";
@@ -28,6 +27,7 @@ type ExportResultsImageProps = {
   currentClassement?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  leagueName?: string;
 };
 
 export const ExportResultsImage = ({
@@ -36,11 +36,11 @@ export const ExportResultsImage = ({
   currentClassement,
   open,
   onOpenChange,
+  leagueName,
 }: ExportResultsImageProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [exportRef, setExportRef] = useState<HTMLDivElement | null>(null);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
-  const leagueClient = useLeagueClient();
 
   const isOneDay = course.type_course === "One day";
   const etapeNumero = !isOneDay && currentStage ? currentStage : null;
@@ -117,52 +117,6 @@ export const ExportResultsImage = ({
     enabled: open && !loadingBareme,
   });
 
-  const { data: managerPoints, isLoading: loadingManagers } = useQuery({
-    queryKey: ["export-manager-points", course.course_id, typeClassement, etapeNumero],
-    queryFn: async () => {
-      // Pour les courses par étapes, inclure TOUS les points de l'étape (Etape + Porteurs)
-      const typeFilter = etapeNumero 
-        ? ['Etape', 'Porteur Leader', 'Porteur Vert', 'Porteur Montagne', 'Porteur Jeune', 'Porteur Combattif']
-        : [typeClassement];
-
-      // @ts-ignore - Type classement is dynamic
-      let query = leagueClient
-        .from("points_ledger")
-        .select("manager_id, managers!inner(nom), points")
-        .eq("course_id", course.course_id)
-        // @ts-ignore
-        .in("type_classement", typeFilter)
-        .not("manager_id", "is", null);
-
-      if (etapeNumero) {
-        query = query.eq("etape_numero", etapeNumero);
-      } else {
-        query = query.is("etape_numero", null);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      // Agrégation par manager
-      const aggregated = (data || []).reduce((acc: any, row: any) => {
-        const managerId = row.manager_id;
-        if (!acc[managerId]) {
-          acc[managerId] = {
-            manager_id: managerId,
-            nom: row.managers.nom,
-            total_points: 0,
-          };
-        }
-        acc[managerId].total_points += row.points;
-        return acc;
-      }, {});
-
-      return Object.values(aggregated)
-        .sort((a: any, b: any) => b.total_points - a.total_points)
-        .slice(0, 3);
-    },
-    enabled: open,
-  });
 
   const { data: jerseyHolders, isLoading: loadingJerseys } = useQuery({
     queryKey: ["export-jerseys", course.course_id, etapeNumero],
@@ -199,7 +153,6 @@ export const ExportResultsImage = ({
     // Vérifier qu'il y a au moins des données à exporter
     const hasData = 
       (topRiders && topRiders.length > 0) ||
-      (managerPoints && managerPoints.length > 0) ||
       (jerseyHolders && jerseyHolders.length > 0);
 
     if (!hasData) {
@@ -350,7 +303,7 @@ export const ExportResultsImage = ({
     toast.success("Image téléchargée !");
   };
 
-  const isLoading = loadingRiders || loadingManagers || loadingJerseys || loadingBareme;
+  const isLoading = loadingRiders || loadingJerseys || loadingBareme;
 
   return (
     <>
@@ -557,45 +510,6 @@ export const ExportResultsImage = ({
             </div>
           )}
 
-          {/* PODIUM MANAGERS */}
-          {managerPoints && managerPoints.length > 0 && (
-            <div
-              style={{
-                background: "white",
-                borderRadius: "20px",
-                padding: "30px",
-                marginBottom: "30px",
-              }}
-            >
-              <h2 style={{ fontSize: "36px", marginBottom: "20px", fontWeight: "bold" }}>
-                👔 Podium Managers
-              </h2>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px" }}>
-                {managerPoints.slice(0, 3).map((manager: any, idx: number) => (
-                  <div
-                    key={idx}
-                    style={{
-                      textAlign: "center",
-                      padding: "20px",
-                      background:
-                        idx === 0 ? "#FFF9E6" : idx === 1 ? "#F5F5F5" : "#FFF5E6",
-                      borderRadius: "15px",
-                    }}
-                  >
-                    <div style={{ fontSize: "48px" }}>
-                      {idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}
-                    </div>
-                    <p style={{ fontSize: "24px", fontWeight: "bold", margin: "10px 0" }}>
-                      {manager.nom}
-                    </p>
-                    <p style={{ fontSize: "28px", fontWeight: "bold", color: "#667eea" }}>
-                      {manager.total_points} pts
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* PORTEURS DE MAILLOTS */}
           {!isOneDay && jerseyHolders && jerseyHolders.length > 0 && (
@@ -645,8 +559,8 @@ export const ExportResultsImage = ({
 
           {/* FOOTER */}
           <div style={{ textAlign: "center", color: "white", marginTop: "40px" }}>
-            <p style={{ fontSize: "18px", opacity: 0.8 }}>
-              Généré le {format(new Date(), "dd/MM/yyyy à HH:mm", { locale: fr })}
+            <p style={{ fontSize: "24px", fontWeight: "bold", opacity: 0.9 }}>
+              {leagueName || "Mon Petit Cycliste"}
             </p>
           </div>
         </div>
