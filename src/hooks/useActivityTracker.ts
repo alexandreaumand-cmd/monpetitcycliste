@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useCurrentManager } from '@/hooks/useCurrentManager';
 
 // Generate or retrieve session ID
 const getSessionId = (): string => {
@@ -14,15 +15,16 @@ const getSessionId = (): string => {
 
 export const useActivityTracker = () => {
   const location = useLocation();
+  const { data: manager } = useCurrentManager();
   const lastLogId = useRef<string | null>(null);
   const lastLogTime = useRef<number>(Date.now());
   const sessionId = useRef<string>(getSessionId());
 
   useEffect(() => {
+    if (!manager?.user_id) return;
+
     const trackPageView = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
 
         // Update duration of previous page
         if (lastLogId.current) {
@@ -39,7 +41,7 @@ export const useActivityTracker = () => {
         const { data, error } = await supabase
           .from('user_activity_logs')
           .insert({
-            user_id: user.id,
+            user_id: manager.user_id,
             page_path: location.pathname,
             page_title: document.title,
             session_id: sessionId.current,
@@ -80,5 +82,5 @@ export const useActivityTracker = () => {
       clearTimeout(timeoutId);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [location.pathname]);
+  }, [location.pathname, manager?.user_id]);
 };

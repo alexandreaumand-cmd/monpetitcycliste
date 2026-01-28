@@ -57,6 +57,7 @@ export const RankingsMobile = () => {
   const { data: standings, isLoading: standingsLoading } = useQuery({
     queryKey: ["manager-standings-mobile", selectedPhase, selectedSeason?.id, leagueId],
     staleTime: 60000, // Cache 1 minute
+    enabled: !!leagueId && (!!selectedSeason?.id || !!selectedPhase),
     queryFn: async () => {
       if (!leagueId) return [];
       
@@ -138,6 +139,7 @@ export const RankingsMobile = () => {
   const { data: allTopRiders, isLoading: ridersLoading } = useQuery({
     queryKey: ["top-riders-mobile", selectedPhase, selectedSeason?.id, leagueId],
     staleTime: 60000, // Cache 1 minute
+    enabled: !!leagueId && !!selectedSeason?.id,
     queryFn: async () => {
       if (!leagueId) return [];
       
