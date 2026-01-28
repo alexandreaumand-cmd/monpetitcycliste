@@ -14,6 +14,7 @@ import { fr, enUS } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { useLeague } from "@/contexts/LeagueContext";
 
 interface Notification {
   id: string;
@@ -38,6 +39,7 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
   const { t, i18n } = useTranslation('navigation');
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const navigate = useNavigate();
+  const { leagueId: currentLeagueId } = useLeague();
   
   const dateLocale = i18n.language === 'fr' ? fr : enUS;
 
@@ -100,7 +102,8 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
       navigate(`/dashboard/startlist?${params.toString()}`);
     } else if (notification.type === 'results_added') {
       const courseId = notification.metadata?.course_id;
-      const leagueId = notification.metadata?.league_id;
+      // Utiliser la ligue courante, sinon fallback sur celle de la notification
+      const leagueId = currentLeagueId || notification.metadata?.league_id;
       const params = new URLSearchParams();
       if (leagueId) params.set('leagueId', leagueId);
       if (courseId) params.set('courseId', courseId);
