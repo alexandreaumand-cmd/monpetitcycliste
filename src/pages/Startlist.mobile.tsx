@@ -90,6 +90,8 @@ export const StartlistMobile = () => {
     data: races
   } = useQuery({
     queryKey: ["startlist-races", leagueId, selectedSeason?.id, tabMode],
+    staleTime: 60000, // Cache 1 minute
+    enabled: !!leagueId && !!selectedSeason?.id && !isLoadingContext,
     queryFn: async () => {
       if (!leagueId) return [];
       console.log('[Startlist Mobile] Loading courses for league:', leagueId, 'season:', selectedSeason?.id);
@@ -137,8 +139,7 @@ export const StartlistMobile = () => {
         filtered = upcoming.sort((a: any, b: any) => a.date_debut.localeCompare(b.date_debut));
       }
       return filtered.slice(0, 100);
-    },
-    enabled: !!leagueId && !!selectedSeason?.id
+    }
   });
 
   // Fetch all startlist info in one query
@@ -146,6 +147,7 @@ export const StartlistMobile = () => {
     data: startlistsInfo
   } = useQuery({
     queryKey: ["startlists-info"],
+    staleTime: 60000, // Cache 1 minute
     queryFn: async () => {
       const {
         data,

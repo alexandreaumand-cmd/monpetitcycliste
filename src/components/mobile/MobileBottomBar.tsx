@@ -1,7 +1,9 @@
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Users, BarChart3, ListChecks, Medal, Calendar } from "lucide-react";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 interface MobileBottomBarProps {
   isAdmin: boolean;
@@ -13,6 +15,35 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const currentLeagueId = searchParams.get('leagueId');
+  const queryClient = useQueryClient();
+  const { selectedSeason } = useSeasonContext();
+
+  // Prefetch data for target page on touch start
+  const prefetchPageData = (path: string) => {
+    if (!currentLeagueId) return;
+    
+    if (path.includes('classement')) {
+      queryClient.prefetchQuery({
+        queryKey: ["manager-standings-mobile", null, selectedSeason?.id, currentLeagueId],
+        staleTime: 30000,
+      });
+    } else if (path.includes('resultats')) {
+      queryClient.prefetchQuery({
+        queryKey: ["mobile-races", currentLeagueId],
+        staleTime: 30000,
+      });
+    } else if (path.includes('startlist')) {
+      queryClient.prefetchQuery({
+        queryKey: ["startlists-info"],
+        staleTime: 30000,
+      });
+    } else if (path.includes('courses')) {
+      queryClient.prefetchQuery({
+        queryKey: ["startlist-races", currentLeagueId, selectedSeason?.id, "upcoming-year"],
+        staleTime: 30000,
+      });
+    }
+  };
 
   const mainRoutes = [
     { label: t('navigation.standings'), path: "/dashboard/classement", icon: BarChart3 },
@@ -44,6 +75,8 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
           return (
             <button
               key={route.path}
+              onTouchStart={() => prefetchPageData(route.path)}
+              onMouseEnter={() => prefetchPageData(route.path)}
               onClick={() => navigate(buildNavUrl(route.path))}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl touch-target transition-all",

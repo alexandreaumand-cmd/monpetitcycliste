@@ -57,115 +57,108 @@ export const SeasonProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLeagueSeason, setIsLeagueSeason] = useState(false);
 
-  // Load seasons and set season from league
+  // Helper to compute active phase from phases data
+  const computeActivePhase = (phasesData: Phase[] | null): Phase | null => {
+    if (!phasesData || phasesData.length === 0) return null;
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Phase en cours (today entre date_debut et date_fin)
+    const currentPhase = phasesData.find(p => 
+      p.date_debut <= today && today <= p.date_fin
+    );
+    
+    if (currentPhase) return currentPhase;
+    
+    // Sinon, prochaine phase à venir
+    const nextPhase = phasesData.find(p => p.date_debut > today);
+    if (nextPhase) return nextPhase;
+    
+    // Sinon, dernière phase (saison terminée)
+    return phasesData[phasesData.length - 1] || null;
+  };
+
+  // Load seasons, scope, and phases in one optimized effect
   useEffect(() => {
     // Wait for LeagueContext to be ready
     if (leagueLoading) return;
 
-    const loadSeasons = async () => {
+    const loadAll = async () => {
       try {
         setIsLoading(true);
 
-        // Fetch all seasons
-        const { data: seasonsData, error: seasonsError } = await supabase
-          .from("saisons")
-          .select("id, annee")
-          .order("annee", { ascending: false });
+        // Step 1: Fetch seasons AND scope in parallel
+        const [seasonsResult, scopeResult] = await Promise.all([
+          supabase
+            .from("saisons")
+            .select("id, annee")
+            .order("annee", { ascending: false }),
+          leagueId 
+            ? supabase
+                .from("league_scopes")
+                .select("season_id")
+                .eq("league_id", leagueId)
+                .maybeSingle()
+            : Promise.resolve({ data: null, error: null })
+        ]);
 
-        if (seasonsError) throw seasonsError;
-        setSeasons(seasonsData || []);
+        if (seasonsResult.error) throw seasonsResult.error;
+        const seasonsData = seasonsResult.data || [];
 
-        // If no leagueId (SuperAdmin mode), use most recent season
+        // Step 2: Determine target season
+        let targetSeason: Season | null = null;
+        let isFromLeague = false;
+
         if (!leagueId) {
+          // SuperAdmin mode: use most recent season
           console.log("[SeasonContext] No leagueId - SuperAdmin mode, using most recent season");
-          if (seasonsData && seasonsData.length > 0) {
-            setSelectedSeasonState(seasonsData[0]); // Most recent season (ordered desc)
-            setIsLeagueSeason(false);
+          targetSeason = seasonsData[0] || null;
+          isFromLeague = false;
+        } else if (scopeResult.data?.season_id) {
+          // Manager mode: use league's season
+          targetSeason = seasonsData.find(s => s.id === scopeResult.data.season_id) || null;
+          isFromLeague = true;
+          if (targetSeason) {
+            console.log("[SeasonContext] Loading season from league:", targetSeason.annee);
+          } else {
+            console.error("[SeasonContext] Season not found for league scope");
           }
-          setIsLoading(false);
-          return;
-        }
-
-        // Load league's season (Manager mode)
-        const { data: scopeData } = await supabase
-          .from("league_scopes")
-          .select("season_id")
-          .eq("league_id", leagueId)
-          .maybeSingle();
-
-        if (!scopeData?.season_id) {
+        } else {
           console.error("[SeasonContext] League has no season configured");
-          setIsLoading(false);
-          return;
         }
 
-        const season = seasonsData?.find(s => s.id === scopeData.season_id);
-        if (!season) {
-          console.error("[SeasonContext] Season not found");
-          setIsLoading(false);
-          return;
+        // Step 3: If we have a target season, load phases immediately
+        let phasesData: Phase[] = [];
+        if (targetSeason) {
+          const { data: phases, error: phasesError } = await supabase
+            .from("phases")
+            .select("*")
+            .eq("saison_id", targetSeason.id)
+            .order("index_dans_saison", { ascending: true });
+
+          if (phasesError) {
+            console.error("Error loading phases:", phasesError);
+          } else {
+            phasesData = phases || [];
+          }
         }
 
-        console.log("[SeasonContext] Loading season from league:", season.annee);
-        setSelectedSeasonState(season);
-        setIsLeagueSeason(true);
+        // Step 4: Set all states at once to minimize re-renders
+        setSeasons(seasonsData);
+        setSelectedSeasonState(targetSeason);
+        setIsLeagueSeason(isFromLeague);
+        setPhases(phasesData);
+        setActivePhase(computeActivePhase(phasesData));
 
       } catch (error) {
-        console.error("Error loading seasons:", error);
+        console.error("Error loading seasons/phases:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadSeasons();
+    loadAll();
   }, [leagueId, leagueLoading]);
-
-  // Load phases when season changes
-  useEffect(() => {
-    const loadPhases = async () => {
-      if (!selectedSeason) {
-        setPhases([]);
-        setActivePhase(null);
-        return;
-      }
-
-      try {
-        const { data: phasesData, error } = await supabase
-          .from("phases")
-          .select("*")
-          .eq("saison_id", selectedSeason.id)
-          .order("index_dans_saison", { ascending: true });
-
-        if (error) throw error;
-        setPhases(phasesData || []);
-
-        // Trouver la phase active basée sur le calendrier
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-        
-        // Phase en cours (today entre date_debut et date_fin)
-        const currentPhase = phasesData?.find(p => 
-          p.date_debut <= today && today <= p.date_fin
-        );
-        
-        if (currentPhase) {
-          setActivePhase(currentPhase);
-        } else {
-          // Sinon, prochaine phase à venir
-          const nextPhase = phasesData?.find(p => p.date_debut > today);
-          if (nextPhase) {
-            setActivePhase(nextPhase);
-          } else {
-            // Sinon, dernière phase (saison terminée)
-            setActivePhase(phasesData?.[phasesData.length - 1] || null);
-          }
-        }
-      } catch (error) {
-        console.error("Error loading phases:", error);
-      }
-    };
-
-    loadPhases();
-  }, [selectedSeason]);
 
   // Update season selection (blocked when league is active)
   const setSelectedSeason = (season: Season | null) => {
