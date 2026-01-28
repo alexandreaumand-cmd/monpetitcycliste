@@ -1,96 +1,125 @@
 
 
-# Corriger l'image d'export des resultats
+# Simplifier le design et adapter la taille pour mobile
 
-## Probleme identifie
+## Objectif
 
-L'image generee dans ta capture d'ecran ne correspond pas au template defini dans le code actuel (`ExportResultsImage.tsx`). Cela peut etre du a :
-
-1. **Cache navigateur** - Rafraichir la page avec Ctrl+Shift+R
-2. **Template non rendu correctement** - Le code est correct mais l'image montre l'ancien design
-
-En analysant les donnees reseau, je confirme que l'edge function `results-course-table` retourne bien les managers :
-- Jonathan MILAN → Bubu
-- Pascal ACKERMANN → Fab
-- Daniel SKERL → Fab
-- etc.
-
-Mais l'image montre "-" pour tous.
+Combiner les deux modifications demandées :
+1. **Supprimer le fond gradient** → Fond blanc épuré
+2. **Redimensionner l'image** → Format carré 1080x1080 pour mobile
 
 ---
 
-## Solution
-
-### 1. Verifier que le template est bien rendu
-
-Le template actuel (lignes 418-586) devrait afficher :
-- Header jaune avec 🏆, nom de course, categorie, date
-- Tableau blanc avec 5 colonnes : Pos, Coureur, Equipe, Manager, Points
-- Section maillots si course par etapes
-- Footer avec nom de la ligue
-
-Mais l'image montre un design completement different (pas de header, 3 colonnes seulement).
-
-### 2. Forcer le re-rendu
-
-Le probleme pourrait etre que le `generatedImageUrl` est mis en cache. Je vais ajouter une logique pour **reset l'image generee** quand le dialog s'ouvre.
+## Modifications techniques
 
 ### Fichier : `src/components/admin/ExportResultsImage.tsx`
 
-**Modification 1 : Reset l'image quand le dialog s'ouvre**
-
-Ajouter un `useEffect` pour reinitialiser `generatedImageUrl` a `null` quand `open` passe a `true` :
+**1. Modifier les dimensions (lignes 193-194 et 430-431)**
 
 ```typescript
-// Apres la ligne 45
-useEffect(() => {
-  if (open) {
-    setGeneratedImageUrl(null);
-  }
-}, [open]);
+// toJpeg options
+width: 1080,
+height: 1080,  // au lieu de 1920
+backgroundColor: "#ffffff",  // au lieu de #000000
+
+// Template HTML
+width: "1080px",
+height: "1080px",  // au lieu de 1920px
+background: "#ffffff",  // au lieu du gradient
+padding: "30px",  // au lieu de 40px
 ```
 
-**Modification 2 : Ajouter des logs pour debug**
-
-Ajouter un console.log temporaire pour verifier que les donnees sont correctement recues :
+**2. Header compact (lignes 438-453)**
 
 ```typescript
-// Dans la query topRiders, apres le .map()
-console.log("Export riders data:", data?.rows?.slice(0, 3));
+<div style={{ 
+  textAlign: "center", 
+  marginBottom: "20px",
+  borderBottom: "3px solid #FFD500",
+  paddingBottom: "15px"
+}}>
+  <h1 style={{ fontSize: "32px", margin: "0 0 8px 0", fontWeight: "bold", color: "#1a1a1a" }}>
+    {course.course_nom}
+  </h1>
+  <p style={{ fontSize: "18px", color: "#6b7280", margin: "4px 0" }}>
+    {course.categorie} • {typeClassement}{etapeNumero && ` • Étape ${etapeNumero}`}
+  </p>
+  <p style={{ fontSize: "16px", color: "#9ca3af" }}>
+    {format(...)}
+  </p>
+</div>
 ```
 
-### 3. Verification des donnees
+**3. Tableau épuré avec tailles réduites (lignes 456-509)**
 
-D'apres les logs reseau, la reponse de `results-course-table` contient bien `manager_nom`. Exemple :
-```json
-{
-  "coureur_nom": "Jonathan MILAN",
-  "manager_nom": "Bubu",
-  "points_officiels": 150
-}
+- En-têtes : 14px, padding 8px
+- Corps : 13px, padding 6px
+- Garder médailles 🥇🥈🥉
+- Alternance de fond : blanc / gris très clair
+
+**4. Section maillots compacte (lignes 514-545)**
+
+- Icônes : 24px
+- Texte : 12-14px
+- Grid 2 colonnes
+
+**5. Footer simplifié (lignes 551-557)**
+
+```typescript
+<div style={{ 
+  position: "absolute",
+  bottom: "20px",
+  left: "30px",
+  right: "30px",
+  textAlign: "center",
+  borderTop: "1px solid #e5e7eb",
+  paddingTop: "15px"
+}}>
+  <p style={{ fontSize: "18px", fontWeight: "600", color: "#1a1a1a" }}>
+    {leagueName || "Mon Petit Cycliste"}
+  </p>
+</div>
 ```
 
-Le template utilise `rider.manager_nom || "-"` ce qui devrait afficher "Bubu" et non "-".
+**6. Mettre à jour le texte du format (ligne 346)**
+
+```typescript
+<p>Format: 1080 x 1080 (carré, optimal mobile)</p>
+```
 
 ---
 
-## Actions a effectuer
+## Comparaison
 
-| Fichier | Modification |
-|---------|--------------|
-| `ExportResultsImage.tsx` | Ajouter `useEffect` pour reset `generatedImageUrl` a l'ouverture |
-| | Verifier que les donnees sont bien chargees avant generation |
-| | S'assurer que le template TdF est rendu (header jaune, 5 colonnes, footer ligue) |
+| Élément | Avant | Après |
+|---------|-------|-------|
+| Dimensions | 1080 x 1920 | 1080 x 1080 |
+| Fond | Gradient noir→jaune | Blanc |
+| Titre | 48px | 32px |
+| Tableau | 18-20px | 13-14px |
+| Padding | 40px | 30px |
 
 ---
 
-## Resultat attendu
+## Résultat attendu
 
-Apres ces corrections :
-1. Ouvrir le dialog "Partager les resultats"
-2. Cliquer "Generer l'apercu"
-3. L'image devrait afficher :
-   - Header : 🏆 AlUla Tour - 2.pro - Etape Etape 2 - 31 janvier 2026
-   - Tableau : Position (🥇🥈🥉), Coureur, Equipe, Manager (Bubu, Fab, etc.), Points
-   - Footer : MPC 2026 (ou le nom de ta ligue)
+```text
+┌────────────────────────────┐
+│      AlUla Tour            │
+│  2.pro • Etape • Étape 2   │
+│     31 janvier 2026        │
+├────────────────────────────┤ ← Ligne jaune
+│ # │Coureur    │Équipe│Mgr│Pts│
+│ 🥇│MILAN      │LID   │Bubu│150│
+│ 🥈│ACKERMANN  │ISR   │Fab │120│
+│ 🥉│SKERL      │ABC   │Fab │100│
+│ 4 │...        │...   │... │ 80│
+├────────────────────────────┤ ← Ligne jaune
+│🟡Leader 🟢Pts 🔴Mont ⚪Jeune│
+├────────────────────────────┤
+│        MPC 2026            │
+└────────────────────────────┘
+```
+
+Image carrée, fond blanc, lisible sur mobile sans scroll.
 
