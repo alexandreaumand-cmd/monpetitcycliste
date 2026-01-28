@@ -1,163 +1,115 @@
 
 
-# Modifier le visuel d'export : classement managers et simplification
+# Correction : Classement managers et porteurs de maillots sur le visuel d'export (Top 10 Managers)
 
-## Objectif
+## Diagnostic
 
-Trois modifications sur l'image d'export :
-1. Afficher les points des maillots individuels (Leader +5, Points +5, etc.) de maniere discrete
-2. Ajouter un classement des managers de la ligue avec leurs points sur la course
-3. Supprimer la colonne "Equipe" du tableau et grossir le reste
+Deux requetes echouent silencieusement a cause de jointures invalides :
+
+### Bug 1 : Edge function `stage-jersey-bonuses`
+La table `points_ledger` n'a pas de colonne `manager_id`, donc la jointure `managers!inner` echoue et retourne un tableau vide.
+
+### Bug 2 : Query `managerRanking` dans ExportResultsImage.tsx
+PostgREST rejette la requete car il n'y a pas de FK directe entre `points_ledger` et `rosters`.
 
 ---
 
-## Modifications techniques
+## Solution
 
-### Fichier : `src/components/admin/ExportResultsImage.tsx`
+### Fichier 1 : `supabase/functions/stage-jersey-bonuses/index.ts`
 
-**1. Enrichir le mapping des jerseyHolders pour inclure les points** (ligne 158)
+Supprimer la jointure invalide et recuperer le manager via `rosters` puis `managers` separement.
 
-```typescript
-return (data?.bonuses || []).map((jersey: any) => ({
-  type_classement: `Porteur ${jersey.jersey_type.charAt(0).toUpperCase() + jersey.jersey_type.slice(1)}`,
-  icon: jersey.icon,
-  coureurs: { nom: jersey.coureur_nom },
-  managers: { nom: jersey.manager_nom || null },
-  points: jersey.points, // Ajouter le champ points
-}));
-```
+### Fichier 2 : `src/components/admin/ExportResultsImage.tsx`
 
-**2. Nouvelle query pour le classement managers sur la course** (apres ligne 166)
+Remplacer la jointure invalide par deux requetes separees + aggregation JS :
 
 ```typescript
 const { data: managerRanking, isLoading: loadingManagerRanking } = useQuery({
   queryKey: ["export-manager-ranking", course.course_id, etapeNumero, leagueId],
   queryFn: async () => {
-    // Pour les courses a etapes : cumul jusqu'a l'etape courante
-    // Pour One day : total de la course
-    const { data, error } = await supabase
+    // 1. Recuperer tous les points de la course
+    let pointsQuery = supabase
       .from('points_ledger')
-      .select(`
-        points,
-        rosters!inner(manager_id, league_id, managers!inner(nom))
-      `)
-      .eq('course_id', course.course_id)
-      .eq('rosters.phase_id', course.phase_id);
+      .select('coureur_id, points, etape_numero')
+      .eq('course_id', course.course_id);
     
-    if (error) throw error;
-    
-    // Filtrer par ligue si specifie
-    let filtered = data || [];
-    if (leagueId) {
-      filtered = filtered.filter((r: any) => r.rosters.league_id === leagueId);
-    }
-    
-    // Pour les courses a etapes, filtrer jusqu'a l'etape courante
     if (etapeNumero) {
-      // Refaire la query avec le filtre etape
-      const { data: dataFiltered } = await supabase
-        .from('points_ledger')
-        .select(`
-          points,
-          etape_numero,
-          rosters!inner(manager_id, league_id, managers!inner(nom))
-        `)
-        .eq('course_id', course.course_id)
-        .eq('rosters.phase_id', course.phase_id)
-        .lte('etape_numero', etapeNumero);
-      
-      filtered = (dataFiltered || []).filter((r: any) => 
-        !leagueId || r.rosters.league_id === leagueId
-      );
+      pointsQuery = pointsQuery.lte('etape_numero', etapeNumero);
     }
     
-    // Agreger par manager
-    const managerTotals = new Map<string, { nom: string; total: number }>();
-    for (const row of filtered) {
-      const roster = row.rosters as any;
-      const managerId = roster.manager_id;
-      const managerNom = roster.managers.nom;
-      const current = managerTotals.get(managerId) || { nom: managerNom, total: 0 };
-      current.total += row.points;
-      managerTotals.set(managerId, current);
+    const { data: pointsData, error: pointsError } = await pointsQuery;
+    if (pointsError) throw pointsError;
+    
+    // 2. Recuperer tous les rosters de la phase/league avec manager
+    let rostersQuery = supabase
+      .from('rosters')
+      .select('coureur_id, manager_id, managers!inner(nom)')
+      .eq('phase_id', course.phase_id);
+    
+    if (leagueId) {
+      rostersQuery = rostersQuery.eq('league_id', leagueId);
     }
     
+    const { data: rostersData, error: rostersError } = await rostersQuery;
+    if (rostersError) throw rostersError;
+    
+    // 3. Creer une map coureur -> manager
+    const coureurToManager = new Map();
+    for (const r of rostersData || []) {
+      if (r.coureur_id && r.manager_id) {
+        coureurToManager.set(r.coureur_id, {
+          managerId: r.manager_id,
+          managerNom: r.managers?.nom || 'Inconnu'
+        });
+      }
+    }
+    
+    // 4. Agreger les points par manager
+    const managerTotals = new Map();
+    for (const p of pointsData || []) {
+      const mgr = coureurToManager.get(p.coureur_id);
+      if (mgr) {
+        const current = managerTotals.get(mgr.managerId) || { nom: mgr.managerNom, total: 0 };
+        current.total += p.points;
+        managerTotals.set(mgr.managerId, current);
+      }
+    }
+    
+    // 5. Trier et retourner top 10
     return Array.from(managerTotals.entries())
       .map(([id, { nom, total }]) => ({ manager_id: id, manager_nom: nom, total_points: total }))
       .sort((a, b) => b.total_points - a.total_points)
-      .slice(0, 5); // Top 5 managers
+      .slice(0, 10); // TOP 10 au lieu de 5
   },
   enabled: open && !!leagueId,
 });
 ```
 
-**3. Supprimer la colonne Equipe et grossir les autres** (lignes 463-501)
+### Affichage compact du classement managers
 
-Avant (5 colonnes) :
-```
-#  | Coureur | Equipe | Manager | Pts
-```
-
-Apres (4 colonnes) :
-```
-#  | Coureur        | Manager | Pts
-```
-
-Nouvelles tailles :
-| Element | Avant | Apres |
-|---------|-------|-------|
-| Position | 24px | **28px** |
-| Coureur | 22px | **26px** |
-| Manager | 20px | **24px** |
-| Points | 22px | **26px** |
-| Padding | 14px 16px | **16px 20px** |
-
-**4. Modifier la section maillots pour afficher les points individuels** (lignes 509-546)
-
-Remplacer les cartes par une ligne discrete :
+Reduire la taille pour ne pas prendre trop de place :
 
 ```typescript
-{/* POINTS MAILLOTS - Discret */}
-{!isOneDay && jerseyHolders && jerseyHolders.length > 0 && (
-  <div style={{
-    display: "flex",
-    justifyContent: "center",
-    gap: "30px",
-    fontSize: "18px",
-    color: "#6b7280",
-    marginTop: "20px",
-  }}>
-    {jerseyHolders.map((jersey: any, idx: number) => (
-      <span key={idx}>
-        {jersey.icon} {jersey.points} pts
-      </span>
-    ))}
-  </div>
-)}
-```
-
-**5. Ajouter le classement managers avant le footer** (avant ligne 549)
-
-```typescript
-{/* CLASSEMENT MANAGERS */}
+{/* CLASSEMENT MANAGERS - Compact */}
 {managerRanking && managerRanking.length > 0 && (
   <div style={{
     marginTop: "30px",
     borderTop: "2px solid #FFD500",
     paddingTop: "20px",
   }}>
-    <p style={{ fontSize: "20px", fontWeight: "600", marginBottom: "12px", color: "#1a1a1a" }}>
+    <p style={{ fontSize: "18px", fontWeight: "600", marginBottom: "10px", color: "#1a1a1a" }}>
       Classement Managers
     </p>
-    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
       {managerRanking.map((m, idx) => (
         <div key={m.manager_id} style={{
           display: "flex",
           justifyContent: "space-between",
-          padding: "10px 16px",
+          padding: "8px 12px",
           background: idx === 0 ? "#FEF3C7" : "#f9fafb",
-          borderRadius: "6px",
-          fontSize: "20px",
+          borderRadius: "4px",
+          fontSize: "16px", // Plus petit
         }}>
           <span>
             {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}.`} {m.manager_nom}
@@ -172,44 +124,21 @@ Remplacer les cartes par une ligne discrete :
 
 ---
 
-## Design final
+## Comparaison tailles (Top 5 vs Top 10)
 
-```text
-┌────────────────────────────┐
-│       AlUla Tour           │
-│   2.pro • General • Etape 5│
-│      31 janvier 2026       │
-├────────────────────────────┤ ← Ligne jaune
-│                            │
-│ #  │ Coureur       │ Mgr  │ Pts │
-│ ─────────────────────────────── │
-│ 🥇 │ MILAN         │ Bubu │ 150 │
-│ 🥈 │ ACKERMANN     │ Fab  │ 120 │
-│ 🥉 │ SKERL         │ Fab  │ 100 │
-│  4 │ ...           │ ...  │  80 │
-│ ...│ ...           │ ...  │ ... │
-│                            │
-│ 🟡 5pts  🟢 5pts  🔴 3pts  │  ← Discret, une ligne
-│                            │
-├────────────────────────────┤ ← Ligne jaune
-│  Classement Managers       │
-│ 🥇 Fab          │  520 pts │
-│ 🥈 Bubu         │  480 pts │
-│ 🥉 Alex         │  350 pts │
-│  4. Jean        │  280 pts │
-│  5. Marie       │  220 pts │
-├────────────────────────────┤
-│        MPC 2026            │
-└────────────────────────────┘
-```
+| Element | Top 5 (avant) | Top 10 (apres) |
+|---------|---------------|----------------|
+| Titre section | 20px | **18px** |
+| Lignes managers | 20px | **16px** |
+| Padding lignes | 10px 16px | **8px 12px** |
+| Gap entre lignes | 8px | **6px** |
+| Nombre affiche | 5 | **10** |
 
 ---
 
-## Recapitulatif des changements
+## Tests attendus
 
-| Section | Modification |
-|---------|--------------|
-| Tableau | Suppression colonne Equipe, polices +4px |
-| Maillots | Ligne discrete avec icone + points |
-| Managers | Nouveau bloc avec top 5 de la ligue |
+Apres correction, le visuel d'export devra afficher :
+- **Points maillots** : `🟡 6pts 🟢 4pts`
+- **Classement Managers** : Top 10 des managers en format compact
 
