@@ -1,147 +1,128 @@
 
-
-# Ajouter l'envoi de push notifications à la saisie manuelle des résultats
+# Implémenter la Landing Page publique
 
 ## Objectif
-
-Permettre la réception des notifications push sur la PWA lors de la saisie manuelle des résultats, en répliquant le comportement de l'import CSV.
-
----
-
-## Analyse
-
-| Méthode | In-app notification | Push notification |
-|---------|---------------------|-------------------|
-| Import CSV (`admin-import-race-results-csv`) | Via trigger DB | Via appel Edge Function |
-| Saisie manuelle (`admin-result-save-lot`) | Via trigger DB | **Manquant** |
+Afficher une page d'accueil marketing pour les visiteurs non connectés sur `https://monpetitcycliste.lovable.app/` au lieu de les rediriger vers `/auth`.
 
 ---
 
-## Solution
+## Ce qui existe deja
 
-### Fichier : `supabase/functions/admin-result-save-lot/index.ts`
+| Element | Statut |
+|---------|--------|
+| Traductions `home.json` (FR/EN) | Completes (hero, howItWorks, leagues, scoring, testimonials, whyPlay, cta, footer) |
+| Assets images | `hero-cycling.jpg`, `cyclist-climbing.jpg`, `team-victory.jpg`, `mpc-logo.png` |
+| Design system TdF | Jaune #FFD500 + noir, gradients, utilitaires CSS |
 
-Après l'appel réussi à `admin_result_save_lot` (ligne 60), ajouter la logique d'envoi de push notification :
+---
+
+## Fichiers a creer
+
+### 1. `src/pages/LandingPage.tsx`
+Page principale assemblant toutes les sections :
+- Header avec logo + bouton Connexion
+- Hero avec image de fond et accroche
+- Section "Comment ca marche" (3 etapes)
+- Section types de ligues (4 cards)
+- Section scoring (podium visuel)
+- Section "Pourquoi jouer" (4 features)
+- Section temoignages (3 citations)
+- CTA final
+- Footer
+
+### 2. Composants modulaires dans `src/components/landing/`
+- `LandingHeader.tsx` - Logo + navigation
+- `HeroSection.tsx` - Accroche + image + CTA
+- `HowItWorksSection.tsx` - 3 etapes illustrees
+- `LeagueTypesSection.tsx` - 4 types de ligues
+- `ScoringSection.tsx` - Tableau de points avec podium
+- `WhyPlaySection.tsx` - 4 features
+- `TestimonialsSection.tsx` - 3 citations
+- `CTASection.tsx` - Appel a l'action final
+- `LandingFooter.tsx` - Liens et copyright
+
+---
+
+## Fichier a modifier
+
+### `src/pages/Index.tsx`
+Changer la logique de redirection :
+
+```text
+AVANT:
+- Connecte → /dashboard/home
+- Non connecte → /auth (redirection)
+
+APRES:
+- Connecte → /dashboard/home (redirection)
+- Non connecte → Afficher LandingPage (pas de redirection)
+```
 
 ```typescript
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+// Nouvelle logique
+if (isLoading) {
+  return <SplashScreen />;
+}
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+// Afficher la landing pour les visiteurs
+if (!isAuthenticated) {
+  return <LandingPage />;
+}
 
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // ... (authentification existante - lignes 14-41)
-
-    const { p_course_id, p_type_classement, p_etape_numero, p_rows } = await req.json();
-
-    if (!p_course_id || !p_type_classement || !p_rows) {
-      return new Response(JSON.stringify({ error: 'Missing required parameters' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Call the database function
-    const { data, error } = await supabase.rpc('admin_result_save_lot', {
-      p_course_id,
-      p_type_classement,
-      p_etape_numero,
-      p_rows,
-    });
-
-    if (error) throw error;
-
-    // ========== NOUVEAU : Envoi de push notification ==========
-    // Ne déclencher que pour les types pertinents (Etape ou General)
-    if (p_type_classement === 'Etape' || p_type_classement === 'General') {
-      try {
-        // Récupérer le nom de la course
-        const { data: courseData } = await supabase
-          .from('courses')
-          .select('nom')
-          .eq('id', p_course_id)
-          .single();
-        
-        const courseName = courseData?.nom || p_course_id;
-        const typeLabel = p_type_classement === 'Etape' 
-          ? (p_etape_numero ? `Étape ${p_etape_numero}` : 'Étape')
-          : 'Classement Général';
-
-        console.log(`[admin-result-save-lot] Sending push notification for ${courseName} - ${typeLabel}`);
-
-        const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseKey}`
-          },
-          body: JSON.stringify({
-            broadcast: true,
-            title: '🏁 Nouveaux résultats',
-            message: `${typeLabel} - ${courseName}`,
-            type: 'results_added',
-            metadata: {
-              course_id: p_course_id,
-              course_name: courseName,
-              type_classement: p_type_classement,
-              etape_numero: p_etape_numero
-            }
-          })
-        });
-
-        if (!pushResponse.ok) {
-          console.error(`[admin-result-save-lot] Push notification failed:`, await pushResponse.text());
-        } else {
-          const pushResult = await pushResponse.json();
-          console.log(`[admin-result-save-lot] Push notification sent:`, pushResult);
-        }
-      } catch (pushError) {
-        console.error(`[admin-result-save-lot] Error sending push notification:`, pushError);
-        // Ne pas faire échouer la sauvegarde si la push échoue
-      }
-    }
-    // ========== FIN NOUVEAU ==========
-
-    return new Response(JSON.stringify(data), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
-  } catch (error) {
-    console.error('Error in admin-result-save-lot:', error);
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-});
+// Les utilisateurs connectes sont rediriges par useEffect
+return null;
 ```
 
 ---
 
-## Comportement
+## Design des sections
 
-| Action | Résultat |
-|--------|----------|
-| Saisie Étape 1 | Push : "🏁 Nouveaux résultats - Étape 1 - Tour de France" |
-| Saisie Classement Général | Push : "🏁 Nouveaux résultats - Classement Général - Tour de France" |
-| Saisie Maillots (Porteur) | Pas de push (type != Etape/General) |
+### Hero Section
+```text
+┌─────────────────────────────────────────────────┐
+│                                                 │
+│  [Logo MPC]                      [Connexion]    │
+│                                                 │
+│        "Les cols c'est pour eux,               │
+│         les points, c'est pour toi."           │
+│                                                 │
+│        [Creer ma ligue]  [Decouvrir le jeu]    │
+│                                                 │
+│  (Image hero-cycling.jpg en fond avec overlay) │
+└─────────────────────────────────────────────────┘
+```
+
+### Comment ca marche
+```text
+   ①                    ②                    ③
+[Icone]             [Icone]             [Icone]
+Cree ta ligue    Compose ton equipe   Suis les courses
+```
+
+### Scoring (Podium visuel)
+```text
+          🥇 100pts
+      🥈 70pts   🥉 50pts
+      
+Stage: 1er=100, 2e=70, 3e=50, Top10=20
+Maillots: Jaune=50, Vert=30, Pois=30
+```
 
 ---
 
-## Récapitulatif technique
+## Responsive
 
-- **Fichier modifié** : `supabase/functions/admin-result-save-lot/index.ts`
-- **Ajouts** :
-  1. Récupération du nom de la course depuis la table `courses`
-  2. Appel à `send-push-notification` avec `broadcast: true`
-  3. Gestion d'erreur non-bloquante (try/catch)
-- **Filtre** : Uniquement pour `p_type_classement` = `'Etape'` ou `'General'`
+| Breakpoint | Comportement |
+|------------|--------------|
+| Mobile (<768px) | Stack vertical, CTA pleine largeur |
+| Tablet | 2 colonnes pour cards |
+| Desktop | 3-4 colonnes, sections plus aerees |
 
+---
+
+## Style et UX
+- Fond noir avec accents jaunes (#FFD500)
+- Animations au scroll (fade-in)
+- Boutons avec hover effects (shadow, scale)
+- Images avec overlays sombres pour lisibilite du texte
+- Utilisation des classes existantes : `btn-tdf`, `card-tdf-hover`, `gradient-hero`
