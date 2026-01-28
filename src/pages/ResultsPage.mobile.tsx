@@ -86,7 +86,7 @@ export const ResultsPageMobile = () => {
   }, [courseIdFromUrl]);
 
   useEffect(() => {
-    if (!isLoadingContext) {
+    if (!isLoadingContext && leagueId) {
       loadRaces(true);
     }
   }, [debouncedSearch, isLoadingContext, leagueId]);

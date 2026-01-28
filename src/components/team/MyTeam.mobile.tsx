@@ -126,22 +126,29 @@ export const MyTeamMobile = () => {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  useEffect(() => {
-    loadCurrentUser();
-  }, []);
-
-  useEffect(() => {
-    if (leagueId) {
-      loadManagers();
-    }
-  }, [leagueId]);
-
+  // Set active phase when available
   useEffect(() => {
     if (activePhase) {
       setSelectedPhaseId(activePhase.id);
     }
   }, [activePhase]);
 
+  // Parallelize initial data loading
+  useEffect(() => {
+    if (leagueLoading) return;
+    
+    const loadInitialData = async () => {
+      // Load user and managers in parallel
+      await Promise.all([
+        loadCurrentUser(),
+        leagueId ? loadManagers() : Promise.resolve()
+      ]);
+    };
+    
+    loadInitialData();
+  }, [leagueId, leagueLoading]);
+
+  // Load team when phase/manager changes
   useEffect(() => {
     if (selectedPhaseId && !leagueLoading && leagueId) {
       loadTeamWithKpis();
