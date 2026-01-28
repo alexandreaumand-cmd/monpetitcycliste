@@ -191,7 +191,7 @@ export const ExportResultsImage = ({
         quality: 0.95,
         pixelRatio: 2,
         width: 1080,
-        height: 1080,
+        height: 1920,
         cacheBust: true,
         backgroundColor: "#ffffff",
         skipFonts: true,
@@ -339,11 +339,11 @@ export const ExportResultsImage = ({
             <>
               <div className="space-y-4 py-4">
                 <div className="text-sm text-muted-foreground space-y-1">
-                <p>
+                  <p>
                     Top {scope === "top10" ? "10" : scope === "top15" ? "15" : scope === "top20" ? "20" : "complet"} coureurs
                     {" "}(basé sur le barème {typeClassement})
                   </p>
-                  <p>Format: 1080 x 1080 (carré, optimal mobile)</p>
+                  <p>Format: 1080 x 1920 (story, idéal partage)</p>
                 </div>
 
                 {isLoading && (
@@ -428,28 +428,28 @@ export const ExportResultsImage = ({
           ref={setExportRef}
           style={{
             width: "1080px",
-            height: "1080px",
+            height: "1920px",
             background: "#ffffff",
-            padding: "30px",
+            padding: "40px",
             fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
             boxSizing: "border-box",
             position: "relative",
           }}
         >
-          {/* HEADER COMPACT */}
+          {/* HEADER */}
           <div style={{ 
             textAlign: "center", 
-            marginBottom: "20px",
+            marginBottom: "40px",
             borderBottom: "3px solid #FFD500",
-            paddingBottom: "15px"
+            paddingBottom: "25px"
           }}>
-            <h1 style={{ fontSize: "32px", margin: "0 0 8px 0", fontWeight: "bold", color: "#1a1a1a" }}>
+            <h1 style={{ fontSize: "48px", margin: "0 0 12px 0", fontWeight: "bold", color: "#1a1a1a" }}>
               {course.course_nom}
             </h1>
-            <p style={{ fontSize: "18px", color: "#6b7280", margin: "4px 0" }}>
+            <p style={{ fontSize: "24px", color: "#6b7280", margin: "6px 0" }}>
               {course.categorie} • {typeClassement}{etapeNumero && ` • Étape ${etapeNumero}`}
             </p>
-            <p style={{ fontSize: "16px", color: "#9ca3af", margin: 0 }}>
+            <p style={{ fontSize: "20px", color: "#9ca3af", margin: 0 }}>
               {format(new Date(course.date_fin || course.date_debut), "dd MMMM yyyy", {
                 locale: fr,
               })}
@@ -458,15 +458,15 @@ export const ExportResultsImage = ({
 
           {/* CLASSEMENT */}
           {topRiders && topRiders.length > 0 && (
-            <div style={{ marginBottom: "20px" }}>
+            <div style={{ marginBottom: "40px" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ borderBottom: "2px solid #FFD500", background: "#f9fafb" }}>
-                    <th style={{ textAlign: "left", padding: "8px", fontSize: "14px", fontWeight: "600" }}>#</th>
-                    <th style={{ textAlign: "left", padding: "8px", fontSize: "14px", fontWeight: "600" }}>Coureur</th>
-                    <th style={{ textAlign: "left", padding: "8px", fontSize: "14px", fontWeight: "600" }}>Équipe</th>
-                    <th style={{ textAlign: "left", padding: "8px", fontSize: "14px", fontWeight: "600" }}>Manager</th>
-                    <th style={{ textAlign: "right", padding: "8px", fontSize: "14px", fontWeight: "600" }}>Pts</th>
+                    <th style={{ textAlign: "left", padding: "14px", fontSize: "18px", fontWeight: "600" }}>#</th>
+                    <th style={{ textAlign: "left", padding: "14px", fontSize: "18px", fontWeight: "600" }}>Coureur</th>
+                    <th style={{ textAlign: "left", padding: "14px", fontSize: "18px", fontWeight: "600" }}>Équipe</th>
+                    <th style={{ textAlign: "left", padding: "14px", fontSize: "18px", fontWeight: "600" }}>Manager</th>
+                    <th style={{ textAlign: "right", padding: "14px", fontSize: "18px", fontWeight: "600" }}>Pts</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -478,7 +478,7 @@ export const ExportResultsImage = ({
                         background: idx % 2 === 0 ? "#ffffff" : "#fafafa",
                       }}
                     >
-                      <td style={{ padding: "6px 8px", fontSize: "16px", fontWeight: "bold" }}>
+                      <td style={{ padding: "12px 14px", fontSize: "20px", fontWeight: "bold" }}>
                         {idx < 3
                           ? idx === 0
                             ? "🥇"
@@ -487,16 +487,16 @@ export const ExportResultsImage = ({
                               : "🥉"
                           : rider.row_position}
                       </td>
-                      <td style={{ padding: "6px 8px", fontSize: "14px", fontWeight: "500" }}>
+                      <td style={{ padding: "12px 14px", fontSize: "18px", fontWeight: "500" }}>
                         {rider.coureur_nom}
                       </td>
-                      <td style={{ padding: "6px 8px", fontSize: "13px", color: "#6b7280" }}>
+                      <td style={{ padding: "12px 14px", fontSize: "16px", color: "#6b7280" }}>
                         {rider.equipe}
                       </td>
-                      <td style={{ padding: "6px 8px", fontSize: "13px", color: "#6b7280" }}>
+                      <td style={{ padding: "12px 14px", fontSize: "16px", color: "#6b7280" }}>
                         {rider.manager_nom || "-"}
                       </td>
-                      <td style={{ padding: "6px 8px", fontSize: "14px", fontWeight: "bold", textAlign: "right" }}>
+                      <td style={{ padding: "12px 14px", fontSize: "18px", fontWeight: "bold", textAlign: "right" }}>
                         {rider.points}
                       </td>
                     </tr>
@@ -510,33 +510,33 @@ export const ExportResultsImage = ({
           {!isOneDay && jerseyHolders && jerseyHolders.length > 0 && (
             <div style={{ 
               borderTop: "2px solid #FFD500",
-              paddingTop: "15px",
-              marginTop: "15px"
+              paddingTop: "25px",
+              marginTop: "25px"
             }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
                 {jerseyHolders.map((jersey: any, idx: number) => (
                   <div
                     key={idx}
                     style={{
-                      padding: "10px",
+                      padding: "15px",
                       background: "#f9fafb",
                       borderRadius: "8px",
                       display: "flex",
                       alignItems: "center",
-                      gap: "10px",
+                      gap: "15px",
                     }}
                   >
-                    <span style={{ fontSize: "24px" }}>
+                    <span style={{ fontSize: "32px" }}>
                       {getJerseyIcon(jersey.type_classement)}
                     </span>
                     <div>
-                      <p style={{ fontSize: "12px", color: "#9ca3af", margin: 0 }}>
+                      <p style={{ fontSize: "14px", color: "#9ca3af", margin: 0 }}>
                         {getJerseyLabel(jersey.type_classement)}
                       </p>
-                      <p style={{ fontSize: "14px", fontWeight: "600", margin: 0 }}>
+                      <p style={{ fontSize: "18px", fontWeight: "600", margin: 0 }}>
                         {jersey.coureurs.nom}
                       </p>
-                      <p style={{ fontSize: "12px", color: "#6b7280", margin: 0 }}>
+                      <p style={{ fontSize: "14px", color: "#6b7280", margin: 0 }}>
                         {jersey.managers?.nom || "-"}
                       </p>
                     </div>
@@ -549,14 +549,14 @@ export const ExportResultsImage = ({
           {/* FOOTER */}
           <div style={{ 
             position: "absolute",
-            bottom: "20px",
-            left: "30px",
-            right: "30px",
+            bottom: "40px",
+            left: "40px",
+            right: "40px",
             textAlign: "center",
             borderTop: "1px solid #e5e7eb",
-            paddingTop: "15px"
+            paddingTop: "25px"
           }}>
-            <p style={{ fontSize: "18px", fontWeight: "600", color: "#1a1a1a", margin: 0 }}>
+            <p style={{ fontSize: "24px", fontWeight: "600", color: "#1a1a1a", margin: 0 }}>
               {leagueName || "Mon Petit Cycliste"}
             </p>
           </div>
