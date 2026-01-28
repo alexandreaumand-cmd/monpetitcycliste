@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useCurrentManager } from '@/hooks/useCurrentManager';
+import { useCurrentManager } from './useCurrentManager';
 
 export interface Notification {
   id: string;
