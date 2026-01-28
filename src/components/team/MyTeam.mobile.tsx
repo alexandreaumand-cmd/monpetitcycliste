@@ -40,6 +40,7 @@ import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useQuery } from "@tanstack/react-query";
+import { useCurrentManager } from "@/hooks/useCurrentManager";
 
 interface Coureur {
   coureur_id: string;
@@ -77,10 +78,13 @@ export const MyTeamMobile = () => {
   const [sortBy, setSortBy] = useState<SortBy>("points");
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   
+  // Use cached current manager hook
+  const { data: currentManager } = useCurrentManager();
+  const currentUserId = currentManager?.id ?? null;
+  
   // Manager selection state
   const [managers, setManagers] = useState<Manager[]>([]);
   const [selectedManagerId, setSelectedManagerId] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   // Detail drawer
   const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string; equipe: string; prix: number; cote: number; round?: number } | null>(null);
@@ -133,19 +137,10 @@ export const MyTeamMobile = () => {
     }
   }, [activePhase]);
 
-  // Parallelize initial data loading
+  // Load managers when league changes
   useEffect(() => {
-    if (leagueLoading) return;
-    
-    const loadInitialData = async () => {
-      // Load user and managers in parallel
-      await Promise.all([
-        loadCurrentUser(),
-        leagueId ? loadManagers() : Promise.resolve()
-      ]);
-    };
-    
-    loadInitialData();
+    if (leagueLoading || !leagueId) return;
+    loadManagers();
   }, [leagueId, leagueLoading]);
 
   // Load team when phase/manager changes
@@ -154,26 +149,6 @@ export const MyTeamMobile = () => {
       loadTeamWithKpis();
     }
   }, [selectedPhaseId, selectedManagerId, leagueId, leagueLoading]);
-
-
-  const loadCurrentUser = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      
-      const { data: manager } = await supabase
-        .from('managers')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .single();
-        
-      if (manager) {
-        setCurrentUserId(manager.id);
-      }
-    } catch (error) {
-      console.error('Error loading current user:', error);
-    }
-  };
 
   const loadManagers = async () => {
     if (!leagueId) {
@@ -207,6 +182,7 @@ export const MyTeamMobile = () => {
       console.error('Error loading managers:', error);
     }
   };
+
 
 
 

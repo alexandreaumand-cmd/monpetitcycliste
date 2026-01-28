@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useCurrentManager } from "@/hooks/useCurrentManager";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
 import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { MobileLayout } from "@/components/mobile/MobileLayout";
@@ -30,8 +31,9 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const [loading, setLoading] = useState(true);
-  const [manager, setManager] = useState<any>(null);
+  
+  // Use cached hooks for manager and role
+  const { data: manager, isLoading: managerLoading } = useCurrentManager();
   const { isSuperAdmin, isLeagueAdminOnly, loading: roleLoading } = useUserRole();
   const isAnyAdmin = isSuperAdmin || isLeagueAdminOnly;
   
@@ -43,39 +45,23 @@ const Dashboard = () => {
   const isDataRoute = location.pathname === '/dashboard/data';
   const isCalendarRoute = location.pathname === '/dashboard/calendar';
 
+  // Redirect to auth if no session
   useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
-    try {
+    const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (!session) {
         navigate("/auth");
-        return;
       }
-
-      const { data: managerData } = await supabase
-        .from("managers")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .single();
-
-      setManager(managerData);
-    } catch (error) {
-      console.error("Error checking user:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    checkSession();
+  }, [navigate]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/");
   };
 
-  if (loading || roleLoading) {
+  if (managerLoading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
