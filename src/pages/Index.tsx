@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import mpcLogo from "@/assets/mpc-logo.png";
+import LandingPage from "./LandingPage";
 
 const Index = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener first
@@ -15,9 +17,9 @@ const Index = () => {
       if (session) {
         navigate("/dashboard/home", { replace: true });
       } else {
-        navigate("/auth", { replace: true });
+        setIsAuthenticated(false);
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
     // Then check current session
@@ -25,9 +27,9 @@ const Index = () => {
       if (session) {
         navigate("/dashboard/home", { replace: true });
       } else {
-        navigate("/auth", { replace: true });
+        setIsAuthenticated(false);
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -47,7 +49,12 @@ const Index = () => {
     );
   }
 
-  // This should never be visible, but just in case
+  // Show landing page for unauthenticated users
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+
+  // Authenticated users are redirected via useEffect
   return null;
 };
 
