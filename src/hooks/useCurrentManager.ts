@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// Cached hook for current manager - avoids redundant auth calls
 export function useCurrentManager() {
   return useQuery({
     queryKey: ["current-manager"],
