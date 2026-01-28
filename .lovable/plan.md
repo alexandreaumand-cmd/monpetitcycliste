@@ -1,186 +1,197 @@
 
 
-# Plan d'optimisation de la latence mobile - Phase 2
+# Plan d'optimisation de la latence mobile - Phase 3
 
-## Etat des lieux apres Phase 1
+## Diagnostic
 
-**Deja optimise :**
-- `useIsMobile()` - Detection synchrone
-- `LeagueContext` - Invalidation ciblee
-- `MyTeam.mobile.tsx` - Parallelisation initiale
-- `ResultsPage.mobile.tsx` - Guards anti-premature
+Apres analyse des requetes reseau, j'ai identifie plusieurs goulots d'etranglement restants.
 
-**Gain realise :** ~250-600ms
+### Problemes detectes
+
+1. **Appels d'authentification redondants**
+   - La requete `/auth/v1/user` est appelee 2-3 fois simultanement
+   - Chaque composant (`LeagueContext`, `Dashboard`, `MyTeam.mobile`) fait son propre appel
+
+2. **Requetes `managers` dupliquees**
+   - La meme requete `managers?select=id&user_id=...` est executee 3 fois par chargement
+   - Aucun partage de cache entre `Dashboard.tsx`, `MyTeam.mobile.tsx`, et les hooks
+
+3. **Hook `useUserRole` non optimise**
+   - Appel RPC `is_superadmin` a chaque montage sans cache
+   - Utilise par 12+ composants (peut declencher plusieurs appels)
+
+4. **Chargement sequentiel dans Dashboard**
+   - `loading || roleLoading` bloque tout l'affichage
+   - Les donnees d'authentification et de role sont chargees en cascade
 
 ---
 
-## Optimisations restantes
+## Solution proposee
 
-### 1. SeasonContext.tsx - Parallelisation des requetes
+### 1. Creer un hook `useCurrentManager` cache (PRIORITE 1)
 
-**Probleme actuel (lignes 61-121) :**
-```text
-1. Attendre leagueLoading → 
-2. Charger saisons → 
-3. Charger league_scopes → 
-4. Charger phases (2e useEffect)
-```
+Centraliser la recuperation du manager courant avec React Query.
 
-**Solution :** Charger `saisons` et `league_scopes` en parallele avec `Promise.all`, puis enchainer phases immediatement.
+**Fichier : `src/hooks/useCurrentManager.ts`**
 
-**Modification :**
 ```typescript
-// Charger saisons ET scope en parallele
-const [seasonsResult, scopeResult] = await Promise.all([
-  supabase.from("saisons").select("id, annee").order("annee", { ascending: false }),
-  leagueId 
-    ? supabase.from("league_scopes").select("season_id").eq("league_id", leagueId).maybeSingle()
-    : Promise.resolve({ data: null })
-]);
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-// Determiner la saison cible
-const targetSeasonId = scopeResult.data?.season_id || seasonsResult.data?.[0]?.id;
-const targetSeason = seasonsResult.data?.find(s => s.id === targetSeasonId);
-
-// Charger les phases immediatement (meme useEffect)
-if (targetSeason) {
-  const { data: phasesData } = await supabase
-    .from("phases")
-    .select("*")
-    .eq("saison_id", targetSeason.id)
-    .order("index_dans_saison", { ascending: true });
-  
-  // Set tout en une fois
-  setSeasons(seasonsResult.data);
-  setSelectedSeasonState(targetSeason);
-  setPhases(phasesData);
-  setActivePhase(computeActivePhase(phasesData));
+export function useCurrentManager() {
+  return useQuery({
+    queryKey: ["current-manager"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return null;
+      
+      const { data: manager } = await supabase
+        .from("managers")
+        .select("id, nom, user_id, avatar_url")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      
+      return manager;
+    },
+    staleTime: 5 * 60 * 1000, // Cache 5 minutes
+    gcTime: 10 * 60 * 1000,
+  });
 }
 ```
 
-**Gain estime :** 200-400ms (elimination du 2e useEffect sequentiel)
+**Gain estime :** 200-300ms (elimination des 3 appels redondants)
 
 ---
 
-### 2. MobileBottomBar.tsx - Prefetch au touch
+### 2. Migrer `useUserRole` vers React Query (PRIORITE 2)
 
-**Probleme actuel :** Aucun prefetch, les donnees sont chargees seulement apres navigation.
+**Fichier : `src/hooks/useUserRole.tsx`**
 
-**Solution :** Utiliser `onTouchStart` pour prefetcher les donnees de la page cible avant le clic.
-
-**Modification :**
 ```typescript
-import { useQueryClient } from "@tanstack/react-query";
-import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-const queryClient = useQueryClient();
-const { selectedSeason } = useSeasonContext();
+export const useUserRole = () => {
+  const { data, isLoading } = useQuery({
+    queryKey: ["user-role"],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return { isSuperAdmin: false, isLeagueAdminOnly: false };
 
-const prefetchPageData = (path: string) => {
-  if (!currentLeagueId) return;
-  
-  if (path.includes('classement')) {
-    queryClient.prefetchQuery({
-      queryKey: ["manager-standings-mobile", null, selectedSeason?.id, currentLeagueId],
-      staleTime: 30000,
-    });
-  } else if (path.includes('resultats')) {
-    queryClient.prefetchQuery({
-      queryKey: ["mobile-races", currentLeagueId],
-      staleTime: 30000,
-    });
-  } else if (path.includes('startlist')) {
-    queryClient.prefetchQuery({
-      queryKey: ["startlists-info"],
-      staleTime: 30000,
-    });
-  }
+      // Check superadmin
+      const { data: isSuperAdminData } = await supabase.rpc('is_superadmin');
+      const isSuperAdmin = isSuperAdminData || false;
+      
+      if (isSuperAdmin) {
+        return { isSuperAdmin: true, isLeagueAdminOnly: false };
+      }
+      
+      // Check league admin
+      const { data: memberships } = await supabase
+        .from('league_members')
+        .select('role_in_league')
+        .eq('user_id', session.user.id)
+        .in('role_in_league', ['owner', 'admin']);
+      
+      return { 
+        isSuperAdmin: false, 
+        isLeagueAdminOnly: (memberships?.length || 0) > 0 
+      };
+    },
+    staleTime: 5 * 60 * 1000, // Cache 5 minutes
+  });
+
+  return {
+    isSuperAdmin: data?.isSuperAdmin ?? false,
+    isLeagueAdminOnly: data?.isLeagueAdminOnly ?? false,
+    isAdmin: (data?.isSuperAdmin || data?.isLeagueAdminOnly) ?? false,
+    loading: isLoading,
+  };
 };
-
-// Dans le JSX:
-<button
-  onTouchStart={() => prefetchPageData(route.path)}
-  onClick={() => navigate(buildNavUrl(route.path))}
-  ...
->
 ```
 
-**Gain estime :** 100-200ms (donnees deja en cache avant navigation)
+**Gain estime :** 100-200ms (cache partage entre 12+ composants)
 
 ---
 
-### 3. Rankings.mobile.tsx - Parallelisation
+### 3. Optimiser `Dashboard.tsx` pour charger en parallele (PRIORITE 3)
 
-**Probleme actuel :** Les requetes `standings`, `previousGlobalStandings`, et `topRiders` sont declenchees separement.
+Remplacer le chargement sequentiel par un chargement parallele utilisant les nouveaux hooks caches.
 
-**Observation :** Les queries utilisent deja React Query et sont donc deja parallelisees automatiquement. Aucune modification necessaire ici.
-
-**Optimisation possible :** Ajouter `staleTime` pour eviter les re-fetches inutiles.
+**Modifications dans `Dashboard.tsx` :**
 
 ```typescript
-const { data: standings } = useQuery({
-  queryKey: ["manager-standings-mobile", selectedPhase, selectedSeason?.id, leagueId],
-  staleTime: 60000, // Cache 1 minute
-  // ...
-});
+// Remplacer:
+const [loading, setLoading] = useState(true);
+const [manager, setManager] = useState<any>(null);
+// ...checkUser() useEffect
+
+// Par:
+import { useCurrentManager } from "@/hooks/useCurrentManager";
+
+const { data: manager, isLoading: managerLoading } = useCurrentManager();
+const { isSuperAdmin, isLeagueAdminOnly, loading: roleLoading } = useUserRole();
+
+// Le loading devient simplement:
+if (managerLoading || roleLoading) { ... }
 ```
+
+**Gain estime :** 100-200ms (elimination d'un useEffect sequentiel)
 
 ---
 
-### 4. Startlist.mobile.tsx - Parallelisation
+### 4. Utiliser le hook dans `MyTeam.mobile.tsx` (PRIORITE 4)
 
-**Probleme actuel (lignes 69-167) :** 3 queries separees pour `currentUserManagerId`, `races`, et `startlistsInfo`.
-
-**Observation :** React Query parallelise deja automatiquement. Optimisation possible via `staleTime`.
-
-**Modifications :**
-- Ajouter `staleTime` aux queries
-- Ajouter guard sur `isLoadingContext` pour eviter les fetches prematures
+**Modifications dans `MyTeam.mobile.tsx` :**
 
 ```typescript
-const { data: races } = useQuery({
-  queryKey: ["startlist-races", leagueId, selectedSeason?.id, tabMode],
-  staleTime: 60000, // Cache 1 minute
-  enabled: !!leagueId && !!selectedSeason?.id && !isLoadingContext,
-  // ...
-});
+// Remplacer:
+const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+// ...loadCurrentUser()
+
+// Par:
+import { useCurrentManager } from "@/hooks/useCurrentManager";
+const { data: currentManager } = useCurrentManager();
+const currentUserId = currentManager?.id ?? null;
 ```
+
+**Gain estime :** 50-100ms
 
 ---
 
 ## Resume des modifications
 
-| Fichier | Modification | Gain |
-|---------|--------------|------|
-| `SeasonContext.tsx` | Promise.all pour saisons + scope + phases | 200-400ms |
-| `MobileBottomBar.tsx` | Prefetch onTouchStart | 100-200ms |
-| `Rankings.mobile.tsx` | Ajouter staleTime | 50-100ms |
-| `Startlist.mobile.tsx` | Guard + staleTime | 50-100ms |
-
-**Gain total Phase 2 :** 400-800ms
-
-**Gain cumule (Phase 1 + 2) :** 650ms - 1.4s
+| Fichier | Modification |
+|---------|--------------|
+| `src/hooks/useCurrentManager.ts` | Nouveau hook avec cache React Query |
+| `src/hooks/useUserRole.tsx` | Migration vers React Query |
+| `src/pages/Dashboard.tsx` | Utiliser useCurrentManager |
+| `src/components/team/MyTeam.mobile.tsx` | Utiliser useCurrentManager |
+| `src/pages/Rankings.mobile.tsx` | Supprimer appels auth redondants si presents |
+| `src/pages/Startlist.mobile.tsx` | Supprimer appels auth redondants si presents |
 
 ---
 
-## Details techniques
+## Gains estimes
 
-### SeasonContext - Nouvelle structure
+| Optimisation | Gain |
+|--------------|------|
+| Hook `useCurrentManager` cache | 200-300ms |
+| Migration `useUserRole` React Query | 100-200ms |
+| Parallelisation Dashboard | 100-200ms |
+| Nettoyage composants | 50-100ms |
 
-Le useEffect unique chargera tout en sequence optimisee :
-1. `Promise.all([saisons, scope])` - Parallele
-2. Determiner saison cible
-3. Charger phases pour cette saison
-4. Set tous les states en une fois
+**Gain total Phase 3 :** 450-800ms
 
-Cela elimine le 2e useEffect qui attendait `selectedSeason` pour charger les phases.
+**Gain cumule (Phase 1 + 2 + 3) :** 1.1s - 2.2s
 
-### MobileBottomBar - Queries a prefetcher
+---
 
-Pour chaque route :
-- `/classement` → `manager-standings-mobile`
-- `/resultats` → `mobile-races`
-- `/startlist` → `startlists-info`
-- `/mon-equipe` → Deja gere par MyTeam
-- `/courses` → `startlist-races`
+## Optimisations futures (Phase 4)
+
+Pour aller encore plus loin, on pourrait :
+
+1. **Optimiser les edge functions** : Paralleliser les queries dans `manager-my-team` et `get-team-riders-races`
+2. **Ajouter le SSR partiel** : Pre-rendre les skeletons cote serveur
+3. **Implementer le prefetch au login** : Charger les donnees critiques des le login
 
