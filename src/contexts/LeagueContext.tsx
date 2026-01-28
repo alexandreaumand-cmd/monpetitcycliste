@@ -81,10 +81,26 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
     }
   }, [searchParams, userLeagues, leaguesLoading, navigate, hasAutoSelected]);
 
-  // Invalidate all queries when league changes
+  // Invalidate only league-specific queries when league changes (targeted invalidation)
   useEffect(() => {
     if (!isLoading && leagueId) {
-      queryClient.invalidateQueries();
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey;
+          // Only invalidate queries that include leagueId in their key
+          return Array.isArray(key) && key.some(k => 
+            k === leagueId || 
+            (typeof k === 'string' && (
+              k.includes('manager') || 
+              k.includes('standings') || 
+              k.includes('team') || 
+              k.includes('roster') ||
+              k.includes('startlist') ||
+              k.includes('results')
+            ))
+          );
+        }
+      });
     }
   }, [leagueId, isLoading, queryClient]);
 
