@@ -154,6 +154,22 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  // Fetch league name for export
+  const { data: leagueInfo } = useQuery({
+    queryKey: ["league-info", leagueId],
+    queryFn: async () => {
+      if (!leagueId) return null;
+      const { data } = await supabase
+        .from("leagues")
+        .select("name")
+        .eq("id", leagueId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!leagueId,
+    staleTime: 1000 * 60 * 30,
+  });
+
   // Fetch leaderboard for the course - always consolidated (all stages, all classifications)
   const { data: leaderboard, isLoading: leaderboardLoading } = useQuery({
     queryKey: ["course-leaderboard-drawer", courseId, leagueId],
@@ -1194,6 +1210,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
       currentClassement={selectedType}
       open={exportDialogOpen}
       onOpenChange={setExportDialogOpen}
+      leagueName={leagueInfo?.name}
     />
   );
 
