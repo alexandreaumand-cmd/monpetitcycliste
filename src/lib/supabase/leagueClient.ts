@@ -15,7 +15,6 @@ const TABLES_REQUIRE_LEAGUE = new Set([
   "auctions",
   "bids",
   "rosters",
-  "points_ledger",
   "transfers",
   "bonus_points",
   "manager_bonus_points",
