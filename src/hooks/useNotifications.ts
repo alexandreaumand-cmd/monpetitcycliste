@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useCurrentManager } from '@/hooks/useCurrentManager';
 
 export interface Notification {
   id: string;
@@ -22,23 +24,14 @@ export interface Notification {
 }
 
 export const useNotifications = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: manager } = useCurrentManager();
+  const queryClient = useQueryClient();
 
-  const fetchNotifications = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: manager } = await supabase
-        .from('managers')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!manager) return;
-
+  const { data: notifications = [], isLoading } = useQuery({
+    queryKey: ["notifications", manager?.id],
+    queryFn: async () => {
+      if (!manager?.id) return [];
+      
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -46,32 +39,37 @@ export const useNotifications = () => {
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (data && !error) {
-        setNotifications(data as Notification[]);
-        setUnreadCount(data.filter(n => !n.is_read).length);
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        return [];
       }
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return (data || []) as Notification[];
+    },
+    enabled: !!manager?.id,
+    staleTime: 30000, // 30 seconds
+  });
 
+  const unreadCount = useMemo(() => 
+    notifications.filter(n => !n.is_read).length, 
+    [notifications]
+  );
+
+  // Subscribe to realtime updates filtered by manager_id
   useEffect(() => {
-    fetchNotifications();
+    if (!manager?.id) return;
 
     const channel = supabase
-      .channel('notifications-changes')
+      .channel(`notifications-${manager.id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'notifications'
+          table: 'notifications',
+          filter: `manager_id=eq.${manager.id}`
         },
-        (payload) => {
-          console.log('Notification update:', payload);
-          fetchNotifications();
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["notifications", manager.id] });
         }
       )
       .subscribe();
@@ -79,39 +77,31 @@ export const useNotifications = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [manager?.id, queryClient]);
 
-  const markAsRead = async (notificationId: string) => {
+  const markAsRead = useCallback(async (notificationId: string) => {
     try {
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
         .eq('id', notificationId);
 
-      if (!error) {
-        setNotifications(prev =>
-          prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+      if (!error && manager?.id) {
+        // Optimistic update
+        queryClient.setQueryData<Notification[]>(
+          ["notifications", manager.id],
+          (old) => old?.map(n => n.id === notificationId ? { ...n, is_read: true } : n) || []
         );
-        setUnreadCount(prev => Math.max(0, prev - 1));
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
-  };
+  }, [manager?.id, queryClient]);
 
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
+    if (!manager?.id) return;
+    
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: manager } = await supabase
-        .from('managers')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!manager) return;
-
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
@@ -119,12 +109,22 @@ export const useNotifications = () => {
         .eq('is_read', false);
 
       if (!error) {
-        fetchNotifications();
+        // Optimistic update
+        queryClient.setQueryData<Notification[]>(
+          ["notifications", manager.id],
+          (old) => old?.map(n => ({ ...n, is_read: true })) || []
+        );
       }
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
-  };
+  }, [manager?.id, queryClient]);
+
+  const refetch = useCallback(() => {
+    if (manager?.id) {
+      queryClient.invalidateQueries({ queryKey: ["notifications", manager.id] });
+    }
+  }, [manager?.id, queryClient]);
 
   return {
     notifications,
@@ -132,6 +132,6 @@ export const useNotifications = () => {
     isLoading,
     markAsRead,
     markAllAsRead,
-    refetch: fetchNotifications
+    refetch
   };
 };
