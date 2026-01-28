@@ -51,6 +51,7 @@ export const ExportResultsImage = ({
     }
   }, [open]);
 
+
   const isOneDay = course.type_course === "One day";
   const etapeNumero = !isOneDay && currentStage ? currentStage : null;
   // @ts-ignore - Type classement is dynamic from parent
@@ -389,6 +390,26 @@ export const ExportResultsImage = ({
 
   const isLoading = loadingRiders || loadingJerseys || loadingBareme || loadingManagerRanking;
 
+  // Générer l'image automatiquement quand les données sont prêtes
+  useEffect(() => {
+    const shouldGenerate = 
+      open && 
+      !isLoading && 
+      !generatedImageUrl && 
+      !isGenerating && 
+      exportRef;
+    
+    if (shouldGenerate) {
+      const hasData = 
+        (topRiders && topRiders.length > 0) ||
+        (jerseyHolders && jerseyHolders.length > 0);
+      
+      if (hasData) {
+        handleGeneratePreview();
+      }
+    }
+  }, [open, isLoading, generatedImageUrl, isGenerating, exportRef, topRiders, jerseyHolders]);
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -398,43 +419,12 @@ export const ExportResultsImage = ({
           </DialogHeader>
 
           {!generatedImageUrl ? (
-            <>
-              <div className="space-y-4 py-4">
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p>
-                    Top {scope === "top10" ? "10" : scope === "top15" ? "15" : scope === "top20" ? "20" : "complet"} coureurs
-                    {" "}(basé sur le barème {typeClassement})
-                  </p>
-                  <p>Format: 1080 x 1920 (story, idéal partage)</p>
-                </div>
-
-                {isLoading && (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-                  Annuler
-                </Button>
-                <Button
-                  onClick={handleGeneratePreview}
-                  disabled={isLoading || isGenerating}
-                  className="flex-1"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Génération...
-                    </>
-                  ) : (
-                    "Générer l'aperçu"
-                  )}
-                </Button>
-              </div>
-            </>
+            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                {isLoading ? "Chargement des données..." : "Génération de l'image..."}
+              </p>
+            </div>
           ) : (
             <>
               <div className="space-y-4 py-4">
