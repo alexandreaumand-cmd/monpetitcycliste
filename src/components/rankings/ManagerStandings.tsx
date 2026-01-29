@@ -301,7 +301,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
                       <span className="text-xs text-muted-foreground">—</span>
                     ) : (
                       <span className="text-xs text-muted-foreground font-mono">
-                        -{gapToPrevious}
+                        -{gapToPrevious.toFixed(2)}
                       </span>
                     )}
                   </TableCell>
