@@ -49,12 +49,30 @@ Deno.serve(async (req) => {
     // Extract all course IDs for batch queries
     const courseIds = recentCourses.map(c => c.course_id);
 
-    // BATCH 1: Get all top 10 results for all courses at once
+    // BATCH 0: Get race_result_sets to know which races are TTT
+    const { data: resultSets, error: resultSetsError } = await supabase
+      .from('race_result_sets')
+      .select('course_id, type_classement, etape_numero, is_ttt')
+      .in('course_id', courseIds);
+
+    if (resultSetsError) {
+      console.error('Error fetching result sets:', resultSetsError);
+    }
+
+    // Build a map to know if a course/type/etape is TTT
+    const tttMap = new Map<string, boolean>();
+    (resultSets || []).forEach((rs: any) => {
+      const key = `${rs.course_id}:${rs.type_classement}:${rs.etape_numero ?? 'null'}`;
+      tttMap.set(key, rs.is_ttt === true);
+    });
+
+    // BATCH 1: Get all top 10 results for all courses at once (General with etape_numero = null)
     const { data: allTop10, error: top10Error } = await supabase
       .from('race_results')
       .select(`
         course_id,
         position,
+        position_decimal,
         coureur_id,
         coureurs!inner(nom),
         equipes_saisons(nom_affiche)
@@ -101,25 +119,73 @@ Deno.serve(async (req) => {
     const top10Map = new Map<string, any[]>();
     const typesMap = new Map<string, Set<string>>();
     const stagesMap = new Map<string, Set<number>>();
+    const isTttMap = new Map<string, boolean>();
 
     // Initialize maps for all courses
     courseIds.forEach(id => {
       top10Map.set(id, []);
       typesMap.set(id, new Set());
       stagesMap.set(id, new Set());
+      // Check if General (null etape) is TTT for this course
+      const tttKey = `${id}:General:null`;
+      isTttMap.set(id, tttMap.get(tttKey) === true);
     });
 
-    // Populate top10 map with points from points_ledger
+    // For TTT races, group by team (position). For regular races, list individual riders.
+    const courseTeamPointsMap = new Map<string, Map<number, { teamName: string; totalPoints: number; riders: string[] }>>();
+
     (allTop10 || []).forEach((r: any) => {
-      const arr = top10Map.get(r.course_id) || [];
+      const isTtt = isTttMap.get(r.course_id);
       const points = pointsMap.get(`${r.course_id}:${r.coureur_id}`) || 0;
-      arr.push({
-        position: r.position,
-        coureur_nom: r.coureurs?.nom || 'Inconnu',
-        coureur_equipe: r.equipes_saisons?.nom_affiche || '',
-        points: points
+      
+      if (isTtt) {
+        // Group by position (all riders with same position are on the same team)
+        if (!courseTeamPointsMap.has(r.course_id)) {
+          courseTeamPointsMap.set(r.course_id, new Map());
+        }
+        const teamMap = courseTeamPointsMap.get(r.course_id)!;
+        const teamPosition = r.position;
+        
+        if (!teamMap.has(teamPosition)) {
+          teamMap.set(teamPosition, {
+            teamName: r.equipes_saisons?.nom_affiche || 'Équipe inconnue',
+            totalPoints: 0,
+            riders: []
+          });
+        }
+        
+        const team = teamMap.get(teamPosition)!;
+        team.totalPoints += points;
+        team.riders.push(r.coureurs?.nom || 'Inconnu');
+      } else {
+        // Regular race - add individual riders
+        const arr = top10Map.get(r.course_id) || [];
+        arr.push({
+          position: r.position,
+          coureur_nom: r.coureurs?.nom || 'Inconnu',
+          coureur_equipe: r.equipes_saisons?.nom_affiche || '',
+          points: points,
+          is_team: false
+        });
+        top10Map.set(r.course_id, arr);
+      }
+    });
+
+    // Convert TTT team maps to top10 arrays
+    courseTeamPointsMap.forEach((teamMap, courseId) => {
+      const teams: any[] = [];
+      teamMap.forEach((team, position) => {
+        teams.push({
+          position: position,
+          coureur_nom: team.teamName, // Display team name
+          coureur_equipe: `${team.riders.length} coureurs`,
+          points: team.totalPoints,
+          is_team: true
+        });
       });
-      top10Map.set(r.course_id, arr);
+      // Sort by position
+      teams.sort((a, b) => a.position - b.position);
+      top10Map.set(courseId, teams.slice(0, 10));
     });
 
     // Populate types and stages maps
@@ -137,6 +203,7 @@ Deno.serve(async (req) => {
       const top10 = top10Map.get(course.course_id) || [];
       const uniqueTypes = [...(typesMap.get(course.course_id) || [])];
       const uniqueStages = [...(stagesMap.get(course.course_id) || [])].sort((a, b) => a - b);
+      const isTtt = isTttMap.get(course.course_id) || false;
 
       return {
         course_id: course.course_id,
@@ -145,7 +212,8 @@ Deno.serve(async (req) => {
         total_points: course.total_points,
         top10: top10,
         types_disponibles: uniqueTypes,
-        etapes_disponibles: uniqueStages
+        etapes_disponibles: uniqueStages,
+        is_ttt: isTtt
       };
     });
 

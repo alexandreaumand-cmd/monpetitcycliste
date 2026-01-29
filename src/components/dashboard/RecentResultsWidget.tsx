@@ -16,6 +16,7 @@ type RiderResult = {
   coureur_nom: string;
   coureur_equipe?: string;
   points: number;
+  is_team?: boolean;
 };
 
 type RaceWithResults = {
@@ -26,6 +27,7 @@ type RaceWithResults = {
   top10: RiderResult[];
   types_disponibles: string[];
   etapes_disponibles: number[];
+  is_ttt?: boolean;
 };
 
 type ClassificationResult = {
@@ -231,21 +233,21 @@ function RidersList({ riders }: { riders: RiderResult[] }) {
   const { t } = useTranslation('dashboard');
   
   const getMedalIcon = (position: number) => {
-    if (position === 1) return <Medal className="h-4 w-4 text-[#FFD500] fill-[#FFD500]" />;
-    if (position === 2) return <Medal className="h-4 w-4 text-gray-500 fill-gray-500" />;
-    if (position === 3) return <Medal className="h-4 w-4 text-gray-700 fill-gray-700" />;
+    if (position === 1) return <Medal className="h-4 w-4 text-[hsl(var(--yellow))] fill-[hsl(var(--yellow))]" />;
+    if (position === 2) return <Medal className="h-4 w-4 text-muted-foreground fill-muted-foreground" />;
+    if (position === 3) return <Medal className="h-4 w-4 text-muted-foreground/80 fill-muted-foreground/80" />;
     return null;
   };
 
   const getPodiumStyles = (position: number) => {
     if (position === 1) {
-      return "bg-[#FFD500] border-l-4 border-black";
+      return "bg-primary border-l-4 border-primary-foreground";
     }
     if (position === 2) {
-      return "bg-gray-200 dark:bg-gray-800 border-l-4 border-gray-500";
+      return "bg-muted border-l-4 border-muted-foreground/50";
     }
     if (position === 3) {
-      return "bg-gray-300 dark:bg-gray-700 border-l-4 border-gray-600";
+      return "bg-muted/70 border-l-4 border-muted-foreground/40";
     }
     return "";
   };
@@ -281,11 +283,13 @@ function RidersList({ riders }: { riders: RiderResult[] }) {
             <div className="flex flex-col min-w-0 flex-1">
               <span className={cn(
                 "truncate",
-                rider.position <= 3 ? "font-semibold text-sm" : "font-medium text-xs"
+                rider.position <= 3 ? "font-semibold text-sm" : "font-medium text-xs",
+                rider.is_team && "flex items-center gap-1"
               )}>
+                {rider.is_team && <span className="text-xs">🏢</span>}
                 {rider.coureur_nom}
               </span>
-              {rider.coureur_equipe && rider.position <= 3 && (
+              {rider.coureur_equipe && rider.position <= 3 && !rider.is_team && (
                 <span className="text-xs text-muted-foreground truncate">
                   {rider.coureur_equipe}
                 </span>
@@ -295,7 +299,7 @@ function RidersList({ riders }: { riders: RiderResult[] }) {
           <span className={cn(
             "flex-shrink-0 ml-2 tabular-nums",
             rider.position === 1
-              ? "font-bold text-sm text-black"
+              ? "font-bold text-sm text-primary-foreground"
               : rider.position <= 3
                 ? "font-bold text-sm text-muted-foreground"
                 : "font-semibold text-xs text-muted-foreground"
