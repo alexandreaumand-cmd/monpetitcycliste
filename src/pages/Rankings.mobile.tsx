@@ -289,7 +289,7 @@ export const RankingsMobile = () => {
   const PointsBadge = ({ points }: { points: number }) => {
     return (
       <div className="flex flex-col items-end">
-        <span className="text-lg font-bold">{points}</span>
+        <span className="text-lg font-bold">{Math.round(points)}</span>
       </div>
     );
   };
