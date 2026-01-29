@@ -19,6 +19,7 @@ import { StageJerseyBonuses } from "./StageJerseyBonuses";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ExportResultsImage } from "@/components/admin/ExportResultsImage";
+import { TTTResultsTable } from "./TTTResultsTable";
 
 // Jersey holders compact bar component
 const JerseyHoldersBar = ({ courseId, etapeNumero, leagueId }: { courseId: string | null; etapeNumero: number | null; leagueId: string | null }) => {
@@ -152,6 +153,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
   const [totalRiders, setTotalRiders] = useState<any[]>([]);
   const [totalBreakdown, setTotalBreakdown] = useState<any[]>([]);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [isTTT, setIsTTT] = useState(false);
   const { toast } = useToast();
 
   // Fetch league name for export
@@ -302,58 +304,11 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
       const rows = data?.rows || [];
       
       // Check if this is a TTT (has position_decimal) - works for both Etape and General (one-day)
-      const isTTT = (selectedType === 'Etape' || selectedType === 'General') && rows.some((r: any) => r.position_decimal !== null);
+      const isTTTResult = (selectedType === 'Etape' || selectedType === 'General') && rows.some((r: any) => r.position_decimal !== null);
+      setIsTTT(isTTTResult);
       
-    if (isTTT) {
-      // Group results by team (using equipe_id_uci for accurate grouping)
-      const grouped = rows.reduce((acc: any, row: any) => {
-        const teamPosition = Math.floor(row.position_decimal);
-        const teamKey = `${teamPosition}-${row.equipe_id_uci || row.equipe}`;
-        
-        if (!acc[teamKey]) {
-          acc[teamKey] = {
-            teamRow: {
-              race_result_id: `team-${teamKey}`,
-              row_position: teamPosition,
-              position_decimal: teamPosition,
-              coureur_nom: row.equipe_nom_uci || row.equipe || 'Équipe inconnue',
-              equipe: row.equipe_nom_uci || row.equipe || 'Équipe inconnue',
-              equipe_id_uci: row.equipe_id_uci,
-              points_theoriques: 0,
-              statut: 'finished',
-              isTeamHeader: true,
-              is_my_rider: false,
-              manager_nom: null
-            },
-            riders: []
-          };
-        }
-        
-        // Accumulate points from all riders in the team
-        acc[teamKey].teamRow.points_theoriques += (row.points_theoriques || 0);
-        acc[teamKey].riders.push(row);
-        return acc;
-      }, {});
-
-        // Flatten: team header + riders, sorted properly
-        const flatResults: any[] = [];
-        Object.keys(grouped)
-          .sort((a, b) => {
-            const posA = parseInt(a.split('-')[0]);
-            const posB = parseInt(b.split('-')[0]);
-            return posA - posB;
-          })
-          .forEach(key => {
-            flatResults.push(grouped[key].teamRow);
-            // Sort riders by position_decimal within team
-            grouped[key].riders.sort((a: any, b: any) => a.position_decimal - b.position_decimal);
-            flatResults.push(...grouped[key].riders);
-          });
-        
-        setResults(flatResults);
-      } else {
-        setResults(rows);
-      }
+      // For TTT, just pass the raw rows - the TTTResultsTable component handles grouping
+      setResults(rows);
     } catch (error) {
       console.error('Error loading results:', error);
       setResults([]);
@@ -656,6 +611,9 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                         </TableBody>
                       </Table>
                     </div>
+                  ) : isTTT ? (
+                    // TTT results with accordion
+                    <TTTResultsTable results={displayedResults} compact={true} />
                   ) : (
                     // Regular results table - optimized for mobile with 4 columns
                     <div className="border rounded-lg overflow-hidden">
@@ -670,34 +628,28 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                         </TableHeader>
                         <TableBody>
                           {displayedResults.map((row) => {
-                            const isTeamHeader = row.isTeamHeader;
-                            const isFinished = row.statut === 'finished' && (row.row_position !== null || row.position_decimal !== null);
+                            const isFinished = row.statut === 'finished' && row.row_position !== null;
                             const statutBadge = getStatutBadge(row.statut);
                             const points = row.points_theoriques;
-                            const displayPosition = row.position_decimal || row.row_position;
+                            const displayPosition = row.row_position;
                             
                             return (
                               <TableRow
                                 key={row.race_result_id}
                                 className={
-                                  isTeamHeader 
-                                    ? "bg-muted/50 font-bold" 
-                              : row.is_my_rider 
-                                      ? "bg-yellow-100/60 dark:bg-yellow-900/20 border-l-2 border-l-yellow-400" 
-                                      : ""
+                                  row.is_my_rider 
+                                    ? "bg-yellow-100/60 dark:bg-yellow-900/20 border-l-2 border-l-yellow-400" 
+                                    : ""
                                 }
                               >
                                 <TableCell className="font-medium px-1 py-1 text-center">
                                   {isFinished ? (
-                                    isTeamHeader ? (
+                                    displayPosition <= 3 ? (
                                       <span className="flex items-center justify-center gap-0.5">
-                                        {displayPosition <= 3 && (
-                                          <span className="text-xs">
-                                            {displayPosition === 1 ? "🥇" : 
-                                             displayPosition === 2 ? "🥈" : "🥉"}
-                                          </span>
-                                        )}
-                                        {displayPosition > 3 && displayPosition}
+                                        <span className="text-xs">
+                                          {displayPosition === 1 ? "🥇" : 
+                                           displayPosition === 2 ? "🥈" : "🥉"}
+                                        </span>
                                       </span>
                                     ) : (
                                       <span className="text-muted-foreground">{displayPosition}</span>
@@ -711,14 +663,10 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                   )}
                                 </TableCell>
                                 <TableCell className="px-1 py-1">
-                                  {isTeamHeader ? (
-                                    <span className="font-bold text-[10px]">{row.coureur_nom}</span>
-                                  ) : (
-                                    <div className="flex flex-col">
-                                      <span className="font-semibold leading-tight truncate">{row.coureur_nom}</span>
-                                      <span className="text-[9px] text-muted-foreground truncate">{row.equipe}</span>
-                                    </div>
-                                  )}
+                                  <div className="flex flex-col">
+                                    <span className="font-semibold leading-tight truncate">{row.coureur_nom}</span>
+                                    <span className="text-[9px] text-muted-foreground truncate">{row.equipe}</span>
+                                  </div>
                                 </TableCell>
                                 <TableCell className="text-right font-bold px-1 py-1 tabular-nums">
                                   {points > 0 ? points : "—"}
@@ -772,85 +720,79 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                 {loading ? (
                   <Skeleton className="h-96 w-full" />
                 ) : displayedResults.length > 0 ? (
-                  <div className="border rounded-lg overflow-hidden">
-                    <Table className="text-[11px] table-fixed w-full">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-7 px-1 text-center">#</TableHead>
-                          <TableHead className="px-1">Coureur</TableHead>
-                          <TableHead className="text-right px-1 w-10">Pts</TableHead>
-                          <TableHead className="px-1 w-16 text-right">Manager</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {displayedResults.map((row) => {
-                          const isTeamHeader = row.isTeamHeader;
-                          const isFinished = row.statut === 'finished' && (row.row_position !== null || row.position_decimal !== null);
-                          const statutBadge = getStatutBadge(row.statut);
-                          const points = row.points_theoriques;
-                          const displayPosition = row.position_decimal || row.row_position;
-                          
-                          return (
-                            <TableRow
-                              key={row.race_result_id}
-                              className={
-                                isTeamHeader 
-                                  ? "bg-muted/50 font-bold" 
-                                : row.is_my_rider 
+                  isTTT ? (
+                    <TTTResultsTable results={displayedResults} compact={true} />
+                  ) : (
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table className="text-[11px] table-fixed w-full">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-7 px-1 text-center">#</TableHead>
+                            <TableHead className="px-1">Coureur</TableHead>
+                            <TableHead className="text-right px-1 w-10">Pts</TableHead>
+                            <TableHead className="px-1 w-16 text-right">Manager</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {displayedResults.map((row) => {
+                            const isFinished = row.statut === 'finished' && row.row_position !== null;
+                            const statutBadge = getStatutBadge(row.statut);
+                            const points = row.points_theoriques;
+                            const displayPosition = row.row_position;
+                            
+                            return (
+                              <TableRow
+                                key={row.race_result_id}
+                                className={
+                                  row.is_my_rider 
                                     ? "bg-yellow-100/60 dark:bg-yellow-900/20 border-l-2 border-l-yellow-400" 
                                     : ""
-                              }
-                            >
-                              <TableCell className="px-1 py-1 text-center font-medium">
-                                {isFinished ? (
-                                  isTeamHeader ? (
-                                    <div className="flex items-center justify-center gap-1">
-                                      {displayPosition <= 3 && (
+                                }
+                              >
+                                <TableCell className="px-1 py-1 text-center font-medium">
+                                  {isFinished ? (
+                                    displayPosition <= 3 ? (
+                                      <div className="flex items-center justify-center gap-1">
                                         <span className="text-sm">
                                           {displayPosition === 1 ? "🥇" : displayPosition === 2 ? "🥈" : "🥉"}
                                         </span>
-                                      )}
-                                      <span className="text-xs">{displayPosition}</span>
-                                    </div>
+                                      </div>
+                                    ) : (
+                                      <span className="text-muted-foreground text-xs">
+                                        {displayPosition}
+                                      </span>
+                                    )
+                                  ) : statutBadge ? (
+                                    <Badge variant={statutBadge.variant} className="text-[9px] px-1">
+                                      {statutBadge.label}
+                                    </Badge>
                                   ) : (
-                                    <span className="text-muted-foreground text-xs">
-                                      {displayPosition}
-                                    </span>
-                                  )
-                                ) : statutBadge ? (
-                                  <Badge variant={statutBadge.variant} className="text-[9px] px-1">
-                                    {statutBadge.label}
-                                  </Badge>
-                                ) : (
-                                  "—"
-                                )}
-                              </TableCell>
-                              <TableCell className="px-1 py-1">
-                                {isTeamHeader ? (
-                                  <span className="font-bold text-xs truncate block">{row.coureur_nom}</span>
-                                ) : (
+                                    "—"
+                                  )}
+                                </TableCell>
+                                <TableCell className="px-1 py-1">
                                   <div className="flex flex-col">
                                     <span className="font-semibold leading-tight truncate">{row.coureur_nom}</span>
                                     <span className="text-[9px] text-muted-foreground truncate">{row.equipe}</span>
                                   </div>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right font-bold px-1 py-1">
-                                {points > 0 ? points : "—"}
-                              </TableCell>
-                              <TableCell className="px-1 py-1 text-right">
-                                {row.manager_nom && (
-                                  <span className="text-[9px] text-muted-foreground truncate block">
-                                    {row.manager_nom}
-                                  </span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
+                                </TableCell>
+                                <TableCell className="text-right font-bold px-1 py-1">
+                                  {points > 0 ? points : "—"}
+                                </TableCell>
+                                <TableCell className="px-1 py-1 text-right">
+                                  {row.manager_nom && (
+                                    <span className="text-[9px] text-muted-foreground truncate block">
+                                      {row.manager_nom}
+                                    </span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )
                 ) : (
                   <p className="text-center text-muted-foreground py-8">
                     {selectedEtape 
@@ -1010,88 +952,79 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                     : "Aucun résultat ne correspond à votre recherche"}
                 </div>
               ) : selectedType !== 'Total' && (
-                <div className="border rounded-lg overflow-hidden">
-                  <Table className="text-xs sm:text-sm">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12 px-2">Pos.</TableHead>
-                        <TableHead className="px-2">Coureur</TableHead>
-                        <TableHead className="text-right px-2 w-12">Pts</TableHead>
-                        <TableHead className="px-2 w-16">Manager</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {displayedResults.map((row) => {
-                        const isTeamHeader = row.isTeamHeader;
-                        const isFinished = row.statut === 'finished' && (row.row_position !== null || row.position_decimal !== null);
-                        const statutBadge = getStatutBadge(row.statut);
-                        const points = row.points_theoriques;
-                        const displayPosition = row.position_decimal || row.row_position;
-                        
-                        return (
-                          <TableRow
-                            key={row.race_result_id}
-                            className={
-                              isTeamHeader 
-                                ? "bg-muted/50 font-bold" 
-                              : row.is_my_rider 
+                isTTT ? (
+                  <TTTResultsTable results={displayedResults} compact={false} />
+                ) : (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table className="text-xs sm:text-sm">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12 px-2">Pos.</TableHead>
+                          <TableHead className="px-2">Coureur</TableHead>
+                          <TableHead className="text-right px-2 w-12">Pts</TableHead>
+                          <TableHead className="px-2 w-16">Manager</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {displayedResults.map((row) => {
+                          const isFinished = row.statut === 'finished' && row.row_position !== null;
+                          const statutBadge = getStatutBadge(row.statut);
+                          const points = row.points_theoriques;
+                          const displayPosition = row.row_position;
+                          
+                          return (
+                            <TableRow
+                              key={row.race_result_id}
+                              className={
+                                row.is_my_rider 
                                   ? "bg-yellow-100/60 dark:bg-yellow-900/20 border-l-2 border-l-yellow-400" 
                                   : ""
-                            }
-                          >
-                            <TableCell className="font-medium px-2 py-2">
-                              {isFinished ? (
-                                <div className="flex items-center gap-1">
-                                  {isTeamHeader ? (
-                                    <>
-                                      {displayPosition <= 3 && (
-                                        <span className="text-sm">
-                                          {displayPosition === 1 ? "🥇" : 
-                                           displayPosition === 2 ? "🥈" : "🥉"}
-                                        </span>
-                                      )}
-                                      <span>{displayPosition}</span>
-                                    </>
-                                  ) : (
+                              }
+                            >
+                              <TableCell className="font-medium px-2 py-2">
+                                {isFinished ? (
+                                  <div className="flex items-center gap-1">
+                                    {displayPosition <= 3 && (
+                                      <span className="text-sm">
+                                        {displayPosition === 1 ? "🥇" : 
+                                         displayPosition === 2 ? "🥈" : "🥉"}
+                                      </span>
+                                    )}
                                     <span className="text-muted-foreground">
                                       {displayPosition}
                                     </span>
-                                  )}
-                                </div>
-                              ) : statutBadge ? (
-                                <Badge variant={statutBadge.variant} className="text-[10px] px-1 py-0">
-                                  {statutBadge.label}
-                                </Badge>
-                              ) : (
-                                "—"
-                              )}
-                            </TableCell>
-                            <TableCell className="px-2 py-2">
-                              {isTeamHeader ? (
-                                <span className="font-bold text-xs">{row.coureur_nom}</span>
-                              ) : (
+                                  </div>
+                                ) : statutBadge ? (
+                                  <Badge variant={statutBadge.variant} className="text-[10px] px-1 py-0">
+                                    {statutBadge.label}
+                                  </Badge>
+                                ) : (
+                                  "—"
+                                )}
+                              </TableCell>
+                              <TableCell className="px-2 py-2">
                                 <div className="flex flex-col gap-0.5">
                                   <span className="font-semibold leading-tight">{row.coureur_nom}</span>
                                   <span className="text-[10px] text-muted-foreground">{row.equipe}</span>
                                 </div>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right font-bold px-2 py-2 tabular-nums">
-                              {points > 0 ? points : "—"}
-                            </TableCell>
-                            <TableCell className="px-2 py-2">
-                              {row.manager_nom && (
-                                <span className="text-[10px] text-muted-foreground truncate block max-w-[60px]">
-                                  {row.manager_nom}
-                                </span>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-bold px-2 py-2 tabular-nums">
+                                {points > 0 ? points : "—"}
+                              </TableCell>
+                              <TableCell className="px-2 py-2">
+                                {row.manager_nom && (
+                                  <span className="text-[10px] text-muted-foreground truncate block max-w-[60px]">
+                                    {row.manager_nom}
+                                  </span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
               )}
 
               {/* Jersey bonuses section for Etape type */}
