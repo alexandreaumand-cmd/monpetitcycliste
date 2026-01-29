@@ -5039,34 +5039,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "courses_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "coureurs_disponibilite"
-            referencedColumns: ["phase_id"]
-          },
-          {
-            foreignKeyName: "courses_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "manager_phase_status"
-            referencedColumns: ["phase_id"]
-          },
-          {
-            foreignKeyName: "courses_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "managers_rosters_status"
-            referencedColumns: ["phase_id"]
-          },
-          {
-            foreignKeyName: "courses_phase_id_fkey"
-            columns: ["phase_id"]
-            isOneToOne: false
-            referencedRelation: "phases"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "points_ledger_coureur_id_fkey"
             columns: ["coureur_id"]
             isOneToOne: false
@@ -5100,6 +5072,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_coureurs_saisons_admin"
             referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
           },
         ]
       }
