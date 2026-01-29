@@ -131,8 +131,12 @@ Deno.serve(async (req) => {
       isTttMap.set(id, tttMap.get(tttKey) === true);
     });
 
+    // Points théoriques par position pour les courses 1.1 TTT (Classement Etape)
+    // En TTT, les points du barème sont distribués par équipe, pas sommés depuis points_ledger
+    const TTT_POINTS_1_1 = [100, 80, 65, 50, 40, 30, 20, 15, 10, 5];
+    
     // For TTT races, group by team (position). For regular races, list individual riders.
-    const courseTeamPointsMap = new Map<string, Map<number, { teamName: string; totalPoints: number; riders: string[] }>>();
+    const courseTeamPointsMap = new Map<string, Map<number, { teamName: string; riders: string[] }>>();
 
     (allTop10 || []).forEach((r: any) => {
       const isTtt = isTttMap.get(r.course_id);
@@ -149,13 +153,11 @@ Deno.serve(async (req) => {
         if (!teamMap.has(teamPosition)) {
           teamMap.set(teamPosition, {
             teamName: r.equipes_saisons?.nom_affiche || 'Équipe inconnue',
-            totalPoints: 0,
             riders: []
           });
         }
         
         const team = teamMap.get(teamPosition)!;
-        team.totalPoints += points;
         team.riders.push(r.coureurs?.nom || 'Inconnu');
       } else {
         // Regular race - add individual riders
@@ -171,15 +173,17 @@ Deno.serve(async (req) => {
       }
     });
 
-    // Convert TTT team maps to top10 arrays
+    // Convert TTT team maps to top10 arrays - use theoretical points from barème
     courseTeamPointsMap.forEach((teamMap, courseId) => {
       const teams: any[] = [];
       teamMap.forEach((team, position) => {
+        // Use theoretical points for TTT based on position (1-indexed)
+        const theoreticalPoints = position >= 1 && position <= 10 ? TTT_POINTS_1_1[position - 1] : 0;
         teams.push({
           position: position,
           coureur_nom: team.teamName, // Display team name
           coureur_equipe: `${team.riders.length} coureurs`,
-          points: team.totalPoints,
+          points: theoreticalPoints,
           is_team: true
         });
       });
