@@ -187,12 +187,34 @@ Deno.serve(async (req) => {
     });
 
     // 7. Calculate winners using BATCH queries instead of N+1
-    const winnerResult: Record<string, { coureur_id: string; coureur_nom: string; type_classement: string; etape_numero: number | null } | null> = {};
+    const winnerResult: Record<string, { coureur_id: string; coureur_nom: string; type_classement: string; etape_numero: number | null; is_ttt: boolean } | null> = {};
 
-    // Batch fetch all general classification winners
+    // First, check which courses are TTT by looking at race_result_sets
+    const { data: resultSetsData, error: resultSetsError } = await supabase
+      .from('race_result_sets')
+      .select('course_id, type_classement, etape_numero, is_ttt')
+      .in('course_id', course_ids);
+
+    if (resultSetsError) throw resultSetsError;
+
+    // Build a map to know if a course's General classification is TTT
+    const tttCourseMap = new Map<string, boolean>();
+    resultSetsData?.forEach(rs => {
+      // Check if General classification is TTT
+      if (rs.type_classement === 'General' && rs.etape_numero === null) {
+        tttCourseMap.set(rs.course_id, rs.is_ttt === true);
+      }
+    });
+
+    // Batch fetch all general classification winners (including team name)
     const { data: allGeneralWinners, error: generalError } = await supabase
       .from('race_results')
-      .select('course_id, coureur_id, coureurs!inner(nom)')
+      .select(`
+        course_id, 
+        coureur_id, 
+        coureurs!inner(nom),
+        equipes_saisons(nom_affiche)
+      `)
       .in('course_id', course_ids)
       .eq('type_classement', 'General')
       .eq('position', 1)
@@ -214,12 +236,13 @@ Deno.serve(async (req) => {
     if (stageError) throw stageError;
 
     // Build maps for O(1) lookup
-    const generalWinnersMap = new Map<string, { coureur_id: string; coureur_nom: string }>();
+    const generalWinnersMap = new Map<string, { coureur_id: string; coureur_nom: string; equipe_nom: string }>();
     allGeneralWinners?.forEach(w => {
       if (!generalWinnersMap.has(w.course_id)) {
         generalWinnersMap.set(w.course_id, {
           coureur_id: w.coureur_id,
-          coureur_nom: (w.coureurs as any)?.nom || 'Unknown'
+          coureur_nom: (w.coureurs as any)?.nom || 'Unknown',
+          equipe_nom: (w.equipes_saisons as any)?.nom_affiche || 'Unknown'
         });
       }
     });
@@ -239,12 +262,16 @@ Deno.serve(async (req) => {
     // Build winner result for each course
     for (const courseId of course_ids) {
       const generalWinner = generalWinnersMap.get(courseId);
+      const isTtt = tttCourseMap.get(courseId) || false;
+      
       if (generalWinner) {
         winnerResult[courseId] = {
           coureur_id: generalWinner.coureur_id,
-          coureur_nom: generalWinner.coureur_nom,
+          // For TTT, display team name instead of rider name
+          coureur_nom: isTtt ? generalWinner.equipe_nom : generalWinner.coureur_nom,
           type_classement: 'General',
           etape_numero: null,
+          is_ttt: isTtt,
         };
         continue;
       }
@@ -256,6 +283,7 @@ Deno.serve(async (req) => {
           coureur_nom: stageWinner.coureur_nom,
           type_classement: 'Etape',
           etape_numero: stageWinner.etape_numero,
+          is_ttt: false,
         };
         continue;
       }
