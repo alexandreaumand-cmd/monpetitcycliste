@@ -107,29 +107,33 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get all riders who scored points in this phase
-    const { data: pointsData, error: pointsError } = await supabase
-      .from('points_ledger')
-      .select('coureur_id')
-      .eq('phase_id', phase_id)
-      .gt('points', 0);
+    // Get non-TTT scoring riders using the database function
+    // This excludes riders who only scored points in TTT races
+    const { data: scoringRidersData, error: scoringError } = await supabase
+      .rpc('get_non_ttt_scoring_riders', { p_phase_id: phase_id });
 
-    if (pointsError) {
-      console.error('Error fetching points:', pointsError);
-      throw pointsError;
+    if (scoringError) {
+      console.error('Error fetching non-TTT scoring riders:', scoringError);
+      throw scoringError;
     }
 
-    const scoringRiderIds = [...new Set(pointsData?.map(p => p.coureur_id).filter(Boolean) || [])];
-    console.log(`Found ${scoringRiderIds.length} scoring riders in phase`);
+    const scoringRiderIds = scoringRidersData?.map((r: { coureur_id: string }) => r.coureur_id) || [];
+    console.log(`Found ${scoringRiderIds.length} non-TTT scoring riders in phase`);
 
     if (scoringRiderIds.length === 0) {
       return new Response(
-        JSON.stringify({ message: 'Aucun coureur scoreur dans cette phase', results: [] }),
+        JSON.stringify({ message: 'Aucun coureur scoreur (hors TTT) dans cette phase', results: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const results: any[] = [];
+    const results: Array<{
+      league_id: string;
+      manager_id: string;
+      scoring_riders: number;
+      points: number;
+      action: string;
+    }> = [];
 
     // Process each league
     for (const leagueId of leagueIds) {
@@ -186,7 +190,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      console.log(`League ${leagueId}: ${winnersManagerIds.length} winner(s) with ${maxCount} scoring riders`);
+      console.log(`League ${leagueId}: ${winnersManagerIds.length} winner(s) with ${maxCount} scoring riders (excluding TTT)`);
 
       // Award bonus to each winner
       for (const managerId of winnersManagerIds) {
@@ -199,7 +203,7 @@ Deno.serve(async (req) => {
           .eq('league_id', leagueId)
           .maybeSingle();
 
-        const commentaire = `Auto-calculé: ${maxCount} coureurs scoreurs${winnersManagerIds.length > 1 ? ' (ex-aequo)' : ''}`;
+        const commentaire = `Auto-calculé: ${maxCount} coureurs scoreurs (hors TTT)${winnersManagerIds.length > 1 ? ' (ex-aequo)' : ''}`;
 
         if (existing) {
           // Update existing entry
@@ -263,15 +267,16 @@ Deno.serve(async (req) => {
         phase_id,
         results_count: results.length,
         leagues_processed: leagueIds.length,
+        note: 'TTT results excluded from scorer count',
       })
     });
 
-    console.log(`Bonus scoreurs computation complete: ${results.length} bonuses awarded`);
+    console.log(`Bonus scoreurs computation complete: ${results.length} bonuses awarded (TTT excluded)`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `${results.length} bonus scoreurs attribués`,
+        message: `${results.length} bonus scoreurs attribués (hors TTT)`,
         results,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
