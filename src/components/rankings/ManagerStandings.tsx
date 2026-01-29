@@ -240,7 +240,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
                   rank === 3 && "text-[#CD7F32]",
                   rank > 3 && "text-foreground"
                 )}>
-                  {standing.total_points}
+                  {Math.round(standing.total_points)}
                 </span>
                       </div>
                       <div className="text-xs text-muted-foreground">
