@@ -102,7 +102,7 @@ export const MyTeamDesktop = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   // Rider detail state
-  const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string; equipe: string; prix: number } | null>(null);
+  const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string; equipe: string; prix: number; cote: number; round?: number } | null>(null);
   
   // Bonus rider state
   const [bonusRiderSelection, setBonusRiderSelection] = useState<{ coureur_id: string; coureur_nom: string } | null>(null);
@@ -369,7 +369,9 @@ export const MyTeamDesktop = () => {
       id: coureur.coureur_id,
       nom: coureur.nom,
       equipe: coureur.equipe,
-      prix: coureur.prix_achat
+      prix: coureur.prix_achat,
+      cote: coureur.cote_initiale,
+      round: coureur.winning_round
     });
   };
 
@@ -886,6 +888,8 @@ export const MyTeamDesktop = () => {
         riderName={selectedRider?.nom || ''}
         riderTeam={selectedRider?.equipe || ''}
         riderPrice={selectedRider?.prix || 0}
+        riderCote={selectedRider?.cote || 0}
+        riderRound={selectedRider?.round}
         phaseId={selectedPhaseId || ''}
       />
 
