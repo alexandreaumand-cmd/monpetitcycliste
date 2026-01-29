@@ -5298,6 +5298,12 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"][]
       }
+      get_non_ttt_scoring_riders: {
+        Args: { p_phase_id: string }
+        Returns: {
+          coureur_id: string
+        }[]
+      }
       get_previous_standings:
         | {
             Args: { p_reference_phase_id?: string; p_saison_id?: string }
