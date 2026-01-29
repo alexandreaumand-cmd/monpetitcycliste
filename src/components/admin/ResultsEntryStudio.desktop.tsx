@@ -786,11 +786,14 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
             statut: row.statut,
           }));
 
-          const { data, error: saveError } = await supabase.rpc("admin_result_save_lot", {
-            p_course_id: course.course_id,
-            p_type_classement: classementType,
-            p_etape_numero: etapeNumeroValue,
-            p_rows: rowsForDb,
+          // Use edge function instead of RPC to trigger push notifications
+          const { data, error: saveError } = await supabase.functions.invoke('admin-result-save-lot', {
+            body: {
+              p_course_id: course.course_id,
+              p_type_classement: classementType,
+              p_etape_numero: etapeNumeroValue,
+              p_rows: rowsForDb,
+            }
           });
 
           if (saveError) throw saveError;
@@ -819,11 +822,14 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
           const coureurId = jerseySnapshot[key];
 
           if (coureurId) {
-            const { error: jerseyError } = await supabase.rpc("admin_result_save_lot", {
-              p_course_id: course.course_id,
-              p_type_classement: type,
-              p_etape_numero: Number(etapeNumero),
-              p_rows: [{ coureur_id: coureurId, position: 1, statut: 'finished' as ResultStatut }],
+            // Use edge function (no push for jersey holders - filtered by edge function)
+            const { error: jerseyError } = await supabase.functions.invoke('admin-result-save-lot', {
+              body: {
+                p_course_id: course.course_id,
+                p_type_classement: type,
+                p_etape_numero: Number(etapeNumero),
+                p_rows: [{ coureur_id: coureurId, position: 1, statut: 'finished' as ResultStatut }],
+              }
             });
             if (jerseyError) {
               console.error(`❌ Error saving ${type}:`, jerseyError);
@@ -881,11 +887,14 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
       // Save Combatif winner if on finals tab for WT GT
       if (!isOneDay && activeTab === "finals" && currentFinalClassement === "Combatif" && course.categorie === 'WT GT' && combatifWinner) {
-        await supabase.rpc("admin_result_save_lot", {
-          p_course_id: course.course_id,
-          p_type_classement: 'Combatif' as ClassementType,
-          p_etape_numero: null,
-          p_rows: [{ coureur_id: combatifWinner, position: 1, statut: 'finished' as ResultStatut }],
+        // Use edge function (no push for Combatif - filtered by edge function)
+        await supabase.functions.invoke('admin-result-save-lot', {
+          body: {
+            p_course_id: course.course_id,
+            p_type_classement: 'Combatif' as ClassementType,
+            p_etape_numero: null,
+            p_rows: [{ coureur_id: combatifWinner, position: 1, statut: 'finished' as ResultStatut }],
+          }
         });
       }
 
