@@ -1,260 +1,72 @@
 
-# Proposition de refonte - Landing Page Marketing
+# Corriger les push notifications pour la saisie manuelle de résultats
 
-## Vision globale
-Transformer la page en une **experience narrative immersive** qui fait vivre le frisson du cyclisme et de la competition entre managers. Au lieu de simplement lister des features, on raconte une histoire : celle d'un manager qui suit ses coureurs.
+## Probleme identifie
+L'interface admin (`ResultsEntryStudio.desktop.tsx`) appelle directement la fonction PostgreSQL `admin_result_save_lot` via `supabase.rpc()`, au lieu de l'edge function `admin-result-save-lot` qui contient la logique d'envoi des push notifications.
+
+**Resultat** : Les notifications in-app fonctionnent (trigger PostgreSQL), mais les push notifications ne sont jamais envoyees.
 
 ---
 
-## Section 1 : "Comment ca marche" - Version GAMIFIEE
+## Solution proposee
 
-### Concept
-Remplacer les 3 etapes statiques par un **parcours visuel de course** avec des checkpoints, comme une etape du Tour.
+### Option A : Appeler l'edge function au lieu du RPC (Recommande)
+Modifier `ResultsEntryStudio.desktop.tsx` pour utiliser l'edge function existante.
 
-### Design propose
+**Avantages** :
+- L'edge function existe deja et fonctionne
+- Centralise la logique d'envoi de push
+- Pas de duplication de code
 
-```text
-    START                                                      FINISH
-      ●━━━━━━━━━━━━●━━━━━━━━━━━━●━━━━━━━━━━━━●
-      ▼             ▼             ▼             ▼
-   [Cree ta      [Draft &      [Les courses   [Monte au
-    ligue]       Encheres]      en direct]    classement]
+**Fichier a modifier** : `src/components/admin/ResultsEntryStudio.desktop.tsx`
+
+### Changements a effectuer
+
+1. Creer une fonction helper pour appeler l'edge function :
+
+```typescript
+const callAdminResultSaveLot = async (
+  courseId: string,
+  typeClassement: string,
+  etapeNumero: number | null,
+  rows: Array<{ coureur_id: string; position: number; statut: string }>
+) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Non authentifié');
+  
+  const response = await supabase.functions.invoke('admin-result-save-lot', {
+    body: {
+      p_course_id: courseId,
+      p_type_classement: typeClassement,
+      p_etape_numero: etapeNumero,
+      p_rows: rows
+    }
+  });
+  
+  if (response.error) throw response.error;
+  return response.data;
+};
 ```
 
-### Ameliorations
-- **4 etapes au lieu de 3** : Ajouter "Monte au classement" pour montrer l'objectif final
-- **Animation de progression** : Une ligne qui se remplit au scroll
-- **Icones personnalisees** : Drapeau depart, marteau enchere, TV/chrono, trophee
-- **Textes orientes benefice** :
-  - "Cree ta ligue" → "Lance ta competition en 2 minutes"
-  - "Encheres" → "Recrute tes champions aux encheres"
-  - "Courses en direct" → "Tes coureurs marquent en temps reel"
-  - "Classement" → "Grimpe vers le maillot jaune"
+2. Remplacer les 3 appels `supabase.rpc("admin_result_save_lot", ...)` par `callAdminResultSaveLot(...)` :
+   - Ligne 789 : Sauvegarde des resultats principaux
+   - Ligne 822 : Sauvegarde des porteurs de maillots (boucle)
+   - Ligne 884 : Sauvegarde du Combatif
+
+3. Filtrer les push pour eviter le spam :
+   - L'edge function n'envoie des push que pour `Etape` ou `General`
+   - Les maillots et Combatif n'en envoient pas (comportement actuel correct)
 
 ---
 
-## Section 2 : "Types de ligues" - PARCOURS DE JEU
+## Verification du comportement attendu
 
-### Concept actuel
-4 cards generiques (Quick, Season, Friends, Public)
-
-### Proposition
-Transformer en **selection de difficulte/mode de jeu** comme dans un jeu video, avec des visuels distincts.
-
-### Design propose
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│     ⚡ SPRINT          🏔️ GRAND TOUR         🏆 SAISON         │
-│    ─────────          ───────────          ─────────           │
-│    1 semaine           3 semaines          Toute l'annee       │
-│    Parfait pour        L'experience        Pour les vrais      │
-│    decouvrir           complete            passionnes          │
-│                                                                 │
-│   [Essayer →]         [Rejoindre →]        [S'engager →]       │
-│                                                                 │
-│         ───────────────────────────────────────────            │
-│                    👥 ENTRE AMIS                                │
-│                   "Defie tes potes"                             │
-│                    2 a 10 managers                              │
-│                  [Creer ma ligue →]                             │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Structure
-- **3 modes principaux** alignes (Sprint / Grand Tour / Saison)
-- **1 mode "Amis"** mis en avant separement en dessous
-- Chaque mode avec une icone, duree, et description courte
-- Couleurs differenciees : orange/sprint, bleu/GT, violet/saison, vert/amis
-
----
-
-## Section 3 : "Scoring" - EXPERIENCE COURSE EN LIVE
-
-### Concept actuel
-Podium statique + tableau de points
-
-### Proposition
-Creer une **simulation de course en direct** qui montre comment les points s'accumulent.
-
-### Design propose
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  🔴 LIVE   Etape 15 - Col du Galibier                          │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  1. 🚴 POGACAR         → +100 pts  ✨                    │   │
-│  │  2. 🚴 VINGEGAARD      → +70 pts                         │   │
-│  │  3. 🚴 EVENEPOEL       → +50 pts                         │   │
-│  │  ...                                                      │   │
-│  │  10. 🚴 VAN AERT       → +20 pts                         │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  BONUS MAILLOTS                                                 │
-│  🟡 Maillot Jaune : +50 pts/jour     Porteur: POGACAR          │
-│  🟢 Maillot Vert  : +30 pts/jour     Porteur: PHILIPSEN        │
-│  🔴 Maillot Pois  : +30 pts/jour     Porteur: CICCONE          │
-│                                                                 │
-│  📊 TON TOTAL AUJOURD'HUI : +180 pts                           │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Elements
-- **Badge "LIVE"** animé (pulse rouge)
-- **Classement qui s'anime** avec des points qui apparaissent
-- **Maillots distinctifs** avec vraies couleurs (jaune, vert, pois rouges)
-- **Total dynamique** qui s'incremente visuellement
-- Le tout dans un style "interface de suivi de course"
-
----
-
-## Section 4 : "Pourquoi jouer" - STATS IMPRESSIONNANTES
-
-### Concept actuel
-4 features generiques avec icones
-
-### Proposition
-Remplacer par des **chiffres qui marquent** + temoignages d'experience.
-
-### Design propose
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│            La communaute Mon Petit Cycliste                     │
-│                                                                 │
-│   ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    │
-│   │  350+   │    │   50+   │    │  1000+  │    │   21    │    │
-│   │ COURSES │    │ LIGUES  │    │ COUREURS│    │ ETAPES  │    │
-│   │  UCI    │    │ ACTIVES │    │ PRO     │    │ DU TOUR │    │
-│   └─────────┘    └─────────┘    └─────────┘    └─────────┘    │
-│                                                                 │
-│         ─────────────────────────────────────────────          │
-│                                                                 │
-│   ✓ Donnees officielles UCI en temps reel                      │
-│   ✓ Systeme d'encheres strategique                             │
-│   ✓ Ligues privees jusqu'a 10 amis                             │
-│   ✓ Maillots personnalisables avec sponsor                     │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Elements
-- **Compteurs animes** qui s'incrementent au scroll
-- **Checkmarks** pour les features cles (plus impactant que des cards)
-- Style epure, chiffres en gros
-- Couleurs : jaune pour les chiffres, blanc pour le texte
-
----
-
-## Section 5 : "Temoignages" - FORMAT SOCIAL PROOF
-
-### Concept actuel
-3 citations identiques
-
-### Proposition
-**Diversifier les profils** et ajouter du contexte de jeu.
-
-### Design propose
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│  "Ils jouent, ils adorent"                                      │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  🏆 1ER - LIGUE "LES FORÇATS"                            │   │
-│  │                                                          │   │
-│  │  "Notre ligue existe depuis 3 ans. Chaque Tour, on      │   │
-│  │   relance une saison et c'est toujours aussi intense!"  │   │
-│  │                                                          │   │
-│  │  👤 Guillaume R. - 127 pts d'avance                      │   │
-│  │                                                          │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  ┌──────────────────┐  ┌──────────────────┐                    │
-│  │ "Les encheres,   │  │ "Pogacar dans    │                    │
-│  │  c'est le        │  │  mon equipe =    │                    │
-│  │  meilleur        │  │  +847 pts cette  │                    │
-│  │  moment !"       │  │  saison. Best    │                    │
-│  │                  │  │  pick ever."     │                    │
-│  │ 👤 Marie L.      │  │ 👤 Thomas B.     │                    │
-│  │    Paris         │  │    Bordeaux      │                    │
-│  └──────────────────┘  └──────────────────┘                    │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Elements
-- **1 temoignage vedette** (full width) avec contexte ligue
-- **2 temoignages secondaires** plus courts
-- **Badges de classement** pour credibilite ("1er", "Top 3")
-- **Stats concretes** dans les temoignages (points, avance)
-
----
-
-## Section 6 (NOUVELLE) : "Tes coureurs, ta strategie"
-
-### Concept
-Montrer l'**aspect strategique** du jeu avec un apercu d'equipe.
-
-### Design propose
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│        Compose ton equipe de reve                               │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                                                          │   │
-│  │   🔴 LEADERS           🟢 SPRINTERS        🔵 GRIMPEURS │   │
-│  │   POGACAR ⭐⭐⭐        PHILIPSEN ⭐⭐       BARDET ⭐⭐   │   │
-│  │   VINGEGAARD ⭐⭐⭐     MERLIER ⭐          CICCONE ⭐    │   │
-│  │                                                          │   │
-│  │   💰 Budget restant : 15M€                               │   │
-│  │                                                          │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│   "Choisis-les aux encheres. Gere ton budget.                  │
-│    Adapte ta strategie a chaque course."                       │
-│                                                                 │
-│                    [Creer mon equipe →]                         │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Elements
-- **Mini-apercu d'equipe** style interface de jeu
-- **Categories de coureurs** (Leaders, Sprinters, Grimpeurs)
-- **Etoiles de rating** pour montrer la valeur
-- **Budget** pour suggerer la dimension strategique
-
----
-
-## Animations et interactions
-
-| Element | Animation |
-|---------|-----------|
-| Stats/chiffres | Compteur qui s'incremente au scroll |
-| Badge LIVE | Pulse rouge continu |
-| Points scoring | Pop-in avec scale |
-| Cards | Hover lift + glow jaune |
-| Progression parcours | Fill progressif au scroll |
-| Maillots | Subtle float animation |
-
----
-
-## Traductions a ajouter
-
-De nouvelles cles seront necessaires dans `home.json` pour :
-- Textes de la simulation de course
-- Noms de coureurs exemples
-- Nouvelles descriptions de modes de jeu
-- Section "Compose ton equipe"
+| Action admin | Notification in-app | Push notification |
+|--------------|---------------------|-------------------|
+| Saisie Etape 3 | Oui (trigger) | Oui (edge function) |
+| Saisie General | Oui (trigger) | Oui (edge function) |
+| Saisie Porteurs | Non | Non |
+| Saisie Combatif | Non | Non |
 
 ---
 
@@ -262,25 +74,20 @@ De nouvelles cles seront necessaires dans `home.json` pour :
 
 | Fichier | Modification |
 |---------|--------------|
-| `HowItWorksSection.tsx` | Refonte complete - parcours visuel |
-| `LeagueTypesSection.tsx` | Nouvelle structure 3+1 modes |
-| `ScoringSection.tsx` | Simulation course live |
-| `WhyPlaySection.tsx` | Stats + checklist |
-| `TestimonialsSection.tsx` | Layout mixte vedette + secondaires |
-| `home.json` (FR/EN) | Nouvelles traductions |
-
-### Nouveau fichier
-- `TeamPreviewSection.tsx` - Apercu composition d'equipe
+| `src/components/admin/ResultsEntryStudio.desktop.tsx` | Remplacer `supabase.rpc()` par `supabase.functions.invoke()` |
 
 ---
 
-## Resume
+## Gestion des erreurs
+Si l'edge function echoue :
+- Les resultats ne seront pas sauvegardes (comportement atomique)
+- Message d'erreur affiche a l'admin
+- Pas de notification partielle (coherent)
 
-Cette refonte transforme une page "liste de features" en une **experience immersive** qui :
+---
 
-1. **Montre le jeu** plutot que de le decrire
-2. **Cree de l'emotion** avec l'aspect live et competition
-3. **Donne envie** de composer son equipe et defier ses amis
-4. **Rassure** avec des chiffres concrets et temoignages credibles
-
-Le tout en conservant l'identite visuelle Tour de France (jaune + noir) et en restant cohérent avec le design system existant.
+## Tests a effectuer apres implementation
+1. Saisir les resultats d'une etape
+2. Verifier que les notifications in-app apparaissent
+3. Verifier que les push notifications sont recues sur les appareils inscrits
+4. Confirmer que les porteurs de maillots ne declenchent pas de push
