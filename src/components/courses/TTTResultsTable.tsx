@@ -40,21 +40,24 @@ interface TTTResultsTableProps {
 export const TTTResultsTable = ({ results, compact = false }: TTTResultsTableProps) => {
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
 
-  // Group results by team and sort properly
+  // Group results by team POSITION only (not by team name) - one team per position
   const groupedTeams: TeamGroup[] = (() => {
-    const teamMap = new Map<string, TeamGroup>();
+    const teamMap = new Map<number, TeamGroup>();
 
-    results.forEach((row) => {
-      if (row.position_decimal === null) return;
+    // First, sort all results by position_decimal to ensure correct ordering
+    const sortedResults = [...results]
+      .filter(row => row.position_decimal !== null)
+      .sort((a, b) => (a.position_decimal || 0) - (b.position_decimal || 0));
+
+    sortedResults.forEach((row) => {
+      const teamPosition = Math.floor(row.position_decimal!);
       
-      const teamPosition = Math.floor(row.position_decimal);
-      const teamKey = `${teamPosition}-${row.equipe_id_uci || row.equipe}`;
-      
-      if (!teamMap.has(teamKey)) {
+      if (!teamMap.has(teamPosition)) {
         // Use barème points for team (0-indexed, so position 1 = index 0)
         const baremePoints = TTT_BAREME[teamPosition - 1] || 0;
         
-        teamMap.set(teamKey, {
+        // Use the FIRST rider's team info for this position
+        teamMap.set(teamPosition, {
           teamPosition,
           teamName: row.equipe_nom_uci || row.equipe || 'Équipe inconnue',
           equipeIdUci: row.equipe_id_uci || row.equipe || '',
@@ -64,20 +67,16 @@ export const TTTResultsTable = ({ results, compact = false }: TTTResultsTablePro
         });
       }
       
-      const team = teamMap.get(teamKey)!;
+      const team = teamMap.get(teamPosition)!;
       team.riders.push(row);
       if (row.is_my_rider) {
         team.hasMyRider = true;
       }
     });
 
-    // Sort teams by position, then sort riders within each team by position_decimal
+    // Sort teams by position
     return Array.from(teamMap.values())
-      .sort((a, b) => a.teamPosition - b.teamPosition)
-      .map(team => ({
-        ...team,
-        riders: team.riders.sort((a, b) => (a.position_decimal || 0) - (b.position_decimal || 0))
-      }));
+      .sort((a, b) => a.teamPosition - b.teamPosition);
   })();
 
   const toggleTeam = (teamKey: string) => {
