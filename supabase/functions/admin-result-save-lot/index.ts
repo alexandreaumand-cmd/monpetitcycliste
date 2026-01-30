@@ -8,10 +8,10 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get user from auth header
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    
+    // Get auth header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -20,10 +20,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    // Create client with user context for permission checks
+    const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: authHeader },
+      },
+    });
 
+    // Verify user is authenticated
+    const { data: { user }, error: authError } = await supabaseWithAuth.auth.getUser();
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -31,14 +36,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check superadmin access
-    const { data: isSuperAdmin, error: adminError } = await supabase.rpc('is_superadmin');
+    // Check superadmin access using user context
+    const { data: isSuperAdmin, error: adminError } = await supabaseWithAuth.rpc('is_superadmin');
     if (adminError || !isSuperAdmin) {
       return new Response(JSON.stringify({ error: 'Access denied: superadmin only' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Create service role client for data operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { p_course_id, p_type_classement, p_etape_numero, p_rows } = await req.json();
 
@@ -80,7 +88,7 @@ Deno.serve(async (req) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseKey}`
+            'Authorization': `Bearer ${supabaseServiceKey}`
           },
           body: JSON.stringify({
             broadcast: true,
