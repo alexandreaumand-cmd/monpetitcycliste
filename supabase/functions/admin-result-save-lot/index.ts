@@ -45,8 +45,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create service role client for data operations
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Create service role client for data operations that bypass RLS
+    const supabaseService = createClient(supabaseUrl, supabaseServiceKey);
 
     const { p_course_id, p_type_classement, p_etape_numero, p_rows } = await req.json();
 
@@ -57,8 +57,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Call the database function
-    const { data, error } = await supabase.rpc('admin_result_save_lot', {
+    // Call the database function with user context (RPC checks auth.uid())
+    const { data, error } = await supabaseWithAuth.rpc('admin_result_save_lot', {
       p_course_id,
       p_type_classement,
       p_etape_numero,
@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
     if (p_type_classement === 'Etape' || p_type_classement === 'General') {
       try {
         // Get course name
-        const { data: courseData } = await supabase
+        const { data: courseData } = await supabaseService
           .from('courses')
           .select('nom')
           .eq('id', p_course_id)
