@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Calendar, Trophy } from "lucide-react";
+import { Calendar, Trophy, Clock } from "lucide-react";
 import { useLeague } from "@/contexts/LeagueContext";
 
 interface StartlistRaceCardsProps {
@@ -132,6 +132,12 @@ export const StartlistRaceCards = ({ onRaceClick, isSuperAdmin }: StartlistRaceC
     return matchingStartlists[0].id;
   };
 
+  const getStartlistDate = (raceId: string) => {
+    const rid = normalizeId(raceId);
+    const matchingStartlist = existingStartlists?.find(sl => normalizeId(sl.race_id) === rid);
+    return matchingStartlist?.created_at || null;
+  };
+
   return (
     <div className="space-y-6">
       <Tabs value={tabMode} onValueChange={(v) => setTabMode(v as '30days' | '90days' | 'history' | 'upcoming-year')}>
@@ -176,6 +182,7 @@ export const StartlistRaceCards = ({ onRaceClick, isSuperAdmin }: StartlistRaceC
               const daysUntil = differenceInDays(dateDebut, todayDate);
               const startlistExists = hasStartlist(course.id);
               const pcsValidated = isPcsValidated(course.id);
+              const startlistImportDate = getStartlistDate(course.id);
               
               return (
                 <Card 
@@ -232,6 +239,13 @@ export const StartlistRaceCards = ({ onRaceClick, isSuperAdmin }: StartlistRaceC
                         {format(dateDebut, 'd MMM', { locale: fr })} - {format(dateFin, 'd MMM yyyy', { locale: fr })}
                       </span>
                     </div>
+                    
+                    {startlistImportDate && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>Import: {format(new Date(startlistImportDate), 'd MMM yyyy HH:mm', { locale: fr })}</span>
+                      </div>
+                    )}
                     
                     {daysUntil >= 0 && tabMode !== 'history' && (
                       <Badge variant="outline" className="text-xs">
