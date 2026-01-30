@@ -525,8 +525,8 @@ export const StartlistMobile = () => {
                           <div className="flex items-center justify-between gap-2 mt-1">
                             <ManagerStars avgStars={manager.avg_stars} votes={manager.votes} showVotes={manager.votes > 1} />
                             <div className="flex gap-2 text-xs text-muted-foreground">
-                              <span>Ph: #{manager.rank_phase || "-"}</span>
-                              <span>CG: #{manager.rank_total || "-"}</span>
+                              <span>Ph: #{manager.rank_phase || "-"}{manager.points_phase > 0 && ` (${Math.round(manager.points_phase)}pts)`}</span>
+                              <span>CG: #{manager.rank_total || "-"}{manager.points_total > 0 && ` (${Math.round(manager.points_total)}pts)`}</span>
                             </div>
                           </div>
                         </div>
