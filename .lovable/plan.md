@@ -1,188 +1,147 @@
 
-# Plan combine : Points decimaux TTT + Exclusion du bonus scoreurs
 
-## Resume des modifications
+# Plan : Notifications de résultats personnalisées
 
-| Modification | Complexite | Impact |
-|-------------|-----------|--------|
-| Points decimaux pour TTT (2 decimales) | Moyenne | Base de donnees + Fonction SQL + UI |
-| Exclure TTT du bonus scoreurs | Faible | Edge Function uniquement |
+## Objectif
+Enrichir les notifications push de résultats pour inclure :
+- Le nom du vainqueur de l'étape/course
+- Les points marqués par le manager dans chaque ligue
 
----
+## Exemple de notification
+```
+🏁 Trofeo Serra Tramuntana - Étape 4
 
-## Partie 1 : Points decimaux pour les resultats TTT
+Victoire de Remco Evenepoel
 
-### 1.1 Migration base de donnees
-
-Changer le type de la colonne `points` dans `points_ledger` de `INTEGER` vers `NUMERIC(10,2)`.
-
-```sql
--- Migration: Convertir points_ledger.points en NUMERIC pour supporter les decimales TTT
-ALTER TABLE public.points_ledger 
-  ALTER COLUMN points TYPE NUMERIC(10,2) USING points::NUMERIC(10,2);
-
--- Ajouter un commentaire explicatif
-COMMENT ON COLUMN public.points_ledger.points IS 
-  'Points attribues au coureur. Peut contenir 2 decimales pour les resultats TTT.';
+Tu as marqué 45 points dans MPC 2026
+Tu as marqué 12 points dans Liga Pro
 ```
 
-### 1.2 Modifier la fonction admin_compute_points_for_course
+## Architecture
 
-Remplacer la logique `FLOOR(sr.points / rrs.ttt_riders_count)::integer` par une division decimale arrondie a 2 decimales.
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                FLUX DE NOTIFICATION PERSONNALISÉE                            │
+└──────────────────────────────────────────────────────────────────────────────┘
 
-**Changement cle dans la fonction SQL** :
-```sql
--- AVANT (actuel)
-THEN FLOOR(sr.points::numeric / rrs.ttt_riders_count)::integer
-
--- APRES (nouveau)
-THEN ROUND(sr.points::numeric / rrs.ttt_riders_count, 2)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     admin-result-save-lot (Edge Function)                   │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │ 1. Sauvegarde les résultats en DB                                      │ │
+│  │ 2. Récupère le vainqueur (position = 1)                                │ │
+│  │ 3. Récupère les subscriptions push avec préférence 'results'           │ │
+│  │ 4. Pour chaque user, calcule les points par ligue                      │ │
+│  │ 5. Envoie une notification personnalisée par user                      │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                      ┌───────────────┴───────────────┐
+                      ▼                               ▼
+         ┌────────────────────────┐      ┌────────────────────────┐
+         │  Notification User A  │      │  Notification User B   │
+         │  ──────────────────── │      │  ────────────────────  │
+         │  Victoire: Evenepoel  │      │  Victoire: Evenepoel   │
+         │  MPC 2026: 45 pts     │      │  Liga Pro: 12 pts      │
+         │  Liga Pro: 12 pts     │      │                        │
+         └────────────────────────┘      └────────────────────────┘
 ```
 
-### 1.3 Impact sur l'UI
+## Modifications techniques
 
-Les composants qui affichent des points devront gerer les decimales. La plupart utilisent deja `{value} pts` sans formatage strict.
+### 1. Edge Function `admin-result-save-lot`
+**Fichier** : `supabase/functions/admin-result-save-lot/index.ts`
 
-**Fichiers a verifier/adapter** :
-| Fichier | Modification |
-|---------|--------------|
-| `src/components/rankings/ManagerBreakdown.tsx` | Afficher `{detail.points.toFixed(2)} pts` pour les lignes TTT |
-| `src/components/rankings/TopRiders.tsx` | Afficher les decimales dans le detail coureur |
-| `src/lib/utils.ts` | `formatNumber()` gere deja les decimales |
+**Changements** :
+- Après la sauvegarde des résultats, récupérer le vainqueur (coureur avec position = 1)
+- Récupérer toutes les subscriptions push avec préférence `results` activée
+- Pour chaque subscription, trouver le(s) manager(s) de l'utilisateur
+- Pour chaque manager, calculer les points dans chaque ligue pour cette course
+- Construire un message personnalisé pour chaque utilisateur
+- Envoyer des notifications individuelles via `send-push-notification` au lieu d'un broadcast
 
-**Recommandation** : Afficher les decimales uniquement si elles existent (ex: `14.29 pts` pour TTT, `150 pts` pour course normale). La fonction `formatNumber()` existante fait deja cela.
-
-### 1.4 Exemple de resultat
-
-Pour le **Trofeo Ses Salines** (7 coureurs par equipe) :
-
-| Place equipe | Points theoriques | Points par coureur (actuel) | Points par coureur (nouveau) |
-|-------------|-------------------|----------------------------|------------------------------|
-| 1er | 100 | 14 pts | 14.29 pts |
-| 2eme | 85 | 12 pts | 12.14 pts |
-| 3eme | 70 | 10 pts | 10.00 pts |
-
----
-
-## Partie 2 : Exclure les TTT du bonus scoreurs
-
-### 2.1 Modifier l'Edge Function compute-bonus-scoreurs
-
-Le probleme actuel : la requete recupere tous les `coureur_id` ayant des points > 0 sans filtrer les TTT.
-
-**Fichier** : `supabase/functions/compute-bonus-scoreurs/index.ts`
-
-**Changement** (lignes 110-120) :
-
+### 2. Nouvelle interface de payload
 ```typescript
-// AVANT (actuel)
-const { data: pointsData, error: pointsError } = await supabase
-  .from('points_ledger')
-  .select('coureur_id')
-  .eq('phase_id', phase_id)
-  .gt('points', 0);
-
-// APRES (nouveau)
-// Utiliser une requete SQL brute via RPC pour exclure les TTT
-const { data: pointsData, error: pointsError } = await supabase
-  .rpc('get_non_ttt_scoring_riders', { p_phase_id: phase_id });
+interface PersonalizedPushPayload {
+  user_id: string;
+  title: string;
+  message: string;  // Message personnalisé avec points par ligue
+  type: string;
+  metadata: {
+    course_id: string;
+    course_name: string;
+    winner_name?: string;
+    points_by_league?: Array<{
+      league_id: string;
+      league_name: string;
+      points: number;
+    }>;
+  };
+}
 ```
 
-### 2.2 Creer une fonction SQL helper
-
-Nouvelle fonction PostgreSQL pour recuperer les coureurs scoreurs hors TTT :
-
+### 3. Requête SQL pour les points par user/ligue
 ```sql
-CREATE OR REPLACE FUNCTION public.get_non_ttt_scoring_riders(p_phase_id uuid)
-RETURNS TABLE(coureur_id text)
-LANGUAGE sql
-SECURITY DEFINER
-AS $$
-  SELECT DISTINCT pl.coureur_id
-  FROM public.points_ledger pl
-  LEFT JOIN public.race_result_sets rrs 
-    ON rrs.course_id = pl.course_id 
-    AND rrs.type_classement = pl.type_classement
-    AND COALESCE(rrs.etape_numero, -1) = COALESCE(pl.etape_numero, -1)
-  WHERE pl.phase_id = p_phase_id
-    AND pl.points > 0
-    AND COALESCE(rrs.is_ttt, false) = false;
-$$;
+-- Pour chaque user_id de subscription, récupérer les points par ligue
+SELECT 
+  m.user_id,
+  l.id as league_id,
+  l.name as league_name,
+  SUM(pl.points) as total_points
+FROM points_ledger pl
+JOIN courses c ON c.id = pl.course_id
+JOIN rosters r ON r.coureur_id = pl.coureur_id AND r.phase_id = pl.phase_id
+JOIN managers m ON m.id = r.manager_id
+JOIN leagues l ON l.id = r.league_id
+WHERE pl.course_id = $course_id
+  AND (pl.etape_numero = $etape_numero OR (pl.etape_numero IS NULL AND $etape_numero IS NULL))
+  AND pl.type_classement = $type_classement
+GROUP BY m.user_id, l.id, l.name
 ```
 
-### 2.3 Alternative sans nouvelle fonction RPC
+### 4. Récupération du vainqueur
+```sql
+SELECT c.nom as winner_name
+FROM race_results rr
+JOIN coureurs c ON c.id = rr.coureur_id
+WHERE rr.course_id = $course_id
+  AND rr.type_classement = $type_classement
+  AND (rr.etape_numero = $etape_numero OR (rr.etape_numero IS NULL AND $etape_numero IS NULL))
+  AND rr.position = 1
+LIMIT 1
+```
 
-Si on prefere eviter une nouvelle fonction RPC, on peut faire deux requetes dans l'Edge Function :
+### 5. Service Worker (aucun changement requis)
+Le service worker `sw-push.js` affiche déjà `title` et `message` tels quels - il suffit de passer le message personnalisé.
 
-1. Recuperer tous les `course_id` TTT de la phase depuis `race_result_sets`
-2. Exclure ces courses lors de la requete `points_ledger`
+## Détail de l'implémentation
 
+### Phase 1 : Récupérer les données nécessaires
+1. Après `supabaseWithAuth.rpc('admin_result_save_lot', ...)` 
+2. Récupérer le vainqueur de la course
+3. Récupérer les subscriptions push (avec user_id)
+4. Récupérer les points par user/ligue pour cette course
+
+### Phase 2 : Construire les messages personnalisés
+Pour chaque subscription :
 ```typescript
-// 1. Get TTT course/classification combos
-const { data: tttResults } = await supabase
-  .from('race_result_sets')
-  .select('course_id, type_classement, etape_numero')
-  .eq('is_ttt', true);
-
-// 2. Build exclusion filter
-const tttKeys = new Set(tttResults?.map(r => 
-  `${r.course_id}|${r.type_classement}|${r.etape_numero ?? 'null'}`
-) || []);
-
-// 3. Query points and filter
-const { data: pointsData } = await supabase
-  .from('points_ledger')
-  .select('coureur_id, course_id, type_classement, etape_numero')
-  .eq('phase_id', phase_id)
-  .gt('points', 0);
-
-// 4. Filter out TTT points
-const nonTttPoints = pointsData?.filter(p => {
-  const key = `${p.course_id}|${p.type_classement}|${p.etape_numero ?? 'null'}`;
-  return !tttKeys.has(key);
-}) || [];
-
-const scoringRiderIds = [...new Set(nonTttPoints.map(p => p.coureur_id).filter(Boolean))];
+const lines = [`Victoire de ${winnerName}`];
+const userPoints = pointsByUser[subscription.user_id] || [];
+for (const { league_name, points } of userPoints) {
+  lines.push(`Tu as marqué ${Math.round(points)} points dans ${league_name}`);
+}
+const message = lines.join('\n');
 ```
 
-**Recommandation** : L'approche avec fonction RPC est plus propre et performante.
+### Phase 3 : Envoi individualisé
+Au lieu d'un broadcast unique, envoyer N notifications (une par user) avec leur message personnalisé.
 
----
+## Considérations
 
-## Resume des fichiers a modifier
+- **Performance** : Le calcul des points par ligue nécessite une requête supplémentaire, mais c'est acceptable car cette opération est peu fréquente (quelques fois par jour)
+- **Fallback** : Si un utilisateur n'a marqué aucun point, afficher seulement le vainqueur
+- **i18n** : Les messages sont en français, cohérent avec l'app existante
+- **Points décimaux** : Arrondir à l'entier le plus proche avec `Math.round()`
 
-| Fichier | Modification | Partie |
-|---------|--------------|--------|
-| Migration SQL (nouvelle) | Changer `points INTEGER` en `NUMERIC(10,2)` | 1 |
-| Migration SQL (nouvelle) | Mettre a jour `admin_compute_points_for_course` avec `ROUND(..., 2)` | 1 |
-| Migration SQL (nouvelle) | Creer fonction `get_non_ttt_scoring_riders` | 2 |
-| `supabase/functions/compute-bonus-scoreurs/index.ts` | Appeler la nouvelle fonction RPC | 2 |
-| `src/components/rankings/ManagerBreakdown.tsx` | (Optionnel) Formater decimales TTT | 1 |
-
----
-
-## Ordre d'execution recommande
-
-1. **Migration 1** : Changer le type de colonne `points_ledger.points`
-2. **Migration 2** : Mettre a jour la fonction `admin_compute_points_for_course`
-3. **Migration 3** : Creer la fonction `get_non_ttt_scoring_riders`
-4. **Edge Function** : Modifier `compute-bonus-scoreurs`
-5. **UI** : Ajuster l'affichage des decimales si necessaire
-6. **Recalculer les points** pour les courses TTT existantes
-
----
-
-## Section technique
-
-### Compatibilite ascendante
-- Les points existants (entiers) seront automatiquement convertis en `NUMERIC` (ex: `100` devient `100.00`)
-- Les requetes existantes continueront de fonctionner car PostgreSQL gere les comparaisons entre `INTEGER` et `NUMERIC`
-
-### Performance
-- L'ajout d'une jointure dans `get_non_ttt_scoring_riders` a un impact negligeable car `race_result_sets` est une petite table
-- L'index existant sur `points_ledger(phase_id)` reste efficace
-
-### Risques
-- **Risque faible** : Certains composants UI pourraient afficher `14.28999...` au lieu de `14.29` - resolu par `toFixed(2)` ou `formatNumber()`
-- **Risque nul** : La modification de type `INTEGER -> NUMERIC` est non-destructive
+## Fichiers modifiés
+- `supabase/functions/admin-result-save-lot/index.ts` - Logique de notification personnalisée
 
