@@ -208,13 +208,13 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
                       <div>
                         <span className="font-medium">Phase:</span> #{manager.rank_phase || '-'}
                         {manager.points_phase > 0 && (
-                          <span className="text-muted-foreground ml-1">({manager.points_phase}pts)</span>
+                          <span className="text-muted-foreground ml-1">({Math.round(manager.points_phase)}pts)</span>
                         )}
                       </div>
                       <div>
                         <span className="font-medium">CG:</span> #{manager.rank_total || '-'}
                         {manager.points_total > 0 && (
-                          <span className="text-muted-foreground ml-1">({manager.points_total}pts)</span>
+                          <span className="text-muted-foreground ml-1">({Math.round(manager.points_total)}pts)</span>
                         )}
                       </div>
                     </div>
