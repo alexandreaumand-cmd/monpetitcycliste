@@ -1,6 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
+interface PointsByUserLeague {
+  user_id: string;
+  league_id: string;
+  league_name: string;
+  total_points: number;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -67,7 +74,7 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
-    // Send push notification for relevant result types (Etape or General)
+    // Send personalized push notifications for Etape or General results
     if (p_type_classement === 'Etape' || p_type_classement === 'General') {
       try {
         // Get course name
@@ -82,36 +89,217 @@ Deno.serve(async (req) => {
           ? (p_etape_numero ? `Étape ${p_etape_numero}` : 'Étape')
           : 'Classement Général';
 
-        console.log(`[admin-result-save-lot] Sending push notification for ${courseName} - ${typeLabel}`);
+        console.log(`[admin-result-save-lot] Preparing personalized push notifications for ${courseName} - ${typeLabel}`);
 
-        const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseServiceKey}`
-          },
-          body: JSON.stringify({
-            broadcast: true,
-            title: '🏁 Nouveaux résultats',
-            message: `${typeLabel} - ${courseName}`,
-            type: 'results_added',
-            metadata: {
-              course_id: p_course_id,
-              course_name: courseName,
-              type_classement: p_type_classement,
-              etape_numero: p_etape_numero
+        // 1. Get the winner (position = 1)
+        let winnerName: string | null = null;
+        
+        let winnerQuery = supabaseService
+          .from('race_results')
+          .select('coureur_id, coureurs!inner(nom)')
+          .eq('course_id', p_course_id)
+          .eq('type_classement', p_type_classement)
+          .eq('position', 1);
+
+        if (p_etape_numero) {
+          winnerQuery = winnerQuery.eq('etape_numero', p_etape_numero);
+        } else {
+          winnerQuery = winnerQuery.is('etape_numero', null);
+        }
+
+        const { data: winnerData } = await winnerQuery.maybeSingle();
+
+        if (winnerData?.coureurs) {
+          // coureurs is an array due to the join, take first element
+          const coureurs = winnerData.coureurs as unknown as { nom: string } | { nom: string }[];
+          if (Array.isArray(coureurs)) {
+            winnerName = coureurs[0]?.nom || null;
+          } else {
+            winnerName = coureurs?.nom || null;
+          }
+        }
+
+        console.log(`[admin-result-save-lot] Winner: ${winnerName || 'Unknown'}`);
+
+        // 2. Get points per user/league for this result
+        // Query: join points_ledger -> rosters -> managers -> leagues
+        let pointsQuery = supabaseService
+          .from('points_ledger')
+          .select(`
+            coureur_id,
+            points,
+            phase_id,
+            rosters!inner(
+              manager_id,
+              league_id,
+              managers!inner(user_id),
+              leagues!inner(name)
+            )
+          `)
+          .eq('course_id', p_course_id)
+          .eq('type_classement', p_type_classement);
+
+        if (p_etape_numero) {
+          pointsQuery = pointsQuery.eq('etape_numero', p_etape_numero);
+        } else {
+          pointsQuery = pointsQuery.is('etape_numero', null);
+        }
+
+        const { data: pointsData, error: pointsError } = await pointsQuery;
+
+        if (pointsError) {
+          console.error('[admin-result-save-lot] Error fetching points:', pointsError);
+        }
+
+        // Aggregate points by user_id and league
+        const pointsByUserLeague = new Map<string, PointsByUserLeague[]>();
+
+        if (pointsData) {
+          for (const row of pointsData) {
+            // rosters comes as an array from the join
+            const rostersArray = row.rosters as unknown as Array<{
+              manager_id: string;
+              league_id: string;
+              managers: { user_id: string } | Array<{ user_id: string }>;
+              leagues: { name: string } | Array<{ name: string }>;
+            }>;
+            
+            if (!rostersArray || !Array.isArray(rostersArray)) continue;
+            
+            for (const roster of rostersArray) {
+              // Handle managers which can be object or array
+              const managers = roster.managers;
+              const userId = Array.isArray(managers) ? managers[0]?.user_id : managers?.user_id;
+              
+              if (!userId) continue;
+              
+              const leagueId = roster.league_id;
+              const leagues = roster.leagues;
+              const leagueName = Array.isArray(leagues) ? leagues[0]?.name : leagues?.name || 'Ligue';
+              const points = Number(row.points) || 0;
+
+              if (!pointsByUserLeague.has(userId)) {
+                pointsByUserLeague.set(userId, []);
+              }
+
+              const userLeagues = pointsByUserLeague.get(userId)!;
+              const existingLeague = userLeagues.find(l => l.league_id === leagueId);
+
+              if (existingLeague) {
+                existingLeague.total_points += points;
+              } else {
+                userLeagues.push({
+                  user_id: userId,
+                  league_id: leagueId,
+                  league_name: leagueName,
+                  total_points: points,
+                });
+              }
             }
-          })
+          }
+        }
+
+        console.log(`[admin-result-save-lot] Points aggregated for ${pointsByUserLeague.size} users`);
+
+        // 3. Get push subscriptions with 'results' preference enabled
+        const { data: subscriptions, error: subError } = await supabaseService
+          .from('push_subscriptions')
+          .select('id, user_id, endpoint, p256dh, auth, preferences');
+
+        if (subError) {
+          console.error('[admin-result-save-lot] Error fetching subscriptions:', subError);
+        }
+
+        // Filter subscriptions that have results preference enabled (or no preferences = all enabled)
+        const activeSubscriptions = (subscriptions || []).filter(sub => {
+          if (!sub.preferences) return true;
+          const prefs = sub.preferences as { results?: boolean };
+          return prefs.results !== false;
         });
 
-        if (!pushResponse.ok) {
-          console.error(`[admin-result-save-lot] Push notification failed:`, await pushResponse.text());
-        } else {
-          const pushResult = await pushResponse.json();
-          console.log(`[admin-result-save-lot] Push notification sent:`, pushResult);
+        console.log(`[admin-result-save-lot] Found ${activeSubscriptions.length} active subscriptions`);
+
+        // 4. Build and send personalized notifications per user
+        // Group subscriptions by user_id to avoid duplicate messages
+        const subscriptionsByUser = new Map<string, typeof activeSubscriptions>();
+        for (const sub of activeSubscriptions) {
+          if (!subscriptionsByUser.has(sub.user_id)) {
+            subscriptionsByUser.set(sub.user_id, []);
+          }
+          subscriptionsByUser.get(sub.user_id)!.push(sub);
         }
+
+        // Build title
+        const title = `🏁 ${courseName}${p_etape_numero ? ` - Étape ${p_etape_numero}` : ''}`;
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const [userId, userSubs] of subscriptionsByUser) {
+          // Build personalized message for this user
+          const lines: string[] = [];
+          
+          if (winnerName) {
+            lines.push(`Victoire de ${winnerName}`);
+          }
+
+          const userLeaguePoints = pointsByUserLeague.get(userId) || [];
+          for (const { league_name, total_points } of userLeaguePoints) {
+            lines.push(`Tu as marqué ${Math.round(total_points)} points dans ${league_name}`);
+          }
+
+          // If user has no points but winner exists, just show winner
+          // If no winner and no points, show generic message
+          const message = lines.length > 0 
+            ? lines.join('\n')
+            : typeLabel;
+
+          // Send notification to all subscriptions for this user
+          const userIds = userSubs.map(s => s.user_id);
+          
+          try {
+            const pushResponse = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseServiceKey}`
+              },
+              body: JSON.stringify({
+                user_ids: [userId],
+                title,
+                message,
+                type: 'results_added',
+                metadata: {
+                  course_id: p_course_id,
+                  course_name: courseName,
+                  type_classement: p_type_classement,
+                  etape_numero: p_etape_numero,
+                  winner_name: winnerName,
+                  points_by_league: userLeaguePoints.map(l => ({
+                    league_id: l.league_id,
+                    league_name: l.league_name,
+                    points: Math.round(l.total_points)
+                  }))
+                }
+              })
+            });
+
+            if (pushResponse.ok) {
+              successCount++;
+            } else {
+              failCount++;
+              console.error(`[admin-result-save-lot] Push failed for user ${userId}:`, await pushResponse.text());
+            }
+          } catch (pushErr) {
+            failCount++;
+            console.error(`[admin-result-save-lot] Push error for user ${userId}:`, pushErr);
+          }
+        }
+
+        console.log(`[admin-result-save-lot] Push notifications sent: ${successCount} success, ${failCount} failed`);
+
       } catch (pushError) {
-        console.error(`[admin-result-save-lot] Error sending push notification:`, pushError);
+        console.error(`[admin-result-save-lot] Error sending push notifications:`, pushError);
         // Don't fail the save if push notification fails
       }
     }
