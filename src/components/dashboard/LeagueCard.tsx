@@ -285,7 +285,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                       <p className="text-xs text-muted-foreground">{t('leagueCard.leader')}</p>
                       <p className="font-semibold text-sm">{stats.seasonLeader.name}</p>
                     </div>
-                    <p className="text-sm font-semibold">{stats.seasonLeader.points} pts</p>
+                    <p className="text-sm font-semibold">{Math.round(stats.seasonLeader.points)} pts</p>
                   </div>
                 )}
               </div>
