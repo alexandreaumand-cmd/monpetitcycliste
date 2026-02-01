@@ -101,15 +101,33 @@ export const BonusPointsDetailDialog = ({
           // Format: "Bonus coureur automatique (25%) - course_id - TypeClassement"
           // ou "Bonus +25% (cote X) - course_nom"
           let courseDisplay = bonus.commentaire || '';
+          let courseId: string | null = null;
+          let classementType: string | null = null;
+          
           if (courseDisplay.includes(' - ')) {
             const parts = courseDisplay.split(' - ');
             if (parts.length >= 2) {
-              // Prendre la course (2ème partie) et le type (3ème partie si existe)
-              const coursePart = parts[1];
-              const typePart = parts[2];
-              courseDisplay = coursePart + (typePart ? ` - ${typePart}` : '');
+              courseId = parts[1];
+              classementType = parts[2] || null;
             }
           }
+
+          // Récupérer le nom de la course depuis la table courses
+          let courseName = courseId || '';
+          if (courseId) {
+            const { data: courseData } = await supabase
+              .from('courses')
+              .select('nom')
+              .eq('id', courseId)
+              .maybeSingle();
+            
+            if (courseData?.nom) {
+              courseName = courseData.nom;
+            }
+          }
+          
+          // Construire l'affichage final: "Nom Course - TypeClassement"
+          courseDisplay = courseName + (classementType ? ` - ${classementType}` : '');
 
           return {
             ...bonus,
