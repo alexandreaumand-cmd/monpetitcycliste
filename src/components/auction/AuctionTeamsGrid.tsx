@@ -78,6 +78,8 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
     nom: string;
     equipe: string;
     prix: number;
+    cote?: number;
+    round?: number;
   } | null>(null);
 
   // Get all managers rosters with enriched data
@@ -384,7 +386,9 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
                                   id: roster.coureur_id,
                                   nom: roster.coureurs.nom,
                                   equipe: roster.coureurs.equipe || 'N/A',
-                                  prix: prixPaye
+                                  prix: prixPaye,
+                                  cote: cote,
+                                  round: roster.winning_round
                                 })}
                               >
                                 <TableCell>
@@ -454,6 +458,8 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
         riderName={selectedRider?.nom || ''}
         riderTeam={selectedRider?.equipe || ''}
         riderPrice={selectedRider?.prix || 0}
+        riderCote={selectedRider?.cote}
+        riderRound={selectedRider?.round}
         phaseId={phaseId}
       />
     </div>
