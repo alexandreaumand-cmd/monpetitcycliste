@@ -75,21 +75,46 @@ export const BonusPointsDetailDialog = ({
       // Enrichir avec l'équipe de la saison
       const enrichedData = await Promise.all(
         (data || []).map(async (bonus) => {
-          if (!bonus.coureur_id) return { ...bonus, coureur_equipe: null };
+          if (!bonus.coureur_id) return { ...bonus, coureur_equipe: null, course_display: null };
 
-          const { data: seasonData } = await supabase
+          // Récupérer l'équipe de la saison via coureurs_saisons -> equipes_saisons
+          const { data: coureurSaison } = await supabase
             .from('coureurs_saisons')
-            .select(`
-              equipe_id,
-              equipes_saisons!coureurs_saisons_equipe_id_saison_id_fkey(nom_affiche)
-            `)
+            .select('equipe_id')
             .eq('coureur_id', bonus.coureur_id)
             .eq('saison_id', bonus.phases.saison_id)
             .maybeSingle();
+          
+          let equipeName = 'N/A';
+          if (coureurSaison?.equipe_id) {
+            const { data: equipeSaison } = await supabase
+              .from('equipes_saisons')
+              .select('nom_affiche, trigramme')
+              .eq('equipe_id', coureurSaison.equipe_id)
+              .eq('saison_id', bonus.phases.saison_id)
+              .maybeSingle();
+            
+            equipeName = equipeSaison?.nom_affiche || equipeSaison?.trigramme || 'N/A';
+          }
+
+          // Parser le commentaire pour extraire la course et l'étape
+          // Format: "Bonus coureur automatique (25%) - course_id - TypeClassement"
+          // ou "Bonus +25% (cote X) - course_nom"
+          let courseDisplay = bonus.commentaire || '';
+          if (courseDisplay.includes(' - ')) {
+            const parts = courseDisplay.split(' - ');
+            if (parts.length >= 2) {
+              // Prendre la course (2ème partie) et le type (3ème partie si existe)
+              const coursePart = parts[1];
+              const typePart = parts[2];
+              courseDisplay = coursePart + (typePart ? ` - ${typePart}` : '');
+            }
+          }
 
           return {
             ...bonus,
-            coureur_equipe: (seasonData?.equipes_saisons as any)?.nom_affiche || 'N/A'
+            coureur_equipe: equipeName,
+            course_display: courseDisplay
           };
         })
       );
@@ -294,7 +319,7 @@ export const BonusPointsDetailDialog = ({
                                 {bonus.coureur_equipe}
                               </TableCell>
                               <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                                {bonus.commentaire}
+                                {bonus.course_display || bonus.commentaire}
                               </TableCell>
                               <TableCell className="text-right font-mono font-medium text-green-600">
                                 +{bonus.points}
