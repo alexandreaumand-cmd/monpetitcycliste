@@ -54,7 +54,7 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
     enabled: !leagueLoading && !!leagueId,
   });
 
-  // Fetch bonus points (rider bonuses)
+  // Fetch bonus points (rider bonuses) and enrich with course names
   const { data: bonusPoints } = useQuery({
     queryKey: ["manager-bonus-points", managerId, phaseId, leagueId] as const,
     queryFn: async (): Promise<any[]> => {
@@ -72,7 +72,40 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
       
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      
+      // Enrichir avec les noms de courses
+      const enrichedData = await Promise.all(
+        (data || []).map(async (bonus) => {
+          // Parser le commentaire pour extraire course_id et type
+          // Format: "Bonus coureur automatique (25%) - course_id - TypeClassement"
+          let displayText = bonus.commentaire || bonus.bonus_type;
+          
+          if (bonus.commentaire?.includes(' - ')) {
+            const parts = bonus.commentaire.split(' - ');
+            if (parts.length >= 2) {
+              const courseId = parts[1];
+              const classementType = parts[2] || null;
+              
+              // Récupérer le nom de la course
+              const { data: courseData } = await supabase
+                .from('courses')
+                .select('nom')
+                .eq('id', courseId)
+                .maybeSingle();
+              
+              const courseName = courseData?.nom || courseId;
+              displayText = courseName + (classementType ? ` - ${classementType}` : '');
+            }
+          }
+          
+          return {
+            ...bonus,
+            displayText
+          };
+        })
+      );
+      
+      return enrichedData;
     },
     enabled: !leagueLoading && !!leagueId,
   });
@@ -364,7 +397,7 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
                         <Badge variant="outline" className="text-xs">
                           {t('breakdown.riderBonus', 'Bonus coureur')}
                         </Badge>
-                        <span className="text-sm">{bonus.commentaire || bonus.bonus_type}</span>
+                        <span className="text-sm">{bonus.displayText || bonus.commentaire || bonus.bonus_type}</span>
                       </div>
                       <Badge variant="secondary" className="text-xs">
                         +{bonus.points} pts
