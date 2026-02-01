@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { course_id, etape_numero } = await req.json();
+    const { course_id, etape_numero, league_id } = await req.json();
 
     if (!course_id || !etape_numero) {
       return new Response(JSON.stringify({ error: 'course_id and etape_numero required' }), {
@@ -34,6 +34,8 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const leagueId = league_id || null;
 
     console.log(`Fetching jersey bonuses for ${course_id} etape ${etape_numero}`);
 
@@ -113,14 +115,19 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Get manager_id from rosters
+        // Get manager_id from rosters (filter by league_id if provided)
         if (phaseId) {
-          const { data: rosterData } = await supabase
+          let rosterQuery = supabase
             .from('rosters')
             .select('manager_id')
             .eq('phase_id', phaseId)
-            .eq('coureur_id', record.coureur_id)
-            .limit(1);
+            .eq('coureur_id', record.coureur_id);
+          
+          if (leagueId) {
+            rosterQuery = rosterQuery.eq('league_id', leagueId);
+          }
+          
+          const { data: rosterData } = await rosterQuery.limit(1);
           managerId = rosterData?.[0]?.manager_id || null;
         }
 

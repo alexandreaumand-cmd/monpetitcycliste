@@ -141,7 +141,7 @@ export const ExportResultsImage = ({
 
 
   const { data: jerseyHolders, isLoading: loadingJerseys } = useQuery({
-    queryKey: ["export-jerseys", course.course_id, etapeNumero],
+    queryKey: ["export-jerseys", course.course_id, etapeNumero, leagueId],
     queryFn: async () => {
       if (isOneDay) return [];
 
@@ -150,6 +150,7 @@ export const ExportResultsImage = ({
         body: {
           course_id: course.course_id,
           etape_numero: etapeNumero || 1,
+          league_id: leagueId || null,
         },
       });
 
