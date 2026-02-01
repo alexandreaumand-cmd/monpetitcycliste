@@ -47,6 +47,8 @@ export const RankingsMobile = () => {
     nom: string;
     equipe: string;
     prix: number;
+    cote?: number;
+    round?: number;
   } | null>(null);
   const [riderDetailsOpen, setRiderDetailsOpen] = useState(false);
   const [expandedManagerId, setExpandedManagerId] = useState<string | null>(null);
@@ -161,6 +163,8 @@ export const RankingsMobile = () => {
         total_points: item.total_points,
         courses_count: item.courses_count,
         prix_achat: item.prix_achat,
+        cote_initiale: item.cote_initiale,
+        winning_round: item.winning_round,
         ratio_points_par_prix: item.ratio_points_par_prix,
         owners: item.owners,
         owners_all: item.owners_all,
@@ -236,6 +240,8 @@ export const RankingsMobile = () => {
       nom: rider.coureur_nom,
       equipe: rider.coureur_equipe || '',
       prix: rider.prix_achat || 0,
+      cote: rider.cote_initiale,
+      round: rider.winning_round,
     });
     setRiderDetailsOpen(true);
   };
@@ -618,6 +624,8 @@ export const RankingsMobile = () => {
         riderName={selectedRider?.nom || ''}
         riderTeam={selectedRider?.equipe || ''}
         riderPrice={selectedRider?.prix || 0}
+        riderCote={selectedRider?.cote}
+        riderRound={selectedRider?.round}
         phaseId={selectedPhase || ''}
         saisonId={selectedSeason?.id}
       />
