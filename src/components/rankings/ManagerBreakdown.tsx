@@ -254,7 +254,7 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
             <span className="font-semibold text-lg">{managerName}</span>
           </div>
           <div className="text-2xl font-bold text-primary">
-            {totalPoints} pts
+            {Math.round(totalPoints)} pts
           </div>
         </div>
       </CardHeader>
@@ -280,7 +280,7 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
                           </div>
                         </div>
                         <Badge variant="default" className="px-3 py-1">
-                          {course.totalPoints} pts
+                          {Math.round(course.totalPoints)} pts
                         </Badge>
                       </div>
                     </AccordionTrigger>
@@ -305,7 +305,7 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
                                   )}
                                 </div>
                                 <Badge variant="secondary" className="px-2 py-0.5 text-xs">
-                                  {rider.totalPoints} pts
+                                  {Math.round(rider.totalPoints)} pts
                                 </Badge>
                               </div>
                             </AccordionTrigger>
@@ -333,7 +333,7 @@ export const ManagerBreakdown = ({ managerId, phaseId }: ManagerBreakdownProps) 
                                           </Badge>
                                         )}
                                       </div>
-                                      <span className="font-medium">{detail.points} pts</span>
+                                      <span className="font-medium">{Math.round(detail.points)} pts</span>
                                     </div>
                                   );
                                 })}
