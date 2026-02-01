@@ -4582,6 +4582,7 @@ export type Database = {
           bonus_ttt: number | null
           commentaire: string | null
           created_at: string | null
+          league_id: string | null
           manager_id: string | null
           phase_id: string | null
           updated_at: string | null
@@ -4808,17 +4809,65 @@ export type Database = {
       }
       v_manager_standings_total: {
         Row: {
+          bonus_points: number | null
           league_id: string | null
-          manager_bonus: number | null
           manager_id: string | null
-          manager_nom: string | null
-          nb_scoreurs: number | null
-          nb_victoires: number | null
-          rider_bonus: number | null
+          race_points: number | null
+          scoreurs_count: number | null
           total_points: number | null
-          total_race_pts: number | null
+          victories_count: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rosters_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["taken_by_manager_id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "rosters_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_managers_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_managers_public: {
         Row: {
