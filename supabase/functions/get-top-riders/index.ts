@@ -179,13 +179,27 @@ Deno.serve(async (req) => {
           
           const managersMap = Object.fromEntries((managers || []).map(m => [m.id, m.nom]));
           
-          // Build ownersMap with owners_all, owners_by_phase and prix_signatures
+          // Get winning bids for these rosters to get round numbers
+          const rosterCoureurIds = [...new Set(allRosterData.map(r => r.coureur_id))];
+          const { data: winningBids } = await supabase
+            .from('bids')
+            .select('coureur_id, round_number')
+            .eq('league_id', league_id)
+            .eq('statut', 'won')
+            .in('coureur_id', rosterCoureurIds);
+          
+          const winningRoundsMap = Object.fromEntries(
+            (winningBids || []).map(b => [b.coureur_id, b.round_number])
+          );
+          
+          // Build ownersMap with owners_all, owners_by_phase, prix_signatures and winning_round
           ownersMap = allRosterData.reduce((acc: any, r: any) => {
             if (!acc[r.coureur_id]) {
               acc[r.coureur_id] = {
                 owners_all: [],
                 owners_by_phase: {},
-                prix_signatures: []
+                prix_signatures: [],
+                winning_round: winningRoundsMap[r.coureur_id] || null
               };
             }
             
