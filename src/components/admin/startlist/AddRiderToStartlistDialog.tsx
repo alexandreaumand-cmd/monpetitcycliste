@@ -40,19 +40,19 @@ export const AddRiderToStartlistDialog = ({
   } | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
-  // Search riders from coureurs_saisons
+  // Search riders from coureurs_saisons with season-specific team names
   const { data: searchResults, isLoading: isSearching } = useQuery({
     queryKey: ["riders-search", saisonId, searchQuery],
     enabled: !!saisonId && searchQuery.length >= 2,
     queryFn: async () => {
-      // Use normalize_text for accent-insensitive search
+      // Get riders with season-specific team names from equipes_saisons
       const { data, error } = await supabase
         .from("coureurs_saisons")
         .select(
           `
           coureur_id,
-          coureurs!inner(nom),
-          equipes!inner(code_court)
+          equipe_id,
+          coureurs!inner(nom)
         `
         )
         .eq("saison_id", saisonId)
@@ -62,11 +62,27 @@ export const AddRiderToStartlistDialog = ({
 
       if (error) throw error;
 
+      // Fetch team names from equipes_saisons
+      const equipeIds = [...new Set((data || []).map((r: any) => r.equipe_id))];
+      let equipesMap = new Map<string, string>();
+      
+      if (equipeIds.length > 0) {
+        const { data: equipesData } = await supabase
+          .from("equipes_saisons")
+          .select("equipe_id, nom_affiche")
+          .eq("saison_id", saisonId)
+          .in("equipe_id", equipeIds);
+        
+        (equipesData || []).forEach((eq: any) => {
+          equipesMap.set(eq.equipe_id, eq.nom_affiche);
+        });
+      }
+
       return (data || [])
         .map((r: any) => ({
           coureur_id: r.coureur_id,
           nom: r.coureurs.nom,
-          equipe: r.equipes.code_court,
+          equipe: equipesMap.get(r.equipe_id) || "N/A",
         }))
         .filter((r) => !existingRiderIds.includes(r.coureur_id));
     },
