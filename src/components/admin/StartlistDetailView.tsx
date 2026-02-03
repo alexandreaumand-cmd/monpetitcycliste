@@ -13,6 +13,7 @@ import { RouteImageUploader } from "@/components/startlist/RouteImageUploader";
 import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { StartlistDesktopExport } from "@/components/startlist/StartlistDesktopExport";
 import { useLeague } from "@/contexts/LeagueContext";
+import { StartlistRidersManagement } from "@/components/admin/startlist/StartlistRidersManagement";
 
 interface StartlistDetailViewProps {
   startlistId: string;
@@ -56,10 +57,10 @@ export const StartlistDetailView = ({ startlistId, onBack, isSuperAdmin, onImpor
       
       if (error) throw error;
       
-      // Get PCS validation info only (admin_rating_note comes from edge function as league-scoped)
+      // Get PCS validation info and saison_id (admin_rating_note comes from edge function as league-scoped)
       const { data: startlistData } = await supabase
         .from('startlist_imports')
-        .select('pcs_validated, pcs_validated_at, pcs_validated_by_manager_id')
+        .select('pcs_validated, pcs_validated_at, pcs_validated_by_manager_id, saison_id')
         .eq('id', startlistId)
         .single();
       
@@ -237,6 +238,16 @@ export const StartlistDetailView = ({ startlistId, onBack, isSuperAdmin, onImpor
         startlistData={startlistViewData}
       />
       {/* FIN ZONE DE CAPTURE */}
+
+      {/* Section éditable des partants (SuperAdmin only, quand pas de managers) */}
+      {isSuperAdmin && startlistViewData?.starters?.length > 0 && startlistViewData?.managers?.length === 0 && (
+        <StartlistRidersManagement
+          startlistId={startlistId}
+          starters={startlistViewData.starters}
+          saisonId={startlistViewData.saison_id}
+          onUpdate={() => queryClient.invalidateQueries({ queryKey: ['startlist-view', startlistId] })}
+        />
+      )}
 
       {/* Modal pour afficher l'image en grand */}
       <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
