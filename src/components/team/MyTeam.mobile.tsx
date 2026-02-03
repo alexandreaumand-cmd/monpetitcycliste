@@ -422,7 +422,7 @@ export const MyTeamMobile = () => {
       <div className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-xl text-sm">
         <div className="flex items-center gap-1">
           <Trophy className="h-4 w-4 text-primary" />
-          <span className="font-semibold">{kpis.total_points}</span>
+          <span className="font-semibold">{Math.round(kpis.total_points)}</span>
           <span className="text-muted-foreground">pts</span>
         </div>
         
