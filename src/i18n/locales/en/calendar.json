@@ -11,6 +11,7 @@
     "phase": "Phase",
     "allCategories": "All categories",
     "allPhases": "All phases",
+    "hidePassed": "Hide past races",
     "reset": "Reset"
   },
   "table": {
