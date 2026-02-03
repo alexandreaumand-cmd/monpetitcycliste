@@ -27,7 +27,7 @@ import { useNavigate } from "react-router-dom";
 import mpcLogo from "@/assets/mpc-logo.png";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
-import { CalendarCourseDrawer } from "@/components/calendar/CalendarCourseDrawer";
+import { CalendarCourseDialog } from "@/components/calendar/CalendarCourseDialog";
 import { useTranslation } from "react-i18next";
 
 interface CourseWithPoints {
@@ -632,8 +632,8 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {/* Course Details Drawer */}
-      <CalendarCourseDrawer 
+      {/* Course Details Dialog */}
+      <CalendarCourseDialog 
         course={selectedCourse}
         open={!!selectedCourse}
         onOpenChange={(open) => !open && setSelectedCourse(null)}
