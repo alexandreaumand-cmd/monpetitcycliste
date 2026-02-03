@@ -196,6 +196,15 @@ export default function CalendarPage() {
     return categories.sort();
   }, [coursesData]);
 
+  // Calculate days until start
+  const getDaysUntil = (dateDebut: string | null): number | null => {
+    if (!dateDebut) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = parseISO(dateDebut);
+    return differenceInDays(startDate, today);
+  };
+
   // Filter courses
   const filteredCourses = useMemo(() => {
     if (!coursesData) return [];
@@ -245,15 +254,6 @@ export default function CalendarPage() {
     return sortDirection === 'desc' 
       ? <ArrowDown className="h-4 w-4 ml-1 inline" />
       : <ArrowUp className="h-4 w-4 ml-1 inline" />;
-  };
-
-  // Calculate days until start
-  const getDaysUntil = (dateDebut: string | null): number | null => {
-    if (!dateDebut) return null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDate = parseISO(dateDebut);
-    return differenceInDays(startDate, today);
   };
 
   // Sort courses
