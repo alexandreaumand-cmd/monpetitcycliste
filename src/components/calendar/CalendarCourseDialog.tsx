@@ -193,7 +193,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-5xl max-h-[90vh] p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4 border-b bg-muted/30">
           <DialogTitle className="text-xl font-semibold">{course.nom}</DialogTitle>
           <DialogDescription className="sr-only">{t('drawer.description')}</DialogDescription>
@@ -219,7 +219,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
         </DialogHeader>
 
         <ScrollArea className="flex-1 max-h-[calc(90vh-120px)]">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6 p-6">
             {/* Left Column - Points & Route */}
             <div className="space-y-4">
               {/* Total Points */}
@@ -351,30 +351,30 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
                 </div>
               ) : sortedStartlistEntries.length > 0 ? (
                 <div className="border rounded-lg overflow-hidden">
-                  <div className="max-h-[400px] overflow-y-auto">
-                    {sortedStartlistEntries.map((entry, idx) => (
-                      <div 
-                        key={idx}
-                        className={`flex items-center gap-3 text-sm py-2 px-3 ${
-                          idx % 2 === 0 ? 'bg-muted/30' : 'bg-background'
-                        } hover:bg-muted/50 transition-colors`}
-                      >
-                        <span className="text-muted-foreground w-7 text-right font-mono text-xs">
-                          #{entry.line_no}
-                        </span>
-                        <span className="flex-1 truncate font-medium">
-                          {entry.coureur?.nom || entry.source_name}
-                        </span>
-                        <span className="text-muted-foreground text-xs truncate max-w-[120px]">
-                          {entry.equipe?.nom_affiche || entry.source_team || ""}
-                        </span>
-                        {entry.coureur_id ? (
-                          <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
-                        ) : (
-                          <AlertCircle className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
-                        )}
-                      </div>
-                    ))}
+                  <div className="max-h-[450px] overflow-y-auto p-2">
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                      {sortedStartlistEntries.map((entry, idx) => (
+                        <div 
+                          key={idx}
+                          className="flex items-center gap-2 text-sm py-1.5 px-2 rounded hover:bg-muted/50 transition-colors"
+                        >
+                          <span className="text-muted-foreground w-6 text-right font-mono text-xs">
+                            #{entry.line_no}
+                          </span>
+                          <span className="flex-1 truncate font-medium text-sm">
+                            {entry.coureur?.nom || entry.source_name}
+                          </span>
+                          <span className="text-muted-foreground text-xs shrink-0">
+                            {entry.equipe?.nom_affiche || entry.source_team || ""}
+                          </span>
+                          {entry.coureur_id ? (
+                            <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
+                          ) : (
+                            <AlertCircle className="h-3 w-3 text-yellow-500 flex-shrink-0" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ) : (
