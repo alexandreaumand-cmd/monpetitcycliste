@@ -56,6 +56,7 @@ export default function CalendarPage() {
   // Filters
   const [search, setSearch] = useState("");
   const [selectedCategorie, setSelectedCategorie] = useState<string>("all");
+  const [hidePassed, setHidePassed] = useState<boolean>(true);
   const [selectedPhase, setSelectedPhase] = useState<string>("all");
   
   // Sorting state
@@ -212,9 +213,16 @@ export default function CalendarPage() {
       if (selectedPhase !== "all" && course.phase_id !== selectedPhase) {
         return false;
       }
+      // Hide passed races filter
+      if (hidePassed) {
+        const days = getDaysUntil(course.date_debut);
+        if (days !== null && days < 0) {
+          return false;
+        }
+      }
       return true;
     });
-  }, [coursesData, search, selectedCategorie, selectedPhase]);
+  }, [coursesData, search, selectedCategorie, selectedPhase, hidePassed]);
 
   // Sort handlers
   const handleSort = (column: SortColumn) => {
@@ -303,6 +311,7 @@ export default function CalendarPage() {
     setSearch("");
     setSelectedCategorie("all");
     setSelectedPhase("all");
+    setHidePassed(true);
   };
 
   // Export to Excel
@@ -465,8 +474,20 @@ export default function CalendarPage() {
             </Select>
           </div>
 
-          <div className="flex items-end">
-            <Button variant="outline" onClick={resetFilters} className="w-full">
+          <div className="flex items-end gap-4">
+            <div className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                id="hidePassed"
+                checked={hidePassed}
+                onChange={(e) => setHidePassed(e.target.checked)}
+                className="h-4 w-4 rounded border-border"
+              />
+              <Label htmlFor="hidePassed" className="text-sm cursor-pointer">
+                {t('filters.hidePassed')}
+              </Label>
+            </div>
+            <Button variant="outline" onClick={resetFilters} className="w-full sm:w-auto">
               {t('filters.reset')}
             </Button>
           </div>
