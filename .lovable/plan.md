@@ -1,29 +1,79 @@
 
-# Plan : Gestion du bonus "Coureur +25%" avec 2 décimales
 
-## Contexte
-Le bonus de +25% pour les coureurs est actuellement stocké et calculé en **nombre entier** (INTEGER). Avec l'introduction des points TTT à précision décimale (NUMERIC(10,2)), le calcul du bonus perd en précision car `FLOOR()` tronque les décimales.
+# 🐛 Correction : Erreur de contrainte CHECK sur bonus_points
 
-**Exemple** : Un coureur marque 14.29 pts en TTT → Le bonus devrait être 3.57 pts (+25%), mais actuellement c'est 3 pts (FLOOR).
+## Problème identifié
+
+L'erreur `"bonus_points_target_check"` se produit lors de l'enregistrement des résultats parce que le **trigger `trigger_calculate_bonus_rider()`** tente d'insérer un bonus avec une valeur non-NULL pour `target_manager_id` alors que la contrainte l'interdit.
+
+### Contrainte actuelle
+
+```sql
+CHECK (
+  -- Bonus manager (ttt, scoreurs) : target_manager_id requis
+  (bonus_type IN ('ttt', 'scoreurs') AND target_manager_id IS NOT NULL AND coureur_id IS NULL AND manager_id IS NULL) 
+  OR 
+  -- Bonus coureur (first_win, itt) : coureur_id requis, target_manager_id NULL
+  (bonus_type IN ('first_win', 'itt') AND coureur_id IS NOT NULL AND target_manager_id IS NULL) 
+  OR 
+  -- Bonus coureur sélectionné (+25%) : coureur_id + manager_id requis, target_manager_id NULL
+  (bonus_type = 'coureur_bonuse' AND coureur_id IS NOT NULL AND manager_id IS NOT NULL AND target_manager_id IS NULL)
+)
+```
+
+### Code fautif dans le trigger
+
+```sql
+INSERT INTO bonus_points (..., target_manager_id, ...) 
+VALUES (..., v_manager_rec.manager_id, ...)  -- ❌ Devrait être NULL !
+```
+
+La ligne 53 du trigger insère `target_manager_id = v_manager_rec.manager_id` alors que la contrainte exige `target_manager_id IS NULL` pour les bonus de type `coureur_bonuse`.
 
 ---
 
-## Modifications à effectuer
+## Solution
 
-### 1. Migration de la base de données
+Modifier le trigger `trigger_calculate_bonus_rider()` pour ne pas renseigner `target_manager_id` lors de l'insertion d'un bonus `coureur_bonuse`.
 
-**Modifier la colonne `bonus_points.points`** de INTEGER vers NUMERIC(10,2) :
+### Avant (bug)
 
 ```sql
-ALTER TABLE bonus_points 
-ALTER COLUMN points TYPE NUMERIC(10,2);
+INSERT INTO bonus_points (
+  phase_id, coureur_id, manager_id, 
+  target_manager_id,  -- ❌ Ne devrait pas être là
+  league_id, bonus_type, points, commentaire, created_by
+) VALUES (
+  NEW.phase_id, NEW.coureur_id, v_manager_rec.manager_id,
+  v_manager_rec.manager_id,  -- ❌ Viole la contrainte
+  v_manager_rec.league_id, 'coureur_bonuse', ...
+);
 ```
 
-### 2. Mise à jour du trigger de calcul automatique
+### Après (corrigé)
 
-**Modifier la fonction `trigger_calculate_bonus_rider()`** :
-- Changer la variable `v_bonus_amount` de INTEGER à NUMERIC(10,2)
-- Remplacer `FLOOR(NEW.points * 0.25)` par `ROUND(NEW.points * 0.25, 2)`
+```sql
+INSERT INTO bonus_points (
+  phase_id, coureur_id, manager_id, 
+  -- target_manager_id omis → NULL par défaut ✅
+  league_id, bonus_type, points, commentaire, created_by
+) VALUES (
+  NEW.phase_id, NEW.coureur_id, v_manager_rec.manager_id,
+  v_manager_rec.league_id, 'coureur_bonuse', ...
+);
+```
+
+---
+
+## Étapes d'implémentation
+
+1. **Créer une migration SQL** qui recrée la fonction `trigger_calculate_bonus_rider()` sans l'insertion de `target_manager_id`
+
+2. **Vérifier les données existantes** pour corriger les enregistrements invalides si nécessaire
+
+---
+
+## Migration SQL à appliquer
 
 ```sql
 CREATE OR REPLACE FUNCTION public.trigger_calculate_bonus_rider()
@@ -33,49 +83,81 @@ SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
 DECLARE
-  v_bonus_record RECORD;
-  v_bonus_amount NUMERIC(10,2);  -- Changé de INTEGER
-  v_saison_id uuid;
-  v_cote_initiale NUMERIC;
-  v_comment text;
+  v_manager_rec RECORD;
+  v_bonus_amount NUMERIC(10,2);
+  v_comment TEXT;
+  v_already_exists BOOLEAN;
 BEGIN
-  -- ... (logique existante) ...
-  
-  -- Calcul avec 2 décimales
-  v_bonus_amount := ROUND(NEW.points * 0.25, 2);
-  
-  -- ... (reste de la logique) ...
+  IF NEW.points <= 0 THEN
+    RETURN NEW;
+  END IF;
+
+  FOR v_manager_rec IN
+    SELECT 
+      r.manager_id,
+      r.league_id,
+      brs.phase_id
+    FROM rosters r
+    INNER JOIN bonus_rider_selections brs 
+      ON brs.manager_id = r.manager_id 
+      AND brs.phase_id = r.phase_id 
+      AND brs.coureur_id = r.coureur_id
+    WHERE r.coureur_id = NEW.coureur_id
+      AND r.phase_id = NEW.phase_id
+  LOOP
+    v_bonus_amount := ROUND(NEW.points * 0.25, 2);
+    v_comment := 'Bonus coureur automatique (25%) - ' || COALESCE(NEW.course_id, 'Course') || ' - ' || NEW.type_classement::text;
+    
+    SELECT EXISTS(
+      SELECT 1 FROM bonus_points
+      WHERE phase_id = NEW.phase_id
+        AND coureur_id = NEW.coureur_id
+        AND manager_id = v_manager_rec.manager_id
+        AND league_id = v_manager_rec.league_id
+        AND bonus_type = 'coureur_bonuse'
+        AND commentaire = v_comment
+    ) INTO v_already_exists;
+    
+    IF NOT v_already_exists THEN
+      -- ✅ Ne pas inclure target_manager_id pour respecter la contrainte
+      INSERT INTO bonus_points (
+        phase_id,
+        coureur_id,
+        manager_id,
+        league_id,
+        bonus_type,
+        points,
+        commentaire,
+        created_by
+      ) VALUES (
+        NEW.phase_id,
+        NEW.coureur_id,
+        v_manager_rec.manager_id,
+        v_manager_rec.league_id,
+        'coureur_bonuse',
+        v_bonus_amount,
+        v_comment,
+        v_manager_rec.manager_id
+      );
+      
+      RAISE NOTICE 'Bonus coureur calculé: % pts pour coureur % manager %', 
+        v_bonus_amount, NEW.coureur_id, v_manager_rec.manager_id;
+    END IF;
+  END LOOP;
+
+  RETURN NEW;
 END;
 $$;
 ```
 
-### 3. Adaptation de l'affichage (Optionnel)
-
-Pour maintenir la cohérence avec le style UI actuel (points affichés en entiers), l'affichage dans `ManagerBreakdown.tsx` applique déjà `Math.round()` sur les totaux. Les bonus individuels peuvent être affichés avec décimales ou arrondis selon la préférence.
-
-**Option A** : Garder l'affichage avec décimales pour les bonus individuels (précision maximale)
-**Option B** : Arrondir tous les bonus à l'affichage (cohérence visuelle)
-
 ---
 
-## Résumé des fichiers impactés
+## Résumé
 
-| Composant | Modification |
-|-----------|--------------|
-| Migration SQL | Altérer `bonus_points.points` → NUMERIC(10,2) |
-| Trigger SQL | `trigger_calculate_bonus_rider()` avec ROUND(x, 2) |
-| UI (optionnel) | `ManagerBreakdown.tsx` - format décimal si souhaité |
+| Élément | Détail |
+|---------|--------|
+| **Cause** | Le trigger insère `target_manager_id` alors que la contrainte l'interdit pour `coureur_bonuse` |
+| **Fichier impacté** | Fonction PostgreSQL `trigger_calculate_bonus_rider()` |
+| **Correction** | Retirer `target_manager_id` de l'INSERT dans le trigger |
+| **Impact** | Aucun impact fonctionnel, le bonus reste lié au manager via `manager_id` |
 
----
-
-## Section technique
-
-### Données existantes
-Les bonus déjà stockés (ex: 3 pts) resteront valides car NUMERIC(10,2) accepte les entiers. Les nouveaux bonus seront calculés avec précision décimale.
-
-### Compatibilité
-- La colonne TypeScript `points` dans les types Supabase sera mise à jour automatiquement
-- Les agrégations `SUM()` et `reduce()` fonctionnent de la même manière avec NUMERIC
-
-### Risques
-Aucun risque majeur - la modification est rétrocompatible. Les données existantes seront conservées.
