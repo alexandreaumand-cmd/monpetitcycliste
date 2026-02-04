@@ -53,33 +53,66 @@ Deno.serve(async (req) => {
     const today = new Date().toISOString().split('T')[0];
     const in10Days = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    // Query startlist entries for all riders with courses that are current or upcoming
-    const { data: entries, error } = await supabase
-      .from('startlist_entries')
+    // Step 1: Get all startlist imports for current/upcoming races, ordered by created_at desc
+    const { data: allStartlists, error: startlistError } = await supabase
+      .from('startlist_imports')
       .select(`
-        coureur_id,
-        startlist_imports!inner(
-          race_id,
-          pcs_validated,
-          courses!inner(
-            id,
-            nom,
-            categorie,
-            date_debut,
-            date_fin
-          )
+        id,
+        race_id,
+        created_at,
+        courses!inner(
+          id,
+          nom,
+          categorie,
+          date_debut,
+          date_fin
         )
       `)
+      .lte('courses.date_debut', in10Days)
+      .gte('courses.date_fin', today)
+      .order('created_at', { ascending: false });
+
+    if (startlistError) {
+      console.error('Error fetching startlists:', startlistError);
+      throw startlistError;
+    }
+
+    // Step 2: Build a map of race_id -> latest startlist_id (first one wins since ordered desc)
+    const latestStartlistByRace = new Map<string, string>();
+    const startlistInfoMap = new Map<string, any>();
+    
+    for (const sl of allStartlists || []) {
+      const raceId = sl.race_id;
+      if (!latestStartlistByRace.has(raceId)) {
+        latestStartlistByRace.set(raceId, sl.id);
+        startlistInfoMap.set(sl.id, sl);
+      }
+    }
+
+    const latestStartlistIds = Array.from(latestStartlistByRace.values());
+
+    if (latestStartlistIds.length === 0) {
+      console.log('No current/upcoming startlists found');
+      return new Response(JSON.stringify({ races_by_rider: {} }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`Found ${latestStartlistIds.length} latest startlists for current/upcoming races`);
+
+    // Step 3: Query startlist entries for all riders, but ONLY in the latest startlists
+    const { data: entries, error } = await supabase
+      .from('startlist_entries')
+      .select('coureur_id, startlist_id')
       .in('coureur_id', rider_ids)
-      .lte('startlist_imports.courses.date_debut', in10Days)
-      .gte('startlist_imports.courses.date_fin', today);
+      .in('startlist_id', latestStartlistIds);
 
     if (error) {
-      console.error('Error fetching races:', error);
+      console.error('Error fetching entries:', error);
       throw error;
     }
 
-    console.log(`Found ${entries?.length || 0} startlist entries`);
+    console.log(`Found ${entries?.length || 0} startlist entries in latest startlists`);
 
     // Group races by rider
     const racesByRider: Record<string, RiderRaces> = {};
@@ -92,15 +125,18 @@ Deno.serve(async (req) => {
       };
     }
 
-    // Process entries
+    // Process entries - only from latest startlists
     if (entries) {
       // Use a map to deduplicate races per rider
       const seenRaces: Record<string, Set<string>> = {};
       
       for (const entry of entries) {
         const riderId = entry.coureur_id;
-        const course = (entry.startlist_imports as any).courses;
+        const startlistInfo = startlistInfoMap.get(entry.startlist_id);
         
+        if (!startlistInfo) continue;
+        
+        const course = startlistInfo.courses;
         if (!course || !course.id) continue;
         
         // Initialize seen races set for this rider
