@@ -1,6 +1,15 @@
 {
   "title": "Mon Compte",
   "backToDashboard": "Retour au dashboard",
+  "appearance": {
+    "title": "Apparence",
+    "description": "Personnalisez l'apparence de l'application",
+    "toggle": "Changer le thème",
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Système",
+    "themeLabel": "Thème"
+  },
   "notifications": {
     "title": "Notifications Push",
     "description": "Recevez des alertes directement sur votre appareil",

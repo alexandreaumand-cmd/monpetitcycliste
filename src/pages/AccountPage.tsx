@@ -1,18 +1,22 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "next-themes";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, User, Lock } from "lucide-react";
+import { Loader2, User, Lock, Palette, Sun, Moon, Monitor } from "lucide-react";
 import { AvatarUploader } from "@/components/account/AvatarUploader";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { SponsorJerseyEditor } from "@/components/account/SponsorJerseyEditor";
+import { cn } from "@/lib/utils";
 
 export default function AccountPage() {
   const { t } = useTranslation('account');
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -23,6 +27,11 @@ export default function AccountPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     loadUserData();
@@ -242,6 +251,64 @@ export default function AccountPage() {
               t('security.changePassword')
             )}
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Section Apparence */}
+      <Card className="mb-4 md:mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5" />
+            {t('appearance.title')}
+          </CardTitle>
+          <CardDescription>
+            {t('appearance.description')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>{t('appearance.themeLabel')}</Label>
+            {mounted && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTheme("light")}
+                  className={cn(
+                    "flex-1 gap-2",
+                    theme === "light" && "border-primary bg-primary/10"
+                  )}
+                >
+                  <Sun className="h-4 w-4" />
+                  {t('appearance.light')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTheme("dark")}
+                  className={cn(
+                    "flex-1 gap-2",
+                    theme === "dark" && "border-primary bg-primary/10"
+                  )}
+                >
+                  <Moon className="h-4 w-4" />
+                  {t('appearance.dark')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTheme("system")}
+                  className={cn(
+                    "flex-1 gap-2",
+                    theme === "system" && "border-primary bg-primary/10"
+                  )}
+                >
+                  <Monitor className="h-4 w-4" />
+                  {t('appearance.system')}
+                </Button>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
