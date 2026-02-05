@@ -23,40 +23,73 @@ interface Coureur {
   id: string;
   nom: string;
   uci_id: string | null;
+  equipe_nom?: string;
 }
 
 interface CoureurSearchComboboxProps {
   value: string;
   onSelect: (coureurId: string) => void;
   placeholder?: string;
+  saisonId?: string;
 }
 
 export const CoureurSearchCombobox = ({
   value,
   onSelect,
   placeholder = "Sélectionner un coureur...",
+  saisonId,
 }: CoureurSearchComboboxProps) => {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch] = useDebounce(searchTerm, 300);
 
-  // Fetch coureurs with search - server-side filtering
+  // Fetch coureurs with search - server-side filtering, optionally filtered by season
   const { data: coureurs, isLoading } = useQuery({
-    queryKey: ["admin-coureurs-search", debouncedSearch],
+    queryKey: ["admin-coureurs-search", debouncedSearch, saisonId],
     queryFn: async () => {
-      let query = supabase
-        .from("coureurs")
-        .select("id, nom, uci_id")
-        .order("nom")
-        .limit(100);
+      // If saisonId is provided, search in coureurs_saisons joined with coureurs
+      if (saisonId) {
+        let query = supabase
+          .from("coureurs_saisons")
+          .select(`
+            coureur_id,
+            coureurs!inner(id, nom, uci_id),
+            equipes_saisons!inner(nom_affiche)
+          `)
+          .eq("saison_id", saisonId)
+          .eq("actif", true)
+          .limit(100);
 
-      if (debouncedSearch.trim()) {
-        query = query.ilike("nom", `%${debouncedSearch}%`);
+        if (debouncedSearch.trim()) {
+          query = query.ilike("coureurs.nom", `%${debouncedSearch}%`);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        // Transform the data to match Coureur interface
+        return (data || []).map((cs: any) => ({
+          id: cs.coureurs.id,
+          nom: cs.coureurs.nom,
+          uci_id: cs.coureurs.uci_id,
+          equipe_nom: cs.equipes_saisons?.nom_affiche || null,
+        })) as Coureur[];
+      } else {
+        // Fallback: search all coureurs (original behavior)
+        let query = supabase
+          .from("coureurs")
+          .select("id, nom, uci_id")
+          .order("nom")
+          .limit(100);
+
+        if (debouncedSearch.trim()) {
+          query = query.ilike("nom", `%${debouncedSearch}%`);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data as Coureur[];
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as Coureur[];
     },
     enabled: open,
   });
@@ -144,9 +177,9 @@ export const CoureurSearchCombobox = ({
                     />
                     <div className="flex flex-col">
                       <span>{coureur.nom}</span>
-                      {coureur.uci_id && (
+                      {(coureur.equipe_nom || coureur.uci_id) && (
                         <span className="text-xs text-muted-foreground">
-                          UCI: {coureur.uci_id}
+                          {coureur.equipe_nom || `UCI: ${coureur.uci_id}`}
                         </span>
                       )}
                     </div>

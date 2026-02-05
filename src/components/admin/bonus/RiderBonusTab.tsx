@@ -262,6 +262,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
                   value={selectedCoureur?.id}
                   onSelect={setSelectedCoureur}
                   showManager={bonusType === 'coureur_bonuse'}
+                  context="super-admin"
                 />
                 {selectedCoureur && (
                   <p className="text-xs text-muted-foreground">
