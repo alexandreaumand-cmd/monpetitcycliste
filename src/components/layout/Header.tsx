@@ -14,7 +14,7 @@ import { LeagueSwitcher } from "@/components/leagues/LeagueSwitcher";
 import { ManagerInfoDropdown } from "./ManagerInfoDropdown";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
-import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
+
 
 interface HeaderProps {
   manager: any;
@@ -166,7 +166,6 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
             <LeagueSwitcher />
             <NotificationCenter />
             <LanguageSwitcher />
-            <ThemeSwitcher />
             
             <Button variant="ghost" size="sm" onClick={onSignOut} className="hidden sm:flex gap-2 h-8">
               <LogOut className="h-4 w-4" />
