@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation, Link } from "react-router-dom";
-import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Menu, LogOut, ArrowLeft } from "lucide-react";
+ import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Menu, LogOut, ArrowLeft, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -18,6 +18,7 @@ import { CoureursManager } from "@/components/admin/CoureursManager";
 import { EquipesSaisonsManager } from "@/components/admin/EquipesSaisonsManager";
 import { BaremesManager } from "@/components/admin/BaremesManager";
 import { PointsLedgerTable } from "@/components/admin/PointsLedgerTable";
+ import { SuperAdminBonusPage } from "@/pages/admin/SuperAdminBonusPage";
 import mpcLogo from "@/assets/mpc-logo-horizontal.png";
 import { useTranslation } from "react-i18next";
 
@@ -43,6 +44,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
     { label: t('superAdmin.startlistData', 'Données Startlists'), path: 'startlist-data', icon: FileText },
     { label: t('superAdmin.data', 'Données'), path: 'data', icon: Database },
     { label: t('superAdmin.leagues', 'Ligues'), path: 'leagues', icon: Users },
+     { label: t('superAdmin.bonus', 'Bonus'), path: 'bonus', icon: Gift },
     { label: t('superAdmin.users', 'Utilisateurs'), path: 'users', icon: Shield },
   ];
 
@@ -194,6 +196,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
             <Route path="data" element={<DataManagementTabs />} />
             <Route path="leagues" element={<SuperAdminLeaguesPage />} />
             <Route path="leagues/:id" element={<LeagueDetailPage />} />
+             <Route path="bonus" element={<SuperAdminBonusPage />} />
             <Route path="users" element={<UsersManagementPage />} />
           </Routes>
         </div>
