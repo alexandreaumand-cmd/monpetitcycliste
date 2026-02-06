@@ -54,10 +54,10 @@ export const MessageBubble = ({
     return map;
   }, [message.metadata]);
 
-  // Highlight @mentions and #rider mentions in content
+  // Render content with @mentions and {rider} mentions
   const renderedContent = useMemo(() => {
-    // Split on @ and # mentions
-    return message.content.split(/([@#][^\s@#]+)/g).map((part, i) => {
+    // Split on @mentions AND {RiderName} patterns
+    return message.content.split(/([@][^\s@#]+|\{[^}]+\})/g).map((part, i) => {
       if (part.startsWith("@")) {
         return (
           <span key={i} className="font-semibold text-primary">
@@ -65,8 +65,8 @@ export const MessageBubble = ({
           </span>
         );
       }
-      if (part.startsWith("#")) {
-        const riderName = part.slice(1);
+      if (part.startsWith("{") && part.endsWith("}")) {
+        const riderName = part.slice(1, -1);
         const coureurId = riderMentionMap[riderName];
         const ownerName = coureurId && rosterOwners?.[coureurId];
 
