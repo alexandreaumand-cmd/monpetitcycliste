@@ -258,6 +258,792 @@ export type Database = {
         }
         Relationships: []
       }
+      arena_channels: {
+        Row: {
+          created_at: string
+          id: string
+          league_id: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          league_id: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          league_id?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_channels_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      arena_messages: {
+        Row: {
+          author_manager_id: string | null
+          channel_id: string
+          content: string
+          created_at: string
+          id: string
+          league_id: string
+          message_type: string
+          metadata: Json | null
+          source_message_id: string | null
+        }
+        Insert: {
+          author_manager_id?: string | null
+          channel_id: string
+          content: string
+          created_at?: string
+          id?: string
+          league_id: string
+          message_type?: string
+          metadata?: Json | null
+          source_message_id?: string | null
+        }
+        Update: {
+          author_manager_id?: string | null
+          channel_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          league_id?: string
+          message_type?: string
+          metadata?: Json | null
+          source_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_messages_author_manager_id_fkey"
+            columns: ["author_manager_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["taken_by_manager_id"]
+          },
+          {
+            foreignKeyName: "arena_messages_author_manager_id_fkey"
+            columns: ["author_manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_messages_author_manager_id_fkey"
+            columns: ["author_manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_messages_author_manager_id_fkey"
+            columns: ["author_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_messages_author_manager_id_fkey"
+            columns: ["author_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_messages_author_manager_id_fkey"
+            columns: ["author_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_managers_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "arena_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_messages_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_messages_source_message_id_fkey"
+            columns: ["source_message_id"]
+            isOneToOne: false
+            referencedRelation: "arena_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      arena_poll_options: {
+        Row: {
+          id: string
+          label: string
+          manager_id: string | null
+          poll_id: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          label: string
+          manager_id?: string | null
+          poll_id: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          label?: string
+          manager_id?: string | null
+          poll_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_poll_options_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["taken_by_manager_id"]
+          },
+          {
+            foreignKeyName: "arena_poll_options_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_poll_options_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_poll_options_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_poll_options_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_poll_options_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_managers_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_poll_options_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "arena_polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      arena_poll_votes: {
+        Row: {
+          created_at: string
+          id: string
+          option_id: string
+          poll_id: string
+          voter_manager_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_id: string
+          poll_id: string
+          voter_manager_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_id?: string
+          poll_id?: string
+          voter_manager_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_poll_votes_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "arena_poll_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_poll_votes_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "arena_polls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_poll_votes_voter_manager_id_fkey"
+            columns: ["voter_manager_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["taken_by_manager_id"]
+          },
+          {
+            foreignKeyName: "arena_poll_votes_voter_manager_id_fkey"
+            columns: ["voter_manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_poll_votes_voter_manager_id_fkey"
+            columns: ["voter_manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_poll_votes_voter_manager_id_fkey"
+            columns: ["voter_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_poll_votes_voter_manager_id_fkey"
+            columns: ["voter_manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_poll_votes_voter_manager_id_fkey"
+            columns: ["voter_manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_managers_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      arena_polls: {
+        Row: {
+          closes_at: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          league_id: string
+          options_type: string
+          poll_type: string
+          title: string
+        }
+        Insert: {
+          closes_at: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          league_id: string
+          options_type?: string
+          poll_type: string
+          title: string
+        }
+        Update: {
+          closes_at?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          league_id?: string
+          options_type?: string
+          poll_type?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_polls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["taken_by_manager_id"]
+          },
+          {
+            foreignKeyName: "arena_polls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_polls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_polls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_polls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_polls_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_managers_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_polls_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      arena_prestige_points: {
+        Row: {
+          created_at: string
+          id: string
+          league_id: string
+          manager_id: string
+          points: number
+          source_id: string | null
+          source_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          league_id: string
+          manager_id: string
+          points?: number
+          source_id?: string | null
+          source_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          league_id?: string
+          manager_id?: string
+          points?: number
+          source_id?: string | null
+          source_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_prestige_points_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_prestige_points_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["taken_by_manager_id"]
+          },
+          {
+            foreignKeyName: "arena_prestige_points_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_prestige_points_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_prestige_points_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_prestige_points_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_prestige_points_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_managers_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      arena_pronostic_deadlines: {
+        Row: {
+          course_id: string
+          created_at: string
+          created_by: string
+          deadline_at: string
+          etape_numero: number | null
+          id: string
+          pronostic_type: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          created_by: string
+          deadline_at: string
+          etape_numero?: number | null
+          id?: string
+          pronostic_type: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          created_by?: string
+          deadline_at?: string
+          etape_numero?: number | null
+          id?: string
+          pronostic_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_pronostic_deadlines_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_pronostic_deadlines_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_for_points_norm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_pronostic_deadlines_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_course_points_theoriques"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostic_deadlines_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_recent_results"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostic_deadlines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["taken_by_manager_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostic_deadlines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostic_deadlines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostic_deadlines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_pronostic_deadlines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostic_deadlines_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_managers_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      arena_pronostics: {
+        Row: {
+          coureur_id: string
+          course_id: string
+          created_at: string
+          etape_numero: number | null
+          evaluated_at: string | null
+          id: string
+          is_correct: boolean | null
+          league_id: string
+          manager_id: string
+          pronostic_type: string
+          updated_at: string
+        }
+        Insert: {
+          coureur_id: string
+          course_id: string
+          created_at?: string
+          etape_numero?: number | null
+          evaluated_at?: string | null
+          id?: string
+          is_correct?: boolean | null
+          league_id: string
+          manager_id: string
+          pronostic_type: string
+          updated_at?: string
+        }
+        Update: {
+          coureur_id?: string
+          course_id?: string
+          created_at?: string
+          etape_numero?: number | null
+          evaluated_at?: string | null
+          id?: string
+          is_correct?: boolean | null
+          league_id?: string
+          manager_id?: string
+          pronostic_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_pronostics_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "my_last_round_bids"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_coureur_id_fkey"
+            columns: ["coureur_id"]
+            isOneToOne: false
+            referencedRelation: "v_coureurs_saisons_admin"
+            referencedColumns: ["coureur_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_for_points_norm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_course_points_theoriques"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_recent_results"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["taken_by_manager_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_managers_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      arena_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          manager_id: string
+          message_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          manager_id: string
+          message_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          manager_id?: string
+          message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_reactions_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["taken_by_manager_id"]
+          },
+          {
+            foreignKeyName: "arena_reactions_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_reactions_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_reactions_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_reactions_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_reactions_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_managers_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "arena_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auctions: {
         Row: {
           closed_at: string | null

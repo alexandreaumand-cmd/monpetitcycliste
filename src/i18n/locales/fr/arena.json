@@ -1,0 +1,31 @@
+{
+  "title": "L'Arène",
+  "subtitle": "Pronostics, votes et trash talk entre managers",
+  "selectLeague": "Sélectionnez une ligue pour accéder à l'Arène",
+  "tabs": {
+    "pronostics": "Pronostics",
+    "votes": "Votes",
+    "trashTalk": "Trash Talk",
+    "hallOfFame": "Hall of Fame"
+  },
+  "pronostics": {
+    "title": "Pronostics",
+    "comingSoon": "Bientôt disponible",
+    "comingSoonDesc": "Pariez sur les vainqueurs des courses et étapes à venir"
+  },
+  "votes": {
+    "title": "Votes de la Communauté",
+    "comingSoon": "Bientôt disponible",
+    "comingSoonDesc": "Élisez le MVP, le flop et bien plus encore"
+  },
+  "trashTalk": {
+    "title": "Trash Talk",
+    "comingSoon": "Bientôt disponible",
+    "comingSoonDesc": "Discutez, chambrez et réagissez en temps réel"
+  },
+  "hallOfFame": {
+    "title": "Hall of Fame",
+    "comingSoon": "Bientôt disponible",
+    "comingSoonDesc": "Le classement des managers par Points de Prestige"
+  }
+}

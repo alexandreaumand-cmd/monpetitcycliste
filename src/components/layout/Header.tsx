@@ -2,7 +2,7 @@ import { useLocation, Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X, ListChecks, LineChart, Lock } from "lucide-react";
+import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X, ListChecks, LineChart, Lock, Swords } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import mpcLogo from "@/assets/mpc-logo.png";
@@ -31,6 +31,7 @@ const getDesktopNavLinks = (t: any) => [
   { label: t('navigation:header.startlist'), href: '/dashboard/startlist', icon: ListChecks },
   { label: t('navigation:header.statistics'), href: '/dashboard/statistiques', icon: LineChart },
   { label: t('navigation:header.auctions'), href: '/dashboard/encheres', icon: Trophy },
+  { label: t('navigation:header.arena'), href: '/dashboard/arene', icon: Swords },
 ];
 
 const getMobileNavLinks = (t: any) => [
@@ -41,6 +42,7 @@ const getMobileNavLinks = (t: any) => [
   { label: t('navigation:header.rankings'), href: '/dashboard/classement', icon: BarChart3 },
   { label: t('navigation:header.startlist'), href: '/dashboard/startlist', icon: ListChecks },
   { label: t('navigation:header.statistics'), href: '/dashboard/statistiques', icon: LineChart },
+  { label: t('navigation:header.arena'), href: '/dashboard/arene', icon: Swords },
 ];
 
 export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {

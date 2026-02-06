@@ -1,0 +1,31 @@
+{
+  "title": "The Arena",
+  "subtitle": "Predictions, votes and trash talk between managers",
+  "selectLeague": "Select a league to access the Arena",
+  "tabs": {
+    "pronostics": "Predictions",
+    "votes": "Votes",
+    "trashTalk": "Trash Talk",
+    "hallOfFame": "Hall of Fame"
+  },
+  "pronostics": {
+    "title": "Predictions",
+    "comingSoon": "Coming soon",
+    "comingSoonDesc": "Bet on the winners of upcoming races and stages"
+  },
+  "votes": {
+    "title": "Community Votes",
+    "comingSoon": "Coming soon",
+    "comingSoonDesc": "Vote for MVP, flop and much more"
+  },
+  "trashTalk": {
+    "title": "Trash Talk",
+    "comingSoon": "Coming soon",
+    "comingSoonDesc": "Chat, banter and react in real-time"
+  },
+  "hallOfFame": {
+    "title": "Hall of Fame",
+    "comingSoon": "Coming soon",
+    "comingSoonDesc": "Manager leaderboard by Prestige Points"
+  }
+}

@@ -18,6 +18,7 @@ import {
   ListChecks,
   LogOut,
   User,
+  Swords,
 } from "lucide-react";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useSeasonContext } from "@/contexts/SeasonContext";
@@ -68,6 +69,12 @@ export const MobileDrawer = ({
       title: "Gestion",
       items: [
         { label: "Enchères", path: "/dashboard/encheres", icon: Trophy },
+      ],
+    },
+    {
+      title: "Social",
+      items: [
+        { label: "Arène", path: "/dashboard/arene", icon: Swords },
       ],
     },
   ];
