@@ -6228,6 +6228,13 @@ export type Database = {
         Args: { team_name: string }
         Returns: string
       }
+      get_daily_points_by_manager: {
+        Args: { p_end: string; p_league_id: string; p_start: string }
+        Returns: {
+          manager_id: string
+          total_points: number
+        }[]
+      }
       get_league_course_ids: {
         Args: { p_league_id: string }
         Returns: {
@@ -6358,6 +6365,15 @@ export type Database = {
       get_user_activity_stats: {
         Args: { target_user_id: string }
         Returns: Json
+      }
+      get_weekly_top_riders: {
+        Args: { p_end: string; p_league_id: string; p_start: string }
+        Returns: {
+          coureur_id: string
+          coureur_nom: string
+          manager_nom: string
+          total_points: number
+        }[]
       }
       has_role: {
         Args: {
