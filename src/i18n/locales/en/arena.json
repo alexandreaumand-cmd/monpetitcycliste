@@ -52,8 +52,55 @@
   },
   "votes": {
     "title": "Community Votes",
-    "comingSoon": "Coming soon",
-    "comingSoonDesc": "Vote for MVP, flop and much more"
+    "empty": "No polls available",
+    "emptyDesc": "Polls will appear here when an admin creates one",
+    "noManager": "You must have a manager profile to access votes",
+    "voteSuccess": "Vote recorded!",
+    "voteError": "Error recording vote",
+    "alreadyVoted": "You have already voted on this poll",
+    "deleteSuccess": "Poll deleted",
+    "deleteError": "Error deleting poll",
+    "voting": "Submitting vote...",
+    "totalVotes": "{{count}} vote(s)",
+    "closesIn": "Closes in {{time}}",
+    "closedAgo": "Closed {{time}}",
+    "sections": {
+      "open": "Active polls",
+      "closed": "Closed polls"
+    },
+    "status": {
+      "open": "Open",
+      "closed": "Closed"
+    },
+    "pollTypes": {
+      "mvp": "MVP of the week",
+      "flop": "Flop of the week",
+      "bestMove": "Best tactical move",
+      "worstBuy": "Worst buy",
+      "custom": "Custom"
+    },
+    "create": {
+      "button": "New poll",
+      "title": "Create a poll",
+      "type": "Poll type",
+      "selectType": "Select a type...",
+      "pollTitle": "Title",
+      "titlePlaceholder": "E.g. MVP of week 12",
+      "description": "Description (optional)",
+      "descriptionPlaceholder": "Describe the context of the vote...",
+      "options": "Options",
+      "option": "Option",
+      "addOption": "Add option",
+      "closesDate": "Closing date",
+      "closesTime": "Closing time",
+      "cancel": "Cancel",
+      "submit": "Create",
+      "success": "Poll created successfully!",
+      "error": "Error creating poll",
+      "requiredFields": "Please fill in all required fields",
+      "minOptions": "At least 2 options are required",
+      "autoManagerOptions": "League managers ({{count}}) will be automatically added as options"
+    }
   },
   "trashTalk": {
     "title": "Trash Talk",
