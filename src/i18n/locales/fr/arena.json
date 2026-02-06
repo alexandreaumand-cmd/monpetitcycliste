@@ -57,6 +57,20 @@
   },
   "trashTalk": {
     "title": "Trash Talk",
+    "channels": {
+      "general": "Général",
+      "liveCourses": "Live Courses"
+    },
+    "placeholder": "Écrire un message...",
+    "placeholderReadOnly": "Ce canal est en lecture seule",
+    "send": "Envoyer",
+    "sendError": "Erreur lors de l'envoi du message",
+    "loadMore": "Charger plus de messages",
+    "loading": "Chargement...",
+    "empty": "Aucun message",
+    "emptyDesc": "Soyez le premier à écrire dans ce canal !",
+    "system": "Système",
+    "admin": "Admin",
     "comingSoon": "Bientôt disponible",
     "comingSoonDesc": "Discutez, chambrez et réagissez en temps réel"
   },

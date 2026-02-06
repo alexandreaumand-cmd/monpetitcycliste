@@ -338,8 +338,7 @@ Voici l'ordre d'implementation suggere :
 
 1. **Phase 1** : ✅ Schema de base (toutes les tables) + navigation + page squelette — DONE
 2. **Phase 2** : ✅ Pronostics (edge functions, UI complète, notifications, deadlines admin, cron reminder) — DONE
-2. **Phase 2** : Pronostics (edge functions, UI complète, notifications)
-3. **Phase 3** : Trash Talk (realtime, UI, trigger clonage)
+3. **Phase 3** : ✅ Trash Talk (realtime, UI, trigger clonage, @mentions, reactions emoji) — DONE
 4. **Phase 4** : Votes (UI admin, UI vote)
 5. **Phase 5** : Hall of Fame (triggers d'attribution, classement)
 
