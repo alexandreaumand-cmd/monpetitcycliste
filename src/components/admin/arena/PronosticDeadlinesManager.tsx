@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -49,6 +50,7 @@ export const PronosticDeadlinesManager = () => {
   const queryClient = useQueryClient();
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deadlineOverrides, setDeadlineOverrides] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
   const [evaluating, setEvaluating] = useState<string | null>(null);
@@ -165,6 +167,35 @@ export const PronosticDeadlinesManager = () => {
 
   const isOpened = (pd: PotentialDeadline) => existingKeys.has(getKey(pd));
 
+  // Get the effective deadline date (override or default)
+  const getEffectiveDeadline = (pd: PotentialDeadline) => {
+    const key = getKey(pd);
+    return deadlineOverrides[key] || pd.defaultDeadlineAt;
+  };
+
+  // Parse ISO to date input value (YYYY-MM-DD)
+  const toDateInput = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  // Parse ISO to time input value (HH:MM)
+  const toTimeInput = (iso: string) => {
+    const d = new Date(iso);
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  };
+
+  // Update deadline override from date/time inputs
+  const updateDeadlineDate = (key: string, currentIso: string, newDate: string) => {
+    const time = toTimeInput(currentIso);
+    setDeadlineOverrides((prev) => ({ ...prev, [key]: new Date(`${newDate}T${time}:00`).toISOString() }));
+  };
+
+  const updateDeadlineTime = (key: string, currentIso: string, newTime: string) => {
+    const date = toDateInput(currentIso);
+    setDeadlineOverrides((prev) => ({ ...prev, [key]: new Date(`${date}T${newTime}:00`).toISOString() }));
+  };
+
   const toggleSelect = (key: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -219,7 +250,7 @@ export const PronosticDeadlinesManager = () => {
           course_id: pd.courseId,
           etape_numero: pd.etapeNumero,
           pronostic_type: pd.pronosticType,
-          deadline_at: pd.defaultDeadlineAt,
+          deadline_at: getEffectiveDeadline(pd),
           created_by: manager.id,
         }));
 
@@ -402,6 +433,11 @@ export const PronosticDeadlinesManager = () => {
                         <OneLineDeadlineInfo
                           pd={allItems[0]}
                           existing={getExistingDeadline(allItems[0])}
+                          effectiveDeadline={getEffectiveDeadline(allItems[0])}
+                          onDateChange={(date) => updateDeadlineDate(getKey(allItems[0]), getEffectiveDeadline(allItems[0]), date)}
+                          onTimeChange={(time) => updateDeadlineTime(getKey(allItems[0]), getEffectiveDeadline(allItems[0]), time)}
+                          toDateInput={toDateInput}
+                          toTimeInput={toTimeInput}
                           onEvaluate={() => {
                             const ex = getExistingDeadline(allItems[0]);
                             if (ex) handleEvaluate(ex);
@@ -448,9 +484,27 @@ export const PronosticDeadlinesManager = () => {
                                 {pd.courseTypeLabel}
                               </span>
 
-                              <span className="text-muted-foreground text-xs flex-1">
-                                {format(new Date(pd.defaultDeadlineAt), "dd/MM/yyyy HH:mm", { locale: fr })}
-                              </span>
+                              {!opened && (
+                                <div className="flex items-center gap-1.5 flex-1" onClick={(e) => e.stopPropagation()}>
+                                  <Input
+                                    type="date"
+                                    value={toDateInput(getEffectiveDeadline(pd))}
+                                    onChange={(e) => updateDeadlineDate(key, getEffectiveDeadline(pd), e.target.value)}
+                                    className="h-7 text-xs w-[130px] px-1.5"
+                                  />
+                                  <Input
+                                    type="time"
+                                    value={toTimeInput(getEffectiveDeadline(pd))}
+                                    onChange={(e) => updateDeadlineTime(key, getEffectiveDeadline(pd), e.target.value)}
+                                    className="h-7 text-xs w-[85px] px-1.5"
+                                  />
+                                </div>
+                              )}
+                              {opened && (
+                                <span className="text-muted-foreground text-xs flex-1">
+                                  {format(new Date(existing!.deadline_at), "dd/MM/yyyy HH:mm", { locale: fr })}
+                                </span>
+                              )}
 
                               {opened ? (
                                 <div className="flex items-center gap-1">
@@ -532,12 +586,22 @@ export const PronosticDeadlinesManager = () => {
 const OneLineDeadlineInfo = ({
   pd,
   existing,
+  effectiveDeadline,
+  onDateChange,
+  onTimeChange,
+  toDateInput,
+  toTimeInput,
   onEvaluate,
   onDelete,
   evaluating,
 }: {
   pd: PotentialDeadline;
   existing: ExistingDeadline | undefined;
+  effectiveDeadline: string;
+  onDateChange: (date: string) => void;
+  onTimeChange: (time: string) => void;
+  toDateInput: (iso: string) => string;
+  toTimeInput: (iso: string) => string;
   onEvaluate: () => void;
   onDelete: () => void;
   evaluating: string | null;
@@ -548,11 +612,26 @@ const OneLineDeadlineInfo = ({
 
   return (
     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-      <span className="text-xs text-muted-foreground hidden sm:inline">
-        {format(new Date(pd.defaultDeadlineAt), "dd/MM HH:mm", { locale: fr })}
-      </span>
-      {opened ? (
+      {!opened ? (
         <>
+          <Input
+            type="date"
+            value={toDateInput(effectiveDeadline)}
+            onChange={(e) => onDateChange(e.target.value)}
+            className="h-7 text-xs w-[130px] px-1.5"
+          />
+          <Input
+            type="time"
+            value={toTimeInput(effectiveDeadline)}
+            onChange={(e) => onTimeChange(e.target.value)}
+            className="h-7 text-xs w-[85px] px-1.5"
+          />
+        </>
+      ) : (
+        <>
+          <span className="text-xs text-muted-foreground hidden sm:inline">
+            {format(new Date(existing.deadline_at), "dd/MM HH:mm", { locale: fr })}
+          </span>
           {expired && existing && (
             <Button
               variant="outline"
@@ -577,7 +656,7 @@ const OneLineDeadlineInfo = ({
             <Trash2 className="h-3 w-3 text-destructive" />
           </Button>
         </>
-      ) : null}
+      )}
     </div>
   );
 };
