@@ -1,39 +1,69 @@
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef, KeyboardEvent, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { type LeagueManager } from "@/hooks/useArenaMessages";
+import { type StartlistRider } from "@/hooks/useArenaPronostics";
 
 interface MessageInputProps {
   onSend: (content: string, metadata?: any) => void;
   managers: LeagueManager[];
+  riders?: StartlistRider[];
   disabled?: boolean;
   readOnly?: boolean;
+}
+
+type SuggestionMode = "manager" | "rider" | null;
+
+interface Suggestion {
+  id: string;
+  label: string;
+  secondary?: string;
+  mode: "manager" | "rider";
 }
 
 export const MessageInput = ({
   onSend,
   managers,
+  riders = [],
   disabled,
   readOnly,
 }: MessageInputProps) => {
   const { t } = useTranslation("arena");
   const [content, setContent] = useState("");
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [mentionIndex, setMentionIndex] = useState(0);
+  const [suggestionMode, setSuggestionMode] = useState<SuggestionMode>(null);
+  const [suggestionQuery, setSuggestionQuery] = useState("");
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const filteredManagers =
-    mentionQuery !== null
-      ? managers
-          .filter((m) =>
-            m.nom.toLowerCase().includes(mentionQuery.toLowerCase())
-          )
-          .slice(0, 6)
-      : [];
+  const filteredSuggestions = useMemo<Suggestion[]>(() => {
+    if (!suggestionMode) return [];
+    const q = suggestionQuery.toLowerCase();
 
-  const showMentions = mentionQuery !== null && filteredManagers.length > 0;
+    if (suggestionMode === "manager") {
+      return managers
+        .filter((m) => m.nom.toLowerCase().includes(q))
+        .slice(0, 6)
+        .map((m) => ({ id: m.id, label: m.nom, mode: "manager" as const }));
+    }
+
+    if (suggestionMode === "rider") {
+      return riders
+        .filter((r) => r.nom.toLowerCase().includes(q))
+        .slice(0, 8)
+        .map((r) => ({
+          id: r.coureur_id,
+          label: r.nom,
+          secondary: r.team || undefined,
+          mode: "rider" as const,
+        }));
+    }
+
+    return [];
+  }, [suggestionMode, suggestionQuery, managers, riders]);
+
+  const showSuggestions = filteredSuggestions.length > 0;
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -41,58 +71,73 @@ export const MessageInput = ({
 
     const cursorPos = e.target.selectionStart;
     const textBeforeCursor = value.slice(0, cursorPos);
-    const atMatch = textBeforeCursor.match(/@(\S*)$/);
 
-    if (atMatch) {
-      setMentionQuery(atMatch[1]);
-      setMentionIndex(0);
+    // Check for # (rider mention) first, then @ (manager mention)
+    const hashMatch = textBeforeCursor.match(/#([^\s#@]*)$/);
+    const atMatch = textBeforeCursor.match(/@([^\s#@]*)$/);
+
+    if (hashMatch && riders.length > 0) {
+      setSuggestionMode("rider");
+      setSuggestionQuery(hashMatch[1]);
+      setSuggestionIndex(0);
+    } else if (atMatch) {
+      setSuggestionMode("manager");
+      setSuggestionQuery(atMatch[1]);
+      setSuggestionIndex(0);
     } else {
-      setMentionQuery(null);
+      setSuggestionMode(null);
     }
   };
 
-  const insertMention = (manager: LeagueManager) => {
+  const insertSuggestion = (suggestion: Suggestion) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
     const cursorPos = textarea.selectionStart;
     const textBeforeCursor = content.slice(0, cursorPos);
-    const atMatch = textBeforeCursor.match(/@(\S*)$/);
+    const trigger = suggestion.mode === "rider" ? "#" : "@";
+    const regex =
+      suggestion.mode === "rider"
+        ? /#([^\s#@]*)$/
+        : /@([^\s#@]*)$/;
+    const match = textBeforeCursor.match(regex);
 
-    if (atMatch) {
-      const beforeAt = content.slice(0, cursorPos - atMatch[0].length);
+    if (match) {
+      const beforeTrigger = content.slice(0, cursorPos - match[0].length);
       const afterCursor = content.slice(cursorPos);
-      const newContent = `${beforeAt}@${manager.nom} ${afterCursor}`;
+      const newContent = `${beforeTrigger}${trigger}${suggestion.label} ${afterCursor}`;
       setContent(newContent);
-      setMentionQuery(null);
+      setSuggestionMode(null);
 
       setTimeout(() => {
         textarea.focus();
-        const newPos = beforeAt.length + manager.nom.length + 2; // +2 for @ and space
+        const newPos = beforeTrigger.length + suggestion.label.length + 2;
         textarea.setSelectionRange(newPos, newPos);
       }, 0);
     }
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (showMentions) {
+    if (showSuggestions) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setMentionIndex((i) => Math.min(i + 1, filteredManagers.length - 1));
+        setSuggestionIndex((i) =>
+          Math.min(i + 1, filteredSuggestions.length - 1)
+        );
         return;
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
-        setMentionIndex((i) => Math.max(i - 1, 0));
+        setSuggestionIndex((i) => Math.max(i - 1, 0));
         return;
       }
       if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
-        insertMention(filteredManagers[mentionIndex]);
+        insertSuggestion(filteredSuggestions[suggestionIndex]);
         return;
       }
       if (e.key === "Escape") {
-        setMentionQuery(null);
+        setSuggestionMode(null);
         return;
       }
     }
@@ -108,9 +153,10 @@ export const MessageInput = ({
     const trimmed = content.trim();
     if (!trimmed || disabled || readOnly) return;
 
-    // Extract mentioned managers from content
-    const mentionMatches = trimmed.match(/@(\S+)/g);
     const metadata: any = {};
+
+    // Extract @manager mentions
+    const mentionMatches = trimmed.match(/@([^\s#@]+)/g);
     if (mentionMatches) {
       const mentionedManagers = mentionMatches
         .map((m) => m.slice(1))
@@ -125,11 +171,26 @@ export const MessageInput = ({
       }
     }
 
+    // Extract #rider mentions
+    const riderMatches = trimmed.match(/#([^\s#@]+)/g);
+    if (riderMatches && riders.length > 0) {
+      const mentionedRiders = riderMatches
+        .map((m) => m.slice(1))
+        .map((name) => riders.find((r) => r.nom === name))
+        .filter(Boolean);
+
+      if (mentionedRiders.length > 0) {
+        metadata.rider_mentions = mentionedRiders.map((r) => ({
+          coureur_id: r!.coureur_id,
+          rider_nom: r!.nom,
+        }));
+      }
+    }
+
     onSend(trimmed, Object.keys(metadata).length > 0 ? metadata : undefined);
     setContent("");
-    setMentionQuery(null);
+    setSuggestionMode(null);
 
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -145,19 +206,32 @@ export const MessageInput = ({
 
   return (
     <div className="relative border-t bg-background">
-      {/* Mention suggestions */}
-      {showMentions && (
-        <div className="absolute bottom-full left-0 right-0 mx-3 mb-1 bg-popover border rounded-lg shadow-lg overflow-hidden z-50">
-          {filteredManagers.map((manager, i) => (
+      {/* Suggestions dropdown */}
+      {showSuggestions && (
+        <div className="absolute bottom-full left-0 right-0 mx-3 mb-1 bg-popover border rounded-lg shadow-lg overflow-hidden z-50 max-h-[240px] overflow-y-auto">
+          {suggestionMode === "rider" && (
+            <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b bg-muted/30">
+              {t("trashTalk.riderMentions", { defaultValue: "Coureurs" })}
+            </div>
+          )}
+          {filteredSuggestions.map((suggestion, i) => (
             <button
-              key={manager.id}
-              onClick={() => insertMention(manager)}
+              key={`${suggestion.mode}-${suggestion.id}`}
+              onClick={() => insertSuggestion(suggestion)}
               className={cn(
                 "w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors",
-                i === mentionIndex ? "bg-accent" : "hover:bg-muted"
+                i === suggestionIndex ? "bg-accent" : "hover:bg-muted"
               )}
             >
-              <span className="font-medium">@{manager.nom}</span>
+              <span className="font-medium">
+                {suggestion.mode === "rider" ? "#" : "@"}
+                {suggestion.label}
+              </span>
+              {suggestion.secondary && (
+                <span className="text-xs text-muted-foreground truncate">
+                  {suggestion.secondary}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -169,7 +243,13 @@ export const MessageInput = ({
           value={content}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={t("trashTalk.placeholder")}
+          placeholder={
+            riders.length > 0
+              ? t("trashTalk.placeholderWithRiders", {
+                  defaultValue: "Message... (@manager, #coureur)",
+                })
+              : t("trashTalk.placeholder")
+          }
           disabled={disabled}
           rows={1}
           className="flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground min-h-[36px] max-h-[120px] py-2"

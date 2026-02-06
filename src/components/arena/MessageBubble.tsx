@@ -15,6 +15,7 @@ interface MessageBubbleProps {
   isOwnMessage: boolean;
   showAuthor: boolean;
   disabled?: boolean;
+  rosterOwners?: Record<string, string>;
 }
 
 export const MessageBubble = ({
@@ -24,6 +25,7 @@ export const MessageBubble = ({
   isOwnMessage,
   showAuthor,
   disabled,
+  rosterOwners,
 }: MessageBubbleProps) => {
   const { t, i18n } = useTranslation("arena");
   const dateLocale = i18n.language === "fr" ? fr : enUS;
@@ -38,9 +40,24 @@ export const MessageBubble = ({
     [message.created_at, dateLocale]
   );
 
-  // Highlight @mentions in content
+  // Build a map from rider name → coureur_id from metadata
+  const riderMentionMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    const mentions = message.metadata?.rider_mentions;
+    if (Array.isArray(mentions)) {
+      for (const m of mentions) {
+        if (m.rider_nom && m.coureur_id) {
+          map[m.rider_nom] = m.coureur_id;
+        }
+      }
+    }
+    return map;
+  }, [message.metadata]);
+
+  // Highlight @mentions and #rider mentions in content
   const renderedContent = useMemo(() => {
-    return message.content.split(/(@\S+)/g).map((part, i) => {
+    // Split on @ and # mentions
+    return message.content.split(/([@#][^\s@#]+)/g).map((part, i) => {
       if (part.startsWith("@")) {
         return (
           <span key={i} className="font-semibold text-primary">
@@ -48,9 +65,27 @@ export const MessageBubble = ({
           </span>
         );
       }
+      if (part.startsWith("#")) {
+        const riderName = part.slice(1);
+        const coureurId = riderMentionMap[riderName];
+        const ownerName = coureurId && rosterOwners?.[coureurId];
+
+        return (
+          <span key={i} className="inline-flex items-baseline gap-0.5">
+            <span className="font-semibold text-amber-600 dark:text-amber-400">
+              {riderName}
+            </span>
+            {ownerName && (
+              <span className="text-[10px] font-medium text-muted-foreground">
+                ({ownerName})
+              </span>
+            )}
+          </span>
+        );
+      }
       return part;
     });
-  }, [message.content]);
+  }, [message.content, riderMentionMap, rosterOwners]);
 
   // System message → centered separator
   if (isSystem) {

@@ -288,6 +288,32 @@ export function useLeagueManagers(leagueId: string) {
   });
 }
 
+// ── Rider owners (for rider mention decorations) ──────
+
+export function useLeagueRosterOwners(leagueId: string) {
+  return useQuery({
+    queryKey: ["arena-league-roster-owners", leagueId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rosters")
+        .select("coureur_id, managers!rosters_manager_id_fkey(nom)")
+        .eq("league_id", leagueId);
+
+      if (error) throw error;
+
+      const ownersMap: Record<string, string> = {};
+      for (const r of data || []) {
+        if (r.coureur_id && (r.managers as any)?.nom) {
+          ownersMap[r.coureur_id] = (r.managers as any).nom;
+        }
+      }
+      return ownersMap;
+    },
+    enabled: !!leagueId,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
 // ── Realtime subscriptions ─────────────────────────────
 
 export function useArenaRealtime(
