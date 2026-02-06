@@ -6207,6 +6207,15 @@ export type Database = {
         Returns: Json
       }
       admin_results_reset_preview: { Args: never; Returns: Json }
+      arena_broadcast_live_message: {
+        Args: {
+          p_content: string
+          p_course_id: string
+          p_manager_id: string
+          p_metadata?: Json
+        }
+        Returns: Json
+      }
       auto_close_ghost_auctions: { Args: never; Returns: undefined }
       auto_open_scheduled_auctions: { Args: never; Returns: undefined }
       course_points_summary: {
