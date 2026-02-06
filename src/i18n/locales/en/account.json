@@ -33,7 +33,9 @@
       "startlists": "Validated startlists",
       "startlistsDescription": "When a new startlist is available",
       "auctions": "Auctions",
-      "auctionsDescription": "Auction opening, closing and validation"
+      "auctionsDescription": "Auction opening, closing and validation",
+      "pronostics": "Predictions",
+      "pronosticsDescription": "Reminders before prediction deadlines close"
     }
   },
   "profile": {

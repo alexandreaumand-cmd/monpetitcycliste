@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
-import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Radar } from "lucide-react";
+import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Radar, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataManagementTabs } from "@/components/admin/DataManagementTabs";
 import { SuperAdminLeaguesPage } from "@/pages/admin/SuperAdminLeaguesPage";
@@ -16,6 +16,7 @@ import { PointsLedgerTable } from "@/components/admin/PointsLedgerTable";
 import { StartlistDataManager } from "@/components/admin/StartlistDataManager";
 import { SuperAdminBonusPage } from "@/pages/admin/SuperAdminBonusPage";
 import { StartlistTracker } from "@/components/admin/StartlistTracker";
+import { PronosticDeadlinesManager } from "@/components/admin/arena/PronosticDeadlinesManager";
 
 const superAdminNavItems = [
   { label: 'Résultats', path: 'results', icon: Trophy },
@@ -31,6 +32,7 @@ const superAdminNavItems = [
   { label: 'Données', path: 'data', icon: Database },
   { label: 'Ligues', path: 'leagues', icon: Users },
   { label: 'Utilisateurs', path: 'users', icon: Shield },
+  { label: 'Arène', path: 'arena', icon: Swords },
 ];
 
 interface SuperAdminPageDesktopProps {
@@ -103,6 +105,7 @@ export const SuperAdminPageDesktop = ({ manager, onSignOut }: SuperAdminPageDesk
               <Route path="leagues" element={<SuperAdminLeaguesPage />} />
               <Route path="leagues/:id" element={<LeagueDetailPage />} />
               <Route path="users" element={<UsersManagementPage />} />
+              <Route path="arena" element={<PronosticDeadlinesManager />} />
             </Routes>
           </div>
         </main>

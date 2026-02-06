@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Bell, Loader2, AlertCircle, Trophy, ListChecks, Gavel } from "lucide-react";
+import { Bell, Loader2, AlertCircle, Trophy, ListChecks, Gavel, Target } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { toast } from "sonner";
 
@@ -174,6 +174,26 @@ export function NotificationSettings() {
                     id="pref-auctions"
                     checked={preferences.auctions}
                     onCheckedChange={(checked) => handlePreferenceChange('auctions', checked)}
+                  />
+                </div>
+
+                {/* Pronostics notifications */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Target className="h-4 w-4 text-primary" />
+                    <div>
+                      <Label htmlFor="pref-pronostics" className="text-sm font-medium">
+                        {t('notifications.types.pronostics')}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        {t('notifications.types.pronosticsDescription')}
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="pref-pronostics"
+                    checked={preferences.pronostics}
+                    onCheckedChange={(checked) => handlePreferenceChange('pronostics', checked)}
                   />
                 </div>
               </div>

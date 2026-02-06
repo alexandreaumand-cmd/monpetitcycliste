@@ -9,6 +9,7 @@ export interface PushPreferences {
   results: boolean;
   startlists: boolean;
   auctions: boolean;
+  pronostics: boolean;
 }
 
 export interface PushDebugInfo {
@@ -51,7 +52,8 @@ export function usePushNotifications(): UsePushNotificationsReturn {
   const [preferences, setPreferences] = useState<PushPreferences>({
     results: true,
     startlists: true,
-    auctions: true
+    auctions: true,
+    pronostics: true,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [debugInfo, setDebugInfo] = useState<PushDebugInfo>({
@@ -113,7 +115,8 @@ export function usePushNotifications(): UsePushNotificationsReturn {
             setPreferences({
               results: prefs.results ?? true,
               startlists: prefs.startlists ?? true,
-              auctions: prefs.auctions ?? true
+              auctions: prefs.auctions ?? true,
+              pronostics: prefs.pronostics ?? true,
             });
           }
         } else {
@@ -164,7 +167,8 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       const prefsAsJson: Json = {
         results: preferences.results,
         startlists: preferences.startlists,
-        auctions: preferences.auctions
+        auctions: preferences.auctions,
+        pronostics: preferences.pronostics,
       };
 
       // Check if subscription exists
@@ -312,7 +316,8 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       const prefsAsJson: Json = {
         results: updatedPreferences.results,
         startlists: updatedPreferences.startlists,
-        auctions: updatedPreferences.auctions
+        auctions: updatedPreferences.auctions,
+        pronostics: updatedPreferences.pronostics,
       };
 
       const { error } = await supabase

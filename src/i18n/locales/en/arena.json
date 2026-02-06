@@ -10,8 +10,45 @@
   },
   "pronostics": {
     "title": "Predictions",
-    "comingSoon": "Coming soon",
-    "comingSoonDesc": "Bet on the winners of upcoming races and stages"
+    "empty": "No predictions available",
+    "emptyDesc": "Predictions will appear here once the admin has configured deadlines",
+    "noManager": "You must have a manager profile to access predictions",
+    "selectRider": "Select a rider...",
+    "searchRider": "Search a rider...",
+    "loadingRiders": "Loading riders...",
+    "noStartlist": "Startlist not available",
+    "noRiderFound": "No rider found",
+    "saved": "Prediction saved: {{rider}}",
+    "saveError": "Error saving prediction",
+    "saving": "Saving...",
+    "yourPick": "Your pick",
+    "noPick": "No prediction",
+    "deadlineIn": "Closes in {{time}}",
+    "deadlineExpired": "Closed {{time}}",
+    "sections": {
+      "open": "Open predictions",
+      "closed": "Results"
+    },
+    "types": {
+      "stageWinner": "Stage winner",
+      "gcWinner": "GC winner",
+      "oneDayWinner": "Winner"
+    },
+    "status": {
+      "open": "Open",
+      "closed": "Closed",
+      "correct": "Correct",
+      "incorrect": "Incorrect"
+    },
+    "stats": {
+      "total": "Total",
+      "correct": "Correct",
+      "incorrect": "Incorrect"
+    },
+    "standings": {
+      "title": "Predictions Standings",
+      "empty": "No evaluated results yet"
+    }
   },
   "votes": {
     "title": "Community Votes",
