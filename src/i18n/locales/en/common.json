@@ -42,7 +42,8 @@
     "settings": "Settings",
     "logout": "Logout",
     "login": "Login",
-    "signup": "Sign up"
+    "signup": "Sign up",
+    "arena": "Arena"
   },
   "auth": {
     "email": "Email",

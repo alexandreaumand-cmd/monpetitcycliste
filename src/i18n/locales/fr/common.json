@@ -42,7 +42,8 @@
     "settings": "Paramètres",
     "logout": "Déconnexion",
     "login": "Connexion",
-    "signup": "Inscription"
+    "signup": "Inscription",
+    "arena": "Arène"
   },
   "auth": {
     "email": "Email",

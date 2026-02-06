@@ -1,4 +1,4 @@
-import { BarChart3, Users, Calendar, ListChecks, LineChart, Trophy, Settings, Home, Shield, Database } from "lucide-react";
+import { BarChart3, Users, Calendar, ListChecks, LineChart, Trophy, Settings, Home, Shield, Database, Swords } from "lucide-react";
 import { NavLink, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -33,6 +33,7 @@ const navItemsConfig = [
   { key: 'startlist', href: '/dashboard/startlist', icon: ListChecks },
   { key: 'statistics', href: '/dashboard/statistiques', icon: LineChart },
   { key: 'auctions', href: '/dashboard/encheres', icon: Trophy },
+  { key: 'arena', href: '/dashboard/arene', icon: Swords },
 ];
 
 export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = false }: AppSidebarProps) {

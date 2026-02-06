@@ -64,7 +64,8 @@
     "menu": "Menu",
     "year": "Année",
     "season": "Saison",
-    "seasonLocked": "Saison verrouillée"
+    "seasonLocked": "Saison verrouillée",
+    "arena": "Arène"
   },
   "logout": "Déconnexion",
   "profile": {

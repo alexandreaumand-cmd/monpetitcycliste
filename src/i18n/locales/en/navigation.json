@@ -64,7 +64,8 @@
     "menu": "Menu",
     "year": "Year",
     "season": "Season",
-    "seasonLocked": "Season locked"
+    "seasonLocked": "Season locked",
+    "arena": "Arena"
   },
   "logout": "Sign Out",
   "profile": {

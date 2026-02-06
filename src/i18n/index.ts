@@ -20,6 +20,7 @@ import frStatistics from './locales/fr/statistics.json';
 import frAdmin from './locales/fr/admin.json';
 import frData from './locales/fr/data.json';
 import frInstall from './locales/fr/install.json';
+import frArena from './locales/fr/arena.json';
 
 // Import English translations
 import enCommon from './locales/en/common.json';
@@ -39,6 +40,7 @@ import enStatistics from './locales/en/statistics.json';
 import enAdmin from './locales/en/admin.json';
 import enData from './locales/en/data.json';
 import enInstall from './locales/en/install.json';
+import enArena from './locales/en/arena.json';
 
 export const resources = {
   fr: {
@@ -59,6 +61,7 @@ export const resources = {
     admin: frAdmin,
     data: frData,
     install: frInstall,
+    arena: frArena,
   },
   en: {
     common: enCommon,
@@ -78,6 +81,7 @@ export const resources = {
     admin: enAdmin,
     data: enData,
     install: enInstall,
+    arena: enArena,
   },
 } as const;
 
@@ -92,7 +96,7 @@ i18n
     resources,
     fallbackLng: 'fr',
     defaultNS,
-    ns: ['common', 'team', 'auction', 'dashboard', 'rankings', 'home', 'auth', 'account', 'calendar', 'results', 'leagues', 'navigation', 'errors', 'statistics', 'admin', 'data', 'install'],
+    ns: ['common', 'team', 'auction', 'dashboard', 'rankings', 'home', 'auth', 'account', 'calendar', 'results', 'leagues', 'navigation', 'errors', 'statistics', 'admin', 'data', 'install', 'arena'],
     interpolation: {
       escapeValue: false,
     },
