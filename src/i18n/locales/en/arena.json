@@ -57,6 +57,20 @@
   },
   "trashTalk": {
     "title": "Trash Talk",
+    "channels": {
+      "general": "General",
+      "liveCourses": "Live Courses"
+    },
+    "placeholder": "Write a message...",
+    "placeholderReadOnly": "This channel is read-only",
+    "send": "Send",
+    "sendError": "Error sending message",
+    "loadMore": "Load more messages",
+    "loading": "Loading...",
+    "empty": "No messages",
+    "emptyDesc": "Be the first to write in this channel!",
+    "system": "System",
+    "admin": "Admin",
     "comingSoon": "Coming soon",
     "comingSoonDesc": "Chat, banter and react in real-time"
   },
