@@ -1,6 +1,6 @@
 import { useState, useRef, KeyboardEvent, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Send } from "lucide-react";
+import { Send, Bike } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { type LeagueManager } from "@/hooks/useArenaMessages";
@@ -72,13 +72,13 @@ export const MessageInput = ({
     const cursorPos = e.target.selectionStart;
     const textBeforeCursor = value.slice(0, cursorPos);
 
-    // Check for # (rider mention) first, then @ (manager mention)
-    const hashMatch = textBeforeCursor.match(/#([^\s#@]*)$/);
+    // Check for # (rider mention) — match everything after # until start of line or previous space
+    const hashMatch = textBeforeCursor.match(/#([^\n#@]*)$/);
     const atMatch = textBeforeCursor.match(/@([^\s#@]*)$/);
 
     if (hashMatch && riders.length > 0) {
       setSuggestionMode("rider");
-      setSuggestionQuery(hashMatch[1]);
+      setSuggestionQuery(hashMatch[1].trim());
       setSuggestionIndex(0);
     } else if (atMatch) {
       setSuggestionMode("manager");
@@ -95,25 +95,39 @@ export const MessageInput = ({
 
     const cursorPos = textarea.selectionStart;
     const textBeforeCursor = content.slice(0, cursorPos);
-    const trigger = suggestion.mode === "rider" ? "#" : "@";
-    const regex =
-      suggestion.mode === "rider"
-        ? /#([^\s#@]*)$/
-        : /@([^\s#@]*)$/;
-    const match = textBeforeCursor.match(regex);
 
-    if (match) {
-      const beforeTrigger = content.slice(0, cursorPos - match[0].length);
-      const afterCursor = content.slice(cursorPos);
-      const newContent = `${beforeTrigger}${trigger}${suggestion.label} ${afterCursor}`;
-      setContent(newContent);
-      setSuggestionMode(null);
+    if (suggestion.mode === "manager") {
+      const match = textBeforeCursor.match(/@([^\s#@]*)$/);
+      if (match) {
+        const beforeTrigger = content.slice(0, cursorPos - match[0].length);
+        const afterCursor = content.slice(cursorPos);
+        const newContent = `${beforeTrigger}@${suggestion.label} ${afterCursor}`;
+        setContent(newContent);
+        setSuggestionMode(null);
 
-      setTimeout(() => {
-        textarea.focus();
-        const newPos = beforeTrigger.length + suggestion.label.length + 2;
-        textarea.setSelectionRange(newPos, newPos);
-      }, 0);
+        setTimeout(() => {
+          textarea.focus();
+          const newPos = beforeTrigger.length + suggestion.label.length + 2;
+          textarea.setSelectionRange(newPos, newPos);
+        }, 0);
+      }
+    } else if (suggestion.mode === "rider") {
+      // For riders, replace #query with {RiderName} (curly braces to handle multi-word names)
+      const match = textBeforeCursor.match(/#([^\n#@]*)$/);
+      if (match) {
+        const beforeTrigger = content.slice(0, cursorPos - match[0].length);
+        const afterCursor = content.slice(cursorPos);
+        const riderTag = `{${suggestion.label}}`;
+        const newContent = `${beforeTrigger}${riderTag} ${afterCursor}`;
+        setContent(newContent);
+        setSuggestionMode(null);
+
+        setTimeout(() => {
+          textarea.focus();
+          const newPos = beforeTrigger.length + riderTag.length + 1;
+          textarea.setSelectionRange(newPos, newPos);
+        }, 0);
+      }
     }
   };
 
@@ -171,11 +185,11 @@ export const MessageInput = ({
       }
     }
 
-    // Extract #rider mentions
-    const riderMatches = trimmed.match(/#([^\s#@]+)/g);
+    // Extract {RiderName} rider mentions
+    const riderMatches = trimmed.match(/\{([^}]+)\}/g);
     if (riderMatches && riders.length > 0) {
       const mentionedRiders = riderMatches
-        .map((m) => m.slice(1))
+        .map((m) => m.slice(1, -1)) // Remove { and }
         .map((name) => riders.find((r) => r.nom === name))
         .filter(Boolean);
 
@@ -210,7 +224,8 @@ export const MessageInput = ({
       {showSuggestions && (
         <div className="absolute bottom-full left-0 right-0 mx-3 mb-1 bg-popover border rounded-lg shadow-lg overflow-hidden z-50 max-h-[240px] overflow-y-auto">
           {suggestionMode === "rider" && (
-            <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b bg-muted/30">
+            <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b bg-muted/30 flex items-center gap-1">
+              <Bike className="h-3 w-3" />
               {t("trashTalk.riderMentions", { defaultValue: "Coureurs" })}
             </div>
           )}
@@ -224,7 +239,7 @@ export const MessageInput = ({
               )}
             >
               <span className="font-medium">
-                {suggestion.mode === "rider" ? "#" : "@"}
+                {suggestion.mode === "rider" ? "🚴 " : "@"}
                 {suggestion.label}
               </span>
               {suggestion.secondary && (
