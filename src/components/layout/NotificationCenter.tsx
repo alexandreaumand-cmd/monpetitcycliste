@@ -102,8 +102,8 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
       navigate(`/dashboard/startlist?${params.toString()}`);
     } else if (notification.type === 'results_added') {
       const courseId = notification.metadata?.course_id;
-      // Utiliser la ligue courante, sinon fallback sur celle de la notification
-      const leagueId = currentLeagueId || notification.metadata?.league_id;
+      // Utiliser la ligue de la notification en priorité, sinon fallback sur la ligue courante
+      const leagueId = notification.metadata?.league_id || currentLeagueId;
       const params = new URLSearchParams();
       if (leagueId) params.set('leagueId', leagueId);
       if (courseId) params.set('courseId', courseId);

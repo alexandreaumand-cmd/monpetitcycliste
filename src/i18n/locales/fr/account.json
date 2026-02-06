@@ -75,6 +75,14 @@
     "invalidFileType": "Veuillez importer un fichier image",
     "fileTooLarge": "Fichier trop volumineux (max 2 Mo)"
   },
+  "defaultLeague": {
+    "title": "Ligue par défaut",
+    "description": "Choisissez la ligue qui s'ouvre automatiquement au lancement de l'application",
+    "label": "Ligue par défaut",
+    "noPreference": "Automatique (première ligue active)",
+    "updated": "Ligue par défaut mise à jour",
+    "error": "Erreur lors de la mise à jour"
+  },
   "buttons": {
     "updateProfile": "Mettre à jour le profil",
     "uploadPhoto": "Changer la photo"

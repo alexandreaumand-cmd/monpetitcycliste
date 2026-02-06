@@ -2100,6 +2100,7 @@ export type Database = {
           email: string | null
           id: string
           nom: string
+          preferred_league_id: string | null
           sponsor: string | null
           user_id: string | null
         }
@@ -2109,6 +2110,7 @@ export type Database = {
           email?: string | null
           id?: string
           nom: string
+          preferred_league_id?: string | null
           sponsor?: string | null
           user_id?: string | null
         }
@@ -2118,10 +2120,19 @@ export type Database = {
           email?: string | null
           id?: string
           nom?: string
+          preferred_league_id?: string | null
           sponsor?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "managers_preferred_league_id_fkey"
+            columns: ["preferred_league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       name_aliases: {
         Row: {

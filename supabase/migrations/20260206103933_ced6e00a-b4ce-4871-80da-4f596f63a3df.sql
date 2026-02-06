@@ -1,0 +1,1 @@
+ALTER TABLE public.managers ADD COLUMN preferred_league_id uuid REFERENCES public.leagues(id) ON DELETE SET NULL;

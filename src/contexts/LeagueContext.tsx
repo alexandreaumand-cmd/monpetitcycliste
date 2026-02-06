@@ -25,34 +25,50 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasAutoSelected, setHasAutoSelected] = useState(false);
 
-  // Fetch user leagues directly in context to avoid circular dependency
-  const { data: userLeagues, isLoading: leaguesLoading } = useQuery({
+  // Fetch user leagues and preferred league directly in context
+  const { data: contextData, isLoading: contextLoading } = useQuery({
     queryKey: ['user-leagues-for-context'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) return { leagues: [], preferredLeagueId: null };
 
-      const { data: memberships } = await supabase
-        .from('league_members')
-        .select(`
-          league_id,
-          leagues:league_id (
-            id,
-            name,
-            status
-          )
-        `)
-        .eq('user_id', user.id);
+      // Fetch leagues and manager profile in parallel
+      const [membershipsResult, managerResult] = await Promise.all([
+        supabase
+          .from('league_members')
+          .select(`
+            league_id,
+            leagues:league_id (
+              id,
+              name,
+              status
+            )
+          `)
+          .eq('user_id', user.id),
+        supabase
+          .from('managers')
+          .select('preferred_league_id')
+          .eq('user_id', user.id)
+          .single()
+      ]);
 
-      return (memberships || [])
+      const leagues = (membershipsResult.data || [])
         .filter(m => m.leagues)
         .map(m => m.leagues as { id: string; name: string; status: string });
+
+      return {
+        leagues,
+        preferredLeagueId: (managerResult.data?.preferred_league_id as string) || null,
+      };
     },
     staleTime: 1000 * 60 * 5,
   });
 
+  const userLeagues = contextData?.leagues;
+  const preferredLeagueId = contextData?.preferredLeagueId;
+
   useEffect(() => {
-    if (leaguesLoading) return;
+    if (contextLoading) return;
 
     const fromUrl = searchParams.get("leagueId");
 
@@ -62,9 +78,14 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       setHasAutoSelected(false);
     } else if (userLeagues && userLeagues.length > 0 && !hasAutoSelected) {
-      // No URL param - auto-select first active league
+      // Priority 2: preferred league (if it exists and user is a member)
+      const preferredLeague = preferredLeagueId
+        ? userLeagues.find(l => l.id === preferredLeagueId)
+        : null;
+
+      // Priority 3: first active league, then any league
       const activeLeagues = userLeagues.filter(l => l.status !== 'completed');
-      const defaultLeague = activeLeagues[0] || userLeagues[0];
+      const defaultLeague = preferredLeague || activeLeagues[0] || userLeagues[0];
 
       if (defaultLeague) {
         // Update URL with default league
@@ -75,11 +96,11 @@ export function LeagueProvider({ children }: { children: ReactNode }) {
         setHasAutoSelected(true);
       }
       setIsLoading(false);
-    } else if (!leaguesLoading) {
+    } else if (!contextLoading) {
       // No leagues available
       setIsLoading(false);
     }
-  }, [searchParams, userLeagues, leaguesLoading, navigate, hasAutoSelected]);
+  }, [searchParams, userLeagues, preferredLeagueId, contextLoading, navigate, hasAutoSelected]);
 
   // Invalidate only league-specific queries when league changes (targeted invalidation)
   useEffect(() => {
