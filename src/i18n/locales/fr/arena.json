@@ -144,5 +144,21 @@
     "title": "Hall of Fame",
     "comingSoon": "Bientôt disponible",
     "comingSoonDesc": "Le classement des managers par Points de Prestige"
+  },
+  "admin": {
+    "deadlines": {
+      "calendarTitle": "Pronostics par course",
+      "opened": "Ouvert",
+      "notOpened": "Fermé",
+      "selectedCount": "{{count}} pronostic(s) sélectionné(s)",
+      "openSelected": "Ouvrir les sélectionnés",
+      "bulkSuccess": "{{count}} deadline(s) créée(s) avec succès",
+      "duplicateError": "Certaines deadlines existent déjà",
+      "deleted": "Deadline supprimée",
+      "deleteTitle": "Confirmer la suppression",
+      "deleteDesc": "Êtes-vous sûr de vouloir supprimer cette deadline ? Les pronostics existants ne seront pas supprimés.",
+      "cancel": "Annuler",
+      "delete": "Supprimer"
+    }
   }
 }
