@@ -134,6 +134,10 @@
       "activateError": "Erreur lors de l'activation",
       "deactivated": "Course live désactivée",
       "deactivateError": "Erreur lors de la désactivation"
+    },
+    "broadcast": {
+      "indicator": "📡 Mode diffusion - vos messages seront envoyés à toutes les ligues",
+      "success": "Message diffusé dans {{count}} ligue(s)"
     }
   },
   "hallOfFame": {

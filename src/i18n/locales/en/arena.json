@@ -134,6 +134,10 @@
       "activateError": "Error activating race",
       "deactivated": "Live race deactivated",
       "deactivateError": "Error deactivating race"
+    },
+    "broadcast": {
+      "indicator": "📡 Broadcast mode - your messages will be sent to all leagues",
+      "success": "Message broadcast to {{count}} league(s)"
     }
   },
   "hallOfFame": {

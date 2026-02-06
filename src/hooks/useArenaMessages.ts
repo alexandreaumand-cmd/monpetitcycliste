@@ -187,6 +187,35 @@ export function useSendArenaMessage() {
   });
 }
 
+// ── Broadcast message to ALL leagues (super-admin only) ───
+
+export function useBroadcastLiveMessage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      content: string;
+      courseId: string;
+      managerId: string;
+      metadata?: any;
+    }) => {
+      const { data, error } = await supabase.rpc("arena_broadcast_live_message", {
+        p_content: params.content,
+        p_course_id: params.courseId,
+        p_manager_id: params.managerId,
+        p_metadata: params.metadata || {},
+      });
+
+      if (error) throw error;
+      return data as { success: boolean; leagues_count: number };
+    },
+    onSuccess: () => {
+      // Invalidate all arena message queries to refresh
+      queryClient.invalidateQueries({ queryKey: ["arena-messages"] });
+    },
+  });
+}
+
 // ── Toggle reaction ────────────────────────────────────
 
 export function useToggleReaction() {

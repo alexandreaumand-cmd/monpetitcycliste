@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, MessageCircle } from "lucide-react";
+import { Loader2, MessageCircle, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ChannelSelector } from "./ChannelSelector";
 import { LiveCourseSelector } from "./LiveCourseSelector";
 import { MessageBubble } from "./MessageBubble";
@@ -11,6 +12,7 @@ import {
   useArenaMessages,
   useArenaRealtime,
   useSendArenaMessage,
+  useBroadcastLiveMessage,
   useToggleReaction,
   useMessageReactions,
   useLeagueManagers,
@@ -52,6 +54,7 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
   useArenaRealtime(channelId, leagueId);
 
   const sendMessage = useSendArenaMessage();
+  const broadcastMessage = useBroadcastLiveMessage();
   const toggleReaction = useToggleReaction();
 
   // Flatten pages → chronological order (oldest first)
@@ -82,31 +85,50 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
 
   const handleSend = useCallback(
     (content: string, metadata?: any) => {
-      if (!channelId || !managerId) return;
+      if (!managerId) return;
 
-      const messageType =
-        activeSlug === "live-courses" ? "admin_broadcast" : "user";
-
-      sendMessage.mutate(
-        {
-          channelId,
-          leagueId,
-          managerId,
-          content,
-          messageType,
-          metadata,
-          courseId: activeSlug === "live-courses" ? activeCourseId : undefined,
-        },
-        {
-          onError: (error: any) => {
-            toast.error(error.message || t("trashTalk.sendError"));
+      // Super-admin in live-courses uses broadcast to ALL leagues
+      if (activeSlug === "live-courses" && isSuperAdmin && activeCourseId) {
+        broadcastMessage.mutate(
+          {
+            content,
+            courseId: activeCourseId,
+            managerId,
+            metadata,
           },
-        }
-      );
+          {
+            onSuccess: (data) => {
+              toast.success(t("trashTalk.broadcast.success", { count: data.leagues_count }));
+            },
+            onError: (error: any) => {
+              toast.error(error.message || t("trashTalk.sendError"));
+            },
+          }
+        );
+      } else {
+        // Regular message to current league's channel
+        if (!channelId) return;
+        
+        sendMessage.mutate(
+          {
+            channelId,
+            leagueId,
+            managerId,
+            content,
+            messageType: "user",
+            metadata,
+          },
+          {
+            onError: (error: any) => {
+              toast.error(error.message || t("trashTalk.sendError"));
+            },
+          }
+        );
+      }
 
       setAutoScroll(true);
     },
-    [channelId, leagueId, managerId, activeSlug, activeCourseId, sendMessage, t]
+    [channelId, leagueId, managerId, activeSlug, activeCourseId, isSuperAdmin, sendMessage, broadcastMessage, t]
   );
 
   const handleToggleReaction = useCallback(
@@ -143,11 +165,22 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
       <div className="p-3 border-b space-y-2">
         <ChannelSelector activeChannel={activeSlug} onSelect={setActiveSlug} />
         {activeSlug === "live-courses" && (
-          <LiveCourseSelector
-            activeCourseId={activeCourseId}
-            onSelect={setActiveCourseId}
-            isSuperAdmin={isSuperAdmin}
-          />
+          <>
+            <LiveCourseSelector
+              activeCourseId={activeCourseId}
+              onSelect={setActiveCourseId}
+              isSuperAdmin={isSuperAdmin}
+            />
+            {/* Broadcast mode indicator for super-admin */}
+            {isSuperAdmin && activeCourseId && (
+              <div className="flex items-center gap-2 p-2 rounded-md bg-primary/10 border border-primary/20">
+                <Radio className="h-4 w-4 text-primary animate-pulse" />
+                <span className="text-xs font-medium text-primary">
+                  {t("trashTalk.broadcast.indicator")}
+                </span>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -219,7 +252,7 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
       <MessageInput
         onSend={handleSend}
         managers={managers}
-        disabled={sendMessage.isPending || !canSend}
+        disabled={sendMessage.isPending || broadcastMessage.isPending || !canSend}
         readOnly={isReadOnly}
       />
     </div>
