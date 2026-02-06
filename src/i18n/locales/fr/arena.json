@@ -119,7 +119,22 @@
     "system": "Système",
     "admin": "Admin",
     "comingSoon": "Bientôt disponible",
-    "comingSoonDesc": "Discutez, chambrez et réagissez en temps réel"
+    "comingSoonDesc": "Discutez, chambrez et réagissez en temps réel",
+    "liveCourses": {
+      "selectCourse": "Choisir une course",
+      "selectPrompt": "Sélectionnez une course pour voir les messages live",
+      "noCourses": "Aucune course live configurée",
+      "noCoursesUser": "Aucune course live en cours",
+      "manage": "Gérer",
+      "manageTitle": "Gérer les courses live",
+      "activeCourses": "Courses actives",
+      "addCourse": "Ajouter une course",
+      "selectPlaceholder": "Sélectionner une course...",
+      "activated": "Course live activée",
+      "activateError": "Erreur lors de l'activation",
+      "deactivated": "Course live désactivée",
+      "deactivateError": "Erreur lors de la désactivation"
+    }
   },
   "hallOfFame": {
     "title": "Hall of Fame",

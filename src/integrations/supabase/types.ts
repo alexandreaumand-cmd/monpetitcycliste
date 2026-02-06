@@ -287,11 +287,107 @@ export type Database = {
           },
         ]
       }
+      arena_live_courses: {
+        Row: {
+          activated_by: string
+          course_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+        }
+        Insert: {
+          activated_by: string
+          course_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+        }
+        Update: {
+          activated_by?: string
+          course_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arena_live_courses_activated_by_fkey"
+            columns: ["activated_by"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["taken_by_manager_id"]
+          },
+          {
+            foreignKeyName: "arena_live_courses_activated_by_fkey"
+            columns: ["activated_by"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_live_courses_activated_by_fkey"
+            columns: ["activated_by"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_live_courses_activated_by_fkey"
+            columns: ["activated_by"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_live_courses_activated_by_fkey"
+            columns: ["activated_by"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "arena_live_courses_activated_by_fkey"
+            columns: ["activated_by"]
+            isOneToOne: false
+            referencedRelation: "v_managers_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_live_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: true
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_live_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: true
+            referencedRelation: "courses_for_points_norm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_live_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: true
+            referencedRelation: "v_course_points_theoriques"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "arena_live_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: true
+            referencedRelation: "v_home_recent_results"
+            referencedColumns: ["course_id"]
+          },
+        ]
+      }
       arena_messages: {
         Row: {
           author_manager_id: string | null
           channel_id: string
           content: string
+          course_id: string | null
           created_at: string
           id: string
           league_id: string
@@ -303,6 +399,7 @@ export type Database = {
           author_manager_id?: string | null
           channel_id: string
           content: string
+          course_id?: string | null
           created_at?: string
           id?: string
           league_id: string
@@ -314,6 +411,7 @@ export type Database = {
           author_manager_id?: string | null
           channel_id?: string
           content?: string
+          course_id?: string | null
           created_at?: string
           id?: string
           league_id?: string
@@ -370,6 +468,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "arena_channels"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_messages_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_messages_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_for_points_norm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arena_messages_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_course_points_theoriques"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "arena_messages_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_recent_results"
+            referencedColumns: ["course_id"]
           },
           {
             foreignKeyName: "arena_messages_league_id_fkey"

@@ -119,7 +119,22 @@
     "system": "System",
     "admin": "Admin",
     "comingSoon": "Coming soon",
-    "comingSoonDesc": "Chat, banter and react in real-time"
+    "comingSoonDesc": "Chat, banter and react in real-time",
+    "liveCourses": {
+      "selectCourse": "Select a race",
+      "selectPrompt": "Select a race to view live messages",
+      "noCourses": "No live races configured",
+      "noCoursesUser": "No live races at the moment",
+      "manage": "Manage",
+      "manageTitle": "Manage live races",
+      "activeCourses": "Active races",
+      "addCourse": "Add a race",
+      "selectPlaceholder": "Select a race...",
+      "activated": "Live race activated",
+      "activateError": "Error activating race",
+      "deactivated": "Live race deactivated",
+      "deactivateError": "Error deactivating race"
+    }
   },
   "hallOfFame": {
     "title": "Hall of Fame",

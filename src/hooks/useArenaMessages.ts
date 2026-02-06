@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useCallback } from "react";
+import { useEffect } from "react";
 
 const PAGE_SIZE = 30;
 
@@ -16,6 +16,7 @@ export interface ArenaMessage {
   metadata: any;
   source_message_id: string | null;
   created_at: string;
+  course_id?: string | null;
   author?: {
     id: string;
     nom: string;
@@ -54,17 +55,21 @@ export function useArenaChannels(leagueId: string) {
 
 // ── Messages (infinite scroll) ─────────────────────────
 
-export function useArenaMessages(channelId: string | null, leagueId: string) {
+export function useArenaMessages(
+  channelId: string | null,
+  leagueId: string,
+  courseId?: string | null
+) {
   return useInfiniteQuery({
-    queryKey: ["arena-messages", channelId, leagueId],
+    queryKey: ["arena-messages", channelId, leagueId, courseId ?? "all"],
     queryFn: async ({ pageParam = 0 }) => {
       if (!channelId) return { messages: [], nextOffset: null };
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("arena_messages")
         .select(
           `id, channel_id, league_id, author_manager_id, message_type,
-           content, metadata, source_message_id, created_at,
+           content, metadata, source_message_id, created_at, course_id,
            author:managers!arena_messages_author_manager_id_fkey(id, nom, avatar_url)`
         )
         .eq("channel_id", channelId)
@@ -72,6 +77,12 @@ export function useArenaMessages(channelId: string | null, leagueId: string) {
         .order("created_at", { ascending: false })
         .range(pageParam, pageParam + PAGE_SIZE - 1);
 
+      // Filter by course_id when provided (for live-courses sub-channels)
+      if (courseId) {
+        query = query.eq("course_id", courseId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
       return {
@@ -143,17 +154,25 @@ export function useSendArenaMessage() {
       content: string;
       messageType?: string;
       metadata?: any;
+      courseId?: string | null;
     }) => {
+      const insertData: any = {
+        channel_id: params.channelId,
+        league_id: params.leagueId,
+        author_manager_id: params.managerId,
+        content: params.content,
+        message_type: params.messageType || "user",
+        metadata: params.metadata || {},
+      };
+
+      // Add course_id for live-courses messages
+      if (params.courseId) {
+        insertData.course_id = params.courseId;
+      }
+
       const { data, error } = await supabase
         .from("arena_messages")
-        .insert({
-          channel_id: params.channelId,
-          league_id: params.leagueId,
-          author_manager_id: params.managerId,
-          content: params.content,
-          message_type: params.messageType || "user",
-          metadata: params.metadata || {},
-        })
+        .insert(insertData)
         .select()
         .single();
 

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChannelSelector } from "./ChannelSelector";
+import { LiveCourseSelector } from "./LiveCourseSelector";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import {
@@ -25,6 +26,7 @@ interface TrashTalkTabProps {
 export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
   const { t } = useTranslation("arena");
   const [activeSlug, setActiveSlug] = useState<string>("general");
+  const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
@@ -36,13 +38,16 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
   const activeChannel = channels?.find((c) => c.slug === activeSlug);
   const channelId = activeChannel?.id || null;
 
+  // For live-courses, filter messages by selected course
+  const courseFilter = activeSlug === "live-courses" ? activeCourseId : null;
+
   const {
     data: messagesData,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     isLoading: messagesLoading,
-  } = useArenaMessages(channelId, leagueId);
+  } = useArenaMessages(channelId, leagueId, courseFilter);
 
   useArenaRealtime(channelId, leagueId);
 
@@ -90,6 +95,7 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
           content,
           messageType,
           metadata,
+          courseId: activeSlug === "live-courses" ? activeCourseId : undefined,
         },
         {
           onError: (error: any) => {
@@ -100,7 +106,7 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
 
       setAutoScroll(true);
     },
-    [channelId, leagueId, managerId, activeSlug, sendMessage, t]
+    [channelId, leagueId, managerId, activeSlug, activeCourseId, sendMessage, t]
   );
 
   const handleToggleReaction = useCallback(
@@ -113,6 +119,15 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
 
   // live-courses is read-only except for super-admins
   const isReadOnly = activeSlug === "live-courses" && !isSuperAdmin;
+  // For live-courses, require a selected course to send messages
+  const canSend = activeSlug !== "live-courses" || (isSuperAdmin && !!activeCourseId);
+
+  // Reset course selection when switching away from live-courses
+  useEffect(() => {
+    if (activeSlug !== "live-courses") {
+      setActiveCourseId(null);
+    }
+  }, [activeSlug]);
 
   if (!managerId) {
     return (
@@ -125,8 +140,15 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
   return (
     <div className="flex flex-col h-[calc(100vh-280px)] min-h-[400px] border rounded-lg overflow-hidden bg-background">
       {/* Channel selector */}
-      <div className="p-3 border-b">
+      <div className="p-3 border-b space-y-2">
         <ChannelSelector activeChannel={activeSlug} onSelect={setActiveSlug} />
+        {activeSlug === "live-courses" && (
+          <LiveCourseSelector
+            activeCourseId={activeCourseId}
+            onSelect={setActiveCourseId}
+            isSuperAdmin={isSuperAdmin}
+          />
+        )}
       </div>
 
       {/* Messages */}
@@ -148,7 +170,12 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
           </div>
         )}
 
-        {messagesLoading ? (
+        {activeSlug === "live-courses" && !activeCourseId ? (
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+            <MessageCircle className="h-12 w-12 mb-4 opacity-30" />
+            <p className="font-medium">{t("trashTalk.liveCourses.selectPrompt")}</p>
+          </div>
+        ) : messagesLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
@@ -192,7 +219,7 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
       <MessageInput
         onSend={handleSend}
         managers={managers}
-        disabled={sendMessage.isPending}
+        disabled={sendMessage.isPending || !canSend}
         readOnly={isReadOnly}
       />
     </div>
