@@ -15,6 +15,108 @@ import { NotificationSettings } from "@/components/settings/NotificationSettings
 import { SponsorJerseyEditor } from "@/components/account/SponsorJerseyEditor";
 import { cn } from "@/lib/utils";
 
+// --- Default League Section ---
+function DefaultLeagueSection({ 
+  managerId, 
+  currentPreferredId, 
+  queryClient 
+}: { 
+  managerId: string; 
+  currentPreferredId: string | null; 
+  queryClient: ReturnType<typeof useQueryClient>;
+}) {
+  const { t } = useTranslation('account');
+  const [saving, setSaving] = useState(false);
+
+  const { data: leagues, isLoading } = useQuery({
+    queryKey: ['user-leagues-for-default-selector'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data: memberships } = await supabase
+        .from('league_members')
+        .select(`
+          league_id,
+          leagues:league_id (
+            id,
+            name,
+            status
+          )
+        `)
+        .eq('user_id', user.id);
+
+      return (memberships || [])
+        .filter(m => m.leagues)
+        .map(m => m.leagues as { id: string; name: string; status: string });
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const handleChange = async (value: string) => {
+    setSaving(true);
+    try {
+      const newValue = value === 'none' ? null : value;
+      const { error } = await supabase
+        .from('managers')
+        .update({ preferred_league_id: newValue })
+        .eq('id', managerId);
+
+      if (error) throw error;
+
+      toast.success(t('defaultLeague.updated'));
+      queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
+    } catch (error) {
+      console.error('Error updating preferred league:', error);
+      toast.error(t('defaultLeague.error'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card className="mb-4 md:mb-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Trophy className="h-5 w-5" />
+          {t('defaultLeague.title')}
+        </CardTitle>
+        <CardDescription>
+          {t('defaultLeague.description')}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <Label>{t('defaultLeague.label')}</Label>
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Select
+              value={currentPreferredId || 'none'}
+              onValueChange={handleChange}
+              disabled={saving}
+            >
+              <SelectTrigger className="w-full sm:w-[350px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">
+                  {t('defaultLeague.noPreference')}
+                </SelectItem>
+                {leagues?.map((league) => (
+                  <SelectItem key={league.id} value={league.id}>
+                    {league.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AccountPage() {
   const { t } = useTranslation('account');
   const { theme, setTheme, resolvedTheme } = useTheme();
@@ -322,108 +424,5 @@ export default function AccountPage() {
       <NotificationSettings />
       
     </div>
-  );
-}
-
-// --- Default League Section (extracted component) ---
-function DefaultLeagueSection({ 
-  managerId, 
-  currentPreferredId, 
-  queryClient 
-}: { 
-  managerId: string; 
-  currentPreferredId: string | null; 
-  queryClient: ReturnType<typeof useQueryClient>;
-}) {
-  const { t } = useTranslation('account');
-  const [saving, setSaving] = useState(false);
-
-  const { data: leagues, isLoading } = useQuery({
-    queryKey: ['user-leagues-for-default-selector'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      const { data: memberships } = await supabase
-        .from('league_members')
-        .select(`
-          league_id,
-          leagues:league_id (
-            id,
-            name,
-            status
-          )
-        `)
-        .eq('user_id', user.id);
-
-      return (memberships || [])
-        .filter(m => m.leagues)
-        .map(m => m.leagues as { id: string; name: string; status: string });
-    },
-    staleTime: 1000 * 60 * 5,
-  });
-
-  const handleChange = async (value: string) => {
-    setSaving(true);
-    try {
-      const newValue = value === 'none' ? null : value;
-      const { error } = await supabase
-        .from('managers')
-        .update({ preferred_league_id: newValue })
-        .eq('id', managerId);
-
-      if (error) throw error;
-
-      toast.success(t('defaultLeague.updated'));
-      // Invalidate context so it picks up the new preference
-      queryClient.invalidateQueries({ queryKey: ['user-leagues-for-context'] });
-    } catch (error) {
-      console.error('Error updating preferred league:', error);
-      toast.error(t('defaultLeague.error'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Card className="mb-4 md:mb-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Trophy className="h-5 w-5" />
-          {t('defaultLeague.title')}
-        </CardTitle>
-        <CardDescription>
-          {t('defaultLeague.description')}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <Label>{t('defaultLeague.label')}</Label>
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Select
-              value={currentPreferredId || 'none'}
-              onValueChange={handleChange}
-              disabled={saving}
-            >
-              <SelectTrigger className="w-full sm:w-[350px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">
-                  {t('defaultLeague.noPreference')}
-                </SelectItem>
-                {leagues?.map((league) => (
-                  <SelectItem key={league.id} value={league.id}>
-                    {league.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      </CardContent>
-    </Card>
   );
 }
