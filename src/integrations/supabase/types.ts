@@ -504,13 +504,6 @@ export type Database = {
             referencedRelation: "leagues"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "arena_messages_source_message_id_fkey"
-            columns: ["source_message_id"]
-            isOneToOne: false
-            referencedRelation: "arena_messages"
-            referencedColumns: ["id"]
-          },
         ]
       }
       arena_poll_options: {

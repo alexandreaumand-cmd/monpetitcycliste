@@ -1,0 +1,2 @@
+-- Drop the foreign key constraint on source_message_id since it's used as a batch ID for broadcast deduplication, not as a true FK reference
+ALTER TABLE public.arena_messages DROP CONSTRAINT IF EXISTS arena_messages_source_message_id_fkey;
