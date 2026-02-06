@@ -52,8 +52,55 @@
   },
   "votes": {
     "title": "Votes de la Communauté",
-    "comingSoon": "Bientôt disponible",
-    "comingSoonDesc": "Élisez le MVP, le flop et bien plus encore"
+    "empty": "Aucun sondage disponible",
+    "emptyDesc": "Les sondages apparaîtront ici quand un admin en créera un",
+    "noManager": "Vous devez avoir un profil manager pour accéder aux votes",
+    "voteSuccess": "Vote enregistré !",
+    "voteError": "Erreur lors du vote",
+    "alreadyVoted": "Vous avez déjà voté pour ce sondage",
+    "deleteSuccess": "Sondage supprimé",
+    "deleteError": "Erreur lors de la suppression",
+    "voting": "Envoi du vote...",
+    "totalVotes": "{{count}} vote(s)",
+    "closesIn": "Clôture dans {{time}}",
+    "closedAgo": "Clôturé {{time}}",
+    "sections": {
+      "open": "Sondages en cours",
+      "closed": "Sondages terminés"
+    },
+    "status": {
+      "open": "Ouvert",
+      "closed": "Terminé"
+    },
+    "pollTypes": {
+      "mvp": "MVP de la semaine",
+      "flop": "Flop de la semaine",
+      "bestMove": "Meilleur coup tactique",
+      "worstBuy": "Pire achat",
+      "custom": "Personnalisé"
+    },
+    "create": {
+      "button": "Nouveau sondage",
+      "title": "Créer un sondage",
+      "type": "Type de sondage",
+      "selectType": "Sélectionner un type...",
+      "pollTitle": "Titre",
+      "titlePlaceholder": "Ex: MVP de la semaine 12",
+      "description": "Description (optionnel)",
+      "descriptionPlaceholder": "Décrivez le contexte du vote...",
+      "options": "Options",
+      "option": "Option",
+      "addOption": "Ajouter une option",
+      "closesDate": "Date de clôture",
+      "closesTime": "Heure de clôture",
+      "cancel": "Annuler",
+      "submit": "Créer",
+      "success": "Sondage créé avec succès !",
+      "error": "Erreur lors de la création du sondage",
+      "requiredFields": "Veuillez remplir tous les champs obligatoires",
+      "minOptions": "Il faut au moins 2 options",
+      "autoManagerOptions": "Les managers de la ligue ({{count}}) seront automatiquement ajoutés comme options"
+    }
   },
   "trashTalk": {
     "title": "Trash Talk",
