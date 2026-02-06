@@ -2,13 +2,14 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, XCircle, Clock, Lock, Target } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Loader2, CheckCircle, XCircle, Clock, Lock, Target, ArrowRight, Users } from "lucide-react";
 import { PronosticStartlistCombobox } from "./PronosticStartlistCombobox";
-import { useSavePronostic, type PronosticDeadline, type MyPronostic } from "@/hooks/useArenaPronostics";
+import { useSavePronostic, useLeaguePronostics, type PronosticDeadline, type MyPronostic } from "@/hooks/useArenaPronostics";
 import { toast } from "sonner";
 import { formatDistanceToNow, isPast } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
-import { useTranslation as useI18n } from "react-i18next";
+import { cn } from "@/lib/utils";
 
 interface PronosticRaceCardProps {
   deadline: PronosticDeadline;
@@ -135,20 +136,110 @@ export const PronosticRaceCard = ({
             )}
           </div>
         ) : (
-          <div className="text-sm">
-            {pronostic ? (
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  {t("pronostics.yourPick")}: <strong>{pronostic.coureur_nom}</strong>
-                </span>
-              </div>
-            ) : (
-              <span className="text-muted-foreground italic">{t("pronostics.noPick")}</span>
-            )}
-          </div>
+          <ClosedPronosticsList
+            leagueId={leagueId}
+            deadline={deadline}
+            pronostic={pronostic}
+            managerId={managerId}
+            isExpired={isExpired}
+            t={t}
+          />
         )}
       </CardContent>
     </Card>
+  );
+};
+
+// Sub-component for the closed state showing all managers' picks
+const ClosedPronosticsList = ({
+  leagueId,
+  deadline,
+  pronostic,
+  managerId,
+  isExpired,
+  t,
+}: {
+  leagueId: string;
+  deadline: PronosticDeadline;
+  pronostic: MyPronostic | null;
+  managerId: string;
+  isExpired: boolean;
+  t: (key: string) => string;
+}) => {
+  const { data: allPicks, isLoading } = useLeaguePronostics(
+    leagueId,
+    deadline.course_id,
+    deadline.etape_numero,
+    deadline.pronostic_type,
+    isExpired
+  );
+
+  return (
+    <div className="space-y-2">
+      {/* Current user's pick summary */}
+      {pronostic ? (
+        <div className="flex items-center gap-2 text-sm">
+          <Target className="h-4 w-4 text-muted-foreground" />
+          <span>
+            {t("pronostics.yourPick")}: <strong>{pronostic.coureur_nom}</strong>
+          </span>
+        </div>
+      ) : (
+        <span className="text-sm text-muted-foreground italic">{t("pronostics.noPick")}</span>
+      )}
+
+      {/* Separator + all picks */}
+      <div className="border-t pt-2 mt-2">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2">
+          <Users className="h-3.5 w-3.5" />
+          {t("pronostics.allPicks")}
+        </div>
+
+        {isLoading ? (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+          </div>
+        ) : !allPicks || allPicks.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic">{t("pronostics.noPicksYet")}</p>
+        ) : (
+          <div className="space-y-1.5">
+            {allPicks.map((pick) => {
+              const isCurrentUser = pick.manager_id === managerId;
+              return (
+                <div
+                  key={pick.manager_id}
+                  className={cn(
+                    "flex items-center gap-2 py-1 px-2 rounded-md text-sm",
+                    isCurrentUser && "bg-primary/10 ring-1 ring-primary/20"
+                  )}
+                >
+                  <Avatar className="h-6 w-6 shrink-0">
+                    <AvatarImage src={pick.avatar_url || undefined} />
+                    <AvatarFallback className="text-[10px]">
+                      {pick.manager_nom.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="font-medium truncate">
+                    {pick.manager_nom}
+                    {isCurrentUser && (
+                      <span className="text-xs text-muted-foreground ml-1">{t("pronostics.you")}</span>
+                    )}
+                  </span>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <span className="truncate flex-1">{pick.coureur_nom}</span>
+                  {pick.is_correct !== null && (
+                    pick.is_correct ? (
+                      <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+                    ) : (
+                      <XCircle className="h-4 w-4 text-red-600 shrink-0" />
+                    )
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
