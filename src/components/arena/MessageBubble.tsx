@@ -87,8 +87,33 @@ export const MessageBubble = ({
     });
   }, [message.content, riderMentionMap, rosterOwners]);
 
-  // System message → centered separator
+  // System message
   if (isSystem) {
+    const isLongSystem = message.content.includes("\n");
+
+    // Long system messages (recaps) → card-style display
+    if (isLongSystem) {
+      return (
+        <div className="px-3 py-2">
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+              <Bot className="h-3 w-3" />
+              <span>{timeStr}</span>
+            </div>
+            <div className="text-sm whitespace-pre-wrap break-words">
+              {message.content.split(/(\*\*[^*]+\*\*)/g).map((part, i) => {
+                if (part.startsWith("**") && part.endsWith("**")) {
+                  return <strong key={i}>{part.slice(2, -2)}</strong>;
+                }
+                return part;
+              })}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Short system messages → centered separator
     return (
       <div className="flex items-center gap-2 py-2 px-3">
         <div className="flex-1 h-px bg-border" />
