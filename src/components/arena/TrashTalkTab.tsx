@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader2, MessageCircle, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ChannelSelector } from "./ChannelSelector";
 import { LiveCourseSelector } from "./LiveCourseSelector";
 import { MessageBubble } from "./MessageBubble";
@@ -16,8 +15,9 @@ import {
   useToggleReaction,
   useMessageReactions,
   useLeagueManagers,
+  useLeagueRosterOwners,
 } from "@/hooks/useArenaMessages";
-import { useCurrentManagerId } from "@/hooks/useArenaPronostics";
+import { useCurrentManagerId, useStartlistRiders } from "@/hooks/useArenaPronostics";
 import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
 
@@ -36,6 +36,12 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
   const { isSuperAdmin } = useUserRole();
   const { data: channels } = useArenaChannels(leagueId);
   const { data: managers = [] } = useLeagueManagers(leagueId);
+  const { data: rosterOwners = {} } = useLeagueRosterOwners(leagueId);
+
+  // Fetch startlist riders for the active live course
+  const { data: startlistRiders = [] } = useStartlistRiders(
+    activeSlug === "live-courses" ? activeCourseId : null
+  );
 
   const activeChannel = channels?.find((c) => c.slug === activeSlug);
   const channelId = activeChannel?.id || null;
@@ -241,6 +247,7 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
                   isOwnMessage={msg.author_manager_id === managerId}
                   showAuthor={showAuthor}
                   disabled={!managerId}
+                  rosterOwners={rosterOwners}
                 />
               );
             })}
@@ -252,6 +259,7 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
       <MessageInput
         onSend={handleSend}
         managers={managers}
+        riders={startlistRiders}
         disabled={sendMessage.isPending || broadcastMessage.isPending || !canSend}
         readOnly={isReadOnly}
       />
