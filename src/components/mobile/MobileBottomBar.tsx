@@ -2,7 +2,7 @@ import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { Users, BarChart3, ListChecks, Medal, Calendar } from "lucide-react";
+import { Users, BarChart3, ListChecks, Medal, Swords } from "lucide-react";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 
 interface MobileBottomBarProps {
@@ -37,11 +37,6 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
         queryKey: ["startlists-info"],
         staleTime: 30000,
       });
-    } else if (path.includes('courses')) {
-      queryClient.prefetchQuery({
-        queryKey: ["startlist-races", currentLeagueId, selectedSeason?.id, "upcoming-year"],
-        staleTime: 30000,
-      });
     }
   };
 
@@ -50,7 +45,7 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
     { label: t('navigation.teams'), path: "/dashboard/mon-equipe", icon: Users },
     { label: t('navigation.startlist'), path: "/dashboard/startlist", icon: ListChecks },
     { label: t('navigation.results'), path: "/dashboard/resultats", icon: Medal },
-    { label: t('navigation.races'), path: "/dashboard/courses", icon: Calendar },
+    { label: t('navigation.arena'), path: "/dashboard/arene", icon: Swords },
   ];
 
   const buildNavUrl = (path: string) => {
