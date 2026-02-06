@@ -1,81 +1,87 @@
 
+# Plan : Ligue par défaut choisie par l'utilisateur
 
-# Plan : Ajout du Mode Sombre
+## Probleme identifie
 
-## Résumé
+Quand un utilisateur fait partie de plusieurs ligues, l'application selectionne automatiquement la **premiere ligue retournee** par la base de donnees (souvent par ordre alphabetique). Ainsi, "Early Adopters" est toujours selectionnee avant "MPC 2026", quel que soit le contexte de la notification.
 
-L'ajout du mode sombre est **simple à implémenter** car l'infrastructure technique est déjà en place. Il suffit de connecter les éléments existants et d'ajouter un bouton de bascule.
-
-## Ce qui existe déjà
-
-| Element | Statut |
-|---------|--------|
-| Bibliothèque `next-themes` | ✅ Installée |
-| Configuration Tailwind `darkMode: ["class"]` | ✅ Configurée |
-| Variables CSS mode sombre (`.dark`) | ✅ Définies |
-| Composants UI avec classes `dark:` | ✅ Partiellement présents |
-
-## Étapes d'implémentation
-
-### 1. Activer le ThemeProvider dans App.tsx
-
-Envelopper l'application avec le `ThemeProvider` de `next-themes` :
-
-```tsx
-import { ThemeProvider } from "next-themes";
-
-// Dans le return :
-<ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-  {/* reste de l'app */}
-</ThemeProvider>
+De plus, quand on clique sur une notification de resultats, le code **force la ligue courante** au lieu de celle de la notification :
+```
+const leagueId = currentLeagueId || notification.metadata?.league_id;
 ```
 
-### 2. Créer un composant ThemeSwitcher
+## Solution proposee
 
-Nouveau fichier `src/components/ui/ThemeSwitcher.tsx` avec :
-- Icône Soleil/Lune
-- Toggle entre light, dark, et system
-- Design cohérent avec le `LanguageSwitcher` existant
+Approche simple et efficace en **3 volets** :
 
-### 3. Ajouter le toggle dans le Header
+### 1. Sauvegarder la preference en base de donnees
 
-Dans `src/components/layout/Header.tsx`, ajouter le `ThemeSwitcher` à côté du `LanguageSwitcher` (ligne 167).
+Ajouter une colonne `preferred_league_id` (nullable) dans la table `managers`. Quand un utilisateur choisit sa ligue par defaut dans ses parametres, on l'enregistre ici.
 
-### 4. Ajouter une section "Apparence" dans la page Compte
-
-Dans `src/pages/AccountPage.tsx`, ajouter une nouvelle `Card` "Apparence" avec :
-- Sélecteur de thème (Clair / Sombre / Système)
-- Description du paramètre
-
-### 5. Ajuster les variables CSS du mode sombre
-
-Le mode sombre actuel utilise des teintes bleues. On pourrait le rendre cohérent avec l'identité Tour de France en gardant le jaune comme accent :
-
-```css
-.dark {
-  --background: 0 0% 8%;
-  --foreground: 0 0% 98%;
-  --primary: 48 100% 50%; /* Jaune conservé */
-  --primary-foreground: 0 0% 0%;
-  /* ... autres ajustements */
-}
+**Migration SQL :**
+```sql
+ALTER TABLE managers ADD COLUMN preferred_league_id uuid REFERENCES leagues(id) ON DELETE SET NULL;
 ```
 
-## Fichiers à modifier
+### 2. Utiliser cette preference a l'initialisation
+
+Modifier le `LeagueContext.tsx` pour prioriser la ligue preferee quand aucun `leagueId` n'est dans l'URL :
+
+| Priorite | Source |
+|----------|--------|
+| 1 | `leagueId` present dans l'URL |
+| 2 | `preferred_league_id` du profil manager |
+| 3 | Premiere ligue active (comportement actuel) |
+
+### 3. Ajouter le selecteur dans les parametres du compte
+
+Ajouter une nouvelle section "Ligue par defaut" dans la page Compte (`AccountPage.tsx`) avec un selecteur listant toutes les ligues de l'utilisateur.
+
+## Corrections supplementaires
+
+- **Notifications de startlist** : le clic utilise deja `notification.metadata?.league_id` -- c'est correct.
+- **Notifications de resultats** : inverser la priorite pour utiliser `notification.metadata?.league_id` en premier, avec un fallback sur `currentLeagueId`. Cela permettra d'ouvrir directement dans la bonne ligue.
+
+## Fichiers a modifier
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/App.tsx` | Ajouter `ThemeProvider` |
-| `src/components/ui/ThemeSwitcher.tsx` | **Nouveau fichier** - Bouton de bascule |
-| `src/components/layout/Header.tsx` | Ajouter le `ThemeSwitcher` |
-| `src/pages/AccountPage.tsx` | Ajouter section "Apparence" |
-| `src/index.css` | Ajuster les couleurs `.dark` pour l'identité TdF |
-| `public/locales/fr/account.json` | Ajouter traductions |
-| `public/locales/en/account.json` | Ajouter traductions |
+| Migration SQL | Ajouter la colonne `preferred_league_id` a `managers` |
+| `src/contexts/LeagueContext.tsx` | Charger `preferred_league_id` et l'utiliser comme priorite 2 |
+| `src/pages/AccountPage.tsx` | Ajouter la section "Ligue par defaut" avec un selecteur |
+| `src/components/layout/NotificationCenter.tsx` | Inverser la priorite ligue dans le clic sur notification resultats |
+| `src/i18n/locales/fr/account.json` | Ajouter les traductions pour "Ligue par defaut" |
+| `src/i18n/locales/en/account.json` | Ajouter les traductions pour "Default League" |
+
+## Details techniques
+
+### LeagueContext.tsx - Logique modifiee
+
+```text
+1. URL a un leagueId ? -> l'utiliser
+2. Sinon, charger le profil manager
+3. Si preferred_league_id existe ET fait partie des ligues actives -> l'utiliser
+4. Sinon -> premiere ligue active (comportement actuel)
+```
+
+### AccountPage.tsx - Nouvelle section
+
+Une carte "Ligue par defaut" avec :
+- Un selecteur (Select) listant les ligues actives de l'utilisateur
+- Une option "Aucune preference" pour revenir au comportement automatique
+- Sauvegarde immediate en base au changement
+
+### NotificationCenter.tsx - Correction
+
+```text
+// Avant (problematique) :
+const leagueId = currentLeagueId || notification.metadata?.league_id;
+
+// Apres (corrige) :
+const leagueId = notification.metadata?.league_id || currentLeagueId;
+```
 
 ## Estimation
 
-- **Complexité** : Faible
-- **Temps estimé** : 15-20 minutes
-- **Risque** : Minimal (infrastructure déjà en place)
-
+- **Complexite** : Faible
+- **Risque** : Minimal (ajout d'une colonne nullable, pas de changement destructif)
