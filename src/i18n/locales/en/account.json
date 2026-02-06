@@ -75,6 +75,14 @@
     "invalidFileType": "Please upload an image file",
     "fileTooLarge": "File is too large (max 2MB)"
   },
+  "defaultLeague": {
+    "title": "Default League",
+    "description": "Choose the league that opens automatically when you launch the app",
+    "label": "Default league",
+    "noPreference": "Automatic (first active league)",
+    "updated": "Default league updated",
+    "error": "Error updating default league"
+  },
   "buttons": {
     "updateProfile": "Update Profile",
     "uploadPhoto": "Change Photo"
