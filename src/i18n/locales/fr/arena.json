@@ -48,7 +48,10 @@
     "standings": {
       "title": "Classement Pronostics",
       "empty": "Pas encore de résultats évalués"
-    }
+    },
+    "allPicks": "Pronostics des managers",
+    "noPicksYet": "Aucun pronostic pour cette course",
+    "you": "(vous)"
   },
   "votes": {
     "title": "Votes de la Communauté",

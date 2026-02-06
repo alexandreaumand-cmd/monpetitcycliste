@@ -48,7 +48,10 @@
     "standings": {
       "title": "Predictions Standings",
       "empty": "No evaluated results yet"
-    }
+    },
+    "allPicks": "Managers' picks",
+    "noPicksYet": "No picks for this race",
+    "you": "(you)"
   },
   "votes": {
     "title": "Community Votes",

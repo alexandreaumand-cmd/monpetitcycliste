@@ -183,6 +183,83 @@ export function usePronosticStandings(leagueId: string) {
   });
 }
 
+export interface LeaguePronostic {
+  manager_id: string;
+  manager_nom: string;
+  avatar_url: string | null;
+  coureur_id: string;
+  coureur_nom: string;
+  is_correct: boolean | null;
+}
+
+export function useLeaguePronostics(
+  leagueId: string,
+  courseId: string,
+  etapeNumero: number | null,
+  pronosticType: string,
+  enabled: boolean
+) {
+  return useQuery({
+    queryKey: ['arena-league-pronostics', leagueId, courseId, etapeNumero, pronosticType],
+    queryFn: async () => {
+      // Fetch all pronostics for this league/course/stage/type
+      let query = supabase
+        .from('arena_pronostics')
+        .select('manager_id, coureur_id, is_correct')
+        .eq('league_id', leagueId)
+        .eq('course_id', courseId)
+        .eq('pronostic_type', pronosticType);
+
+      if (etapeNumero !== null) {
+        query = query.eq('etape_numero', etapeNumero);
+      } else {
+        query = query.is('etape_numero', null);
+      }
+
+      const { data: pronostics, error } = await query;
+      if (error) throw error;
+      if (!pronostics || pronostics.length === 0) return [];
+
+      // Fetch manager info
+      const managerIds = [...new Set(pronostics.map(p => p.manager_id))];
+      const { data: managers } = await supabase
+        .from('managers')
+        .select('id, nom, avatar_url')
+        .in('id', managerIds);
+
+      const managerMap: Record<string, { nom: string; avatar_url: string | null }> = {};
+      for (const m of (managers || [])) {
+        managerMap[m.id] = { nom: m.nom, avatar_url: m.avatar_url };
+      }
+
+      // Fetch coureur names
+      const coureurIds = [...new Set(pronostics.map(p => p.coureur_id))];
+      const { data: coureurs } = await supabase
+        .from('coureurs')
+        .select('id, nom')
+        .in('id', coureurIds);
+
+      const coureurMap: Record<string, string> = {};
+      for (const c of (coureurs || [])) {
+        coureurMap[c.id] = c.nom;
+      }
+
+      return pronostics
+        .map(p => ({
+          manager_id: p.manager_id,
+          manager_nom: managerMap[p.manager_id]?.nom || 'Inconnu',
+          avatar_url: managerMap[p.manager_id]?.avatar_url || null,
+          coureur_id: p.coureur_id,
+          coureur_nom: coureurMap[p.coureur_id] || p.coureur_id,
+          is_correct: p.is_correct,
+        }))
+        .sort((a, b) => a.manager_nom.localeCompare(b.manager_nom)) as LeaguePronostic[];
+    },
+    enabled: enabled && !!leagueId && !!courseId,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
 export interface StartlistRider {
   coureur_id: string;
   nom: string;
