@@ -720,6 +720,7 @@ export type Database = {
           etape_numero: number | null
           id: string
           pronostic_type: string
+          reminder_sent_at: string | null
           updated_at: string
         }
         Insert: {
@@ -730,6 +731,7 @@ export type Database = {
           etape_numero?: number | null
           id?: string
           pronostic_type: string
+          reminder_sent_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -740,6 +742,7 @@ export type Database = {
           etape_numero?: number | null
           id?: string
           pronostic_type?: string
+          reminder_sent_at?: string | null
           updated_at?: string
         }
         Relationships: [

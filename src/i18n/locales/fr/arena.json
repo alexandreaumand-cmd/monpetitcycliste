@@ -10,8 +10,45 @@
   },
   "pronostics": {
     "title": "Pronostics",
-    "comingSoon": "Bientôt disponible",
-    "comingSoonDesc": "Pariez sur les vainqueurs des courses et étapes à venir"
+    "empty": "Aucun pronostic disponible",
+    "emptyDesc": "Les pronostics apparaîtront ici quand l'administrateur aura configuré des deadlines",
+    "noManager": "Vous devez avoir un profil manager pour accéder aux pronostics",
+    "selectRider": "Sélectionner un coureur...",
+    "searchRider": "Rechercher un coureur...",
+    "loadingRiders": "Chargement des coureurs...",
+    "noStartlist": "Startlist non disponible",
+    "noRiderFound": "Aucun coureur trouvé",
+    "saved": "Pronostic enregistré : {{rider}}",
+    "saveError": "Erreur lors de l'enregistrement du pronostic",
+    "saving": "Enregistrement...",
+    "yourPick": "Votre choix",
+    "noPick": "Pas de pronostic",
+    "deadlineIn": "Clôture dans {{time}}",
+    "deadlineExpired": "Clôturé {{time}}",
+    "sections": {
+      "open": "Pronostics ouverts",
+      "closed": "Résultats"
+    },
+    "types": {
+      "stageWinner": "Vainqueur d'étape",
+      "gcWinner": "Vainqueur CG",
+      "oneDayWinner": "Vainqueur"
+    },
+    "status": {
+      "open": "Ouvert",
+      "closed": "Fermé",
+      "correct": "Correct",
+      "incorrect": "Incorrect"
+    },
+    "stats": {
+      "total": "Total",
+      "correct": "Corrects",
+      "incorrect": "Incorrects"
+    },
+    "standings": {
+      "title": "Classement Pronostics",
+      "empty": "Pas encore de résultats évalués"
+    }
   },
   "votes": {
     "title": "Votes de la Communauté",

@@ -33,7 +33,9 @@
       "startlists": "Startlists validées",
       "startlistsDescription": "Quand une nouvelle startlist est disponible",
       "auctions": "Enchères",
-      "auctionsDescription": "Ouverture, fermeture et validation des enchères"
+      "auctionsDescription": "Ouverture, fermeture et validation des enchères",
+      "pronostics": "Pronostics",
+      "pronosticsDescription": "Rappels avant la clôture des pronostics"
     }
   },
   "profile": {

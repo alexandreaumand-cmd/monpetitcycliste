@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation, Link } from "react-router-dom";
- import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Menu, LogOut, ArrowLeft, Gift } from "lucide-react";
+ import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Menu, LogOut, ArrowLeft, Gift, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -19,6 +19,7 @@ import { EquipesSaisonsManager } from "@/components/admin/EquipesSaisonsManager"
 import { BaremesManager } from "@/components/admin/BaremesManager";
 import { PointsLedgerTable } from "@/components/admin/PointsLedgerTable";
  import { SuperAdminBonusPage } from "@/pages/admin/SuperAdminBonusPage";
+import { PronosticDeadlinesManager } from "@/components/admin/arena/PronosticDeadlinesManager";
 import mpcLogo from "@/assets/mpc-logo-horizontal.png";
 import { useTranslation } from "react-i18next";
 
@@ -46,6 +47,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
     { label: t('superAdmin.leagues', 'Ligues'), path: 'leagues', icon: Users },
      { label: t('superAdmin.bonus', 'Bonus'), path: 'bonus', icon: Gift },
     { label: t('superAdmin.users', 'Utilisateurs'), path: 'users', icon: Shield },
+    { label: t('superAdmin.arena', 'Arène'), path: 'arena', icon: Swords },
   ];
 
   const isActive = (path: string) => {
@@ -198,6 +200,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
             <Route path="leagues/:id" element={<LeagueDetailPage />} />
              <Route path="bonus" element={<SuperAdminBonusPage />} />
             <Route path="users" element={<UsersManagementPage />} />
+            <Route path="arena" element={<PronosticDeadlinesManager />} />
           </Routes>
         </div>
       </main>

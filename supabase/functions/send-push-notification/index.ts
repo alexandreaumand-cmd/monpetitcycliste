@@ -25,14 +25,16 @@ interface PushSubscription {
     results?: boolean;
     startlists?: boolean;
     auctions?: boolean;
+    pronostics?: boolean;
   } | null;
 }
 
 // Helper to determine preference key from notification type
-function getPreferenceKey(type: string): 'results' | 'startlists' | 'auctions' | null {
+function getPreferenceKey(type: string): 'results' | 'startlists' | 'auctions' | 'pronostics' | null {
   if (type === 'results_added') return 'results';
   if (type === 'startlist_validated') return 'startlists';
   if (type.startsWith('auction_')) return 'auctions';
+  if (type === 'pronostic_reminder') return 'pronostics';
   return null;
 }
 
