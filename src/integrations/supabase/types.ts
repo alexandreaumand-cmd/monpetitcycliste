@@ -6267,6 +6267,14 @@ export type Database = {
           wt_tier: string
         }[]
       }
+      get_league_standings_for_recap: {
+        Args: { p_league_id: string }
+        Returns: {
+          manager_id: string
+          manager_nom: string
+          total_points: number
+        }[]
+      }
       get_manager_public_info: {
         Args: { manager_id: string }
         Returns: {
