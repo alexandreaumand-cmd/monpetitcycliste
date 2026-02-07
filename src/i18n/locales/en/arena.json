@@ -27,7 +27,9 @@
     "deadlineExpired": "Closed {{time}}",
     "sections": {
       "open": "Open predictions",
-      "closed": "Results"
+      "closed": "Results",
+      "pending": "Awaiting evaluation",
+      "evaluated": "Evaluated results"
     },
     "types": {
       "stageWinner": "Stage winner",
