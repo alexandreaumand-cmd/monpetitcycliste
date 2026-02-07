@@ -1,75 +1,36 @@
 
-# Afficher les pronostics de tous les managers apres la cloture
 
-## Contexte
-
-Actuellement, quand un pronostic est ferme, la carte affiche uniquement "Votre choix: [coureur]". L'utilisateur ne peut pas voir ce que les autres managers ont pronostique, meme si la politique de securite (RLS) le permet deja apres la deadline.
+# Ajout d'une notification push au Daily Recap
 
 ## Ce qui va changer
 
-Quand un pronostic est **ferme** (deadline passee), la carte affichera :
-- Le pronostic du manager courant (mis en evidence)
-- La liste de tous les pronostics des autres managers de la ligue, avec le nom du manager et le coureur choisi
-- Un indicateur visuel si le pronostic a ete evalue (correct/incorrect)
+Apres l'envoi du message systeme dans le channel #general, une notification push sera envoyee a tous les membres de la ligue avec le texte :
 
-## Implementation
+**Titre :** `📊 Récap du jour — [Nom de la ligue]`
+**Message :** `Bravo à [NomManager1], manager du jour !`
 
-### 1. Nouveau hook : `useLeaguePronostics`
+ou `NomManager1` est le manager ayant marque le plus de points dans la journee (le premier de la liste `entries`).
 
-Ajout dans `src/hooks/useArenaPronostics.ts` d'un hook qui recupere tous les pronostics de la ligue pour une course/etape/type donnes, uniquement quand la deadline est passee.
+## Modifications techniques
 
-- Requete sur `arena_pronostics` filtree par `league_id`, `course_id`, `etape_numero`, `pronostic_type`
-- Jointure avec `managers` pour obtenir le nom et l'avatar
-- Jointure avec `coureurs` pour obtenir le nom du coureur
-- Active uniquement si `isExpired === true`
+### Fichier : `supabase/functions/arena-recaps/index.ts`
 
-### 2. Modification de `PronosticRaceCard.tsx`
+1. **Modifier la signature de `sendDailyRecap`** pour recevoir `supabaseUrl` et `serviceKey` (necessaires pour appeler l'Edge Function `send-push-notification`), comme c'est deja le cas pour `sendWeeklyRecap`.
 
-Dans la section "fermee" de la carte (quand `isExpired` est vrai) :
-- Appeler le nouveau hook `useLeaguePronostics`
-- Afficher la liste de tous les pronostics avec :
-  - Avatar + nom du manager
-  - Nom du coureur pronostique
-  - Icone correct/incorrect si evalue
-  - Mise en evidence du pronostic du manager courant (bordure ou fond different)
+2. **Mettre a jour l'appel** dans le handler principal (ligne 59) pour passer ces deux parametres supplementaires.
 
-### 3. Traductions
+3. **Ajouter le bloc push notification** apres l'insertion du message systeme (apres la ligne 215), en suivant le meme pattern que le weekly recap :
+   - Recuperer tous les `user_id` des membres de la ligue via `league_members`
+   - Appeler `send-push-notification` avec :
+     - `user_ids` : tous les membres de la ligue
+     - `title` : `📊 Récap du jour — [league.name]`
+     - `message` : `Bravo à [nom du 1er manager], manager du jour !`
+     - `type` : `arena_daily_recap`
+     - `metadata` : `{ league_id: league.id }`
 
-Ajout des cles i18n dans `fr/arena.json` et `en/arena.json` :
-- `pronostics.allPicks` : "Pronostics des managers" / "Managers' picks"
-- `pronostics.noPicksYet` : "Aucun pronostic pour cette course" / "No picks for this race"
+### Aucune autre modification necessaire
 
-## Details techniques
+- Le systeme de push existant (`send-push-notification`) gere deja le filtrage par preferences utilisateur
+- Pas de changement de base de donnees
+- Pas de changement cote frontend
 
-### Hook `useLeaguePronostics`
-
-```typescript
-// Parametres : leagueId, courseId, etapeNumero, pronosticType, enabled (deadline passee)
-// Retourne : { manager_id, manager_nom, avatar_url, coureur_id, coureur_nom, is_correct }[]
-```
-
-La requete SQL sous-jacente :
-- SELECT sur `arena_pronostics` avec filtre league/course/etape/type
-- Jointure `managers(id, nom, avatar_url)` pour les infos manager
-- Resolution des noms de coureurs via une requete secondaire sur `coureurs`
-- Trie par nom de manager
-
-### UI de la section fermee
-
-La carte fermee affichera :
-1. Un separateur avec le titre "Pronostics des managers"
-2. Une liste compacte avec chaque manager :
-   - Avatar miniature (h-6 w-6)
-   - Nom du manager
-   - Fleche vers le nom du coureur
-   - Badge correct (vert) / incorrect (rouge) si evalue
-3. Le pronostic du manager courant sera mis en evidence avec un fond leger et une mention "(vous)"
-
-### Fichiers modifies
-
-| Fichier | Modification |
-|---------|-------------|
-| `src/hooks/useArenaPronostics.ts` | Ajout du hook `useLeaguePronostics` + type `LeaguePronostic` |
-| `src/components/arena/PronosticRaceCard.tsx` | Affichage de la liste des pronostics de tous les managers quand ferme |
-| `src/i18n/locales/fr/arena.json` | Nouvelles cles de traduction |
-| `src/i18n/locales/en/arena.json` | Nouvelles cles de traduction |
