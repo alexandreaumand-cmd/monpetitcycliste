@@ -166,16 +166,35 @@ async function sendDailyRecap(
     month: "long",
   });
 
+  // Get current league standings via the edge function RPC
+  const { data: standingsData } = await supabase.rpc("get_league_standings_for_recap", {
+    p_league_id: league.id,
+  });
+
   // Build message
   const lines = [`📊 **Récap du ${dayStr}**\n`];
   const medals = ["🥇", "🥈", "🥉"];
 
+  // Daily point changes
+  lines.push("**Mouvements du jour :**");
   entries.forEach((entry, i) => {
     const name = managerMap[entry.managerId] || "Inconnu";
     const medal = i < 3 ? medals[i] : "▪️";
     const sign = entry.total > 0 ? "+" : "";
     lines.push(`${medal} ${name}: ${sign}${entry.total} pts`);
   });
+
+  // Current standings with gaps
+  if (standingsData && standingsData.length > 0) {
+    lines.push("");
+    lines.push("**📈 Classement général :**");
+    const leader = standingsData[0];
+    standingsData.forEach((entry: any, i: number) => {
+      const gap = i === 0 ? "" : ` (${entry.total_points - leader.total_points} pts)`;
+      const rankEmoji = i < 3 ? medals[i] : `${i + 1}.`;
+      lines.push(`${rankEmoji} ${entry.manager_nom}: ${entry.total_points} pts${gap}`);
+    });
+  }
 
   const content = lines.join("\n");
 
