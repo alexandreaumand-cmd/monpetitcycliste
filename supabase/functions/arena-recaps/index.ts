@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
           await sendWeeklyRecap(supabase, league, channel.id, supabaseUrl, serviceKey);
           results.push({ league: league.name, sent: true, type: "weekly" });
         } else {
-          const sent = await sendDailyRecap(supabase, league, channel.id);
+          const sent = await sendDailyRecap(supabase, league, channel.id, supabaseUrl, serviceKey);
           results.push({ league: league.name, sent, type: "daily" });
         }
       } catch (err) {
@@ -84,7 +84,9 @@ Deno.serve(async (req) => {
 async function sendDailyRecap(
   supabase: any,
   league: { id: string; name: string },
-  channelId: string
+  channelId: string,
+  supabaseUrl: string,
+  serviceKey: string
 ): Promise<boolean> {
   const today = new Date();
   const startOfDay = new Date(today);
@@ -213,6 +215,40 @@ async function sendDailyRecap(
   }
 
   console.log(`📊 Daily recap sent for ${league.name}`);
+
+  // Send push notification for daily recap
+  try {
+    const topManagerName = managerMap[entries[0].managerId] || "?";
+
+    const { data: leagueMembers } = await supabase
+      .from("league_members")
+      .select("user_id")
+      .eq("league_id", league.id);
+
+    if (leagueMembers && leagueMembers.length > 0) {
+      const userIds = leagueMembers.map((m: any) => m.user_id);
+
+      await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({
+          user_ids: userIds,
+          title: `📊 Récap du jour — ${league.name}`,
+          message: `Bravo à ${topManagerName}, manager du jour !`,
+          type: "arena_daily_recap",
+          metadata: { league_id: league.id },
+        }),
+      });
+
+      console.log(`📲 Push notification sent for daily recap of ${league.name}`);
+    }
+  } catch (pushErr) {
+    console.error("Push notification error (daily):", pushErr);
+  }
+
   return true;
 }
 
