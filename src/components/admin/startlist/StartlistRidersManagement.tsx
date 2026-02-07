@@ -45,7 +45,28 @@ export const StartlistRidersManagement = ({
 
     setIsDeleting(true);
     try {
-      // Delete from startlist_entries by coureur_id and startlist_id
+      // First, find the startlist_entry id(s) to delete
+      const { data: entries, error: findError } = await supabase
+        .from("startlist_entries")
+        .select("id")
+        .eq("startlist_id", startlistId)
+        .eq("coureur_id", deleteCandidate.coureur_id);
+
+      if (findError) throw findError;
+
+      const entryIds = (entries || []).map((e) => e.id);
+
+      // Delete related startlist_tracker_changes that reference these entries
+      if (entryIds.length > 0) {
+        const { error: trackerError } = await supabase
+          .from("startlist_tracker_changes")
+          .delete()
+          .in("startlist_entry_id", entryIds);
+
+        if (trackerError) throw trackerError;
+      }
+
+      // Now delete the startlist_entries
       const { error } = await supabase
         .from("startlist_entries")
         .delete()
