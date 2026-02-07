@@ -27,7 +27,9 @@
     "deadlineExpired": "Clôturé {{time}}",
     "sections": {
       "open": "Pronostics ouverts",
-      "closed": "Résultats"
+      "closed": "Résultats",
+      "pending": "En attente d'évaluation",
+      "evaluated": "Résultats évalués"
     },
     "types": {
       "stageWinner": "Vainqueur d'étape",
