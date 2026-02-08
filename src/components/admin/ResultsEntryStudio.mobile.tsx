@@ -11,6 +11,7 @@ import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
 import { X, ChevronLeft, ChevronRight, Save, Check, Info, MessageSquare, Share2, Download, Loader2 } from "lucide-react";
 import { usePcsImport } from "@/hooks/usePcsImport";
 import { ExportResultsImage } from "./ExportResultsImage";
+import { PcsSlugDialog } from "./PcsSlugDialog";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -87,6 +88,8 @@ export const ResultsEntryStudioMobile = ({
   const [combatifOpen, setCombatifOpen] = useState(false);
   const [combatifWinner, setCombatifWinner] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [pcsSlugDialogOpen, setPcsSlugDialogOpen] = useState(false);
+  const [pcsSlugError, setPcsSlugError] = useState<{ message: string; slugUsed: string }>({ message: '', slugUsed: '' });
   const queryClient = useQueryClient();
   const leagueClient = useLeagueClient();
   const { importFromPcs, isImporting: isPcsImporting } = usePcsImport();
@@ -278,15 +281,23 @@ export const ResultsEntryStudioMobile = ({
   };
 
   // PCS Import handler
-  const handlePcsImport = async () => {
+  const handlePcsImport = async (pcsSlugOverride?: string) => {
     const year = new Date(course.date_debut).getFullYear();
     const etapeNumero = currentClassement === "Etape" ? currentStage : null;
-    const results = await importFromPcs({
+    const { results, error } = await importFromPcs({
       courseId: course.course_id,
       year,
       typeClassement: currentClassement,
       etapeNumero,
+      pcsSlugOverride,
     });
+
+    if (error?.type === 'slug_error') {
+      const slugUsed = error.slugUsed || course.course_id.replace(/^(.+)-[a-z0-9]{8}$/, '$1').replace(/_/g, '-');
+      setPcsSlugError({ message: error.message, slugUsed });
+      setPcsSlugDialogOpen(true);
+      return;
+    }
 
     if (!results || results.length === 0) return;
 
@@ -304,6 +315,7 @@ export const ResultsEntryStudioMobile = ({
       }
       return newRows;
     });
+    setPcsSlugDialogOpen(false);
   };
 
   const handleRiderChange = (index: number, coureur: any) => {
@@ -1177,7 +1189,7 @@ export const ResultsEntryStudioMobile = ({
         <div className="flex gap-2 mb-2">
           <Button
             variant="outline"
-            onClick={handlePcsImport}
+            onClick={() => handlePcsImport()}
             disabled={isPcsImporting || isCancelled}
             className="flex-1"
           >
@@ -1188,6 +1200,15 @@ export const ResultsEntryStudioMobile = ({
             )}
           </Button>
         </div>
+
+        <PcsSlugDialog
+          open={pcsSlugDialogOpen}
+          onOpenChange={setPcsSlugDialogOpen}
+          slugUsed={pcsSlugError.slugUsed}
+          errorMessage={pcsSlugError.message}
+          onRetry={(newSlug) => handlePcsImport(newSlug)}
+          isRetrying={isPcsImporting}
+        />
 
         <div className="flex gap-2">
           {/* Bouton Enregistrer */}

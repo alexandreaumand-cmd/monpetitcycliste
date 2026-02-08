@@ -248,29 +248,32 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { course_id, year, type_classement, etape_numero } = await req.json();
+    const { course_id, year, type_classement, etape_numero, pcs_slug_override } = await req.json();
 
-    if (!course_id || !year) {
-      return new Response(
-        JSON.stringify({ error: "course_id and year are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
-    // 1. Get PCS slug: first try pcs_slug column, then extract from course_id
+    // 1. Get PCS slug: override > pcs_slug column > extract from course_id
     const { data: courseData } = await supabase
       .from("courses")
       .select("id, pcs_slug, type_course")
       .eq("id", course_id)
       .single();
 
-    let pcsSlug = courseData?.pcs_slug || extractPcsSlugFromId(course_id);
+    let pcsSlug = pcs_slug_override || courseData?.pcs_slug || extractPcsSlugFromId(course_id);
 
     if (!pcsSlug) {
       return new Response(
-        JSON.stringify({ error: "Cannot determine PCS slug for this course. Please set pcs_slug in the courses table." }),
+        JSON.stringify({ error: "Cannot determine PCS slug for this course. Please set pcs_slug in the courses table.", error_type: "slug_error", slug_used: null }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // If override provided, save it for future use
+    if (pcs_slug_override && pcs_slug_override !== courseData?.pcs_slug) {
+      await supabase
+        .from("courses")
+        .update({ pcs_slug: pcs_slug_override })
+        .eq("id", course_id);
+      console.log(`Saved pcs_slug override: ${pcs_slug_override} for course ${course_id}`);
     }
 
     // 2. Build PCS URL
@@ -288,7 +291,7 @@ serve(async (req) => {
 
     if (!response.ok) {
       return new Response(
-        JSON.stringify({ error: `PCS returned ${response.status}. URL: ${pcsUrl}` }),
+        JSON.stringify({ error: `PCS returned ${response.status}. URL: ${pcsUrl}`, error_type: "slug_error", slug_used: pcsSlug }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -407,6 +410,7 @@ serve(async (req) => {
         matched: matchedCount,
         total: scrapedResults.length,
         pcs_url: pcsUrl,
+        slug_used: pcsSlug,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
