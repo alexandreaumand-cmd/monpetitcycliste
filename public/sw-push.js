@@ -127,6 +127,17 @@ function getUrlForNotificationType(type, metadata) {
         return `${baseUrl}/encheres?leagueId=${metadata.league_id}`;
       }
       return `${baseUrl}/encheres`;
+
+    case 'arena_daily_recap':
+    case 'arena_weekly_recap':
+    case 'arena_mention':
+    case 'arena_mention_all':
+    case 'arena_reaction': {
+      const params = new URLSearchParams();
+      params.set('tab', 'trashtalk');
+      if (metadata?.league_id) params.set('leagueId', metadata.league_id);
+      return `${baseUrl}/arene?${params.toString()}`;
+    }
     
     default:
       return baseUrl;
