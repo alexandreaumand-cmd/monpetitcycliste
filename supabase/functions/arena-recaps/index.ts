@@ -262,12 +262,22 @@ async function sendWeeklyRecap(
   serviceKey: string
 ) {
   const now = new Date();
-  const weekAgo = new Date(now);
-  weekAgo.setDate(weekAgo.getDate() - 7);
-  weekAgo.setUTCHours(0, 0, 0, 0);
 
-  const startIso = weekAgo.toISOString();
-  const endIso = now.toISOString();
+  // Calculate Monday 00:00 UTC of the current week
+  // getUTCDay(): 0=Sunday, 1=Monday, ..., 6=Saturday
+  const dayOfWeek = now.getUTCDay();
+  const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(now);
+  monday.setUTCDate(monday.getUTCDate() - daysSinceMonday);
+  monday.setUTCHours(0, 0, 0, 0);
+
+  // Sunday 23:59:59 UTC (end of current week)
+  const sunday = new Date(monday);
+  sunday.setUTCDate(sunday.getUTCDate() + 6);
+  sunday.setUTCHours(23, 59, 59, 999);
+
+  const startIso = monday.toISOString();
+  const endIso = sunday.toISOString();
 
   // 1. Get race points for the week
   const { data: racePoints } = await supabase.rpc("get_daily_points_by_manager", {
@@ -312,16 +322,18 @@ async function sendWeeklyRecap(
   });
 
   // 4. Get upcoming races for next week
-  const nextWeekStart = new Date(now);
-  nextWeekStart.setDate(nextWeekStart.getDate() + 1);
-  const nextWeekEnd = new Date(now);
-  nextWeekEnd.setDate(nextWeekEnd.getDate() + 8);
+  // Next week: Monday to Sunday
+  const nextMonday = new Date(sunday);
+  nextMonday.setUTCDate(nextMonday.getUTCDate() + 1);
+  nextMonday.setUTCHours(0, 0, 0, 0);
+  const nextSunday = new Date(nextMonday);
+  nextSunday.setUTCDate(nextSunday.getUTCDate() + 6);
 
   const { data: upcomingRaces } = await supabase
     .from("courses")
     .select("nom, categorie, date_debut")
-    .gte("date_debut", nextWeekStart.toISOString().split("T")[0])
-    .lte("date_debut", nextWeekEnd.toISOString().split("T")[0])
+    .gte("date_debut", nextMonday.toISOString().split("T")[0])
+    .lte("date_debut", nextSunday.toISOString().split("T")[0])
     .order("date_debut", { ascending: true })
     .limit(10);
 
