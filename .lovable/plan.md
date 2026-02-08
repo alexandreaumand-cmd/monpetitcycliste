@@ -1,36 +1,60 @@
 
 
-# Ajout d'une notification push au Daily Recap
+# Matching 100% des coureurs : utiliser le slug PCS comme cle directe
+
+## Le probleme actuel
+
+Le systeme actuel charge les 3034 coureurs en memoire et compare les noms normalises. Deux problemes :
+
+1. **Limite de 1000 lignes** : la requete Supabase ne retourne que 1000 coureurs sur 3034, donc 2/3 des coureurs ne sont jamais trouves
+2. **Comparaison inutilement complexe** : on compare des noms alors qu'on a deja la cle exacte
+
+## La solution : correspondance directe par ID
+
+Les IDs des coureurs dans ta base suivent exactement le meme format que les slugs PCS :
+
+| Slug PCS (dans le HTML) | ID coureur (dans ta base) |
+|--------------------------|---------------------------|
+| `mauro-schmid` | `mauro_schmid` |
+| `luke-plapp` | `luke_plapp` |
+| `mikkel-honore` | `mikkel_honore` |
+| `roger-adria` | `roger_adria` |
+
+La transformation est triviale : remplacer les `-` par des `_`.
+
+J'ai teste sur 10 coureurs non-matches : **10/10 trouves** avec cette methode.
 
 ## Ce qui va changer
 
-Apres l'envoi du message systeme dans le channel #general, une notification push sera envoyee a tous les membres de la ligue avec le texte :
+### Edge Function `scrape-pcs-results`
 
-**Titre :** `📊 Récap du jour — [Nom de la ligue]`
-**Message :** `Bravo à [NomManager1], manager du jour !`
+La strategie de matching sera reecrite :
 
-ou `NomManager1` est le manager ayant marque le plus de points dans la journee (le premier de la liste `entries`).
+1. **Strategie 1 (nouvelle) : ID direct depuis le slug PCS**
+   - Convertir le slug PCS en ID coureur : `mauro-schmid` devient `mauro_schmid`
+   - Verifier l'existence dans la base avec une seule requete SQL (`WHERE id IN (...)`)
+   - Devrait matcher ~95-100% des coureurs
 
-## Modifications techniques
+2. **Strategie 2 (fallback) : Recherche par nom normalise**
+   - Pour les rares cas ou le slug PCS ne correspond pas a l'ID en base
+   - Utiliser la recherche par token signature existante
+   - Charger les coureurs en paginant (plusieurs requetes de 1000) pour couvrir les 3034 coureurs
 
-### Fichier : `supabase/functions/arena-recaps/index.ts`
+### Avantages
 
-1. **Modifier la signature de `sendDailyRecap`** pour recevoir `supabaseUrl` et `serviceKey` (necessaires pour appeler l'Edge Function `send-push-notification`), comme c'est deja le cas pour `sendWeeklyRecap`.
+- **Performance** : une seule requete SQL au lieu de charger 3000+ coureurs en memoire
+- **Fiabilite** : correspondance par cle primaire, pas par comparaison de texte
+- **Taux de match** : proche de 100% pour tous les coureurs presents dans ta base
 
-2. **Mettre a jour l'appel** dans le handler principal (ligne 59) pour passer ces deux parametres supplementaires.
+## Details techniques
 
-3. **Ajouter le bloc push notification** apres l'insertion du message systeme (apres la ligne 215), en suivant le meme pattern que le weekly recap :
-   - Recuperer tous les `user_id` des membres de la ligue via `league_members`
-   - Appeler `send-push-notification` avec :
-     - `user_ids` : tous les membres de la ligue
-     - `title` : `📊 Récap du jour — [league.name]`
-     - `message` : `Bravo à [nom du 1er manager], manager du jour !`
-     - `type` : `arena_daily_recap`
-     - `metadata` : `{ league_id: league.id }`
+Le changement se fait uniquement dans `supabase/functions/scrape-pcs-results/index.ts` :
 
-### Aucune autre modification necessaire
+- Extraire tous les slugs PCS des resultats scrapes
+- Les convertir en IDs potentiels (`slug.replace(/-/g, '_')`)
+- Faire une requete `SELECT id, nom FROM coureurs WHERE id IN ($1, $2, ...)` pour verifier lesquels existent
+- Associer directement les resultats aux coureurs trouves
+- Pour les non-trouves, appliquer le fallback par nom (avec pagination correcte pour depasser la limite de 1000 lignes)
 
-- Le systeme de push existant (`send-push-notification`) gere deja le filtrage par preferences utilisateur
-- Pas de changement de base de donnees
-- Pas de changement cote frontend
+Aucun changement cote frontend, aucune migration SQL necessaire.
 
