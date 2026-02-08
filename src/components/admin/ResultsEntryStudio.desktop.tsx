@@ -1108,7 +1108,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
             courseId: course.course_id,
             year,
             typeClassement: type,
-            etapeNumero: null,
+            etapeNumero: currentStage,
             pcsSlugOverride,
           })
         )
