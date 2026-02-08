@@ -39,36 +39,46 @@ export function usePcsImport() {
       });
 
       if (error) {
-        // Try to parse error body for slug_error type
+        // Debug: log the full error structure to understand how Supabase returns it
+        console.log('PCS import error object:', JSON.stringify({
+          message: error.message,
+          name: error.name,
+          hasContext: !!error.context,
+          contextType: typeof error.context,
+        }));
+        
         let errorType: 'slug_error' | 'other' = 'other';
         let errorMessage = error.message || "Import failed";
         let slugUsed: string | undefined;
 
-        // The Supabase client puts the response body JSON in error.message
+        // Strategy 1: error.message might contain JSON (possibly with a prefix like "Edge function returned 400: ")
         try {
-          const parsed = JSON.parse(errorMessage);
+          const jsonMatch = errorMessage.match(/\{[\s\S]*\}$/);
+          const jsonStr = jsonMatch ? jsonMatch[0] : errorMessage;
+          const parsed = JSON.parse(jsonStr);
           if (parsed.error) errorMessage = parsed.error;
           if (parsed.error_type === 'slug_error' || errorMessage.includes('PCS returned')) {
             errorType = 'slug_error';
           }
           slugUsed = parsed.slug_used || undefined;
         } catch {
-          // Try error.context?.body as fallback
-          try {
-            const errorBody = error.context?.body
-              ? (typeof error.context.body === 'string' ? JSON.parse(error.context.body) : error.context.body)
-              : null;
-            if (errorBody) {
-              errorMessage = errorBody.error || errorMessage;
-              if (errorBody.error_type === 'slug_error' || errorMessage.includes('PCS returned')) {
+          // Strategy 2: error.context might be a Response - try reading it
+          if (error.context && typeof error.context.json === 'function') {
+            try {
+              const body = await error.context.json();
+              console.log('PCS error context.json():', JSON.stringify(body));
+              if (body.error) errorMessage = body.error;
+              if (body.error_type === 'slug_error' || errorMessage.includes('PCS returned')) {
                 errorType = 'slug_error';
               }
-              slugUsed = errorBody.slug_used || undefined;
+              slugUsed = body.slug_used || undefined;
+            } catch (e2) {
+              console.log('Failed to read error.context.json():', e2);
             }
-          } catch {
-            if (errorMessage.includes('PCS returned')) {
-              errorType = 'slug_error';
-            }
+          }
+          // Strategy 3: just check the message string
+          if (errorType === 'other' && errorMessage.includes('PCS returned')) {
+            errorType = 'slug_error';
           }
         }
 
