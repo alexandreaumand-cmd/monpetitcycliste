@@ -1,53 +1,50 @@
 
-# Fix: Remplacer le parsing regex par DOMParser (deno-dom)
 
-## Probleme
+# Cron Job pour le Startlist Tracker (toutes les 30 min)
 
-Le parsing regex dans `parseStartlistByTeamAndRider` retourne systematiquement 0 coureurs sur toutes les pages PCS testees (Provence, Algarve, Figueira). La regex combinee ne matche aucun lien team ni rider dans le HTML recu par l'edge function, bien que le HTML semble correct (39K caracteres, titre extrait correctement).
+## Objectif
 
-La fonction `scrape-pcs-results` fonctionne parfaitement car elle utilise `DOMParser` de `deno-dom` pour parser le HTML de maniere fiable.
+Automatiser le scraping global du Startlist Tracker en le lancant toutes les 30 minutes via un cron job dans la base de donnees.
 
-## Solution
+## Prerequis
 
-Remplacer le parsing regex par `DOMParser` de `deno-dom`, exactement comme `scrape-pcs-results`.
+Activer les extensions `pg_cron` et `pg_net` dans la base de donnees (si pas deja fait).
 
-## Changements dans `supabase/functions/startlist-tracker/index.ts`
+## Implementation
 
-### 1. Ajouter l'import DOMParser
-```typescript
-import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
+### Migration SQL unique
+
+Executer une requete SQL qui :
+
+1. Active les extensions `pg_cron` et `pg_net`
+2. Cree un cron job qui appelle la fonction `startlist-tracker` toutes les 30 minutes avec le body `{"source_type": "global"}`
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+SELECT cron.schedule(
+  'startlist-tracker-global-sync',
+  '*/30 * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://khahpetvqjoyrwambaqn.supabase.co/functions/v1/startlist-tracker',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYWhwZXR2cWpveXJ3YW1iYXFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNzQwMjUsImV4cCI6MjA4NTk1MDAyNX0.fDW-OHQan6_rOr_cYVJNWhDF3BwZu8Vu6-qLKKRAHtM"}'::jsonb,
+    body := '{"source_type": "global"}'::jsonb
+  ) AS request_id;
+  $$
+);
 ```
 
-### 2. Reecrire `parseStartlistHtml` avec DOMParser
-- Parser le HTML complet avec `new DOMParser().parseFromString(html, "text/html")`
-- Selectionner la section `ul.startlist_v4`
-- Pour chaque equipe : `querySelectorAll("a.team")` pour le nom
-- Pour chaque coureur : `querySelectorAll('a[href*="/rider/"]')` pour nom et slug
-- Parcourir les elements du DOM sequentiellement (equipe puis coureurs)
+## Details
 
-### 3. Reecrire `parseChangedRacesHtml` avec DOMParser
-- Parser le HTML avec DOMParser
-- Trouver les liens de course dans la table via `querySelectorAll('a[href*="/race/"]')`
-- Extraire slug et annee depuis le href
+- **Frequence** : toutes les 30 minutes (`*/30 * * * *`)
+- **Nom du job** : `startlist-tracker-global-sync`
+- **Aucun changement de code** : seule une migration SQL est necessaire
+- Le job appelle exactement le meme endpoint que le bouton "Lancer le scraping global" dans l'interface
 
-### 4. Supprimer les fonctions regex obsoletes
-- Supprimer `parseStartlistByTeamAndRider`
-- Supprimer `parseStartlistFallback`
-- Les remplacer par la logique DOM
+## Pour modifier ou supprimer le job plus tard
 
-## Detail technique
+- Modifier la frequence : `SELECT cron.alter_job('startlist-tracker-global-sync', schedule := '0 * * * *');` (ex: toutes les heures)
+- Supprimer : `SELECT cron.unschedule('startlist-tracker-global-sync');`
 
-La logique DOM pour les startlists :
-
-```typescript
-const doc = new DOMParser().parseFromString(html, "text/html");
-const startlist = doc.querySelector(".startlist_v4");
-// Iterate through child <li> elements (each = one team)
-// Within each: querySelector("a.team") for team name
-// querySelectorAll('a[href*="/rider/"]') for riders
-```
-
-## Avantage
-- Meme approche que `scrape-pcs-results` qui fonctionne parfaitement
-- Parsing DOM fiable, insensible a la minification et aux variations d'attributs
-- Plus de problemes de regex sur du HTML complexe
