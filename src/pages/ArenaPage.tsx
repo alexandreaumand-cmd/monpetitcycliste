@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Target, Vote, MessageCircle, Crown } from "lucide-react";
 import { PronosticsTab } from "@/components/arena/PronosticsTab";
@@ -7,10 +8,25 @@ import { TrashTalkTab } from "@/components/arena/TrashTalkTab";
 import { HallOfFameSection } from "@/components/arena/HallOfFameSection";
 import { useLeague } from "@/contexts/LeagueContext";
 
+const VALID_TABS = ["pronostics", "votes", "trashtalk", "halloffame"] as const;
+
 export default function ArenaPage() {
   const { t } = useTranslation("arena");
   const { leagueId } = useLeague();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const tabFromUrl = searchParams.get("tab");
+  const defaultTab = VALID_TABS.includes(tabFromUrl as any) ? tabFromUrl! : "pronostics";
 
+  const handleTabChange = (value: string) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (value === "pronostics") {
+      newParams.delete("tab");
+    } else {
+      newParams.set("tab", value);
+    }
+    setSearchParams(newParams, { replace: true });
+  };
   if (!leagueId) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
@@ -28,7 +44,7 @@ export default function ArenaPage() {
         <p className="text-muted-foreground">{t("subtitle")}</p>
       </div>
 
-      <Tabs defaultValue="pronostics" className="w-full">
+      <Tabs value={defaultTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="pronostics" className="gap-2">
             <Target className="h-4 w-4" />
