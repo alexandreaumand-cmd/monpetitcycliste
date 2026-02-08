@@ -1092,6 +1092,51 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     setIsDirty(true);
     setGridPrepared(true);
     setPcsSlugDialogOpen(false);
+
+    // Auto-fill jersey holders for stage races in "Etape" mode
+    if (!isOneDay && activeTab === "stages" && classementType === "Etape") {
+      const jerseyClassifications = [
+        { type: "General", jersey: "general" as JerseyType },
+        { type: "Points", jersey: "vert" as JerseyType },
+        { type: "Montagne", jersey: "montagne" as JerseyType },
+        { type: "Jeune", jersey: "jeune" as JerseyType },
+      ];
+
+      const jerseyResults = await Promise.allSettled(
+        jerseyClassifications.map(({ type }) =>
+          importFromPcs({
+            courseId: course.course_id,
+            year,
+            typeClassement: type,
+            etapeNumero: null,
+            pcsSlugOverride,
+          })
+        )
+      );
+
+      let filled = 0;
+      jerseyResults.forEach((result, idx) => {
+        if (result.status === "fulfilled" && result.value.results && result.value.results.length > 0) {
+          const leader = result.value.results[0];
+          if (leader.matched_coureur_id) {
+            setJerseyHolders((prev) => ({
+              ...prev,
+              [jerseyClassifications[idx].jersey]: leader.matched_coureur_id,
+            }));
+            filled++;
+          }
+        }
+      });
+
+      if (filled > 0) {
+        toast({
+          title: `🏅 ${filled}/4 maillots remplis automatiquement`,
+          description: filled < 4
+            ? `${4 - filled} maillot(s) non trouvé(s) sur PCS`
+            : "Tous les maillots ont été remplis !",
+        });
+      }
+    }
   };
 
   const handleRiderChange = (index: number, riderId: string | null, riderName: string | null) => {
