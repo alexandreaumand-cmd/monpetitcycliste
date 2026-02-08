@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.scrape-pcs-results]
 verify_jwt = false
+
+[functions.recalculate-rider-bonuses]
+verify_jwt = false
