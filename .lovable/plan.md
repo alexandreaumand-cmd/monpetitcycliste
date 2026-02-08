@@ -1,52 +1,53 @@
 
-# Fix: Parsing HTML des startlists PCS
+# Fix: Remplacer le parsing regex par DOMParser (deno-dom)
 
-## Probleme identifie
+## Probleme
 
-Le HTML PCS est **entierement minifie** (tout sur une seule ligne de ~44k caracteres). La structure reelle est :
+Le parsing regex dans `parseStartlistByTeamAndRider` retourne systematiquement 0 coureurs sur toutes les pages PCS testees (Provence, Algarve, Figueira). La regex combinee ne matche aucun lien team ni rider dans le HTML recu par l'edge function, bien que le HTML semble correct (39K caracteres, titre extrait correctement).
 
-```text
-<ul class="startlist_v4">
-  <li>                          <-- equipe (outer)
-    <a class="team">...</a>
-    <ul>
-      <li class=" ">            <-- coureur (inner, imbrique)
-        <a href="/rider/...">NOM</a>
-      </li>
-    </ul>
-  </li>
-</ul>
-```
-
-La regex `/<li[^>]*>[\s\S]*?<\/li>/gi` ne fonctionne pas correctement avec ces `<li>` imbriques sur une seule ligne. Le lazy matching decoupe mal les blocs, et aucun coureur n'est extrait.
+La fonction `scrape-pcs-results` fonctionne parfaitement car elle utilise `DOMParser` de `deno-dom` pour parser le HTML de maniere fiable.
 
 ## Solution
 
-Simplifier `parseStartlistHtml` pour utiliser directement l'approche sequentielle (`parseStartlistByTeamAndRider`) qui scanne les liens `<a class="team">` et `<a href="/rider/...">` dans l'ordre. Cette methode est deja codee en fallback mais n'est jamais atteinte car le regex `<li>` retourne des blocs (mal formes).
+Remplacer le parsing regex par `DOMParser` de `deno-dom`, exactement comme `scrape-pcs-results`.
 
-## Changements
+## Changements dans `supabase/functions/startlist-tracker/index.ts`
 
-### Fichier : `supabase/functions/startlist-tracker/index.ts`
+### 1. Ajouter l'import DOMParser
+```typescript
+import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
+```
 
-**`parseStartlistHtml`** : Supprimer la logique de split par blocs `<li>` et appeler directement `parseStartlistByTeamAndRider(section)` apres avoir trouve la section `startlist_v4`. Cela donne :
+### 2. Reecrire `parseStartlistHtml` avec DOMParser
+- Parser le HTML complet avec `new DOMParser().parseFromString(html, "text/html")`
+- Selectionner la section `ul.startlist_v4`
+- Pour chaque equipe : `querySelectorAll("a.team")` pour le nom
+- Pour chaque coureur : `querySelectorAll('a[href*="/rider/"]')` pour nom et slug
+- Parcourir les elements du DOM sequentiellement (equipe puis coureurs)
 
-1. Trouver `class="startlist_v4"` dans le HTML
-2. Extraire la section depuis ce point
-3. Scanner sequentiellement les liens team et rider (sans decoupe par `<li>`)
-4. Garder le fallback global si `startlist_v4` n'est pas present
+### 3. Reecrire `parseChangedRacesHtml` avec DOMParser
+- Parser le HTML avec DOMParser
+- Trouver les liens de course dans la table via `querySelectorAll('a[href*="/race/"]')`
+- Extraire slug et annee depuis le href
 
-**Ajouter du logging** dans `parseStartlistByTeamAndRider` pour tracer le nombre de teams et riders detectes.
+### 4. Supprimer les fonctions regex obsoletes
+- Supprimer `parseStartlistByTeamAndRider`
+- Supprimer `parseStartlistFallback`
+- Les remplacer par la logique DOM
 
 ## Detail technique
 
-La fonction `parseStartlistByTeamAndRider` parcourt le HTML lineairement avec un seul regex combine :
-- Quand elle rencontre `<a class="team">` : elle met a jour le nom de l'equipe courante
-- Quand elle rencontre `<a href="/rider/...">` : elle ajoute le coureur avec l'equipe courante
+La logique DOM pour les startlists :
 
-Cette approche est insensible a l'imbrication des `<li>` et fonctionne sur du HTML minifie.
+```typescript
+const doc = new DOMParser().parseFromString(html, "text/html");
+const startlist = doc.querySelector(".startlist_v4");
+// Iterate through child <li> elements (each = one team)
+// Within each: querySelector("a.team") for team name
+// querySelectorAll('a[href*="/rider/"]') for riders
+```
 
-## Impact
-
-- Aucun changement de comportement visible cote UI
-- Parsing deterministe et robuste sur HTML minifie
-- Redeploy automatique de la fonction
+## Avantage
+- Meme approche que `scrape-pcs-results` qui fonctionne parfaitement
+- Parsing DOM fiable, insensible a la minification et aux variations d'attributs
+- Plus de problemes de regex sur du HTML complexe
