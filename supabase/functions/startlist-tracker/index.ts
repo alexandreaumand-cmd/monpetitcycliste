@@ -30,7 +30,6 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -62,7 +61,7 @@ serve(async (req) => {
         // TWO-STEP APPROACH:
         // Step 1: Fetch list of races with recent startlist modifications
         console.log("Step 1: Fetching list of changed races...");
-        const changedRaces = await scrapeChangedRacesList(lovableApiKey);
+        const changedRaces = await scrapeChangedRacesList();
         console.log(`Found ${changedRaces.length} races with recent changes`);
         racesAnalyzed = changedRaces.length;
 
@@ -83,9 +82,7 @@ serve(async (req) => {
             const dbCoursesByName = new Map<string, { id: string; nom: string }>();
             
             for (const course of dbCourses) {
-              // Add by lowercase ID (slug)
               dbCoursesBySlug.set(course.id.toLowerCase(), course);
-              // Add by normalized name
               const normalizedName = normalizeName(course.nom);
               dbCoursesByName.set(normalizedName, course);
             }
@@ -97,12 +94,10 @@ serve(async (req) => {
               const slugLower = race.slug.toLowerCase();
               const normalizedRaceName = normalizeName(race.name);
               
-              // Try to match by slug first, then by name
               let matchedCourse = dbCoursesBySlug.get(slugLower);
               if (!matchedCourse) {
                 matchedCourse = dbCoursesByName.get(normalizedRaceName);
               }
-              // Also try partial matching on slug
               if (!matchedCourse) {
                 for (const [dbSlug, course] of dbCoursesBySlug) {
                   if (dbSlug.includes(slugLower) || slugLower.includes(dbSlug)) {
@@ -122,7 +117,6 @@ serve(async (req) => {
 
             console.log(`Matched ${racesToProcess.length} courses, processing max ${MAX_COURSES_PER_RUN}`);
             
-            // Limit to MAX_COURSES_PER_RUN to avoid timeout
             const limitedRaces = racesToProcess.slice(0, MAX_COURSES_PER_RUN);
             
             for (const { race, matchedCourse } of limitedRaces) {
@@ -130,18 +124,15 @@ serve(async (req) => {
               console.log(`Processing course: ${race.name} -> matched to ${matchedCourse.id}`);
 
               try {
-                // Scrape the full startlist for this race
-                const scrapedRiders = await scrapeRaceStartlist(race.url, lovableApiKey);
+                const scrapedRiders = await scrapeRaceStartlist(race.url);
                 console.log(`Scraped ${scrapedRiders.length} riders from ${race.name}`);
 
-                // Generate changes by comparing with existing entries (full sync)
                 const raceChanges = await generateFullSyncChanges(supabase, scrapedRiders, race.url);
                 console.log(`Generated ${raceChanges.length} changes for ${race.name}`);
                 
                 changes.push(...raceChanges);
               } catch (raceError) {
                 console.error(`Error processing race ${race.name}:`, raceError);
-                // Continue with next race
               }
             }
             
@@ -153,10 +144,9 @@ serve(async (req) => {
           }
         }
       } else if (source_type === "race" && race_url) {
-        // Single race scraping - triggers FULL SYNC mode
         racesAnalyzed = 1;
         racesMatched = 1;
-        const scrapedRiders = await scrapeRaceStartlist(race_url, lovableApiKey);
+        const scrapedRiders = await scrapeRaceStartlist(race_url);
         changes = await generateFullSyncChanges(supabase, scrapedRiders, race_url);
       }
 
@@ -198,7 +188,6 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } catch (error) {
-      // Update run as failed
       await supabase
         .from("startlist_tracker_runs")
         .update({
@@ -234,11 +223,183 @@ function normalizeName(name: string): string {
     .trim();
 }
 
+// ============================================================
+// HTML PARSING FUNCTIONS (replacing Gemini AI calls)
+// ============================================================
+
 /**
- * NEW FUNCTION: Scrape the list of races with recent startlist changes
- * URL: https://www.procyclingstats.com/races.php?s=startlist-changes-all-races&interval=12&filter=Filter
+ * Parse the "startlist changes" page HTML to extract races with recent modifications.
+ * Replaces the Gemini-based extraction.
  */
-async function scrapeChangedRacesList(apiKey: string | undefined): Promise<ChangedRace[]> {
+function parseChangedRacesHtml(html: string): ChangedRace[] {
+  const races: ChangedRace[] = [];
+  const seen = new Set<string>();
+
+  // Find all race links in the table: /race/{slug}/{year}/startlist or /race/{slug}/{year}
+  const linkRegex = /<a[^>]*href="\/race\/([^/]+)\/(\d{4})(?:\/[^"]*)?"/gi;
+  let match;
+
+  while ((match = linkRegex.exec(html)) !== null) {
+    const slug = match[1];
+    const year = parseInt(match[2], 10);
+    const key = `${slug}/${year}`;
+
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    // Extract the race name from the link text
+    // Pattern: <a href="/race/slug/year/...">Race Name</a>
+    const afterTag = html.substring(match.index);
+    const nameMatch = afterTag.match(/<a[^>]*>[^<]*?(?:<[^/][^>]*>[^<]*<\/[^>]*>)*\s*([^<]+?)\s*<\/a>/i);
+    
+    // Simpler approach: get text content after the opening tag
+    const textMatch = afterTag.match(/<a[^>]*>\s*([\s\S]*?)\s*<\/a>/i);
+    let name = slug.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    
+    if (textMatch) {
+      // Strip any inner HTML tags to get pure text
+      const rawText = textMatch[1].replace(/<[^>]*>/g, "").trim();
+      if (rawText.length > 2) {
+        name = rawText;
+      }
+    }
+
+    races.push({
+      name,
+      slug,
+      year,
+      url: `https://www.procyclingstats.com/race/${slug}/${year}/startlist`,
+    });
+  }
+
+  console.log(`parseChangedRacesHtml: extracted ${races.length} races`);
+  races.forEach((r, i) => console.log(`  ${i + 1}. ${r.name} (${r.slug}/${r.year})`));
+  return races;
+}
+
+/**
+ * Parse a race startlist page HTML to extract all riders with their teams.
+ * Replaces the Gemini-based extraction.
+ * 
+ * PCS structure:
+ * <ul class="startlist_v4">
+ *   <li>
+ *     <a class="team" href="/team/...">Team Name (WT)</a>
+ *     ...
+ *     <a href="/rider/slug">LASTNAME Firstname</a>
+ *     ...
+ *   </li>
+ * </ul>
+ */
+function parseStartlistHtml(html: string): { rider_name: string; team_name: string }[] {
+  const riders: { rider_name: string; team_name: string }[] = [];
+
+  // Find the startlist_v4 section
+  const startlistMatch = html.match(/class="[^"]*startlist_v4[^"]*"/);
+  if (!startlistMatch) {
+    console.warn("parseStartlistHtml: No startlist_v4 section found");
+    // Fallback: try to find riders in the whole page
+    return parseStartlistFallback(html);
+  }
+
+  const startIdx = startlistMatch.index!;
+  // Find the section from startlist_v4 to the end of its container
+  const section = html.substring(startIdx);
+
+  // Split by team blocks: each <li> in the startlist_v4 is a team
+  // We look for team links and rider links
+  const teamRegex = /<li[^>]*>[\s\S]*?<\/li>/gi;
+  const teamBlocks = section.match(teamRegex);
+
+  if (!teamBlocks || teamBlocks.length === 0) {
+    console.warn("parseStartlistHtml: No <li> team blocks found, using line-by-line approach");
+    return parseStartlistByTeamAndRider(section);
+  }
+
+  for (const block of teamBlocks) {
+    // Extract team name from <a class="team" ...>Team Name</a>
+    const teamMatch = block.match(/<a[^>]*class="[^"]*team[^"]*"[^>]*>([\s\S]*?)<\/a>/i);
+    let teamName = "Unknown Team";
+    if (teamMatch) {
+      teamName = teamMatch[1].replace(/<[^>]*>/g, "").trim();
+    }
+
+    // Extract riders: <a href="/rider/slug">LASTNAME Firstname</a>
+    const riderRegex = /<a[^>]*href="[^"]*\/rider\/[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
+    let riderMatch;
+    while ((riderMatch = riderRegex.exec(block)) !== null) {
+      const riderName = riderMatch[1].replace(/<[^>]*>/g, "").trim();
+      if (riderName.length > 2) {
+        riders.push({ rider_name: riderName, team_name: teamName });
+      }
+    }
+  }
+
+  console.log(`parseStartlistHtml: extracted ${riders.length} riders`);
+  if (riders.length > 0) {
+    console.log(`Sample: ${riders.slice(0, 5).map(r => `${r.rider_name} (${r.team_name})`).join(", ")}...`);
+  }
+
+  return riders;
+}
+
+/**
+ * Alternative parsing approach: scan for team and rider links sequentially.
+ * Used when <li> block splitting doesn't work cleanly.
+ */
+function parseStartlistByTeamAndRider(html: string): { rider_name: string; team_name: string }[] {
+  const riders: { rider_name: string; team_name: string }[] = [];
+  let currentTeam = "Unknown Team";
+
+  // Match both team links and rider links in order
+  const combinedRegex = /<a[^>]*class="[^"]*team[^"]*"[^>]*>([\s\S]*?)<\/a>|<a[^>]*href="[^"]*\/rider\/[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+
+  while ((match = combinedRegex.exec(html)) !== null) {
+    if (match[1] !== undefined) {
+      // Team link
+      currentTeam = match[1].replace(/<[^>]*>/g, "").trim();
+    } else if (match[2] !== undefined) {
+      // Rider link
+      const riderName = match[2].replace(/<[^>]*>/g, "").trim();
+      if (riderName.length > 2) {
+        riders.push({ rider_name: riderName, team_name: currentTeam });
+      }
+    }
+  }
+
+  console.log(`parseStartlistByTeamAndRider: extracted ${riders.length} riders`);
+  return riders;
+}
+
+/**
+ * Last-resort fallback: just find all /rider/ links in the page.
+ */
+function parseStartlistFallback(html: string): { rider_name: string; team_name: string }[] {
+  const riders: { rider_name: string; team_name: string }[] = [];
+  const riderRegex = /<a[^>]*href="[^"]*\/rider\/[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+
+  while ((match = riderRegex.exec(html)) !== null) {
+    const riderName = match[1].replace(/<[^>]*>/g, "").trim();
+    if (riderName.length > 2) {
+      riders.push({ rider_name: riderName, team_name: "Unknown" });
+    }
+  }
+
+  console.log(`parseStartlistFallback: extracted ${riders.length} riders`);
+  return riders;
+}
+
+// ============================================================
+// SCRAPING FUNCTIONS (now using HTML parsing instead of Gemini)
+// ============================================================
+
+/**
+ * Scrape the list of races with recent startlist changes.
+ * No longer requires API key - uses direct HTML parsing.
+ */
+async function scrapeChangedRacesList(): Promise<ChangedRace[]> {
   const pcsUrl = "https://www.procyclingstats.com/races.php?s=startlist-changes-all-races&interval=12&filter=Filter";
   
   console.log(`Fetching changed races list from: ${pcsUrl}`);
@@ -256,106 +417,7 @@ async function scrapeChangedRacesList(apiKey: string | undefined): Promise<Chang
   const html = await response.text();
   console.log(`Fetched HTML: ${html.length} characters`);
 
-  if (!apiKey) {
-    throw new Error("LOVABLE_API_KEY is not configured");
-  }
-
-  const geminiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
-      messages: [
-        {
-          role: "system",
-          content: `You are an HTML parser specialized in extracting cycling race information from ProCyclingStats.
-
-This page shows a TABLE with races that have had startlist modifications in the last 12 hours.
-The table has columns: Last change | Date | Race | Class | #Changes
-
-CRITICAL: You MUST extract ALL races from the table, reading from TOP to BOTTOM.
-Each row contains a race with:
-- The race name in the "Race" column (often with a flag icon and link)
-- The race link format is: /race/{race-slug}/{year}/startlist or /race/{race-slug}/{year}
-
-Examples of races you might find:
-- "UAE Tour" -> slug: "uae-tour", year: 2026
-- "Tour Down Under" -> slug: "tour-down-under", year: 2026
-- "Classica Camp de Morvedre" -> slug: "classica-camp-de-morvedre", year: 2026
-- "Gran Premio Castellón" -> slug: "gran-premio-castellon", year: 2026
-
-Extract EVERY SINGLE race row from the table. Do not skip any.
-If the page shows 10 races, return exactly 10 races.`,
-        },
-        {
-          role: "user",
-          content: `Extract ALL races with recent startlist changes from this HTML page. Make sure to extract every single race in the table:\n\n${html.substring(0, 100000)}`,
-        },
-      ],
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "extract_changed_races",
-            description: "Extract the complete list of races with recent startlist changes from the table",
-            parameters: {
-              type: "object",
-              properties: {
-                races: {
-                  type: "array",
-                  description: "All races from the table, one per row",
-                  items: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string", description: "Race name exactly as displayed in the table" },
-                      slug: { type: "string", description: "Race slug extracted from the race URL (e.g., 'uae-tour', 'tour-down-under')" },
-                      year: { type: "number", description: "Race year from the URL (e.g., 2026)" },
-                    },
-                    required: ["name", "slug", "year"],
-                  },
-                },
-              },
-              required: ["races"],
-            },
-          },
-        },
-      ],
-      tool_choice: { type: "function", function: { name: "extract_changed_races" } },
-    }),
-  });
-
-  if (!geminiResponse.ok) {
-    const errorText = await geminiResponse.text();
-    console.error("Gemini API error:", errorText);
-    throw new Error(`Gemini API error: ${geminiResponse.status}`);
-  }
-
-  const geminiData = await geminiResponse.json();
-  
-  const toolCall = geminiData.choices?.[0]?.message?.tool_calls?.[0];
-  if (toolCall?.function?.arguments) {
-    try {
-      const parsed = JSON.parse(toolCall.function.arguments);
-      const races: ChangedRace[] = (parsed.races || []).map((r: any) => ({
-        name: r.name,
-        slug: r.slug,
-        year: r.year,
-        url: `https://www.procyclingstats.com/race/${r.slug}/${r.year}/startlist`,
-      }));
-      console.log(`Extracted ${races.length} races from page:`);
-      races.forEach((r, i) => console.log(`  ${i + 1}. ${r.name} (${r.slug}/${r.year})`));
-      return races;
-    } catch (e) {
-      console.error("Failed to parse Gemini response:", e);
-      return [];
-    }
-  }
-
-  console.log("No tool call found in Gemini response");
-  return [];
+  return parseChangedRacesHtml(html);
 }
 
 function extractPcsRaceSlug(raceUrl: string): string | null {
@@ -364,15 +426,17 @@ function extractPcsRaceSlug(raceUrl: string): string | null {
     const parts = url.pathname.split("/").filter(Boolean);
     const raceIdx = parts.indexOf("race");
     if (raceIdx >= 0 && parts[raceIdx + 1]) return parts[raceIdx + 1];
-    // Fallback for unexpected paths: PCS often ends with /{slug}/{year}/startlist
     return parts[parts.length - 3] || parts[parts.length - 2] || null;
   } catch {
     return null;
   }
 }
 
-async function scrapeRaceStartlist(raceUrl: string, apiKey: string | undefined): Promise<StartlistChange[]> {
-  // Fetch the race startlist page
+/**
+ * Scrape a race startlist page and extract all riders.
+ * No longer requires API key - uses direct HTML parsing.
+ */
+async function scrapeRaceStartlist(raceUrl: string): Promise<StartlistChange[]> {
   const response = await fetch(raceUrl, {
     headers: {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -386,156 +450,47 @@ async function scrapeRaceStartlist(raceUrl: string, apiKey: string | undefined):
   const html = await response.text();
   console.log(`Fetched race HTML: ${html.length} characters`);
 
-  if (!apiKey) {
-    throw new Error("LOVABLE_API_KEY is not configured");
-  }
-
-  // Extract race slug from URL (e.g. /race/classic-brugge-de-panne/2026/startlist -> classic-brugge-de-panne)
   const courseId = extractPcsRaceSlug(raceUrl) || "unknown";
 
-  // Try to extract only the startlist section from HTML for more focused parsing
-  // PCS uses various class names for the startlist container
-  let htmlToProcess = html;
-  const startlistPatterns = [
-    /<div[^>]*class="[^"]*startlist_v4[^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/i,
-    /<ul[^>]*class="[^"]*startlist[^"]*"[^>]*>[\s\S]*?<\/ul>/i,
-    /<div[^>]*class="[^"]*teams[^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>/i,
-  ];
+  // Extract race name from the page title
+  const titleMatch = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  let courseName = courseId.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  if (titleMatch) {
+    const rawTitle = titleMatch[1].replace(/<[^>]*>/g, "").trim();
+    if (rawTitle.length > 2) {
+      courseName = rawTitle;
+    }
+  }
+
+  // Parse riders using regex HTML parsing
+  const parsedRiders = parseStartlistHtml(html);
   
-  for (const pattern of startlistPatterns) {
-    const match = html.match(pattern);
-    if (match && match[0].length > 1000) {
-      htmlToProcess = match[0];
-      console.log(`Extracted startlist section: ${htmlToProcess.length} characters`);
-      break;
-    }
+  console.log(`Parsed ${parsedRiders.length} riders for "${courseName}"`);
+  
+  if (parsedRiders.length > 0) {
+    console.log(`Sample riders: ${parsedRiders.slice(0, 5).map(r => r.rider_name).join(", ")}...`);
+  }
+  
+  if (parsedRiders.length < 20) {
+    console.warn(`WARNING: Only ${parsedRiders.length} riders extracted - this seems incomplete for a race startlist!`);
   }
 
-  // Limit to 100k characters for Gemini processing
-  const truncatedHtml = htmlToProcess.substring(0, 100000);
-  console.log(`Processing HTML: ${truncatedHtml.length} characters`);
-
-  const geminiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert HTML parser specialized in extracting cycling race startlists from ProCyclingStats.
-
-CRITICAL INSTRUCTIONS - READ CAREFULLY:
-
-1. You MUST extract EVERY SINGLE RIDER from the startlist. Missing riders will cause data corruption.
-
-2. STRUCTURE OF PCS STARTLISTS:
-   - The startlist is organized by TEAMS
-   - Each team section has a team name/header
-   - Under each team, there are typically 6-8 riders listed
-   - A typical race has 20-25 teams = 150-200 riders total
-
-3. HOW TO FIND RIDERS:
-   - Look for <a> tags containing rider names with href="/rider/..."
-   - Rider names are in format "LASTNAME Firstname" or "LASTNAME FIRSTNAME"
-   - Team names appear as headers before groups of riders
-
-4. VERIFICATION:
-   - After extraction, count your total riders
-   - If you have fewer than 50 riders for a major race, you likely missed sections
-   - Double-check you haven't stopped reading mid-page
-
-5. OUTPUT: Return ALL riders found, even if there are 200+ of them.`,
-        },
-        {
-          role: "user",
-          content: `Extract the COMPLETE startlist from this ProCyclingStats race page. Make sure to include every single rider from every team:\n\n${truncatedHtml}`,
-        },
-      ],
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "extract_race_startlist",
-            description: "Extract the complete race startlist - must include every rider from every team",
-            parameters: {
-              type: "object",
-              properties: {
-                course_name: { type: "string", description: "The race name as shown on the page" },
-                total_teams: { type: "number", description: "Total number of teams found in the startlist" },
-                riders: {
-                  type: "array",
-                  description: "Complete list of ALL riders from ALL teams",
-                  items: {
-                    type: "object",
-                    properties: {
-                      rider_name: { type: "string", description: "Full rider name in LASTNAME Firstname format" },
-                      team_name: { type: "string", description: "Team code or short name" },
-                    },
-                    required: ["rider_name"],
-                  },
-                },
-              },
-              required: ["course_name", "riders"],
-            },
-          },
-        },
-      ],
-      tool_choice: { type: "function", function: { name: "extract_race_startlist" } },
-    }),
-  });
-
-  if (!geminiResponse.ok) {
-    const errorText = await geminiResponse.text();
-    console.error("Gemini API error:", errorText);
-    throw new Error(`Gemini API error: ${geminiResponse.status}`);
-  }
-
-  const geminiData = await geminiResponse.json();
-  const toolCall = geminiData.choices?.[0]?.message?.tool_calls?.[0];
-
-  if (toolCall?.function?.arguments) {
-    try {
-      const parsed = JSON.parse(toolCall.function.arguments);
-      const riders = parsed.riders || [];
-      const totalTeams = parsed.total_teams || 0;
-      
-      console.log(`Gemini extracted ${riders.length} riders from ${totalTeams} teams for "${parsed.course_name}"`);
-      
-      // Log sample riders for debugging
-      if (riders.length > 0) {
-        console.log(`Sample riders: ${riders.slice(0, 5).map((r: any) => r.rider_name).join(", ")}...`);
-      }
-      
-      // Warn if extraction seems incomplete
-      if (riders.length < 20) {
-        console.warn(`WARNING: Only ${riders.length} riders extracted - this seems incomplete for a race startlist!`);
-      }
-      
-      return riders.map((r: any) => ({
-        course_id: courseId,
-        course_name: parsed.course_name || "Unknown Race",
-        rider_name: r.rider_name,
-        team_name: r.team_name || null,
-        change_type: "added" as const,
-        source_url: raceUrl,
-      }));
-    } catch (e) {
-      console.error("Failed to parse Gemini response:", e);
-      return [];
-    }
-  }
-
-  console.log("No tool call found in Gemini response");
-  return [];
+  return parsedRiders.map(r => ({
+    course_id: courseId,
+    course_name: courseName,
+    rider_name: r.rider_name,
+    team_name: r.team_name || null,
+    change_type: "added" as const,
+    source_url: raceUrl,
+  }));
 }
+
+// ============================================================
+// SYNC & PROCESSING FUNCTIONS (unchanged)
+// ============================================================
 
 /**
  * Generate full sync changes by comparing scraped riders with existing startlist entries.
- * This creates "added" changes for new riders and "removed" changes for riders no longer present.
  */
 async function generateFullSyncChanges(
   supabase: any,
@@ -552,7 +507,6 @@ async function generateFullSyncChanges(
   
   console.log(`Full sync for ${courseName}: ${scrapedRiders.length} riders scraped`);
 
-  // Try to find the matching course in database
   const { data: courses } = await supabase.rpc("search_course_by_name", {
     p_search: courseName,
     p_limit: 1,
@@ -560,7 +514,6 @@ async function generateFullSyncChanges(
 
   let course = courses?.[0];
 
-  // Fallback: direct search on courses table
   if (!course) {
     const searchTerms = courseName.split(" ").slice(0, 4).join("%");
     const { data: directCourses } = await supabase
@@ -574,13 +527,11 @@ async function generateFullSyncChanges(
 
   if (!course) {
     console.log(`Course not found for full sync: ${courseName}`);
-    // Return all scraped as "added" - they'll be processed later when course is matched
     return scrapedRiders;
   }
 
   console.log(`Found course for full sync: ${course.id} - ${course.nom}`);
 
-  // Get existing startlist for this course
   const { data: imports } = await supabase
     .from("startlist_imports")
     .select("id")
@@ -595,7 +546,6 @@ async function generateFullSyncChanges(
 
   const startlistId = imports[0].id;
 
-  // Get all existing entries for this startlist
   const { data: existingEntries } = await supabase
     .from("startlist_entries")
     .select("id, source_name, coureur_id, coureurs(nom)")
@@ -608,7 +558,6 @@ async function generateFullSyncChanges(
 
   console.log(`Existing entries: ${existingEntries.length}`);
 
-  // Normalize names for comparison
   const normalize = (name: string) => 
     name.toLowerCase()
       .normalize("NFD")
@@ -616,7 +565,6 @@ async function generateFullSyncChanges(
       .replace(/[^a-z\s]/g, "")
       .trim();
 
-  // Create sets for comparison
   const scrapedNamesNormalized = new Set(
     scrapedRiders.map(r => normalize(r.rider_name))
   );
@@ -626,14 +574,12 @@ async function generateFullSyncChanges(
     const sourceName = entry.source_name || "";
     const coureurNom = entry.coureurs?.nom || "";
     
-    // Use source_name for matching primarily
     if (sourceName) {
       existingNamesNormalized.set(normalize(sourceName), {
         source_name: sourceName,
         coureur_nom: coureurNom
       });
     }
-    // Also add coureur nom as fallback
     if (coureurNom && !existingNamesNormalized.has(normalize(coureurNom))) {
       existingNamesNormalized.set(normalize(coureurNom), {
         source_name: sourceName || coureurNom,
@@ -644,11 +590,9 @@ async function generateFullSyncChanges(
 
   const changes: StartlistChange[] = [];
 
-  // SAFETY CHECK: If scraped count is suspiciously low compared to existing,
-  // skip removals to prevent false deletions from incomplete extraction
   const scrapedCount = scrapedRiders.length;
   const existingCount = existingEntries.length;
-  const removalThreshold = 0.5; // If scraped < 50% of existing, don't remove
+  const removalThreshold = 0.5;
   
   const shouldProcessRemovals = scrapedCount >= existingCount * removalThreshold;
   
@@ -656,12 +600,9 @@ async function generateFullSyncChanges(
     console.warn(`SAFETY: Scraped ${scrapedCount} riders vs ${existingCount} existing (< ${removalThreshold * 100}%). Skipping removals to prevent false deletions.`);
   }
 
-  // Find riders to REMOVE (in existing but not in scraped)
-  // Only process if we have a reasonable number of scraped riders
   if (shouldProcessRemovals) {
     for (const [normalizedName, entry] of existingNamesNormalized.entries()) {
       if (!scrapedNamesNormalized.has(normalizedName)) {
-        // This rider is no longer in the scraped startlist - mark for removal
         const displayName = entry.coureur_nom || entry.source_name;
         console.log(`Marking for removal: ${displayName}`);
         changes.push({
@@ -676,11 +617,9 @@ async function generateFullSyncChanges(
     }
   }
 
-  // Find riders to ADD (in scraped but not in existing)
   for (const scrapedRider of scrapedRiders) {
     const normalizedScraped = normalize(scrapedRider.rider_name);
     if (!existingNamesNormalized.has(normalizedScraped)) {
-      // This is a new rider - mark for addition
       console.log(`Marking for addition: ${scrapedRider.rider_name}`);
       changes.push(scrapedRider);
     }
@@ -696,7 +635,6 @@ async function generateFullSyncChanges(
 async function processChanges(supabase: any, changes: StartlistChange[]): Promise<number> {
   let processedCount = 0;
 
-  // Get the current season (2026)
   const { data: currentSeason, error: seasonError } = await supabase
     .from("saisons")
     .select("id, annee")
@@ -719,11 +657,9 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
     try {
       console.log(`Processing change: ${change.rider_name} for ${change.course_name}`);
       
-      // Normalize course name: remove year suffix (e.g., "Paris-Nice 2026" -> "Paris-Nice")
       const normalizedCourseName = change.course_name.replace(/\s+\d{4}$/, '').trim();
       console.log(`Normalized course name: "${normalizedCourseName}"`);
       
-      // Try to find matching course by normalized name
       const { data: courses } = await supabase.rpc("search_course_by_name", {
         p_search: normalizedCourseName,
         p_limit: 1,
@@ -732,9 +668,7 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
       let course = courses?.[0];
       console.log(`RPC search result: ${JSON.stringify(course)}`);
 
-      // Fallback: direct search on courses table with flexible matching
       if (!course) {
-        // Extract key words from course name for better matching
         const searchTerms = normalizedCourseName.split(" ").slice(0, 4).join("%");
         const { data: directCourses } = await supabase
           .from("courses")
@@ -763,7 +697,6 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
 
       console.log(`Found course: ${course.id} - ${course.nom}`);
 
-      // Find or create startlist import for this course
       let startlistId: string;
       const { data: imports } = await supabase
         .from("startlist_imports")
@@ -804,7 +737,6 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
         startlistId = imports[0].id;
       }
 
-      // Use the proper RPC function for word-order-insensitive, accent-insensitive matching
       let coureurId: string | null = null;
       if (saisonId) {
         const { data: matchedRiders, error: matchError } = await supabase.rpc("search_riders_for_matching", {
@@ -827,7 +759,6 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
       let insertedEntryId: string | null = null;
 
       if (change.change_type === "added") {
-        // Check if entry already exists
         const { data: existing } = await supabase
           .from("startlist_entries")
           .select("id")
@@ -836,7 +767,6 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
           .limit(1);
 
         if (!existing || existing.length === 0) {
-          // Get max line_no for this startlist to calculate next line number
           const { data: maxLineData } = await supabase
             .from("startlist_entries")
             .select("line_no")
@@ -846,7 +776,6 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
           
           const nextLineNo = (maxLineData?.[0]?.line_no || 0) + 1;
 
-          // Add new entry with line_no
           const { data: insertedEntry, error: entryError } = await supabase
             .from("startlist_entries")
             .insert({
@@ -869,15 +798,12 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
             insertedEntryId = insertedEntry?.id || null;
           }
         } else {
-          // Entry already exists, consider it as processed
           entryInserted = true;
           insertedEntryId = existing[0].id;
         }
       } else if (change.change_type === "removed") {
-        // Remove entry if exists
         console.log(`Looking for entry to remove: startlist_id=${startlistId}, source_name="${change.rider_name}"`);
         
-        // Try by source_name first
         let { data: toRemove } = await supabase
           .from("startlist_entries")
           .select("id, source_name, coureur_id")
@@ -887,7 +813,6 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
 
         console.log(`Search by source_name result: ${JSON.stringify(toRemove)}`);
 
-        // Fallback: search by coureur_id if we have a matched rider and source_name search failed
         if ((!toRemove || toRemove.length === 0) && coureurId) {
           console.log(`Fallback: searching by coureur_id=${coureurId}`);
           const { data: fallbackEntries } = await supabase
@@ -911,15 +836,14 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
             console.error(`Failed to delete entry ${entryToDelete.id}: ${deleteError.message}`);
           } else {
             console.log(`Successfully deleted entry ${entryToDelete.id} for ${change.rider_name}`);
-            entryInserted = true; // Removal succeeded
-            insertedEntryId = entryToDelete.id; // Track the deleted entry ID for audit
+            entryInserted = true;
+            insertedEntryId = entryToDelete.id;
           }
         } else {
           console.log(`No entry found to remove for ${change.rider_name} in startlist ${startlistId}`);
         }
       }
 
-      // Update the tracker change record - only "validated" if both rider matched AND entry inserted/removed
       const isFullyValidated = coureurId !== null && entryInserted;
       await supabase
         .from("startlist_tracker_changes")
