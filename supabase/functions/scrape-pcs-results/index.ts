@@ -318,72 +318,82 @@ serve(async (req) => {
       );
     }
 
-    // 5. Load all coureurs from DB for matching
-    const { data: coureurs, error: coureursError } = await supabase
-      .from("coureurs")
-      .select("id, nom")
-      .limit(5000);
-
-    if (coureursError) throw coureursError;
-
-    // Build lookup maps for matching
-    const coureursByTokenSig = new Map<string, { id: string; nom: string }>();
-    const coureursByLastName = new Map<string, { id: string; nom: string }[]>();
-
-    for (const c of coureurs || []) {
-      // Token signature match (order-independent)
-      const sig = tokenSig(c.nom);
-      coureursByTokenSig.set(sig, c);
-
-      // Last name lookup
-      const normName = normalize(c.nom);
-      const tokens = normName.split(/\s+/).filter(t => t.length > 0);
-      const lastName = tokens[tokens.length - 1];
-      if (lastName) {
-        if (!coureursByLastName.has(lastName)) {
-          coureursByLastName.set(lastName, []);
-        }
-        coureursByLastName.get(lastName)!.push(c);
+    // 5. Strategy 1: Direct ID match via PCS slug -> coureur ID
+    const slugToIdx = new Map<string, number[]>();
+    for (let i = 0; i < scrapedResults.length; i++) {
+      const slug = scrapedResults[i].rider_pcs_slug;
+      if (slug) {
+        const candidateId = slug.replace(/-/g, '_');
+        if (!slugToIdx.has(candidateId)) slugToIdx.set(candidateId, []);
+        slugToIdx.get(candidateId)!.push(i);
       }
     }
 
-    // 6. Match each scraped result with a coureur
+    const candidateIds = [...slugToIdx.keys()];
     let matchedCount = 0;
-    for (const result of scrapedResults) {
-      // Strategy 1: Token signature match (insensitive to accent + word order)
-      const sig = tokenSig(result.rider_name);
-      const directMatch = coureursByTokenSig.get(sig);
-      if (directMatch) {
-        result.matched_coureur_id = directMatch.id;
-        result.matched_coureur_nom = directMatch.nom;
-        matchedCount++;
-        continue;
+
+    // Batch query in chunks of 200 (URL length safety)
+    for (let i = 0; i < candidateIds.length; i += 200) {
+      const chunk = candidateIds.slice(i, i + 200);
+      const { data: found } = await supabase
+        .from("coureurs")
+        .select("id, nom")
+        .in("id", chunk);
+
+      for (const c of found || []) {
+        const indices = slugToIdx.get(c.id) || [];
+        for (const idx of indices) {
+          scrapedResults[idx].matched_coureur_id = c.id;
+          scrapedResults[idx].matched_coureur_nom = c.nom;
+          matchedCount++;
+        }
+      }
+    }
+
+    console.log(`After direct ID match: ${matchedCount}/${scrapedResults.length}`);
+
+    // 6. Strategy 2 (fallback): token-signature match for unmatched riders
+    const unmatched = scrapedResults.filter(r => !r.matched_coureur_id);
+    if (unmatched.length > 0) {
+      // Load ALL coureurs with pagination
+      const allCoureurs: { id: string; nom: string }[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data } = await supabase
+          .from("coureurs")
+          .select("id, nom")
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+        if (!data || data.length === 0) break;
+        allCoureurs.push(...data);
+        if (data.length < pageSize) break;
+        page++;
       }
 
-      // Strategy 2: Try with PCS slug converted to name
-      // e.g. "jasper-philipsen" -> "JASPER PHILIPSEN"
-      if (result.rider_pcs_slug) {
-        const slugName = result.rider_pcs_slug.replace(/-/g, ' ');
-        const slugSig = tokenSig(slugName);
-        const slugMatch = coureursByTokenSig.get(slugSig);
-        if (slugMatch) {
-          result.matched_coureur_id = slugMatch.id;
-          result.matched_coureur_nom = slugMatch.nom;
+      const coureursByTokenSig = new Map<string, { id: string; nom: string }>();
+      for (const c of allCoureurs) {
+        coureursByTokenSig.set(tokenSig(c.nom), c);
+      }
+
+      for (const result of unmatched) {
+        // Try rider name
+        const sig = tokenSig(result.rider_name);
+        const match = coureursByTokenSig.get(sig);
+        if (match) {
+          result.matched_coureur_id = match.id;
+          result.matched_coureur_nom = match.nom;
           matchedCount++;
           continue;
         }
-      }
-
-      // Strategy 3: Last name only match (if unique)
-      const normName = normalize(result.rider_name);
-      const tokens = normName.split(/\s+/).filter(t => t.length > 0);
-      const lastName = tokens[tokens.length - 1];
-      if (lastName) {
-        const candidates = coureursByLastName.get(lastName) || [];
-        if (candidates.length === 1) {
-          result.matched_coureur_id = candidates[0].id;
-          result.matched_coureur_nom = candidates[0].nom;
-          matchedCount++;
+        // Try slug as name
+        if (result.rider_pcs_slug) {
+          const slugSig = tokenSig(result.rider_pcs_slug.replace(/-/g, ' '));
+          const slugMatch = coureursByTokenSig.get(slugSig);
+          if (slugMatch) {
+            result.matched_coureur_id = slugMatch.id;
+            result.matched_coureur_nom = slugMatch.nom;
+            matchedCount++;
+          }
         }
       }
     }
