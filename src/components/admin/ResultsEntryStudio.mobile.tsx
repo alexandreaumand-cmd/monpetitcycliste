@@ -332,7 +332,7 @@ export const ResultsEntryStudioMobile = ({
             courseId: course.course_id,
             year,
             typeClassement: type,
-            etapeNumero: null,
+            etapeNumero: currentStage,
             pcsSlugOverride,
           })
         )
