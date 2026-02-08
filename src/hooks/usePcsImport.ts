@@ -44,21 +44,31 @@ export function usePcsImport() {
         let errorMessage = error.message || "Import failed";
         let slugUsed: string | undefined;
 
+        // The Supabase client puts the response body JSON in error.message
         try {
-          const errorBody = error.context?.body
-            ? (typeof error.context.body === 'string' ? JSON.parse(error.context.body) : error.context.body)
-            : null;
-          if (errorBody) {
-            errorMessage = errorBody.error || errorMessage;
-            if (errorBody.error_type === 'slug_error' || errorMessage.includes('PCS returned')) {
+          const parsed = JSON.parse(errorMessage);
+          if (parsed.error) errorMessage = parsed.error;
+          if (parsed.error_type === 'slug_error' || errorMessage.includes('PCS returned')) {
+            errorType = 'slug_error';
+          }
+          slugUsed = parsed.slug_used || undefined;
+        } catch {
+          // Try error.context?.body as fallback
+          try {
+            const errorBody = error.context?.body
+              ? (typeof error.context.body === 'string' ? JSON.parse(error.context.body) : error.context.body)
+              : null;
+            if (errorBody) {
+              errorMessage = errorBody.error || errorMessage;
+              if (errorBody.error_type === 'slug_error' || errorMessage.includes('PCS returned')) {
+                errorType = 'slug_error';
+              }
+              slugUsed = errorBody.slug_used || undefined;
+            }
+          } catch {
+            if (errorMessage.includes('PCS returned')) {
               errorType = 'slug_error';
             }
-            slugUsed = errorBody.slug_used || undefined;
-          }
-        } catch {
-          // If message contains "PCS returned", treat as slug error
-          if (errorMessage.includes('PCS returned')) {
-            errorType = 'slug_error';
           }
         }
 
