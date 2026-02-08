@@ -8,7 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { toast } from "sonner";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
-import { X, ChevronLeft, ChevronRight, Save, Check, Info, MessageSquare, Share2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Save, Check, Info, MessageSquare, Share2, Download, Loader2 } from "lucide-react";
+import { usePcsImport } from "@/hooks/usePcsImport";
 import { ExportResultsImage } from "./ExportResultsImage";
 import { normalizeCourseType, isStageRace } from "@/lib/courseType";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -88,6 +89,7 @@ export const ResultsEntryStudioMobile = ({
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const queryClient = useQueryClient();
   const leagueClient = useLeagueClient();
+  const { importFromPcs, isImporting: isPcsImporting } = usePcsImport();
 
   // Fetch scoring rules using normalized views (same as desktop)
   const { data: scoringRules } = useQuery({
@@ -273,6 +275,35 @@ export const ResultsEntryStudioMobile = ({
     }
 
     setJerseyHolders(newJerseyHolders);
+  };
+
+  // PCS Import handler
+  const handlePcsImport = async () => {
+    const year = new Date(course.date_debut).getFullYear();
+    const etapeNumero = currentClassement === "Etape" ? currentStage : null;
+    const results = await importFromPcs({
+      courseId: course.course_id,
+      year,
+      typeClassement: currentClassement,
+      etapeNumero,
+    });
+
+    if (!results || results.length === 0) return;
+
+    setResultRows((prev) => {
+      const newRows = [...prev];
+      for (const result of results) {
+        const idx = newRows.findIndex((r) => r.position === result.position);
+        if (idx >= 0 && result.matched_coureur_id) {
+          newRows[idx] = {
+            ...newRows[idx],
+            coureur_id: result.matched_coureur_id,
+            coureur_nom: result.matched_coureur_nom,
+          };
+        }
+      }
+      return newRows;
+    });
   };
 
   const handleRiderChange = (index: number, coureur: any) => {
@@ -1143,6 +1174,21 @@ export const ResultsEntryStudioMobile = ({
           </div>
         )}
         
+        <div className="flex gap-2 mb-2">
+          <Button
+            variant="outline"
+            onClick={handlePcsImport}
+            disabled={isPcsImporting || isCancelled}
+            className="flex-1"
+          >
+            {isPcsImporting ? (
+              <><Loader2 className="h-4 w-4 mr-1 animate-spin" />PCS...</>
+            ) : (
+              <><Download className="h-4 w-4 mr-1" />Importer PCS</>
+            )}
+          </Button>
+        </div>
+
         <div className="flex gap-2">
           {/* Bouton Enregistrer */}
           <Button 

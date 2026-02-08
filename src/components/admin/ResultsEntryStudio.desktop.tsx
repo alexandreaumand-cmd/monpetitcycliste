@@ -10,8 +10,9 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle, Loader2, Camera, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle, Loader2, Camera, Trash2, ChevronDown, ChevronUp, Download } from "lucide-react";
 import { ExportResultsImage } from "./ExportResultsImage";
+import { usePcsImport } from "@/hooks/usePcsImport";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CoureursCombobox } from "@/components/shared/CoureursCombobox";
@@ -90,6 +91,7 @@ function usePrevious<T>(value: T): T | undefined {
 export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const queryClient = useQueryClient();
   const leagueClient = useLeagueClient();
+  const { importFromPcs, isImporting: isPcsImporting } = usePcsImport();
   const [activeTab, setActiveTab] = useState<"stages" | "finals">("stages");
   const [currentStage, setCurrentStage] = useState(1);
   const [currentFinalClassement, setCurrentFinalClassement] = useState<ClassementType>("General");
@@ -1048,6 +1050,37 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     },
   });
 
+  // PCS Import handler
+  const handlePcsImport = async () => {
+    const year = new Date(course.date_debut).getFullYear();
+    const results = await importFromPcs({
+      courseId: course.course_id,
+      year,
+      typeClassement: classementType,
+      etapeNumero: etapeNumero,
+    });
+
+    if (!results || results.length === 0) return;
+
+    // Map scraped results into the existing grid
+    setResultRows((prev) => {
+      const newRows = [...prev];
+      for (const result of results) {
+        const idx = newRows.findIndex((r) => r.position === result.position);
+        if (idx >= 0 && result.matched_coureur_id) {
+          newRows[idx] = {
+            ...newRows[idx],
+            coureur_id: result.matched_coureur_id,
+            coureur_nom: result.matched_coureur_nom,
+          };
+        }
+      }
+      return newRows;
+    });
+    setIsDirty(true);
+    setGridPrepared(true);
+  };
+
   const handleRiderChange = (index: number, riderId: string | null, riderName: string | null) => {
     setResultRows((prev) =>
       prev.map((row, i) =>
@@ -1644,6 +1677,18 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+
+              <Button
+                variant="outline"
+                onClick={handlePcsImport}
+                disabled={isPcsImporting || isCancelled}
+              >
+                {isPcsImporting ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Import PCS...</>
+                ) : (
+                  <><Download className="h-4 w-4 mr-2" />Importer PCS</>
+                )}
+              </Button>
 
               <Button
                 variant="outline"
