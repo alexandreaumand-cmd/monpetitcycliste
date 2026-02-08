@@ -1,40 +1,47 @@
 
-# Fix: URLs PCS pour les classements de courses a etapes
+
+# Fix: URLs PCS stage-specifiques pour les classements
 
 ## Probleme
 
-L'edge function `scrape-pcs-results` ajoute `/result/result` a toutes les URLs, y compris les classements intermediaires (GC, Points, KOM, Youth). Sur PCS, ces pages n'ont pas ce suffixe :
+Les URLs generees pour les classements (GC, Points, KOM, Youth) sont au niveau de la course entiere (`/gc`, `/points`, etc.) et ces pages chargent les donnees via JavaScript -- donc un `fetch()` retourne un tableau vide.
 
-- Incorrect : `.../2026/gc/result/result` (table quasi vide, 664 chars)
-- Correct : `.../2026/gc` (contient le classement complet)
+Les bonnes URLs sont stage-specifiques :
+- `/stage-3-gc` au lieu de `/gc`
+- `/stage-3-points` au lieu de `/points`
+- `/stage-3-kom` au lieu de `/kom`
+- `/stage-3-youth` au lieu de `/youth`
 
-## Solution
+De plus, cote frontend, les appels passent `etapeNumero: null` alors qu'il faut envoyer le numero d'etape.
 
-Modifier la fonction `buildPcsUrl` dans `supabase/functions/scrape-pcs-results/index.ts` pour ne PAS ajouter `/result/result` aux classements General, Points, Montagne et Jeune des courses a etapes.
+## Corrections
 
-## Changement
+### 1. Edge function `scrape-pcs-results/index.ts` -- `buildPcsUrl`
 
-Dans `buildPcsUrl` (lignes 41-64), retirer `/result/result` des cases General, Points, Montagne et Jeune :
+Modifier les cases General, Points, Montagne, Jeune pour utiliser le format stage-specifique quand `etapeNumero` est fourni :
 
 ```typescript
 case "General":
-  return `${base}/gc`;
+  return etapeNumero ? `${base}/stage-${etapeNumero}-gc` : `${base}/gc`;
 case "Points":
-  return `${base}/points`;
+  return etapeNumero ? `${base}/stage-${etapeNumero}-points` : `${base}/points`;
 case "Montagne":
-  return `${base}/kom`;
+  return etapeNumero ? `${base}/stage-${etapeNumero}-kom` : `${base}/kom`;
 case "Jeune":
-  return `${base}/youth`;
+  return etapeNumero ? `${base}/stage-${etapeNumero}-youth` : `${base}/youth`;
 ```
 
-Seuls "Etape" et le default conservent `/result/result`.
+### 2. Frontend desktop `ResultsEntryStudio.desktop.tsx`
 
-## Fichier modifie
+Dans le bloc `jerseyClassifications`, remplacer `etapeNumero: null` par le vrai numero d'etape (la variable `etapeNum` ou equivalent deja disponible dans le scope).
 
-- `supabase/functions/scrape-pcs-results/index.ts` : fonction `buildPcsUrl` uniquement (4 lignes changees)
+### 3. Frontend mobile `ResultsEntryStudio.mobile.tsx`
+
+Meme correction : passer le numero d'etape au lieu de `null`.
 
 ## Impact
 
-- Corrige l'auto-remplissage des maillots lors de l'import PCS
-- N'affecte pas l'import des resultats d'etape (qui garde `/result/result`)
-- N'affecte pas les one-day (le early return reste inchange)
+- 1 seule ligne changee dans l'edge function par type de classement (4 cases)
+- 1 ligne changee dans chaque fichier frontend (desktop + mobile)
+- Les URLs race-level (`/gc`, `/points`...) restent fonctionnelles pour les appels sans etape
+- Pas d'impact sur les one-day ni les resultats d'etape
