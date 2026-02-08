@@ -1,50 +1,59 @@
 
 
-# Cron Job pour le Startlist Tracker (toutes les 30 min)
+# Auto-remplissage des porteurs de maillots via Import PCS
 
-## Objectif
+## Idee
 
-Automatiser le scraping global du Startlist Tracker en le lancant toutes les 30 minutes via un cron job dans la base de donnees.
+Quand tu cliques "Importer PCS" pour une etape, en plus d'importer le Top 10 de l'etape, le systeme ira chercher automatiquement les classements General, Points, Montagne et Jeune sur PCS. Le coureur en position 1 de chaque classement = le porteur du maillot correspondant.
 
-## Prerequis
+## Fonctionnement
 
-Activer les extensions `pg_cron` et `pg_net` dans la base de donnees (si pas deja fait).
+1. L'import PCS de l'etape se fait normalement (top 10)
+2. Ensuite, 4 appels supplementaires sont faits en parallele vers PCS :
+   - General (GC) -> position 1 = Maillot Jaune
+   - Points -> position 1 = Maillot Vert
+   - Montagne (KOM) -> position 1 = Maillot a Pois
+   - Jeune (Youth) -> position 1 = Maillot Blanc
+3. Les jersey holders sont remplis automatiquement dans le formulaire
+4. Le combattif n'est pas disponible sur PCS, il reste manuel
 
-## Implementation
+## Condition
 
-### Migration SQL unique
+Uniquement pour les courses a etapes, onglet "stages" et classement "Etape". Pour les one-day ou les finaux, pas de changement.
 
-Executer une requete SQL qui :
+## Fichiers modifies
 
-1. Active les extensions `pg_cron` et `pg_net`
-2. Cree un cron job qui appelle la fonction `startlist-tracker` toutes les 30 minutes avec le body `{"source_type": "global"}`
+### `src/components/admin/ResultsEntryStudio.desktop.tsx`
 
-```sql
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-CREATE EXTENSION IF NOT EXISTS pg_net;
+Dans `handlePcsImport`, apres l'import principal des resultats d'etape :
+- Verifier qu'on est en mode "Etape" (stage race, onglet stages)
+- Lancer 4 appels `importFromPcs` en parallele avec `type_classement` = General, Points, Montagne, Jeune (et `etape_numero: null` car ce sont des classements globaux)
+- Pour chaque resultat reussi, prendre `results[0].matched_coureur_id` (position 1) et appeler `setJerseyHolders` pour le type correspondant
+- Afficher un toast recapitulatif ("3/4 maillots remplis automatiquement")
 
-SELECT cron.schedule(
-  'startlist-tracker-global-sync',
-  '*/30 * * * *',
-  $$
-  SELECT net.http_post(
-    url := 'https://khahpetvqjoyrwambaqn.supabase.co/functions/v1/startlist-tracker',
-    headers := '{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYWhwZXR2cWpveXJ3YW1iYXFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNzQwMjUsImV4cCI6MjA4NTk1MDAyNX0.fDW-OHQan6_rOr_cYVJNWhDF3BwZu8Vu6-qLKKRAHtM"}'::jsonb,
-    body := '{"source_type": "global"}'::jsonb
-  ) AS request_id;
-  $$
-);
+### `src/components/admin/ResultsEntryStudio.mobile.tsx`
+
+Meme logique dans le `handlePcsImport` mobile.
+
+## Detail technique
+
+```text
+handlePcsImport (etape)
+  |
+  +--> importFromPcs("Etape", etapeNumero)   --> top 10
+  |
+  +--> En parallele (Promise.allSettled) :
+         importFromPcs("General", null)       --> pos 1 = jaune
+         importFromPcs("Points", null)        --> pos 1 = vert
+         importFromPcs("Montagne", null)      --> pos 1 = pois
+         importFromPcs("Jeune", null)         --> pos 1 = blanc
 ```
 
-## Details
+Pas de modification de l'edge function `scrape-pcs-results` -- elle supporte deja tous ces types de classement.
 
-- **Frequence** : toutes les 30 minutes (`*/30 * * * *`)
-- **Nom du job** : `startlist-tracker-global-sync`
-- **Aucun changement de code** : seule une migration SQL est necessaire
-- Le job appelle exactement le meme endpoint que le bouton "Lancer le scraping global" dans l'interface
+## Limites
 
-## Pour modifier ou supprimer le job plus tard
-
-- Modifier la frequence : `SELECT cron.alter_job('startlist-tracker-global-sync', schedule := '0 * * * *');` (ex: toutes les heures)
-- Supprimer : `SELECT cron.unschedule('startlist-tracker-global-sync');`
+- Le maillot combattif (pas de page PCS dediee) reste a saisir manuellement
+- Si PCS n'a pas encore publie un classement, le maillot correspondant restera vide (pas d'erreur)
+- Les maillots sont pre-remplis mais restent editables avant la sauvegarde
 
