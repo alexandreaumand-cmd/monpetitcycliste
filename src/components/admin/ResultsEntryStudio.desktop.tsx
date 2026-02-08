@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { X, CheckCircle2, Info, ChevronLeft, ChevronRight, Circle, CheckCircle, Save, AlertCircle, Loader2, Camera, Trash2, ChevronDown, ChevronUp, Download } from "lucide-react";
 import { ExportResultsImage } from "./ExportResultsImage";
+import { PcsSlugDialog } from "./PcsSlugDialog";
 import { usePcsImport } from "@/hooks/usePcsImport";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -118,6 +119,8 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   const [isCancelled, setIsCancelled] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [pcsSlugDialogOpen, setPcsSlugDialogOpen] = useState(false);
+  const [pcsSlugError, setPcsSlugError] = useState<{ message: string; slugUsed: string }>({ message: '', slugUsed: '' });
   const [isTTT, setIsTTT] = useState(false);
   const [tttRidersCount, setTttRidersCount] = useState(7);
   const [saisonId, setSaisonId] = useState<string | null>(null);
@@ -1051,14 +1054,23 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
   });
 
   // PCS Import handler
-  const handlePcsImport = async () => {
+  const handlePcsImport = async (pcsSlugOverride?: string) => {
     const year = new Date(course.date_debut).getFullYear();
-    const results = await importFromPcs({
+    const { results, error } = await importFromPcs({
       courseId: course.course_id,
       year,
       typeClassement: classementType,
       etapeNumero: etapeNumero,
+      pcsSlugOverride,
     });
+
+    if (error?.type === 'slug_error') {
+      // Extract slug from error or course_id
+      const slugUsed = error.slugUsed || course.course_id.replace(/^(.+)-[a-z0-9]{8}$/, '$1').replace(/_/g, '-');
+      setPcsSlugError({ message: error.message, slugUsed });
+      setPcsSlugDialogOpen(true);
+      return;
+    }
 
     if (!results || results.length === 0) return;
 
@@ -1079,6 +1091,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
     });
     setIsDirty(true);
     setGridPrepared(true);
+    setPcsSlugDialogOpen(false);
   };
 
   const handleRiderChange = (index: number, riderId: string | null, riderName: string | null) => {
@@ -1680,7 +1693,7 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
               <Button
                 variant="outline"
-                onClick={handlePcsImport}
+                onClick={() => handlePcsImport()}
                 disabled={isPcsImporting || isCancelled}
               >
                 {isPcsImporting ? (
@@ -1689,6 +1702,15 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
                   <><Download className="h-4 w-4 mr-2" />Importer PCS</>
                 )}
               </Button>
+
+              <PcsSlugDialog
+                open={pcsSlugDialogOpen}
+                onOpenChange={setPcsSlugDialogOpen}
+                slugUsed={pcsSlugError.slugUsed}
+                errorMessage={pcsSlugError.message}
+                onRetry={(newSlug) => handlePcsImport(newSlug)}
+                isRetrying={isPcsImporting}
+              />
 
               <Button
                 variant="outline"
