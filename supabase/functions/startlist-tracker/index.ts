@@ -292,8 +292,6 @@ function parseChangedRacesHtml(html: string): ChangedRace[] {
  * </ul>
  */
 function parseStartlistHtml(html: string): { rider_name: string; team_name: string }[] {
-  const riders: { rider_name: string; team_name: string }[] = [];
-
   // Find the startlist_v4 section
   const startlistMatch = html.match(/class="[^"]*startlist_v4[^"]*"/);
   if (!startlistMatch) {
@@ -303,44 +301,10 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
   }
 
   const startIdx = startlistMatch.index!;
-  // Find the section from startlist_v4 to the end of its container
   const section = html.substring(startIdx);
 
-  // Split by team blocks: each <li> in the startlist_v4 is a team
-  // We look for team links and rider links
-  const teamRegex = /<li[^>]*>[\s\S]*?<\/li>/gi;
-  const teamBlocks = section.match(teamRegex);
-
-  if (!teamBlocks || teamBlocks.length === 0) {
-    console.warn("parseStartlistHtml: No <li> team blocks found, using line-by-line approach");
-    return parseStartlistByTeamAndRider(section);
-  }
-
-  for (const block of teamBlocks) {
-    // Extract team name from <a class="team" ...>Team Name</a>
-    const teamMatch = block.match(/<a[^>]*class="[^"]*team[^"]*"[^>]*>([\s\S]*?)<\/a>/i);
-    let teamName = "Unknown Team";
-    if (teamMatch) {
-      teamName = teamMatch[1].replace(/<[^>]*>/g, "").trim();
-    }
-
-    // Extract riders: <a href="/rider/slug">LASTNAME Firstname</a>
-    const riderRegex = /<a[^>]*href="[^"]*\/rider\/[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
-    let riderMatch;
-    while ((riderMatch = riderRegex.exec(block)) !== null) {
-      const riderName = riderMatch[1].replace(/<[^>]*>/g, "").trim();
-      if (riderName.length > 2) {
-        riders.push({ rider_name: riderName, team_name: teamName });
-      }
-    }
-  }
-
-  console.log(`parseStartlistHtml: extracted ${riders.length} riders`);
-  if (riders.length > 0) {
-    console.log(`Sample: ${riders.slice(0, 5).map(r => `${r.rider_name} (${r.team_name})`).join(", ")}...`);
-  }
-
-  return riders;
+  // Use sequential scanning directly — robust on minified HTML with nested <li>
+  return parseStartlistByTeamAndRider(section);
 }
 
 /**
