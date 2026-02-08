@@ -51,13 +51,13 @@ function buildPcsUrl(pcsSlug: string, year: number, typeClassement: string, etap
     case "Etape":
       return `${base}/stage-${etapeNumero}/result/result`;
     case "General":
-      return `${base}/gc/result/result`;
+      return `${base}/gc`;
     case "Points":
-      return `${base}/points/result/result`;
+      return `${base}/points`;
     case "Montagne":
-      return `${base}/kom/result/result`;
+      return `${base}/kom`;
     case "Jeune":
-      return `${base}/youth/result/result`;
+      return `${base}/youth`;
     default:
       return `${base}/result/result`;
   }
