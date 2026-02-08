@@ -248,8 +248,18 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { course_id, year, type_classement, etape_numero, pcs_slug_override } = await req.json();
+    let { course_id, year, type_classement, etape_numero, pcs_slug_override } = await req.json();
 
+    // Clean up pcs_slug_override: extract slug if user pasted a full URL
+    if (pcs_slug_override) {
+      const urlMatch = pcs_slug_override.match(/procyclingstats\.com\/race\/([^/]+)/);
+      if (urlMatch) {
+        pcs_slug_override = urlMatch[1];
+        console.log(`Extracted slug from URL: ${pcs_slug_override}`);
+      }
+      // Also trim whitespace
+      pcs_slug_override = pcs_slug_override.trim();
+    }
 
     // 1. Get PCS slug: override > pcs_slug column > extract from course_id
     const { data: courseData } = await supabase
