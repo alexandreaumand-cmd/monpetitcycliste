@@ -1,56 +1,53 @@
 
-# Import PCS avec correction de slug a la demande
+# Remplacer Gemini par du scraping HTML direct dans le Startlist Tracker
 
-## Comportement souhaite
+## Objectif
 
-1. Clic sur "Importer PCS" -- l'import se lance directement (pas de dialog)
-2. Si ca marche -- les resultats remplissent la grille (comme aujourd'hui)
-3. Si erreur de slug (PCS retourne 500 ou 0 resultats) -- un Dialog s'ouvre pour corriger le slug manuellement, puis relancer l'import
+Supprimer les 2 appels Gemini du startlist-tracker (qui coutent des credits et sont parfois imprecis) et les remplacer par du parsing HTML regex, exactement comme dans `scrape-pcs-results`.
 
-## Changements
+## Analyse de la structure HTML PCS
 
-### 1. Hook `usePcsImport.ts`
+### Page "startlist changes" (`races.php?s=startlist-changes-all-races`)
+- Table simple avec classe `basic`
+- Chaque ligne `<tr>` contient : date, nom de course, classe, nombre de changements
+- Lien de course dans format : `<a href="/race/{slug}/{year}/startlist">Race Name</a>`
 
-- Ajouter un parametre optionnel `pcsSlugOverride` a `importFromPcs()`
-- Au lieu de throw sur erreur slug/PCS 500, retourner un objet structure avec le type d'erreur pour distinguer "slug invalide" des autres erreurs
-- Retourner aussi le `pcs_url` tente pour l'afficher dans le dialog
+### Page startlist d'une course (`/race/{slug}/{year}/startlist`)
+- Structure `<ul class="startlist_v4">`
+- Chaque `<li>` = une equipe, contenant :
+  - `<a class="team" href="/team/...">Team Name (WT)</a>` pour le nom de l'equipe
+  - `<a href="/rider/{slug}">LASTNAME Firstname</a>` pour chaque coureur
 
-### 2. Edge Function `scrape-pcs-results/index.ts`
+## Changements dans `supabase/functions/startlist-tracker/index.ts`
 
-- Accepter `pcs_slug_override` dans le body
-- Si fourni, l'utiliser en priorite ET le sauvegarder dans `courses.pcs_slug` pour les prochains imports
-- Retourner `slug_used` dans la reponse pour que le frontend sache quel slug a ete utilise
+### 1. Nouvelle fonction `parseChangedRacesHtml(html)` (remplace `scrapeChangedRacesList`)
+- Regex sur `<table class=" basic">` pour trouver la table
+- Pour chaque `<tr>`, extraire le lien `/race/{slug}/{year}/startlist` et le nom de course
+- Retourner un tableau `ChangedRace[]`
+- Plus besoin de `lovableApiKey` ni d'appel Gemini
 
-### 3. Composants Desktop et Mobile
+### 2. Nouvelle fonction `parseStartlistHtml(html)` (remplace la partie Gemini de `scrapeRaceStartlist`)
+- Chercher `<ul class="startlist_v4">` ou `class="startlist_v4"`
+- Pour chaque equipe : extraire le team name depuis `<a class="team">`
+- Pour chaque coureur : extraire nom depuis `<a href="/rider/{slug}">LASTNAME Firstname</a>`
+- Retourner la liste complete des coureurs avec leur equipe
 
-- Ajouter un state `pcsSlugDialog` (ouvert/ferme) et `pcsSlugValue` (le slug a corriger)
-- Modifier `handlePcsImport` :
-  - Appeler `importFromPcs()` normalement
-  - Si erreur de type "slug invalide" (PCS 500, ou message contenant "PCS returned"), ouvrir le Dialog avec le slug detecte pre-rempli
-  - Sinon, comportement normal
-- Ajouter un Dialog avec :
-  - Message expliquant que le slug PCS ne correspond pas
-  - Champ texte pre-rempli avec le slug detecte
-  - Lien "Verifier sur PCS" pointant vers `procyclingstats.com/race/{slug}`
-  - Bouton "Reessayer" qui relance l'import avec le slug corrige
+### 3. Mise a jour de `scrapeChangedRacesList`
+- Supprimer l'appel Gemini
+- Appeler `parseChangedRacesHtml(html)` a la place
+- Supprimer le parametre `apiKey`
 
-### Details techniques
+### 4. Mise a jour de `scrapeRaceStartlist`
+- Supprimer l'appel Gemini
+- Appeler `parseStartlistHtml(html)` a la place
+- Supprimer le parametre `apiKey`
 
-**Hook - nouveau type de retour enrichi :**
-```typescript
-interface PcsImportResult {
-  results: PcsResult[] | null;
-  error?: { type: 'slug_error' | 'other'; message: string; slugUsed?: string };
-}
-```
+### 5. Nettoyage general
+- Supprimer `lovableApiKey` du code principal (plus utilise)
+- Tout le reste (matching, processChanges, generateFullSyncChanges) reste identique
 
-**Edge Function - nouveau parametre :**
-- `pcs_slug_override` : si present, utilise ce slug et le sauvegarde dans `courses.pcs_slug`
-- Reponse enrichie avec `slug_used` pour le feedback
-
-**Dialog de correction :**
-- Composant inline dans les deux fichiers Studio (desktop + mobile)
-- Utilise les composants Dialog, Input et Button existants
-- Pre-remplit le slug detecte automatiquement
-- Au clic "Reessayer", appelle `importFromPcs` avec le `pcsSlugOverride`
-- Si le retry reussit, le slug est sauvegarde automatiquement cote serveur
+## Avantages
+- Zero credit AI consomme par le tracker
+- Parsing deterministe et instantane (pas de variation IA)
+- Meme approche eprouvee que pour les resultats
+- Plus de dependance a `LOVABLE_API_KEY` pour cette fonction
