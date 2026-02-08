@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -235,11 +236,20 @@ function parseChangedRacesHtml(html: string): ChangedRace[] {
   const races: ChangedRace[] = [];
   const seen = new Set<string>();
 
-  // Find all race links in the table: /race/{slug}/{year}/startlist or /race/{slug}/{year}
-  const linkRegex = /<a[^>]*href="\/race\/([^/]+)\/(\d{4})(?:\/[^"]*)?"/gi;
-  let match;
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  if (!doc) {
+    console.error("parseChangedRacesHtml: Failed to parse HTML");
+    return [];
+  }
 
-  while ((match = linkRegex.exec(html)) !== null) {
+  const raceLinks = doc.querySelectorAll('a[href*="/race/"]');
+  console.log(`parseChangedRacesHtml: found ${raceLinks.length} race links`);
+
+  for (const link of raceLinks) {
+    const href = link.getAttribute("href") || "";
+    const match = href.match(/\/race\/([^/]+)\/(\d{4})/);
+    if (!match) continue;
+
     const slug = match[1];
     const year = parseInt(match[2], 10);
     const key = `${slug}/${year}`;
@@ -247,21 +257,9 @@ function parseChangedRacesHtml(html: string): ChangedRace[] {
     if (seen.has(key)) continue;
     seen.add(key);
 
-    // Extract the race name from the link text
-    // Pattern: <a href="/race/slug/year/...">Race Name</a>
-    const afterTag = html.substring(match.index);
-    const nameMatch = afterTag.match(/<a[^>]*>[^<]*?(?:<[^/][^>]*>[^<]*<\/[^>]*>)*\s*([^<]+?)\s*<\/a>/i);
-    
-    // Simpler approach: get text content after the opening tag
-    const textMatch = afterTag.match(/<a[^>]*>\s*([\s\S]*?)\s*<\/a>/i);
-    let name = slug.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-    
-    if (textMatch) {
-      // Strip any inner HTML tags to get pure text
-      const rawText = textMatch[1].replace(/<[^>]*>/g, "").trim();
-      if (rawText.length > 2) {
-        name = rawText;
-      }
+    let name = link.textContent?.replace(/<[^>]*>/g, "").trim() || "";
+    if (name.length < 3) {
+      name = slug.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
     }
 
     races.push({
@@ -280,78 +278,61 @@ function parseChangedRacesHtml(html: string): ChangedRace[] {
 /**
  * Parse a race startlist page HTML to extract all riders with their teams.
  * Replaces the Gemini-based extraction.
- * 
- * PCS structure:
- * <ul class="startlist_v4">
- *   <li>
- *     <a class="team" href="/team/...">Team Name (WT)</a>
- *     ...
- *     <a href="/rider/slug">LASTNAME Firstname</a>
- *     ...
- *   </li>
- * </ul>
+ * Uses DOMParser for reliable parsing of minified HTML.
  */
 function parseStartlistHtml(html: string): { rider_name: string; team_name: string }[] {
-  // Find the startlist_v4 section
-  const startlistMatch = html.match(/class="[^"]*startlist_v4[^"]*"/);
-  if (!startlistMatch) {
-    console.warn("parseStartlistHtml: No startlist_v4 section found");
-    // Fallback: try to find riders in the whole page
-    return parseStartlistFallback(html);
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  if (!doc) {
+    console.error("parseStartlistHtml: Failed to parse HTML");
+    return [];
   }
 
-  const startIdx = startlistMatch.index!;
-  const section = html.substring(startIdx);
+  const startlist = doc.querySelector(".startlist_v4");
+  if (!startlist) {
+    console.warn("parseStartlistHtml: No .startlist_v4 found, falling back to global rider scan");
+    const allPageLinks = doc.querySelectorAll("a");
+    const riders: { rider_name: string; team_name: string }[] = [];
+    for (const link of allPageLinks) {
+      const href = link.getAttribute("href") || "";
+      if (!href.includes("rider/")) continue;
+      const name = link.textContent?.trim() || "";
+      if (name.length > 2) {
+        riders.push({ rider_name: name, team_name: "Unknown" });
+      }
+    }
+    console.log(`parseStartlistHtml fallback: extracted ${riders.length} riders`);
+    return riders;
+  }
 
-  // Use sequential scanning directly — robust on minified HTML with nested <li>
-  return parseStartlistByTeamAndRider(section);
-}
-
-/**
- * Alternative parsing approach: scan for team and rider links sequentially.
- * Used when <li> block splitting doesn't work cleanly.
- */
-function parseStartlistByTeamAndRider(html: string): { rider_name: string; team_name: string }[] {
   const riders: { rider_name: string; team_name: string }[] = [];
+
+  // Get ALL <a> links inside the startlist and process sequentially
+  // This avoids relying on parentElement or :scope which may not work in deno-dom
+  const allLinks = startlist.querySelectorAll("a");
   let currentTeam = "Unknown Team";
+  let teamCount = 0;
 
-  // Match both team links and rider links in order
-  const combinedRegex = /<a[^>]*class="[^"]*team[^"]*"[^>]*>([\s\S]*?)<\/a>|<a[^>]*href="[^"]*\/rider\/[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
-  let match;
+  console.log(`parseStartlistHtml: found ${allLinks.length} total links in startlist`);
 
-  while ((match = combinedRegex.exec(html)) !== null) {
-    if (match[1] !== undefined) {
-      // Team link
-      currentTeam = match[1].replace(/<[^>]*>/g, "").trim();
-    } else if (match[2] !== undefined) {
-      // Rider link
-      const riderName = match[2].replace(/<[^>]*>/g, "").trim();
+  for (const link of allLinks) {
+    const href = link.getAttribute("href") || "";
+    const className = link.getAttribute("class") || "";
+
+    if (className.includes("team") && !className.includes("team-in-race")) {
+      currentTeam = link.textContent?.trim() || "Unknown Team";
+      teamCount++;
+    } else if (href.includes("rider/") && !href.includes("team-in-race")) {
+      const riderName = link.textContent?.trim() || "";
       if (riderName.length > 2) {
         riders.push({ rider_name: riderName, team_name: currentTeam });
       }
     }
   }
 
-  console.log(`parseStartlistByTeamAndRider: extracted ${riders.length} riders`);
-  return riders;
-}
-
-/**
- * Last-resort fallback: just find all /rider/ links in the page.
- */
-function parseStartlistFallback(html: string): { rider_name: string; team_name: string }[] {
-  const riders: { rider_name: string; team_name: string }[] = [];
-  const riderRegex = /<a[^>]*href="[^"]*\/rider\/[^"]*"[^>]*>([\s\S]*?)<\/a>/gi;
-  let match;
-
-  while ((match = riderRegex.exec(html)) !== null) {
-    const riderName = match[1].replace(/<[^>]*>/g, "").trim();
-    if (riderName.length > 2) {
-      riders.push({ rider_name: riderName, team_name: "Unknown" });
-    }
+  console.log(`parseStartlistHtml: extracted ${riders.length} riders from ${teamCount} teams`);
+  if (riders.length > 0) {
+    console.log(`Sample: ${riders.slice(0, 3).map(r => `${r.rider_name} (${r.team_name})`).join(", ")}`);
   }
-
-  console.log(`parseStartlistFallback: extracted ${riders.length} riders`);
   return riders;
 }
 
@@ -416,13 +397,19 @@ async function scrapeRaceStartlist(raceUrl: string): Promise<StartlistChange[]> 
 
   const courseId = extractPcsRaceSlug(raceUrl) || "unknown";
 
-  // Extract race name from the page title
-  const titleMatch = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  // Extract race name using DOMParser for clean text
+  const titleDoc = new DOMParser().parseFromString(html, "text/html");
+  const h1 = titleDoc?.querySelector("h1");
   let courseName = courseId.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-  if (titleMatch) {
-    const rawTitle = titleMatch[1].replace(/<[^>]*>/g, "").trim();
-    if (rawTitle.length > 2) {
-      courseName = rawTitle;
+  if (h1) {
+    // Remove "hideIfMobile" spans (contain "2026 » 10th" prefix)
+    const hideSpans = h1.querySelectorAll(".hideIfMobile");
+    for (const span of hideSpans) {
+      span.remove();
+    }
+    const cleanTitle = h1.textContent?.trim() || "";
+    if (cleanTitle.length > 2) {
+      courseName = cleanTitle;
     }
   }
 
