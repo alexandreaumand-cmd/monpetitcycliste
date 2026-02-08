@@ -38,8 +38,14 @@ function tokenSig(s: string): string {
 
 // ============ PCS URL BUILDER ============
 
-function buildPcsUrl(pcsSlug: string, year: number, typeClassement: string, etapeNumero: number | null): string {
+function buildPcsUrl(pcsSlug: string, year: number, typeClassement: string, etapeNumero: number | null, typeCourse: string | null): string {
   const base = `https://www.procyclingstats.com/race/${pcsSlug}/${year}`;
+  
+  // One-day races always use the simple result URL regardless of classement type
+  const tc = (typeCourse || '').toLowerCase().replace(/[\s_-]/g, '');
+  if (tc === 'oneday') {
+    return `${base}/result/result`;
+  }
   
   switch (typeClassement) {
     case "Etape":
@@ -53,7 +59,6 @@ function buildPcsUrl(pcsSlug: string, year: number, typeClassement: string, etap
     case "Jeune":
       return `${base}/youth/result/result`;
     default:
-      // One-day race or fallback
       return `${base}/result/result`;
   }
 }
@@ -214,11 +219,20 @@ function parseResultsHtml(html: string): ScrapedResult[] {
 // ============ EXTRACT PCS SLUG FROM COURSE ID ============
 
 function extractPcsSlugFromId(courseId: string): string | null {
-  // Course IDs follow pattern: {pcs-slug}-{8char-suffix}
-  // e.g. "tour-de-france-mj6wc9l7" -> "tour-de-france"
-  // e.g. "paris-nice-mj6w30jw" -> "paris-nice"
+  // Strategy 1: IDs with 8-char random suffix: "tour-de-france-mj6wc9l7" -> "tour-de-france"
   const match = courseId.match(/^(.+)-([a-z0-9]{8})$/);
   if (match) return match[1];
+  
+  // Strategy 2: Underscore-based IDs: "muscat_classic" -> "muscat-classic"
+  if (courseId.includes('_')) {
+    return courseId.replace(/_/g, '-');
+  }
+  
+  // Strategy 3: Already a valid slug (contains hyphens, no random suffix pattern)
+  if (courseId.includes('-')) {
+    return courseId;
+  }
+  
   return null;
 }
 
@@ -246,7 +260,7 @@ serve(async (req) => {
     // 1. Get PCS slug: first try pcs_slug column, then extract from course_id
     const { data: courseData } = await supabase
       .from("courses")
-      .select("id, pcs_slug")
+      .select("id, pcs_slug, type_course")
       .eq("id", course_id)
       .single();
 
@@ -261,7 +275,8 @@ serve(async (req) => {
 
     // 2. Build PCS URL
     const classement = type_classement || "General";
-    const pcsUrl = buildPcsUrl(pcsSlug, year, classement, etape_numero);
+    const typeCourse = courseData?.type_course || null;
+    const pcsUrl = buildPcsUrl(pcsSlug, year, classement, etape_numero, typeCourse);
     console.log(`Fetching PCS results from: ${pcsUrl}`);
 
     // 3. Fetch HTML
