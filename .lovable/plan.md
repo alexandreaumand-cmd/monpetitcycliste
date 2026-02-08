@@ -1,53 +1,52 @@
 
-# Remplacer Gemini par du scraping HTML direct dans le Startlist Tracker
+# Fix: Parsing HTML des startlists PCS
 
-## Objectif
+## Probleme identifie
 
-Supprimer les 2 appels Gemini du startlist-tracker (qui coutent des credits et sont parfois imprecis) et les remplacer par du parsing HTML regex, exactement comme dans `scrape-pcs-results`.
+Le HTML PCS est **entierement minifie** (tout sur une seule ligne de ~44k caracteres). La structure reelle est :
 
-## Analyse de la structure HTML PCS
+```text
+<ul class="startlist_v4">
+  <li>                          <-- equipe (outer)
+    <a class="team">...</a>
+    <ul>
+      <li class=" ">            <-- coureur (inner, imbrique)
+        <a href="/rider/...">NOM</a>
+      </li>
+    </ul>
+  </li>
+</ul>
+```
 
-### Page "startlist changes" (`races.php?s=startlist-changes-all-races`)
-- Table simple avec classe `basic`
-- Chaque ligne `<tr>` contient : date, nom de course, classe, nombre de changements
-- Lien de course dans format : `<a href="/race/{slug}/{year}/startlist">Race Name</a>`
+La regex `/<li[^>]*>[\s\S]*?<\/li>/gi` ne fonctionne pas correctement avec ces `<li>` imbriques sur une seule ligne. Le lazy matching decoupe mal les blocs, et aucun coureur n'est extrait.
 
-### Page startlist d'une course (`/race/{slug}/{year}/startlist`)
-- Structure `<ul class="startlist_v4">`
-- Chaque `<li>` = une equipe, contenant :
-  - `<a class="team" href="/team/...">Team Name (WT)</a>` pour le nom de l'equipe
-  - `<a href="/rider/{slug}">LASTNAME Firstname</a>` pour chaque coureur
+## Solution
 
-## Changements dans `supabase/functions/startlist-tracker/index.ts`
+Simplifier `parseStartlistHtml` pour utiliser directement l'approche sequentielle (`parseStartlistByTeamAndRider`) qui scanne les liens `<a class="team">` et `<a href="/rider/...">` dans l'ordre. Cette methode est deja codee en fallback mais n'est jamais atteinte car le regex `<li>` retourne des blocs (mal formes).
 
-### 1. Nouvelle fonction `parseChangedRacesHtml(html)` (remplace `scrapeChangedRacesList`)
-- Regex sur `<table class=" basic">` pour trouver la table
-- Pour chaque `<tr>`, extraire le lien `/race/{slug}/{year}/startlist` et le nom de course
-- Retourner un tableau `ChangedRace[]`
-- Plus besoin de `lovableApiKey` ni d'appel Gemini
+## Changements
 
-### 2. Nouvelle fonction `parseStartlistHtml(html)` (remplace la partie Gemini de `scrapeRaceStartlist`)
-- Chercher `<ul class="startlist_v4">` ou `class="startlist_v4"`
-- Pour chaque equipe : extraire le team name depuis `<a class="team">`
-- Pour chaque coureur : extraire nom depuis `<a href="/rider/{slug}">LASTNAME Firstname</a>`
-- Retourner la liste complete des coureurs avec leur equipe
+### Fichier : `supabase/functions/startlist-tracker/index.ts`
 
-### 3. Mise a jour de `scrapeChangedRacesList`
-- Supprimer l'appel Gemini
-- Appeler `parseChangedRacesHtml(html)` a la place
-- Supprimer le parametre `apiKey`
+**`parseStartlistHtml`** : Supprimer la logique de split par blocs `<li>` et appeler directement `parseStartlistByTeamAndRider(section)` apres avoir trouve la section `startlist_v4`. Cela donne :
 
-### 4. Mise a jour de `scrapeRaceStartlist`
-- Supprimer l'appel Gemini
-- Appeler `parseStartlistHtml(html)` a la place
-- Supprimer le parametre `apiKey`
+1. Trouver `class="startlist_v4"` dans le HTML
+2. Extraire la section depuis ce point
+3. Scanner sequentiellement les liens team et rider (sans decoupe par `<li>`)
+4. Garder le fallback global si `startlist_v4` n'est pas present
 
-### 5. Nettoyage general
-- Supprimer `lovableApiKey` du code principal (plus utilise)
-- Tout le reste (matching, processChanges, generateFullSyncChanges) reste identique
+**Ajouter du logging** dans `parseStartlistByTeamAndRider` pour tracer le nombre de teams et riders detectes.
 
-## Avantages
-- Zero credit AI consomme par le tracker
-- Parsing deterministe et instantane (pas de variation IA)
-- Meme approche eprouvee que pour les resultats
-- Plus de dependance a `LOVABLE_API_KEY` pour cette fonction
+## Detail technique
+
+La fonction `parseStartlistByTeamAndRider` parcourt le HTML lineairement avec un seul regex combine :
+- Quand elle rencontre `<a class="team">` : elle met a jour le nom de l'equipe courante
+- Quand elle rencontre `<a href="/rider/...">` : elle ajoute le coureur avec l'equipe courante
+
+Cette approche est insensible a l'imbrication des `<li>` et fonctionne sur du HTML minifie.
+
+## Impact
+
+- Aucun changement de comportement visible cote UI
+- Parsing deterministe et robuste sur HTML minifie
+- Redeploy automatique de la fonction
