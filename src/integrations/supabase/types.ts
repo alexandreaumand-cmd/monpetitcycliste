@@ -2018,6 +2018,7 @@ export type Database = {
           id: string
           nom: string
           pays: string | null
+          pcs_slug: string | null
           phase_id: string | null
           route_image_url: string | null
           statut: Database["public"]["Enums"]["race_statut"] | null
@@ -2032,6 +2033,7 @@ export type Database = {
           id: string
           nom: string
           pays?: string | null
+          pcs_slug?: string | null
           phase_id?: string | null
           route_image_url?: string | null
           statut?: Database["public"]["Enums"]["race_statut"] | null
@@ -2046,6 +2048,7 @@ export type Database = {
           id?: string
           nom?: string
           pays?: string | null
+          pcs_slug?: string | null
           phase_id?: string | null
           route_image_url?: string | null
           statut?: Database["public"]["Enums"]["race_statut"] | null

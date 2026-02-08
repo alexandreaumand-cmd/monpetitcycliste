@@ -2,3 +2,6 @@ project_id = "khahpetvqjoyrwambaqn"
 
 [functions.arena-recaps]
 verify_jwt = false
+
+[functions.scrape-pcs-results]
+verify_jwt = false
