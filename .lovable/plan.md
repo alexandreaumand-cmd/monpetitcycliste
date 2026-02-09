@@ -1,93 +1,91 @@
 
 
-## Diagnostic et Plan de correction du Startlist Tracker
+# Refonte du Startlist Tracker : approche directe avec matching existant
 
-### Probleme identifie
+## Probleme constate
 
-Le scraping **global** du Startlist Tracker echoue silencieusement car **ProCyclingStats bloque l'acces a la page "startlist changes"** (`races.php?s=startlist-changes-all-races`). Le serveur PCS retourne du HTML (26 450 caracteres) mais il ne contient aucun lien vers les courses -- il s'agit probablement d'une page anti-bot, captcha ou consentement cookies.
+Le tracker detecte de **faux retraits** pour l'UAE Tour (et potentiellement d'autres courses). Exemples concrets en LIVE :
+- `MUHLBERGER Gregor` detecte comme "removed" alors que `MUHLBERGER Gregor` est toujours sur PCS (accent `u` mal gere)
+- `Adam YATES` detecte comme "removed" car le nom en base est stocke dans un ordre different (`YATES Adam` sur PCS)
+- `PALENI Enzo`, `MEZGEC Luka`, `MILAN Matteo`, etc. : memes causes
 
-Preuve dans les logs :
-- `Fetched HTML: 26450 characters`
-- `parseChangedRacesHtml: found 0 race links`
-- `extracted 0 races`
+**Cause racine** : Le tracker utilise une normalisation simpliste (ligne 588-593) qui supprime les caracteres speciaux et ne gere ni les accents (`o` pour `ø`, `u` pour `u`) ni l'ordre des mots. En parallele, il n'utilise pas la table `name_aliases` ni le matching multi-strategie deja presents dans `startlist-import`.
 
-En revanche, le scraping d'une course individuelle fonctionne parfaitement (test TdF reussi avec matching complet).
+## Approche proposee
 
----
-
-### Strategie de correction
-
-Abandonner la dependance a la page "startlist changes" de PCS et la remplacer par une approche directe : **scraper les startlists des courses a venir** directement depuis notre base de donnees.
+Reprendre la methodologie suggeree : **lire PCS, comparer avec la startlist existante**, et agir directement :
 
 ```text
-AVANT (casse) :
-  Cron --> PCS changes page --> [BLOQUE] --> 0 courses --> fin
-
-APRES (robuste) :
-  Cron --> DB : courses des 6 prochaines semaines
-       --> Pour chaque course : construire URL PCS
-       --> Scraper startlist individuelle (fonctionne)
-       --> Comparer avec entries existantes
-       --> Detecter ajouts/retraits
+Pour chaque course :
+  1. Scraper PCS --> liste de coureurs scraped[]
+  2. Charger startlist_entries existantes --> liste existing[]
+  3. Comparer avec tokenSig (normalisation robuste + tri alphabetique) :
+     - Coureur present dans les deux --> ne rien faire
+     - Coureur sur PCS mais absent en base --> AJOUTER (avec matching complet)
+     - Coureur en base mais absent de PCS --> RETIRER
+  4. Logger les changements dans startlist_tracker_changes (audit)
 ```
 
----
+## Details techniques
 
-### Etapes de mise en oeuvre
+### 1. Remplacer la normalisation du tracker
 
-#### 1. Nouvelle logique "global sync" dans l'edge function `startlist-tracker`
+Remplacer la fonction `normalizeName` (lignes 360-368) et le `normalize` inline (lignes 588-593) par la version robuste deja utilisee dans `startlist-import` :
+- `CHAR_MAP` complet (o pour ø, u pour u, ss pour ß, etc.)
+- `tokenSig()` : normalisation + tri alphabetique des mots
 
-Remplacer `scrapeChangedRacesList()` par une approche basee sur la DB :
+Cela garantit que `"YATES Adam"` et `"Adam YATES"` produisent la meme cle (`"ADAM YATES"`), et que `"MUHLBERGER"` et `"MUHLBERGER"` sont identiques.
 
-- Requeter les courses dont la `date_debut` est dans les **6 prochaines semaines**
-- Pour chaque course, construire l'URL PCS a partir de :
-  - `pcs_slug` si disponible dans la table `courses`
-  - Sinon, deriver un slug depuis le `course.id` ou `course.nom` (avec normalisation)
-- Limiter a `MAX_COURSES_PER_RUN = 5` pour eviter les timeouts (150s)
-- Garder un suivi des courses deja scrapees recemment (via `startlist_tracker_runs` ou un champ `last_scraped_at` sur `startlist_imports`) pour ne pas re-scraper la meme course toutes les 30 minutes
+### 2. Refondre `generateFullSyncChanges` en approche directe
 
-#### 2. Construction intelligente des URLs PCS
+La fonction actuelle (lignes 511-660) sera simplifiee :
 
-Creer une fonction `buildPcsStartlistUrl(course)` :
-- Si `pcs_slug` existe : `https://www.procyclingstats.com/race/{pcs_slug}/2026/startlist`
-- Sinon : essayer de deriver le slug depuis `course.id` (ex: `cadel-evans-great-ocean-road-race-mj8c3myx` devient `cadel-evans-great-ocean-road-race`)
-- Ajouter un fallback avec le nom normalise
+- Charger les `startlist_entries` existantes avec leur `coureur_id` et `coureurs.nom`
+- Construire un `Set` de cles tokenSig pour les coureurs scraped
+- Construire un `Map<tokenSig, entryId>` pour les entries existantes (en utilisant a la fois `source_name` et `coureurs.nom`)
+- **Additions** : pour chaque coureur scraped dont la cle n'est pas dans la map existante, marquer comme ajout
+- **Retraits** : pour chaque entry existante dont la cle n'est ni dans les scraped NI deja couverte par un autre entry avec la meme cle, marquer comme retrait
 
-#### 3. Rotation et priorisation des courses
+### 3. Utiliser le matching complet pour les ajouts
 
-Pour eviter de scraper les memes courses en boucle :
-- Stocker `last_tracker_check` (timestamp) dans `startlist_imports` ou via les `startlist_tracker_runs`
-- Prioriser les courses jamais verifiees ou non verifiees depuis plus de 6h
-- Cela permettra au cron de couvrir toutes les courses progressivement (5 par execution, toutes les 30 minutes)
+Pour chaque coureur a ajouter, reutiliser la meme logique que `startlist-import` :
+1. Consulter `name_aliases` (priorite maximale)
+2. Match exact normalise sur le roster
+3. Match par `tokenSig` (roster puis off-roster)
+4. Match fuzzy Levenshtein (roster puis off-roster)
 
-#### 4. Ajout de logging diagnostique
+Les donnees necessaires (roster riders, all riders, aliases) seront chargees une seule fois par course.
 
-Ajouter un log des 500 premiers caracteres du HTML recu + le titre de la page pour diagnostiquer les futurs blocages PCS :
-```
-console.log(`HTML title: ${doc.querySelector('title')?.textContent}`);
-console.log(`HTML preview: ${html.substring(0, 500)}`);
-```
+### 4. Agir directement sur `startlist_entries`
 
-#### 5. Migration base de donnees
+Au lieu du flux actuel en 2 etapes (generer des changes puis les traiter dans `processChanges`), agir directement :
+- **Ajout** : inserer dans `startlist_entries` avec le `coureur_id` trouve
+- **Retrait** : supprimer de `startlist_entries` (avec cascade manuelle sur `startlist_tracker_changes` comme dans la suppression manuelle existante)
+- **Logger** : inserer dans `startlist_tracker_changes` pour l'audit avec un statut `validated` immediat
 
-Ajouter une colonne `last_tracker_check` a la table `startlist_imports` (ou `courses`) pour tracker la derniere verification de chaque course :
+### 5. Simplifier `processChanges`
+
+Cette fonction (lignes 662-900) sera fortement reduite ou supprimee car le traitement se fera directement dans la boucle de comparaison. Plus besoin de re-rechercher la course, re-matcher le coureur, etc.
+
+### 6. Nettoyage des faux changements en LIVE
+
+Apres deploiement, les ~20 faux changements "pending" pour UAE Tour pourront etre marques comme `skipped` via une requete SQL :
 
 ```sql
-ALTER TABLE courses ADD COLUMN IF NOT EXISTS last_tracker_check timestamptz;
+UPDATE startlist_tracker_changes
+SET validation_status = 'skipped', processed = true
+WHERE course_name = 'UAE Tour'
+AND validation_status = 'pending';
 ```
 
----
+## Fichiers modifies
 
-### Avantages de cette approche
+- `supabase/functions/startlist-tracker/index.ts` : refonte de la normalisation, du flux de comparaison et de la logique de traitement
 
-- **Robustesse** : ne depend plus d'une page PCS unique qui peut etre bloquee
-- **Fiabilite** : les pages de startlist individuelles fonctionnent (prouve par les tests)
-- **Couverture** : toutes les courses a venir sont verifiees, meme celles non listees sur la page "changes"
-- **Progressif** : 5 courses par run, toutes les 30 min = ~240 verifications par jour, largement suffisant
+## Benefices
 
-### Risques et mitigations
-
-- **Blocage IP par PCS** : limiter a 5 courses/run avec des delais entre requetes (deja en place)
-- **Slug PCS inconnu** : la derivation automatique couvrira la majorite des cas ; les echecs seront logues pour correction manuelle via `pcs_slug`
-- **Course sans startlist import** : le systeme en creera une automatiquement (logique existante)
+- **Pas de faux positifs** : meme normalisation robuste que l'import manuel
+- **Aliases supportes** : les coureurs avec des noms ambigus sont reconnus
+- **Code simplifie** : une seule passe au lieu de deux etapes distinctes
+- **Moins de requetes DB** : les donnees de matching sont chargees une fois par course, pas une fois par coureur
 
