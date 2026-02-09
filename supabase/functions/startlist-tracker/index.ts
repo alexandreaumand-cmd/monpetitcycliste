@@ -227,6 +227,39 @@ serve(async (req) => {
 
     const { source_type = "global", race_url } = await req.json().catch(() => ({}));
 
+    // Handle list_courses separately (no run record needed)
+    if (source_type === "list_courses") {
+      const now = new Date();
+      const sixWeeksLater = new Date(now);
+      sixWeeksLater.setDate(sixWeeksLater.getDate() + 42);
+      const threeDaysAgo = new Date(now);
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+      const { data: allCourses } = await supabase
+        .from("courses")
+        .select("id, nom, pcs_slug, date_debut, last_tracker_check")
+        .gte("date_debut", threeDaysAgo.toISOString().split("T")[0])
+        .lte("date_debut", sixWeeksLater.toISOString().split("T")[0])
+        .order("date_debut", { ascending: true });
+
+      const coursesList = (allCourses || []).map((c: any) => {
+        const url = buildPcsStartlistUrl(c);
+        return {
+          id: c.id,
+          nom: c.nom,
+          pcs_slug: c.pcs_slug,
+          date_debut: c.date_debut,
+          last_tracker_check: c.last_tracker_check,
+          derived_url: url,
+        };
+      });
+
+      return new Response(
+        JSON.stringify({ success: true, courses: coursesList }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Create a run record
     const { data: run, error: runError } = await supabase
       .from("startlist_tracker_runs")
@@ -275,40 +308,6 @@ serve(async (req) => {
             }
           }
         }
-      } else if (source_type === "list_courses") {
-        // Return list of upcoming courses with their derived PCS URLs
-        const now = new Date();
-        const sixWeeksLater = new Date(now);
-        sixWeeksLater.setDate(sixWeeksLater.getDate() + 42);
-        const threeDaysAgo = new Date(now);
-        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-
-        const { data: allCourses } = await supabase
-          .from("courses")
-          .select("id, nom, pcs_slug, date_debut, last_tracker_check")
-          .gte("date_debut", threeDaysAgo.toISOString().split("T")[0])
-          .lte("date_debut", sixWeeksLater.toISOString().split("T")[0])
-          .order("date_debut", { ascending: true });
-
-        const coursesList = (allCourses || []).map((c: any) => {
-          const url = buildPcsStartlistUrl(c);
-          return {
-            id: c.id,
-            nom: c.nom,
-            pcs_slug: c.pcs_slug,
-            date_debut: c.date_debut,
-            last_tracker_check: c.last_tracker_check,
-            derived_url: url,
-          };
-        });
-
-        // Clean up run record (not a real run)
-        await supabase.from("startlist_tracker_runs").delete().eq("id", runId);
-
-        return new Response(
-          JSON.stringify({ success: true, courses: coursesList }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
       }
 
       const changesTotal = totalAdded + totalRemoved;
