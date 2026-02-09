@@ -244,6 +244,8 @@ serve(async (req) => {
       let racesMatched = 0;
       let coursesProcessed: string[] = [];
 
+      let scrapeErrors: { course_id: string; course_name: string; url_tried: string; error: string }[] = [];
+
       if (source_type === "global") {
         const result = await handleGlobalSync(supabase);
         totalAdded = result.totalAdded;
@@ -251,12 +253,12 @@ serve(async (req) => {
         racesAnalyzed = result.racesAnalyzed;
         racesMatched = result.racesMatched;
         coursesProcessed = result.coursesProcessed;
+        scrapeErrors = result.scrapeErrors || [];
       } else if (source_type === "race" && race_url) {
         racesAnalyzed = 1;
         const scrapedRiders = await scrapeRaceStartlist(race_url);
         if (scrapedRiders.length > 0) {
           racesMatched = 1;
-          // Find course from URL
           const courseSlug = extractPcsRaceSlug(race_url);
           if (courseSlug) {
             const { data: course } = await supabase
@@ -273,6 +275,40 @@ serve(async (req) => {
             }
           }
         }
+      } else if (source_type === "list_courses") {
+        // Return list of upcoming courses with their derived PCS URLs
+        const now = new Date();
+        const sixWeeksLater = new Date(now);
+        sixWeeksLater.setDate(sixWeeksLater.getDate() + 42);
+        const threeDaysAgo = new Date(now);
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+        const { data: allCourses } = await supabase
+          .from("courses")
+          .select("id, nom, pcs_slug, date_debut, last_tracker_check")
+          .gte("date_debut", threeDaysAgo.toISOString().split("T")[0])
+          .lte("date_debut", sixWeeksLater.toISOString().split("T")[0])
+          .order("date_debut", { ascending: true });
+
+        const coursesList = (allCourses || []).map((c: any) => {
+          const url = buildPcsStartlistUrl(c);
+          return {
+            id: c.id,
+            nom: c.nom,
+            pcs_slug: c.pcs_slug,
+            date_debut: c.date_debut,
+            last_tracker_check: c.last_tracker_check,
+            derived_url: url,
+          };
+        });
+
+        // Clean up run record (not a real run)
+        await supabase.from("startlist_tracker_runs").delete().eq("id", runId);
+
+        return new Response(
+          JSON.stringify({ success: true, courses: coursesList }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
       const changesTotal = totalAdded + totalRemoved;
@@ -286,6 +322,7 @@ serve(async (req) => {
           changes_detected: changesTotal,
           changes_processed: changesTotal,
           courses_processed: coursesProcessed,
+          scrape_errors: scrapeErrors,
         })
         .eq("id", runId);
 
@@ -332,6 +369,7 @@ async function handleGlobalSync(supabase: any): Promise<{
   racesAnalyzed: number;
   racesMatched: number;
   coursesProcessed: string[];
+  scrapeErrors: { course_id: string; course_name: string; url_tried: string; error: string }[];
 }> {
   const now = new Date();
   const sixWeeksLater = new Date(now);
@@ -367,7 +405,7 @@ async function handleGlobalSync(supabase: any): Promise<{
 
   if (!courses || courses.length === 0) {
     console.log("No courses need checking right now");
-    return { totalAdded: 0, totalRemoved: 0, racesAnalyzed: 0, racesMatched: 0, coursesProcessed: [] };
+    return { totalAdded: 0, totalRemoved: 0, racesAnalyzed: 0, racesMatched: 0, coursesProcessed: [], scrapeErrors: [] };
   }
 
   console.log(`Found ${courses.length} courses to check:`);
@@ -379,11 +417,13 @@ async function handleGlobalSync(supabase: any): Promise<{
   let totalRemoved = 0;
   let racesMatched = 0;
   const coursesProcessed: string[] = [];
+  const scrapeErrors: { course_id: string; course_name: string; url_tried: string; error: string }[] = [];
 
   for (const course of courses) {
     const pcsUrl = buildPcsStartlistUrl(course);
     if (!pcsUrl) {
       console.log(`Could not build PCS URL for "${course.nom}" (${course.id}), skipping`);
+      scrapeErrors.push({ course_id: course.id, course_name: course.nom, url_tried: "", error: "Impossible de construire l'URL PCS (pas de pcs_slug)" });
       await markCourseChecked(supabase, course.id);
       continue;
     }
@@ -396,6 +436,7 @@ async function handleGlobalSync(supabase: any): Promise<{
       
       if (scrapedRiders.length === 0) {
         console.log(`No riders found for ${course.nom}, startlist may not be published yet`);
+        scrapeErrors.push({ course_id: course.id, course_name: course.nom, url_tried: pcsUrl, error: "0 coureurs trouvés (startlist pas encore publiée ou URL incorrecte)" });
         await markCourseChecked(supabase, course.id);
         continue;
       }
@@ -410,13 +451,14 @@ async function handleGlobalSync(supabase: any): Promise<{
       await markCourseChecked(supabase, course.id);
     } catch (raceError) {
       console.error(`Error processing ${course.nom}:`, raceError);
+      scrapeErrors.push({ course_id: course.id, course_name: course.nom, url_tried: pcsUrl, error: raceError instanceof Error ? raceError.message : "Erreur inconnue" });
       await markCourseChecked(supabase, course.id);
     }
   }
 
   console.log(`\nGlobal sync complete: ${courses.length} analyzed, ${racesMatched} matched, ${totalAdded} added, ${totalRemoved} removed`);
 
-  return { totalAdded, totalRemoved, racesAnalyzed: courses.length, racesMatched, coursesProcessed };
+  return { totalAdded, totalRemoved, racesAnalyzed: courses.length, racesMatched, coursesProcessed, scrapeErrors };
 }
 
 // ============================================================
@@ -771,7 +813,7 @@ function derivePcsSlug(courseId: string): string | null {
     "clasica_de_almeria": "clasica-de-almeria",
     "vuelta_a_andalucia_ruta_ciclista_del_sol": "vuelta-a-andalucia",
     "volta_ao_algarve_em_bicicleta": "volta-ao-algarve",
-    "tour_de_la_provence": "tour-de-la-provence",
+    "tour_de_la_provence": "tour-cycliste-international-la-provence",
     "kuurne_brussel_kuurne": "kuurne-brussel-kuurne",
     "faun_ard_che_classic": "faun-ardeche-classic",
     "faun_drome_classic": "faun-drome-classic",

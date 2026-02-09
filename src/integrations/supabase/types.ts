@@ -4704,6 +4704,7 @@ export type Database = {
           courses_processed: string[] | null
           error_message: string | null
           id: string
+          scrape_errors: Json | null
           source_type: string
           started_at: string
           status: string
@@ -4715,6 +4716,7 @@ export type Database = {
           courses_processed?: string[] | null
           error_message?: string | null
           id?: string
+          scrape_errors?: Json | null
           source_type: string
           started_at?: string
           status?: string
@@ -4726,6 +4728,7 @@ export type Database = {
           courses_processed?: string[] | null
           error_message?: string | null
           id?: string
+          scrape_errors?: Json | null
           source_type?: string
           started_at?: string
           status?: string

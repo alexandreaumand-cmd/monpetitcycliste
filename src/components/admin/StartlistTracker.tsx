@@ -12,6 +12,7 @@ import { fr } from "date-fns/locale";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { TrackerChangeMatchDialog } from "./TrackerChangeMatchDialog";
+import { TrackerCoursesTab } from "./TrackerCoursesTab";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -265,6 +266,7 @@ export const StartlistTracker = () => {
       <Tabs defaultValue="changes">
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="changes" className="text-xs sm:text-sm">Modifications</TabsTrigger>
+          <TabsTrigger value="courses" className="text-xs sm:text-sm">Courses</TabsTrigger>
           <TabsTrigger value="runs" className="text-xs sm:text-sm">Historique</TabsTrigger>
         </TabsList>
 
@@ -401,6 +403,10 @@ export const StartlistTracker = () => {
           </Card>
         </TabsContent>
 
+        <TabsContent value="courses" className="mt-4">
+          <TrackerCoursesTab />
+        </TabsContent>
+
         <TabsContent value="runs" className="mt-4">
           <Card>
             <CardHeader className="p-3 sm:p-6">
@@ -441,6 +447,16 @@ export const StartlistTracker = () => {
                               <Badge key={i} variant="outline" className="text-[10px] px-1.5 py-0">
                                 {name}
                               </Badge>
+                            ))}
+                          </div>
+                        )}
+                        {run.scrape_errors && (run.scrape_errors as any[]).length > 0 && (
+                          <div className="space-y-1">
+                            {(run.scrape_errors as any[]).map((err: any, i: number) => (
+                              <div key={i} className="text-[10px] text-destructive bg-destructive/10 rounded px-2 py-0.5">
+                                <span className="font-medium">{err.course_name}</span>: {err.error}
+                                {err.url_tried && <span className="text-muted-foreground ml-1">({err.url_tried})</span>}
+                              </div>
                             ))}
                           </div>
                         )}
