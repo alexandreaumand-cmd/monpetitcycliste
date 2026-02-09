@@ -16,12 +16,17 @@ interface StartlistChange {
   source_url: string;
 }
 
-interface ChangedRace {
-  name: string;
-  slug: string;
-  year: number;
-  url: string;
+interface DbCourse {
+  id: string;
+  nom: string;
+  pcs_slug: string | null;
+  date_debut: string;
 }
+
+// Maximum courses to process per run to avoid timeout (150s limit)
+const MAX_COURSES_PER_RUN = 3;
+// Re-check interval: don't re-scrape a course checked less than 6h ago
+const RECHECK_INTERVAL_HOURS = 6;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -31,7 +36,6 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { source_type = "global", race_url } = await req.json().catch(() => ({}));
@@ -39,15 +43,11 @@ serve(async (req) => {
     // Create a run record
     const { data: run, error: runError } = await supabase
       .from("startlist_tracker_runs")
-      .insert({
-        source_type,
-        status: "running",
-      })
+      .insert({ source_type, status: "running" })
       .select()
       .single();
 
     if (runError) throw runError;
-
     const runId = run.id;
 
     try {
@@ -55,95 +55,11 @@ serve(async (req) => {
       let racesAnalyzed = 0;
       let racesMatched = 0;
 
-      // Maximum courses to process per run to avoid timeout (150s limit)
-      const MAX_COURSES_PER_RUN = 5;
-
       if (source_type === "global") {
-        // TWO-STEP APPROACH:
-        // Step 1: Fetch list of races with recent startlist modifications
-        console.log("Step 1: Fetching list of changed races...");
-        const changedRaces = await scrapeChangedRacesList();
-        console.log(`Found ${changedRaces.length} races with recent changes`);
-        racesAnalyzed = changedRaces.length;
-
-        if (changedRaces.length === 0) {
-          console.log("No races with changes found in the last 12 hours");
-        } else {
-          // Step 2: Get races from current season in database
-          const { data: dbCourses } = await supabase
-            .from("courses")
-            .select("id, nom, date_debut")
-            .gte("date_debut", "2025-07-01"); // Season 2026 starts July 2025
-
-          if (dbCourses && dbCourses.length > 0) {
-            console.log(`Database has ${dbCourses.length} courses for current season`);
-            
-            // Create lookup maps for matching
-            const dbCoursesBySlug = new Map<string, { id: string; nom: string }>();
-            const dbCoursesByName = new Map<string, { id: string; nom: string }>();
-            
-            for (const course of dbCourses) {
-              dbCoursesBySlug.set(course.id.toLowerCase(), course);
-              const normalizedName = normalizeName(course.nom);
-              dbCoursesByName.set(normalizedName, course);
-            }
-
-            // Step 3: Match races and limit processing
-            const racesToProcess: { race: ChangedRace; matchedCourse: { id: string; nom: string } }[] = [];
-            
-            for (const race of changedRaces) {
-              const slugLower = race.slug.toLowerCase();
-              const normalizedRaceName = normalizeName(race.name);
-              
-              let matchedCourse = dbCoursesBySlug.get(slugLower);
-              if (!matchedCourse) {
-                matchedCourse = dbCoursesByName.get(normalizedRaceName);
-              }
-              if (!matchedCourse) {
-                for (const [dbSlug, course] of dbCoursesBySlug) {
-                  if (dbSlug.includes(slugLower) || slugLower.includes(dbSlug)) {
-                    matchedCourse = course;
-                    break;
-                  }
-                }
-              }
-
-              if (!matchedCourse) {
-                console.log(`Course "${race.name}" (${race.slug}) not found in database, skipping`);
-                continue;
-              }
-
-              racesToProcess.push({ race, matchedCourse });
-            }
-
-            console.log(`Matched ${racesToProcess.length} courses, processing max ${MAX_COURSES_PER_RUN}`);
-            
-            const limitedRaces = racesToProcess.slice(0, MAX_COURSES_PER_RUN);
-            
-            for (const { race, matchedCourse } of limitedRaces) {
-              racesMatched++;
-              console.log(`Processing course: ${race.name} -> matched to ${matchedCourse.id}`);
-
-              try {
-                const scrapedRiders = await scrapeRaceStartlist(race.url);
-                console.log(`Scraped ${scrapedRiders.length} riders from ${race.name}`);
-
-                const raceChanges = await generateFullSyncChanges(supabase, scrapedRiders, race.url);
-                console.log(`Generated ${raceChanges.length} changes for ${race.name}`);
-                
-                changes.push(...raceChanges);
-              } catch (raceError) {
-                console.error(`Error processing race ${race.name}:`, raceError);
-              }
-            }
-            
-            if (racesToProcess.length > MAX_COURSES_PER_RUN) {
-              console.log(`Note: ${racesToProcess.length - MAX_COURSES_PER_RUN} more courses pending, run again to process them`);
-            }
-          } else {
-            console.log("No courses found in database for current season");
-          }
-        }
+        const result = await handleGlobalSync(supabase);
+        changes = result.changes;
+        racesAnalyzed = result.racesAnalyzed;
+        racesMatched = result.racesMatched;
       } else if (source_type === "race" && race_url) {
         racesAnalyzed = 1;
         racesMatched = 1;
@@ -159,7 +75,6 @@ serve(async (req) => {
             ...c,
             detected_at: new Date().toISOString(),
           })));
-
         if (insertError) throw insertError;
       }
 
@@ -197,23 +112,228 @@ serve(async (req) => {
           error_message: error instanceof Error ? error.message : "Unknown error",
         })
         .eq("id", runId);
-
       throw error;
     }
   } catch (error) {
     console.error("Startlist tracker error:", error);
     return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
 
+// ============================================================
+// GLOBAL SYNC: DB-BASED APPROACH (replaces PCS changes page)
+// ============================================================
+
 /**
- * Normalize a name for comparison (remove accents, lowercase, etc.)
+ * New global sync strategy:
+ * 1. Query upcoming courses from DB (next 6 weeks)
+ * 2. Prioritize courses never checked or not checked recently
+ * 3. Build PCS URL from pcs_slug or course ID
+ * 4. Scrape individual startlist pages (which work reliably)
+ * 5. Compare with existing entries to detect changes
  */
+async function handleGlobalSync(supabase: any): Promise<{
+  changes: StartlistChange[];
+  racesAnalyzed: number;
+  racesMatched: number;
+}> {
+  const now = new Date();
+  const sixWeeksLater = new Date(now);
+  sixWeeksLater.setDate(sixWeeksLater.getDate() + 42);
+
+  // Also include courses that started recently (last 3 days) to catch late changes
+  const threeDaysAgo = new Date(now);
+  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+  const recheckCutoff = new Date(now);
+  recheckCutoff.setHours(recheckCutoff.getHours() - RECHECK_INTERVAL_HOURS);
+
+  console.log(`Global sync: looking for courses from ${threeDaysAgo.toISOString().split("T")[0]} to ${sixWeeksLater.toISOString().split("T")[0]}`);
+
+  // Fetch courses that need checking:
+  // - date_debut in range
+  // - never checked OR checked more than RECHECK_INTERVAL_HOURS ago
+  const { data: courses, error: coursesError } = await supabase
+    .from("courses")
+    .select("id, nom, pcs_slug, date_debut, last_tracker_check")
+    .gte("date_debut", threeDaysAgo.toISOString().split("T")[0])
+    .lte("date_debut", sixWeeksLater.toISOString().split("T")[0])
+    .or(`last_tracker_check.is.null,last_tracker_check.lt.${recheckCutoff.toISOString()}`)
+    .order("last_tracker_check", { ascending: true, nullsFirst: true })
+    .limit(MAX_COURSES_PER_RUN);
+
+  if (coursesError) {
+    console.error(`Failed to query courses: ${coursesError.message}`);
+    throw coursesError;
+  }
+
+  if (!courses || courses.length === 0) {
+    console.log("No courses need checking right now (all recently checked or none in range)");
+    return { changes: [], racesAnalyzed: 0, racesMatched: 0 };
+  }
+
+  console.log(`Found ${courses.length} courses to check:`);
+  courses.forEach((c: DbCourse, i: number) => {
+    console.log(`  ${i + 1}. ${c.nom} (${c.id}) - last check: ${c.last_tracker_check || "never"}`);
+  });
+
+  const allChanges: StartlistChange[] = [];
+  let racesMatched = 0;
+
+  for (const course of courses as DbCourse[]) {
+    const pcsUrl = buildPcsStartlistUrl(course);
+    if (!pcsUrl) {
+      console.log(`Could not build PCS URL for "${course.nom}" (${course.id}), skipping`);
+      // Still mark as checked to avoid retrying endlessly
+      await markCourseChecked(supabase, course.id);
+      continue;
+    }
+
+    console.log(`\n--- Processing: ${course.nom} ---`);
+    console.log(`PCS URL: ${pcsUrl}`);
+
+    try {
+      const scrapedRiders = await scrapeRaceStartlist(pcsUrl);
+      
+      if (scrapedRiders.length === 0) {
+        console.log(`No riders found for ${course.nom}, startlist may not be published yet`);
+        await markCourseChecked(supabase, course.id);
+        continue;
+      }
+
+      racesMatched++;
+
+      // Override the course_id/course_name from the scraper with our DB values
+      const ridersWithDbInfo = scrapedRiders.map(r => ({
+        ...r,
+        course_id: course.id,
+        course_name: course.nom,
+      }));
+
+      const raceChanges = await generateFullSyncChanges(supabase, ridersWithDbInfo, pcsUrl);
+      console.log(`Changes for ${course.nom}: ${raceChanges.length}`);
+      allChanges.push(...raceChanges);
+
+      await markCourseChecked(supabase, course.id);
+    } catch (raceError) {
+      console.error(`Error processing ${course.nom}:`, raceError);
+      // Still mark as checked to prevent infinite retry loop
+      await markCourseChecked(supabase, course.id);
+    }
+  }
+
+  console.log(`\nGlobal sync complete: ${courses.length} analyzed, ${racesMatched} matched, ${allChanges.length} changes`);
+
+  return {
+    changes: allChanges,
+    racesAnalyzed: courses.length,
+    racesMatched,
+  };
+}
+
+/**
+ * Build the PCS startlist URL from course data.
+ * Priority: pcs_slug > derived from course ID
+ */
+function buildPcsStartlistUrl(course: DbCourse): string | null {
+  const year = course.date_debut ? new Date(course.date_debut).getFullYear() : new Date().getFullYear();
+
+  // 1. Use pcs_slug if available
+  if (course.pcs_slug) {
+    return `https://www.procyclingstats.com/race/${course.pcs_slug}/${year}/startlist`;
+  }
+
+  // 2. Derive slug from course ID
+  const slug = derivePcsSlug(course.id);
+  if (slug) {
+    return `https://www.procyclingstats.com/race/${slug}/${year}/startlist`;
+  }
+
+  return null;
+}
+
+/**
+ * Derive a PCS slug from a course ID.
+ * Handles formats like:
+ *   "tour_de_la_provence"        -> "tour-de-la-provence"
+ *   "omloop-nieuwsblad-mj8bzkne" -> "omloop-het-nieuwsblad" (via known mappings)
+ *   "uae-tour-mj6w6xhe"          -> "uae-tour"
+ */
+function derivePcsSlug(courseId: string): string | null {
+  // Known mappings for courses whose IDs don't match PCS slugs
+  const KNOWN_MAPPINGS: Record<string, string> = {
+    "omloop-nieuwsblad": "omloop-het-nieuwsblad",
+    "strade-bianche": "strade-bianche",
+    "paris-nice": "paris-nice",
+    "tirreno-adriatico": "tirreno-adriatico",
+    "clasica_de_almeria": "clasica-de-almeria",
+    "vuelta_a_andalucia_ruta_ciclista_del_sol": "vuelta-a-andalucia",
+    "volta_ao_algarve_em_bicicleta": "volta-ao-algarve",
+    "tour_de_la_provence": "tour-de-la-provence",
+    "kuurne_brussel_kuurne": "kuurne-brussel-kuurne",
+    "faun_ard_che_classic": "faun-ardeche-classic",
+    "faun_drome_classic": "faun-drome-classic",
+    "classic_var": "classic-var",
+    "tour_des_alpes_maritimes": "tour-des-alpes-maritimes-et-du-var",
+    "tour_du_rwanda": "tour-du-rwanda",
+    "giro_di_sardegna": "giro-di-sardegna",
+    "danilith_nokere_koerse": "nokere-koerse",
+    "milano_torino": "milano-torino",
+    "grand_prix_de_denain_porte_du_hainaut": "grand-prix-de-denain",
+    "bredene_koksijde_classic": "bredene-koksijde-classic",
+    "trofeo_laigueglia": "trofeo-laigueglia",
+    "ename_samyn_classic": "le-samyn",
+    "figueira_champions_classic": "figueira-champions-classic",
+    "cl_sica_ja_n": "clasica-jaen",
+    "vuelta_a_la_regi_n_de_murcia_costa_c_lida": "vuelta-a-murcia",
+    "visit_south_aegean_gp": "rhodes-gp",
+    "region_on_dodecanese_gp": "rhodes-gp",
+    "tour_de_taiwan": "tour-de-taiwan",
+  };
+
+  // Strip random 8-char suffix (pattern: -[a-z0-9]{6,10} at end)
+  const cleanId = courseId.replace(/-[a-z0-9]{6,10}$/, "");
+
+  // Check known mappings first (with clean ID)
+  if (KNOWN_MAPPINGS[cleanId]) {
+    return KNOWN_MAPPINGS[cleanId];
+  }
+
+  // Also check with original ID (for underscore-based IDs without suffix)
+  if (KNOWN_MAPPINGS[courseId]) {
+    return KNOWN_MAPPINGS[courseId];
+  }
+
+  // Convert underscores to hyphens as general fallback
+  const slug = cleanId.replace(/_/g, "-");
+
+  // Skip IDs that look like continental championships or very specific codes
+  if (slug.includes("continental-") || slug.includes("championships")) {
+    console.log(`Skipping continental/championship race: ${courseId}`);
+    return null;
+  }
+
+  return slug;
+}
+
+async function markCourseChecked(supabase: any, courseId: string): Promise<void> {
+  const { error } = await supabase
+    .from("courses")
+    .update({ last_tracker_check: new Date().toISOString() })
+    .eq("id", courseId);
+
+  if (error) {
+    console.error(`Failed to update last_tracker_check for ${courseId}: ${error.message}`);
+  }
+}
+
+// ============================================================
+// HTML PARSING FUNCTIONS
+// ============================================================
+
 function normalizeName(name: string): string {
   return name
     .toLowerCase()
@@ -224,60 +344,8 @@ function normalizeName(name: string): string {
     .trim();
 }
 
-// ============================================================
-// HTML PARSING FUNCTIONS (replacing Gemini AI calls)
-// ============================================================
-
-/**
- * Parse the "startlist changes" page HTML to extract races with recent modifications.
- * Replaces the Gemini-based extraction.
- */
-function parseChangedRacesHtml(html: string): ChangedRace[] {
-  const races: ChangedRace[] = [];
-  const seen = new Set<string>();
-
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  if (!doc) {
-    console.error("parseChangedRacesHtml: Failed to parse HTML");
-    return [];
-  }
-
-  const raceLinks = doc.querySelectorAll('a[href*="/race/"]');
-  console.log(`parseChangedRacesHtml: found ${raceLinks.length} race links`);
-
-  for (const link of raceLinks) {
-    const href = link.getAttribute("href") || "";
-    const match = href.match(/\/race\/([^/]+)\/(\d{4})/);
-    if (!match) continue;
-
-    const slug = match[1];
-    const year = parseInt(match[2], 10);
-    const key = `${slug}/${year}`;
-
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    let name = link.textContent?.replace(/<[^>]*>/g, "").trim() || "";
-    if (name.length < 3) {
-      name = slug.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-    }
-
-    races.push({
-      name,
-      slug,
-      year,
-      url: `https://www.procyclingstats.com/race/${slug}/${year}/startlist`,
-    });
-  }
-
-  console.log(`parseChangedRacesHtml: extracted ${races.length} races`);
-  races.forEach((r, i) => console.log(`  ${i + 1}. ${r.name} (${r.slug}/${r.year})`));
-  return races;
-}
-
 /**
  * Parse a race startlist page HTML to extract all riders with their teams.
- * Replaces the Gemini-based extraction.
  * Uses DOMParser for reliable parsing of minified HTML.
  */
 function parseStartlistHtml(html: string): { rider_name: string; team_name: string }[] {
@@ -287,9 +355,17 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
     return [];
   }
 
+  // Log page title for diagnostics
+  const title = doc.querySelector("title")?.textContent || "unknown";
+  console.log(`Page title: "${title}"`);
+
   const startlist = doc.querySelector(".startlist_v4");
   if (!startlist) {
-    console.warn("parseStartlistHtml: No .startlist_v4 found, falling back to global rider scan");
+    console.warn("parseStartlistHtml: No .startlist_v4 found");
+    // Log first 500 chars for diagnostics
+    console.log(`HTML preview: ${html.substring(0, 500)}`);
+
+    // Fallback: scan all rider links
     const allPageLinks = doc.querySelectorAll("a");
     const riders: { rider_name: string; team_name: string }[] = [];
     for (const link of allPageLinks) {
@@ -305,14 +381,9 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
   }
 
   const riders: { rider_name: string; team_name: string }[] = [];
-
-  // Get ALL <a> links inside the startlist and process sequentially
-  // This avoids relying on parentElement or :scope which may not work in deno-dom
   const allLinks = startlist.querySelectorAll("a");
   let currentTeam = "Unknown Team";
   let teamCount = 0;
-
-  console.log(`parseStartlistHtml: found ${allLinks.length} total links in startlist`);
 
   for (const link of allLinks) {
     const href = link.getAttribute("href") || "";
@@ -337,33 +408,8 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
 }
 
 // ============================================================
-// SCRAPING FUNCTIONS (now using HTML parsing instead of Gemini)
+// SCRAPING FUNCTIONS
 // ============================================================
-
-/**
- * Scrape the list of races with recent startlist changes.
- * No longer requires API key - uses direct HTML parsing.
- */
-async function scrapeChangedRacesList(): Promise<ChangedRace[]> {
-  const pcsUrl = "https://www.procyclingstats.com/races.php?s=startlist-changes-all-races&interval=12&filter=Filter";
-  
-  console.log(`Fetching changed races list from: ${pcsUrl}`);
-  
-  const response = await fetch(pcsUrl, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch PCS races page: ${response.status}`);
-  }
-
-  const html = await response.text();
-  console.log(`Fetched HTML: ${html.length} characters`);
-
-  return parseChangedRacesHtml(html);
-}
 
 function extractPcsRaceSlug(raceUrl: string): string | null {
   try {
@@ -379,7 +425,6 @@ function extractPcsRaceSlug(raceUrl: string): string | null {
 
 /**
  * Scrape a race startlist page and extract all riders.
- * No longer requires API key - uses direct HTML parsing.
  */
 async function scrapeRaceStartlist(raceUrl: string): Promise<StartlistChange[]> {
   const response = await fetch(raceUrl, {
@@ -389,7 +434,7 @@ async function scrapeRaceStartlist(raceUrl: string): Promise<StartlistChange[]> 
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch race page: ${response.status}`);
+    throw new Error(`Failed to fetch race page: ${response.status} for ${raceUrl}`);
   }
 
   const html = await response.text();
@@ -397,12 +442,11 @@ async function scrapeRaceStartlist(raceUrl: string): Promise<StartlistChange[]> 
 
   const courseId = extractPcsRaceSlug(raceUrl) || "unknown";
 
-  // Extract race name using DOMParser for clean text
+  // Extract race name
   const titleDoc = new DOMParser().parseFromString(html, "text/html");
   const h1 = titleDoc?.querySelector("h1");
   let courseName = courseId.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   if (h1) {
-    // Remove "hideIfMobile" spans (contain "2026 » 10th" prefix)
     const hideSpans = h1.querySelectorAll(".hideIfMobile");
     for (const span of hideSpans) {
       span.remove();
@@ -413,16 +457,14 @@ async function scrapeRaceStartlist(raceUrl: string): Promise<StartlistChange[]> 
     }
   }
 
-  // Parse riders using regex HTML parsing
   const parsedRiders = parseStartlistHtml(html);
-  
   console.log(`Parsed ${parsedRiders.length} riders for "${courseName}"`);
-  
+
   if (parsedRiders.length > 0) {
     console.log(`Sample riders: ${parsedRiders.slice(0, 5).map(r => r.rider_name).join(", ")}...`);
   }
-  
-  if (parsedRiders.length < 20) {
+
+  if (parsedRiders.length < 20 && parsedRiders.length > 0) {
     console.warn(`WARNING: Only ${parsedRiders.length} riders extracted - this seems incomplete for a race startlist!`);
   }
 
@@ -437,7 +479,7 @@ async function scrapeRaceStartlist(raceUrl: string): Promise<StartlistChange[]> 
 }
 
 // ============================================================
-// SYNC & PROCESSING FUNCTIONS (unchanged)
+// SYNC & PROCESSING FUNCTIONS
 // ============================================================
 
 /**
@@ -455,9 +497,10 @@ async function generateFullSyncChanges(
 
   const courseName = scrapedRiders[0]?.course_name || "Unknown Race";
   const courseId = scrapedRiders[0]?.course_id || "unknown";
-  
+
   console.log(`Full sync for ${courseName}: ${scrapedRiders.length} riders scraped`);
 
+  // Try to find the course in DB
   const { data: courses } = await supabase.rpc("search_course_by_name", {
     p_search: courseName,
     p_limit: 1,
@@ -474,6 +517,16 @@ async function generateFullSyncChanges(
       .order("date_debut", { ascending: false })
       .limit(1);
     course = directCourses?.[0];
+  }
+
+  // If course ID was already set from DB (global sync), use it directly
+  if (!course) {
+    const { data: directById } = await supabase
+      .from("courses")
+      .select("id, nom, date_debut")
+      .eq("id", courseId)
+      .maybeSingle();
+    course = directById;
   }
 
   if (!course) {
@@ -509,7 +562,7 @@ async function generateFullSyncChanges(
 
   console.log(`Existing entries: ${existingEntries.length}`);
 
-  const normalize = (name: string) => 
+  const normalize = (name: string) =>
     name.toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -519,22 +572,22 @@ async function generateFullSyncChanges(
   const scrapedNamesNormalized = new Set(
     scrapedRiders.map(r => normalize(r.rider_name))
   );
-  
+
   const existingNamesNormalized = new Map<string, { source_name: string; coureur_nom: string | null }>();
   for (const entry of existingEntries) {
     const sourceName = entry.source_name || "";
     const coureurNom = entry.coureurs?.nom || "";
-    
+
     if (sourceName) {
       existingNamesNormalized.set(normalize(sourceName), {
         source_name: sourceName,
-        coureur_nom: coureurNom
+        coureur_nom: coureurNom,
       });
     }
     if (coureurNom && !existingNamesNormalized.has(normalize(coureurNom))) {
       existingNamesNormalized.set(normalize(coureurNom), {
         source_name: sourceName || coureurNom,
-        coureur_nom: coureurNom
+        coureur_nom: coureurNom,
       });
     }
   }
@@ -544,11 +597,11 @@ async function generateFullSyncChanges(
   const scrapedCount = scrapedRiders.length;
   const existingCount = existingEntries.length;
   const removalThreshold = 0.5;
-  
+
   const shouldProcessRemovals = scrapedCount >= existingCount * removalThreshold;
-  
+
   if (!shouldProcessRemovals) {
-    console.warn(`SAFETY: Scraped ${scrapedCount} riders vs ${existingCount} existing (< ${removalThreshold * 100}%). Skipping removals to prevent false deletions.`);
+    console.warn(`SAFETY: Scraped ${scrapedCount} riders vs ${existingCount} existing (< ${removalThreshold * 100}%). Skipping removals.`);
   }
 
   if (shouldProcessRemovals) {
@@ -578,7 +631,7 @@ async function generateFullSyncChanges(
 
   const additionsCount = changes.filter(c => c.change_type === "added").length;
   const removalsCount = changes.filter(c => c.change_type === "removed").length;
-  console.log(`Full sync result: ${additionsCount} additions, ${removalsCount} removals (safety check: removals ${shouldProcessRemovals ? "enabled" : "DISABLED"})`);
+  console.log(`Full sync: ${additionsCount} additions, ${removalsCount} removals (safety: removals ${shouldProcessRemovals ? "ON" : "OFF"})`);
 
   return changes;
 }
@@ -607,17 +660,15 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
   for (const change of changes) {
     try {
       console.log(`Processing change: ${change.rider_name} for ${change.course_name}`);
-      
-      const normalizedCourseName = change.course_name.replace(/\s+\d{4}$/, '').trim();
-      console.log(`Normalized course name: "${normalizedCourseName}"`);
-      
+
+      const normalizedCourseName = change.course_name.replace(/\s+\d{4}$/, "").trim();
+
       const { data: courses } = await supabase.rpc("search_course_by_name", {
         p_search: normalizedCourseName,
         p_limit: 1,
       });
 
       let course = courses?.[0];
-      console.log(`RPC search result: ${JSON.stringify(course)}`);
 
       if (!course) {
         const searchTerms = normalizedCourseName.split(" ").slice(0, 4).join("%");
@@ -628,7 +679,16 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
           .order("date_debut", { ascending: false })
           .limit(1);
         course = directCourses?.[0];
-        console.log(`Fallback search result: ${JSON.stringify(course)}`);
+      }
+
+      // Also try direct ID lookup (for global sync where course_id = DB id)
+      if (!course) {
+        const { data: directById } = await supabase
+          .from("courses")
+          .select("id, nom, date_debut")
+          .eq("id", change.course_id)
+          .maybeSingle();
+        course = directById;
       }
 
       if (!course) {
@@ -724,7 +784,7 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
             .eq("startlist_id", startlistId)
             .order("line_no", { ascending: false })
             .limit(1);
-          
+
           const nextLineNo = (maxLineData?.[0]?.line_no || 0) + 1;
 
           const { data: insertedEntry, error: entryError } = await supabase
@@ -754,7 +814,7 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
         }
       } else if (change.change_type === "removed") {
         console.log(`Looking for entry to remove: startlist_id=${startlistId}, source_name="${change.rider_name}"`);
-        
+
         let { data: toRemove } = await supabase
           .from("startlist_entries")
           .select("id, source_name, coureur_id")
@@ -762,10 +822,7 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
           .ilike("source_name", change.rider_name)
           .limit(1);
 
-        console.log(`Search by source_name result: ${JSON.stringify(toRemove)}`);
-
         if ((!toRemove || toRemove.length === 0) && coureurId) {
-          console.log(`Fallback: searching by coureur_id=${coureurId}`);
           const { data: fallbackEntries } = await supabase
             .from("startlist_entries")
             .select("id, source_name, coureur_id")
@@ -773,7 +830,6 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
             .eq("coureur_id", coureurId)
             .limit(1);
           toRemove = fallbackEntries;
-          console.log(`Fallback search result: ${JSON.stringify(toRemove)}`);
         }
 
         if (toRemove && toRemove.length > 0) {
@@ -782,7 +838,7 @@ async function processChanges(supabase: any, changes: StartlistChange[]): Promis
             .from("startlist_entries")
             .delete()
             .eq("id", entryToDelete.id);
-          
+
           if (deleteError) {
             console.error(`Failed to delete entry ${entryToDelete.id}: ${deleteError.message}`);
           } else {

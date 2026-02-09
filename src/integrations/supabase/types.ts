@@ -2016,6 +2016,7 @@ export type Database = {
           date_debut: string | null
           date_fin: string | null
           id: string
+          last_tracker_check: string | null
           nom: string
           pays: string | null
           pcs_slug: string | null
@@ -2031,6 +2032,7 @@ export type Database = {
           date_debut?: string | null
           date_fin?: string | null
           id: string
+          last_tracker_check?: string | null
           nom: string
           pays?: string | null
           pcs_slug?: string | null
@@ -2046,6 +2048,7 @@ export type Database = {
           date_debut?: string | null
           date_fin?: string | null
           id?: string
+          last_tracker_check?: string | null
           nom?: string
           pays?: string | null
           pcs_slug?: string | null
