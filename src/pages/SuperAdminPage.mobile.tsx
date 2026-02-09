@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation, Link } from "react-router-dom";
- import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Menu, LogOut, ArrowLeft, Gift, Swords } from "lucide-react";
+ import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Menu, LogOut, ArrowLeft, Gift, Swords, Radar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -20,6 +20,7 @@ import { BaremesManager } from "@/components/admin/BaremesManager";
 import { PointsLedgerTable } from "@/components/admin/PointsLedgerTable";
  import { SuperAdminBonusPage } from "@/pages/admin/SuperAdminBonusPage";
 import { PronosticDeadlinesManager } from "@/components/admin/arena/PronosticDeadlinesManager";
+import { StartlistTracker } from "@/components/admin/StartlistTracker";
 import mpcLogo from "@/assets/mpc-logo-horizontal.png";
 import { useTranslation } from "react-i18next";
 
@@ -42,6 +43,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
     { label: t('superAdmin.scales', 'Barèmes'), path: 'baremes', icon: BarChart },
     { label: t('superAdmin.pointsLedger', 'Points Ledger'), path: 'points-ledger', icon: Database },
     { label: t('superAdmin.startlists', 'Startlists'), path: 'startlists', icon: FileText },
+    { label: t('superAdmin.startlistTracker', 'Startlist Tracker'), path: 'startlist-tracker', icon: Radar },
     { label: t('superAdmin.startlistData', 'Données Startlists'), path: 'startlist-data', icon: FileText },
     { label: t('superAdmin.data', 'Données'), path: 'data', icon: Database },
     { label: t('superAdmin.leagues', 'Ligues'), path: 'leagues', icon: Users },
@@ -194,6 +196,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
               <Route path="baremes" element={<BaremesManager />} />
               <Route path="points-ledger" element={<PointsLedgerTable />} />
               <Route path="startlists" element={<StartlistImportManager />} />
+              <Route path="startlist-tracker" element={<StartlistTracker />} />
               <Route path="startlist-data" element={<StartlistDataManager />} />
             <Route path="data" element={<DataManagementTabs />} />
             <Route path="leagues" element={<SuperAdminLeaguesPage />} />
