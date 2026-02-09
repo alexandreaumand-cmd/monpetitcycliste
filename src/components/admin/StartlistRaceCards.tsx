@@ -97,17 +97,32 @@ export const StartlistRaceCards = ({ onRaceClick, isSuperAdmin }: StartlistRaceC
     enabled: isSuperAdmin || !!leagueId
   });
 
-  // Check if startlist exists for a race
+  // Check if startlist exists for a race, with last modification date and rider count
   const { data: existingStartlists } = useQuery({
-    queryKey: ['startlist-imports'],
+    queryKey: ['startlist-imports-with-stats'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('startlist_imports')
-        .select('id, race_id, created_at, pcs_validated')
+        .select('id, race_id, created_at, pcs_validated, startlist_entries(id, created_at)')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data || [];
+      
+      // Aggregate stats per startlist
+      return (data || []).map((sl: any) => {
+        const entries = sl.startlist_entries || [];
+        const lastEntryDate = entries.length > 0
+          ? entries.reduce((latest: string, e: any) => e.created_at > latest ? e.created_at : latest, entries[0].created_at)
+          : null;
+        return {
+          id: sl.id,
+          race_id: sl.race_id,
+          created_at: sl.created_at,
+          pcs_validated: sl.pcs_validated,
+          last_modified: lastEntryDate || sl.created_at,
+          rider_count: entries.length,
+        };
+      });
     }
   });
 
@@ -132,10 +147,14 @@ export const StartlistRaceCards = ({ onRaceClick, isSuperAdmin }: StartlistRaceC
     return matchingStartlists[0].id;
   };
 
-  const getStartlistDate = (raceId: string) => {
+  const getStartlistInfo = (raceId: string) => {
     const rid = normalizeId(raceId);
     const matchingStartlist = existingStartlists?.find(sl => normalizeId(sl.race_id) === rid);
-    return matchingStartlist?.created_at || null;
+    if (!matchingStartlist) return null;
+    return {
+      lastModified: matchingStartlist.last_modified,
+      riderCount: matchingStartlist.rider_count,
+    };
   };
 
   return (
@@ -178,90 +197,90 @@ export const StartlistRaceCards = ({ onRaceClick, isSuperAdmin }: StartlistRaceC
               const today = new Date().toISOString().split('T')[0];
               const todayDate = new Date(today);
               
-              const isOngoing = course.date_debut <= today && course.date_fin >= today;
-              const daysUntil = differenceInDays(dateDebut, todayDate);
-              const startlistExists = hasStartlist(course.id);
-              const pcsValidated = isPcsValidated(course.id);
-              const startlistImportDate = getStartlistDate(course.id);
-              
-              return (
-                <Card 
-                  key={course.id} 
-                  className="cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => {
-                    const startlistId = getStartlistId(course.id);
-                    onRaceClick(course, startlistId);
-                  }}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between mb-2">
-                      <CardTitle className="text-base font-semibold leading-tight pr-2">
-                        {course.nom}
-                      </CardTitle>
-                      <Trophy className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {isOngoing && (
-                        <Badge className="bg-red-600 text-white border-red-600">
-                          EN COURS
-                        </Badge>
-                      )}
-                      {startlistExists && (
-                        <Badge variant="outline" className="border-primary text-primary">
-                          Startlist
-                        </Badge>
-                      )}
-                      {pcsValidated && (
-                        <Badge className="bg-green-600 text-white border-green-600">
-                          SL officielle
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 text-xs">
-                      <Badge variant="secondary">
-                        Phase {course.phase_index}
-                      </Badge>
-                      {course.categorie && (
-                        <Badge variant="outline">{course.categorie}</Badge>
-                      )}
-                      {course.type_course && (
-                        <Badge variant="outline">{course.type_course}</Badge>
-                      )}
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="pt-0 space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4 flex-shrink-0" />
-                      <span className="text-xs">
-                        {format(dateDebut, 'd MMM', { locale: fr })} - {format(dateFin, 'd MMM yyyy', { locale: fr })}
-                      </span>
-                    </div>
-                    
-                    {startlistImportDate && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Clock className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span>Import: {format(new Date(startlistImportDate), 'd MMM yyyy HH:mm', { locale: fr })}</span>
+                const isOngoing = course.date_debut <= today && course.date_fin >= today;
+                const daysUntil = differenceInDays(dateDebut, todayDate);
+                const startlistExists = hasStartlist(course.id);
+                const pcsValidated = isPcsValidated(course.id);
+                const startlistInfo = getStartlistInfo(course.id);
+                
+                return (
+                  <Card 
+                    key={course.id} 
+                    className="cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => {
+                      const startlistId = getStartlistId(course.id);
+                      onRaceClick(course, startlistId);
+                    }}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <CardTitle className="text-base font-semibold leading-tight pr-2">
+                          {course.nom}
+                        </CardTitle>
+                        <Trophy className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       </div>
-                    )}
-                    
-                    {daysUntil >= 0 && tabMode !== 'history' && (
-                      <Badge variant="outline" className="text-xs">
-                        J-{daysUntil}
-                      </Badge>
-                    )}
-                    
-                    {course.nb_etapes_estimees && course.nb_etapes_estimees > 1 && (
-                      <p className="text-xs text-muted-foreground">
-                        {course.nb_etapes_estimees} étapes
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+                      
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {isOngoing && (
+                          <Badge className="bg-red-600 text-white border-red-600">
+                            EN COURS
+                          </Badge>
+                        )}
+                        {startlistExists && (
+                          <Badge variant="outline" className="border-primary text-primary">
+                            Startlist{startlistInfo ? ` (${startlistInfo.riderCount})` : ''}
+                          </Badge>
+                        )}
+                        {pcsValidated && (
+                          <Badge className="bg-green-600 text-white border-green-600">
+                            SL officielle
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        <Badge variant="secondary">
+                          Phase {course.phase_index}
+                        </Badge>
+                        {course.categorie && (
+                          <Badge variant="outline">{course.categorie}</Badge>
+                        )}
+                        {course.type_course && (
+                          <Badge variant="outline">{course.type_course}</Badge>
+                        )}
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="pt-0 space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4 flex-shrink-0" />
+                        <span className="text-xs">
+                          {format(dateDebut, 'd MMM', { locale: fr })} - {format(dateFin, 'd MMM yyyy', { locale: fr })}
+                        </span>
+                      </div>
+                      
+                      {startlistInfo && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span>Modifié: {format(new Date(startlistInfo.lastModified), 'd MMM yyyy HH:mm', { locale: fr })}</span>
+                        </div>
+                      )}
+                      
+                      {daysUntil >= 0 && tabMode !== 'history' && (
+                        <Badge variant="outline" className="text-xs">
+                          J-{daysUntil}
+                        </Badge>
+                      )}
+                      
+                      {course.nb_etapes_estimees && course.nb_etapes_estimees > 1 && (
+                        <p className="text-xs text-muted-foreground">
+                          {course.nb_etapes_estimees} étapes
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
         </div>
       ) : (
         <Card className="p-12">
