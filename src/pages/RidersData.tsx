@@ -34,6 +34,7 @@ import { useNavigate } from "react-router-dom";
 import mpcLogo from "@/assets/mpc-logo.png";
 import * as XLSX from "xlsx";
 import { useTranslation } from "react-i18next";
+import { RiderResultsPanel } from "@/components/data/RiderResultsPanel";
 
 interface RiderWithPoints {
   coureur_id: string;
@@ -73,6 +74,10 @@ export default function RidersData() {
   const [selectedCotes, setSelectedCotes] = useState<number[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [programFilter, setProgramFilter] = useState<"all" | "with" | "without">("all");
+  
+  // Rider results panel state
+  const [selectedRider, setSelectedRider] = useState<{ id: string; nom: string } | null>(null);
+  const [resultsPanelOpen, setResultsPanelOpen] = useState(false);
   
   // Sorting state - primary and secondary sort
   type SortColumn = 'cote' | 'points' | 'equipe';
@@ -840,7 +845,15 @@ export default function RidersData() {
                           />
                         </Button>
                       </TableCell>
-                      <TableCell className="font-medium">{rider.coureur_nom}</TableCell>
+                      <TableCell
+                        className="font-medium cursor-pointer hover:text-primary hover:underline transition-colors"
+                        onClick={() => {
+                          setSelectedRider({ id: rider.coureur_id, nom: rider.coureur_nom });
+                          setResultsPanelOpen(true);
+                        }}
+                      >
+                        {rider.coureur_nom}
+                      </TableCell>
                       <TableCell>{rider.equipe_trigramme || "-"}</TableCell>
                       <TableCell className="w-20">{rider.equipe_categorie || "-"}</TableCell>
                       <TableCell className="w-16 text-right">{rider.prix_initial}</TableCell>
@@ -876,6 +889,14 @@ export default function RidersData() {
         </div>
       )}
       </div>
+
+      <RiderResultsPanel
+        open={resultsPanelOpen}
+        onOpenChange={setResultsPanelOpen}
+        riderId={selectedRider?.id ?? null}
+        riderName={selectedRider?.nom ?? null}
+        saisonId={localSelectedSeason?.id ?? null}
+      />
     </div>
   );
 }
