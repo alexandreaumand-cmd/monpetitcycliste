@@ -153,17 +153,29 @@ async function handleGlobalSync(supabase: any): Promise<{
 
   console.log(`Global sync: looking for courses from ${threeDaysAgo.toISOString().split("T")[0]} to ${sixWeeksLater.toISOString().split("T")[0]}`);
 
+  // Fetch race IDs that have a validated startlist (pcs_validated = true) to exclude them
+  const { data: validatedImports } = await supabase
+    .from("startlist_imports")
+    .select("race_id")
+    .eq("pcs_validated", true);
+
+  const validatedRaceIds = new Set((validatedImports || []).map((si: any) => si.race_id));
+  console.log(`Excluding ${validatedRaceIds.size} courses with validated startlists`);
+
   // Fetch courses that need checking:
   // - date_debut in range
   // - never checked OR checked more than RECHECK_INTERVAL_HOURS ago
-  const { data: courses, error: coursesError } = await supabase
+  // - NOT already validated (filtered post-query)
+  const { data: allCourses, error: coursesError } = await supabase
     .from("courses")
     .select("id, nom, pcs_slug, date_debut, last_tracker_check")
     .gte("date_debut", threeDaysAgo.toISOString().split("T")[0])
     .lte("date_debut", sixWeeksLater.toISOString().split("T")[0])
     .or(`last_tracker_check.is.null,last_tracker_check.lt.${recheckCutoff.toISOString()}`)
     .order("last_tracker_check", { ascending: true, nullsFirst: true })
-    .limit(MAX_COURSES_PER_RUN);
+    .limit(MAX_COURSES_PER_RUN * 3); // Fetch more to compensate for filtered-out validated ones
+
+  const courses = (allCourses || []).filter((c: any) => !validatedRaceIds.has(c.id)).slice(0, MAX_COURSES_PER_RUN);
 
   if (coursesError) {
     console.error(`Failed to query courses: ${coursesError.message}`);
