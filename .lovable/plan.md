@@ -1,118 +1,93 @@
 
 
-# Correction des bonus Costiou + Outil d'edition/recalcul Super Admin
+## Diagnostic et Plan de correction du Startlist Tracker
 
-## Partie 1 : Correction manuelle des donnees Live
+### Probleme identifie
 
-Les bonus d'Ewen Costiou dans la phase `73e540d2` (Etoile de Besseges) sont incorrects car le trigger s'est declenche sur les valeurs initiales (5 pts) avant la mise a jour vers les valeurs de jeu (200 pts).
+Le scraping **global** du Startlist Tracker echoue silencieusement car **ProCyclingStats bloque l'acces a la page "startlist changes"** (`races.php?s=startlist-changes-all-races`). Le serveur PCS retourne du HTML (26 450 caracteres) mais il ne contient aucun lien vers les courses -- il s'agit probablement d'une page anti-bot, captcha ou consentement cookies.
 
-**Etat actuel en Live :**
-| Bonus | Points actuels | Points attendus |
-|-------|---------------|-----------------|
-| Etape 1 (10 pts) | 2.50 | 2.50 (correct) |
-| Porteur Leader (5 pts) | 1.25 | 1.25 (correct) |
-| General (200 pts) | **1.25** | **50.00** |
-| Etape 5 (100 pts) | **manquant** | **25.00** |
-| Porteur Leader etape 5 (5 pts) | **manquant** | **1.25** |
+Preuve dans les logs :
+- `Fetched HTML: 26450 characters`
+- `parseChangedRacesHtml: found 0 race links`
+- `extracted 0 races`
 
-**Requetes SQL a executer manuellement dans Cloud View > Run SQL (Live) :**
+En revanche, le scraping d'une course individuelle fonctionne parfaitement (test TdF reussi avec matching complet).
 
-```sql
--- 1. Corriger le bonus General (1.25 -> 50.00)
-UPDATE bonus_points 
-SET points = 50.00, 
-    commentaire = 'Bonus coureur automatique (25%) - etoile_de_bess_ges_tour_du_gard - General [corrige manuellement]',
-    updated_at = now()
-WHERE id = '4ee6745f-4659-4a51-be6d-604f4634a55e';
+---
 
--- 2. Inserer le bonus manquant Etape 5 (25.00)
-INSERT INTO bonus_points (phase_id, coureur_id, manager_id, league_id, bonus_type, points, commentaire, created_by)
-VALUES (
-  '73e540d2-d008-4d13-ac93-72aec3d5d986', 'ewen_costiou',
-  'fc1f58a4-ec7f-49c3-ab7a-62f9b2ada9ea', 'b5b46b5e-7c78-4ad9-a669-b08e8f099800',
-  'coureur_bonuse', 25.00,
-  'Bonus coureur automatique (25%) - etoile_de_bess_ges_tour_du_gard - Etape 5 [ajoute manuellement]',
-  'fc1f58a4-ec7f-49c3-ab7a-62f9b2ada9ea'
-);
+### Strategie de correction
 
--- 3. Inserer le bonus manquant Porteur Leader etape 5 (1.25)
-INSERT INTO bonus_points (phase_id, coureur_id, manager_id, league_id, bonus_type, points, commentaire, created_by)
-VALUES (
-  '73e540d2-d008-4d13-ac93-72aec3d5d986', 'ewen_costiou',
-  'fc1f58a4-ec7f-49c3-ab7a-62f9b2ada9ea', 'b5b46b5e-7c78-4ad9-a669-b08e8f099800',
-  'coureur_bonuse', 1.25,
-  'Bonus coureur automatique (25%) - etoile_de_bess_ges_tour_du_gard - Porteur Leader etape 5 [ajoute manuellement]',
-  'fc1f58a4-ec7f-49c3-ab7a-62f9b2ada9ea'
-);
+Abandonner la dependance a la page "startlist changes" de PCS et la remplacer par une approche directe : **scraper les startlists des courses a venir** directement depuis notre base de donnees.
+
+```text
+AVANT (casse) :
+  Cron --> PCS changes page --> [BLOQUE] --> 0 courses --> fin
+
+APRES (robuste) :
+  Cron --> DB : courses des 6 prochaines semaines
+       --> Pour chaque course : construire URL PCS
+       --> Scraper startlist individuelle (fonctionne)
+       --> Comparer avec entries existantes
+       --> Detecter ajouts/retraits
 ```
 
-Total bonus Costiou apres correction : **80.25 pts** (au lieu de 5.00 actuels).
+---
+
+### Etapes de mise en oeuvre
+
+#### 1. Nouvelle logique "global sync" dans l'edge function `startlist-tracker`
+
+Remplacer `scrapeChangedRacesList()` par une approche basee sur la DB :
+
+- Requeter les courses dont la `date_debut` est dans les **6 prochaines semaines**
+- Pour chaque course, construire l'URL PCS a partir de :
+  - `pcs_slug` si disponible dans la table `courses`
+  - Sinon, deriver un slug depuis le `course.id` ou `course.nom` (avec normalisation)
+- Limiter a `MAX_COURSES_PER_RUN = 5` pour eviter les timeouts (150s)
+- Garder un suivi des courses deja scrapees recemment (via `startlist_tracker_runs` ou un champ `last_scraped_at` sur `startlist_imports`) pour ne pas re-scraper la meme course toutes les 30 minutes
+
+#### 2. Construction intelligente des URLs PCS
+
+Creer une fonction `buildPcsStartlistUrl(course)` :
+- Si `pcs_slug` existe : `https://www.procyclingstats.com/race/{pcs_slug}/2026/startlist`
+- Sinon : essayer de deriver le slug depuis `course.id` (ex: `cadel-evans-great-ocean-road-race-mj8c3myx` devient `cadel-evans-great-ocean-road-race`)
+- Ajouter un fallback avec le nom normalise
+
+#### 3. Rotation et priorisation des courses
+
+Pour eviter de scraper les memes courses en boucle :
+- Stocker `last_tracker_check` (timestamp) dans `startlist_imports` ou via les `startlist_tracker_runs`
+- Prioriser les courses jamais verifiees ou non verifiees depuis plus de 6h
+- Cela permettra au cron de couvrir toutes les courses progressivement (5 par execution, toutes les 30 minutes)
+
+#### 4. Ajout de logging diagnostique
+
+Ajouter un log des 500 premiers caracteres du HTML recu + le titre de la page pour diagnostiquer les futurs blocages PCS :
+```
+console.log(`HTML title: ${doc.querySelector('title')?.textContent}`);
+console.log(`HTML preview: ${html.substring(0, 500)}`);
+```
+
+#### 5. Migration base de donnees
+
+Ajouter une colonne `last_tracker_check` a la table `startlist_imports` (ou `courses`) pour tracker la derniere verification de chaque course :
+
+```sql
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS last_tracker_check timestamptz;
+```
 
 ---
 
-## Partie 2 : Bouton "Modifier" sur les bonus coureur existants
+### Avantages de cette approche
 
-Ajout d'un bouton d'edition (icone crayon) a cote du bouton de suppression dans le tableau `RiderBonusTab`.
+- **Robustesse** : ne depend plus d'une page PCS unique qui peut etre bloquee
+- **Fiabilite** : les pages de startlist individuelles fonctionnent (prouve par les tests)
+- **Couverture** : toutes les courses a venir sont verifiees, meme celles non listees sur la page "changes"
+- **Progressif** : 5 courses par run, toutes les 30 min = ~240 verifications par jour, largement suffisant
 
-**Fichier modifie : `src/components/admin/bonus/RiderBonusTab.tsx`**
+### Risques et mitigations
 
-Modifications :
-- Ajout de deux states : `editDialogOpen` et `bonusToEdit`
-- Ajout d'un `Dialog` d'edition avec formulaire pre-rempli (points + commentaire)
-- La fonction `handleEdit` fait un `UPDATE` direct sur `bonus_points` via le client Supabase (les RLS permettent deja les updates pour les admins)
-- Un bouton icone "Pencil" (de lucide-react) est ajoute dans la colonne Action de chaque ligne, a cote du bouton "Trash"
-- Import de `Pencil` depuis lucide-react
-- Le formulaire d'edition contient : champ Points (number, pre-rempli), champ Commentaire (textarea, pre-rempli), boutons Annuler/Sauvegarder
-
----
-
-## Partie 3 : Edge Function `recalculate-rider-bonuses`
-
-Nouvelle Edge Function permettant de recalculer tous les bonus `coureur_bonuse` pour un coureur specifique dans une phase, ou pour tous les coureurs d'une phase.
-
-**Fichier cree : `supabase/functions/recalculate-rider-bonuses/index.ts`**
-
-Logique de la fonction :
-1. Verification superadmin via `is_superadmin()`
-2. Recoit `phase_id` (obligatoire) et optionnellement `coureur_id` (pour recalculer un seul coureur)
-3. Recupere les `bonus_rider_selections` pour la phase (filtre par coureur si specifie)
-4. Pour chaque selection :
-   - Recupere tous les points du `points_ledger` pour ce coureur/phase
-   - Calcule 25% pour chaque entree (`ROUND(points * 0.25, 2)`)
-   - Supprime les anciens bonus `coureur_bonuse` pour ce coureur/manager/league/phase
-   - Insere les nouveaux bonus avec les montants corrects et un commentaire incluant le course_id et type_classement
-5. Retourne un recapitulatif : nombre de bonus recalcules, total avant/apres
-6. Insere un audit log
-
-La fonction utilise le `SUPABASE_SERVICE_ROLE_KEY` pour bypasser les RLS (comme `compute-bonus-scoreurs`), avec verification d'authentification superadmin via un client separe.
-
----
-
-## Partie 4 : Bouton "Recalculer" dans l'interface
-
-**Fichier modifie : `src/components/admin/bonus/RiderBonusTab.tsx`**
-
-Ajout d'une carte en haut du composant (similaire au pattern du `ManagerBonusTab` avec le bouton "Calculer le bonus Scoreurs") :
-- Titre : "Recalcul des bonus coureur (+25%)"
-- Description explicative
-- Bouton "Recalculer tous les bonus coureur" qui appelle l'Edge Function `recalculate-rider-bonuses` avec le `phase_id`
-- Confirmation via `AlertDialog` avant execution (action destructive car supprime et re-cree les bonus)
-- Affichage du resultat (toast avec nombre de bonus recalcules et variation du total)
-
----
-
-## Details techniques
-
-### Cause racine du bug Costiou
-Le trigger `trigger_calculate_bonus_rider` se declenche uniquement sur `INSERT` dans `points_ledger`. Lors de l'import via `admin-result-save-lot`, les points sont d'abord inseres avec la valeur brute PCS (5 pts pour un CG de course 2.1), puis mis a jour par la fonction `results_course_table` avec la valeur de jeu (200 pts via `ON CONFLICT DO UPDATE`). Le trigger calcule le bonus sur la valeur initiale et ne se re-declenche pas sur l'UPDATE.
-
-### Fichiers impactes
-1. `src/components/admin/bonus/RiderBonusTab.tsx` -- Ajout du bouton Modifier + bouton Recalculer
-2. `supabase/functions/recalculate-rider-bonuses/index.ts` -- Nouvelle Edge Function
-
-### Securite
-- L'Edge Function verifie le role superadmin via `is_superadmin()`
-- Les RLS existantes sur `bonus_points` autorisent les admins a UPDATE et DELETE
-- Un audit log est cree pour chaque recalcul
-- Pas de SQL brut : toutes les operations passent par le client Supabase type
+- **Blocage IP par PCS** : limiter a 5 courses/run avec des delais entre requetes (deja en place)
+- **Slug PCS inconnu** : la derivation automatique couvrira la majorite des cas ; les echecs seront logues pour correction manuelle via `pcs_slug`
+- **Course sans startlist import** : le systeme en creera une automatiquement (logique existante)
 
