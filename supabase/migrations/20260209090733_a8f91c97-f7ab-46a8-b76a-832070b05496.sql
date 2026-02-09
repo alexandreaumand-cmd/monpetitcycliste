@@ -1,0 +1,1 @@
+ALTER TABLE public.startlist_tracker_runs ADD COLUMN IF NOT EXISTS courses_processed text[] DEFAULT '{}';

@@ -4701,6 +4701,7 @@ export type Database = {
           changes_detected: number | null
           changes_processed: number | null
           completed_at: string | null
+          courses_processed: string[] | null
           error_message: string | null
           id: string
           source_type: string
@@ -4711,6 +4712,7 @@ export type Database = {
           changes_detected?: number | null
           changes_processed?: number | null
           completed_at?: string | null
+          courses_processed?: string[] | null
           error_message?: string | null
           id?: string
           source_type: string
@@ -4721,6 +4723,7 @@ export type Database = {
           changes_detected?: number | null
           changes_processed?: number | null
           completed_at?: string | null
+          courses_processed?: string[] | null
           error_message?: string | null
           id?: string
           source_type?: string
