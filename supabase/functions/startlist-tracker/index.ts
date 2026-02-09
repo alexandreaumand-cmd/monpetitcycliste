@@ -7,14 +7,96 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface StartlistChange {
-  course_id: string;
-  course_name: string;
-  rider_name: string;
-  team_name: string | null;
-  change_type: "added" | "removed";
-  source_url: string;
+// ============================================================
+// NORMALIZATION (robust, shared with startlist-import)
+// ============================================================
+
+const CHAR_MAP: Record<string, string> = {
+  'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a', 'å': 'a', 'æ': 'ae',
+  'ç': 'c', 'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
+  'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
+  'ñ': 'n', 'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o', 'ø': 'o',
+  'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u',
+  'ý': 'y', 'ÿ': 'y', 'ß': 'ss', 'œ': 'oe',
+  'À': 'A', 'Á': 'A', 'Â': 'A', 'Ã': 'A', 'Ä': 'A', 'Å': 'A', 'Æ': 'AE',
+  'Ç': 'C', 'È': 'E', 'É': 'E', 'Ê': 'E', 'Ë': 'E',
+  'Ì': 'I', 'Í': 'I', 'Î': 'I', 'Ï': 'I',
+  'Ñ': 'N', 'Ò': 'O', 'Ó': 'O', 'Ô': 'O', 'Õ': 'O', 'Ö': 'O', 'Ø': 'O',
+  'Ù': 'U', 'Ú': 'U', 'Û': 'U', 'Ü': 'U',
+  'Ý': 'Y', 'Ÿ': 'Y', 'Œ': 'OE'
+};
+
+const PARTICLES = ['VAN', 'VAN DER', 'VAN DEN', 'VAN DE', 'DE', 'DI', 'DA', 'DEL', 'DELLA', 'VON', 'LE', 'LA'];
+
+function normalize(s: string): string {
+  if (!s) return '';
+  let result = s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+  result = result.split('').map(c => CHAR_MAP[c] || c).join('');
+  result = result.replace(/['']/g, "'").replace(/[.\-]/g, ' ').replace(/\s+/g, ' ').trim();
+  return result.toUpperCase();
 }
+
+function tokenSig(s: string): string {
+  return normalize(s).split(/\s+/).filter(t => t.length > 0).sort().join(' ');
+}
+
+function extractLastName(s: string): string {
+  const norm = normalize(s);
+  const tokens = norm.split(/\s+/).filter(t => t.length > 0);
+  if (tokens.length === 0) return '';
+  for (let i = tokens.length - 1; i >= 0; i--) {
+    if (!PARTICLES.includes(tokens[i])) return tokens[i];
+  }
+  return tokens[tokens.length - 1];
+}
+
+function levenshtein(a: string, b: string): number {
+  const n = a.length, m = b.length;
+  if (n === 0) return m;
+  if (m === 0) return n;
+  const matrix: number[][] = [];
+  for (let i = 0; i <= n; i++) matrix[i] = [i];
+  for (let j = 0; j <= m; j++) matrix[0][j] = j;
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost);
+    }
+  }
+  return matrix[n][m];
+}
+
+function similarity(a: string, b: string): number {
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return 1.0;
+  return 1.0 - (levenshtein(a, b) / maxLen);
+}
+
+function canonizeName(raw: string): string {
+  const tokens = raw.trim().split(/\s+/);
+  if (tokens.length < 2) return raw;
+  const firstToken = tokens[0];
+  const isFirstAllCaps = firstToken === firstToken.toUpperCase() && firstToken.length > 1;
+  if (isFirstAllCaps) {
+    let lastNameEndIdx = 0;
+    for (let i = 0; i < tokens.length; i++) {
+      const tok = tokens[i];
+      if ((tok === tok.toUpperCase() && tok.length > 1) || PARTICLES.includes(tok)) {
+        lastNameEndIdx = i;
+      } else {
+        break;
+      }
+    }
+    const lastName = tokens.slice(0, lastNameEndIdx + 1).join(' ');
+    const firstName = tokens.slice(lastNameEndIdx + 1).join(' ');
+    if (firstName && lastName) return `${firstName} ${lastName}`;
+  }
+  return raw;
+}
+
+// ============================================================
+// INTERFACES
+// ============================================================
 
 interface DbCourse {
   id: string;
@@ -23,10 +105,115 @@ interface DbCourse {
   date_debut: string;
 }
 
+interface RiderRef {
+  id: string;
+  nom: string;
+  equipe: string | null;
+}
+
+interface AliasRef {
+  alias_text: string;
+  coureur_id: string;
+  source_team: string | null;
+}
+
+interface MatchResult {
+  coureur_id: string | null;
+  confidence: number;
+  status: 'confirmed' | 'unmatched';
+  match_type?: string;
+  on_roster?: boolean;
+}
+
 // Maximum courses to process per run to avoid timeout (150s limit)
 const MAX_COURSES_PER_RUN = 3;
 // Re-check interval: don't re-scrape a course checked less than 6h ago
 const RECHECK_INTERVAL_HOURS = 6;
+
+// ============================================================
+// MATCHING (same multi-strategy as startlist-import)
+// ============================================================
+
+function matchRider(
+  scraped_name: string,
+  rosterRiders: RiderRef[],
+  allRiders: RiderRef[],
+  aliases: AliasRef[]
+): MatchResult {
+  const canonical = canonizeName(scraped_name);
+  const entryNorm = normalize(canonical);
+  const sourceNorm = normalize(scraped_name);
+  const entrySig = tokenSig(canonical);
+  const sourceSig = tokenSig(scraped_name);
+
+  // 1) Alias (highest priority)
+  for (const alias of aliases) {
+    const aliasNorm = normalize(alias.alias_text);
+    const aliasSig = tokenSig(alias.alias_text);
+    if (aliasNorm === sourceNorm || aliasNorm === entryNorm || aliasSig === sourceSig || aliasSig === entrySig) {
+      const isOnRoster = rosterRiders.some(r => r.id === alias.coureur_id);
+      return { coureur_id: alias.coureur_id, confidence: 1.0, status: 'confirmed', match_type: 'alias', on_roster: isOnRoster };
+    }
+  }
+
+  // 2) Exact normalized (roster)
+  for (const rider of rosterRiders) {
+    if (normalize(rider.nom) === entryNorm || normalize(rider.nom) === sourceNorm) {
+      return { coureur_id: rider.id, confidence: 1.0, status: 'confirmed', match_type: 'exact', on_roster: true };
+    }
+  }
+
+  // 3) Token signature (roster)
+  for (const rider of rosterRiders) {
+    const riderSig = tokenSig(rider.nom);
+    if (riderSig === entrySig || riderSig === sourceSig) {
+      return { coureur_id: rider.id, confidence: 0.95, status: 'confirmed', match_type: 'tokens', on_roster: true };
+    }
+  }
+
+  // 4) Fuzzy Levenshtein (roster, >= 0.90)
+  let best = { id: null as string | null, score: 0 };
+  for (const rider of rosterRiders) {
+    const score = Math.max(similarity(entryNorm, normalize(rider.nom)), similarity(sourceNorm, normalize(rider.nom)));
+    if (score > best.score) best = { id: rider.id, score };
+  }
+  if (best.id && best.score >= 0.90) {
+    return { coureur_id: best.id, confidence: best.score, status: 'confirmed', match_type: 'fuzzy_roster', on_roster: true };
+  }
+
+  // 5) Off-roster: exact
+  for (const rider of allRiders) {
+    const riderNorm = normalize(rider.nom);
+    if (riderNorm === entryNorm || riderNorm === sourceNorm) {
+      return { coureur_id: rider.id, confidence: 1.0, status: 'confirmed', match_type: 'exact_off_roster', on_roster: false };
+    }
+  }
+
+  // 5b) Off-roster: token sig
+  for (const rider of allRiders) {
+    const riderSig = tokenSig(rider.nom);
+    if (riderSig === entrySig || riderSig === sourceSig) {
+      return { coureur_id: rider.id, confidence: 0.95, status: 'confirmed', match_type: 'tokens_off_roster', on_roster: false };
+    }
+  }
+
+  // 5c) Off-roster: fuzzy (>= 0.90)
+  let bestOff = { id: null as string | null, score: 0 };
+  for (const rider of allRiders) {
+    const riderNorm = normalize(rider.nom);
+    const score = Math.max(similarity(entryNorm, riderNorm), similarity(sourceNorm, riderNorm));
+    if (score > bestOff.score) bestOff = { id: rider.id, score };
+  }
+  if (bestOff.id && bestOff.score >= 0.90) {
+    return { coureur_id: bestOff.id, confidence: bestOff.score, status: 'confirmed', match_type: 'fuzzy_off_roster', on_roster: false };
+  }
+
+  return { coureur_id: null, confidence: 0, status: 'unmatched' };
+}
+
+// ============================================================
+// MAIN HANDLER
+// ============================================================
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -51,41 +238,44 @@ serve(async (req) => {
     const runId = run.id;
 
     try {
-      let changes: StartlistChange[] = [];
+      let totalAdded = 0;
+      let totalRemoved = 0;
       let racesAnalyzed = 0;
       let racesMatched = 0;
       let coursesProcessed: string[] = [];
 
       if (source_type === "global") {
         const result = await handleGlobalSync(supabase);
-        changes = result.changes;
+        totalAdded = result.totalAdded;
+        totalRemoved = result.totalRemoved;
         racesAnalyzed = result.racesAnalyzed;
         racesMatched = result.racesMatched;
         coursesProcessed = result.coursesProcessed;
       } else if (source_type === "race" && race_url) {
         racesAnalyzed = 1;
-        racesMatched = 1;
         const scrapedRiders = await scrapeRaceStartlist(race_url);
-        changes = await generateFullSyncChanges(supabase, scrapedRiders, race_url);
-        // Extract course name from changes if available
-        if (changes.length > 0) {
-          coursesProcessed = [...new Set(changes.map(c => c.course_name))];
+        if (scrapedRiders.length > 0) {
+          racesMatched = 1;
+          // Find course from URL
+          const courseSlug = extractPcsRaceSlug(race_url);
+          if (courseSlug) {
+            const { data: course } = await supabase
+              .from("courses")
+              .select("id, nom, date_debut, pcs_slug, phase_id")
+              .or(`pcs_slug.eq.${courseSlug},id.ilike.%${courseSlug}%`)
+              .limit(1)
+              .maybeSingle();
+            if (course) {
+              const result = await syncCourseStartlist(supabase, course, scrapedRiders);
+              totalAdded = result.added;
+              totalRemoved = result.removed;
+              coursesProcessed = [course.nom];
+            }
+          }
         }
       }
 
-      // Insert detected changes
-      if (changes.length > 0) {
-        const { error: insertError } = await supabase
-          .from("startlist_tracker_changes")
-          .insert(changes.map(c => ({
-            ...c,
-            detected_at: new Date().toISOString(),
-          })));
-        if (insertError) throw insertError;
-      }
-
-      // Process changes - auto-update startlist_entries
-      const processedCount = await processChanges(supabase, changes);
+      const changesTotal = totalAdded + totalRemoved;
 
       // Update run as completed
       await supabase
@@ -93,8 +283,8 @@ serve(async (req) => {
         .update({
           status: "completed",
           completed_at: new Date().toISOString(),
-          changes_detected: changes.length,
-          changes_processed: processedCount,
+          changes_detected: changesTotal,
+          changes_processed: changesTotal,
           courses_processed: coursesProcessed,
         })
         .eq("id", runId);
@@ -105,8 +295,10 @@ serve(async (req) => {
           run_id: runId,
           races_analyzed: racesAnalyzed,
           races_matched: racesMatched,
-          changes_detected: changes.length,
-          changes_processed: processedCount,
+          changes_detected: changesTotal,
+          changes_processed: changesTotal,
+          added: totalAdded,
+          removed: totalRemoved,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -131,19 +323,12 @@ serve(async (req) => {
 });
 
 // ============================================================
-// GLOBAL SYNC: DB-BASED APPROACH (replaces PCS changes page)
+// GLOBAL SYNC: DB-BASED APPROACH
 // ============================================================
 
-/**
- * New global sync strategy:
- * 1. Query upcoming courses from DB (next 6 weeks)
- * 2. Prioritize courses never checked or not checked recently
- * 3. Build PCS URL from pcs_slug or course ID
- * 4. Scrape individual startlist pages (which work reliably)
- * 5. Compare with existing entries to detect changes
- */
 async function handleGlobalSync(supabase: any): Promise<{
-  changes: StartlistChange[];
+  totalAdded: number;
+  totalRemoved: number;
   racesAnalyzed: number;
   racesMatched: number;
   coursesProcessed: string[];
@@ -151,17 +336,14 @@ async function handleGlobalSync(supabase: any): Promise<{
   const now = new Date();
   const sixWeeksLater = new Date(now);
   sixWeeksLater.setDate(sixWeeksLater.getDate() + 42);
-
-  // Also include courses that started recently (last 3 days) to catch late changes
   const threeDaysAgo = new Date(now);
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-
   const recheckCutoff = new Date(now);
   recheckCutoff.setHours(recheckCutoff.getHours() - RECHECK_INTERVAL_HOURS);
 
   console.log(`Global sync: looking for courses from ${threeDaysAgo.toISOString().split("T")[0]} to ${sixWeeksLater.toISOString().split("T")[0]}`);
 
-  // Fetch race IDs that have a validated startlist (pcs_validated = true) to exclude them
+  // Fetch race IDs that have a validated startlist to exclude
   const { data: validatedImports } = await supabase
     .from("startlist_imports")
     .select("race_id")
@@ -170,45 +352,38 @@ async function handleGlobalSync(supabase: any): Promise<{
   const validatedRaceIds = new Set((validatedImports || []).map((si: any) => si.race_id));
   console.log(`Excluding ${validatedRaceIds.size} courses with validated startlists`);
 
-  // Fetch courses that need checking:
-  // - date_debut in range
-  // - never checked OR checked more than RECHECK_INTERVAL_HOURS ago
-  // - NOT already validated (filtered post-query)
   const { data: allCourses, error: coursesError } = await supabase
     .from("courses")
-    .select("id, nom, pcs_slug, date_debut, last_tracker_check")
+    .select("id, nom, pcs_slug, date_debut, last_tracker_check, phase_id")
     .gte("date_debut", threeDaysAgo.toISOString().split("T")[0])
     .lte("date_debut", sixWeeksLater.toISOString().split("T")[0])
     .or(`last_tracker_check.is.null,last_tracker_check.lt.${recheckCutoff.toISOString()}`)
     .order("last_tracker_check", { ascending: true, nullsFirst: true })
-    .limit(MAX_COURSES_PER_RUN * 3); // Fetch more to compensate for filtered-out validated ones
+    .limit(MAX_COURSES_PER_RUN * 3);
+
+  if (coursesError) throw coursesError;
 
   const courses = (allCourses || []).filter((c: any) => !validatedRaceIds.has(c.id)).slice(0, MAX_COURSES_PER_RUN);
 
-  if (coursesError) {
-    console.error(`Failed to query courses: ${coursesError.message}`);
-    throw coursesError;
-  }
-
   if (!courses || courses.length === 0) {
-    console.log("No courses need checking right now (all recently checked or none in range)");
-    return { changes: [], racesAnalyzed: 0, racesMatched: 0, coursesProcessed: [] };
+    console.log("No courses need checking right now");
+    return { totalAdded: 0, totalRemoved: 0, racesAnalyzed: 0, racesMatched: 0, coursesProcessed: [] };
   }
 
   console.log(`Found ${courses.length} courses to check:`);
-  courses.forEach((c: DbCourse, i: number) => {
+  courses.forEach((c: any, i: number) => {
     console.log(`  ${i + 1}. ${c.nom} (${c.id}) - last check: ${c.last_tracker_check || "never"}`);
   });
 
-  const allChanges: StartlistChange[] = [];
-  const coursesProcessed: string[] = [];
+  let totalAdded = 0;
+  let totalRemoved = 0;
   let racesMatched = 0;
+  const coursesProcessed: string[] = [];
 
-  for (const course of courses as DbCourse[]) {
+  for (const course of courses) {
     const pcsUrl = buildPcsStartlistUrl(course);
     if (!pcsUrl) {
       console.log(`Could not build PCS URL for "${course.nom}" (${course.id}), skipping`);
-      // Still mark as checked to avoid retrying endlessly
       await markCourseChecked(supabase, course.id);
       continue;
     }
@@ -228,65 +403,366 @@ async function handleGlobalSync(supabase: any): Promise<{
       racesMatched++;
       coursesProcessed.push(course.nom);
 
-      // Override the course_id/course_name from the scraper with our DB values
-      const ridersWithDbInfo = scrapedRiders.map(r => ({
-        ...r,
-        course_id: course.id,
-        course_name: course.nom,
-      }));
-
-      const raceChanges = await generateFullSyncChanges(supabase, ridersWithDbInfo, pcsUrl);
-      console.log(`Changes for ${course.nom}: ${raceChanges.length}`);
-      allChanges.push(...raceChanges);
+      const result = await syncCourseStartlist(supabase, course, scrapedRiders);
+      totalAdded += result.added;
+      totalRemoved += result.removed;
 
       await markCourseChecked(supabase, course.id);
     } catch (raceError) {
       console.error(`Error processing ${course.nom}:`, raceError);
-      // Still mark as checked to prevent infinite retry loop
       await markCourseChecked(supabase, course.id);
     }
   }
 
-  console.log(`\nGlobal sync complete: ${courses.length} analyzed, ${racesMatched} matched, ${allChanges.length} changes`);
+  console.log(`\nGlobal sync complete: ${courses.length} analyzed, ${racesMatched} matched, ${totalAdded} added, ${totalRemoved} removed`);
 
-  return {
-    changes: allChanges,
-    racesAnalyzed: courses.length,
-    racesMatched,
-    coursesProcessed,
-  };
+  return { totalAdded, totalRemoved, racesAnalyzed: courses.length, racesMatched, coursesProcessed };
 }
 
+// ============================================================
+// CORE: SYNC A SINGLE COURSE (direct approach)
+// ============================================================
+
 /**
- * Build the PCS startlist URL from course data.
- * Priority: pcs_slug > derived from course ID
+ * Compare PCS scraped riders with existing startlist_entries.
+ * - Present in both → do nothing
+ * - On PCS but not in DB → ADD (with full matching)
+ * - In DB but not on PCS → REMOVE
+ * Actions are performed directly on startlist_entries.
  */
+async function syncCourseStartlist(
+  supabase: any,
+  course: any,
+  scrapedRiders: { rider_name: string; team_name: string }[]
+): Promise<{ added: number; removed: number }> {
+  const courseId = course.id;
+  const courseName = course.nom;
+  const phaseId = course.phase_id;
+
+  console.log(`[SYNC] ${courseName}: ${scrapedRiders.length} riders scraped from PCS`);
+
+  // 1. Find or create startlist import
+  let startlistId: string;
+  const { data: imports } = await supabase
+    .from("startlist_imports")
+    .select("id")
+    .eq("race_id", courseId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (!imports || imports.length === 0) {
+    // Need saison_id to create import
+    const { data: currentSeason } = await supabase
+      .from("saisons")
+      .select("id")
+      .eq("annee", new Date().getFullYear())
+      .maybeSingle();
+
+    const { data: newImport, error: importError } = await supabase
+      .from("startlist_imports")
+      .insert({
+        race_id: courseId,
+        file_url: `https://www.procyclingstats.com/race/${course.pcs_slug || courseId}`,
+        saison_id: currentSeason?.id,
+      })
+      .select("id")
+      .single();
+
+    if (importError) {
+      console.error(`Failed to create startlist import: ${importError.message}`);
+      return { added: 0, removed: 0 };
+    }
+    startlistId = newImport.id;
+    console.log(`[SYNC] Created new startlist import ${startlistId}`);
+  } else {
+    startlistId = imports[0].id;
+  }
+
+  // 2. Load existing entries with their coureur names
+  const { data: existingEntries, error: entriesError } = await supabase
+    .from("startlist_entries")
+    .select("id, source_name, coureur_id, coureurs(nom)")
+    .eq("startlist_id", startlistId);
+
+  if (entriesError) {
+    console.error(`Failed to load existing entries: ${entriesError.message}`);
+    return { added: 0, removed: 0 };
+  }
+
+  const existing = existingEntries || [];
+  console.log(`[SYNC] ${existing.length} existing entries in DB`);
+
+  // 3. Build tokenSig sets for comparison
+  // For scraped riders: tokenSig of their PCS name
+  const scrapedSigSet = new Set<string>();
+  const scrapedByKey = new Map<string, { rider_name: string; team_name: string }>();
+  for (const r of scrapedRiders) {
+    const sig = tokenSig(r.rider_name);
+    scrapedSigSet.add(sig);
+    if (!scrapedByKey.has(sig)) {
+      scrapedByKey.set(sig, r);
+    }
+  }
+
+  // For existing entries: tokenSig of source_name AND coureur.nom
+  // Map from tokenSig -> entry (deduplicated)
+  const existingSigMap = new Map<string, { id: string; source_name: string; coureur_id: string | null }>();
+  const existingEntryIds = new Set<string>(); // track which entries are covered
+  for (const entry of existing) {
+    const sourceSig = tokenSig(entry.source_name || "");
+    const coureurNom = (entry.coureurs as any)?.nom || "";
+    const coureurSig = coureurNom ? tokenSig(coureurNom) : "";
+
+    // Register by source_name sig
+    if (sourceSig && !existingSigMap.has(sourceSig)) {
+      existingSigMap.set(sourceSig, { id: entry.id, source_name: entry.source_name, coureur_id: entry.coureur_id });
+      existingEntryIds.add(entry.id);
+    }
+    // Also register by coureur nom sig (if different)
+    if (coureurSig && coureurSig !== sourceSig && !existingSigMap.has(coureurSig)) {
+      existingSigMap.set(coureurSig, { id: entry.id, source_name: entry.source_name, coureur_id: entry.coureur_id });
+      existingEntryIds.add(entry.id);
+    }
+  }
+
+  // 4. Determine additions and removals
+  const toAdd: { rider_name: string; team_name: string }[] = [];
+  const toRemoveEntryIds: { id: string; source_name: string }[] = [];
+
+  // Additions: scraped riders whose tokenSig is NOT in existing map
+  for (const [sig, rider] of scrapedByKey) {
+    if (!existingSigMap.has(sig)) {
+      toAdd.push(rider);
+    }
+  }
+
+  // Removals: existing entries whose tokenSig is NOT in scraped set
+  // Use a set to avoid removing the same entry twice (when both source and coureur sigs point to same entry)
+  const removedIds = new Set<string>();
+  for (const [sig, entry] of existingSigMap) {
+    if (!scrapedSigSet.has(sig) && !removedIds.has(entry.id)) {
+      // Double-check: make sure no OTHER sig for this entry is in the scraped set
+      const otherSigsCovered = [...existingSigMap.entries()]
+        .filter(([, e]) => e.id === entry.id)
+        .some(([s]) => scrapedSigSet.has(s));
+      
+      if (!otherSigsCovered) {
+        toRemoveEntryIds.push({ id: entry.id, source_name: entry.source_name });
+        removedIds.add(entry.id);
+      }
+    }
+  }
+
+  // Safety check: if we'd remove more than 50% of entries, skip removals
+  const removalThreshold = 0.5;
+  const shouldProcessRemovals = scrapedRiders.length >= existing.length * removalThreshold;
+
+  if (!shouldProcessRemovals && toRemoveEntryIds.length > 0) {
+    console.warn(`[SYNC] SAFETY: Scraped ${scrapedRiders.length} riders vs ${existing.length} existing (< ${removalThreshold * 100}%). Skipping ${toRemoveEntryIds.length} removals.`);
+    toRemoveEntryIds.length = 0;
+  }
+
+  console.log(`[SYNC] ${toAdd.length} additions, ${toRemoveEntryIds.length} removals`);
+
+  if (toAdd.length === 0 && toRemoveEntryIds.length === 0) {
+    console.log(`[SYNC] No changes for ${courseName}`);
+    return { added: 0, removed: 0 };
+  }
+
+  // 5. Load matching data (once per course, only if needed for additions)
+  let rosterRiders: RiderRef[] = [];
+  let allRiders: RiderRef[] = [];
+  let aliases: AliasRef[] = [];
+
+  if (toAdd.length > 0) {
+    // Load roster for this course's phase
+    if (phaseId) {
+      const { data: rostersData } = await supabase
+        .from("rosters")
+        .select("coureur_id")
+        .eq("phase_id", phaseId);
+
+      const rosterIds = [...new Set((rostersData || []).map((r: any) => r.coureur_id))];
+
+      if (rosterIds.length > 0) {
+        // Get phase's saison_id
+        const { data: phaseData } = await supabase
+          .from("phases")
+          .select("saison_id")
+          .eq("id", phaseId)
+          .single();
+
+        const saisonId = phaseData?.saison_id;
+
+        if (saisonId) {
+          const { data: csData } = await supabase
+            .from("coureurs_saisons")
+            .select("coureur_id, coureurs!inner(id, nom), equipe_id")
+            .eq("saison_id", saisonId)
+            .in("coureur_id", rosterIds);
+
+          const equipeIds = [...new Set((csData || []).map((cs: any) => cs.equipe_id).filter(Boolean))];
+          let equipeMap: Record<string, string> = {};
+          if (equipeIds.length > 0) {
+            const { data: equipesData } = await supabase
+              .from("equipes_saisons")
+              .select("id, nom_affiche")
+              .in("id", equipeIds);
+            equipeMap = (equipesData || []).reduce((acc: Record<string, string>, eq: any) => {
+              acc[eq.id] = eq.nom_affiche || "";
+              return acc;
+            }, {});
+          }
+
+          rosterRiders = (csData || []).map((cs: any) => {
+            const coureur = Array.isArray(cs.coureurs) ? cs.coureurs[0] : cs.coureurs;
+            return {
+              id: coureur?.id || cs.coureur_id,
+              nom: coureur?.nom || "",
+              equipe: cs.equipe_id ? (equipeMap[cs.equipe_id] || "") : "",
+            };
+          });
+        }
+      }
+    }
+
+    // Load all riders
+    const { data: allRidersData } = await supabase
+      .from("coureurs")
+      .select("id, nom, equipe")
+      .limit(5000);
+    allRiders = (allRidersData || []).map((r: any) => ({ id: r.id, nom: r.nom, equipe: r.equipe }));
+
+    // Load aliases
+    const { data: aliasesData } = await supabase
+      .from("name_aliases")
+      .select("alias_text, coureur_id, source_team");
+    aliases = (aliasesData || []).map((a: any) => ({ alias_text: a.alias_text, coureur_id: a.coureur_id, source_team: a.source_team }));
+
+    console.log(`[SYNC] Loaded matching data: ${rosterRiders.length} roster, ${allRiders.length} all riders, ${aliases.length} aliases`);
+  }
+
+  // 6. Process REMOVALS first (delete from startlist_entries)
+  let removedCount = 0;
+  for (const entry of toRemoveEntryIds) {
+    // Manual cascade: delete from startlist_tracker_changes first
+    await supabase
+      .from("startlist_tracker_changes")
+      .delete()
+      .eq("startlist_entry_id", entry.id);
+
+    const { error: deleteError } = await supabase
+      .from("startlist_entries")
+      .delete()
+      .eq("id", entry.id);
+
+    if (deleteError) {
+      console.error(`[SYNC] Failed to remove entry ${entry.id} (${entry.source_name}): ${deleteError.message}`);
+    } else {
+      console.log(`[SYNC] Removed: ${entry.source_name}`);
+      removedCount++;
+
+      // Log in audit table
+      await supabase.from("startlist_tracker_changes").insert({
+        course_id: courseId,
+        course_name: courseName,
+        rider_name: entry.source_name,
+        team_name: null,
+        change_type: "removed",
+        source_url: `https://www.procyclingstats.com/race/${course.pcs_slug || courseId}`,
+        detected_at: new Date().toISOString(),
+        processed: true,
+        processed_at: new Date().toISOString(),
+        validation_status: "validated",
+      });
+    }
+  }
+
+  // 7. Process ADDITIONS (match + insert into startlist_entries)
+  let addedCount = 0;
+
+  // Get current max line_no
+  const { data: maxLineData } = await supabase
+    .from("startlist_entries")
+    .select("line_no")
+    .eq("startlist_id", startlistId)
+    .order("line_no", { ascending: false })
+    .limit(1);
+  let nextLineNo = (maxLineData?.[0]?.line_no || 0) + 1;
+
+  for (const rider of toAdd) {
+    const match = matchRider(rider.rider_name, rosterRiders, allRiders, aliases);
+    
+    // Check if this coureur_id already exists in the startlist (prevent duplicates)
+    if (match.coureur_id) {
+      const alreadyExists = existing.some(e => e.coureur_id === match.coureur_id);
+      if (alreadyExists) {
+        console.log(`[SYNC] Skipping ${rider.rider_name}: coureur_id ${match.coureur_id} already in startlist`);
+        continue;
+      }
+    }
+
+    const { data: insertedEntry, error: entryError } = await supabase
+      .from("startlist_entries")
+      .insert({
+        startlist_id: startlistId,
+        line_no: nextLineNo,
+        source_name: rider.rider_name,
+        source_team: rider.team_name || null,
+        coureur_id: match.coureur_id,
+        confidence: match.confidence || null,
+        status: match.status,
+      })
+      .select("id")
+      .single();
+
+    if (entryError) {
+      console.error(`[SYNC] Failed to add ${rider.rider_name}: ${entryError.message}`);
+    } else {
+      const matchInfo = match.coureur_id ? ` → ${match.match_type} (${match.confidence})` : " → unmatched";
+      console.log(`[SYNC] Added: ${rider.rider_name}${matchInfo}`);
+      addedCount++;
+      nextLineNo++;
+
+      // Log in audit table
+      await supabase.from("startlist_tracker_changes").insert({
+        course_id: courseId,
+        course_name: courseName,
+        rider_name: rider.rider_name,
+        team_name: rider.team_name || null,
+        change_type: "added",
+        source_url: `https://www.procyclingstats.com/race/${course.pcs_slug || courseId}`,
+        detected_at: new Date().toISOString(),
+        processed: true,
+        processed_at: new Date().toISOString(),
+        validation_status: match.coureur_id ? "validated" : "unmatched",
+        coureur_id: match.coureur_id,
+        startlist_entry_id: insertedEntry?.id || null,
+      });
+    }
+  }
+
+  console.log(`[SYNC] ${courseName} done: ${addedCount} added, ${removedCount} removed`);
+  return { added: addedCount, removed: removedCount };
+}
+
+// ============================================================
+// PCS URL BUILDING
+// ============================================================
+
 function buildPcsStartlistUrl(course: DbCourse): string | null {
   const year = course.date_debut ? new Date(course.date_debut).getFullYear() : new Date().getFullYear();
-
-  // 1. Use pcs_slug if available
   if (course.pcs_slug) {
     return `https://www.procyclingstats.com/race/${course.pcs_slug}/${year}/startlist`;
   }
-
-  // 2. Derive slug from course ID
   const slug = derivePcsSlug(course.id);
   if (slug) {
     return `https://www.procyclingstats.com/race/${slug}/${year}/startlist`;
   }
-
   return null;
 }
 
-/**
- * Derive a PCS slug from a course ID.
- * Handles formats like:
- *   "tour_de_la_provence"        -> "tour-de-la-provence"
- *   "omloop-nieuwsblad-mj8bzkne" -> "omloop-het-nieuwsblad" (via known mappings)
- *   "uae-tour-mj6w6xhe"          -> "uae-tour"
- */
 function derivePcsSlug(courseId: string): string | null {
-  // Known mappings for courses whose IDs don't match PCS slugs
   const KNOWN_MAPPINGS: Record<string, string> = {
     "omloop-nieuwsblad": "omloop-het-nieuwsblad",
     "strade-bianche": "strade-bianche",
@@ -317,28 +793,15 @@ function derivePcsSlug(courseId: string): string | null {
     "tour_de_taiwan": "tour-de-taiwan",
   };
 
-  // Strip random 8-char suffix (pattern: -[a-z0-9]{6,10} at end)
   const cleanId = courseId.replace(/-[a-z0-9]{6,10}$/, "");
+  if (KNOWN_MAPPINGS[cleanId]) return KNOWN_MAPPINGS[cleanId];
+  if (KNOWN_MAPPINGS[courseId]) return KNOWN_MAPPINGS[courseId];
 
-  // Check known mappings first (with clean ID)
-  if (KNOWN_MAPPINGS[cleanId]) {
-    return KNOWN_MAPPINGS[cleanId];
-  }
-
-  // Also check with original ID (for underscore-based IDs without suffix)
-  if (KNOWN_MAPPINGS[courseId]) {
-    return KNOWN_MAPPINGS[courseId];
-  }
-
-  // Convert underscores to hyphens as general fallback
   const slug = cleanId.replace(/_/g, "-");
-
-  // Skip IDs that look like continental championships or very specific codes
   if (slug.includes("continental-") || slug.includes("championships")) {
     console.log(`Skipping continental/championship race: ${courseId}`);
     return null;
   }
-
   return slug;
 }
 
@@ -347,30 +810,15 @@ async function markCourseChecked(supabase: any, courseId: string): Promise<void>
     .from("courses")
     .update({ last_tracker_check: new Date().toISOString() })
     .eq("id", courseId);
-
   if (error) {
     console.error(`Failed to update last_tracker_check for ${courseId}: ${error.message}`);
   }
 }
 
 // ============================================================
-// HTML PARSING FUNCTIONS
+// HTML PARSING & SCRAPING
 // ============================================================
 
-function normalizeName(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/**
- * Parse a race startlist page HTML to extract all riders with their teams.
- * Uses DOMParser for reliable parsing of minified HTML.
- */
 function parseStartlistHtml(html: string): { rider_name: string; team_name: string }[] {
   const doc = new DOMParser().parseFromString(html, "text/html");
   if (!doc) {
@@ -378,17 +826,13 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
     return [];
   }
 
-  // Log page title for diagnostics
   const title = doc.querySelector("title")?.textContent || "unknown";
   console.log(`Page title: "${title}"`);
 
   const startlist = doc.querySelector(".startlist_v4");
   if (!startlist) {
     console.warn("parseStartlistHtml: No .startlist_v4 found");
-    // Log first 500 chars for diagnostics
     console.log(`HTML preview: ${html.substring(0, 500)}`);
-
-    // Fallback: scan all rider links
     const allPageLinks = doc.querySelectorAll("a");
     const riders: { rider_name: string; team_name: string }[] = [];
     for (const link of allPageLinks) {
@@ -411,7 +855,6 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
   for (const link of allLinks) {
     const href = link.getAttribute("href") || "";
     const className = link.getAttribute("class") || "";
-
     if (className.includes("team") && !className.includes("team-in-race")) {
       currentTeam = link.textContent?.trim() || "Unknown Team";
       teamCount++;
@@ -430,10 +873,6 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
   return riders;
 }
 
-// ============================================================
-// SCRAPING FUNCTIONS
-// ============================================================
-
 function extractPcsRaceSlug(raceUrl: string): string | null {
   try {
     const url = new URL(raceUrl);
@@ -446,10 +885,7 @@ function extractPcsRaceSlug(raceUrl: string): string | null {
   }
 }
 
-/**
- * Scrape a race startlist page and extract all riders.
- */
-async function scrapeRaceStartlist(raceUrl: string): Promise<StartlistChange[]> {
+async function scrapeRaceStartlist(raceUrl: string): Promise<{ rider_name: string; team_name: string }[]> {
   const response = await fetch(raceUrl, {
     headers: {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -463,438 +899,16 @@ async function scrapeRaceStartlist(raceUrl: string): Promise<StartlistChange[]> 
   const html = await response.text();
   console.log(`Fetched race HTML: ${html.length} characters`);
 
-  const courseId = extractPcsRaceSlug(raceUrl) || "unknown";
-
-  // Extract race name
-  const titleDoc = new DOMParser().parseFromString(html, "text/html");
-  const h1 = titleDoc?.querySelector("h1");
-  let courseName = courseId.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-  if (h1) {
-    const hideSpans = h1.querySelectorAll(".hideIfMobile");
-    for (const span of hideSpans) {
-      span.remove();
-    }
-    const cleanTitle = h1.textContent?.trim() || "";
-    if (cleanTitle.length > 2) {
-      courseName = cleanTitle;
-    }
-  }
-
   const parsedRiders = parseStartlistHtml(html);
-  console.log(`Parsed ${parsedRiders.length} riders for "${courseName}"`);
+  console.log(`Parsed ${parsedRiders.length} riders`);
 
   if (parsedRiders.length > 0) {
     console.log(`Sample riders: ${parsedRiders.slice(0, 5).map(r => r.rider_name).join(", ")}...`);
   }
 
   if (parsedRiders.length < 20 && parsedRiders.length > 0) {
-    console.warn(`WARNING: Only ${parsedRiders.length} riders extracted - this seems incomplete for a race startlist!`);
+    console.warn(`WARNING: Only ${parsedRiders.length} riders extracted - this seems incomplete!`);
   }
 
-  return parsedRiders.map(r => ({
-    course_id: courseId,
-    course_name: courseName,
-    rider_name: r.rider_name,
-    team_name: r.team_name || null,
-    change_type: "added" as const,
-    source_url: raceUrl,
-  }));
-}
-
-// ============================================================
-// SYNC & PROCESSING FUNCTIONS
-// ============================================================
-
-/**
- * Generate full sync changes by comparing scraped riders with existing startlist entries.
- */
-async function generateFullSyncChanges(
-  supabase: any,
-  scrapedRiders: StartlistChange[],
-  raceUrl: string
-): Promise<StartlistChange[]> {
-  if (scrapedRiders.length === 0) {
-    console.log("No riders scraped, skipping full sync");
-    return [];
-  }
-
-  const courseName = scrapedRiders[0]?.course_name || "Unknown Race";
-  const courseId = scrapedRiders[0]?.course_id || "unknown";
-
-  console.log(`Full sync for ${courseName}: ${scrapedRiders.length} riders scraped`);
-
-  // Try to find the course in DB
-  const { data: courses } = await supabase.rpc("search_course_by_name", {
-    p_search: courseName,
-    p_limit: 1,
-  });
-
-  let course = courses?.[0];
-
-  if (!course) {
-    const searchTerms = courseName.split(" ").slice(0, 4).join("%");
-    const { data: directCourses } = await supabase
-      .from("courses")
-      .select("id, nom, date_debut")
-      .ilike("nom", `%${searchTerms}%`)
-      .order("date_debut", { ascending: false })
-      .limit(1);
-    course = directCourses?.[0];
-  }
-
-  // If course ID was already set from DB (global sync), use it directly
-  if (!course) {
-    const { data: directById } = await supabase
-      .from("courses")
-      .select("id, nom, date_debut")
-      .eq("id", courseId)
-      .maybeSingle();
-    course = directById;
-  }
-
-  if (!course) {
-    console.log(`Course not found for full sync: ${courseName}`);
-    return scrapedRiders;
-  }
-
-  console.log(`Found course for full sync: ${course.id} - ${course.nom}`);
-
-  const { data: imports } = await supabase
-    .from("startlist_imports")
-    .select("id")
-    .eq("race_id", course.id)
-    .order("created_at", { ascending: false })
-    .limit(1);
-
-  if (!imports || imports.length === 0) {
-    console.log("No existing startlist import, all scraped riders are additions");
-    return scrapedRiders;
-  }
-
-  const startlistId = imports[0].id;
-
-  const { data: existingEntries } = await supabase
-    .from("startlist_entries")
-    .select("id, source_name, coureur_id, coureurs(nom)")
-    .eq("startlist_id", startlistId);
-
-  if (!existingEntries || existingEntries.length === 0) {
-    console.log("No existing entries, all scraped riders are additions");
-    return scrapedRiders;
-  }
-
-  console.log(`Existing entries: ${existingEntries.length}`);
-
-  const normalize = (name: string) =>
-    name.toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z\s]/g, "")
-      .trim();
-
-  const scrapedNamesNormalized = new Set(
-    scrapedRiders.map(r => normalize(r.rider_name))
-  );
-
-  const existingNamesNormalized = new Map<string, { source_name: string; coureur_nom: string | null }>();
-  for (const entry of existingEntries) {
-    const sourceName = entry.source_name || "";
-    const coureurNom = entry.coureurs?.nom || "";
-
-    if (sourceName) {
-      existingNamesNormalized.set(normalize(sourceName), {
-        source_name: sourceName,
-        coureur_nom: coureurNom,
-      });
-    }
-    if (coureurNom && !existingNamesNormalized.has(normalize(coureurNom))) {
-      existingNamesNormalized.set(normalize(coureurNom), {
-        source_name: sourceName || coureurNom,
-        coureur_nom: coureurNom,
-      });
-    }
-  }
-
-  const changes: StartlistChange[] = [];
-
-  const scrapedCount = scrapedRiders.length;
-  const existingCount = existingEntries.length;
-  const removalThreshold = 0.5;
-
-  const shouldProcessRemovals = scrapedCount >= existingCount * removalThreshold;
-
-  if (!shouldProcessRemovals) {
-    console.warn(`SAFETY: Scraped ${scrapedCount} riders vs ${existingCount} existing (< ${removalThreshold * 100}%). Skipping removals.`);
-  }
-
-  if (shouldProcessRemovals) {
-    for (const [normalizedName, entry] of existingNamesNormalized.entries()) {
-      if (!scrapedNamesNormalized.has(normalizedName)) {
-        const displayName = entry.coureur_nom || entry.source_name;
-        console.log(`Marking for removal: ${displayName}`);
-        changes.push({
-          course_id: courseId,
-          course_name: courseName,
-          rider_name: entry.source_name,
-          team_name: null,
-          change_type: "removed",
-          source_url: raceUrl,
-        });
-      }
-    }
-  }
-
-  for (const scrapedRider of scrapedRiders) {
-    const normalizedScraped = normalize(scrapedRider.rider_name);
-    if (!existingNamesNormalized.has(normalizedScraped)) {
-      console.log(`Marking for addition: ${scrapedRider.rider_name}`);
-      changes.push(scrapedRider);
-    }
-  }
-
-  const additionsCount = changes.filter(c => c.change_type === "added").length;
-  const removalsCount = changes.filter(c => c.change_type === "removed").length;
-  console.log(`Full sync: ${additionsCount} additions, ${removalsCount} removals (safety: removals ${shouldProcessRemovals ? "ON" : "OFF"})`);
-
-  return changes;
-}
-
-async function processChanges(supabase: any, changes: StartlistChange[]): Promise<number> {
-  let processedCount = 0;
-
-  const { data: currentSeason, error: seasonError } = await supabase
-    .from("saisons")
-    .select("id, annee")
-    .eq("annee", 2026)
-    .maybeSingle();
-
-  if (seasonError) {
-    console.error(`Failed to load season 2026: ${seasonError.message}`);
-  }
-
-  const saisonId = currentSeason?.id;
-  console.log(`Using season: ${saisonId} (${currentSeason?.annee})`);
-
-  if (!saisonId) {
-    console.error("No season id found for 2026; cannot auto-match riders.");
-    return 0;
-  }
-
-  for (const change of changes) {
-    try {
-      console.log(`Processing change: ${change.rider_name} for ${change.course_name}`);
-
-      const normalizedCourseName = change.course_name.replace(/\s+\d{4}$/, "").trim();
-
-      const { data: courses } = await supabase.rpc("search_course_by_name", {
-        p_search: normalizedCourseName,
-        p_limit: 1,
-      });
-
-      let course = courses?.[0];
-
-      if (!course) {
-        const searchTerms = normalizedCourseName.split(" ").slice(0, 4).join("%");
-        const { data: directCourses } = await supabase
-          .from("courses")
-          .select("id, nom, date_debut")
-          .ilike("nom", `%${searchTerms}%`)
-          .order("date_debut", { ascending: false })
-          .limit(1);
-        course = directCourses?.[0];
-      }
-
-      // Also try direct ID lookup (for global sync where course_id = DB id)
-      if (!course) {
-        const { data: directById } = await supabase
-          .from("courses")
-          .select("id, nom, date_debut")
-          .eq("id", change.course_id)
-          .maybeSingle();
-        course = directById;
-      }
-
-      if (!course) {
-        console.log(`Course not found: ${change.course_name}`);
-        await supabase
-          .from("startlist_tracker_changes")
-          .update({
-            processed: false,
-            processed_at: new Date().toISOString(),
-            validation_status: "unmatched",
-          })
-          .eq("rider_name", change.rider_name)
-          .eq("course_name", change.course_name)
-          .is("processed", false);
-        continue;
-      }
-
-      console.log(`Found course: ${course.id} - ${course.nom}`);
-
-      let startlistId: string;
-      const { data: imports } = await supabase
-        .from("startlist_imports")
-        .select("id")
-        .eq("race_id", course.id)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      if (!imports || imports.length === 0) {
-        console.log(`Creating new startlist import for course: ${course.id}`);
-        const { data: newImport, error: importError } = await supabase
-          .from("startlist_imports")
-          .insert({
-            race_id: course.id,
-            file_url: change.source_url || `https://www.procyclingstats.com/race/${course.id}`,
-            saison_id: saisonId,
-          })
-          .select()
-          .single();
-
-        if (importError) {
-          console.error(`Failed to create startlist import: ${importError.message}`);
-          await supabase
-            .from("startlist_tracker_changes")
-            .update({
-              processed: false,
-              processed_at: new Date().toISOString(),
-              validation_status: "unmatched",
-              course_id: course.id,
-            })
-            .eq("rider_name", change.rider_name)
-            .eq("course_name", change.course_name)
-            .is("processed", false);
-          continue;
-        }
-        startlistId = newImport.id;
-      } else {
-        startlistId = imports[0].id;
-      }
-
-      let coureurId: string | null = null;
-      if (saisonId) {
-        const { data: matchedRiders, error: matchError } = await supabase.rpc("search_riders_for_matching", {
-          p_saison_id: saisonId,
-          p_query: change.rider_name,
-          p_limit: 1,
-        });
-
-        if (matchError) {
-          console.error(`Rider matching error: ${matchError.message}`);
-        } else if (matchedRiders && matchedRiders.length > 0) {
-          coureurId = matchedRiders[0].coureur_id;
-          console.log(`Matched rider: "${change.rider_name}" -> "${matchedRiders[0].coureur_nom}" (${coureurId})`);
-        } else {
-          console.log(`No match found for rider: ${change.rider_name}`);
-        }
-      }
-
-      let entryInserted = false;
-      let insertedEntryId: string | null = null;
-
-      if (change.change_type === "added") {
-        const { data: existing } = await supabase
-          .from("startlist_entries")
-          .select("id")
-          .eq("startlist_id", startlistId)
-          .ilike("source_name", change.rider_name)
-          .limit(1);
-
-        if (!existing || existing.length === 0) {
-          const { data: maxLineData } = await supabase
-            .from("startlist_entries")
-            .select("line_no")
-            .eq("startlist_id", startlistId)
-            .order("line_no", { ascending: false })
-            .limit(1);
-
-          const nextLineNo = (maxLineData?.[0]?.line_no || 0) + 1;
-
-          const { data: insertedEntry, error: entryError } = await supabase
-            .from("startlist_entries")
-            .insert({
-              startlist_id: startlistId,
-              line_no: nextLineNo,
-              source_name: change.rider_name,
-              source_team: change.team_name,
-              coureur_id: coureurId,
-              confidence: coureurId ? 0.9 : null,
-              status: coureurId ? "confirmed" : "unmatched",
-            })
-            .select("id")
-            .single();
-
-          if (entryError) {
-            console.error(`Failed to insert entry: ${entryError.message}`);
-          } else {
-            console.log(`Added entry for ${change.rider_name} to startlist ${startlistId} (line ${nextLineNo})`);
-            entryInserted = true;
-            insertedEntryId = insertedEntry?.id || null;
-          }
-        } else {
-          entryInserted = true;
-          insertedEntryId = existing[0].id;
-        }
-      } else if (change.change_type === "removed") {
-        console.log(`Looking for entry to remove: startlist_id=${startlistId}, source_name="${change.rider_name}"`);
-
-        let { data: toRemove } = await supabase
-          .from("startlist_entries")
-          .select("id, source_name, coureur_id")
-          .eq("startlist_id", startlistId)
-          .ilike("source_name", change.rider_name)
-          .limit(1);
-
-        if ((!toRemove || toRemove.length === 0) && coureurId) {
-          const { data: fallbackEntries } = await supabase
-            .from("startlist_entries")
-            .select("id, source_name, coureur_id")
-            .eq("startlist_id", startlistId)
-            .eq("coureur_id", coureurId)
-            .limit(1);
-          toRemove = fallbackEntries;
-        }
-
-        if (toRemove && toRemove.length > 0) {
-          const entryToDelete = toRemove[0];
-          const { error: deleteError } = await supabase
-            .from("startlist_entries")
-            .delete()
-            .eq("id", entryToDelete.id);
-
-          if (deleteError) {
-            console.error(`Failed to delete entry ${entryToDelete.id}: ${deleteError.message}`);
-          } else {
-            console.log(`Successfully deleted entry ${entryToDelete.id} for ${change.rider_name}`);
-            entryInserted = true;
-            insertedEntryId = entryToDelete.id;
-          }
-        } else {
-          console.log(`No entry found to remove for ${change.rider_name} in startlist ${startlistId}`);
-        }
-      }
-
-      const isFullyValidated = coureurId !== null && entryInserted;
-      await supabase
-        .from("startlist_tracker_changes")
-        .update({
-          processed: entryInserted,
-          processed_at: new Date().toISOString(),
-          validation_status: isFullyValidated ? "validated" : (entryInserted ? "pending" : "unmatched"),
-          coureur_id: coureurId,
-          course_id: course.id,
-          startlist_entry_id: insertedEntryId,
-        })
-        .eq("rider_name", change.rider_name)
-        .eq("course_name", change.course_name);
-
-      if (isFullyValidated) {
-        processedCount++;
-      }
-    } catch (error) {
-      console.error(`Error processing change for ${change.rider_name}:`, error);
-    }
-  }
-
-  return processedCount;
+  return parsedRiders;
 }
