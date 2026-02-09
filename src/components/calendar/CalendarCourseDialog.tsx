@@ -40,6 +40,22 @@ interface StartlistEntry {
   equipe?: { nom_affiche: string } | null;
 }
 
+const RiderRow = ({ entry }: { entry: StartlistEntry }) => (
+  <div className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-muted/50 transition-colors">
+    <span className="text-muted-foreground w-6 text-right font-mono text-xs">
+      #{entry.line_no}
+    </span>
+    <span className="flex-1 truncate font-medium text-sm">
+      {entry.coureur?.nom || entry.source_name}
+    </span>
+    {entry.coureur_id ? (
+      <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
+    ) : (
+      <AlertCircle className="h-3 w-3 text-yellow-500 flex-shrink-0" />
+    )}
+  </div>
+);
+
 export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCourseDialogProps) => {
   const { t, i18n } = useTranslation('calendar');
   const [imageError, setImageError] = useState(false);
@@ -359,33 +375,30 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
               ) : groupedStartlistEntries.length > 0 ? (
                 <div className="border rounded-lg overflow-hidden">
                   <div className="max-h-[550px] overflow-y-auto p-3 space-y-4">
-                    {groupedStartlistEntries.map(({ team, entries }) => (
-                      <div key={team}>
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 px-1">
-                          {team} <span className="text-muted-foreground/60">({entries.length})</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-                          {entries.map((entry, idx) => (
-                            <div 
-                              key={idx}
-                              className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-muted/50 transition-colors"
-                            >
-                              <span className="text-muted-foreground w-6 text-right font-mono text-xs">
-                                #{entry.line_no}
-                              </span>
-                              <span className="flex-1 truncate font-medium text-sm">
-                                {entry.coureur?.nom || entry.source_name}
-                              </span>
-                              {entry.coureur_id ? (
-                                <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
-                              ) : (
-                                <AlertCircle className="h-3 w-3 text-yellow-500 flex-shrink-0" />
-                              )}
+                    {groupedStartlistEntries.map(({ team, entries }) => {
+                      const half = Math.ceil(entries.length / 2);
+                      const col1 = entries.slice(0, half);
+                      const col2 = entries.slice(half);
+                      return (
+                        <div key={team}>
+                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 px-1 border-b pb-1">
+                            {team} <span className="text-muted-foreground/60">({entries.length})</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-4">
+                            <div>
+                              {col1.map((entry, idx) => (
+                                <RiderRow key={idx} entry={entry} />
+                              ))}
                             </div>
-                          ))}
+                            <div>
+                              {col2.map((entry, idx) => (
+                                <RiderRow key={idx} entry={entry} />
+                              ))}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
