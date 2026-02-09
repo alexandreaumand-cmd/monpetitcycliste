@@ -422,6 +422,7 @@ export const StartlistTracker = () => {
                     <TableRow>
                       <TableHead>Statut</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>Courses</TableHead>
                       <TableHead>Démarré</TableHead>
                       <TableHead>Durée</TableHead>
                       <TableHead>Changements</TableHead>
@@ -436,6 +437,19 @@ export const StartlistTracker = () => {
                           <Badge variant="secondary">
                             {run.source_type === "global" ? "Global" : "Course"}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[250px]">
+                          {run.courses_processed && run.courses_processed.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {run.courses_processed.map((name: string, i: number) => (
+                                <Badge key={i} variant="outline" className="text-xs">
+                                  {name}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {formatDistanceToNow(new Date(run.started_at), { addSuffix: true, locale: fr })}

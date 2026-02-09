@@ -54,17 +54,23 @@ serve(async (req) => {
       let changes: StartlistChange[] = [];
       let racesAnalyzed = 0;
       let racesMatched = 0;
+      let coursesProcessed: string[] = [];
 
       if (source_type === "global") {
         const result = await handleGlobalSync(supabase);
         changes = result.changes;
         racesAnalyzed = result.racesAnalyzed;
         racesMatched = result.racesMatched;
+        coursesProcessed = result.coursesProcessed;
       } else if (source_type === "race" && race_url) {
         racesAnalyzed = 1;
         racesMatched = 1;
         const scrapedRiders = await scrapeRaceStartlist(race_url);
         changes = await generateFullSyncChanges(supabase, scrapedRiders, race_url);
+        // Extract course name from changes if available
+        if (changes.length > 0) {
+          coursesProcessed = [...new Set(changes.map(c => c.course_name))];
+        }
       }
 
       // Insert detected changes
@@ -89,6 +95,7 @@ serve(async (req) => {
           completed_at: new Date().toISOString(),
           changes_detected: changes.length,
           changes_processed: processedCount,
+          courses_processed: coursesProcessed,
         })
         .eq("id", runId);
 
@@ -139,6 +146,7 @@ async function handleGlobalSync(supabase: any): Promise<{
   changes: StartlistChange[];
   racesAnalyzed: number;
   racesMatched: number;
+  coursesProcessed: string[];
 }> {
   const now = new Date();
   const sixWeeksLater = new Date(now);
@@ -184,7 +192,7 @@ async function handleGlobalSync(supabase: any): Promise<{
 
   if (!courses || courses.length === 0) {
     console.log("No courses need checking right now (all recently checked or none in range)");
-    return { changes: [], racesAnalyzed: 0, racesMatched: 0 };
+    return { changes: [], racesAnalyzed: 0, racesMatched: 0, coursesProcessed: [] };
   }
 
   console.log(`Found ${courses.length} courses to check:`);
@@ -193,6 +201,7 @@ async function handleGlobalSync(supabase: any): Promise<{
   });
 
   const allChanges: StartlistChange[] = [];
+  const coursesProcessed: string[] = [];
   let racesMatched = 0;
 
   for (const course of courses as DbCourse[]) {
@@ -217,6 +226,7 @@ async function handleGlobalSync(supabase: any): Promise<{
       }
 
       racesMatched++;
+      coursesProcessed.push(course.nom);
 
       // Override the course_id/course_name from the scraper with our DB values
       const ridersWithDbInfo = scrapedRiders.map(r => ({
@@ -243,6 +253,7 @@ async function handleGlobalSync(supabase: any): Promise<{
     changes: allChanges,
     racesAnalyzed: courses.length,
     racesMatched,
+    coursesProcessed,
   };
 }
 
