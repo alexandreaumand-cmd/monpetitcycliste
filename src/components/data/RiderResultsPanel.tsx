@@ -96,12 +96,19 @@ export function RiderResultsPanel({
   };
 
   const getClassementLabel = (type: string, etape: number | null) => {
-    if (type === "GC" || type === "general") return "CG";
-    if (type === "stage" || type === "etape") return etape ? `Ét. ${etape}` : "Étape";
-    if (type === "points") return "Pts";
-    if (type === "mountain" || type === "kom") return "GPM";
-    if (type === "youth") return "Jeune";
-    return type;
+    let label = type;
+    if (type === "GC" || type === "general") label = "Général";
+    else if (type === "stage" || type === "etape") label = "Étape";
+    else if (type === "points") label = "Points";
+    else if (type === "mountain" || type === "kom") label = "GPM";
+    else if (type === "youth") label = "Jeune";
+    else if (type === "Porteur Leader") label = "Leader";
+    else if (type === "Porteur Vert") label = "Maillot Vert";
+    else if (type === "Porteur Pois") label = "Maillot Pois";
+    else if (type === "Porteur Blanc") label = "Maillot Blanc";
+
+    if (etape) label += ` ét.${etape}`;
+    return label;
   };
 
   return (
@@ -119,11 +126,11 @@ export function RiderResultsPanel({
               </SheetTitle>
             </div>
             <SheetDescription className="text-xs">
-              {data?.rider?.equipe && (
+              {data?.rider?.equipe && data.rider.equipe !== 'N/A' && (
                 <span>{data.rider.equipe} · </span>
               )}
               <span className="font-semibold text-foreground">
-                {data?.total ?? 0} pts
+                {Math.round(data?.total ?? 0)} pts
               </span>
             </SheetDescription>
           </SheetHeader>
@@ -153,7 +160,7 @@ export function RiderResultsPanel({
                     <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
                       <span className="text-sm font-semibold truncate">{courseName}</span>
                       <span className="text-xs font-bold text-primary ml-2 whitespace-nowrap">
-                        {courseTotal} pts
+                        {Math.round(courseTotal)} pts
                       </span>
                     </div>
                     <div className="divide-y">
@@ -163,7 +170,7 @@ export function RiderResultsPanel({
                           className="flex items-center justify-between px-3 py-1.5 text-sm"
                         >
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-xs text-muted-foreground w-10 shrink-0">
+                            <span className="text-xs text-muted-foreground shrink-0">
                               {getClassementLabel(row.type_classement, row.etape_numero)}
                             </span>
                             {getPositionBadge(row.position)}
@@ -178,7 +185,7 @@ export function RiderResultsPanel({
                               row.points > 0 ? "text-foreground" : "text-muted-foreground"
                             }`}
                           >
-                            {row.points > 0 ? `+${row.points}` : row.points}
+                            {row.points > 0 ? `+${Math.round(row.points)}` : Math.round(row.points)}
                           </span>
                         </div>
                       ))}
@@ -193,7 +200,7 @@ export function RiderResultsPanel({
                   <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
                     <span className="text-sm font-semibold">Bonus</span>
                     <span className="text-xs font-bold text-primary ml-2">
-                      {bonusRows.reduce((s, r) => s + r.points, 0)} pts
+                      {Math.round(bonusRows.reduce((s, r) => s + r.points, 0))} pts
                     </span>
                   </div>
                   <div className="divide-y">
@@ -206,7 +213,7 @@ export function RiderResultsPanel({
                           {row.type_classement}
                         </span>
                         <span className="text-xs font-semibold tabular-nums">
-                          +{row.points}
+                          +{Math.round(row.points)}
                         </span>
                       </div>
                     ))}
