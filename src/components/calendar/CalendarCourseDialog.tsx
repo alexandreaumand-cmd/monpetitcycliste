@@ -384,7 +384,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
                           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 px-1 border-b pb-1">
                             {team} <span className="text-muted-foreground/60">({entries.length})</span>
                           </div>
-                          <div className="grid grid-cols-2 gap-x-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
                             <div>
                               {col1.map((entry, idx) => (
                                 <RiderRow key={idx} entry={entry} />
