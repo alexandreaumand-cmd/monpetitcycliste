@@ -486,7 +486,7 @@ export const StartlistTracker = () => {
                               {run.source_type === "global" ? "Global" : "Course"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="max-w-[250px]">
+                          <TableCell className="max-w-[350px]">
                             {run.courses_processed && run.courses_processed.length > 0 ? (
                               <div className="flex flex-wrap gap-1">
                                 {run.courses_processed.map((name: string, i: number) => (
@@ -497,6 +497,15 @@ export const StartlistTracker = () => {
                               </div>
                             ) : (
                               <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                            {run.scrape_errors && (run.scrape_errors as any[]).length > 0 && (
+                              <div className="space-y-1 mt-2">
+                                {(run.scrape_errors as any[]).map((err: any, i: number) => (
+                                  <div key={i} className="text-[11px] text-destructive bg-destructive/10 rounded px-2 py-0.5">
+                                    <span className="font-medium">{err.course_name}</span>: {err.error}
+                                  </div>
+                                ))}
+                              </div>
                             )}
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm">
