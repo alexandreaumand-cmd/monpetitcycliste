@@ -1,91 +1,86 @@
 
 
-# Refonte du Startlist Tracker : approche directe avec matching existant
+## Objectif
 
-## Probleme constate
+Eviter d'envoyer des notifications push (et in-app) lorsqu'un resultat de course ou d'etape est **corrige** (modifie), tout en les envoyant normalement lors de la **premiere saisie**.
 
-Le tracker detecte de **faux retraits** pour l'UAE Tour (et potentiellement d'autres courses). Exemples concrets en LIVE :
-- `MUHLBERGER Gregor` detecte comme "removed" alors que `MUHLBERGER Gregor` est toujours sur PCS (accent `u` mal gere)
-- `Adam YATES` detecte comme "removed" car le nom en base est stocke dans un ordre different (`YATES Adam` sur PCS)
-- `PALENI Enzo`, `MEZGEC Luka`, `MILAN Matteo`, etc. : memes causes
+## Analyse du probleme
 
-**Cause racine** : Le tracker utilise une normalisation simpliste (ligne 588-593) qui supprime les caracteres speciaux et ne gere ni les accents (`o` pour `ø`, `u` pour `u`) ni l'ordre des mots. En parallele, il n'utilise pas la table `name_aliases` ni le matching multi-strategie deja presents dans `startlist-import`.
+Il y a **deux sources de notifications** a traiter :
 
-## Approche proposee
+1. **Notifications push** (Edge Function `admin-result-save-lot`) : la fonction envoie systematiquement des notifications push apres chaque sauvegarde de resultats de type "Etape" ou "General", sans verifier si c'est une premiere saisie ou une correction.
 
-Reprendre la methodologie suggeree : **lire PCS, comparer avec la startlist existante**, et agir directement :
+2. **Notifications in-app** (Trigger PostgreSQL `notify_results_added`) : le trigger se declenche sur chaque `INSERT` dans `race_results`. Comme la fonction `admin_result_save_lot` fait un `DELETE` puis un `INSERT`, le trigger se redeclenche a chaque correction.
+
+## Solution proposee
+
+### 1. Edge Function `admin-result-save-lot`
+
+Avant d'appeler la RPC de sauvegarde, verifier si des resultats existent deja pour ce (course_id, type_classement, etape_numero) via la table `race_result_sets` ou directement `race_results`. Si des resultats existent deja, c'est une correction : on saute l'envoi de notifications push.
 
 ```text
-Pour chaque course :
-  1. Scraper PCS --> liste de coureurs scraped[]
-  2. Charger startlist_entries existantes --> liste existing[]
-  3. Comparer avec tokenSig (normalisation robuste + tri alphabetique) :
-     - Coureur present dans les deux --> ne rien faire
-     - Coureur sur PCS mais absent en base --> AJOUTER (avec matching complet)
-     - Coureur en base mais absent de PCS --> RETIRER
-  4. Logger les changements dans startlist_tracker_changes (audit)
+Pseudo-code :
+1. Verifier si des race_results existent pour (course_id, type_classement, etape_numero)
+2. Stocker is_correction = true/false
+3. Appeler la RPC admin_result_save_lot (inchange)
+4. Si is_correction == false -> envoyer les notifications push
+5. Si is_correction == true -> log "Correction, pas de notification"
 ```
+
+### 2. Trigger PostgreSQL `notify_results_added`
+
+Meme logique : avant de creer la notification in-app, verifier si une notification pour cette meme course/etape/type a deja ete envoyee. On peut verifier l'existence d'une notification precedente dans la table `notifications`.
+
+```text
+Pseudo-code dans le trigger :
+1. Verifier si une notification 'results_added' existe deja
+   pour ce course_id + type_classement + etape_numero (via metadata)
+2. Si oui -> RETURN NEW sans inserer de notification
+3. Si non -> inserer la notification normalement
+```
+
+### 3. Edge Function `admin-stage-save-step`
+
+Ce endpoint ne gere pas de push notifications actuellement, mais il fait aussi un `DELETE` + `INSERT` qui declenche le trigger. La correction du trigger (point 2) couvrira ce cas automatiquement.
 
 ## Details techniques
 
-### 1. Remplacer la normalisation du tracker
+### Fichier 1 : `supabase/functions/admin-result-save-lot/index.ts`
 
-Remplacer la fonction `normalizeName` (lignes 360-368) et le `normalize` inline (lignes 588-593) par la version robuste deja utilisee dans `startlist-import` :
-- `CHAR_MAP` complet (o pour ø, u pour u, ss pour ß, etc.)
-- `tokenSig()` : normalisation + tri alphabetique des mots
+- Ajouter une requete avant l'appel RPC pour verifier l'existence de resultats :
+  ```typescript
+  const { count } = await supabaseService
+    .from('race_results')
+    .select('id', { count: 'exact', head: true })
+    .eq('course_id', p_course_id)
+    .eq('type_classement', p_type_classement)
+    .eq('etape_numero', p_etape_numero); // ou .is('etape_numero', null)
+  
+  const isCorrection = (count || 0) > 0;
+  ```
+- Entourer tout le bloc d'envoi push (lignes 78-305) d'une condition `if (!isCorrection)`
 
-Cela garantit que `"YATES Adam"` et `"Adam YATES"` produisent la meme cle (`"ADAM YATES"`), et que `"MUHLBERGER"` et `"MUHLBERGER"` sont identiques.
+### Fichier 2 : Migration SQL (nouveau fichier)
 
-### 2. Refondre `generateFullSyncChanges` en approche directe
+- Modifier la fonction `notify_results_added()` pour verifier si une notification in-app a deja ete envoyee pour la meme combinaison course + type + etape :
+  ```sql
+  -- Verifier si une notification existe deja pour ce resultat
+  IF EXISTS (
+    SELECT 1 FROM notifications
+    WHERE type = 'results_added'
+    AND metadata->>'course_id' = NEW.course_id
+    AND metadata->>'type_classement' = NEW.type_classement::text
+    AND (
+      (NEW.etape_numero IS NULL AND (metadata->>'etape_numero') IS NULL)
+      OR metadata->>'etape_numero' = NEW.etape_numero::text
+    )
+    LIMIT 1
+  ) THEN
+    RETURN NEW; -- Correction, pas de nouvelle notification
+  END IF;
+  ```
 
-La fonction actuelle (lignes 511-660) sera simplifiee :
+### Fichier 3 : `supabase/functions/admin-import-race-results-csv/index.ts`
 
-- Charger les `startlist_entries` existantes avec leur `coureur_id` et `coureurs.nom`
-- Construire un `Set` de cles tokenSig pour les coureurs scraped
-- Construire un `Map<tokenSig, entryId>` pour les entries existantes (en utilisant a la fois `source_name` et `coureurs.nom`)
-- **Additions** : pour chaque coureur scraped dont la cle n'est pas dans la map existante, marquer comme ajout
-- **Retraits** : pour chaque entry existante dont la cle n'est ni dans les scraped NI deja couverte par un autre entry avec la meme cle, marquer comme retrait
-
-### 3. Utiliser le matching complet pour les ajouts
-
-Pour chaque coureur a ajouter, reutiliser la meme logique que `startlist-import` :
-1. Consulter `name_aliases` (priorite maximale)
-2. Match exact normalise sur le roster
-3. Match par `tokenSig` (roster puis off-roster)
-4. Match fuzzy Levenshtein (roster puis off-roster)
-
-Les donnees necessaires (roster riders, all riders, aliases) seront chargees une seule fois par course.
-
-### 4. Agir directement sur `startlist_entries`
-
-Au lieu du flux actuel en 2 etapes (generer des changes puis les traiter dans `processChanges`), agir directement :
-- **Ajout** : inserer dans `startlist_entries` avec le `coureur_id` trouve
-- **Retrait** : supprimer de `startlist_entries` (avec cascade manuelle sur `startlist_tracker_changes` comme dans la suppression manuelle existante)
-- **Logger** : inserer dans `startlist_tracker_changes` pour l'audit avec un statut `validated` immediat
-
-### 5. Simplifier `processChanges`
-
-Cette fonction (lignes 662-900) sera fortement reduite ou supprimee car le traitement se fera directement dans la boucle de comparaison. Plus besoin de re-rechercher la course, re-matcher le coureur, etc.
-
-### 6. Nettoyage des faux changements en LIVE
-
-Apres deploiement, les ~20 faux changements "pending" pour UAE Tour pourront etre marques comme `skipped` via une requete SQL :
-
-```sql
-UPDATE startlist_tracker_changes
-SET validation_status = 'skipped', processed = true
-WHERE course_name = 'UAE Tour'
-AND validation_status = 'pending';
-```
-
-## Fichiers modifies
-
-- `supabase/functions/startlist-tracker/index.ts` : refonte de la normalisation, du flux de comparaison et de la logique de traitement
-
-## Benefices
-
-- **Pas de faux positifs** : meme normalisation robuste que l'import manuel
-- **Aliases supportes** : les coureurs avec des noms ambigus sont reconnus
-- **Code simplifie** : une seule passe au lieu de deux etapes distinctes
-- **Moins de requetes DB** : les donnees de matching sont chargees une fois par course, pas une fois par coureur
+- Meme logique que pour `admin-result-save-lot` : verifier si des resultats existent avant d'envoyer les push notifications.
 
