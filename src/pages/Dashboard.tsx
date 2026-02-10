@@ -27,6 +27,7 @@ import { LeagueDetailPage } from "./admin/LeagueDetailPage";
 import { SuperAdminPage } from "./SuperAdminPage";
 import { SuperAdminGuard } from "@/components/guards/SuperAdminGuard";
 import ArenaPage from "./ArenaPage";
+import TeamStartlistMovements from "./TeamStartlistMovements";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -112,6 +113,7 @@ const Dashboard = () => {
             <Route path="calendar" element={<CalendarPage />} />
             <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
             <Route path="mon-equipe" element={<MyTeam />} />
+            <Route path="mon-equipe/mouvements" element={<TeamStartlistMovements />} />
             <Route path="courses" element={<UpcomingCourses />} />
             <Route path="resultats" element={<ResultsPage />} />
             <Route path="classement" element={<Rankings />} />
@@ -168,6 +170,7 @@ const Dashboard = () => {
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="encheres" element={manager && <AuctionsList managerId={manager.id} />} />
               <Route path="mon-equipe" element={<MyTeam />} />
+              <Route path="mon-equipe/mouvements" element={<TeamStartlistMovements />} />
               <Route path="courses" element={<UpcomingCourses />} />
               <Route path="resultats" element={<ResultsPage />} />
               <Route path="classement" element={<Rankings />} />

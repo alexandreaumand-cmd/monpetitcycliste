@@ -26,7 +26,9 @@ import {
   Star,
   Eye,
   Users,
+  ArrowRightLeft,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
@@ -71,6 +73,7 @@ interface Manager {
 
 export const MyTeamMobile = () => {
   const { t } = useTranslation('team');
+  const navigate = useNavigate();
   const { phases, activePhase, selectedSeason } = useSeasonContext();
   const { leagueId, isLoading: leagueLoading } = useLeague();
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
@@ -468,6 +471,15 @@ export const MyTeamMobile = () => {
             <Star className="h-5 w-5" />
           </Button>
         )}
+        <Button variant="ghost" size="icon" onClick={() => {
+          const mId = selectedManagerId || currentUserId;
+          const mName = selectedManagerId && selectedManagerId !== currentUserId
+            ? managers.find(m => m.id === selectedManagerId)?.nom || ''
+            : t('myTeam');
+          navigate(`/dashboard/mon-equipe/mouvements?managerId=${mId}&phaseId=${selectedPhaseId}&leagueId=${leagueId}&managerName=${encodeURIComponent(mName)}`);
+        }}>
+          <ArrowRightLeft className="h-5 w-5" />
+        </Button>
       </div>
 
       {/* Coureurs list */}

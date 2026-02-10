@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt, Star, ArrowUp, ArrowDown, Award, Eye, Users } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt, Star, ArrowUp, ArrowDown, Award, Eye, Users, ArrowRightLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -76,6 +77,7 @@ interface Manager {
 export const MyTeamDesktop = () => {
   const { t } = useTranslation('team');
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { phases, activePhase, selectedSeason } = useSeasonContext();
   const { leagueId, isLoading: leagueLoading } = useLeague();
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
@@ -619,6 +621,20 @@ export const MyTeamDesktop = () => {
               title="Vue d'ensemble des effectifs"
             >
               <Users className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={() => {
+                const mId = selectedManagerId || currentUserId;
+                const mName = selectedManagerId && selectedManagerId !== currentUserId
+                  ? managers.find(m => m.id === selectedManagerId)?.nom || ''
+                  : t('myTeam');
+                navigate(`/dashboard/mon-equipe/mouvements?managerId=${mId}&phaseId=${selectedPhaseId}&leagueId=${leagueId}&managerName=${encodeURIComponent(mName)}`);
+              }}
+              variant="outline"
+              size="sm"
+              title="Mouvements startlists"
+            >
+              <ArrowRightLeft className="h-4 w-4" />
             </Button>
           </div>
         </div>
