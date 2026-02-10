@@ -389,9 +389,11 @@ async function handleGlobalSync(supabase: any): Promise<{
   const validatedRaceIds = new Set((validatedImports || []).map((si: any) => si.race_id));
   console.log(`Excluding ${validatedRaceIds.size} courses with validated startlists`);
 
+  const today = now.toISOString().split("T")[0];
+
   const { data: allCourses, error: coursesError } = await supabase
     .from("courses")
-    .select("id, nom, pcs_slug, date_debut, last_tracker_check, phase_id")
+    .select("id, nom, pcs_slug, date_debut, date_fin, last_tracker_check, phase_id")
     .gte("date_debut", threeDaysAgo.toISOString().split("T")[0])
     .lte("date_debut", sixWeeksLater.toISOString().split("T")[0])
     .or(`last_tracker_check.is.null,last_tracker_check.lt.${recheckCutoff.toISOString()}`)
@@ -400,7 +402,14 @@ async function handleGlobalSync(supabase: any): Promise<{
 
   if (coursesError) throw coursesError;
 
-  const courses = (allCourses || []).filter((c: any) => !validatedRaceIds.has(c.id)).slice(0, MAX_COURSES_PER_RUN);
+  // Exclude courses whose end date is in the past (already finished)
+  const courses = (allCourses || [])
+    .filter((c: any) => !validatedRaceIds.has(c.id))
+    .filter((c: any) => {
+      const endDate = c.date_fin || c.date_debut;
+      return endDate >= today;
+    })
+    .slice(0, MAX_COURSES_PER_RUN);
 
   if (!courses || courses.length === 0) {
     console.log("No courses need checking right now");
