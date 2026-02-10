@@ -153,17 +153,50 @@ async function sendDailyRecap(
       .maybeSingle();
 
     if (leagueScope?.season_id) {
+      // Determine the active phase for this season
+      const { data: phases } = await supabase
+        .from("phases")
+        .select("id, date_debut, date_fin, index_dans_saison")
+        .eq("saison_id", leagueScope.season_id)
+        .order("index_dans_saison", { ascending: true });
+
+      let activePhaseId: string | null = null;
+      if (phases && phases.length > 0) {
+        const todayDate = today.toISOString().split("T")[0];
+        const currentPhase = phases.find((p: any) => p.date_debut <= todayDate && todayDate <= p.date_fin);
+        if (currentPhase) {
+          activePhaseId = currentPhase.id;
+        } else {
+          const nextPhase = phases.find((p: any) => p.date_debut > todayDate);
+          activePhaseId = nextPhase ? nextPhase.id : phases[phases.length - 1].id;
+        }
+      }
+
       // Get startlist changes detected today
       const { data: changes } = await supabase
         .from("startlist_tracker_changes")
-        .select("coureur_id, rider_name, team_name, course_name, change_type")
+        .select("coureur_id, rider_name, team_name, course_name, change_type, course_id")
         .gte("detected_at", startIso)
         .lte("detected_at", endIso)
         .not("coureur_id", "is", null);
 
-      if (changes && changes.length > 0) {
+      if (changes && changes.length > 0 && activePhaseId) {
+        // Filter to only courses belonging to the active phase
+        const changeCourseIds = [...new Set(changes.map((c: any) => c.course_id).filter(Boolean))];
+        let activeCoursesSet = new Set<string>();
+        if (changeCourseIds.length > 0) {
+          const { data: coursesInPhase } = await supabase
+            .from("courses")
+            .select("id")
+            .eq("phase_id", activePhaseId)
+            .in("id", changeCourseIds);
+          activeCoursesSet = new Set((coursesInPhase || []).map((c: any) => c.id));
+        }
+        const phaseFilteredChanges = changes.filter((c: any) => activeCoursesSet.has(c.course_id));
+
+      if (phaseFilteredChanges.length > 0) {
         // Get coureur_ids with prix_initial >= 50 for this season
-        const coureurIds = [...new Set(changes.map((c: any) => c.coureur_id))];
+        const coureurIds = [...new Set(phaseFilteredChanges.map((c: any) => c.coureur_id))];
         const { data: csData } = await supabase
           .from("coureurs_saisons")
           .select("coureur_id, prix_initial")
@@ -172,7 +205,7 @@ async function sendDailyRecap(
           .gte("prix_initial", 50);
 
         const eligibleIds = new Set((csData || []).map((cs: any) => cs.coureur_id));
-        const filteredChanges = changes.filter((c: any) => eligibleIds.has(c.coureur_id));
+        const filteredChanges = phaseFilteredChanges.filter((c: any) => eligibleIds.has(c.coureur_id));
 
         if (filteredChanges.length > 0) {
           // Get roster ownership for these coureurs in this league
@@ -210,6 +243,7 @@ async function sendDailyRecap(
             ...c,
             ownerName: coureurOwnerMap[c.coureur_id] || null,
           }));
+        }
         }
       }
     }
