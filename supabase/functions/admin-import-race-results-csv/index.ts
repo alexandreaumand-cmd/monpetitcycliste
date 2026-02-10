@@ -192,10 +192,13 @@ Deno.serve(async (req) => {
 
     // Send ONE push notification per course (not per type_classement)
     // Only for Etape and General types (not jersey wearers)
+    // Only on FIRST entry, not on corrections
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseServiceClient = (supabaseUrl && serviceRoleKey) 
+      ? createClient(supabaseUrl, serviceRoleKey) : null;
     
-    if (supabaseUrl && serviceRoleKey) {
+    if (supabaseUrl && serviceRoleKey && supabaseServiceClient) {
       for (const courseId of courseIds) {
         try {
           // Check if this course has any Etape or General results in the import
@@ -206,6 +209,45 @@ Deno.serve(async (req) => {
           
           if (relevantResults.length === 0) {
             console.log(`[admin-import-race-results-csv] Skipping push for ${courseId} - no Etape/General results`);
+            continue;
+          }
+
+          // Check if results already existed for this course (correction detection)
+          // Use the first relevant result's type/etape to check
+          const etapeResult = relevantResults.find(r => r.type_classement === 'Etape');
+          const gcResult = relevantResults.find(r => r.type_classement === 'General' || r.type_classement === 'GC');
+          const checkType = etapeResult ? 'Etape' : 'General';
+          const checkEtape = etapeResult?.etape_numero || null;
+
+          let checkQuery = supabaseServiceClient
+            .from('race_results')
+            .select('id', { count: 'exact', head: true })
+            .eq('course_id', courseId)
+            .eq('type_classement', checkType);
+
+          if (checkEtape) {
+            checkQuery = checkQuery.eq('etape_numero', checkEtape);
+          } else {
+            checkQuery = checkQuery.is('etape_numero', null);
+          }
+
+          // Note: we check AFTER insert, but since this is a fresh insert (no delete/re-insert),
+          // results will exist. We need to check count > number of imported results for this combo.
+          // Actually, for CSV import, results are INSERTED (not delete+insert), so if count > 0 
+          // BEFORE insert it was a correction. But we already inserted... 
+          // We need to check if results existed BEFORE the insert.
+          // Since we already inserted, we compare: if count > number of results we just inserted, 
+          // there were pre-existing results.
+          const importedCountForCombo = relevantResults.filter(
+            r => r.course_id === courseId && r.type_classement === checkType && 
+            (checkEtape ? r.etape_numero === checkEtape : !r.etape_numero)
+          ).length;
+
+          const { count: currentCount } = await checkQuery;
+          const isCorrection = (currentCount || 0) > importedCountForCombo;
+
+          if (isCorrection) {
+            console.log(`[admin-import-race-results-csv] Skipping push for ${courseId} - correction detected (existing=${currentCount}, imported=${importedCountForCombo})`);
             continue;
           }
           

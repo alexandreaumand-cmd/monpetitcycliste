@@ -64,6 +64,26 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Check if results already exist (correction vs first entry) BEFORE saving
+    let isCorrection = false;
+    {
+      let checkQuery = supabaseService
+        .from('race_results')
+        .select('id', { count: 'exact', head: true })
+        .eq('course_id', p_course_id)
+        .eq('type_classement', p_type_classement);
+
+      if (p_etape_numero) {
+        checkQuery = checkQuery.eq('etape_numero', p_etape_numero);
+      } else {
+        checkQuery = checkQuery.is('etape_numero', null);
+      }
+
+      const { count } = await checkQuery;
+      isCorrection = (count || 0) > 0;
+      console.log(`[admin-result-save-lot] isCorrection=${isCorrection} (existing count=${count}) for ${p_course_id}/${p_type_classement}/${p_etape_numero}`);
+    }
+
     // Call the database function with user context (RPC checks auth.uid())
     const { data, error } = await supabaseWithAuth.rpc('admin_result_save_lot', {
       p_course_id,
@@ -75,7 +95,8 @@ Deno.serve(async (req) => {
     if (error) throw error;
 
     // Send personalized push notifications for Etape or General results
-    if (p_type_classement === 'Etape' || p_type_classement === 'General') {
+    // ONLY on first entry, not on corrections
+    if (!isCorrection && (p_type_classement === 'Etape' || p_type_classement === 'General')) {
       try {
         // Get course name
         const { data: courseData } = await supabaseService
