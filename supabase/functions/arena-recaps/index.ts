@@ -142,17 +142,93 @@ async function sendDailyRecap(
     .filter((e) => e.total !== 0)
     .sort((a, b) => b.total - a.total);
 
-  if (entries.length === 0) {
-    console.log(`No points today for league ${league.name}, skipping daily recap`);
+  // Get startlist movements for today (coureurs with prix_initial >= 50)
+  let startlistChanges: any[] = [];
+  try {
+    // Get the season_id for this league
+    const { data: leagueScope } = await supabase
+      .from("league_scopes")
+      .select("season_id")
+      .eq("league_id", league.id)
+      .maybeSingle();
+
+    if (leagueScope?.season_id) {
+      // Get startlist changes detected today
+      const { data: changes } = await supabase
+        .from("startlist_tracker_changes")
+        .select("coureur_id, rider_name, team_name, course_name, change_type")
+        .gte("detected_at", startIso)
+        .lte("detected_at", endIso)
+        .not("coureur_id", "is", null);
+
+      if (changes && changes.length > 0) {
+        // Get coureur_ids with prix_initial >= 50 for this season
+        const coureurIds = [...new Set(changes.map((c: any) => c.coureur_id))];
+        const { data: csData } = await supabase
+          .from("coureurs_saisons")
+          .select("coureur_id, prix_initial")
+          .eq("saison_id", leagueScope.season_id)
+          .in("coureur_id", coureurIds)
+          .gte("prix_initial", 50);
+
+        const eligibleIds = new Set((csData || []).map((cs: any) => cs.coureur_id));
+        const filteredChanges = changes.filter((c: any) => eligibleIds.has(c.coureur_id));
+
+        if (filteredChanges.length > 0) {
+          // Get roster ownership for these coureurs in this league
+          const filteredCoureurIds = [...new Set(filteredChanges.map((c: any) => c.coureur_id))];
+          const { data: rosterData } = await supabase
+            .from("rosters")
+            .select("coureur_id, manager_id")
+            .eq("league_id", league.id)
+            .in("coureur_id", filteredCoureurIds);
+
+          // Get manager names for owners
+          const ownerManagerIds = [...new Set((rosterData || []).map((r: any) => r.manager_id))];
+          let ownerManagerMap: Record<string, string> = {};
+          if (ownerManagerIds.length > 0) {
+            const { data: ownerManagers } = await supabase
+              .from("managers")
+              .select("id, nom")
+              .in("id", ownerManagerIds);
+            if (ownerManagers) {
+              for (const m of ownerManagers) {
+                ownerManagerMap[m.id] = m.nom;
+              }
+            }
+          }
+
+          // Build coureur -> manager name map
+          const coureurOwnerMap: Record<string, string> = {};
+          if (rosterData) {
+            for (const r of rosterData) {
+              coureurOwnerMap[r.coureur_id] = ownerManagerMap[r.manager_id] || "Inconnu";
+            }
+          }
+
+          startlistChanges = filteredChanges.map((c: any) => ({
+            ...c,
+            ownerName: coureurOwnerMap[c.coureur_id] || null,
+          }));
+        }
+      }
+    }
+  } catch (slErr) {
+    console.error(`Error fetching startlist changes for ${league.name}:`, slErr);
+  }
+
+  // Skip recap if no points AND no startlist movements
+  if (entries.length === 0 && startlistChanges.length === 0) {
+    console.log(`No points and no startlist changes today for league ${league.name}, skipping daily recap`);
     return false;
   }
 
-  // Get manager names
+  // Get manager names for points entries
   const managerIds = entries.map((e) => e.managerId);
   const { data: managers } = await supabase
     .from("managers")
     .select("id, nom")
-    .in("id", managerIds);
+    .in("id", managerIds.length > 0 ? managerIds : ["00000000-0000-0000-0000-000000000000"]);
 
   const managerMap: Record<string, string> = {};
   if (managers) {
@@ -178,16 +254,18 @@ async function sendDailyRecap(
   const medals = ["🥇", "🥈", "🥉"];
 
   // Daily point changes
-  lines.push("**Mouvements du jour :**");
-  entries.forEach((entry, i) => {
-    const name = managerMap[entry.managerId] || "Inconnu";
-    const medal = i < 3 ? medals[i] : "▪️";
-    const sign = entry.total > 0 ? "+" : "";
-    lines.push(`${medal} ${name}: ${sign}${entry.total} pts`);
-  });
+  if (entries.length > 0) {
+    lines.push("**Mouvements du jour :**");
+    entries.forEach((entry, i) => {
+      const name = managerMap[entry.managerId] || "Inconnu";
+      const medal = i < 3 ? medals[i] : "▪️";
+      const sign = entry.total > 0 ? "+" : "";
+      lines.push(`${medal} ${name}: ${sign}${entry.total} pts`);
+    });
+  }
 
   // Current standings with gaps
-  if (standingsData && standingsData.length > 0) {
+  if (entries.length > 0 && standingsData && standingsData.length > 0) {
     lines.push("");
     lines.push("**📈 Classement général :**");
     const leader = standingsData[0];
@@ -196,6 +274,24 @@ async function sendDailyRecap(
       const rankEmoji = i < 3 ? medals[i] : `${i + 1}.`;
       lines.push(`${rankEmoji} ${entry.manager_nom}: ${entry.total_points} pts${gap}`);
     });
+  }
+
+  // Startlist movements
+  if (startlistChanges.length > 0) {
+    lines.push("");
+    lines.push("**🔄 Mouvements startlists :**");
+    // Sort: added first, then removed
+    const sorted = startlistChanges.sort((a: any, b: any) => {
+      if (a.change_type === b.change_type) return 0;
+      return a.change_type === "added" ? -1 : 1;
+    });
+    for (const change of sorted) {
+      const emoji = change.change_type === "added" ? "➕" : "➖";
+      const team = change.team_name ? ` (${change.team_name})` : "";
+      const course = change.course_name || "?";
+      const owner = change.ownerName ? `Manager: ${change.ownerName}` : "Libre";
+      lines.push(`${emoji} ${change.rider_name}${team} → ${course} — ${owner}`);
+    }
   }
 
   const content = lines.join("\n");
