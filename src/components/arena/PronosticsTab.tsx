@@ -47,7 +47,9 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
           p.pronostic_type === d.pronostic_type &&
           p.etape_numero === d.etape_numero
       );
-      if (prono?.is_correct !== null && prono?.is_correct !== undefined) {
+      // If user has no pronostic, or pronostic has been evaluated → evaluated
+      // Only "pending" if user HAS a pronostic that hasn't been evaluated yet
+      if (!prono || (prono.is_correct !== null && prono.is_correct !== undefined)) {
         evaluated.push(d);
       } else {
         pending.push(d);
