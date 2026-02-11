@@ -196,6 +196,34 @@ All colors MUST be HSL.
     display: none;
   }
 
+  /* Pulse energy CTA animation */
+  .pulse-energy {
+    animation: pulse-energy 2.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-energy {
+    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
+    50% { box-shadow: 0 0 20px 6px hsl(var(--primary) / 0.25); }
+  }
+
+  /* Speed lines animations */
+  .speed-line-left {
+    background: linear-gradient(to bottom, transparent, hsl(0 0% 100% / 0.3), transparent);
+    animation: speed-line-move 0.8s linear infinite;
+    filter: blur(2px);
+  }
+
+  .speed-line-right {
+    background: linear-gradient(to bottom, transparent, hsl(0 0% 100% / 0.3), transparent);
+    animation: speed-line-move 0.6s linear infinite reverse;
+    filter: blur(2px);
+  }
+
+  @keyframes speed-line-move {
+    0% { transform: translateY(100%); }
+    100% { transform: translateY(-100%); }
+  }
+
   /* Tour de France Utilities EXTENDED */
   .tdf-yellow-bg {
     background-color: hsl(var(--tdf-yellow));
