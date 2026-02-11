@@ -1,60 +1,30 @@
 
-# Correction des contrastes en mode sombre
 
-## Probleme identifie
+# Restaurer le Startlist Tracker en Live
 
-Les composants UI de base (Button, Badge) et plusieurs composants metier utilisent des couleurs codees en dur (`text-black`, `border-black`, `bg-black`) qui ne s'adaptent pas au mode sombre. Resultat : texte noir invisible sur fond sombre.
+## Diagnostic
 
-Le probleme principal visible sur la capture est le combobox de selection de coureur dont le texte est quasi-invisible en dark mode.
+Le cron job `startlist-tracker-sync` fonctionne correctement toutes les 5 minutes (confirme par `cron.job_run_details` et `net._http_response`). La fonction edge s'execute, traite des courses, et retourne des `run_id` valides. **Mais ces `run_id` n'existent pas dans la base Live** -- la fonction ecrit dans un environnement different depuis son redeploiement automatique (cause par les corrections dark mode).
 
-## Fichiers a modifier
+## Plan de correction
 
-### 1. `src/components/ui/button.tsx` -- Composant critique
+### Etape 1 : Corriger l'erreur de build (bloquante pour la publication)
 
-Remplacer les couleurs codees en dur par des variantes dark-mode-aware :
+**Fichier** : `src/hooks/usePushNotifications.ts`
 
-| Variant | Avant | Apres |
-|---------|-------|-------|
-| `default` | `text-black` | `text-black` (OK, sur fond jaune) |
-| `outline` | `border-2 border-black text-black hover:bg-black` | `border-2 border-foreground text-foreground hover:bg-foreground hover:text-background` |
-| `ghost` | `hover:bg-yellow-50 hover:text-black` | `hover:bg-accent hover:text-accent-foreground` |
-| `link` | `text-black` | `text-foreground` |
+Le type TypeScript de `ServiceWorkerRegistration` ne reconnait pas `pushManager`. Il faut ajouter un cast `as any` ou une declaration de type aux 4 endroits (lignes 91, 154, 234, 274).
 
-### 2. `src/components/ui/badge.tsx` -- Composant critique
+### Etape 2 : Publier le projet
 
-| Variant | Avant | Apres |
-|---------|-------|-------|
-| `outline` | `border-black` | `border-foreground` |
-| `secondary` | `bg-black` | OK (noir avec texte jaune, marche en dark) |
+Une fois le build corrige, publier le projet. Cela synchronisera la fonction edge `startlist-tracker` vers l'environnement Live, afin qu'elle ecrive a nouveau dans la bonne base de donnees.
 
-### 3. `src/components/arena/PronosticStartlistCombobox.tsx`
+### Etape 3 : Verification
 
-Le composant combobox utilise un bouton `variant="outline"` qui herite du probleme du Button. La correction du Button le corrigera automatiquement. Verifier aussi l'input de recherche interne.
-
-### 4. `src/components/arena/PronosticRaceCard.tsx`
-
-Aucun changement direct necessaire : les couleurs utilisent `text-muted-foreground`, `text-primary`, etc. qui sont deja dark-mode-aware.
-
-### 5. `src/components/dashboard/LeagueCard.tsx`
-
-Plusieurs instances de `text-black` codees en dur dans les badges et boutons inline. Remplacer par `text-foreground` ou garder `text-black` quand sur fond jaune.
-
-### 6. `src/components/mobile/MobileBottomBar.tsx`
-
-Le `text-black` sur fond jaune pour l'etat actif est correct. Le `text-gray-400` pour inactif est OK en dark.
-
-### 7. `src/index.css`
-
-Les classes utilitaires `.btn-tdf` et `.btn-tdf-inverse` utilisent `text-black` -- a corriger quand sur fond non-jaune.
-
-## Regle de correction
-
-- `text-black` sur fond jaune (`bg-[#FFD500]`) : **garder** (le noir sur jaune est toujours lisible)
-- `text-black` sur fond generique : **remplacer** par `text-foreground`
-- `border-black` decoratif : **remplacer** par `border-foreground` ou `border-border`
-- `hover:bg-black` : **remplacer** par `dark:hover:bg-white/10` ou equivalent
-- `bg-black` pour secondary : OK (design intentionnel noir/jaune)
+Apres publication, verifier que les nouvelles executions apparaissent bien dans l'historique du Startlist Tracker (onglet "Historique") dans les 5 minutes suivantes.
 
 ## Details techniques
 
-Les modifications sont concentrees sur 3-4 fichiers. Les composants `button.tsx` et `badge.tsx` ont l'impact le plus large car utilises partout. La correction de `LeagueCard.tsx` necessite un audit ligne par ligne pour distinguer les `text-black` sur fond jaune (corrects) des autres.
+- La correction de `pushManager` utilise un cast `(registration as any).pushManager` pour contourner le type TypeScript incomplet
+- Aucune modification de la fonction edge `startlist-tracker` elle-meme n'est necessaire
+- Le cron job en base Live n'a pas besoin d'etre touche -- il fonctionne deja
+
