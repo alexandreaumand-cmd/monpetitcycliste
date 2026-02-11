@@ -257,6 +257,6 @@ All colors MUST be HSL.
 
   /* Bouton noir inversé */
   .btn-tdf-inverse {
-    @apply bg-black text-[#FFD500] font-poppins font-semibold hover:bg-gray-900 border-2 border-yellow-500 transition-all;
+    @apply bg-black text-[#FFD500] font-poppins font-semibold hover:bg-gray-900 border-2 border-foreground transition-all;
   }
 }

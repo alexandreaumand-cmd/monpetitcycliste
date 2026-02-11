@@ -165,7 +165,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
             {isAdmin && (
               <Button 
                 onClick={() => setInvitesSheetOpen(true)}
-                className="w-full bg-[#FFD500] text-black border-2 border-black font-montserrat font-semibold hover:bg-yellow-400 gap-2"
+                className="w-full bg-[#FFD500] text-black border-2 border-foreground font-montserrat font-semibold hover:bg-yellow-400 gap-2"
               >
                 <UserPlus className="h-4 w-4" />
                 {t('leagueCard.invitePlayers')}
