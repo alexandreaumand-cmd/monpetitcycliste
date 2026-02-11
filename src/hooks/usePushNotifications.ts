@@ -88,7 +88,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       try {
         // Get browser subscription info for debug
         const registration = await navigator.serviceWorker.ready;
-        const browserSub = await registration.pushManager.getSubscription();
+        const browserSub = await (registration as any).pushManager.getSubscription();
         
         setDebugInfo({
           endpoint: browserSub?.endpoint || null,
@@ -151,7 +151,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       
       // Subscribe to push notifications
       const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-      const pushSubscription = await registration.pushManager.subscribe({
+      const pushSubscription = await (registration as any).pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: applicationServerKey.buffer as ArrayBuffer
       });
@@ -231,7 +231,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     try {
       // Get service worker registration
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await (registration as any).pushManager.getSubscription();
       
       if (subscription) {
         await subscription.unsubscribe();
@@ -271,7 +271,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       
       // 1. Unsubscribe from browser push
       const registration = await navigator.serviceWorker.ready;
-      const existingSub = await registration.pushManager.getSubscription();
+      const existingSub = await (registration as any).pushManager.getSubscription();
       if (existingSub) {
         console.log('[Push] Unsubscribing existing browser subscription');
         await existingSub.unsubscribe();
