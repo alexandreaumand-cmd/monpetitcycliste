@@ -230,8 +230,8 @@ serve(async (req) => {
     // Handle list_courses separately (no run record needed)
     if (source_type === "list_courses") {
       const now = new Date();
-      const sixWeeksLater = new Date(now);
-      sixWeeksLater.setDate(sixWeeksLater.getDate() + 42);
+      const twelveWeeksLater = new Date(now);
+      twelveWeeksLater.setDate(twelveWeeksLater.getDate() + 84);
       const threeDaysAgo = new Date(now);
       threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
@@ -239,7 +239,7 @@ serve(async (req) => {
         .from("courses")
         .select("id, nom, pcs_slug, date_debut, last_tracker_check")
         .gte("date_debut", threeDaysAgo.toISOString().split("T")[0])
-        .lte("date_debut", sixWeeksLater.toISOString().split("T")[0])
+        .lte("date_debut", twelveWeeksLater.toISOString().split("T")[0])
         .order("date_debut", { ascending: true });
 
       const coursesList = (allCourses || []).map((c: any) => {
@@ -371,14 +371,14 @@ async function handleGlobalSync(supabase: any): Promise<{
   scrapeErrors: { course_id: string; course_name: string; url_tried: string; error: string }[];
 }> {
   const now = new Date();
-  const sixWeeksLater = new Date(now);
-  sixWeeksLater.setDate(sixWeeksLater.getDate() + 42);
+  const twelveWeeksLater = new Date(now);
+  twelveWeeksLater.setDate(twelveWeeksLater.getDate() + 84);
   const threeDaysAgo = new Date(now);
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
   const recheckCutoff = new Date(now);
   recheckCutoff.setHours(recheckCutoff.getHours() - RECHECK_INTERVAL_HOURS);
 
-  console.log(`Global sync: looking for courses from ${threeDaysAgo.toISOString().split("T")[0]} to ${sixWeeksLater.toISOString().split("T")[0]}`);
+  console.log(`Global sync: looking for courses from ${threeDaysAgo.toISOString().split("T")[0]} to ${twelveWeeksLater.toISOString().split("T")[0]}`);
 
   // Fetch race IDs that have a validated startlist to exclude
   const { data: validatedImports } = await supabase
@@ -395,7 +395,7 @@ async function handleGlobalSync(supabase: any): Promise<{
     .from("courses")
     .select("id, nom, pcs_slug, date_debut, date_fin, last_tracker_check, phase_id")
     .gte("date_debut", threeDaysAgo.toISOString().split("T")[0])
-    .lte("date_debut", sixWeeksLater.toISOString().split("T")[0])
+    .lte("date_debut", twelveWeeksLater.toISOString().split("T")[0])
     .or(`last_tracker_check.is.null,last_tracker_check.lt.${recheckCutoff.toISOString()}`)
     .order("last_tracker_check", { ascending: true, nullsFirst: true })
     .limit(MAX_COURSES_PER_RUN * 3);
