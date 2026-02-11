@@ -67,7 +67,7 @@ export const MobileCard = ({
       
       {expandedContent && (
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-          <div className="pt-3 mt-3 border-t border-gray-100">
+          <div className="pt-3 mt-3 border-t border-border">
             {expandedContent}
           </div>
         </CollapsibleContent>
@@ -78,11 +78,11 @@ export const MobileCard = ({
   if (onClick && expandedContent) {
     return (
       <Collapsible open={expanded}>
-        <Card className={cn("rounded-2xl p-3 shadow-sm w-full border border-gray-200", className)}>
+        <Card className={cn("rounded-2xl p-3 shadow-sm w-full border border-border", className)}>
           <CollapsibleTrigger asChild>
             <div
               className={cn(
-                "cursor-pointer hover:bg-yellow-50 hover:border-yellow-500 active:scale-[0.98] transition-all touch-target",
+                "cursor-pointer hover:bg-accent hover:border-primary active:scale-[0.98] transition-all touch-target",
                 "w-full -m-3 p-3 rounded-2xl"
               )}
               onClick={onClick}
@@ -122,7 +122,7 @@ export const MobileCard = ({
           </CollapsibleTrigger>
           
           <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-            <div className="pt-3 border-t border-gray-100">
+            <div className="pt-3 border-t border-border">
               {expandedContent}
             </div>
           </CollapsibleContent>
@@ -135,8 +135,8 @@ export const MobileCard = ({
     return (
       <Card
         className={cn(
-          "rounded-2xl p-3 shadow-sm w-full border border-gray-200",
-          "cursor-pointer hover:bg-yellow-50 hover:border-yellow-500 active:scale-[0.98] transition-all touch-target",
+          "rounded-2xl p-3 shadow-sm w-full border border-border",
+          "cursor-pointer hover:bg-accent hover:border-primary active:scale-[0.98] transition-all touch-target",
           className
         )}
         onClick={onClick}

@@ -11,7 +11,7 @@ const buttonVariants = cva(
       variant: {
         default: "bg-[#FFD500] text-black hover:bg-yellow-400 shadow-md hover:shadow-lg font-poppins font-semibold",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border-2 border-foreground text-foreground hover:bg-foreground hover:text-background font-poppins font-semibold",
+        outline: "border-2 border-input text-foreground bg-background hover:bg-accent hover:text-accent-foreground font-poppins font-semibold",
         secondary: "bg-black text-[#FFD500] hover:bg-gray-900 border border-yellow-500 font-poppins font-semibold",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-foreground underline-offset-4 hover:underline hover:text-primary",
