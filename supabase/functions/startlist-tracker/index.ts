@@ -631,7 +631,7 @@ async function syncCourseStartlist(
 
   // 4. Determine additions and removals
   const toAdd: { rider_name: string; team_name: string }[] = [];
-  const toRemoveEntryIds: { id: string; source_name: string }[] = [];
+  const toRemoveEntryIds: { id: string; source_name: string; coureur_id: string | null }[] = [];
 
   // Additions: scraped riders whose tokenSig is NOT in existing map
   for (const [sig, rider] of scrapedByKey) {
@@ -651,7 +651,7 @@ async function syncCourseStartlist(
         .some(([s]) => scrapedSigSet.has(s));
       
       if (!otherSigsCovered) {
-        toRemoveEntryIds.push({ id: entry.id, source_name: entry.source_name });
+        toRemoveEntryIds.push({ id: entry.id, source_name: entry.source_name, coureur_id: entry.coureur_id });
         removedIds.add(entry.id);
       }
     }
@@ -773,6 +773,7 @@ async function syncCourseStartlist(
         rider_name: entry.source_name,
         team_name: null,
         change_type: "removed",
+        coureur_id: entry.coureur_id,
         source_url: `https://www.procyclingstats.com/race/${course.pcs_slug || courseId}`,
         detected_at: new Date().toISOString(),
         processed: true,
