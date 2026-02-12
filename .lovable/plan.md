@@ -1,71 +1,39 @@
 
-
-# Corriger le partage des slots entre courses urgentes et non-urgentes
+# Corriger le coureur_id manquant dans les logs de retrait
 
 ## Probleme
 
-Le batch est limite a 3 courses par run (`MAX_COURSES_PER_RUN = 3`). Comme les courses urgentes (< 7 jours) sont re-eligibles toutes les 30 minutes et triees en priorite, elles monopolisent les 3 slots a chaque execution. Les courses a horizon plus lointain ne sont jamais traitees.
+Quand le startlist tracker enregistre un **retrait** de coureur dans `startlist_tracker_changes`, il n'inclut pas le `coureur_id`. Le champ reste `NULL`.
 
-On le voit dans la capture : les memes courses proches (Tour de la Provence, Vuelta a la Region de Murcia, Figueira Champions Classic, etc.) tournent en boucle, et certains runs ne trouvent rien a faire (courses deja checkees il y a moins de 30min).
+Or, la page "Mouvements startlists" filtre avec `.in("coureur_id", rosterCoureurIds)`, ce qui exclut toutes les lignes ou `coureur_id` est `NULL`. Les retraits sont donc invisibles.
 
-## Solution : slots reserves
+Les **ajouts** fonctionnent correctement car le `coureur_id` est renseigne via le matching (ligne 843).
 
-Partager le batch en 2 groupes avec des slots dedies :
+## Cause racine
 
-- **2 slots reserves aux courses urgentes** (< 7 jours) -- intervalle 30min
-- **1 slot reserve aux courses non-urgentes** (> 7 jours) -- intervalle 6h
+Dans `supabase/functions/startlist-tracker/index.ts` :
 
-Si un groupe n'a pas assez de courses eligibles, ses slots vacants sont redistribues a l'autre groupe.
+1. **Ligne 634** : le type `toRemoveEntryIds` est `{ id: string; source_name: string }[]` -- il ne porte pas `coureur_id`
+2. **Ligne 654** : l'insertion dans `toRemoveEntryIds` omet `coureur_id`, alors que `existingSigMap` le contient deja
+3. **Ligne 770-781** : l'insert dans `startlist_tracker_changes` pour les retraits n'inclut pas `coureur_id`
 
-Cela garantit qu'a chaque run de 5 minutes, au moins 1 course lointaine est traitee (si eligible), tout en maintenant la haute frequence pour les courses imminentes.
+## Correction (3 points dans le meme fichier)
 
-## Fichier concerne
+Fichier : `supabase/functions/startlist-tracker/index.ts`
 
-`supabase/functions/startlist-tracker/index.ts`
+1. **Ajouter `coureur_id` au type de `toRemoveEntryIds`** (ligne 634)
+   - De : `{ id: string; source_name: string }[]`
+   - A : `{ id: string; source_name: string; coureur_id: string | null }[]`
 
-## Details techniques
+2. **Passer `coureur_id` lors du push** (ligne 654)
+   - De : `toRemoveEntryIds.push({ id: entry.id, source_name: entry.source_name })`
+   - A : `toRemoveEntryIds.push({ id: entry.id, source_name: entry.source_name, coureur_id: entry.coureur_id })`
 
-### Modification dans `handleGlobalSync` (lignes ~427-444)
+3. **Inclure `coureur_id` dans l'insert du log de retrait** (ligne 770-781)
+   - Ajouter `coureur_id: entry.coureur_id,` dans l'objet insere dans `startlist_tracker_changes`
 
-Remplacer le tri + slice unique par une logique de repartition :
+## Impact
 
-```
-const URGENT_SLOTS = 2;
-const STANDARD_SLOTS = 1;
-// (URGENT_SLOTS + STANDARD_SLOTS = MAX_COURSES_PER_RUN = 3)
-
-// Separer les courses eligibles en 2 pools
-const urgentPool = eligible.filter(c => isUrgentCourse(c.date_debut, now))
-  .sort(byOldestCheck);
-const standardPool = eligible.filter(c => !isUrgentCourse(c.date_debut, now))
-  .sort(byOldestCheck);
-
-// Remplir les slots avec redistribution si un pool est vide
-let urgentPick = urgentPool.slice(0, URGENT_SLOTS);
-let standardPick = standardPool.slice(0, STANDARD_SLOTS);
-
-// Redistribuer les slots vacants
-const urgentRemaining = URGENT_SLOTS - urgentPick.length;
-const standardRemaining = STANDARD_SLOTS - standardPick.length;
-
-if (standardRemaining > 0) {
-  urgentPick = urgentPool.slice(0, URGENT_SLOTS + standardRemaining);
-}
-if (urgentRemaining > 0) {
-  standardPick = standardPool.slice(0, STANDARD_SLOTS + urgentRemaining);
-}
-
-const courses = [...urgentPick, ...standardPick];
-```
-
-### Resultat attendu
-
-Avec le cron toutes les 5 minutes :
-- Courses imminentes : re-checkees toutes les ~30 min (2 par run, ~6 courses/heure)
-- Courses lointaines : re-checkees toutes les ~6h (1 par run quand eligibles)
-- Plus de runs "vides" consecutifs car les courses lointaines comblent les trous
-
-### Logs ameliores
-
-Le log existant avec les emojis sera conserve pour distinguer visuellement les deux types dans l'historique.
-
+- Aucun changement de schema (la colonne `coureur_id` existe deja dans `startlist_tracker_changes`)
+- Les futurs retraits auront le `coureur_id` renseigne et seront visibles dans les mouvements d'equipe
+- Les retraits passes (deja en base avec `coureur_id = NULL`) ne seront pas corriges automatiquement, mais les prochains le seront
