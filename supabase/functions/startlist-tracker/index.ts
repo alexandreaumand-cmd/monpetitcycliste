@@ -129,6 +129,29 @@ interface MatchResult {
 const MAX_COURSES_PER_RUN = 3;
 // Re-check interval: don't re-scrape a course checked less than 6h ago
 const RECHECK_INTERVAL_HOURS = 6;
+// Urgent re-check interval for courses starting within 7 days (30 min)
+const RECHECK_INTERVAL_MINUTES_URGENT = 30;
+// Number of days ahead to consider a course "urgent"
+const URGENT_HORIZON_DAYS = 7;
+
+/** Returns true if the course starts within the next URGENT_HORIZON_DAYS days */
+function isUrgentCourse(dateDebut: string | null, now: Date): boolean {
+  if (!dateDebut) return false;
+  const start = new Date(dateDebut + "T00:00:00Z");
+  const horizonMs = URGENT_HORIZON_DAYS * 24 * 60 * 60 * 1000;
+  return start.getTime() - now.getTime() <= horizonMs;
+}
+
+/** Returns true if the course needs re-checking based on its proximity */
+function needsRecheck(course: { date_debut: string | null; last_tracker_check: string | null }, now: Date): boolean {
+  if (!course.last_tracker_check) return true;
+  const lastCheck = new Date(course.last_tracker_check);
+  const elapsed = now.getTime() - lastCheck.getTime();
+  if (isUrgentCourse(course.date_debut, now)) {
+    return elapsed >= RECHECK_INTERVAL_MINUTES_URGENT * 60 * 1000;
+  }
+  return elapsed >= RECHECK_INTERVAL_HOURS * 60 * 60 * 1000;
+}
 
 // ============================================================
 // MATCHING (same multi-strategy as startlist-import)
@@ -375,8 +398,6 @@ async function handleGlobalSync(supabase: any): Promise<{
   twelveWeeksLater.setDate(twelveWeeksLater.getDate() + 84);
   const threeDaysAgo = new Date(now);
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-  const recheckCutoff = new Date(now);
-  recheckCutoff.setHours(recheckCutoff.getHours() - RECHECK_INTERVAL_HOURS);
 
   console.log(`Global sync: looking for courses from ${threeDaysAgo.toISOString().split("T")[0]} to ${twelveWeeksLater.toISOString().split("T")[0]}`);
 
@@ -391,23 +412,34 @@ async function handleGlobalSync(supabase: any): Promise<{
 
   const today = now.toISOString().split("T")[0];
 
+  // Fetch ALL eligible courses without recheck filter — adaptive filtering applied in JS
   const { data: allCourses, error: coursesError } = await supabase
     .from("courses")
     .select("id, nom, pcs_slug, date_debut, date_fin, last_tracker_check, phase_id")
     .gte("date_debut", threeDaysAgo.toISOString().split("T")[0])
     .lte("date_debut", twelveWeeksLater.toISOString().split("T")[0])
-    .or(`last_tracker_check.is.null,last_tracker_check.lt.${recheckCutoff.toISOString()}`)
     .order("last_tracker_check", { ascending: true, nullsFirst: true })
-    .limit(MAX_COURSES_PER_RUN * 3);
+    .limit(200);
 
   if (coursesError) throw coursesError;
 
-  // Exclude courses whose end date is in the past (already finished)
+  // Apply adaptive recheck filter + exclusions in JS
   const courses = (allCourses || [])
     .filter((c: any) => !validatedRaceIds.has(c.id))
     .filter((c: any) => {
       const endDate = c.date_fin || c.date_debut;
       return endDate >= today;
+    })
+    .filter((c: any) => needsRecheck(c, now))
+    // Sort: urgent courses first, then by oldest last_tracker_check
+    .sort((a: any, b: any) => {
+      const aUrgent = isUrgentCourse(a.date_debut, now);
+      const bUrgent = isUrgentCourse(b.date_debut, now);
+      if (aUrgent !== bUrgent) return aUrgent ? -1 : 1;
+      if (!a.last_tracker_check && b.last_tracker_check) return -1;
+      if (a.last_tracker_check && !b.last_tracker_check) return 1;
+      if (!a.last_tracker_check && !b.last_tracker_check) return 0;
+      return new Date(a.last_tracker_check).getTime() - new Date(b.last_tracker_check).getTime();
     })
     .slice(0, MAX_COURSES_PER_RUN);
 
@@ -418,7 +450,8 @@ async function handleGlobalSync(supabase: any): Promise<{
 
   console.log(`Found ${courses.length} courses to check:`);
   courses.forEach((c: any, i: number) => {
-    console.log(`  ${i + 1}. ${c.nom} (${c.id}) - last check: ${c.last_tracker_check || "never"}`);
+    const urgent = isUrgentCourse(c.date_debut, now);
+    console.log(`  ${i + 1}. ${urgent ? "⚡" : "◻️"} ${c.nom} (${c.id}) - last check: ${c.last_tracker_check || "never"}${urgent ? " [URGENT – 30min interval]" : ""}`);
   });
 
   let totalAdded = 0;
