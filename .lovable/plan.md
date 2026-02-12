@@ -1,20 +1,23 @@
-# Tracking plus frequent pour les courses imminentes
-
-## Contexte actuel
-
-Le startlist tracker utilise un intervalle unique de **6 heures** (`RECHECK_INTERVAL_HOURS = 6`) pour toutes les courses, quelle que soit leur proximite temporelle. Une course prevue demain est re-verifiee au meme rythme qu'une course dans 2 mois.
-
-## Modification proposee
-
-Introduire un intervalle de re-check **adaptatif** selon la proximite de la course :
 
 
-| Proximite                  | Intervalle actuel | Nouvel intervalle |
-| -------------------------- | ----------------- | ----------------- |
-| Aujourd'hui ou demain      | 6h                | **30min**         |
-| Dans les 7 prochains jours | 6h                | 30min             |
-| Au-dela de 7 jours         | 6h                | 6h (inchange)     |
+# Corriger le partage des slots entre courses urgentes et non-urgentes
 
+## Probleme
+
+Le batch est limite a 3 courses par run (`MAX_COURSES_PER_RUN = 3`). Comme les courses urgentes (< 7 jours) sont re-eligibles toutes les 30 minutes et triees en priorite, elles monopolisent les 3 slots a chaque execution. Les courses a horizon plus lointain ne sont jamais traitees.
+
+On le voit dans la capture : les memes courses proches (Tour de la Provence, Vuelta a la Region de Murcia, Figueira Champions Classic, etc.) tournent en boucle, et certains runs ne trouvent rien a faire (courses deja checkees il y a moins de 30min).
+
+## Solution : slots reserves
+
+Partager le batch en 2 groupes avec des slots dedies :
+
+- **2 slots reserves aux courses urgentes** (< 7 jours) -- intervalle 30min
+- **1 slot reserve aux courses non-urgentes** (> 7 jours) -- intervalle 6h
+
+Si un groupe n'a pas assez de courses eligibles, ses slots vacants sont redistribues a l'autre groupe.
+
+Cela garantit qu'a chaque run de 5 minutes, au moins 1 course lointaine est traitee (si eligible), tout en maintenant la haute frequence pour les courses imminentes.
 
 ## Fichier concerne
 
@@ -22,24 +25,47 @@ Introduire un intervalle de re-check **adaptatif** selon la proximite de la cour
 
 ## Details techniques
 
-### Changement dans `handleGlobalSync`
+### Modification dans `handleGlobalSync` (lignes ~427-444)
 
-1. **Supprimer le filtre `last_tracker_check` de la requete Supabase** (ligne 399) : actuellement, la requete exclut les courses verifiees il y a moins de 6h directement au niveau SQL. On ne peut pas appliquer deux seuils differents dans une seule clause `.or()`.
-2. **Appliquer le filtre en JavaScript** apres recuperation : pour chaque course, calculer si elle est "imminente" (date de debut dans les 7 prochains jours) et appliquer le seuil correspondant :
-  - Course imminente : re-check si `last_tracker_check` est null ou plus ancien qu'**1 heure**
-  - Autre course : re-check si `last_tracker_check` est null ou plus ancien que **6 heures**
-3. **Trier par priorite** : les courses imminentes sont traitees en premier (elles sont plus urgentes), puis les autres par anciennete du dernier check.
+Remplacer le tri + slice unique par une logique de repartition :
 
-### Code modifie (lignes ~128-131 et ~373-412)
+```
+const URGENT_SLOTS = 2;
+const STANDARD_SLOTS = 1;
+// (URGENT_SLOTS + STANDARD_SLOTS = MAX_COURSES_PER_RUN = 3)
 
-- Ajouter une constante `RECHECK_INTERVAL_HOURS_URGENT = 1`
-- Ajouter une fonction utilitaire `isUrgentCourse(course, now)` qui retourne `true` si la date de debut est dans les 7 prochains jours
-- Modifier le filtre post-requete pour utiliser le bon seuil selon la proximite
-- Ajuster le tri pour prioriser les courses urgentes
+// Separer les courses eligibles en 2 pools
+const urgentPool = eligible.filter(c => isUrgentCourse(c.date_debut, now))
+  .sort(byOldestCheck);
+const standardPool = eligible.filter(c => !isUrgentCourse(c.date_debut, now))
+  .sort(byOldestCheck);
 
-### Impact
+// Remplir les slots avec redistribution si un pool est vide
+let urgentPick = urgentPool.slice(0, URGENT_SLOTS);
+let standardPick = standardPool.slice(0, STANDARD_SLOTS);
 
-- Aucun changement de schema en base
-- Aucun changement du cron job (toujours toutes les 5 minutes)
-- Le batch de 3 courses par run (`MAX_COURSES_PER_RUN = 3`) reste inchange
-- Les courses imminentes seront simplement eligibles au re-check plus souvent, et priorisees dans la file
+// Redistribuer les slots vacants
+const urgentRemaining = URGENT_SLOTS - urgentPick.length;
+const standardRemaining = STANDARD_SLOTS - standardPick.length;
+
+if (standardRemaining > 0) {
+  urgentPick = urgentPool.slice(0, URGENT_SLOTS + standardRemaining);
+}
+if (urgentRemaining > 0) {
+  standardPick = standardPool.slice(0, STANDARD_SLOTS + urgentRemaining);
+}
+
+const courses = [...urgentPick, ...standardPick];
+```
+
+### Resultat attendu
+
+Avec le cron toutes les 5 minutes :
+- Courses imminentes : re-checkees toutes les ~30 min (2 par run, ~6 courses/heure)
+- Courses lointaines : re-checkees toutes les ~6h (1 par run quand eligibles)
+- Plus de runs "vides" consecutifs car les courses lointaines comblent les trous
+
+### Logs ameliores
+
+Le log existant avec les emojis sera conserve pour distinguer visuellement les deux types dans l'historique.
+
