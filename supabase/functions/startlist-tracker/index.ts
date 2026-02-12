@@ -424,24 +424,45 @@ async function handleGlobalSync(supabase: any): Promise<{
   if (coursesError) throw coursesError;
 
   // Apply adaptive recheck filter + exclusions in JS
-  const courses = (allCourses || [])
+  const URGENT_SLOTS = 2;
+  const STANDARD_SLOTS = 1;
+
+  const byOldestCheck = (a: any, b: any) => {
+    if (!a.last_tracker_check && b.last_tracker_check) return -1;
+    if (a.last_tracker_check && !b.last_tracker_check) return 1;
+    if (!a.last_tracker_check && !b.last_tracker_check) return 0;
+    return new Date(a.last_tracker_check).getTime() - new Date(b.last_tracker_check).getTime();
+  };
+
+  const eligible = (allCourses || [])
     .filter((c: any) => !validatedRaceIds.has(c.id))
     .filter((c: any) => {
       const endDate = c.date_fin || c.date_debut;
       return endDate >= today;
     })
-    .filter((c: any) => needsRecheck(c, now))
-    // Sort: urgent courses first, then by oldest last_tracker_check
-    .sort((a: any, b: any) => {
-      const aUrgent = isUrgentCourse(a.date_debut, now);
-      const bUrgent = isUrgentCourse(b.date_debut, now);
-      if (aUrgent !== bUrgent) return aUrgent ? -1 : 1;
-      if (!a.last_tracker_check && b.last_tracker_check) return -1;
-      if (a.last_tracker_check && !b.last_tracker_check) return 1;
-      if (!a.last_tracker_check && !b.last_tracker_check) return 0;
-      return new Date(a.last_tracker_check).getTime() - new Date(b.last_tracker_check).getTime();
-    })
-    .slice(0, MAX_COURSES_PER_RUN);
+    .filter((c: any) => needsRecheck(c, now));
+
+  // Split into two pools with dedicated slots
+  const urgentPool = eligible.filter((c: any) => isUrgentCourse(c.date_debut, now)).sort(byOldestCheck);
+  const standardPool = eligible.filter((c: any) => !isUrgentCourse(c.date_debut, now)).sort(byOldestCheck);
+
+  // Fill slots with redistribution if a pool is short
+  let urgentPick = urgentPool.slice(0, URGENT_SLOTS);
+  let standardPick = standardPool.slice(0, STANDARD_SLOTS);
+
+  const urgentVacant = URGENT_SLOTS - urgentPick.length;
+  const standardVacant = STANDARD_SLOTS - standardPick.length;
+
+  if (standardVacant > 0) {
+    urgentPick = urgentPool.slice(0, URGENT_SLOTS + standardVacant);
+  }
+  if (urgentVacant > 0) {
+    standardPick = standardPool.slice(0, STANDARD_SLOTS + urgentVacant);
+  }
+
+  const courses = [...urgentPick, ...standardPick];
+
+  console.log(`Slot distribution: ${urgentPick.length}/${URGENT_SLOTS} urgent, ${standardPick.length}/${STANDARD_SLOTS} standard (pools: ${urgentPool.length} urgent eligible, ${standardPool.length} standard eligible)`);
 
   if (!courses || courses.length === 0) {
     console.log("No courses need checking right now");
