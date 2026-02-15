@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     } else if (pronostic_type === 'gc_winner') {
       type_classement = 'General';
     } else if (pronostic_type === 'one_day_winner') {
-      type_classement = 'Etape';
+      type_classement = 'General'; // One-day races store results as 'General'
     } else {
       return new Response(JSON.stringify({ error: 'Invalid pronostic_type' }), {
         status: 400,
@@ -77,24 +77,40 @@ Deno.serve(async (req) => {
     }
 
     // Find winner from race_results (position = 1)
-    let winnerQuery = adminClient
-      .from('race_results')
-      .select('coureur_id')
-      .eq('course_id', course_id)
-      .eq('type_classement', type_classement)
-      .eq('position', 1);
+    const findWinner = async (typeClass: string) => {
+      let q = adminClient
+        .from('race_results')
+        .select('coureur_id')
+        .eq('course_id', course_id)
+        .eq('type_classement', typeClass)
+        .eq('position', 1);
 
-    if (etape_numero !== null && etape_numero !== undefined) {
-      winnerQuery = winnerQuery.eq('etape_numero', etape_numero);
-    } else {
-      winnerQuery = winnerQuery.is('etape_numero', null);
-    }
+      if (etape_numero !== null && etape_numero !== undefined) {
+        q = q.eq('etape_numero', etape_numero);
+      } else {
+        q = q.is('etape_numero', null);
+      }
 
-    const { data: winnerData, error: winnerError } = await winnerQuery.limit(1).maybeSingle();
+      return await q.limit(1).maybeSingle();
+    };
+
+    let { data: winnerData, error: winnerError } = await findWinner(type_classement);
 
     if (winnerError) {
       console.error('[evaluate] Winner query error:', winnerError);
       throw winnerError;
+    }
+
+    // Fallback: for one_day_winner, try 'Etape' if no result found with 'General'
+    if (!winnerData?.coureur_id && pronostic_type === 'one_day_winner') {
+      console.log(`[evaluate] No winner with '${type_classement}', trying 'Etape' fallback`);
+      type_classement = 'Etape';
+      const fallback = await findWinner(type_classement);
+      if (fallback.error) {
+        console.error('[evaluate] Fallback query error:', fallback.error);
+        throw fallback.error;
+      }
+      winnerData = fallback.data;
     }
 
     if (!winnerData?.coureur_id) {
