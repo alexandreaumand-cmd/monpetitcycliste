@@ -94,6 +94,87 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
+    // === AUTO-EVALUATE PRONOSTICS ===
+    // When results are saved, automatically evaluate matching pronostics
+    if (p_type_classement === 'Etape' || p_type_classement === 'General') {
+      try {
+        // Find the winner (position = 1)
+        let winnerQuery = supabaseService
+          .from('race_results')
+          .select('coureur_id')
+          .eq('course_id', p_course_id)
+          .eq('type_classement', p_type_classement)
+          .eq('position', 1);
+
+        if (p_etape_numero) {
+          winnerQuery = winnerQuery.eq('etape_numero', p_etape_numero);
+        } else {
+          winnerQuery = winnerQuery.is('etape_numero', null);
+        }
+
+        const { data: winnerResult } = await winnerQuery.limit(1).maybeSingle();
+        const winnerId = winnerResult?.coureur_id;
+
+        if (winnerId) {
+          // Map type_classement to pronostic_types
+          const pronosticTypes: string[] = [];
+          if (p_type_classement === 'Etape') {
+            pronosticTypes.push('stage_winner', 'one_day_winner');
+          } else if (p_type_classement === 'General') {
+            pronosticTypes.push('gc_winner');
+          }
+
+          const evalNow = new Date().toISOString();
+
+          for (const pronosticType of pronosticTypes) {
+            // Build base filter for unevaluated pronostics
+            const buildFilter = (query: any) => {
+              let q = query
+                .eq('course_id', p_course_id)
+                .eq('pronostic_type', pronosticType)
+                .is('is_correct', null);
+
+              if (p_etape_numero) {
+                q = q.eq('etape_numero', p_etape_numero);
+              } else {
+                q = q.is('etape_numero', null);
+              }
+              return q;
+            };
+
+            // Mark correct
+            const { data: correctData, error: correctErr } = await buildFilter(
+              supabaseService
+                .from('arena_pronostics')
+                .update({ is_correct: true, evaluated_at: evalNow })
+            ).eq('coureur_id', winnerId).select('id');
+
+            if (correctErr) console.error(`[auto-evaluate] Error marking correct for ${pronosticType}:`, correctErr);
+
+            // Mark incorrect
+            const { data: incorrectData, error: incorrectErr } = await buildFilter(
+              supabaseService
+                .from('arena_pronostics')
+                .update({ is_correct: false, evaluated_at: evalNow })
+            ).neq('coureur_id', winnerId).select('id');
+
+            if (incorrectErr) console.error(`[auto-evaluate] Error marking incorrect for ${pronosticType}:`, incorrectErr);
+
+            const correctCount = correctData?.length || 0;
+            const incorrectCount = incorrectData?.length || 0;
+            if (correctCount > 0 || incorrectCount > 0) {
+              console.log(`[auto-evaluate] ${pronosticType}: ${correctCount} correct, ${incorrectCount} incorrect (winner: ${winnerId})`);
+            }
+          }
+        } else {
+          console.log(`[auto-evaluate] No winner found for ${p_course_id}/${p_type_classement}/${p_etape_numero}`);
+        }
+      } catch (evalError) {
+        console.error(`[auto-evaluate] Error:`, evalError);
+        // Don't fail the save if evaluation fails
+      }
+    }
+
     // Send personalized push notifications for Etape or General results
     // ONLY on first entry, not on corrections
     if (!isCorrection && (p_type_classement === 'Etape' || p_type_classement === 'General')) {
