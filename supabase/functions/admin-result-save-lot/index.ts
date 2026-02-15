@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
           if (p_type_classement === 'Etape') {
             pronosticTypes.push('stage_winner', 'one_day_winner');
           } else if (p_type_classement === 'General') {
-            pronosticTypes.push('gc_winner');
+            pronosticTypes.push('gc_winner', 'one_day_winner');
           }
 
           const evalNow = new Date().toISOString();
