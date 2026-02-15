@@ -1,39 +1,44 @@
 
-# Corriger le coureur_id manquant dans les logs de retrait
 
-## Probleme
+## Probleme identifie
 
-Quand le startlist tracker enregistre un **retrait** de coureur dans `startlist_tracker_changes`, il n'inclut pas le `coureur_id`. Le champ reste `NULL`.
+La fonction `arena-evaluate-pronostics` contient un mapping incorrect pour les courses d'un jour :
 
-Or, la page "Mouvements startlists" filtre avec `.in("coureur_id", rosterCoureurIds)`, ce qui exclut toutes les lignes ou `coureur_id` est `NULL`. Les retraits sont donc invisibles.
+```
+one_day_winner -> type_classement = 'Etape'  (FAUX)
+```
 
-Les **ajouts** fonctionnent correctement car le `coureur_id` est renseigne via le matching (ligne 843).
+Or les resultats des courses d'un jour sont enregistres avec `type_classement = 'General'`. La fonction cherche donc un vainqueur dans un classement qui n'existe pas et renvoie une erreur 404.
 
-## Cause racine
+## Correction
 
-Dans `supabase/functions/startlist-tracker/index.ts` :
+### 1. Corriger le mapping dans `arena-evaluate-pronostics`
 
-1. **Ligne 634** : le type `toRemoveEntryIds` est `{ id: string; source_name: string }[]` -- il ne porte pas `coureur_id`
-2. **Ligne 654** : l'insertion dans `toRemoveEntryIds` omet `coureur_id`, alors que `existingSigMap` le contient deja
-3. **Ligne 770-781** : l'insert dans `startlist_tracker_changes` pour les retraits n'inclut pas `coureur_id`
+Fichier : `supabase/functions/arena-evaluate-pronostics/index.ts`
 
-## Correction (3 points dans le meme fichier)
+Remplacer le mapping actuel (lignes 65-77) par une logique qui tente d'abord `General`, puis `Etape` pour `one_day_winner` :
 
-Fichier : `supabase/functions/startlist-tracker/index.ts`
+```typescript
+let type_classement: string;
+if (pronostic_type === 'stage_winner') {
+  type_classement = 'Etape';
+} else if (pronostic_type === 'gc_winner') {
+  type_classement = 'General';
+} else if (pronostic_type === 'one_day_winner') {
+  // One-day races store results as 'General', but fallback to 'Etape'
+  type_classement = 'General';
+} else {
+  // error
+}
+```
 
-1. **Ajouter `coureur_id` au type de `toRemoveEntryIds`** (ligne 634)
-   - De : `{ id: string; source_name: string }[]`
-   - A : `{ id: string; source_name: string; coureur_id: string | null }[]`
+Avec un fallback : si aucun vainqueur n'est trouve avec `General`, retenter avec `Etape` (pour les cas ou des resultats seraient stockes differemment).
 
-2. **Passer `coureur_id` lors du push** (ligne 654)
-   - De : `toRemoveEntryIds.push({ id: entry.id, source_name: entry.source_name })`
-   - A : `toRemoveEntryIds.push({ id: entry.id, source_name: entry.source_name, coureur_id: entry.coureur_id })`
+### 2. Deployer la fonction
 
-3. **Inclure `coureur_id` dans l'insert du log de retrait** (ligne 770-781)
-   - Ajouter `coureur_id: entry.coureur_id,` dans l'objet insere dans `startlist_tracker_changes`
+La fonction sera deployee automatiquement apres modification.
 
-## Impact
+### 3. Evaluer les pronostics Clasica de Almeria en production
 
-- Aucun changement de schema (la colonne `coureur_id` existe deja dans `startlist_tracker_changes`)
-- Les futurs retraits auront le `coureur_id` renseigne et seront visibles dans les mouvements d'equipe
-- Les retraits passes (deja en base avec `coureur_id = NULL`) ne seront pas corriges automatiquement, mais les prochains le seront
+Apres le deploiement, le bouton "Evaluer" fonctionnera. Alternativement, l'evaluation a deja ete integree automatiquement dans `admin-result-save-lot` (qui utilise le bon mapping `General -> one_day_winner` depuis la derniere correction). Ce fix corrige uniquement le bouton manuel d'evaluation.
+
