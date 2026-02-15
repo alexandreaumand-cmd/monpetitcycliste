@@ -376,7 +376,7 @@ export const PronosticDeadlinesManager = () => {
                   <div key={courseId} className="border rounded-lg overflow-hidden">
                     {/* Course header row */}
                     <div
-                      className="flex items-center gap-2 px-3 py-2.5 bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
+                      className="flex flex-wrap items-center gap-1.5 sm:gap-2 px-3 py-2.5 bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
                       onClick={() => isMultiStage ? toggleCourseExpand(courseId) : undefined}
                     >
                       {/* Checkbox for selecting all unopened items of this course */}
@@ -409,7 +409,7 @@ export const PronosticDeadlinesManager = () => {
                         <div className="w-4 shrink-0" />
                       )}
 
-                      <span className="font-medium text-sm flex-1 truncate">{group.courseName}</span>
+                      <span className="font-medium text-sm flex-1 truncate min-w-[100px]">{group.courseName}</span>
                       {group.categorie && (
                         <Badge variant="outline" className="text-xs shrink-0">
                           {group.categorie}
@@ -428,29 +428,31 @@ export const PronosticDeadlinesManager = () => {
                         </Badge>
                       ) : null}
 
-                      {/* For one-day races, show info inline */}
+                      {/* For one-day races, show info on a new row on mobile */}
                       {!isMultiStage && (
-                        <OneLineDeadlineInfo
-                          pd={allItems[0]}
-                          existing={getExistingDeadline(allItems[0])}
-                          effectiveDeadline={getEffectiveDeadline(allItems[0])}
-                          onDateChange={(date) => updateDeadlineDate(getKey(allItems[0]), getEffectiveDeadline(allItems[0]), date)}
-                          onTimeChange={(time) => updateDeadlineTime(getKey(allItems[0]), getEffectiveDeadline(allItems[0]), time)}
-                          toDateInput={toDateInput}
-                          toTimeInput={toTimeInput}
-                          onEvaluate={() => {
-                            const ex = getExistingDeadline(allItems[0]);
-                            if (ex) handleEvaluate(ex);
-                          }}
-                          onDelete={() => {
-                            const ex = getExistingDeadline(allItems[0]);
-                            if (ex) {
-                              setDeleteId(ex.id);
-                              setDeleteDialogOpen(true);
-                            }
-                          }}
-                          evaluating={evaluating}
-                        />
+                        <div className="w-full sm:w-auto sm:flex-none mt-1.5 sm:mt-0 pl-8 sm:pl-0">
+                          <OneLineDeadlineInfo
+                            pd={allItems[0]}
+                            existing={getExistingDeadline(allItems[0])}
+                            effectiveDeadline={getEffectiveDeadline(allItems[0])}
+                            onDateChange={(date) => updateDeadlineDate(getKey(allItems[0]), getEffectiveDeadline(allItems[0]), date)}
+                            onTimeChange={(time) => updateDeadlineTime(getKey(allItems[0]), getEffectiveDeadline(allItems[0]), time)}
+                            toDateInput={toDateInput}
+                            toTimeInput={toTimeInput}
+                            onEvaluate={() => {
+                              const ex = getExistingDeadline(allItems[0]);
+                              if (ex) handleEvaluate(ex);
+                            }}
+                            onDelete={() => {
+                              const ex = getExistingDeadline(allItems[0]);
+                              if (ex) {
+                                setDeleteId(ex.id);
+                                setDeleteDialogOpen(true);
+                              }
+                            }}
+                            evaluating={evaluating}
+                          />
+                        </div>
                       )}
                     </div>
 
@@ -466,88 +468,113 @@ export const PronosticDeadlinesManager = () => {
                           return (
                             <div
                               key={key}
-                              className={`flex items-center gap-2 px-3 py-2 pl-10 text-sm transition-colors ${
+                              className={`flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 px-3 py-2.5 sm:py-2 pl-8 sm:pl-10 text-sm transition-colors ${
                                 opened
                                   ? "bg-green-50/50 dark:bg-green-950/10"
                                   : "hover:bg-muted/20"
                               }`}
                             >
-                              <div onClick={(e) => e.stopPropagation()}>
-                                <Checkbox
-                                  checked={selected.has(key)}
-                                  onCheckedChange={() => toggleSelect(key)}
-                                  disabled={opened}
-                                />
+                              {/* Top row: checkbox + label + status */}
+                              <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <div onClick={(e) => e.stopPropagation()}>
+                                  <Checkbox
+                                    checked={selected.has(key)}
+                                    onCheckedChange={() => toggleSelect(key)}
+                                    disabled={opened}
+                                  />
+                                </div>
+
+                                <span className="font-medium w-20 shrink-0">
+                                  {pd.courseTypeLabel}
+                                </span>
+
+                                <div className="flex-1" />
+
+                                {opened ? (
+                                  <div className="flex items-center gap-1 sm:hidden">
+                                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs">
+                                      <Unlock className="h-3 w-3 mr-1" />
+                                      {t("admin.deadlines.opened")}
+                                    </Badge>
+                                  </div>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs sm:hidden">
+                                    <Lock className="h-3 w-3 mr-1" />
+                                    {t("admin.deadlines.notOpened")}
+                                  </Badge>
+                                )}
                               </div>
 
-                              <span className="font-medium w-20 shrink-0">
-                                {pd.courseTypeLabel}
-                              </span>
+                              {/* Bottom row: date/time inputs or deadline info + actions */}
+                              <div className="flex items-center gap-1.5 pl-7 sm:pl-0 sm:flex-1">
+                                {!opened && (
+                                  <div className="flex items-center gap-1.5 flex-1" onClick={(e) => e.stopPropagation()}>
+                                    <Input
+                                      type="date"
+                                      value={toDateInput(getEffectiveDeadline(pd))}
+                                      onChange={(e) => updateDeadlineDate(key, getEffectiveDeadline(pd), e.target.value)}
+                                      className="h-7 text-xs flex-1 sm:w-[130px] sm:flex-none px-1.5"
+                                    />
+                                    <Input
+                                      type="time"
+                                      value={toTimeInput(getEffectiveDeadline(pd))}
+                                      onChange={(e) => updateDeadlineTime(key, getEffectiveDeadline(pd), e.target.value)}
+                                      className="h-7 text-xs w-[80px] sm:w-[85px] px-1.5"
+                                    />
+                                  </div>
+                                )}
+                                {opened && (
+                                  <span className="text-muted-foreground text-xs flex-1">
+                                    {format(new Date(existing!.deadline_at), "dd/MM/yyyy HH:mm", { locale: fr })}
+                                  </span>
+                                )}
 
-                              {!opened && (
-                                <div className="flex items-center gap-1.5 flex-1" onClick={(e) => e.stopPropagation()}>
-                                  <Input
-                                    type="date"
-                                    value={toDateInput(getEffectiveDeadline(pd))}
-                                    onChange={(e) => updateDeadlineDate(key, getEffectiveDeadline(pd), e.target.value)}
-                                    className="h-7 text-xs w-[130px] px-1.5"
-                                  />
-                                  <Input
-                                    type="time"
-                                    value={toTimeInput(getEffectiveDeadline(pd))}
-                                    onChange={(e) => updateDeadlineTime(key, getEffectiveDeadline(pd), e.target.value)}
-                                    className="h-7 text-xs w-[85px] px-1.5"
-                                  />
-                                </div>
-                              )}
-                              {opened && (
-                                <span className="text-muted-foreground text-xs flex-1">
-                                  {format(new Date(existing!.deadline_at), "dd/MM/yyyy HH:mm", { locale: fr })}
-                                </span>
-                              )}
-
-                              {opened ? (
-                                <div className="flex items-center gap-1">
-                                  <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs">
-                                    <Unlock className="h-3 w-3 mr-1" />
-                                    {t("admin.deadlines.opened")}
+                                {/* Desktop status badge */}
+                                {opened ? (
+                                  <div className="hidden sm:flex items-center gap-1">
+                                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs">
+                                      <Unlock className="h-3 w-3 mr-1" />
+                                      {t("admin.deadlines.opened")}
+                                    </Badge>
+                                  </div>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs hidden sm:flex">
+                                    <Lock className="h-3 w-3 mr-1" />
+                                    {t("admin.deadlines.notOpened")}
                                   </Badge>
-                                  {expired && existing && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-7 text-xs"
-                                      onClick={() => handleEvaluate(existing)}
-                                      disabled={evaluating === existing.id}
-                                    >
-                                      {evaluating === existing.id ? (
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                      ) : (
-                                        <Zap className="h-3 w-3" />
-                                      )}
-                                      <span className="ml-1">Évaluer</span>
-                                    </Button>
-                                  )}
-                                  {existing && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-7"
-                                      onClick={() => {
-                                        setDeleteId(existing.id);
-                                        setDeleteDialogOpen(true);
-                                      }}
-                                    >
-                                      <Trash2 className="h-3 w-3 text-destructive" />
-                                    </Button>
-                                  )}
-                                </div>
-                              ) : (
-                                <Badge variant="outline" className="text-xs">
-                                  <Lock className="h-3 w-3 mr-1" />
-                                  {t("admin.deadlines.notOpened")}
-                                </Badge>
-                              )}
+                                )}
+
+                                {/* Action buttons - always visible */}
+                                {opened && expired && existing && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    onClick={() => handleEvaluate(existing)}
+                                    disabled={evaluating === existing.id}
+                                  >
+                                    {evaluating === existing.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Zap className="h-3 w-3" />
+                                    )}
+                                    <span className="ml-1">Évaluer</span>
+                                  </Button>
+                                )}
+                                {opened && existing && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7"
+                                    onClick={() => {
+                                      setDeleteId(existing.id);
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                  >
+                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
@@ -611,25 +638,25 @@ const OneLineDeadlineInfo = ({
   const expired = existing ? isPast(new Date(existing.deadline_at)) : false;
 
   return (
-    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
       {!opened ? (
         <>
           <Input
             type="date"
             value={toDateInput(effectiveDeadline)}
             onChange={(e) => onDateChange(e.target.value)}
-            className="h-7 text-xs w-[130px] px-1.5"
+            className="h-7 text-xs flex-1 sm:w-[130px] sm:flex-none px-1.5"
           />
           <Input
             type="time"
             value={toTimeInput(effectiveDeadline)}
             onChange={(e) => onTimeChange(e.target.value)}
-            className="h-7 text-xs w-[85px] px-1.5"
+            className="h-7 text-xs w-[80px] sm:w-[85px] px-1.5"
           />
         </>
       ) : (
         <>
-          <span className="text-xs text-muted-foreground hidden sm:inline">
+          <span className="text-xs text-muted-foreground">
             {format(new Date(existing.deadline_at), "dd/MM HH:mm", { locale: fr })}
           </span>
           {expired && existing && (
