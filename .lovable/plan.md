@@ -1,24 +1,23 @@
 
 
-## Correction de l'ecran coupe sur mobile
+## Correction de l'affichage trop large sur mobile
 
-### Probleme
+### Probleme identifie
 
-Le composant `TabGroup` utilise `min-w-fit` et `whitespace-nowrap` sur chaque bouton d'onglet, ce qui empeche les boutons de se reduire en dessous de la largeur de leur texte. Avec 4 onglets ("En cours", "A venir", "Passes", "Classement"), la largeur totale depasse l'ecran sur mobile. Le `overflow-x-auto` permet de scroller les onglets mais ne contraint pas la largeur du conteneur parent, ce qui pousse tout le contenu a deborder.
+Le composant `TabGroup` conserve `overflow-x-auto` sur son conteneur principal. Cela permet au contenu interne de depasser la largeur de l'ecran, ce qui elargit toute la page. La preview fonctionne car la fenetre contraint la largeur, mais sur un vrai telephone le conteneur deborde.
 
-### Solution
+De plus, dans `PronosticRaceCard`, les badges sur la ligne 1 ont `shrink-0` ce qui les empeche de se reduire, et combinee avec un nom de course long, la ligne depasse la largeur de la carte.
 
-Modifier le `TabGroup` pour que les boutons puissent se reduire et rester dans la largeur de l'ecran :
+### Modifications prevues
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/components/mobile/TabGroup.tsx` | Remplacer `min-w-fit` par `min-w-0` sur les boutons, et retirer `whitespace-nowrap` pour permettre le retour a la ligne si necessaire. Ajouter `text-center` pour garder l'alignement. Aussi, ajouter `w-full` au conteneur pour s'assurer qu'il prend la largeur du parent et non plus. |
-| `src/components/arena/PronosticsTab.tsx` | Ajouter `max-w-full overflow-hidden` au conteneur principal (ligne 128) pour empecher tout debordement |
+| `src/components/mobile/TabGroup.tsx` | Retirer `overflow-x-auto` du conteneur principal pour forcer les onglets a rester dans la largeur disponible |
+| `src/components/arena/PronosticRaceCard.tsx` | Retirer `shrink-0` du badge categorie (ligne 110) pour lui permettre de se tronquer si necessaire. Ajouter `truncate` et `max-w-[80px]` sur ce badge pour eviter qu'il depasse |
 
 ### Details techniques
 
-**TabGroup.tsx ligne 34** : `"flex-1 min-w-fit px-3 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap"` devient `"flex-1 min-w-0 px-2 py-2 text-xs font-medium rounded-md transition-all text-center"` -- les boutons peuvent desormais se reduire, le padding est reduit, et le texte est plus petit pour mieux tenir.
+1. **TabGroup.tsx ligne 22** : Retirer `overflow-x-auto` de la classe du conteneur. Les onglets avec `flex-1 min-w-0` se repartiront equitablement dans l'espace disponible sans deborder.
 
-**TabGroup.tsx ligne 22** : ajouter `w-full` au conteneur flex pour contraindre sa largeur a celle du parent.
+2. **PronosticRaceCard.tsx ligne 110** : Le badge categorie passe de `shrink-0` a `shrink truncate max-w-[80px]` pour permettre la troncature quand l'espace manque. Le badge type (ligne 106) garde `shrink-0` car il est plus important.
 
-**PronosticsTab.tsx ligne 128** : `<div className="space-y-4">` devient `<div className="space-y-4 max-w-full overflow-hidden">` pour securiser au niveau du composant.
