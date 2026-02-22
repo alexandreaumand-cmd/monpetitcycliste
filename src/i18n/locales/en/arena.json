@@ -51,6 +51,12 @@
       "title": "Predictions Standings",
       "empty": "No evaluated results yet"
     },
+    "tabs": {
+      "inProgress": "In Progress",
+      "upcoming": "Upcoming",
+      "past": "Past",
+      "standings": "Standings"
+    },
     "allPicks": "Managers' picks",
     "noPicksYet": "No picks for this race",
     "you": "(you)"
