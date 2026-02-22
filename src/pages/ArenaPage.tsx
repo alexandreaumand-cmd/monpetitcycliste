@@ -36,7 +36,7 @@ export default function ArenaPage() {
   }
 
   return (
-    <div className="space-y-0 pt-2">
+    <div className="space-y-0 pt-2 overflow-hidden">
       <Tabs value={defaultTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="pronostics" className="gap-2">
