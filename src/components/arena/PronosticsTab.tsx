@@ -125,7 +125,7 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-full overflow-hidden">
       <TabGroup
         items={tabItems}
         selected={activeTab}
