@@ -10,6 +10,12 @@ import { toast } from "sonner";
 import { formatDistanceToNow, isPast } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface PronosticRaceCardProps {
   deadline: PronosticDeadline;
@@ -75,67 +81,67 @@ export const PronosticRaceCard = ({
 
   const StatusIcon = statusInfo.icon;
 
+  const deadlineText = isExpired
+    ? t("pronostics.deadlineExpired", {
+        time: formatDistanceToNow(new Date(deadline.deadline_at), { addSuffix: true, locale: dateLocale }),
+      })
+    : t("pronostics.deadlineIn", {
+        time: formatDistanceToNow(new Date(deadline.deadline_at), { addSuffix: false, locale: dateLocale }),
+      });
+
   return (
     <Card className={`transition-all ${statusInfo.bg}`}>
-      <CardContent className="p-4 space-y-3">
-        {/* Header: Course + Type */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-sm truncate">
-              {deadline.courses?.nom || deadline.course_id}
-            </h4>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <Badge variant="outline" className="text-xs">
-                {typeLabel}
-              </Badge>
-              {deadline.courses?.categorie && (
-                <Badge variant="secondary" className="text-xs">
-                  {deadline.courses.categorie}
-                </Badge>
-              )}
-            </div>
-          </div>
-          <div className={`flex items-center gap-1 text-xs font-medium ${statusInfo.color}`}>
+      <CardContent className="p-3 space-y-1.5">
+        {/* Line 1: Course name + badges + status */}
+        <div className="flex items-center gap-2">
+          <h4 className="font-semibold text-sm truncate flex-1 min-w-0">
+            {deadline.courses?.nom || deadline.course_id}
+          </h4>
+          <Badge variant="outline" className="text-[10px] shrink-0 px-1.5 py-0">
+            {typeLabel}
+          </Badge>
+          {deadline.courses?.categorie && (
+            <Badge variant="secondary" className="text-[10px] shrink-0 px-1.5 py-0">
+              {deadline.courses.categorie}
+            </Badge>
+          )}
+          <div className={`flex items-center shrink-0 ${statusInfo.color}`}>
             <StatusIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">{statusInfo.label}</span>
           </div>
         </div>
 
-        {/* Deadline info */}
-        <div className="text-xs text-muted-foreground">
-          <Clock className="h-3 w-3 inline mr-1" />
-          {isExpired
-            ? t("pronostics.deadlineExpired", {
-                time: formatDistanceToNow(new Date(deadline.deadline_at), {
-                  addSuffix: true,
-                  locale: dateLocale,
-                }),
-              })
-            : t("pronostics.deadlineIn", {
-                time: formatDistanceToNow(new Date(deadline.deadline_at), {
-                  addSuffix: false,
-                  locale: dateLocale,
-                }),
-              })}
-        </div>
-
-        {/* Rider selection or result */}
-        {!isExpired ? (
-          <div>
-            <PronosticStartlistCombobox
-              courseId={deadline.course_id}
-              value={pronostic?.coureur_id || null}
-              onSelect={handleSelect}
-              disabled={savePronostic.isPending}
-            />
-            {savePronostic.isPending && (
-              <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                {t("pronostics.saving")}
+        {/* Line 2: Deadline + rider selector or result */}
+        <div className="flex items-center gap-2">
+          <div className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            <span>{deadlineText}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            {!isExpired ? (
+              <div className="flex items-center gap-1">
+                <PronosticStartlistCombobox
+                  courseId={deadline.course_id}
+                  value={pronostic?.coureur_id || null}
+                  onSelect={handleSelect}
+                  disabled={savePronostic.isPending}
+                />
+                {savePronostic.isPending && (
+                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
+                )}
               </div>
+            ) : pronostic ? (
+              <div className="flex items-center gap-1 text-sm justify-end">
+                <Target className="h-3 w-3 text-muted-foreground shrink-0" />
+                <span className="truncate font-medium">{pronostic.coureur_nom}</span>
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground italic text-right block">{t("pronostics.noPick")}</span>
             )}
           </div>
-        ) : (
+        </div>
+
+        {/* Collapsible all picks (closed state only) */}
+        {isExpired && (
           <ClosedPronosticsList
             leagueId={leagueId}
             deadline={deadline}
@@ -150,7 +156,7 @@ export const PronosticRaceCard = ({
   );
 };
 
-// Sub-component for the closed state showing all managers' picks
+// Sub-component for the closed state showing all managers' picks (collapsed by default)
 const ClosedPronosticsList = ({
   leagueId,
   deadline,
@@ -175,71 +181,61 @@ const ClosedPronosticsList = ({
   );
 
   return (
-    <div className="space-y-2">
-      {/* Current user's pick summary */}
-      {pronostic ? (
-        <div className="flex items-center gap-2 text-sm">
-          <Target className="h-4 w-4 text-muted-foreground" />
-          <span>
-            {t("pronostics.yourPick")}: <strong>{pronostic.coureur_nom}</strong>
+    <Accordion type="single" collapsible>
+      <AccordionItem value="picks" className="border-0">
+        <AccordionTrigger className="py-1 hover:no-underline text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Users className="h-3 w-3" />
+            {t("pronostics.allPicks")}
           </span>
-        </div>
-      ) : (
-        <span className="text-sm text-muted-foreground italic">{t("pronostics.noPick")}</span>
-      )}
-
-      {/* Separator + all picks */}
-      <div className="border-t pt-2 mt-2">
-        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2">
-          <Users className="h-3.5 w-3.5" />
-          {t("pronostics.allPicks")}
-        </div>
-
-        {isLoading ? (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" />
-          </div>
-        ) : !allPicks || allPicks.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">{t("pronostics.noPicksYet")}</p>
-        ) : (
-          <div className="space-y-1.5">
-            {allPicks.map((pick) => {
-              const isCurrentUser = pick.manager_id === managerId;
-              return (
-                <div
-                  key={pick.manager_id}
-                  className={cn(
-                    "flex items-center gap-2 py-1 px-2 rounded-md text-sm",
-                    isCurrentUser && "bg-primary/10 ring-1 ring-primary/20"
-                  )}
-                >
-                  <Avatar className="h-6 w-6 shrink-0">
-                    <AvatarImage src={pick.avatar_url || undefined} />
-                    <AvatarFallback className="text-[10px]">
-                      {pick.manager_nom.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium truncate">
-                    {pick.manager_nom}
-                    {isCurrentUser && (
-                      <span className="text-xs text-muted-foreground ml-1">{t("pronostics.you")}</span>
+        </AccordionTrigger>
+        <AccordionContent className="pb-0">
+          {isLoading ? (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+            </div>
+          ) : !allPicks || allPicks.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">{t("pronostics.noPicksYet")}</p>
+          ) : (
+            <div className="space-y-1">
+              {allPicks.map((pick) => {
+                const isCurrentUser = pick.manager_id === managerId;
+                return (
+                  <div
+                    key={pick.manager_id}
+                    className={cn(
+                      "flex items-center gap-2 py-1 px-2 rounded-md text-sm",
+                      isCurrentUser && "bg-primary/10 ring-1 ring-primary/20"
                     )}
-                  </span>
-                  <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                  <span className="truncate flex-1">{pick.coureur_nom}</span>
-                  {pick.is_correct !== null && (
-                    pick.is_correct ? (
-                      <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-                    ) : (
-                      <XCircle className="h-4 w-4 text-red-600 shrink-0" />
-                    )
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
+                  >
+                    <Avatar className="h-5 w-5 shrink-0">
+                      <AvatarImage src={pick.avatar_url || undefined} />
+                      <AvatarFallback className="text-[9px]">
+                        {pick.manager_nom.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium truncate text-xs">
+                      {pick.manager_nom}
+                      {isCurrentUser && (
+                        <span className="text-[10px] text-muted-foreground ml-1">{t("pronostics.you")}</span>
+                      )}
+                    </span>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span className="truncate flex-1 text-xs">{pick.coureur_nom}</span>
+                    {pick.is_correct !== null && (
+                      pick.is_correct ? (
+                        <CheckCircle className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5 text-red-600 shrink-0" />
+                      )
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 };

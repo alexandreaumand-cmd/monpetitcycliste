@@ -1,15 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Target, CheckCircle, XCircle, Clock, HourglassIcon } from "lucide-react";
+import { Target } from "lucide-react";
 import { PronosticRaceCard } from "./PronosticRaceCard";
 import { PronosticStandings } from "./PronosticStandings";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { TabGroup } from "@/components/mobile/TabGroup";
 import {
   useCurrentManagerId,
   usePronosticDeadlines,
@@ -23,20 +18,20 @@ interface PronosticsTabProps {
 
 export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
   const { t } = useTranslation("arena");
+  const [activeTab, setActiveTab] = useState("inprogress");
   const { data: managerId, isLoading: managerLoading } = useCurrentManagerId();
   const { data: deadlines, isLoading: deadlinesLoading } = usePronosticDeadlines();
   const { data: myPronostics, isLoading: pronosticsLoading } = useMyPronostics(leagueId, managerId || null);
 
   const isLoading = managerLoading || deadlinesLoading || pronosticsLoading;
 
-  // Split deadlines into open and closed, then closed into evaluated and pending
+  // Split deadlines into categories
   const { openDeadlines, evaluatedDeadlines, pendingDeadlines } = useMemo(() => {
     if (!deadlines) return { openDeadlines: [], evaluatedDeadlines: [], pendingDeadlines: [] };
 
     const open = deadlines.filter((d) => !isPast(new Date(d.deadline_at)));
     const closed = deadlines.filter((d) => isPast(new Date(d.deadline_at)));
 
-    // Split closed by evaluation status using myPronostics
     const evaluated: typeof closed = [];
     const pending: typeof closed = [];
 
@@ -47,8 +42,6 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
           p.pronostic_type === d.pronostic_type &&
           p.etape_numero === d.etape_numero
       );
-      // If user has no pronostic, or pronostic has been evaluated → evaluated
-      // Only "pending" if user HAS a pronostic that hasn't been evaluated yet
       if (!prono || (prono.is_correct !== null && prono.is_correct !== undefined)) {
         evaluated.push(d);
       } else {
@@ -56,10 +49,12 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
       }
     }
 
+    // Sort evaluated by deadline descending (most recent first)
+    evaluated.sort((a, b) => new Date(b.deadline_at).getTime() - new Date(a.deadline_at).getTime());
+
     return { openDeadlines: open, evaluatedDeadlines: evaluated, pendingDeadlines: pending };
   }, [deadlines, myPronostics]);
 
-  // Map pronostics to deadlines
   const getPronosticForDeadline = (deadline: typeof deadlines extends (infer T)[] ? T : never) => {
     if (!myPronostics) return null;
     return myPronostics.find(
@@ -70,19 +65,17 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
     ) || null;
   };
 
-  // Stats
-  const stats = useMemo(() => {
-    if (!myPronostics) return { total: 0, correct: 0, incorrect: 0, pending: 0 };
-    const correct = myPronostics.filter((p) => p.is_correct === true).length;
-    const incorrect = myPronostics.filter((p) => p.is_correct === false).length;
-    const pending = myPronostics.filter((p) => p.is_correct === null).length;
-    return { total: myPronostics.length, correct, incorrect, pending };
-  }, [myPronostics]);
+  const tabItems = [
+    { label: t("pronostics.tabs.inProgress"), value: "inprogress" },
+    { label: t("pronostics.tabs.upcoming"), value: "upcoming" },
+    { label: t("pronostics.tabs.past"), value: "past" },
+    { label: t("pronostics.tabs.standings"), value: "standings" },
+  ];
 
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-10 w-full" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-32 w-full" />
       </div>
@@ -97,131 +90,42 @@ export const PronosticsTab = ({ leagueId }: PronosticsTabProps) => {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Stats summary */}
-      {stats.total > 0 && (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
-            <Target className="h-4 w-4 text-primary" />
-            <div>
-              <p className="text-lg font-bold">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">{t("pronostics.stats.total")}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <div>
-              <p className="text-lg font-bold text-green-700 dark:text-green-400">{stats.correct}</p>
-              <p className="text-xs text-muted-foreground">{t("pronostics.stats.correct")}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950/20">
-            <XCircle className="h-4 w-4 text-red-600" />
-            <div>
-              <p className="text-lg font-bold text-red-700 dark:text-red-400">{stats.incorrect}</p>
-              <p className="text-xs text-muted-foreground">{t("pronostics.stats.incorrect")}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Accordion sections */}
-      <Accordion
-        type="multiple"
-        defaultValue={["open", "pending", "evaluated"]}
-        className="space-y-2"
-      >
-        {/* Open pronostics */}
-        {openDeadlines.length > 0 && (
-          <AccordionItem value="open" className="border rounded-lg px-3">
-            <AccordionTrigger className="py-3 hover:no-underline">
-              <span className="font-semibold flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" />
-                {t("pronostics.sections.open")}
-                <span className="text-xs font-normal text-muted-foreground">({openDeadlines.length})</span>
-              </span>
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {openDeadlines.map((deadline) => (
-                  <PronosticRaceCard
-                    key={deadline.id}
-                    deadline={deadline}
-                    pronostic={getPronosticForDeadline(deadline)}
-                    leagueId={leagueId}
-                    managerId={managerId}
-                  />
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        )}
-
-        {/* Pending evaluation */}
-        {pendingDeadlines.length > 0 && (
-          <AccordionItem value="pending" className="border rounded-lg px-3">
-            <AccordionTrigger className="py-3 hover:no-underline">
-              <span className="font-semibold flex items-center gap-2">
-                <HourglassIcon className="h-4 w-4 text-muted-foreground" />
-                {t("pronostics.sections.pending")}
-                <span className="text-xs font-normal text-muted-foreground">({pendingDeadlines.length})</span>
-              </span>
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {pendingDeadlines.map((deadline) => (
-                  <PronosticRaceCard
-                    key={deadline.id}
-                    deadline={deadline}
-                    pronostic={getPronosticForDeadline(deadline)}
-                    leagueId={leagueId}
-                    managerId={managerId}
-                  />
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        )}
-
-        {/* Evaluated results */}
-        {evaluatedDeadlines.length > 0 && (
-          <AccordionItem value="evaluated" className="border rounded-lg px-3">
-            <AccordionTrigger className="py-3 hover:no-underline">
-              <span className="font-semibold flex items-center gap-2">
-                <Target className="h-4 w-4 text-primary" />
-                {t("pronostics.sections.evaluated")}
-                <span className="text-xs font-normal text-muted-foreground">({evaluatedDeadlines.length})</span>
-              </span>
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {evaluatedDeadlines.map((deadline) => (
-                  <PronosticRaceCard
-                    key={deadline.id}
-                    deadline={deadline}
-                    pronostic={getPronosticForDeadline(deadline)}
-                    leagueId={leagueId}
-                    managerId={managerId}
-                  />
-                ))}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        )}
-      </Accordion>
-
-      {/* Empty state */}
-      {deadlines?.length === 0 && (
+  const renderDeadlineList = (list: typeof deadlines) => {
+    if (!list || list.length === 0) {
+      return (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
           <Target className="h-12 w-12 mb-4 opacity-30" />
-          <p className="text-lg font-medium">{t("pronostics.empty")}</p>
-          <p className="text-sm">{t("pronostics.emptyDesc")}</p>
+          <p className="text-sm">{t("pronostics.empty")}</p>
         </div>
-      )}
+      );
+    }
+    return (
+      <div className="grid gap-3 sm:grid-cols-2">
+        {list.map((deadline) => (
+          <PronosticRaceCard
+            key={deadline.id}
+            deadline={deadline}
+            pronostic={getPronosticForDeadline(deadline)}
+            leagueId={leagueId}
+            managerId={managerId}
+          />
+        ))}
+      </div>
+    );
+  };
 
-      {/* Standings */}
-      <PronosticStandings leagueId={leagueId} />
+  return (
+    <div className="space-y-4">
+      <TabGroup
+        items={tabItems}
+        selected={activeTab}
+        onSelect={setActiveTab}
+      />
+
+      {activeTab === "inprogress" && renderDeadlineList(pendingDeadlines)}
+      {activeTab === "upcoming" && renderDeadlineList(openDeadlines)}
+      {activeTab === "past" && renderDeadlineList(evaluatedDeadlines)}
+      {activeTab === "standings" && <PronosticStandings leagueId={leagueId} />}
     </div>
   );
 };

@@ -51,6 +51,12 @@
       "title": "Classement Pronostics",
       "empty": "Pas encore de résultats évalués"
     },
+    "tabs": {
+      "inProgress": "En cours",
+      "upcoming": "À venir",
+      "past": "Passés",
+      "standings": "Classement"
+    },
     "allPicks": "Pronostics des managers",
     "noPicksYet": "Aucun pronostic pour cette course",
     "you": "(vous)"
