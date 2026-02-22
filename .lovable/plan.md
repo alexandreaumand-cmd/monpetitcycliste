@@ -1,26 +1,24 @@
 
 
-## Correction de la largeur d'ecran sur mobile
+## Correction de l'ecran coupe sur mobile
 
 ### Probleme
 
-Les onglets et sous-onglets poussent la largeur de la page au-dela de l'ecran mobile. Le contenu en dessous ne s'adapte pas car rien ne contraint la largeur maximale. Le `TabGroup` utilise `overflow-x-auto` ce qui permet au contenu de deborder, et le conteneur principal (`<main>`) n'a aucune contrainte de largeur.
+Le composant `TabGroup` utilise `min-w-fit` et `whitespace-nowrap` sur chaque bouton d'onglet, ce qui empeche les boutons de se reduire en dessous de la largeur de leur texte. Avec 4 onglets ("En cours", "A venir", "Passes", "Classement"), la largeur totale depasse l'ecran sur mobile. Le `overflow-x-auto` permet de scroller les onglets mais ne contraint pas la largeur du conteneur parent, ce qui pousse tout le contenu a deborder.
 
 ### Solution
 
-Appliquer des contraintes de largeur a plusieurs niveaux :
+Modifier le `TabGroup` pour que les boutons puissent se reduire et rester dans la largeur de l'ecran :
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/components/mobile/MobileLayout.tsx` | Ajouter `overflow-x-hidden` sur le `<main>` (ligne 73) pour empecher tout debordement horizontal |
-| `src/pages/ArenaPage.tsx` | Ajouter `overflow-hidden` sur le conteneur principal (ligne 39) |
-| `src/components/arena/PronosticRaceCard.tsx` | Ajouter `overflow-hidden` sur le `CardContent` et `min-w-0` sur le conteneur flex de la ligne 1 pour permettre la troncature correcte des elements |
+| `src/components/mobile/TabGroup.tsx` | Remplacer `min-w-fit` par `min-w-0` sur les boutons, et retirer `whitespace-nowrap` pour permettre le retour a la ligne si necessaire. Ajouter `text-center` pour garder l'alignement. Aussi, ajouter `w-full` au conteneur pour s'assurer qu'il prend la largeur du parent et non plus. |
+| `src/components/arena/PronosticsTab.tsx` | Ajouter `max-w-full overflow-hidden` au conteneur principal (ligne 128) pour empecher tout debordement |
 
 ### Details techniques
 
-1. **MobileLayout.tsx ligne 73** : `<main className="pb-safe">` devient `<main className="pb-safe overflow-x-hidden">` -- cela empeche globalement tout contenu de deborder horizontalement sur mobile.
+**TabGroup.tsx ligne 34** : `"flex-1 min-w-fit px-3 py-2 text-sm font-medium rounded-md transition-all whitespace-nowrap"` devient `"flex-1 min-w-0 px-2 py-2 text-xs font-medium rounded-md transition-all text-center"` -- les boutons peuvent desormais se reduire, le padding est reduit, et le texte est plus petit pour mieux tenir.
 
-2. **ArenaPage.tsx ligne 39** : `<div className="space-y-0 pt-2">` devient `<div className="space-y-0 pt-2 overflow-hidden">` -- securite supplementaire au niveau de la page.
+**TabGroup.tsx ligne 22** : ajouter `w-full` au conteneur flex pour contraindre sa largeur a celle du parent.
 
-3. **PronosticRaceCard.tsx ligne 102** : `<div className="flex items-center gap-2">` devient `<div className="flex items-center gap-1.5 min-w-0 overflow-hidden">` -- le `min-w-0` permet au flex de se reduire correctement, et `overflow-hidden` coupe proprement les elements qui debordent. Reduction du gap pour gagner de la place.
-
+**PronosticsTab.tsx ligne 128** : `<div className="space-y-4">` devient `<div className="space-y-4 max-w-full overflow-hidden">` pour securiser au niveau du composant.
