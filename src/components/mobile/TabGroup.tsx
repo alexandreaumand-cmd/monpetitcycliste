@@ -19,7 +19,7 @@ export const TabGroup = ({
   return (
     <div
       className={cn(
-        "flex gap-1 p-1 bg-muted rounded-lg overflow-x-auto w-full",
+        "flex gap-1 p-1 bg-muted rounded-lg w-full",
         "scrollbar-hide hide-scrollbar",
         className
       )}
