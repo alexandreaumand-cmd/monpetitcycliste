@@ -1,50 +1,25 @@
 
 
-## Refonte de l'onglet Pronostics
+## Carte pronostic : 2 lignes
 
-### Changements prevus
-
-**1. Supprimer les 3 vignettes stats** (Total / Corrects / Incorrects) - lignes 102-127 de `PronosticsTab.tsx`
-
-**2. Remplacer les accordeons par des sous-onglets**
-
-Quatre sous-onglets remplaceront les sections accordeon actuelles :
-
-- **En cours** (defaut) : pronostics dont la deadline est passee mais dont les resultats n'ont pas encore ete evalues (= actuels "pendingDeadlines")
-- **A venir** : pronostics dont la deadline n'est pas encore passee, a effectuer (= actuels "openDeadlines")  
-- **Passes** : resultats evalues, tries par date decroissante (= actuels "evaluatedDeadlines")
-- **Classement** : le composant `PronosticStandings` existant
-
-**3. Condenser les cartes pronostic sur 2 lignes**
-
-Actuellement chaque `PronosticRaceCard` affiche 4 lignes (course, type, cloture, coureur). Nouvelle disposition :
+### Disposition
 
 ```text
-Ligne 1 : [Nom course]  [Badge type + categorie]  [Icone statut]
-Ligne 2 : [Horloge + deadline]  [Selecteur coureur OU resultat]
+Ligne 1 : [Nom course (truncate)]  [Badge type]  [Badge categorie]  [Horloge jaune + temps compact]  [Icone statut]
+Ligne 2 : [Selecteur coureur pleine largeur]  (uniquement si non expire, sinon resultat ou "aucun choix")
 ```
 
-**4. Replier tous les accordeons par defaut**
+### Modifications
 
-Changer `defaultValue={["open", "pending", "evaluated"]}` pour `defaultValue={[]}` sur les accordeons restants dans les sous-onglets (si on garde des groupes), ou simplement lister les cartes directement.
+**Fichier : `src/components/arena/PronosticRaceCard.tsx`**
 
-### Fichiers modifies
+- Fusionner la ligne deadline dans la ligne 1 : ajouter l'horloge jaune + temps compact a droite, avant l'icone statut
+- Ajouter une fonction `formatShortDeadline(deadlineDate, lang)` pour le format compact :
+  - Moins de 1h : `45min`
+  - Entre 1h et 24h : `2h12`
+  - Entre 1 et 7 jours : `2jrs` (fr) / `2d` (en)
+  - Plus de 7 jours : `3sem` (fr) / `3w` (en)
+- Supprimer la ligne 2 actuelle (deadline separee)
+- Ligne 2 : uniquement le selecteur coureur en `w-full` si non expire, ou le resultat/texte "aucun choix" si expire
+- Supprimer l'ancien `deadlineText` base sur `formatDistanceToNow`
 
-| Fichier | Modification |
-|---------|-------------|
-| `src/components/arena/PronosticsTab.tsx` | Remplacer stats + accordeons par sous-onglets (TabGroup ou Tabs). Reorganiser la logique de tri. |
-| `src/components/arena/PronosticRaceCard.tsx` | Condenser le layout sur 2 lignes : fusionner header + deadline + selecteur. |
-| `src/i18n/locales/fr/arena.json` | Ajouter les cles `pronostics.tabs.inProgress`, `pronostics.tabs.upcoming`, `pronostics.tabs.past`, `pronostics.tabs.standings` |
-| `src/i18n/locales/en/arena.json` | Idem en anglais |
-
-### Details techniques
-
-**PronosticsTab.tsx** :
-- Utiliser le composant `TabGroup` mobile existant (`src/components/mobile/TabGroup.tsx`) pour les sous-onglets, coherent avec le design mobile-first
-- Etat local `useState("inprogress")` pour gerer le sous-onglet actif
-- Pour "Passes" : trier `evaluatedDeadlines` par `deadline.courses?.date_debut` ou `deadline.deadline_at` decroissant
-
-**PronosticRaceCard.tsx** :
-- Ligne 1 : `div flex items-center gap-2` avec nom course (truncate), badges type + categorie, icone statut a droite
-- Ligne 2 : `div flex items-center gap-2` avec info deadline a gauche, selecteur/resultat a droite (ou en dessous sur mobile)
-- Supprimer l'espacement vertical (`space-y-3` → `space-y-1.5`)
