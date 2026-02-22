@@ -37,7 +37,7 @@ export const MobileLayout = ({
   const isHomePage = location.pathname === '/dashboard/home' || location.pathname === '/dashboard';
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 max-w-[100vw] overflow-x-hidden">
       {/* Header with menu button - masqué sur home */}
       {!isHomePage && (
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 safe-top">
