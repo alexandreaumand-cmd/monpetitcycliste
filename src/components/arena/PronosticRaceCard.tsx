@@ -7,8 +7,7 @@ import { Loader2, CheckCircle, XCircle, Clock, Lock, Target, ArrowRight, Users }
 import { PronosticStartlistCombobox } from "./PronosticStartlistCombobox";
 import { useSavePronostic, useLeaguePronostics, type PronosticDeadline, type MyPronostic } from "@/hooks/useArenaPronostics";
 import { toast } from "sonner";
-import { formatDistanceToNow, isPast } from "date-fns";
-import { fr, enUS } from "date-fns/locale";
+import { isPast, differenceInMinutes, differenceInHours, differenceInDays, differenceInWeeks } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
   Accordion,
@@ -24,6 +23,19 @@ interface PronosticRaceCardProps {
   managerId: string;
 }
 
+function formatShortDeadline(deadline: Date, lang: string): string {
+  const now = new Date();
+  const mins = differenceInMinutes(deadline, now);
+  if (mins < 60) return `${Math.max(1, mins)}min`;
+  const hrs = differenceInHours(deadline, now);
+  const remainMins = mins - hrs * 60;
+  if (hrs < 24) return remainMins > 0 ? `${hrs}h${String(remainMins).padStart(2, '0')}` : `${hrs}h`;
+  const days = differenceInDays(deadline, now);
+  if (days < 7) return lang === 'fr' ? `${days}jrs` : `${days}d`;
+  const weeks = differenceInWeeks(deadline, now);
+  return lang === 'fr' ? `${weeks}sem` : `${weeks}w`;
+}
+
 export const PronosticRaceCard = ({
   deadline,
   pronostic,
@@ -31,7 +43,7 @@ export const PronosticRaceCard = ({
   managerId,
 }: PronosticRaceCardProps) => {
   const { t, i18n } = useTranslation("arena");
-  const dateLocale = i18n.language === "fr" ? fr : enUS;
+  const lang = i18n.language?.split('-')[0] || 'fr';
   const savePronostic = useSavePronostic();
 
   const isExpired = isPast(new Date(deadline.deadline_at));
@@ -81,18 +93,12 @@ export const PronosticRaceCard = ({
 
   const StatusIcon = statusInfo.icon;
 
-  const deadlineText = isExpired
-    ? t("pronostics.deadlineExpired", {
-        time: formatDistanceToNow(new Date(deadline.deadline_at), { addSuffix: true, locale: dateLocale }),
-      })
-    : t("pronostics.deadlineIn", {
-        time: formatDistanceToNow(new Date(deadline.deadline_at), { addSuffix: false, locale: dateLocale }),
-      });
+  const shortDeadline = !isExpired ? formatShortDeadline(new Date(deadline.deadline_at), lang) : null;
 
   return (
     <Card className={`transition-all ${statusInfo.bg}`}>
       <CardContent className="p-3 space-y-1.5">
-        {/* Line 1: Course name + badges + status */}
+        {/* Line 1: Course name + badges + compact deadline + status */}
         <div className="flex items-center gap-2">
           <h4 className="font-semibold text-sm truncate flex-1 min-w-0">
             {deadline.courses?.nom || deadline.course_id}
@@ -105,39 +111,39 @@ export const PronosticRaceCard = ({
               {deadline.courses.categorie}
             </Badge>
           )}
+          {shortDeadline && (
+            <div className="flex items-center gap-0.5 shrink-0 text-primary">
+              <Clock className="h-3 w-3" />
+              <span className="text-[10px] font-medium">{shortDeadline}</span>
+            </div>
+          )}
           <div className={`flex items-center shrink-0 ${statusInfo.color}`}>
             <StatusIcon className="h-4 w-4" />
           </div>
         </div>
 
-        {/* Line 2: Deadline + rider selector or result */}
-        <div className="flex items-center gap-2">
-          <div className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            <span>{deadlineText}</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            {!isExpired ? (
-              <div className="flex items-center gap-1">
-                <PronosticStartlistCombobox
-                  courseId={deadline.course_id}
-                  value={pronostic?.coureur_id || null}
-                  onSelect={handleSelect}
-                  disabled={savePronostic.isPending}
-                />
-                {savePronostic.isPending && (
-                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
-                )}
-              </div>
-            ) : pronostic ? (
-              <div className="flex items-center gap-1 text-sm justify-end">
-                <Target className="h-3 w-3 text-muted-foreground shrink-0" />
-                <span className="truncate font-medium">{pronostic.coureur_nom}</span>
-              </div>
-            ) : (
-              <span className="text-xs text-muted-foreground italic text-right block">{t("pronostics.noPick")}</span>
-            )}
-          </div>
+        {/* Line 2: Full-width rider selector or result */}
+        <div>
+          {!isExpired ? (
+            <div className="flex items-center gap-1">
+              <PronosticStartlistCombobox
+                courseId={deadline.course_id}
+                value={pronostic?.coureur_id || null}
+                onSelect={handleSelect}
+                disabled={savePronostic.isPending}
+              />
+              {savePronostic.isPending && (
+                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
+              )}
+            </div>
+          ) : pronostic ? (
+            <div className="flex items-center gap-1 text-sm">
+              <Target className="h-3 w-3 text-muted-foreground shrink-0" />
+              <span className="truncate font-medium">{pronostic.coureur_nom}</span>
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground italic">{t("pronostics.noPick")}</span>
+          )}
         </div>
 
         {/* Collapsible all picks (closed state only) */}
