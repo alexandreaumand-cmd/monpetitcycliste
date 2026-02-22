@@ -99,7 +99,7 @@ export const PronosticRaceCard = ({
     <Card className={`transition-all ${statusInfo.bg}`}>
       <CardContent className="p-3 space-y-1.5">
         {/* Line 1: Course name + badges + compact deadline + status */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
           <h4 className="font-semibold text-sm truncate flex-1 min-w-0">
             {deadline.courses?.nom || deadline.course_id}
           </h4>

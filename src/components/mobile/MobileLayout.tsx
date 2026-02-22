@@ -70,7 +70,7 @@ export const MobileLayout = ({
       )}
 
       {/* Main content */}
-      <main className="pb-safe">{children}</main>
+      <main className="pb-safe overflow-x-hidden">{children}</main>
 
       {/* Bottom navigation bar - masquée sur home */}
       {!isHomePage && <MobileBottomBar isAdmin={isAdmin} />}
