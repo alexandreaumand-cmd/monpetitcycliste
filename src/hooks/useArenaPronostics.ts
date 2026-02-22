@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { isPast } from "date-fns";
 
 export function useCurrentManagerId() {
   return useQuery({
@@ -257,6 +259,65 @@ export function useLeaguePronostics(
     },
     enabled: enabled && !!leagueId && !!courseId,
     staleTime: 1000 * 60 * 2,
+  });
+}
+
+/**
+ * Hook to check which closed deadlines have race results (position=1),
+ * meaning evaluation has occurred even if the manager didn't make a pick.
+ */
+export function useEvaluatedDeadlineIds(deadlines: PronosticDeadline[] | undefined) {
+  // Only look at closed deadlines
+  const closedDeadlines = useMemo(() => {
+    if (!deadlines) return [];
+    return deadlines.filter((d) => isPast(new Date(d.deadline_at)));
+  }, [deadlines]);
+
+  return useQuery({
+    queryKey: ['arena-evaluated-deadline-ids', closedDeadlines.map(d => d.id).join(',')],
+    queryFn: async () => {
+      if (closedDeadlines.length === 0) return new Set<string>();
+
+      const courseIds = [...new Set(closedDeadlines.map(d => d.course_id))];
+
+      // Fetch race_results with position=1 for these courses
+      const { data: results, error } = await supabase
+        .from('race_results')
+        .select('course_id, etape_numero, type_classement')
+        .in('course_id', courseIds)
+        .eq('position', 1);
+
+      if (error) throw error;
+
+      // Build a lookup set of "course_id|etape_numero|type_classement"
+      const resultKeys = new Set<string>();
+      for (const r of (results || [])) {
+        resultKeys.add(`${r.course_id}|${r.etape_numero ?? 'null'}|${r.type_classement}`);
+      }
+
+      // Map pronostic_type to type_classement for matching
+      const pronosticToClassement: Record<string, string[]> = {
+        stage_winner: ['Etape'],
+        gc_winner: ['General'],
+        one_day_winner: ['General', 'Etape'],
+      };
+
+      const evaluatedIds = new Set<string>();
+      for (const d of closedDeadlines) {
+        const classements = pronosticToClassement[d.pronostic_type] || [];
+        const etapeKey = d.etape_numero ?? 'null';
+        for (const tc of classements) {
+          if (resultKeys.has(`${d.course_id}|${etapeKey}|${tc}`)) {
+            evaluatedIds.add(d.id);
+            break;
+          }
+        }
+      }
+
+      return evaluatedIds;
+    },
+    enabled: closedDeadlines.length > 0,
+    staleTime: 1000 * 60 * 5,
   });
 }
 
