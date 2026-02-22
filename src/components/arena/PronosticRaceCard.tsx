@@ -107,7 +107,7 @@ export const PronosticRaceCard = ({
             {typeLabel}
           </Badge>
           {deadline.courses?.categorie && (
-            <Badge variant="secondary" className="text-[10px] shrink-0 px-1.5 py-0">
+            <Badge variant="secondary" className="text-[10px] shrink truncate max-w-[80px] px-1.5 py-0">
               {deadline.courses.categorie}
             </Badge>
           )}
