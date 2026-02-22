@@ -36,14 +36,7 @@ export default function ArenaPage() {
   }
 
   return (
-    <div className="space-y-6 py-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          🏟️ {t("title")}
-        </h1>
-        <p className="text-muted-foreground">{t("subtitle")}</p>
-      </div>
-
+    <div className="space-y-0 pt-2">
       <Tabs value={defaultTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="pronostics" className="gap-2">
