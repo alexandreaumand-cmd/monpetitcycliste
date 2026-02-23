@@ -27,6 +27,7 @@ import {
   Eye,
   Users,
   ArrowRightLeft,
+  Calendar,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -98,7 +99,8 @@ export const MyTeamMobile = () => {
     total_points: 0, 
     bonus_points: 0, 
     bonus_rider_points: 0,
-    total_with_bonus: 0 
+    total_with_bonus: 0,
+    total_race_days: 0
   });
   
   // Bonus rider state
@@ -441,6 +443,12 @@ export const MyTeamMobile = () => {
         <div className="flex items-center gap-1 text-muted-foreground">
           <TrendingUp className="h-4 w-4" />
           <span>{kpis.scorers_count}/{coureurs.length}</span>
+        </div>
+        
+        <div className="flex items-center gap-1 text-muted-foreground">
+          <Calendar className="h-4 w-4 text-blue-500" />
+          <span>{kpis.total_race_days || 0}</span>
+          <span>jours</span>
         </div>
       </div>
 

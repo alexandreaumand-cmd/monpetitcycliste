@@ -132,6 +132,83 @@ Deno.serve(async (req) => {
     // Filtrer les coureurs pour masquer ceux non annoncés
     const visibleCoureurs = coureurs?.filter((c: any) => !hiddenRiderIds.includes(c.coureur_id)) || [];
 
+    // Calculer les jours de course par coureur
+    const raceDaysMap = new Map<string, number>();
+    const effectivePhaseId = phase_id || phaseIdForAnnonces;
+    if (effectivePhaseId && visibleCoureurs.length > 0) {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // 1. Récupérer les courses passées de la phase
+      const { data: pastCourses } = await supabase
+        .from('courses')
+        .select('id, date_debut, date_fin')
+        .eq('phase_id', effectivePhaseId)
+        .lt('date_fin', today);
+      
+      if (pastCourses && pastCourses.length > 0) {
+        const courseIds = pastCourses.map(c => c.id);
+        const coureurIds = visibleCoureurs.map((c: any) => c.coureur_id);
+        
+        // 2. Pour chaque course, trouver le dernier startlist_imports
+        const { data: latestImports } = await supabase
+          .from('startlist_imports')
+          .select('id, race_id, created_at')
+          .in('race_id', courseIds)
+          .order('created_at', { ascending: false });
+        
+        if (latestImports && latestImports.length > 0) {
+          // Garder seulement le dernier import par race_id
+          const latestByRace = new Map<string, string>();
+          for (const imp of latestImports) {
+            if (!latestByRace.has(imp.race_id)) {
+              latestByRace.set(imp.race_id, imp.id);
+            }
+          }
+          const startlistIds = [...latestByRace.values()];
+          
+          // 3. Récupérer les entrées de startlist pour ces imports et ces coureurs
+          const { data: entries } = await supabase
+            .from('startlist_entries')
+            .select('startlist_id, coureur_id')
+            .in('startlist_id', startlistIds)
+            .in('coureur_id', coureurIds);
+          
+          if (entries && entries.length > 0) {
+            // Créer un map startlist_id -> race_id
+            const startlistToRace = new Map<string, string>();
+            for (const [raceId, slId] of latestByRace) {
+              startlistToRace.set(slId, raceId);
+            }
+            
+            // Créer un map race_id -> jours
+            const raceDaysPerCourse = new Map<string, number>();
+            for (const course of pastCourses) {
+              if (course.date_debut && course.date_fin) {
+                const debut = new Date(course.date_debut);
+                const fin = new Date(course.date_fin);
+                const days = Math.round((fin.getTime() - debut.getTime()) / 86400000) + 1;
+                raceDaysPerCourse.set(course.id, days);
+              }
+            }
+            
+            // Sommer les jours par coureur
+            for (const entry of entries) {
+              const raceId = startlistToRace.get(entry.startlist_id);
+              if (raceId) {
+                const days = raceDaysPerCourse.get(raceId) || 0;
+                raceDaysMap.set(entry.coureur_id, (raceDaysMap.get(entry.coureur_id) || 0) + days);
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Attacher race_days à chaque coureur visible
+    for (const c of visibleCoureurs) {
+      c.race_days = raceDaysMap.get(c.coureur_id) || 0;
+    }
+
     // Calculer les KPIs sur les coureurs VISIBLES uniquement
     const totalPoints = visibleCoureurs.reduce((sum: number, c: any) => sum + Number(c.points_total || 0), 0) || 0;
     const scorersCount = visibleCoureurs.filter((c: any) => Number(c.points_total || 0) > 0).length || 0;
@@ -267,7 +344,8 @@ Deno.serve(async (req) => {
         wins_count: winsCount,
         my_rank: myRank,
         managers_count: managersCount,
-        pending_announcements: pendingAnnouncements
+        pending_announcements: pendingAnnouncements,
+        total_race_days: visibleCoureurs.reduce((sum: number, c: any) => sum + (c.race_days || 0), 0)
       }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
