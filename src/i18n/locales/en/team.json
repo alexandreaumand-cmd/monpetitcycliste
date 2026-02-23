@@ -11,6 +11,8 @@
   "totalPts": "Total pts",
   "bonusPts": "Bonus pts",
   "scorers": "Scorers",
+  "raceDays": "Race days",
+  "totalRaceDays": "Race days",
   "ranking": "Ranking",
   "ratio": "Ratio",
   "price": "Price",
@@ -57,6 +59,7 @@
     "price": "Price",
     "rating": "Rating",
     "totalPoints": "Total points",
+    "raceDays": "Days",
     "ratio": "Ratio"
   },
   "sort": {
@@ -65,7 +68,8 @@
     "price": "Price",
     "rating": "Rating",
     "rider": "Rider",
-    "team": "Team"
+    "team": "Team",
+    "jours": "Days"
   },
   "empty": {
     "title": "No riders",

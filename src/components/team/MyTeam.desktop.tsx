@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt, Star, ArrowUp, ArrowDown, Award, Eye, Users, ArrowRightLeft } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Trophy, ArrowUpDown, X, Shirt, Star, ArrowUp, ArrowDown, Award, Eye, Users, ArrowRightLeft, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useToast } from "@/hooks/use-toast";
@@ -43,6 +43,7 @@ interface Coureur {
   points_total: number;
   ratio_points_par_prix: number;
   winning_round?: number;
+  race_days?: number;
 }
 
 interface PointDetail {
@@ -63,10 +64,11 @@ interface TeamKPIs {
   wins_count: number;
   my_rank: number | null;
   managers_count: number;
+  total_race_days?: number;
 }
 
 
-type SortBy = 'points' | 'ratio' | 'prix' | 'cote' | 'nom' | 'equipe';
+type SortBy = 'points' | 'ratio' | 'prix' | 'cote' | 'nom' | 'equipe' | 'jours';
 type SortDirection = 'asc' | 'desc';
 
 interface Manager {
@@ -407,6 +409,9 @@ export const MyTeamDesktop = () => {
       case 'equipe':
         comparison = a.equipe.localeCompare(b.equipe, 'fr', { sensitivity: 'base' });
         return sortDirection === 'desc' ? comparison : -comparison;
+      case 'jours':
+        comparison = (b.race_days || 0) - (a.race_days || 0);
+        break;
       default:
         comparison = 0;
     }
@@ -645,7 +650,7 @@ export const MyTeamDesktop = () => {
       {coureurs.length > 0 && (
         <Card className="border-2 border-black">
           <CardContent className="p-4">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-5 gap-4">
               {/* Total Points */}
               <div className="text-center">
                 <Trophy className="h-5 w-5 mx-auto text-[#FFD500] mb-1" />
@@ -665,6 +670,13 @@ export const MyTeamDesktop = () => {
                 <TrendingUp className="h-5 w-5 mx-auto text-green-600 mb-1" />
                 <div className="text-2xl font-bold">{kpis.scorers_count}</div>
                 <div className="text-xs text-muted-foreground">{t('scorers')}</div>
+              </div>
+              
+              {/* Race Days */}
+              <div className="text-center">
+                <Calendar className="h-5 w-5 mx-auto text-blue-500 mb-1" />
+                <div className="text-2xl font-bold">{kpis.total_race_days || 0}</div>
+                <div className="text-xs text-muted-foreground">{t('raceDays')}</div>
               </div>
               
               {/* Rank */}
@@ -734,6 +746,17 @@ export const MyTeamDesktop = () => {
                   </TableHead>
                   <TableHead 
                     className="text-right cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('jours')}
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      {t('table.raceDays')}
+                      {sortBy === 'jours' && (
+                        sortDirection === 'desc' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="text-right cursor-pointer hover:bg-muted/50 select-none"
                     onClick={() => handleSort('ratio')}
                   >
                     <div className="flex items-center justify-end gap-1">
@@ -794,6 +817,9 @@ export const MyTeamDesktop = () => {
                         )}
                         <span className="font-bold text-lg">{coureur.points_total}</span>
                       </div>
+                    </TableCell>
+                    <TableCell className="text-right py-2">
+                      <span className="text-muted-foreground">{coureur.race_days || 0}</span>
                     </TableCell>
                     <TableCell className="text-right py-2">
                       <Badge className={`${getRatioBadgeClass(

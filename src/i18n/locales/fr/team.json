@@ -11,6 +11,8 @@
   "totalPts": "Total pts",
   "bonusPts": "Bonus pts",
   "scorers": "Scoreurs",
+  "raceDays": "Jours de course",
+  "totalRaceDays": "Jours de course",
   "ranking": "Classement",
   "ratio": "Ratio",
   "price": "Prix",
@@ -57,6 +59,7 @@
     "price": "Prix",
     "rating": "Cote",
     "totalPoints": "Points totaux",
+    "raceDays": "Jours",
     "ratio": "Ratio"
   },
   "sort": {
@@ -65,7 +68,8 @@
     "price": "Prix",
     "rating": "Cote",
     "rider": "Coureur",
-    "team": "Équipe"
+    "team": "Équipe",
+    "jours": "Jours"
   },
   "empty": {
     "title": "Aucun coureur",
