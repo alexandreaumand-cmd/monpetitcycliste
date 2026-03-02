@@ -1,34 +1,82 @@
 
 
-## Probleme identifie
+## Nouveau onglet "Hebdo" dans le Classement
 
-L'ecran "Mon Equipe" calcule les scoreurs differemment de l'ecran "Classement" :
+Ajout d'un onglet heatmap hebdomadaire dans la section Classement, affichant les points gagnes par semaine pour chaque manager avec un code couleur base sur le classement.
 
-- **Classement** (correct) : compte les coureurs distincts ayant marque des points (`points > 0`) en **excluant les resultats TTT** (`is_ttt = false`), via la table `race_result_sets`
-- **Mon Equipe** (incorrect) : compte simplement les coureurs avec `points_total > 0` sur le roster, ce qui inclut les points TTT
+### Architecture
 
-## Solution
+**1. Nouvelle fonction RPC SQL** (`get_weekly_points_heatmap`)
+- Parametres : `p_league_id`, `p_saison_id`
+- Logique :
+  - Joindre `points_ledger` avec `race_results` pour obtenir `date_classement` (date reelle de la course/etape/CG)
+  - Joindre avec `rosters` pour attribuer les points aux managers de la ligue
+  - Grouper par `manager_id` et `EXTRACT(WEEK FROM date_classement)` (numero de semaine ISO)
+  - Retourner : `manager_id`, `manager_nom`, `week_number`, `week_year`, `total_points`
+- Filtre par les phases de la saison donnee
 
-Modifier la fonction backend `manager-my-team` pour aligner le calcul des scoreurs avec la vue `v_manager_standings_by_phase_v2`.
+**2. Nouveau composant** `src/components/rankings/WeeklyHeatmap.tsx`
+- Appelle la RPC via `useQuery`
+- Construit une matrice managers x semaines
+- Affiche un tableau avec :
+  - Colonne fixe a gauche : nom du manager
+  - Colonnes : semaines (numero)
+  - Cellules : points de la semaine, colorees selon le classement
+  - Ligne TOTAL en bas
+- Code couleur par semaine (colonne) :
+  - Vert fonce (`bg-green-700`) : 1er
+  - Vert clair (`bg-green-300`) : 2e et 3e
+  - Rouge fonce (`bg-red-600`) : dernier
+  - Rouge clair (`bg-red-300`) : avant-dernier et avant-avant-dernier
+  - Fond neutre pour les autres
+- Scroll horizontal si beaucoup de semaines
 
-### Changement technique
+**3. Integration dans les pages**
+- `Rankings.tsx` (desktop) : ajout d'un 5e onglet "Hebdo" avec `<TabsTrigger value="weekly">`
+- `Rankings.mobile.tsx` : ajout dans le `TabGroup` et rendu du composant en mode responsive
+- Traductions i18n dans `en/rankings.json` et `fr/rankings.json`
 
-**Fichier** : `supabase/functions/manager-my-team/index.ts`
+### Details techniques
 
-Remplacer le calcul simple a la ligne 214 :
-```typescript
-const scorersCount = visibleCoureurs.filter((c: any) => Number(c.points_total || 0) > 0).length || 0;
+**Migration SQL** :
+```sql
+CREATE OR REPLACE FUNCTION public.get_weekly_points_heatmap(
+  p_league_id uuid,
+  p_saison_id uuid
+)
+RETURNS TABLE(
+  manager_id uuid,
+  manager_nom text,
+  week_number int,
+  total_points numeric
+)
+LANGUAGE sql STABLE AS $$
+  SELECT
+    r.manager_id,
+    m.nom AS manager_nom,
+    EXTRACT(WEEK FROM rr.date_classement)::int AS week_number,
+    SUM(pl.points) AS total_points
+  FROM points_ledger pl
+  JOIN race_results rr
+    ON rr.course_id = pl.course_id
+    AND rr.coureur_id = pl.coureur_id
+    AND rr.type_classement = pl.type_classement
+    AND COALESCE(rr.etape_numero, 0) = COALESCE(pl.etape_numero, 0)
+  JOIN rosters r
+    ON r.coureur_id = pl.coureur_id
+    AND r.phase_id = pl.phase_id
+    AND r.league_id = p_league_id
+  JOIN managers m ON m.id = r.manager_id
+  JOIN phases p ON p.id = pl.phase_id
+  WHERE p.saison_id = p_saison_id
+  GROUP BY r.manager_id, m.nom, EXTRACT(WEEK FROM rr.date_classement)
+$$;
 ```
 
-Par une requete SQL qui reproduit exactement la logique de la vue du classement :
-1. Interroger `points_ledger` pour les coureurs du roster sur la phase
-2. Faire un `LEFT JOIN` avec `race_result_sets` pour identifier les resultats TTT
-3. Filtrer `points > 0` et `is_ttt = false`
-4. Compter les `DISTINCT coureur_id`
-
-Concretement, ajouter une requete RPC ou directe qui :
-- Prend les `coureur_id` du roster visible
-- Cherche dans `points_ledger` les points > 0 pour la phase
-- Exclut les lignes ou `race_result_sets.is_ttt = true`
-- Retourne le `COUNT(DISTINCT coureur_id)`
+**Composant WeeklyHeatmap** :
+- Recoit `saisonId` en prop
+- Transforme les donnees en matrice `{ managers: [...], weeks: [4,5,6,...], cells: Map<managerId_week, points> }`
+- Pour chaque semaine, calcule le classement des managers et applique les couleurs
+- Affiche la ligne TOTAL (somme par semaine)
+- Tri par defaut : par total de points decroissant
 
