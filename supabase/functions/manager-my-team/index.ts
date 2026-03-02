@@ -211,7 +211,7 @@ Deno.serve(async (req) => {
 
     // Calculer les KPIs sur les coureurs VISIBLES uniquement
     const totalPoints = visibleCoureurs.reduce((sum: number, c: any) => sum + Number(c.points_total || 0), 0) || 0;
-    const scorersCount = visibleCoureurs.filter((c: any) => Number(c.points_total || 0) > 0).length || 0;
+    // scorersCount sera calculé plus bas via la vue standings (exclut TTT)
 
     // Obtenir la phase active ou celle fournie
     let phaseId = phase_id;
@@ -307,12 +307,13 @@ Deno.serve(async (req) => {
     // Calculer le classement du manager sur la phase (depuis la vue officielle)
     let myRank = null;
     let managersCount = 0;
+    let scorersCount = 0;
     if (phaseId && targetManagerId) {
       console.log(`[manager-my-team] Computing rank for phase ${phaseId}, manager ${targetManagerId}`);
       
       let standingsQuery = supabase
         .from('v_manager_standings_by_phase_v2')
-        .select('manager_id, total_points')
+        .select('manager_id, total_points, nb_scoreurs')
         .eq('phase_id', phaseId);
       
       if (league_id) standingsQuery = standingsQuery.eq('league_id', league_id);
@@ -321,13 +322,14 @@ Deno.serve(async (req) => {
       if (standings && standings.length > 0) {
         managersCount = standings.length;
         
-        // Trouver la position du manager actuel
+        // Trouver la position du manager actuel et récupérer nb_scoreurs
         const position = standings.findIndex(m => m.manager_id === targetManagerId);
         if (position !== -1) {
           myRank = position + 1;
+          scorersCount = Number(standings[position].nb_scoreurs) || 0;
         }
         
-        console.log(`[manager-my-team] Phase ${phaseId}: manager ${targetManagerId} rank = ${myRank}/${managersCount}`);
+        console.log(`[manager-my-team] Phase ${phaseId}: manager ${targetManagerId} rank = ${myRank}/${managersCount}, scorers = ${scorersCount}`);
       } else {
         console.log(`[manager-my-team] No standings found for phase ${phaseId}`);
       }
