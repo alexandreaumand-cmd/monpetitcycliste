@@ -1,49 +1,63 @@
 
-## Correction du calcul de points en saisie mobile
+
+## Correction automatique du date_classement dans la saisie des resultats
 
 ### Probleme identifie
 
-La saisie mobile utilise un chemin de sauvegarde different du desktop, causant des points incorrects :
+La fonction SQL `admin_result_save_lot` utilise `COALESCE(date_classement, CURRENT_DATE)` comme date par defaut lorsqu'aucune date n'est passee dans les lignes de resultats. Or, **ni le desktop ni le mobile** ne transmettent le `date_classement` dans les rows envoyees a l'edge function (sauf pour les TTT en mode direct insert sur desktop).
 
-- **Desktop** : appelle l'edge function `admin-result-save-lot` (qui utilise la RPC SQL `admin_result_save_lot`), puis `admin_compute_points_for_course` pour calculer correctement les points via `scoring_rules_saisons` (filtree par saison).
-- **Mobile** : interroge la vue `scoring_rules_norm` (qui contient **toutes les saisons** sans filtre), construit un `scoringMap` ambigu, puis insere directement dans `race_results` avec des points potentiellement faux. La derniere valeur trouvee pour une meme place gagne (aleatoire : 5 au lieu de 200).
+Consequence : la date enregistree est la date de saisie (ex: 17/02) au lieu de la date reelle de la course (ex: 13/02). Cela decale les points dans le heatmap hebdomadaire.
+
+**Cas concret** : Vuelta Region Murcia etape 1, date reelle 2026-02-13 (S7), enregistree avec 2026-02-17 (S8).
 
 ### Solution
 
-Aligner le mobile sur le desktop en utilisant le meme edge function `admin-result-save-lot` et le meme flux de recalcul des points.
+Modifier la fonction SQL `admin_result_save_lot` pour calculer automatiquement le `date_classement` a partir des donnees de la course, sans dependre du client.
 
 ### Modifications
 
-**Fichier** : `src/components/admin/ResultsEntryStudio.mobile.tsx`
+#### 1. Migration SQL : mise a jour de `admin_result_save_lot`
 
-1. **Remplacer la sauvegarde directe des resultats (lignes ~438-530)** :
-   - Supprimer le code qui interroge `scoring_rules_norm` et construit un `scoringMap`
-   - Supprimer le code qui fait `delete` puis `insert` directement dans `race_results`
-   - Remplacer par un appel a `supabase.functions.invoke('admin-result-save-lot', ...)` avec les memes parametres que le desktop :
-     ```text
-     body: {
-       p_course_id: course.course_id,
-       p_type_classement: currentClassement,
-       p_etape_numero: etapeNumeroValue,
-       p_rows: validRows.map(row => ({
-         coureur_id: row.coureur_id,
-         position: row.position,
-         statut: row.statut,
-       })),
-     }
-     ```
+Remplacer la ligne :
+```text
+COALESCE((row_data->>'date_classement')::date, CURRENT_DATE)
+```
 
-2. **Sauvegarder les maillots via le meme edge function** (lignes ~532-600) :
-   - Remplacer le delete + insert direct par des appels a `admin-result-save-lot` pour chaque porteur de maillot, comme le desktop
+Par un calcul automatique :
+```text
+CASE
+  WHEN p_etape_numero IS NOT NULL THEN
+    -- Pour les etapes : date_debut + (etape_numero - 1) jours
+    (v_date_debut + (p_etape_numero - 1) * interval '1 day')::date
+  ELSE
+    -- Pour les classements generaux et one-day : date_fin de la course
+    v_date_fin
+END
+```
 
-3. **Ajouter le recalcul des points** apres la sauvegarde :
-   - Appeler `supabase.functions.invoke('compute-points', { body: { course_id: course.course_id } })` apres sauvegarde (identique au desktop)
+Ajouter les variables `v_date_debut` et `v_date_fin` au debut de la fonction, extraites de la table `courses` (deja requetee pour `saison_id`).
 
-4. **Supprimer les imports et references a `scoring_rules_norm`** qui ne sont plus necessaires dans la mutation de sauvegarde
+#### 2. Correction des donnees existantes en production
+
+Executer une migration pour corriger la Vuelta Region Murcia :
+```text
+UPDATE race_results
+SET date_classement = '2026-02-13'
+WHERE course_id = 'vuelta_a_la_regi_n_de_murcia_costa_c_lida'
+  AND etape_numero = 1
+  AND date_classement = '2026-02-17';
+```
+
+### Details techniques
+
+- La variable `v_date_debut` / `v_date_fin` sera extraite dans le meme `SELECT` qui recupere deja `v_saison_id` depuis `courses JOIN phases`
+- Le calcul `date_debut + (etape_numero - 1)` est une approximation raisonnable pour les courses par etapes (chaque etape = 1 jour). Si des jours de repos existent, l'admin peut toujours passer un `date_classement` explicite dans les rows (le `COALESCE` existant sera conserve en priorite)
+- L'ordre de priorite sera : `date_classement` explicite dans les rows > calcul automatique
+- Aucune modification du code frontend n'est necessaire
 
 ### Impact
 
-- Les points seront correctement calcules via `scoring_rules_saisons` filtree par saison
-- Le `points_ledger` sera mis a jour via `admin_compute_points_for_course`
-- Le comportement sera strictement identique entre mobile et desktop
-- Les notifications push existantes seront aussi declenchees sur mobile (gerees par l'edge function)
+- Toutes les futures saisies auront automatiquement la bonne date, que ce soit depuis le mobile ou le desktop
+- Le heatmap hebdomadaire affichera les points dans la bonne semaine
+- Les saisies TTT via insertion directe sur desktop continueront de fonctionner comme avant (elles passent deja un `dateClassement`)
+
