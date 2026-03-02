@@ -1,63 +1,43 @@
 
 
-## Correction automatique du date_classement dans la saisie des resultats
+## Correction du dialogue "Créer un coureur" depuis les données startlist
 
-### Probleme identifie
+### Probleme 1 : L'equipe existante n'est pas trouvee
 
-La fonction SQL `admin_result_save_lot` utilise `COALESCE(date_classement, CURRENT_DATE)` comme date par defaut lorsqu'aucune date n'est passee dans les lignes de resultats. Or, **ni le desktop ni le mobile** ne transmettent le `date_classement` dans les rows envoyees a l'edge function (sauf pour les TTT en mode direct insert sur desktop).
+**Cause** : Le code actuel cherche l'equipe uniquement par `trigramme` avec `ilike`. Or, `source_team` contient le nom complet avec un suffixe de categorie entre parentheses (ex: `"XDS Astana Team (WT)"`), tandis que le trigramme en base est `"XAT"` et le `nom_affiche` est `"XDS Astana Team"`. Aucune correspondance n'est jamais trouvee, donc le dialogue "Creer une nouvelle equipe" s'affiche systematiquement.
 
-Consequence : la date enregistree est la date de saisie (ex: 17/02) au lieu de la date reelle de la course (ex: 13/02). Cela decale les points dans le heatmap hebdomadaire.
+**Solution** : Ameliorer la recherche d'equipe dans le `useEffect` de `CreateRiderDialog.tsx` :
+1. Nettoyer le `source_team` en retirant le suffixe de categorie entre parentheses (ex: `"XDS Astana Team (WT)"` devient `"XDS Astana Team"`)
+2. Chercher par correspondance multi-criteres : `nom_affiche` (ilike), `trigramme` (ilike), et `code_court` de la table `equipes` (ilike)
+3. Ne proposer la creation d'equipe que si aucune correspondance n'est trouvee
 
-**Cas concret** : Vuelta Region Murcia etape 1, date reelle 2026-02-13 (S7), enregistree avec 2026-02-17 (S8).
+### Probleme 2 : Le nom est en format "NOM Prenom" au lieu de "Prenom NOM"
 
-### Solution
+**Cause** : Le `source_name` provenant du scraping PCS est au format `"GALBUSERA Pietro"`. Le champ `nom` du formulaire est pre-rempli tel quel, alors que la convention de la base est `"Pietro Galbusera"`.
 
-Modifier la fonction SQL `admin_result_save_lot` pour calculer automatiquement le `date_classement` a partir des donnees de la course, sans dependre du client.
+**Solution** : Ajouter une fonction `convertNameFormat` qui :
+1. Detecte les mots en majuscules (le nom de famille) et les mots en casse mixte (le prenom)
+2. Reorganise en "Prenom Nom" avec la bonne casse (ex: `"GALBUSERA Pietro"` devient `"Pietro Galbusera"`)
+3. Pre-remplit le champ `nom` avec le format converti
 
-### Modifications
+### Fichier modifie
 
-#### 1. Migration SQL : mise a jour de `admin_result_save_lot`
+**`src/components/admin/startlist-data/CreateRiderDialog.tsx`** :
 
-Remplacer la ligne :
-```text
-COALESCE((row_data->>'date_classement')::date, CURRENT_DATE)
-```
+1. Ajouter une fonction utilitaire `convertNameFormat(sourceName)` :
+   - Separe les mots du nom
+   - Identifie les mots tout en majuscules comme le nom de famille
+   - Place le prenom en premier, suivi du nom de famille avec une majuscule initiale
+   - Cas particulier : si un seul mot ou tout en majuscules, on met juste la casse correcte
 
-Par un calcul automatique :
-```text
-CASE
-  WHEN p_etape_numero IS NOT NULL THEN
-    -- Pour les etapes : date_debut + (etape_numero - 1) jours
-    (v_date_debut + (p_etape_numero - 1) * interval '1 day')::date
-  ELSE
-    -- Pour les classements generaux et one-day : date_fin de la course
-    v_date_fin
-END
-```
+2. Ajouter une fonction `cleanSourceTeam(sourceTeam)` :
+   - Retire les suffixes entre parentheses comme `(WT)`, `(CT)`, `(PT)`
+   - Trim le resultat
 
-Ajouter les variables `v_date_debut` et `v_date_fin` au debut de la fonction, extraites de la table `courses` (deja requetee pour `saison_id`).
+3. Modifier le `useEffect` de recherche d'equipe :
+   - Utiliser le nom nettoyé pour chercher par `nom_affiche` via `ilike`
+   - Si pas de resultat, chercher par `trigramme`
+   - Ne declencher `setShowCreateTeam(true)` que si aucune correspondance n'est trouvee
 
-#### 2. Correction des donnees existantes en production
-
-Executer une migration pour corriger la Vuelta Region Murcia :
-```text
-UPDATE race_results
-SET date_classement = '2026-02-13'
-WHERE course_id = 'vuelta_a_la_regi_n_de_murcia_costa_c_lida'
-  AND etape_numero = 1
-  AND date_classement = '2026-02-17';
-```
-
-### Details techniques
-
-- La variable `v_date_debut` / `v_date_fin` sera extraite dans le meme `SELECT` qui recupere deja `v_saison_id` depuis `courses JOIN phases`
-- Le calcul `date_debut + (etape_numero - 1)` est une approximation raisonnable pour les courses par etapes (chaque etape = 1 jour). Si des jours de repos existent, l'admin peut toujours passer un `date_classement` explicite dans les rows (le `COALESCE` existant sera conserve en priorite)
-- L'ordre de priorite sera : `date_classement` explicite dans les rows > calcul automatique
-- Aucune modification du code frontend n'est necessaire
-
-### Impact
-
-- Toutes les futures saisies auront automatiquement la bonne date, que ce soit depuis le mobile ou le desktop
-- Le heatmap hebdomadaire affichera les points dans la bonne semaine
-- Les saisies TTT via insertion directe sur desktop continueront de fonctionner comme avant (elles passent deja un `dateClassement`)
+4. Initialiser `formData.nom` avec `convertNameFormat(entry.source_name)` au lieu de `entry.source_name` directement
 
