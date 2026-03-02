@@ -28,7 +28,7 @@ export const JerseyHoldersInput = ({ phaseId, jerseyHolders, onChange }: JerseyH
   return (
     <div className="border rounded-lg p-4 bg-muted/30">
       <h4 className="text-sm font-medium mb-3">Porteurs de maillots après l'étape (optionnel)</h4>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {JERSEY_CONFIG.map(({ type, icon, label }) => (
           <div key={type} className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
