@@ -19,7 +19,7 @@ export const TabGroup = ({
   return (
     <div
       className={cn(
-        "flex gap-1 p-1 bg-muted rounded-lg w-full",
+        "flex gap-1 p-1 bg-muted rounded-lg w-full overflow-x-auto",
         "scrollbar-hide hide-scrollbar",
         className
       )}
@@ -31,7 +31,7 @@ export const TabGroup = ({
           <button
             key={item.value}
             className={cn(
-              "flex-1 min-w-0 px-2 py-2 text-xs font-medium rounded-md transition-all text-center",
+              "shrink-0 px-3 py-2 text-xs font-medium rounded-md transition-all text-center whitespace-nowrap",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               isSelected
                 ? "bg-background text-foreground shadow-sm border-b-2 border-primary"
