@@ -15,24 +15,34 @@ interface StartlistTrackerMovementsProps {
 }
 
 export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTrackerMovementsProps) {
-  // 1. Get course_ids for the current phase
-  const { data: phaseCourseIds } = useQuery({
+  // 1. Get upcoming courses for the current phase (with dates for sorting)
+  const { data: phaseCourses } = useQuery({
     queryKey: ["phase-courses-for-movements", phaseId],
     queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
       const { data } = await supabase
         .from("courses")
-        .select("id")
-        .eq("phase_id", phaseId);
-      return (data || []).map(c => c.id);
+        .select("id, date_debut")
+        .eq("phase_id", phaseId)
+        .gte("date_fin", today)
+        .order("date_debut", { ascending: true });
+      return data || [];
     },
     enabled: !!phaseId,
   });
+
+  const phaseCourseIds = useMemo(() => phaseCourses?.map(c => c.id) || [], [phaseCourses]);
+  const courseOrder = useMemo(() => {
+    const map = new Map<string, number>();
+    phaseCourses?.forEach((c, i) => map.set(c.id, i));
+    return map;
+  }, [phaseCourses]);
 
   // 2. Get tracker changes for those courses
   const { data: changes, isLoading } = useQuery({
     queryKey: ["startlist-tracker-movements", phaseCourseIds],
     queryFn: async () => {
-      if (!phaseCourseIds?.length) return [];
+      if (!phaseCourseIds.length) return [];
       const { data } = await supabase
         .from("startlist_tracker_changes")
         .select("id, change_type, rider_name, team_name, course_name, course_id, coureur_id, detected_at")
@@ -41,7 +51,7 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
         .limit(200);
       return data || [];
     },
-    enabled: !!phaseCourseIds?.length,
+    enabled: phaseCourseIds.length > 0,
   });
 
   // 3. Get coureur equipe fallback for removed entries (team_name is null)
@@ -96,12 +106,10 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
       }
       groups.get(c.course_id)!.items.push(c);
     }
-    return Array.from(groups.entries()).map(([courseId, { courseName, items }]) => ({
-      courseId,
-      courseName,
-      items,
-    }));
-  }, [changes]);
+    return Array.from(groups.entries())
+      .map(([courseId, { courseName, items }]) => ({ courseId, courseName, items }))
+      .sort((a, b) => (courseOrder.get(a.courseId) ?? 999) - (courseOrder.get(b.courseId) ?? 999));
+  }, [changes, courseOrder]);
 
   if (isLoading) {
     return (
