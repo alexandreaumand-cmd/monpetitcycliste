@@ -34,7 +34,7 @@ function convertNameFormat(sourceName: string): string {
     return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
   }
   const firstName = otherWords.join(' ');
-  const lastName = upperWords.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  const lastName = upperWords.join(' ');
   return `${firstName} ${lastName}`;
 }
 
