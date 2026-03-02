@@ -195,75 +195,137 @@ export const StartlistEntriesTable = ({ entries, saisonId, onUpdate }: Startlist
         </div>
       )}
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-10">
-              <Checkbox
-                checked={selectedIds.size === entries.length && entries.length > 0}
-                onCheckedChange={toggleSelectAll}
-              />
-            </TableHead>
-            <SortableHeader column="source_name">Nom source</SortableHeader>
-            <SortableHeader column="source_team">Équipe source</SortableHeader>
-            <SortableHeader column="coureur">Coureur matché</SortableHeader>
-            <SortableHeader column="status">Statut</SortableHeader>
-            <SortableHeader column="startlist">Startlist</SortableHeader>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sortedEntries.map((entry) => (
-            <TableRow key={entry.id}>
-              <TableCell>
+      {/* Desktop table */}
+      <div className="hidden md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-10">
                 <Checkbox
-                  checked={selectedIds.has(entry.id)}
-                  onCheckedChange={() => toggleSelection(entry.id)}
+                  checked={selectedIds.size === entries.length && entries.length > 0}
+                  onCheckedChange={toggleSelectAll}
                 />
-              </TableCell>
-              <TableCell className="font-medium">{entry.source_name}</TableCell>
-              <TableCell>
-                <Badge variant="outline">{entry.source_team || 'N/A'}</Badge>
-              </TableCell>
-              <TableCell>
-                {entry.coureurs ? (
-                  <span className="text-sm">{entry.coureurs.nom}</span>
-                ) : (
-                  <span className="text-sm text-muted-foreground">Non matché</span>
-                )}
-              </TableCell>
-              <TableCell>{getStatusBadge(entry.status)}</TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {entry.startlist_imports?.courses?.nom || 'N/A'}
-              </TableCell>
-              <TableCell className="text-right space-x-2">
-                {!entry.coureur_id && (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="default"
-                      onClick={() => setSelectedEntry(entry)}
-                      disabled={!saisonId}
-                    >
-                      <UserPlus className="h-4 w-4 mr-1" />
-                      Créer
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setMatchingEntry(entry)}
-                      disabled={!saisonId}
-                    >
-                      <LinkIcon className="h-4 w-4 mr-1" />
-                      Matcher
-                    </Button>
-                  </>
-                )}
-              </TableCell>
+              </TableHead>
+              <SortableHeader column="source_name">Nom source</SortableHeader>
+              <SortableHeader column="source_team">Équipe source</SortableHeader>
+              <SortableHeader column="coureur">Coureur matché</SortableHeader>
+              <SortableHeader column="status">Statut</SortableHeader>
+              <SortableHeader column="startlist">Startlist</SortableHeader>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {sortedEntries.map((entry) => (
+              <TableRow key={entry.id}>
+                <TableCell>
+                  <Checkbox
+                    checked={selectedIds.has(entry.id)}
+                    onCheckedChange={() => toggleSelection(entry.id)}
+                  />
+                </TableCell>
+                <TableCell className="font-medium">{entry.source_name}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">{entry.source_team || 'N/A'}</Badge>
+                </TableCell>
+                <TableCell>
+                  {entry.coureurs ? (
+                    <span className="text-sm">{entry.coureurs.nom}</span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Non matché</span>
+                  )}
+                </TableCell>
+                <TableCell>{getStatusBadge(entry.status)}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {entry.startlist_imports?.courses?.nom || 'N/A'}
+                </TableCell>
+                <TableCell className="text-right space-x-2">
+                  {!entry.coureur_id && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => setSelectedEntry(entry)}
+                        disabled={!saisonId}
+                      >
+                        <UserPlus className="h-4 w-4 mr-1" />
+                        Créer
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setMatchingEntry(entry)}
+                        disabled={!saisonId}
+                      >
+                        <LinkIcon className="h-4 w-4 mr-1" />
+                        Matcher
+                      </Button>
+                    </>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Mobile card layout */}
+      <div className="md:hidden space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <Checkbox
+            checked={selectedIds.size === entries.length && entries.length > 0}
+            onCheckedChange={toggleSelectAll}
+          />
+          <span className="text-xs text-muted-foreground">Tout sélectionner</span>
+        </div>
+        {sortedEntries.map((entry) => (
+          <div key={entry.id} className="border rounded-lg p-3 space-y-2">
+            <div className="flex items-start gap-2">
+              <Checkbox
+                checked={selectedIds.has(entry.id)}
+                onCheckedChange={() => toggleSelection(entry.id)}
+                className="mt-1"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm truncate">{entry.source_name}</div>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <Badge variant="outline" className="text-xs">{entry.source_team || 'N/A'}</Badge>
+                  {getStatusBadge(entry.status)}
+                </div>
+                {entry.coureurs ? (
+                  <div className="text-xs text-muted-foreground mt-1">→ {entry.coureurs.nom}</div>
+                ) : null}
+                <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                  {entry.startlist_imports?.courses?.nom || ''}
+                </div>
+              </div>
+            </div>
+            {!entry.coureur_id && (
+              <div className="flex gap-2 pl-8">
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="flex-1"
+                  onClick={() => setSelectedEntry(entry)}
+                  disabled={!saisonId}
+                >
+                  <UserPlus className="h-4 w-4 mr-1" />
+                  Créer
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setMatchingEntry(entry)}
+                  disabled={!saisonId}
+                >
+                  <LinkIcon className="h-4 w-4 mr-1" />
+                  Matcher
+                </Button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
 
       {selectedEntry && (
         <CreateRiderDialog
