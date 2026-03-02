@@ -1,43 +1,50 @@
 
+## Ajout d'un tableau des mouvements startlist sous le calendrier
 
-## Correction du dialogue "Créer un coureur" depuis les données startlist
+### Objectif
+Ajouter, sous le calendrier de la page Startlist (desktop et mobile), un tableau des derniers mouvements de startlists (ajouts/retraits) pour les courses de la phase en cours. Les mouvements sont regroupes par course dans des accordeons.
 
-### Probleme 1 : L'equipe existante n'est pas trouvee
+### Source de donnees
+- Table `startlist_tracker_changes` : contient `change_type`, `rider_name`, `team_name`, `course_name`, `course_id`, `coureur_id`, `detected_at`
+- Table `rosters` : jointure sur `coureur_id` pour retrouver le `manager_id`, puis `managers.nom` pour le nom du manager
+- Table `courses` : filtrer par `phase_id` = phase en cours
+- La phase en cours est deja disponible via `useSeasonContext()` (tableau `phases`)
 
-**Cause** : Le code actuel cherche l'equipe uniquement par `trigramme` avec `ilike`. Or, `source_team` contient le nom complet avec un suffixe de categorie entre parentheses (ex: `"XDS Astana Team (WT)"`), tandis que le trigramme en base est `"XAT"` et le `nom_affiche` est `"XDS Astana Team"`. Aucune correspondance n'est jamais trouvee, donc le dialogue "Creer une nouvelle equipe" s'affiche systematiquement.
+### Nouveau composant : `src/components/startlist/StartlistTrackerMovements.tsx`
 
-**Solution** : Ameliorer la recherche d'equipe dans le `useEffect` de `CreateRiderDialog.tsx` :
-1. Nettoyer le `source_team` en retirant le suffixe de categorie entre parentheses (ex: `"XDS Astana Team (WT)"` devient `"XDS Astana Team"`)
-2. Chercher par correspondance multi-criteres : `nom_affiche` (ilike), `trigramme` (ilike), et `code_court` de la table `equipes` (ilike)
-3. Ne proposer la creation d'equipe que si aucune correspondance n'est trouvee
+**Props** : `phaseId: string`, `leagueId: string`
 
-### Probleme 2 : Le nom est en format "NOM Prenom" au lieu de "Prenom NOM"
+**Donnees** :
+1. Recuperer les `course_id` de la phase en cours depuis `courses` (filtre `phase_id`)
+2. Recuperer les changements depuis `startlist_tracker_changes` filtres par ces `course_id`, ordonnees par `detected_at` desc
+3. Recuperer les rosters de la ligue pour mapper `coureur_id` -> `manager_nom` (via `rosters` + `managers`)
 
-**Cause** : Le `source_name` provenant du scraping PCS est au format `"GALBUSERA Pietro"`. Le champ `nom` du formulaire est pre-rempli tel quel, alors que la convention de la base est `"Pietro Galbusera"`.
+**Affichage** :
+- Titre "Mouvements startlists" avec une icone
+- Accordeons regroupes par course (`course_name`)
+- Chaque accordeon affiche le nom de la course + le nombre de changements entre parentheses
+- Dans chaque accordeon, un tableau compact avec les colonnes :
+  - **Type** : badge vert "Ajout" / badge rouge "Retrait"
+  - **Coureur** : `rider_name`
+  - **Equipe** : `team_name`
+  - **Manager** : nom du manager (si le coureur est dans un roster de la ligue, sinon "-")
+  - **Detecte** : date formatee "dd MMM HH:mm"
+- Si aucun mouvement, afficher un message "Aucun mouvement"
 
-**Solution** : Ajouter une fonction `convertNameFormat` qui :
-1. Detecte les mots en majuscules (le nom de famille) et les mots en casse mixte (le prenom)
-2. Reorganise en "Prenom Nom" avec la bonne casse (ex: `"GALBUSERA Pietro"` devient `"Pietro Galbusera"`)
-3. Pre-remplit le champ `nom` avec le format converti
+### Integration
 
-### Fichier modifie
+**Desktop (`Startlist.desktop.tsx`)** :
+- Ajouter le composant sous le `StartlistCalendarView` (ou sous le grid de cartes) dans le mode `list`
+- Determiner la phase en cours : la premiere phase dont `date_debut <= today <= date_fin`, ou a defaut la prochaine phase
 
-**`src/components/admin/startlist-data/CreateRiderDialog.tsx`** :
+**Mobile (`Startlist.mobile.tsx`)** :
+- Ajouter le composant sous le calendrier / liste dans le mode `list`
+- Meme logique de phase en cours
 
-1. Ajouter une fonction utilitaire `convertNameFormat(sourceName)` :
-   - Separe les mots du nom
-   - Identifie les mots tout en majuscules comme le nom de famille
-   - Place le prenom en premier, suivi du nom de famille avec une majuscule initiale
-   - Cas particulier : si un seul mot ou tout en majuscules, on met juste la casse correcte
+### Details techniques
 
-2. Ajouter une fonction `cleanSourceTeam(sourceTeam)` :
-   - Retire les suffixes entre parentheses comme `(WT)`, `(CT)`, `(PT)`
-   - Trim le resultat
-
-3. Modifier le `useEffect` de recherche d'equipe :
-   - Utiliser le nom nettoyé pour chercher par `nom_affiche` via `ilike`
-   - Si pas de resultat, chercher par `trigramme`
-   - Ne declencher `setShowCreateTeam(true)` que si aucune correspondance n'est trouvee
-
-4. Initialiser `formData.nom` avec `convertNameFormat(entry.source_name)` au lieu de `entry.source_name` directement
-
+- Utiliser `useQuery` pour les 3 requetes (courses de la phase, changements, rosters)
+- Utiliser les composants existants : `Accordion`, `AccordionItem`, `AccordionTrigger`, `AccordionContent`, `Badge`, `Table`
+- La requete rosters necessite une jointure : `rosters` filtre par `league_id` pour mapper `coureur_id` -> `manager_id`, puis `managers` pour le nom
+- Grouper les changements par `course_id` cote client avec un `useMemo`
+- Limiter a 200 changements pour la performance
