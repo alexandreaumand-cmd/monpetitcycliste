@@ -1,82 +1,49 @@
 
+## Correction du calcul de points en saisie mobile
 
-## Nouveau onglet "Hebdo" dans le Classement
+### Probleme identifie
 
-Ajout d'un onglet heatmap hebdomadaire dans la section Classement, affichant les points gagnes par semaine pour chaque manager avec un code couleur base sur le classement.
+La saisie mobile utilise un chemin de sauvegarde different du desktop, causant des points incorrects :
 
-### Architecture
+- **Desktop** : appelle l'edge function `admin-result-save-lot` (qui utilise la RPC SQL `admin_result_save_lot`), puis `admin_compute_points_for_course` pour calculer correctement les points via `scoring_rules_saisons` (filtree par saison).
+- **Mobile** : interroge la vue `scoring_rules_norm` (qui contient **toutes les saisons** sans filtre), construit un `scoringMap` ambigu, puis insere directement dans `race_results` avec des points potentiellement faux. La derniere valeur trouvee pour une meme place gagne (aleatoire : 5 au lieu de 200).
 
-**1. Nouvelle fonction RPC SQL** (`get_weekly_points_heatmap`)
-- Parametres : `p_league_id`, `p_saison_id`
-- Logique :
-  - Joindre `points_ledger` avec `race_results` pour obtenir `date_classement` (date reelle de la course/etape/CG)
-  - Joindre avec `rosters` pour attribuer les points aux managers de la ligue
-  - Grouper par `manager_id` et `EXTRACT(WEEK FROM date_classement)` (numero de semaine ISO)
-  - Retourner : `manager_id`, `manager_nom`, `week_number`, `week_year`, `total_points`
-- Filtre par les phases de la saison donnee
+### Solution
 
-**2. Nouveau composant** `src/components/rankings/WeeklyHeatmap.tsx`
-- Appelle la RPC via `useQuery`
-- Construit une matrice managers x semaines
-- Affiche un tableau avec :
-  - Colonne fixe a gauche : nom du manager
-  - Colonnes : semaines (numero)
-  - Cellules : points de la semaine, colorees selon le classement
-  - Ligne TOTAL en bas
-- Code couleur par semaine (colonne) :
-  - Vert fonce (`bg-green-700`) : 1er
-  - Vert clair (`bg-green-300`) : 2e et 3e
-  - Rouge fonce (`bg-red-600`) : dernier
-  - Rouge clair (`bg-red-300`) : avant-dernier et avant-avant-dernier
-  - Fond neutre pour les autres
-- Scroll horizontal si beaucoup de semaines
+Aligner le mobile sur le desktop en utilisant le meme edge function `admin-result-save-lot` et le meme flux de recalcul des points.
 
-**3. Integration dans les pages**
-- `Rankings.tsx` (desktop) : ajout d'un 5e onglet "Hebdo" avec `<TabsTrigger value="weekly">`
-- `Rankings.mobile.tsx` : ajout dans le `TabGroup` et rendu du composant en mode responsive
-- Traductions i18n dans `en/rankings.json` et `fr/rankings.json`
+### Modifications
 
-### Details techniques
+**Fichier** : `src/components/admin/ResultsEntryStudio.mobile.tsx`
 
-**Migration SQL** :
-```sql
-CREATE OR REPLACE FUNCTION public.get_weekly_points_heatmap(
-  p_league_id uuid,
-  p_saison_id uuid
-)
-RETURNS TABLE(
-  manager_id uuid,
-  manager_nom text,
-  week_number int,
-  total_points numeric
-)
-LANGUAGE sql STABLE AS $$
-  SELECT
-    r.manager_id,
-    m.nom AS manager_nom,
-    EXTRACT(WEEK FROM rr.date_classement)::int AS week_number,
-    SUM(pl.points) AS total_points
-  FROM points_ledger pl
-  JOIN race_results rr
-    ON rr.course_id = pl.course_id
-    AND rr.coureur_id = pl.coureur_id
-    AND rr.type_classement = pl.type_classement
-    AND COALESCE(rr.etape_numero, 0) = COALESCE(pl.etape_numero, 0)
-  JOIN rosters r
-    ON r.coureur_id = pl.coureur_id
-    AND r.phase_id = pl.phase_id
-    AND r.league_id = p_league_id
-  JOIN managers m ON m.id = r.manager_id
-  JOIN phases p ON p.id = pl.phase_id
-  WHERE p.saison_id = p_saison_id
-  GROUP BY r.manager_id, m.nom, EXTRACT(WEEK FROM rr.date_classement)
-$$;
-```
+1. **Remplacer la sauvegarde directe des resultats (lignes ~438-530)** :
+   - Supprimer le code qui interroge `scoring_rules_norm` et construit un `scoringMap`
+   - Supprimer le code qui fait `delete` puis `insert` directement dans `race_results`
+   - Remplacer par un appel a `supabase.functions.invoke('admin-result-save-lot', ...)` avec les memes parametres que le desktop :
+     ```text
+     body: {
+       p_course_id: course.course_id,
+       p_type_classement: currentClassement,
+       p_etape_numero: etapeNumeroValue,
+       p_rows: validRows.map(row => ({
+         coureur_id: row.coureur_id,
+         position: row.position,
+         statut: row.statut,
+       })),
+     }
+     ```
 
-**Composant WeeklyHeatmap** :
-- Recoit `saisonId` en prop
-- Transforme les donnees en matrice `{ managers: [...], weeks: [4,5,6,...], cells: Map<managerId_week, points> }`
-- Pour chaque semaine, calcule le classement des managers et applique les couleurs
-- Affiche la ligne TOTAL (somme par semaine)
-- Tri par defaut : par total de points decroissant
+2. **Sauvegarder les maillots via le meme edge function** (lignes ~532-600) :
+   - Remplacer le delete + insert direct par des appels a `admin-result-save-lot` pour chaque porteur de maillot, comme le desktop
 
+3. **Ajouter le recalcul des points** apres la sauvegarde :
+   - Appeler `supabase.functions.invoke('compute-points', { body: { course_id: course.course_id } })` apres sauvegarde (identique au desktop)
+
+4. **Supprimer les imports et references a `scoring_rules_norm`** qui ne sont plus necessaires dans la mutation de sauvegarde
+
+### Impact
+
+- Les points seront correctement calcules via `scoring_rules_saisons` filtree par saison
+- Le `points_ledger` sera mis a jour via `admin_compute_points_for_course`
+- Le comportement sera strictement identique entre mobile et desktop
+- Les notifications push existantes seront aussi declenchees sur mobile (gerees par l'edge function)
