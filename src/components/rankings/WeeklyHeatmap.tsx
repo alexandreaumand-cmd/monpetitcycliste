@@ -133,21 +133,21 @@ export const WeeklyHeatmap = ({ saisonId }: WeeklyHeatmapProps) => {
       <CardContent className="p-0 sm:p-6">
         <ScrollArea className="w-full">
           <div className="min-w-max">
-            <table className="w-full border-collapse text-sm">
+            <table className="w-full border-collapse text-xs sm:text-sm">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-10 bg-background border-b border-r px-3 py-2 text-left font-medium text-muted-foreground min-w-[140px]">
+                  <th className="sticky left-0 z-10 bg-background border-b border-r px-2 sm:px-3 py-1.5 sm:py-2 text-left font-medium text-muted-foreground min-w-[90px] sm:min-w-[140px]">
                     {t("standings.manager")}
                   </th>
                   {weeks.map((w) => (
                     <th
                       key={w}
-                      className="border-b px-2 py-2 text-center font-medium text-muted-foreground min-w-[56px]"
+                      className="border-b px-1 sm:px-2 py-1.5 sm:py-2 text-center font-medium text-muted-foreground min-w-[40px] sm:min-w-[56px]"
                     >
                       S{w}
                     </th>
                   ))}
-                  <th className="sticky right-0 z-10 bg-background border-b border-l px-3 py-2 text-center font-bold min-w-[64px]">
+                  <th className="sticky right-0 z-10 bg-background border-b border-l px-2 sm:px-3 py-1.5 sm:py-2 text-center font-bold min-w-[48px] sm:min-w-[64px]">
                     {t("weekly.total")}
                   </th>
                 </tr>
@@ -155,7 +155,7 @@ export const WeeklyHeatmap = ({ saisonId }: WeeklyHeatmapProps) => {
               <tbody>
                 {managers.map((manager) => (
                   <tr key={manager.id} className="border-b last:border-b-0">
-                    <td className="sticky left-0 z-10 bg-background border-r px-3 py-2 font-medium whitespace-nowrap">
+                    <td className="sticky left-0 z-10 bg-background border-r px-2 sm:px-3 py-1.5 sm:py-2 font-medium whitespace-nowrap max-w-[90px] sm:max-w-none truncate">
                       {manager.nom}
                     </td>
                     {weeks.map((w) => {
@@ -164,13 +164,13 @@ export const WeeklyHeatmap = ({ saisonId }: WeeklyHeatmapProps) => {
                       return (
                         <td
                           key={w}
-                          className={`px-2 py-2 text-center tabular-nums ${color}`}
+                          className={`px-1 sm:px-2 py-1.5 sm:py-2 text-center tabular-nums ${color}`}
                         >
                           {pts > 0 ? Math.round(pts) : ""}
                         </td>
                       );
                     })}
-                    <td className="sticky right-0 z-10 bg-background border-l px-3 py-2 text-center font-bold tabular-nums">
+                    <td className="sticky right-0 z-10 bg-background border-l px-2 sm:px-3 py-1.5 sm:py-2 text-center font-bold tabular-nums">
                       {Math.round(managerTotals.get(manager.id) || 0)}
                     </td>
                   </tr>
