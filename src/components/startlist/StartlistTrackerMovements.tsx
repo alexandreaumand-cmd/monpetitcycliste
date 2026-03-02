@@ -152,8 +152,8 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                 {/* Mobile cards */}
                 <div className="md:hidden space-y-2">
                   {items.map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg border bg-card">
-                      <div className={`flex-shrink-0 rounded-full p-1.5 ${
+                    <div key={item.id} className="flex items-start gap-3 p-2 rounded-lg border bg-card">
+                      <div className={`flex-shrink-0 rounded-full p-1.5 mt-0.5 ${
                         item.change_type === "added"
                           ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                           : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
@@ -161,13 +161,15 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                         {item.change_type === "added" ? <Plus className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">{item.rider_name}</div>
-                        <div className="text-xs text-muted-foreground truncate">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="font-medium text-sm truncate">{item.rider_name}</span>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            {format(new Date(item.detected_at), "dd MMM HH:mm", { locale: fr })}
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
                           {item.team_name || "-"} • {rosterMap?.get(item.coureur_id || "") || "-"}
                         </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground whitespace-nowrap">
-                        {format(new Date(item.detected_at), "dd MMM HH:mm", { locale: fr })}
                       </div>
                     </div>
                   ))}
