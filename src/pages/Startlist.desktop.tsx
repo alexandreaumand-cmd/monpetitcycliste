@@ -28,6 +28,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLeague } from "@/contexts/LeagueContext";
 import { StartlistCalendarView } from "@/components/startlist/StartlistCalendarView";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { StartlistTrackerMovements } from "@/components/startlist/StartlistTrackerMovements";
 
 const StartlistDesktop = () => {
   
@@ -580,6 +581,17 @@ const StartlistDesktop = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Startlist tracker movements for current phase */}
+        {(() => {
+          const today = new Date().toISOString().split('T')[0];
+          const currentPhase = phases?.find(p => p.date_debut <= today && p.date_fin >= today)
+            || phases?.filter(p => p.date_debut > today).sort((a, b) => a.date_debut.localeCompare(b.date_debut))[0];
+          if (currentPhase && leagueId) {
+            return <StartlistTrackerMovements phaseId={currentPhase.id} leagueId={leagueId} />;
+          }
+          return null;
+        })()}
       </div>
     );
   }

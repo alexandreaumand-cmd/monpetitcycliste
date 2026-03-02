@@ -21,6 +21,7 @@ import { useSeasonContext } from "@/contexts/SeasonContext";
 import { StartlistDesktopExport } from "@/components/startlist/StartlistDesktopExport";
 import { useLeague } from "@/contexts/LeagueContext";
 import { StartlistCalendarMobile } from "@/components/startlist/StartlistCalendarMobile";
+import { StartlistTrackerMovements } from "@/components/startlist/StartlistTrackerMovements";
 export const StartlistMobile = () => {
   const {
     t
@@ -354,6 +355,17 @@ export const StartlistMobile = () => {
         
         {/* Empty state for calendar */}
         {displayMode === "calendar" && (!races || races.length === 0) && <MobileEmptyState icon={<Trophy className="h-12 w-12" />} title={t('startlist.noRace')} description={getEmptyDescription()} />}
+
+        {/* Startlist tracker movements for current phase */}
+        {(() => {
+          const today = new Date().toISOString().split('T')[0];
+          const currentPhase = phases?.find(p => p.date_debut <= today && p.date_fin >= today)
+            || phases?.filter(p => p.date_debut > today).sort((a, b) => a.date_debut.localeCompare(b.date_debut))[0];
+          if (currentPhase && leagueId) {
+            return <StartlistTrackerMovements phaseId={currentPhase.id} leagueId={leagueId} />;
+          }
+          return null;
+        })()}
       </div>;
   }
 
