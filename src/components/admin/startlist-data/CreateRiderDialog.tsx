@@ -11,6 +11,33 @@ import { EquipeSelect } from "@/components/shared/EquipeSelect";
 import { CreateTeamDialog } from "./CreateTeamDialog";
 import { generateCoureurId } from "@/utils/coureurIdGenerator";
 
+function cleanSourceTeam(sourceTeam: string): string {
+  return sourceTeam.replace(/\s*\([^)]*\)\s*$/, '').trim();
+}
+
+function convertNameFormat(sourceName: string): string {
+  if (!sourceName) return '';
+  const words = sourceName.trim().split(/\s+/);
+  if (words.length <= 1) {
+    return sourceName.charAt(0).toUpperCase() + sourceName.slice(1).toLowerCase();
+  }
+  const upperWords: string[] = [];
+  const otherWords: string[] = [];
+  for (const w of words) {
+    if (w.length > 1 && w === w.toUpperCase() && /[A-ZÀ-Ü]/.test(w)) {
+      upperWords.push(w);
+    } else {
+      otherWords.push(w);
+    }
+  }
+  if (upperWords.length === 0 || otherWords.length === 0) {
+    return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  }
+  const firstName = otherWords.join(' ');
+  const lastName = upperWords.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  return `${firstName} ${lastName}`;
+}
+
 interface CreateRiderDialogProps {
   entry: any;
   saisonId: string;
@@ -23,7 +50,7 @@ export const CreateRiderDialog = ({ entry, saisonId, onClose, onSuccess }: Creat
   const [isLoading, setIsLoading] = useState(false);
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [formData, setFormData] = useState({
-    nom: entry.source_name || '',
+    nom: convertNameFormat(entry.source_name) || '',
     uci_id: '',
     prix_initial: 10,
     equipe_id: '',
@@ -33,18 +60,37 @@ export const CreateRiderDialog = ({ entry, saisonId, onClose, onSuccess }: Creat
     const findTeam = async () => {
       if (!entry.source_team || !saisonId) return;
 
-      const { data } = await supabase
-        .from('equipes_saisons')
-        .select('*, equipes(*)')
-        .eq('saison_id', saisonId)
-        .ilike('trigramme', entry.source_team)
-        .single();
+      const cleaned = cleanSourceTeam(entry.source_team);
 
-      if (data) {
-        setFormData((prev) => ({ ...prev, equipe_id: data.equipe_id }));
-      } else {
-        setShowCreateTeam(true);
+      // Try by nom_affiche first
+      const { data: byName } = await supabase
+        .from('equipes_saisons')
+        .select('equipe_id')
+        .eq('saison_id', saisonId)
+        .ilike('nom_affiche', cleaned)
+        .limit(1)
+        .maybeSingle();
+
+      if (byName) {
+        setFormData((prev) => ({ ...prev, equipe_id: byName.equipe_id }));
+        return;
       }
+
+      // Try by trigramme or code_court
+      const { data: byCode } = await supabase
+        .from('equipes_saisons')
+        .select('equipe_id, equipes!inner(code_court)')
+        .eq('saison_id', saisonId)
+        .or(`trigramme.ilike.${cleaned},equipes.code_court.ilike.${cleaned}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (byCode) {
+        setFormData((prev) => ({ ...prev, equipe_id: byCode.equipe_id }));
+        return;
+      }
+
+      setShowCreateTeam(true);
     };
 
     findTeam();
