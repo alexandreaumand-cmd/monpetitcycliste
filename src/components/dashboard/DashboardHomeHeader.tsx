@@ -1,4 +1,4 @@
-import { Calendar, Bike, MoreHorizontal } from "lucide-react";
+import { Calendar, Bike } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
 import mpcLogo from "@/assets/mpc-logo.png";
@@ -6,12 +6,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { UnifiedProfileDropdown } from "@/components/layout/UnifiedProfileDropdown";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { ManagerDropdown } from "@/components/layout/ManagerDropdown";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface DashboardHomeHeaderProps {
   manager: any;
@@ -50,26 +44,22 @@ export function DashboardHomeHeader({
             className="h-8 w-8"
           />
 
-          {/* Mobile actions - consolidated */}
+          {/* Mobile actions */}
           <div className="flex items-center gap-1">
-            {/* More menu with Calendar + Data */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="p-2 text-yellow-500 hover:bg-yellow-500/10 rounded-md">
-                  <MoreHorizontal className="h-5 w-5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-popover">
-                <DropdownMenuItem onClick={() => navigate('/dashboard/calendar')}>
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {t('header.calendar')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/dashboard/data')}>
-                  <Bike className="mr-2 h-4 w-4" />
-                  {t('header.data')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <button
+              onClick={() => navigate('/dashboard/calendar')}
+              className="p-2 text-yellow-500 hover:bg-yellow-500/10 rounded-md"
+              aria-label={t('header.calendar')}
+            >
+              <Calendar className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => navigate('/dashboard/data')}
+              className="p-2 text-yellow-500 hover:bg-yellow-500/10 rounded-md"
+              aria-label={t('header.data')}
+            >
+              <Bike className="h-5 w-5" />
+            </button>
             
             {manager && (
               <UnifiedProfileDropdown
