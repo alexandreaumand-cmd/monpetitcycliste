@@ -6200,8 +6200,8 @@ export type Database = {
       admin_result_save_lot: {
         Args: {
           p_course_id: string
-          p_etape_numero: number
-          p_rows: Json
+          p_etape_numero?: number
+          p_rows?: Json
           p_type_classement: Database["public"]["Enums"]["type_classement"]
         }
         Returns: Json
