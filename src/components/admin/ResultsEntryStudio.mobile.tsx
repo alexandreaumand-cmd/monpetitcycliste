@@ -398,7 +398,6 @@ export const ResultsEntryStudioMobile = ({
 
       // If cancelled, delete all results AND points and return
       if (isCancelled) {
-        // 1. Delete race_results
         await leagueClient
           .from('race_results')
           .delete()
@@ -406,7 +405,6 @@ export const ResultsEntryStudioMobile = ({
           .eq('type_classement', currentClassement)
           .eq('etape_numero', etapeNumeroValue);
         
-        // 2. Delete points_ledger
         await leagueClient
           .from('points_ledger')
           .delete()
@@ -417,119 +415,34 @@ export const ResultsEntryStudioMobile = ({
         return { success: true, message: 'Annulation enregistrée' };
       }
 
-      // Otherwise, save results normally
+      // Otherwise, save results via edge function (same as desktop)
       const validRows = resultRows.filter(r => r.coureur_id);
       
-      // Allow save if either:
-      // 1. We have valid rows in resultRows
-      // 2. OR we have a Super Combatif winner (WT GT only)
       const hasSuperCombatif = courseIsStageRace && course.categorie === 'WT GT' && currentClassement === 'Combatif' && combatifWinner;
 
       if (validRows.length === 0 && !hasSuperCombatif) {
         throw new Error("Aucun résultat à sauvegarder");
       }
 
-      // Skip scoring lookup if we're only saving Super Combatif
-      let scoringMap = new Map();
-      let phaseData = null;
-      let riderManagerMap = new Map<string, string | null>();
-      let dateClassement = '';
-
+      // Save main results via admin-result-save-lot edge function
       if (validRows.length > 0) {
-        // Normalize category to lowercase for scoring_rules_norm lookup
-        const normalizedCategory = course.categorie?.toLowerCase() || '';
-        const { data: serverScoringRules, error: rulesError } = await supabase
-        .from('scoring_rules_norm')
-        .select('place, points')
-        .eq('cat_canon', normalizedCategory)
-        .eq('type_canon', currentClassement)
-        .order('place');
-
-        if (rulesError) throw rulesError;
-        if (!serverScoringRules?.length) {
-          console.warn(`⚠️ Aucun barème trouvé pour ${currentClassement}`);
-          // Continue with empty scoring map
-        }
-
-        scoringMap = new Map(serverScoringRules.map(sr => [sr.place, sr.points]));
-      }
-
-      // Get saison_id from phase
-      const { data: phaseDataResult } = await supabase
-        .from('phases')
-        .select('saison_id')
-        .eq('id', course.phase_id)
-        .single();
-
-      phaseData = phaseDataResult;
-
-      if (!phaseData?.saison_id) {
-        throw new Error('Impossible de trouver la saison pour cette course');
-      }
-
-      // For Etape and Porteur types (which have stage number), use stage date
-      // For other types (General, Points, Montagne), use course end date
-      const isStageBasedType = currentClassement === 'Etape' || currentClassement.startsWith('Porteur');
-      dateClassement = isStageBasedType && currentStage > 0
-        ? new Date(new Date(course.date_debut).getTime() + (currentStage - 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        : (course.date_fin || course.date_debut);
-
-      if (validRows.length > 0) {
-        for (const row of validRows) {
-          const { data: roster } = await leagueClient
-            .from('rosters')
-            .select('manager_id')
-            .eq('phase_id', course.phase_id)
-            .eq('coureur_id', row.coureur_id!)
-            .maybeSingle();
-          
-          riderManagerMap.set(row.coureur_id!, roster?.manager_id || null);
-        }
-
-        const resultsToUpsert = validRows.map(row => {
-        const isFinished = row.statut === 'finished';
-        const positionValue = isFinished && row.position > 0 ? row.position : null;
-        const points = isFinished && row.position > 0 ? (scoringMap.get(row.position) || 0) : 0;
-        
-        return {
-          course_id: course.course_id,
-          coureur_id: row.coureur_id!,
-          type_classement: currentClassement,
-          etape_numero: currentClassement === 'Etape' ? currentStage : null,
-          position: positionValue,
-          statut: row.statut,
-          date_classement: dateClassement,
-          manager_id: riderManagerMap.get(row.coureur_id!),
-          points,
-          saison_id: phaseData.saison_id,
-        };
+        const { error: saveLotError } = await supabase.functions.invoke('admin-result-save-lot', {
+          body: {
+            p_course_id: course.course_id,
+            p_type_classement: currentClassement,
+            p_etape_numero: etapeNumeroValue,
+            p_rows: validRows.map(row => ({
+              coureur_id: row.coureur_id,
+              position: row.statut === 'finished' && row.position > 0 ? row.position : null,
+              statut: row.statut,
+            })),
+          },
         });
 
-        // Delete existing results before upserting to avoid position conflicts
-        let deleteResultsQuery = leagueClient
-          .from('race_results')
-          .delete()
-          .eq('course_id', course.course_id)
-          .eq('type_classement', currentClassement);
-        
-        if (currentClassement === 'Etape') {
-          deleteResultsQuery = deleteResultsQuery.eq('etape_numero', currentStage);
-        } else {
-          deleteResultsQuery = deleteResultsQuery.is('etape_numero', null);
-        }
-
-        const { error: deleteError } = await deleteResultsQuery;
-
-        if (deleteError) throw deleteError;
-
-        const { error: resultsError } = await leagueClient
-          .from('race_results')
-          .insert(resultsToUpsert);
-
-        if (resultsError) throw resultsError;
+        if (saveLotError) throw saveLotError;
       }
 
-      // Save jersey holders
+      // Save jersey holders via edge function
       if (courseIsStageRace && currentClassement === 'Etape') {
         const jerseyMappings: Array<{ key: 'general' | 'vert' | 'montagne' | 'jeune' | 'combattif'; type: string }> = [
           { key: 'general', type: 'Porteur Leader' },
@@ -539,156 +452,57 @@ export const ResultsEntryStudioMobile = ({
           { key: 'combattif', type: 'Porteur Combattif' },
         ];
 
-        // First delete existing jersey holder results for this stage
-        for (const { type } of jerseyMappings) {
-          await leagueClient
-            .from('race_results')
-            .delete()
-            .eq('course_id', course.course_id)
-            .eq('type_classement', type as any)
-            .eq('etape_numero', currentStage);
-            
-          // Also delete existing jersey holder points from points_ledger
-          await leagueClient
-            .from('points_ledger')
-            .delete()
-            .eq('course_id', course.course_id)
-            .eq('type_classement', type as any)
-            .eq('etape_numero', currentStage);
-        }
-
         for (const { key, type } of jerseyMappings) {
           const coureurId = jerseyHolders[key];
           if (!coureurId) continue;
 
-          // Get points from scoring rules for this jersey type
-          const { data: jerseyScoring, error: jerseyScoringError } = await supabase
-            .from('scoring_rules_saisons')
-            .select('points')
-            .eq('saison_id', phaseData.saison_id)
-            .eq('categorie', course.categorie || '')
-            .eq('type_classement', type as any)
-            .eq('place', 1)
-            .maybeSingle();
+          const { error: jerseyError } = await supabase.functions.invoke('admin-result-save-lot', {
+            body: {
+              p_course_id: course.course_id,
+              p_type_classement: type,
+              p_etape_numero: currentStage,
+              p_rows: [{
+                coureur_id: coureurId,
+                position: 1,
+                statut: 'finished',
+              }],
+            },
+          });
 
-          if (jerseyScoringError) throw jerseyScoringError;
-
-          const jerseyPoints = jerseyScoring?.points || 0;
-
-          // Récupérer le manager_id pour ce coureur spécifiquement
-          const { data: roster } = await leagueClient
-            .from('rosters')
-            .select('manager_id')
-            .eq('phase_id', course.phase_id)
-            .eq('coureur_id', coureurId)
-            .maybeSingle();
-
-          // Insert race_result for jersey holder
-          await leagueClient.from('race_results').insert({
-            course_id: course.course_id,
-            coureur_id: coureurId,
-            type_classement: type as any,
-            etape_numero: currentStage,
-            position: 1,
-            statut: 'finished' as const,
-            date_classement: dateClassement,
-            manager_id: roster?.manager_id || null,
-            points: jerseyPoints,
-            saison_id: phaseData.saison_id,
-          } as any);
-
-          // Insert points into points_ledger for jersey holder
-          if (jerseyPoints > 0) {
-            await leagueClient.from('points_ledger').insert({
-              course_id: course.course_id,
-              coureur_id: coureurId,
-              phase_id: course.phase_id,
-              type_classement: type as any,
-              etape_numero: currentStage,
-              points: jerseyPoints,
-            });
+          if (jerseyError) {
+            console.error(`Error saving jersey ${type}:`, jerseyError);
           }
         }
       }
 
       // Save Combatif winner for WT GT
       if (courseIsStageRace && currentClassement === 'Combatif' && course.categorie === 'WT GT' && combatifWinner) {
-        // Get manager for combatif winner
-        const { data: combatifRoster } = await leagueClient
-          .from('rosters')
-          .select('manager_id')
-          .eq('phase_id', course.phase_id)
-          .eq('coureur_id', combatifWinner)
-          .maybeSingle();
-
-        await leagueClient.from('race_results').upsert({
-          course_id: course.course_id,
-          coureur_id: combatifWinner,
-          type_classement: 'Combatif' as any,
-          etape_numero: null,
-          position: 1,
-          statut: 'finished' as const,
-          date_classement: dateClassement,
-          manager_id: combatifRoster?.manager_id || null,
-          points: 0,
-          saison_id: phaseData!.saison_id,
-        } as any, {
-          onConflict: 'course_id,type_classement,etape_numero,coureur_id',
+        const { error: combatifError } = await supabase.functions.invoke('admin-result-save-lot', {
+          body: {
+            p_course_id: course.course_id,
+            p_type_classement: 'Combatif',
+            p_etape_numero: null,
+            p_rows: [{
+              coureur_id: combatifWinner,
+              position: 1,
+              statut: 'finished',
+            }],
+          },
         });
+
+        if (combatifError) {
+          console.error('Error saving combatif:', combatifError);
+        }
       }
 
-      // Delete existing points from points_ledger for this classification
-      let deletePointsQuery = leagueClient
-        .from('points_ledger')
-        .delete()
-        .eq('course_id', course.course_id)
-        .eq('type_classement', currentClassement);
-      
-      if (currentClassement === 'Etape') {
-        deletePointsQuery = deletePointsQuery.eq('etape_numero', currentStage);
-      } else {
-        deletePointsQuery = deletePointsQuery.is('etape_numero', null);
-      }
+      // Recalculate points via compute-points edge function (same as desktop)
+      const { error: computeError } = await supabase.functions.invoke('compute-points', {
+        body: { course_id: course.course_id },
+      });
 
-      const { error: deletePointsError } = await deletePointsQuery;
-      if (deletePointsError) throw deletePointsError;
-
-      // Delete and reinsert points
-      let deleteQuery = leagueClient
-        .from('points_ledger')
-        .delete()
-        .eq('course_id', course.course_id)
-        .eq('type_classement', currentClassement);
-
-      if (currentClassement === 'Etape') {
-        deleteQuery = deleteQuery.eq('etape_numero', currentStage);
-      } else {
-        deleteQuery = deleteQuery.is('etape_numero', null);
-      }
-
-      await deleteQuery;
-
-      const pointsToInsert = [];
-      for (const row of validRows) {
-        if (row.statut !== 'finished' || row.position === 0) continue;
-
-        const serverPoints = scoringMap.get(row.position) || 0;
-        if (serverPoints === 0) continue;
-
-        // points_ledger does NOT have manager_id - it's linked via coureur_id
-        pointsToInsert.push({
-          course_id: course.course_id,
-          coureur_id: row.coureur_id!,
-          phase_id: course.phase_id,
-          type_classement: currentClassement,
-          etape_numero: currentClassement === 'Etape' ? currentStage : null,
-          points: serverPoints,
-        });
-      }
-
-      if (pointsToInsert.length > 0) {
-        const { error: insertPointsError } = await leagueClient.from('points_ledger').insert(pointsToInsert);
-        if (insertPointsError) throw insertPointsError;
+      if (computeError) {
+        console.error('Error computing points:', computeError);
+        // Don't fail the save if compute fails
       }
       
       return { success: true };
