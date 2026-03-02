@@ -1,78 +1,34 @@
 
-## Ajout "Nombre de jours de course" dans l'ecran equipe
 
-### Vue d'ensemble
+## Probleme identifie
 
-Ajouter le nombre de jours de course par coureur (colonne dans le tableau) et le cumul total (stat dans le bandeau KPI), en se basant sur les startlists des courses passees.
+L'ecran "Mon Equipe" calcule les scoreurs differemment de l'ecran "Classement" :
 
-### Logique de calcul
+- **Classement** (correct) : compte les coureurs distincts ayant marque des points (`points > 0`) en **excluant les resultats TTT** (`is_ttt = false`), via la table `race_result_sets`
+- **Mon Equipe** (incorrect) : compte simplement les coureurs avec `points_total > 0` sur le roster, ce qui inclut les points TTT
 
-Pour chaque coureur visible de l'equipe :
-1. Recuperer toutes les courses passees (`date_fin < today`) de la phase
-2. Pour chaque course, trouver le dernier `startlist_imports` (par `race_id`, `MAX(created_at)`)
-3. Verifier si le coureur est present dans `startlist_entries` pour ce startlist_id
-4. Calculer `date_fin - date_debut + 1` comme nombre de jours
-5. Sommer par coureur
+## Solution
 
-### Fichiers a modifier
+Modifier la fonction backend `manager-my-team` pour aligner le calcul des scoreurs avec la vue `v_manager_standings_by_phase_v2`.
 
-| Fichier | Modification |
-|---------|-------------|
-| `supabase/functions/manager-my-team/index.ts` | Calculer `race_days` par coureur et `total_race_days` dans les KPIs |
-| `src/components/team/MyTeam.desktop.tsx` | Colonne "Jours" triable dans le tableau + stat dans le bandeau KPI (5 colonnes) |
-| `src/components/team/MyTeam.mobile.tsx` | Stat cumul jours dans le bandeau KPI mobile |
-| `src/i18n/locales/fr/team.json` | Ajouter `raceDays`, `totalRaceDays`, `table.raceDays`, `sort.jours` |
-| `src/i18n/locales/en/team.json` | Ajouter les memes cles en anglais |
+### Changement technique
 
-### Details techniques
+**Fichier** : `supabase/functions/manager-my-team/index.ts`
 
-**Edge function `manager-my-team/index.ts`** :
+Remplacer le calcul simple a la ligne 214 :
+```typescript
+const scorersCount = visibleCoureurs.filter((c: any) => Number(c.points_total || 0) > 0).length || 0;
+```
 
-Apres la ligne 133 (visibleCoureurs), inserer le bloc de calcul des jours de course :
-- Requeter `courses` avec `date_fin < today` et filtrer par `phase_id` si fourni
-- Pour chaque course passee, trouver le dernier `startlist_imports` par `race_id` (`ORDER BY created_at DESC`, garder le premier par race)
-- Requeter `startlist_entries` avec les `startlist_id` trouves et les `coureur_id` de l'equipe
-- Calculer le nombre de jours par course : `(date_fin - date_debut) / 86400000 + 1`
-- Creer une Map coureur_id -> total_race_days
-- Attacher `race_days` a chaque coureur visible
-- Ajouter `total_race_days` (somme) dans les KPIs retournes (ligne 270)
+Par une requete SQL qui reproduit exactement la logique de la vue du classement :
+1. Interroger `points_ledger` pour les coureurs du roster sur la phase
+2. Faire un `LEFT JOIN` avec `race_result_sets` pour identifier les resultats TTT
+3. Filtrer `points > 0` et `is_ttt = false`
+4. Compter les `DISTINCT coureur_id`
 
-**Desktop `MyTeam.desktop.tsx`** :
+Concretement, ajouter une requete RPC ou directe qui :
+- Prend les `coureur_id` du roster visible
+- Cherche dans `points_ledger` les points > 0 pour la phase
+- Exclut les lignes ou `race_result_sets.is_ttt = true`
+- Retourne le `COUNT(DISTINCT coureur_id)`
 
-- Ligne 7 : ajouter `Calendar` dans les imports lucide
-- Ligne 37-46 : ajouter `race_days?: number` a l'interface `Coureur`
-- Ligne 57-66 : ajouter `total_race_days: number` a l'interface `TeamKPIs`
-- Ligne 69 : ajouter `'jours'` au type `SortBy`
-- Lignes 389-414 : ajouter un case `'jours'` dans le switch de tri : `comparison = (b.race_days || 0) - (a.race_days || 0)`
-- Ligne 648 : changer `grid-cols-4` en `grid-cols-5`
-- Apres la cellule Scoreurs (ligne 668), ajouter une nouvelle cellule KPI :
-  - Icone Calendar bleu
-  - Valeur `kpis.total_race_days`
-  - Label "Jours" ou traduction `raceDays`
-- Apres la colonne "Points totaux" (ligne 734), ajouter une nouvelle colonne "Jours" triable avec `handleSort('jours')`
-- Dans le TableBody (ligne 795), ajouter une cellule affichant `coureur.race_days || 0`
-
-**Mobile `MyTeam.mobile.tsx`** :
-
-- Ligne 20-30 : ajouter `Calendar` dans les imports lucide
-- Ligne 96-102 : ajouter `total_race_days: 0` dans le state initial des KPIs
-- Ligne 425-444 : dans la barre de stats compactes, ajouter un element apres scoreurs :
-  - Icone Calendar
-  - Valeur `kpis.total_race_days`
-  - Label "jours"
-
-**Traductions FR `team.json`** :
-
-Ajouter :
-- `"raceDays": "Jours de course"`
-- `"totalRaceDays": "Jours de course"`
-- dans `table` : `"raceDays": "Jours"`
-- dans `sort` : `"jours": "Jours"`
-
-**Traductions EN `team.json`** :
-
-Ajouter :
-- `"raceDays": "Race days"`
-- `"totalRaceDays": "Race days"`
-- dans `table` : `"raceDays": "Days"`
-- dans `sort` : `"jours": "Days"`
