@@ -111,6 +111,25 @@ export const CreateRiderDialog = ({ entry, saisonId, onClose, onSuccess }: Creat
     try {
       const coureurId = generateCoureurId(formData.nom);
 
+      // Check if a coureur with same name already exists in this season
+      const { data: existing } = await supabase
+        .from('coureurs_saisons')
+        .select('coureur_id, coureurs!inner(nom)')
+        .eq('saison_id', saisonId)
+        .ilike('coureurs.nom', formData.nom.trim())
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        toast({
+          variant: "destructive",
+          title: "Coureur déjà existant",
+          description: `"${formData.nom}" existe déjà dans cette saison. Utilisez le matching plutôt que la création.`,
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const { data: newCoureur, error: coureurError } = await supabase
         .from('coureurs')
         .insert({
