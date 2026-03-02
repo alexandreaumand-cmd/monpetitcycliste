@@ -21,13 +21,14 @@ import { ManagerBreakdown } from "@/components/rankings/ManagerBreakdown";
 import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
 import { RecentPointsChart } from "@/components/rankings/RecentPointsChart";
 import { ManagerComparisonMobile } from "@/components/rankings/ManagerComparison.mobile";
+import { WeeklyHeatmap } from "@/components/rankings/WeeklyHeatmap";
 import { ManagerPrestigeIcons } from "@/components/rankings/ManagerPrestigeIcons";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 
-type TabView = "standings" | "riders" | "timeline" | "comparison";
+type TabView = "standings" | "riders" | "timeline" | "comparison" | "weekly";
 
 export const RankingsMobile = () => {
   const { t } = useTranslation('rankings');
@@ -219,6 +220,7 @@ export const RankingsMobile = () => {
   const tabChips = [
     { label: t('tabs.managers'), value: "standings" as TabView },
     { label: t('tabs.topRiders'), value: "riders" as TabView },
+    { label: t('tabs.weekly'), value: "weekly" as TabView },
     { label: t('tabs.timeline'), value: "timeline" as TabView },
     { label: t('tabs.comparison'), value: "comparison" as TabView },
   ];
@@ -596,6 +598,10 @@ export const RankingsMobile = () => {
               viewMode={selectedPhase ? 'phase' : 'season'}
             />
           </div>
+        )}
+
+        {activeTab === "weekly" && (
+          <WeeklyHeatmap saisonId={selectedSeason?.id || null} />
         )}
 
         {activeTab === "comparison" && (

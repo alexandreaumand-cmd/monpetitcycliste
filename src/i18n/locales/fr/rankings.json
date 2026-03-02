@@ -2,6 +2,7 @@
   "tabs": {
     "managers": "Managers",
     "topRiders": "Top Coureurs",
+    "weekly": "Hebdo",
     "timeline": "Chrono",
     "comparison": "Comparaison"
   },
@@ -85,6 +86,11 @@
     "selectManagers": "Sélectionnez deux managers à comparer",
     "managerA": "Manager A",
     "managerB": "Manager B"
+  },
+  "weekly": {
+    "title": "Points par semaine",
+    "total": "Total",
+    "noData": "Aucune donnée disponible"
   },
   "mobile": {
     "position": "Position",

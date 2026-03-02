@@ -6386,6 +6386,15 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: Json
       }
+      get_weekly_points_heatmap: {
+        Args: { p_league_id: string; p_saison_id: string }
+        Returns: {
+          manager_id: string
+          manager_nom: string
+          total_points: number
+          week_number: number
+        }[]
+      }
       get_weekly_top_riders: {
         Args: { p_end: string; p_league_id: string; p_start: string }
         Returns: {

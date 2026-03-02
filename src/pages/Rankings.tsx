@@ -13,6 +13,7 @@ import { RankingsKPIs } from "@/components/rankings/RankingsKPIs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { TeamScoring } from "@/components/rankings/TeamScoring";
 import { ManagerComparison } from "@/components/rankings/ManagerComparison";
+import { WeeklyHeatmap } from "@/components/rankings/WeeklyHeatmap";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
@@ -49,6 +50,7 @@ export default function Rankings() {
             <TabsList className="flex w-full gap-1">
               <TabsTrigger value="standings">{t('tabs.managers')}</TabsTrigger>
               <TabsTrigger value="riders">{t('tabs.topRiders')}</TabsTrigger>
+              <TabsTrigger value="weekly">{t('tabs.weekly')}</TabsTrigger>
               <TabsTrigger value="timeline">{t('tabs.timeline')}</TabsTrigger>
               <TabsTrigger value="comparison">{t('tabs.comparison')}</TabsTrigger>
             </TabsList>
@@ -89,6 +91,10 @@ export default function Rankings() {
               saisonId={selectedSeason?.id || null}
               viewMode={selectedPhase ? 'phase' : 'season'}
             />
+          </TabsContent>
+
+          <TabsContent value="weekly" className="space-y-4">
+            <WeeklyHeatmap saisonId={selectedSeason?.id || null} />
           </TabsContent>
 
           <TabsContent value="comparison" className="space-y-4">
