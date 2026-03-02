@@ -66,15 +66,31 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
     queryKey: ["coureur-equipe-fallback", coureurIdsWithoutTeam, selectedSeason?.id],
     queryFn: async () => {
       if (!coureurIdsWithoutTeam.length || !selectedSeason?.id) return new Map<string, string>();
-      const { data } = await supabase
+      
+      // Step 1: get coureur -> equipe_id mapping for this season
+      const { data: csData } = await supabase
         .from("coureurs_saisons")
-        .select("coureur_id, equipe_id, equipes_saisons!inner(nom_affiche)")
+        .select("coureur_id, equipe_id")
         .in("coureur_id", coureurIdsWithoutTeam)
-        .eq("saison_id", selectedSeason.id)
-        .eq("equipes_saisons.saison_id", selectedSeason.id);
+        .eq("saison_id", selectedSeason.id);
+      
+      if (!csData?.length) return new Map<string, string>();
+      
+      const equipeIds = [...new Set(csData.map(c => c.equipe_id))];
+      
+      // Step 2: get season-specific team names
+      const { data: esData } = await supabase
+        .from("equipes_saisons")
+        .select("equipe_id, nom_affiche")
+        .in("equipe_id", equipeIds)
+        .eq("saison_id", selectedSeason.id);
+      
+      const equipeNameMap = new Map<string, string>();
+      (esData || []).forEach(e => equipeNameMap.set(e.equipe_id, e.nom_affiche));
+      
       const map = new Map<string, string>();
-      (data || []).forEach((c: any) => {
-        const nom = c.equipes_saisons?.[0]?.nom_affiche || c.equipes_saisons?.nom_affiche;
+      csData.forEach(c => {
+        const nom = equipeNameMap.get(c.equipe_id);
         if (nom) map.set(c.coureur_id, nom);
       });
       return map;
