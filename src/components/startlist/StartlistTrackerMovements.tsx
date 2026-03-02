@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowDownUp, Plus, Minus } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useSeasonContext } from "@/contexts/SeasonContext";
 
 interface StartlistTrackerMovementsProps {
   phaseId: string;
@@ -15,6 +16,7 @@ interface StartlistTrackerMovementsProps {
 }
 
 export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTrackerMovementsProps) {
+  const { selectedSeason } = useSeasonContext();
   // 1. Get upcoming courses for the current phase (with dates for sorting)
   const { data: phaseCourses } = useQuery({
     queryKey: ["phase-courses-for-movements", phaseId],
@@ -61,18 +63,23 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
   }, [changes]);
 
   const { data: coureurEquipeMap } = useQuery({
-    queryKey: ["coureur-equipe-fallback", coureurIdsWithoutTeam],
+    queryKey: ["coureur-equipe-fallback", coureurIdsWithoutTeam, selectedSeason?.id],
     queryFn: async () => {
-      if (!coureurIdsWithoutTeam.length) return new Map<string, string>();
+      if (!coureurIdsWithoutTeam.length || !selectedSeason?.id) return new Map<string, string>();
       const { data } = await supabase
-        .from("coureurs")
-        .select("id, equipe")
-        .in("id", coureurIdsWithoutTeam);
+        .from("coureurs_saisons")
+        .select("coureur_id, equipe_id, equipes_saisons!inner(nom_affiche)")
+        .in("coureur_id", coureurIdsWithoutTeam)
+        .eq("saison_id", selectedSeason.id)
+        .eq("equipes_saisons.saison_id", selectedSeason.id);
       const map = new Map<string, string>();
-      (data || []).forEach(c => { if (c.equipe) map.set(c.id, c.equipe); });
+      (data || []).forEach((c: any) => {
+        const nom = c.equipes_saisons?.[0]?.nom_affiche || c.equipes_saisons?.nom_affiche;
+        if (nom) map.set(c.coureur_id, nom);
+      });
       return map;
     },
-    enabled: coureurIdsWithoutTeam.length > 0,
+    enabled: coureurIdsWithoutTeam.length > 0 && !!selectedSeason?.id,
   });
 
   // 4. Get rosters for the league to map coureur_id -> manager name
