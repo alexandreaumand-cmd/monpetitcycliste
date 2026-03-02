@@ -44,7 +44,28 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
     enabled: !!phaseCourseIds?.length,
   });
 
-  // 3. Get rosters for the league to map coureur_id -> manager name
+  // 3. Get coureur equipe fallback for removed entries (team_name is null)
+  const coureurIdsWithoutTeam = useMemo(() => {
+    if (!changes) return [];
+    return changes.filter(c => !c.team_name && c.coureur_id).map(c => c.coureur_id!);
+  }, [changes]);
+
+  const { data: coureurEquipeMap } = useQuery({
+    queryKey: ["coureur-equipe-fallback", coureurIdsWithoutTeam],
+    queryFn: async () => {
+      if (!coureurIdsWithoutTeam.length) return new Map<string, string>();
+      const { data } = await supabase
+        .from("coureurs")
+        .select("id, equipe")
+        .in("id", coureurIdsWithoutTeam);
+      const map = new Map<string, string>();
+      (data || []).forEach(c => { if (c.equipe) map.set(c.id, c.equipe); });
+      return map;
+    },
+    enabled: coureurIdsWithoutTeam.length > 0,
+  });
+
+  // 4. Get rosters for the league to map coureur_id -> manager name
   const { data: rosterMap } = useQuery({
     queryKey: ["roster-manager-map", leagueId],
     queryFn: async () => {
@@ -61,6 +82,9 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
     },
     enabled: !!leagueId,
   });
+
+  const getTeamName = (item: { team_name: string | null; coureur_id: string | null }) =>
+    item.team_name || (item.coureur_id ? coureurEquipeMap?.get(item.coureur_id) : null) || "-";
 
   // Group changes by course
   const groupedByCourse = useMemo(() => {
@@ -136,7 +160,7 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                             )}
                           </TableCell>
                           <TableCell className="font-medium">{item.rider_name}</TableCell>
-                          <TableCell className="text-muted-foreground">{item.team_name || "-"}</TableCell>
+                          <TableCell className="text-muted-foreground">{getTeamName(item)}</TableCell>
                           <TableCell className="text-muted-foreground">
                             {rosterMap?.get(item.coureur_id || "") || "-"}
                           </TableCell>
@@ -168,7 +192,7 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {item.team_name || "-"} • {rosterMap?.get(item.coureur_id || "") || "-"}
+                          {getTeamName(item)} • {rosterMap?.get(item.coureur_id || "") || "-"}
                         </div>
                       </div>
                     </div>
