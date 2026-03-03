@@ -67,6 +67,27 @@ export const WeeklyHeatmap = ({ saisonId }: WeeklyHeatmapProps) => {
     return { managers, weeks, cellMap, managerTotals };
   }, [rawData]);
 
+  // Current ISO week
+  const currentWeek = useMemo(() => {
+    const now = new Date();
+    const jan4 = new Date(now.getFullYear(), 0, 4);
+    const dayDiff = (now.getTime() - jan4.getTime()) / 86400000;
+    return Math.ceil((dayDiff + jan4.getDay() + 1) / 7);
+  }, []);
+
+  // Week totals
+  const weekTotals = useMemo(() => {
+    const totals = new Map<number, number>();
+    for (const w of weeks) {
+      let sum = 0;
+      for (const m of managers) {
+        sum += cellMap.get(`${m.id}_${w}`) || 0;
+      }
+      totals.set(w, sum);
+    }
+    return totals;
+  }, [weeks, managers, cellMap]);
+
   // For each week, compute rankings and assign colors
   const getCellColor = (managerId: string, week: number): string => {
     const weekPoints: { id: string; pts: number }[] = managers.map((m) => ({
@@ -142,7 +163,11 @@ export const WeeklyHeatmap = ({ saisonId }: WeeklyHeatmapProps) => {
                   {weeks.map((w) => (
                     <th
                       key={w}
-                      className="border-b px-1 sm:px-2 py-1.5 sm:py-2 text-center font-medium text-muted-foreground min-w-[40px] sm:min-w-[56px]"
+                      className={`border-b px-1 sm:px-2 py-1.5 sm:py-2 text-center font-medium min-w-[40px] sm:min-w-[56px] ${
+                        w === currentWeek
+                          ? "bg-yellow-500/20 text-yellow-300 border-x border-yellow-500/30"
+                          : "text-muted-foreground"
+                      }`}
                     >
                       S{w}
                     </th>
@@ -164,7 +189,9 @@ export const WeeklyHeatmap = ({ saisonId }: WeeklyHeatmapProps) => {
                       return (
                         <td
                           key={w}
-                          className={`px-1 sm:px-2 py-1.5 sm:py-2 text-center tabular-nums ${color}`}
+                          className={`px-1 sm:px-2 py-1.5 sm:py-2 text-center tabular-nums ${color} ${
+                            w === currentWeek ? "border-x border-yellow-500/30" : ""
+                          }`}
                         >
                           {pts > 0 ? Math.round(pts) : ""}
                         </td>
@@ -175,6 +202,26 @@ export const WeeklyHeatmap = ({ saisonId }: WeeklyHeatmapProps) => {
                     </td>
                   </tr>
                 ))}
+                <tr className="border-t-2 border-muted-foreground/30 font-semibold">
+                  <td className="sticky left-0 z-10 bg-background border-r px-2 sm:px-3 py-1.5 sm:py-2 text-muted-foreground text-xs uppercase">
+                    Total
+                  </td>
+                  {weeks.map((w) => {
+                    const total = weekTotals.get(w) || 0;
+                    return (
+                      <td
+                        key={w}
+                        className={`px-1 sm:px-2 py-1.5 sm:py-2 text-center tabular-nums text-muted-foreground ${
+                          w === currentWeek ? "border-x border-yellow-500/30" : ""
+                        }`}
+                      >
+                        {total > 0 ? Math.round(total) : ""}
+                      </td>
+                    );
+                  })}
+                  <td className="sticky right-0 z-10 bg-background border-l px-2 sm:px-3 py-1.5 sm:py-2 text-center tabular-nums">
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
