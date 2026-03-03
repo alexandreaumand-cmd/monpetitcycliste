@@ -1,28 +1,38 @@
 
 
-## Diagnostic confirmé
+## Diagnostic
 
-Les résultats pour `ename_samyn_classic` sont bien en base **Live** (10 lignes, Meeus P1) mais :
-- `points = 0` sur toutes les lignes
-- `result_set_id = NULL` (non rattachés à un result_set)
-- `points_ledger` vide
-- Aucun log d'exécution des edge functions `compute-points` ou `admin-result-save-lot`
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-**Cause racine** : le calcul de points (`admin_compute_points_for_course`) n'a jamais été exécuté après l'insertion des résultats. Les résultats semblent avoir été insérés sans passer par le flux standard (edge function).
+## Cause racine
 
-## Solution proposée
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-### Action immédiate (sans code)
-Utiliser l'onglet **"Recalcul Points"** dans l'admin pour relancer `compute-points` sur `ename_samyn_classic`. Cela appellera `admin_compute_points_for_course` et remplira le `points_ledger`.
+## Plan de correction
 
-### Amélioration préventive (changement de code)
-Ajouter un **garde-fou automatique** dans le composant `PointsComputeManager` ou dans le flux de saisie :
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
+```
 
-1. **Vérification post-save** dans `ResultsEntryStudio.desktop.tsx` : après l'appel à `compute-points`, vérifier que `points_ledger` contient bien des entrées. Si ce n'est pas le cas, retenter le calcul et afficher un avertissement explicite.
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
 
-2. **Détection des courses "orphelines"** dans l'onglet Résultats admin : afficher un badge d'alerte sur les courses qui ont des `race_results` mais un `points_ledger` vide, pour que l'admin puisse relancer le calcul manuellement.
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
+
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
 
 ### Fichiers impactés
-- `src/components/admin/ResultsEntryStudio.desktop.tsx` : ajout d'une vérification post-compute
-- `src/components/admin/RecentResults.tsx` : ajout d'un indicateur visuel pour les courses sans points calculés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 
