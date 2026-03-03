@@ -70,9 +70,10 @@ export const WeeklyHeatmap = ({ saisonId }: WeeklyHeatmapProps) => {
   // Current ISO week
   const currentWeek = useMemo(() => {
     const now = new Date();
-    const jan4 = new Date(now.getFullYear(), 0, 4);
-    const dayDiff = (now.getTime() - jan4.getTime()) / 86400000;
-    return Math.ceil((dayDiff + jan4.getDay() + 1) / 7);
+    const target = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    target.setUTCDate(target.getUTCDate() + 4 - (target.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+    return Math.ceil(((target.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
   }, []);
 
   // Week totals
