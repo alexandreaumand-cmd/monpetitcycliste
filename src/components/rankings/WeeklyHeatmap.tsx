@@ -203,8 +203,8 @@ export const WeeklyHeatmap = ({ saisonId }: WeeklyHeatmapProps) => {
                     </td>
                   </tr>
                 ))}
-                <tr className="border-t-2 border-muted-foreground/30 font-semibold">
-                  <td className="sticky left-0 z-10 bg-background border-r px-2 sm:px-3 py-1.5 sm:py-2 text-muted-foreground text-xs uppercase">
+                <tr className="border-t-2 border-muted-foreground/30 font-semibold bg-muted/60">
+                  <td className="sticky left-0 z-10 bg-muted/60 border-r px-2 sm:px-3 py-1.5 sm:py-2 text-muted-foreground text-xs uppercase">
                     Total
                   </td>
                   {weeks.map((w) => {
@@ -220,7 +220,7 @@ export const WeeklyHeatmap = ({ saisonId }: WeeklyHeatmapProps) => {
                       </td>
                     );
                   })}
-                  <td className="sticky right-0 z-10 bg-background border-l px-2 sm:px-3 py-1.5 sm:py-2 text-center tabular-nums">
+                  <td className="sticky right-0 z-10 bg-muted/60 border-l px-2 sm:px-3 py-1.5 sm:py-2 text-center tabular-nums">
                   </td>
                 </tr>
               </tbody>
