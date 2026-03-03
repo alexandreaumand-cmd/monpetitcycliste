@@ -9,6 +9,7 @@ import { ArrowDownUp, Plus, Minus } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useSeasonContext } from "@/contexts/SeasonContext";
+import { useCurrentManager } from "@/hooks/useCurrentManager";
 
 interface StartlistTrackerMovementsProps {
   phaseId: string;
@@ -17,6 +18,7 @@ interface StartlistTrackerMovementsProps {
 
 export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTrackerMovementsProps) {
   const { selectedSeason } = useSeasonContext();
+  const { data: currentManager } = useCurrentManager();
   // 1. Get upcoming courses for the current phase (with dates for sorting)
   const { data: phaseCourses } = useQuery({
     queryKey: ["phase-courses-for-movements", phaseId],
@@ -107,9 +109,9 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
         .select("coureur_id, manager_id, managers!inner(nom)")
         .eq("league_id", leagueId);
       
-      const map = new Map<string, string>();
+      const map = new Map<string, { name: string; managerId: string }>();
       (data || []).forEach((r: any) => {
-        map.set(r.coureur_id, r.managers?.nom || "-");
+        map.set(r.coureur_id, { name: r.managers?.nom || "-", managerId: r.manager_id });
       });
       return map;
     },
@@ -178,7 +180,11 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                     </TableHeader>
                     <TableBody>
                       {items.map((item) => (
-                        <TableRow key={item.id}>
+                        <TableRow key={item.id} className={
+                          currentManager && rosterMap?.get(item.coureur_id || "")?.managerId === currentManager.id
+                            ? "bg-yellow-500/15"
+                            : ""
+                        }>
                           <TableCell>
                             {item.change_type === "added" ? (
                               <Badge className="bg-green-600 text-white text-xs gap-1">
@@ -193,7 +199,7 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                           <TableCell className="font-medium">{item.rider_name}</TableCell>
                           <TableCell className="text-muted-foreground">{getTeamName(item)}</TableCell>
                           <TableCell className="text-muted-foreground">
-                            {rosterMap?.get(item.coureur_id || "") || "-"}
+                            {rosterMap?.get(item.coureur_id || "")?.name || "-"}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             {format(new Date(item.detected_at), "dd MMM HH:mm", { locale: fr })}
@@ -207,7 +213,11 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                 {/* Mobile cards */}
                 <div className="md:hidden space-y-2">
                   {items.map((item) => (
-                    <div key={item.id} className="flex items-start gap-3 p-2 rounded-lg border bg-card">
+                    <div key={item.id} className={`flex items-start gap-3 p-2 rounded-lg border ${
+                      currentManager && rosterMap?.get(item.coureur_id || "")?.managerId === currentManager.id
+                        ? "bg-yellow-500/15 border-yellow-500/30"
+                        : "bg-card"
+                    }`}>
                       <div className={`flex-shrink-0 rounded-full p-1.5 mt-0.5 ${
                         item.change_type === "added"
                           ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
@@ -223,7 +233,7 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {getTeamName(item)} • {rosterMap?.get(item.coureur_id || "") || "-"}
+                          {getTeamName(item)} • {rosterMap?.get(item.coureur_id || "")?.name || "-"}
                         </div>
                       </div>
                     </div>
