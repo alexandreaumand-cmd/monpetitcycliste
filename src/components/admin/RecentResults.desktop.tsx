@@ -32,6 +32,7 @@ type ResultsStatus = {
   nb_lignes_montagne: number;
   nb_lignes_jeune: number;
   is_cancelled?: boolean;
+  has_points_ledger?: boolean;
 };
 
 export const RecentResults = () => {
@@ -128,6 +129,12 @@ export const RecentResults = () => {
           .eq('is_cancelled', true);
 
         const is_cancelled = (count ?? 0) > 0;
+
+        // Check if points_ledger has entries for this course
+        const { count: ledgerCount } = await supabase
+          .from('points_ledger')
+          .select('*', { count: 'exact', head: true })
+          .eq('course_id', course.course_id);
         
         // Get expected positions from scoring rules for the selected season
         const { data: scoringData } = await supabase
@@ -141,6 +148,9 @@ export const RecentResults = () => {
           const filtered = scoringData?.filter(s => s.type_classement === typeClassement);
           return filtered?.[0]?.place || 0;
         };
+
+        const hasResults = (data?.filter(r => r.type_classement === 'General' && r.coureur_id).length || 0) > 0 ||
+          (new Set(data?.filter(r => r.type_classement === 'Etape').map(r => r.etape_numero)).size || 0) > 0;
         
         statusMap[course.course_id] = {
           nb_lignes_etapes: new Set(data?.filter(r => r.type_classement === 'Etape').map(r => r.etape_numero)).size || 0,
@@ -149,6 +159,7 @@ export const RecentResults = () => {
           nb_lignes_montagne: data?.filter(r => r.type_classement === 'Montagne' && r.coureur_id).length || 0,
           nb_lignes_jeune: data?.filter(r => r.type_classement === 'Jeune' && r.coureur_id).length || 0,
           is_cancelled: is_cancelled,
+          has_points_ledger: hasResults ? (ledgerCount ?? 0) > 0 : true, // Only flag if there are results but no points
           expected_gc: getMaxPlace('General'),
           expected_points: getMaxPlace('Points'),
           expected_montagne: getMaxPlace('Montagne'),
@@ -312,6 +323,14 @@ export const RecentResults = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Orphan warning: results exist but no points calculated */}
+                  {status && !status.has_points_ledger && !status.is_cancelled && (
+                    <Badge variant="destructive" className="flex items-center gap-1 w-fit">
+                      <AlertCircle className="h-3 w-3" />
+                      ⚠️ Points non calculés — Utilisez "Recalcul Points"
+                    </Badge>
+                  )}
+
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
                     {new Date(course.date_debut).toLocaleDateString('fr-FR')} 
