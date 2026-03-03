@@ -96,18 +96,27 @@ export const RecentResultsMobile = () => {
     queryFn: async () => {
       if (!recentCourses?.length) return {};
       
-      const statusMap: Record<string, ResultsStatus> = {};
+      const statusMap: Record<string, ResultsStatus & { has_points_ledger?: boolean }> = {};
       
       for (const course of recentCourses) {
-        const { data, error } = await supabase
-          .from('race_results')
-          .select('type_classement, coureur_id, etape_numero')
-          .eq('course_id', course.course_id);
+        const [{ data, error }, { count: ledgerCount }] = await Promise.all([
+          supabase
+            .from('race_results')
+            .select('type_classement, coureur_id, etape_numero')
+            .eq('course_id', course.course_id),
+          supabase
+            .from('points_ledger')
+            .select('*', { count: 'exact', head: true })
+            .eq('course_id', course.course_id),
+        ]);
         
         if (error) {
           console.error('Error fetching status:', error);
           continue;
         }
+
+        const hasResults = (data?.filter(r => r.type_classement === 'General' && r.coureur_id).length || 0) > 0 ||
+          (new Set(data?.filter(r => r.type_classement === 'Etape').map(r => r.etape_numero)).size || 0) > 0;
         
         statusMap[course.course_id] = {
           nb_lignes_etapes: new Set(data?.filter(r => r.type_classement === 'Etape').map(r => r.etape_numero)).size || 0,
@@ -115,6 +124,7 @@ export const RecentResultsMobile = () => {
           nb_lignes_points: data?.filter(r => r.type_classement === 'Points' && r.coureur_id).length || 0,
           nb_lignes_montagne: data?.filter(r => r.type_classement === 'Montagne' && r.coureur_id).length || 0,
           nb_lignes_jeune: data?.filter(r => r.type_classement === 'Jeune' && r.coureur_id).length || 0,
+          has_points_ledger: hasResults ? (ledgerCount ?? 0) > 0 : true,
         };
       }
       
@@ -248,6 +258,13 @@ export const RecentResultsMobile = () => {
                   badge={<Badge variant="secondary" className="text-xs">{course.categorie}</Badge>}
                   onClick={() => handleOpenStudio(course, hasResults ? 'edit' : 'create')}
                 >
+                  {/* Orphan warning */}
+                  {status && !(status as any).has_points_ledger && (
+                    <Badge variant="destructive" className="text-xs flex items-center gap-1 w-fit">
+                      ⚠️ Points non calculés
+                    </Badge>
+                  )}
+
                   {courseIsStageRace && (
                     <div className="mt-2 space-y-2">
                       <div className="flex items-center justify-between text-xs">

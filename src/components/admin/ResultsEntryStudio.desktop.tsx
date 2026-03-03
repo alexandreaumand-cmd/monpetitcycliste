@@ -880,10 +880,48 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         });
       } else {
         console.log('✅ Points recalculés avec succès:', computeData);
-        toast({
-          title: "✅ Points calculés",
-          description: "Les points ont été mis à jour avec succès.",
-        });
+        
+        // Post-compute verification: check points_ledger has entries
+        const { count: ledgerCount, error: ledgerError } = await supabase
+          .from('points_ledger')
+          .select('*', { count: 'exact', head: true })
+          .eq('course_id', course.course_id);
+        
+        if (ledgerError) {
+          console.error('❌ Error checking points_ledger:', ledgerError);
+        }
+        
+        if (!ledgerError && (ledgerCount ?? 0) === 0) {
+          console.warn('⚠️ Points ledger vide après compute-points! Tentative de retry...');
+          
+          // Retry once
+          const { error: retryError } = await supabase.functions.invoke('compute-points', {
+            body: { course_id: course.course_id }
+          });
+          
+          const { count: retryCount } = await supabase
+            .from('points_ledger')
+            .select('*', { count: 'exact', head: true })
+            .eq('course_id', course.course_id);
+          
+          if (retryError || (retryCount ?? 0) === 0) {
+            toast({
+              title: "⚠️ Points non attribués",
+              description: "Les résultats sont enregistrés mais le calcul de points semble avoir échoué. Vérifiez dans l'onglet 'Recalcul Points'.",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "✅ Points calculés (2ème tentative)",
+              description: `${retryCount} lignes de points attribuées.`,
+            });
+          }
+        } else {
+          toast({
+            title: "✅ Points calculés",
+            description: `${ledgerCount} lignes de points attribuées.`,
+          });
+        }
         
         // Reset manual TTT flag after successful save
         tttManuallySet.current = false;
