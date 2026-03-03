@@ -1,50 +1,28 @@
 
-## Ajout d'un tableau des mouvements startlist sous le calendrier
 
-### Objectif
-Ajouter, sous le calendrier de la page Startlist (desktop et mobile), un tableau des derniers mouvements de startlists (ajouts/retraits) pour les courses de la phase en cours. Les mouvements sont regroupes par course dans des accordeons.
+## Diagnostic confirmé
 
-### Source de donnees
-- Table `startlist_tracker_changes` : contient `change_type`, `rider_name`, `team_name`, `course_name`, `course_id`, `coureur_id`, `detected_at`
-- Table `rosters` : jointure sur `coureur_id` pour retrouver le `manager_id`, puis `managers.nom` pour le nom du manager
-- Table `courses` : filtrer par `phase_id` = phase en cours
-- La phase en cours est deja disponible via `useSeasonContext()` (tableau `phases`)
+Les résultats pour `ename_samyn_classic` sont bien en base **Live** (10 lignes, Meeus P1) mais :
+- `points = 0` sur toutes les lignes
+- `result_set_id = NULL` (non rattachés à un result_set)
+- `points_ledger` vide
+- Aucun log d'exécution des edge functions `compute-points` ou `admin-result-save-lot`
 
-### Nouveau composant : `src/components/startlist/StartlistTrackerMovements.tsx`
+**Cause racine** : le calcul de points (`admin_compute_points_for_course`) n'a jamais été exécuté après l'insertion des résultats. Les résultats semblent avoir été insérés sans passer par le flux standard (edge function).
 
-**Props** : `phaseId: string`, `leagueId: string`
+## Solution proposée
 
-**Donnees** :
-1. Recuperer les `course_id` de la phase en cours depuis `courses` (filtre `phase_id`)
-2. Recuperer les changements depuis `startlist_tracker_changes` filtres par ces `course_id`, ordonnees par `detected_at` desc
-3. Recuperer les rosters de la ligue pour mapper `coureur_id` -> `manager_nom` (via `rosters` + `managers`)
+### Action immédiate (sans code)
+Utiliser l'onglet **"Recalcul Points"** dans l'admin pour relancer `compute-points` sur `ename_samyn_classic`. Cela appellera `admin_compute_points_for_course` et remplira le `points_ledger`.
 
-**Affichage** :
-- Titre "Mouvements startlists" avec une icone
-- Accordeons regroupes par course (`course_name`)
-- Chaque accordeon affiche le nom de la course + le nombre de changements entre parentheses
-- Dans chaque accordeon, un tableau compact avec les colonnes :
-  - **Type** : badge vert "Ajout" / badge rouge "Retrait"
-  - **Coureur** : `rider_name`
-  - **Equipe** : `team_name`
-  - **Manager** : nom du manager (si le coureur est dans un roster de la ligue, sinon "-")
-  - **Detecte** : date formatee "dd MMM HH:mm"
-- Si aucun mouvement, afficher un message "Aucun mouvement"
+### Amélioration préventive (changement de code)
+Ajouter un **garde-fou automatique** dans le composant `PointsComputeManager` ou dans le flux de saisie :
 
-### Integration
+1. **Vérification post-save** dans `ResultsEntryStudio.desktop.tsx` : après l'appel à `compute-points`, vérifier que `points_ledger` contient bien des entrées. Si ce n'est pas le cas, retenter le calcul et afficher un avertissement explicite.
 
-**Desktop (`Startlist.desktop.tsx`)** :
-- Ajouter le composant sous le `StartlistCalendarView` (ou sous le grid de cartes) dans le mode `list`
-- Determiner la phase en cours : la premiere phase dont `date_debut <= today <= date_fin`, ou a defaut la prochaine phase
+2. **Détection des courses "orphelines"** dans l'onglet Résultats admin : afficher un badge d'alerte sur les courses qui ont des `race_results` mais un `points_ledger` vide, pour que l'admin puisse relancer le calcul manuellement.
 
-**Mobile (`Startlist.mobile.tsx`)** :
-- Ajouter le composant sous le calendrier / liste dans le mode `list`
-- Meme logique de phase en cours
+### Fichiers impactés
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` : ajout d'une vérification post-compute
+- `src/components/admin/RecentResults.tsx` : ajout d'un indicateur visuel pour les courses sans points calculés
 
-### Details techniques
-
-- Utiliser `useQuery` pour les 3 requetes (courses de la phase, changements, rosters)
-- Utiliser les composants existants : `Accordion`, `AccordionItem`, `AccordionTrigger`, `AccordionContent`, `Badge`, `Table`
-- La requete rosters necessite une jointure : `rosters` filtre par `league_id` pour mapper `coureur_id` -> `manager_id`, puis `managers` pour le nom
-- Grouper les changements par `course_id` cote client avec un `useMemo`
-- Limiter a 200 changements pour la performance
