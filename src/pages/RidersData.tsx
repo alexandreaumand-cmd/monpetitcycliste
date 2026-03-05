@@ -63,6 +63,8 @@ export default function RidersData() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { t } = useTranslation('data');
+  const isMobile = useIsMobile();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   
   // Local season state (autonomous from global context)
   const [localSelectedSeason, setLocalSelectedSeason] = useState<{ id: string; annee: number } | null>(null);
