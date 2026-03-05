@@ -374,7 +374,7 @@ const StartlistDesktop = () => {
         <StartlistDesktopExport 
           ref={exportRef}
           startlistData={startlistViewData}
-          onRouteImageClick={() => setIsImageModalOpen(true)}
+          onRouteImageClick={(imageUrl: string) => setIsImageModalOpen(true)}
         />
         {/* FIN ZONE DE CAPTURE */}
 
