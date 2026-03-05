@@ -1951,6 +1951,65 @@ export type Database = {
           },
         ]
       }
+      course_route_images: {
+        Row: {
+          course_id: string
+          created_at: string
+          etape_numero: number | null
+          id: string
+          image_url: string
+          label: string | null
+          sort_order: number
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          etape_numero?: number | null
+          id?: string
+          image_url: string
+          label?: string | null
+          sort_order?: number
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          etape_numero?: number | null
+          id?: string
+          image_url?: string
+          label?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_route_images_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_route_images_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses_for_points_norm"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_route_images_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_course_points_theoriques"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "course_route_images_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_home_recent_results"
+            referencedColumns: ["course_id"]
+          },
+        ]
+      }
       course_stage_config: {
         Row: {
           course_id: string

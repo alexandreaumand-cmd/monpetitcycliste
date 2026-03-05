@@ -18,6 +18,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RouteImageUploader } from "@/components/startlist/RouteImageUploader";
+import { RouteImageModalContent } from "@/components/startlist/RouteImageGallery";
 import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
 import { useSeasonContext } from "@/contexts/SeasonContext";
@@ -373,7 +374,7 @@ const StartlistDesktop = () => {
         <StartlistDesktopExport 
           ref={exportRef}
           startlistData={startlistViewData}
-          onRouteImageClick={() => setIsImageModalOpen(true)}
+          onRouteImageClick={(imageUrl: string) => setIsImageModalOpen(true)}
         />
         {/* FIN ZONE DE CAPTURE */}
 
@@ -381,13 +382,10 @@ const StartlistDesktop = () => {
         <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
           <DialogContent className="max-w-7xl w-[95vw] max-h-[95vh] p-0">
             <DialogTitle className="sr-only">Image du parcours</DialogTitle>
-            <div className="relative w-full h-full flex items-center justify-center p-4">
-              <img 
-                src={startlistViewData.route_image_url} 
-                alt="Parcours en grand format" 
-                className="max-w-full max-h-[90vh] object-contain rounded-lg"
-              />
-            </div>
+            <RouteImageModalContent
+              images={startlistViewData.route_images || []}
+              fallbackUrl={startlistViewData.route_image_url}
+            />
           </DialogContent>
         </Dialog>
 
