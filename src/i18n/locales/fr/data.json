@@ -14,7 +14,10 @@
     "programWith": "Avec programme",
     "programWithout": "Sans programme",
     "favoritesOnly": "Favoris uniquement",
-    "reset": "Réinitialiser"
+    "reset": "Réinitialiser",
+    "showFilters": "Filtres",
+    "activeFilters": "{{count}} filtre actif",
+    "activeFilters_plural": "{{count}} filtres actifs"
   },
   "table": {
     "fav": "Fav",
