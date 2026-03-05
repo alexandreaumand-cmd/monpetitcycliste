@@ -119,7 +119,8 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
                     <img 
                       src={startlistData.route_image_url} 
                       alt="Parcours" 
-                      className="w-full h-auto object-cover"
+                      className={cn("w-full h-auto object-cover", onRouteImageClick && "cursor-zoom-in")}
+                      onClick={onRouteImageClick}
                     />
                   </div>
                 </Card>
