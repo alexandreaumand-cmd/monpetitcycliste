@@ -871,7 +871,7 @@ export default function RidersData() {
                       onClick={() => { setSelectedRider({ id: rider.coureur_id, nom: rider.coureur_nom }); setResultsPanelOpen(true); }}
                     >
                       <p className="font-semibold text-sm leading-tight truncate">{rider.coureur_nom}</p>
-                      <p className="text-xs text-muted-foreground truncate">{rider.equipe_trigramme || "-"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{rider.equipe_trigramme || "-"}{rider.equipe_categorie ? ` · ${rider.equipe_categorie}` : ""}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-bold">{rider.total_points} <span className="text-xs font-normal text-muted-foreground">pts</span></p>
