@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 
 interface StartlistDesktopExportProps {
   startlistData: any;
+  onRouteImageClick?: () => void;
 }
 
 export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDesktopExportProps>(
