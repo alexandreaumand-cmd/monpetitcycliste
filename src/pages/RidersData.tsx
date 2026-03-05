@@ -646,133 +646,186 @@ export default function RidersData() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className={cn("container mx-auto", isMobile ? "px-3 py-4" : "px-4 py-8")}>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-        <div className="space-y-1.5">
-          <Label htmlFor="search">{t('filters.search')}</Label>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="search"
-              placeholder={t('filters.searchPlaceholder')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8"
-            />
+      {isMobile ? (
+        <>
+          {/* Search always visible on mobile */}
+          <div className="mb-3">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={t('filters.searchPlaceholder')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8"
+              />
+            </div>
           </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>{t('filters.team')}</Label>
-          <Select value={selectedEquipe} onValueChange={setSelectedEquipe}>
-            <SelectTrigger>
-              <SelectValue placeholder={t('filters.allTeams')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('filters.allTeams')}</SelectItem>
-              {filteredTeamsData?.map((team) => (
-                <SelectItem key={team.id} value={team.equipe_id}>
-                  {team.nom_affiche}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>{t('filters.category')}</Label>
-          <Select value={selectedCategorie} onValueChange={setSelectedCategorie}>
-            <SelectTrigger>
-              <SelectValue placeholder={t('filters.allCategories')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('filters.allCategories')}</SelectItem>
-              {categorieOptions.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>{t('filters.cotes')} {selectedCotes.length > 0 && `(${selectedCotes.length})`}</Label>
-          <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
-            {coteOptions.map((cote) => (
-              <div key={cote} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`cote-${cote}`}
-                  checked={selectedCotes.includes(cote)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedCotes([...selectedCotes, cote]);
-                    } else {
-                      setSelectedCotes(selectedCotes.filter(c => c !== cote));
-                    }
-                  }}
-                />
-                <Label htmlFor={`cote-${cote}`} className="cursor-pointer text-sm">
-                  {cote}
-                </Label>
+          <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full mb-3 justify-between">
+                <span className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  {t('filters.showFilters')}
+                  {(() => {
+                    const count = (selectedEquipe !== 'all' ? 1 : 0) + (selectedCategorie !== 'all' ? 1 : 0) + (selectedCotes.length > 0 ? 1 : 0) + (programFilter !== 'all' ? 1 : 0) + (showFavoritesOnly ? 1 : 0);
+                    return count > 0 ? <Badge variant="secondary" className="ml-1">{count}</Badge> : null;
+                  })()}
+                </span>
+                <ChevronDown className={cn("h-4 w-4 transition-transform", filtersOpen && "rotate-180")} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 mb-4">
+              <div className="space-y-1.5">
+                <Label>{t('filters.team')}</Label>
+                <Select value={selectedEquipe} onValueChange={setSelectedEquipe}>
+                  <SelectTrigger><SelectValue placeholder={t('filters.allTeams')} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('filters.allTeams')}</SelectItem>
+                    {filteredTeamsData?.map((team) => (
+                      <SelectItem key={team.id} value={team.equipe_id}>{team.nom_affiche}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            ))}
+              <div className="space-y-1.5">
+                <Label>{t('filters.category')}</Label>
+                <Select value={selectedCategorie} onValueChange={setSelectedCategorie}>
+                  <SelectTrigger><SelectValue placeholder={t('filters.allCategories')} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('filters.allCategories')}</SelectItem>
+                    {categorieOptions.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t('filters.cotes')} {selectedCotes.length > 0 && `(${selectedCotes.length})`}</Label>
+                <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
+                  {coteOptions.map((cote) => (
+                    <div key={cote} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`cote-m-${cote}`}
+                        checked={selectedCotes.includes(cote)}
+                        onCheckedChange={(checked) => {
+                          if (checked) setSelectedCotes([...selectedCotes, cote]);
+                          else setSelectedCotes(selectedCotes.filter(c => c !== cote));
+                        }}
+                      />
+                      <Label htmlFor={`cote-m-${cote}`} className="cursor-pointer text-sm">{cote}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t('filters.program')}</Label>
+                <Select value={programFilter} onValueChange={(v) => setProgramFilter(v as "all" | "with" | "without")}>
+                  <SelectTrigger><SelectValue placeholder={t('filters.programAll')} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('filters.programAll')}</SelectItem>
+                    <SelectItem value="with">{t('filters.programWith')}</SelectItem>
+                    <SelectItem value="without">{t('filters.programWithout')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="favorites-m"
+                  checked={showFavoritesOnly}
+                  onCheckedChange={(checked) => setShowFavoritesOnly(checked === true)}
+                />
+                <Label htmlFor="favorites-m" className="cursor-pointer">{t('filters.favoritesOnly')}</Label>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => {
+                  setSearch(""); setSelectedEquipe("all"); setSelectedCategorie("all");
+                  setSelectedCotes([]); setShowFavoritesOnly(false); setProgramFilter("all");
+                }}>{t('filters.reset')}</Button>
+                <Button variant="default" size="sm" onClick={handleExportExcel} disabled={!sortedRiders || sortedRiders.length === 0}>
+                  <Download className="h-4 w-4 mr-1" />{t('export.button')}
+                </Button>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+          <div className="space-y-1.5">
+            <Label htmlFor="search">{t('filters.search')}</Label>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input id="search" placeholder={t('filters.searchPlaceholder')} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8" />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t('filters.team')}</Label>
+            <Select value={selectedEquipe} onValueChange={setSelectedEquipe}>
+              <SelectTrigger><SelectValue placeholder={t('filters.allTeams')} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('filters.allTeams')}</SelectItem>
+                {filteredTeamsData?.map((team) => (
+                  <SelectItem key={team.id} value={team.equipe_id}>{team.nom_affiche}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t('filters.category')}</Label>
+            <Select value={selectedCategorie} onValueChange={setSelectedCategorie}>
+              <SelectTrigger><SelectValue placeholder={t('filters.allCategories')} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('filters.allCategories')}</SelectItem>
+                {categorieOptions.map((cat) => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t('filters.cotes')} {selectedCotes.length > 0 && `(${selectedCotes.length})`}</Label>
+            <div className="border rounded-md p-2 max-h-32 overflow-y-auto space-y-1">
+              {coteOptions.map((cote) => (
+                <div key={cote} className="flex items-center space-x-2">
+                  <Checkbox id={`cote-${cote}`} checked={selectedCotes.includes(cote)} onCheckedChange={(checked) => {
+                    if (checked) setSelectedCotes([...selectedCotes, cote]);
+                    else setSelectedCotes(selectedCotes.filter(c => c !== cote));
+                  }} />
+                  <Label htmlFor={`cote-${cote}`} className="cursor-pointer text-sm">{cote}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t('filters.program')}</Label>
+            <Select value={programFilter} onValueChange={(v) => setProgramFilter(v as "all" | "with" | "without")}>
+              <SelectTrigger><SelectValue placeholder={t('filters.programAll')} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('filters.programAll')}</SelectItem>
+                <SelectItem value="with">{t('filters.programWith')}</SelectItem>
+                <SelectItem value="without">{t('filters.programWithout')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end pb-1">
+            <div className="flex items-center space-x-2">
+              <Checkbox id="favorites" checked={showFavoritesOnly} onCheckedChange={(checked) => setShowFavoritesOnly(checked === true)} />
+              <Label htmlFor="favorites" className="cursor-pointer">{t('filters.favoritesOnly')}</Label>
+            </div>
+          </div>
+          <div className="flex items-end gap-2">
+            <Button variant="outline" onClick={() => {
+              setSearch(""); setSelectedEquipe("all"); setSelectedCategorie("all");
+              setSelectedCotes([]); setShowFavoritesOnly(false); setProgramFilter("all");
+            }}>{t('filters.reset')}</Button>
+            <Button variant="default" onClick={handleExportExcel} disabled={!sortedRiders || sortedRiders.length === 0}>
+              <Download className="h-4 w-4 mr-2" />{t('export.button')}
+            </Button>
           </div>
         </div>
-
-        <div className="space-y-1.5">
-          <Label>{t('filters.program')}</Label>
-          <Select value={programFilter} onValueChange={(v) => setProgramFilter(v as "all" | "with" | "without")}>
-            <SelectTrigger>
-              <SelectValue placeholder={t('filters.programAll')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('filters.programAll')}</SelectItem>
-              <SelectItem value="with">{t('filters.programWith')}</SelectItem>
-              <SelectItem value="without">{t('filters.programWithout')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-end pb-1">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="favorites"
-              checked={showFavoritesOnly}
-              onCheckedChange={(checked) => setShowFavoritesOnly(checked === true)}
-            />
-            <Label htmlFor="favorites" className="cursor-pointer">
-              {t('filters.favoritesOnly')}
-            </Label>
-          </div>
-        </div>
-
-        <div className="flex items-end gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              setSearch("");
-              setSelectedEquipe("all");
-              setSelectedCategorie("all");
-              setSelectedCotes([]);
-              setShowFavoritesOnly(false);
-              setProgramFilter("all");
-            }}
-          >
-            {t('filters.reset')}
-          </Button>
-          <Button
-            variant="default"
-            onClick={handleExportExcel}
-            disabled={!sortedRiders || sortedRiders.length === 0}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            {t('export.button')}
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* Results count */}
       <div className="text-sm text-muted-foreground mb-4">
@@ -782,37 +835,90 @@ export default function RidersData() {
         )}
       </div>
 
-      {/* Table */}
+      {/* Content */}
       {ridersLoading ? (
         <div className="space-y-2">
           {[...Array(10)].map((_, i) => (
             <Skeleton key={i} className="h-12 w-full" />
           ))}
         </div>
+      ) : isMobile ? (
+        /* Mobile: Card-based layout */
+        <div className="space-y-2">
+          {sortedRiders.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">{t('results.noRiders')}</div>
+          ) : (
+            sortedRiders.map((rider) => {
+              const upcomingRaces = programData?.get(rider.coureur_id) || [];
+              return (
+                <div
+                  key={rider.coureur_id}
+                  className="rounded-lg border bg-card p-3 space-y-2"
+                >
+                  {/* Row 1: Fav + Name + Cote/Points */}
+                  <div className="flex items-start gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 mt-0.5"
+                      onClick={() => toggleFavorite.mutate({ coureurId: rider.coureur_id, isFavorite: rider.is_favorite })}
+                      disabled={!managerId}
+                    >
+                      <Star className={cn("h-4 w-4", rider.is_favorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground")} />
+                    </Button>
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => { setSelectedRider({ id: rider.coureur_id, nom: rider.coureur_nom }); setResultsPanelOpen(true); }}
+                    >
+                      <p className="font-semibold text-sm leading-tight truncate">{rider.coureur_nom}</p>
+                      <p className="text-xs text-muted-foreground truncate">{rider.equipe_trigramme || "-"}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold">{rider.total_points} <span className="text-xs font-normal text-muted-foreground">pts</span></p>
+                      <p className="text-xs text-muted-foreground">{t('table.cote')}: {rider.prix_initial}</p>
+                    </div>
+                  </div>
+                  {/* Row 2: Category + Program */}
+                  {(rider.equipe_categorie || upcomingRaces.length > 0) && (
+                    <div className="flex flex-wrap items-center gap-1 pl-9">
+                      {rider.equipe_categorie && (
+                        <Badge variant="secondary" className="text-xs">{rider.equipe_categorie}</Badge>
+                      )}
+                      {upcomingRaces.map((race) => (
+                        <Badge
+                          key={race.race_id}
+                          variant="outline"
+                          className={cn("text-xs", race.is_confirmed ? "border-green-500/50" : "border-yellow-500/50")}
+                        >
+                          <span className={race.is_confirmed ? "text-green-500" : "text-yellow-500"}>
+                            {race.is_confirmed ? "✓" : "?"}
+                          </span>
+                          <span className="ml-1 truncate max-w-[100px]">{race.race_nom}</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
       ) : (
+        /* Desktop: Table layout */
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">{t('table.fav')}</TableHead>
                 <TableHead>{t('table.name')}</TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-muted/50 select-none"
-                  onClick={() => handleSort('equipe')}
-                >
+                <TableHead className="cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort('equipe')}>
                   {t('table.team')} {getSortIcon('equipe')}
                 </TableHead>
                 <TableHead className="w-20">{t('table.category')}</TableHead>
-                <TableHead 
-                  className="w-16 text-right cursor-pointer hover:bg-muted/50 select-none"
-                  onClick={() => handleSort('cote')}
-                >
+                <TableHead className="w-16 text-right cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort('cote')}>
                   {t('table.cote')} {getSortIcon('cote')}
                 </TableHead>
-                <TableHead 
-                  className="w-20 text-right cursor-pointer hover:bg-muted/50 select-none"
-                  onClick={() => handleSort('points')}
-                >
+                <TableHead className="w-20 text-right cursor-pointer hover:bg-muted/50 select-none" onClick={() => handleSort('points')}>
                   {t('table.points')} {getSortIcon('points')}
                 </TableHead>
                 <TableHead className="min-w-[300px]">{t('table.program')}</TableHead>
@@ -821,9 +927,7 @@ export default function RidersData() {
             <TableBody>
               {sortedRiders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    {t('results.noRiders')}
-                  </TableCell>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t('results.noRiders')}</TableCell>
                 </TableRow>
               ) : (
                 sortedRiders.map((rider) => {
@@ -831,50 +935,28 @@ export default function RidersData() {
                   return (
                     <TableRow key={rider.coureur_id}>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => toggleFavorite.mutate({
-                            coureurId: rider.coureur_id,
-                            isFavorite: rider.is_favorite,
-                          })}
+                        <Button variant="ghost" size="icon" className="h-8 w-8"
+                          onClick={() => toggleFavorite.mutate({ coureurId: rider.coureur_id, isFavorite: rider.is_favorite })}
                           disabled={!managerId}
                         >
-                          <Star
-                            className={`h-4 w-4 ${
-                              rider.is_favorite
-                                ? "fill-yellow-400 text-yellow-400"
-                                : "text-muted-foreground"
-                            }`}
-                          />
+                          <Star className={cn("h-4 w-4", rider.is_favorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground")} />
                         </Button>
                       </TableCell>
-                      <TableCell
-                        className="font-medium cursor-pointer hover:text-primary hover:underline transition-colors"
-                        onClick={() => {
-                          setSelectedRider({ id: rider.coureur_id, nom: rider.coureur_nom });
-                          setResultsPanelOpen(true);
-                        }}
-                      >
-                        {rider.coureur_nom}
-                      </TableCell>
+                      <TableCell className="font-medium cursor-pointer hover:text-primary hover:underline transition-colors"
+                        onClick={() => { setSelectedRider({ id: rider.coureur_id, nom: rider.coureur_nom }); setResultsPanelOpen(true); }}
+                      >{rider.coureur_nom}</TableCell>
                       <TableCell>{rider.equipe_trigramme || "-"}</TableCell>
                       <TableCell className="w-20">{rider.equipe_categorie || "-"}</TableCell>
                       <TableCell className="w-16 text-right">{rider.prix_initial}</TableCell>
-                      <TableCell className="w-20 text-right font-semibold">
-                        {rider.total_points}
-                      </TableCell>
+                      <TableCell className="w-20 text-right font-semibold">{rider.total_points}</TableCell>
                       <TableCell className="min-w-[300px]">
                         {upcomingRaces.length === 0 ? (
                           <span className="text-muted-foreground text-sm">-</span>
                         ) : (
                           <div className="flex flex-wrap gap-1">
                             {upcomingRaces.map((race) => (
-                              <Badge 
-                                key={race.race_id} 
-                                variant="outline"
-                                className={`text-xs ${race.is_confirmed ? "border-green-500/50" : "border-yellow-500/50"}`}
+                              <Badge key={race.race_id} variant="outline"
+                                className={cn("text-xs", race.is_confirmed ? "border-green-500/50" : "border-yellow-500/50")}
                               >
                                 <span className={race.is_confirmed ? "text-green-500" : "text-yellow-500"}>
                                   {race.is_confirmed ? "✓" : "?"}
