@@ -1,38 +1,67 @@
 
 
-## Diagnostic
+## Problème
 
-L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
+Actuellement, une seule image de parcours (`route_image_url` sur la table `courses`) est supportée. Pour les courses par étapes (Paris-Nice, Tour de France...), il faut pouvoir associer **plusieurs images** (une par étape + éventuellement une vue d'ensemble).
 
-## Cause racine
+## Solution proposée : table `course_route_images`
 
-La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
+### 1. Nouvelle table en base
 
-## Plan de correction
-
-### 1. Action immédiate — Nettoyer les doublons en production
-Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
 ```sql
-DELETE FROM race_result_sets
-WHERE id NOT IN (
-  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
-    id
-  FROM race_result_sets
-  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+CREATE TABLE course_route_images (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  course_id text NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  etape_numero integer, -- NULL = vue d'ensemble
+  image_url text NOT NULL,
+  label text, -- ex: "Étape 1 - Contre-la-montre"
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE UNIQUE INDEX uniq_course_route_image 
+ON course_route_images (course_id, COALESCE(etape_numero, -1));
 ```
 
-### 2. Migration — Ajouter une contrainte d'unicité
-Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
+RLS : SELECT pour tous, INSERT/UPDATE/DELETE pour superadmins. Le champ `route_image_url` existant sur `courses` reste en place pour les courses d'un jour (rétrocompatibilité).
 
-### 3. Corriger `admin_compute_points_for_course`
-Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
+### 2. Edge Function `startlist-upload-route-image`
 
-### 4. Corriger le flux de saisie des résultats
-Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
+Adapter pour accepter un paramètre optionnel `etape_numero` et `label` :
+- Si fournis → insérer/upsert dans `course_route_images`
+- Sinon → comportement actuel (mise à jour de `courses.route_image_url`)
+
+### 3. Admin — `RouteImageUploader` multi-étapes
+
+Pour les courses de type "Stage race" :
+- Afficher un sélecteur d'étape (1 à N + "Vue d'ensemble")
+- Permettre d'uploader une image par étape
+- Afficher les miniatures des images déjà uploadées avec possibilité de remplacer
+
+### 4. Côté utilisateur (ligue) — Consultation
+
+**Desktop (`StartlistDesktopExport.tsx`)** :
+- Si une seule image → affichage actuel inchangé
+- Si plusieurs images → afficher des **onglets/tabs** (Étape 1, Étape 2, ...) au-dessus de l'image, ou un **carousel** avec navigation gauche/droite
+- Le clic ouvre le modal plein écran avec navigation entre étapes
+
+**Mobile (`Startlist.mobile.tsx`)** :
+- Carousel swipeable avec indicateurs de pagination (dots)
+- Bottom sheet en plein écran avec navigation entre étapes
+
+### 5. Edge Function `startlist-manager-view`
+
+Enrichir la réponse avec les images multi-étapes :
+- Requêter `course_route_images` triées par `sort_order`
+- Les inclure dans le payload sous `route_images: [{etape_numero, image_url, label}]`
+- Garder `route_image_url` pour la rétrocompatibilité (courses d'un jour)
 
 ### Fichiers impactés
-- Migration SQL (nettoyage + contrainte unique)
-- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
-- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
+- **Migration SQL** : création table + RLS
+- **`supabase/functions/startlist-upload-route-image/index.ts`** : support multi-étapes
+- **`supabase/functions/startlist-manager-view/index.ts`** : inclure les images
+- **`src/components/startlist/RouteImageUploader.tsx`** : UI multi-upload pour stage races
+- **`src/components/startlist/StartlistDesktopExport.tsx`** : tabs/carousel d'images
+- **`src/pages/Startlist.desktop.tsx`** : modal avec navigation multi-images
+- **`src/pages/Startlist.mobile.tsx`** : carousel + bottom sheet multi-images
 
