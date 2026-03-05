@@ -38,20 +38,6 @@ import { RiderResultsPanel } from "@/components/data/RiderResultsPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
-import mpcLogo from "@/assets/mpc-logo.png";
-import * as XLSX from "xlsx";
-import { useTranslation } from "react-i18next";
-import { RiderResultsPanel } from "@/components/data/RiderResultsPanel";
 
 interface RiderWithPoints {
   coureur_id: string;
