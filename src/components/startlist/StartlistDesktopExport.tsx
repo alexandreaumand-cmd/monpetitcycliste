@@ -13,7 +13,7 @@ interface StartlistDesktopExportProps {
 }
 
 export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDesktopExportProps>(
-  ({ startlistData }, ref) => {
+  ({ startlistData, onRouteImageClick }, ref) => {
     return (
       <div ref={ref} className="relative space-y-4 bg-white">
         {/* Badge SL officielle - visible uniquement si validé */}
