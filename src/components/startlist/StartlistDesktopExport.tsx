@@ -9,10 +9,11 @@ import { cn } from '@/lib/utils';
 
 interface StartlistDesktopExportProps {
   startlistData: any;
+  onRouteImageClick?: () => void;
 }
 
 export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDesktopExportProps>(
-  ({ startlistData }, ref) => {
+  ({ startlistData, onRouteImageClick }, ref) => {
     return (
       <div ref={ref} className="relative space-y-4 bg-white">
         {/* Badge SL officielle - visible uniquement si validé */}
@@ -118,7 +119,8 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
                     <img 
                       src={startlistData.route_image_url} 
                       alt="Parcours" 
-                      className="w-full h-auto object-cover"
+                      className={cn("w-full h-auto object-cover", onRouteImageClick && "cursor-zoom-in")}
+                      onClick={onRouteImageClick}
                     />
                   </div>
                 </Card>
