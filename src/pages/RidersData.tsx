@@ -880,18 +880,14 @@ export default function RidersData() {
                   </div>
                   {/* Row 2: Category + Program */}
                   {upcomingRaces.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1 pl-9">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-9">
                       {upcomingRaces.map((race) => (
-                        <Badge
-                          key={race.race_id}
-                          variant="outline"
-                          className={cn("text-xs", race.is_confirmed ? "border-green-500/50" : "border-yellow-500/50")}
-                        >
+                        <span key={race.race_id} className="text-[11px] text-muted-foreground leading-tight">
                           <span className={race.is_confirmed ? "text-green-500" : "text-yellow-500"}>
                             {race.is_confirmed ? "✓" : "?"}
                           </span>
-                          <span className="ml-1 truncate max-w-[100px]">{race.race_nom}</span>
-                        </Badge>
+                          {" "}{race.race_nom}
+                        </span>
                       ))}
                     </div>
                   )}
