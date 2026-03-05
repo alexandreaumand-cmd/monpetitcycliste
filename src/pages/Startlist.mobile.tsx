@@ -429,10 +429,14 @@ export const StartlistMobile = () => {
 
           {/* Section Parcours + Avis - Layout optimisé */}
           <div className="space-y-3">
-            {/* Image du parcours - Agrandie */}
-            {startlistViewData.route_image_url && <div className="rounded-2xl overflow-hidden border-2 cursor-pointer shadow-lg" onClick={() => setImageModalOpen(true)}>
-                <img src={startlistViewData.route_image_url} alt={t('startlist.route')} className="w-full h-auto object-cover" />
-              </div>}
+            {/* Image du parcours - Multi-stage support */}
+            {(startlistViewData.route_images?.length > 0 || startlistViewData.route_image_url) && (
+              <RouteImageGallery
+                images={startlistViewData.route_images || []}
+                fallbackUrl={startlistViewData.route_image_url}
+                onImageClick={() => setImageModalOpen(true)}
+              />
+            )}
 
             {/* L'avis du startlisteur - Sans espace vide */}
             {startlistViewData.admin_rating_note?.trim()?.length > 0 && <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
