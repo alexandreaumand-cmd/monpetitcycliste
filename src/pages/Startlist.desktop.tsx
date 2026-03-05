@@ -18,6 +18,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RouteImageUploader } from "@/components/startlist/RouteImageUploader";
+import { RouteImageModalContent } from "@/components/startlist/RouteImageGallery";
 import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
 import { useSeasonContext } from "@/contexts/SeasonContext";
