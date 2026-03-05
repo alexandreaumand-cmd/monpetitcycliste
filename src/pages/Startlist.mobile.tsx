@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Trophy, FileText, Loader2, Users, Calendar, CalendarDays, List, Star, CheckCircle2, AlertCircle, ArrowLeft, Image as ImageIcon, MessageSquare, Share2 } from "lucide-react";
+import { RouteImageGallery } from "@/components/startlist/RouteImageGallery";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ManagerStars } from "@/components/startlist/ManagerStars";
 import { ManagerRatingModal } from "@/components/startlist/ManagerRatingModal";
