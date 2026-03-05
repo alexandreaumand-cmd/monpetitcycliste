@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 
 interface StartlistDesktopExportProps {
   startlistData: any;
-  onRouteImageClick?: () => void;
+  onRouteImageClick?: (imageUrl: string) => void;
 }
 
 export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDesktopExportProps>(
