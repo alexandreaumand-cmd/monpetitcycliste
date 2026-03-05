@@ -9,10 +9,8 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-    // Get the authenticated user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -21,15 +19,10 @@ serve(async (req) => {
       );
     }
 
-    // Admin client for privileged operations
     const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false
-      }
+      auth: { persistSession: false, autoRefreshToken: false }
     });
 
-    // Validate the token
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
@@ -41,17 +34,12 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is admin by querying user_roles directly with admin client
-    const { data: userRole, error: roleError } = await supabaseAdmin
+    const { data: userRole } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .eq('role', 'admin')
       .single();
-
-    if (roleError) {
-      console.error('Error checking admin role:', roleError);
-    }
 
     if (!userRole) {
       return new Response(
@@ -60,10 +48,11 @@ serve(async (req) => {
       );
     }
 
-    // Parse the multipart form data
     const formData = await req.formData();
     const raceId = formData.get('race_id') as string;
     const file = formData.get('file') as File;
+    const etapeNumeroRaw = formData.get('etape_numero') as string | null;
+    const label = formData.get('label') as string | null;
 
     if (!raceId || !file) {
       return new Response(
@@ -72,7 +61,6 @@ serve(async (req) => {
       );
     }
 
-    // Validate file type
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       return new Response(
@@ -81,19 +69,16 @@ serve(async (req) => {
       );
     }
 
-    // Generate unique filename using race_id instead of startlist_id
     const timestamp = Date.now();
     const ext = file.name.split('.').pop();
-    const filename = `${raceId}_${timestamp}.${ext}`;
+    const etapeNumero = etapeNumeroRaw ? parseInt(etapeNumeroRaw, 10) : null;
+    const suffix = etapeNumero !== null ? `_etape${etapeNumero}` : '';
+    const filename = `${raceId}${suffix}_${timestamp}.${ext}`;
     const path = `courses/${raceId}/${filename}`;
 
-    // Upload to storage using admin client
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+    const { error: uploadError } = await supabaseAdmin.storage
       .from('startlist-route-images')
-      .upload(path, file, {
-        contentType: file.type,
-        upsert: false
-      });
+      .upload(path, file, { contentType: file.type, upsert: false });
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
@@ -103,12 +88,50 @@ serve(async (req) => {
       );
     }
 
-    // Get public URL
     const { data: { publicUrl } } = supabaseAdmin.storage
       .from('startlist-route-images')
       .getPublicUrl(path);
 
-    // Update courses table with the new URL (linked to the race, not the import)
+    // Multi-stage mode: upsert into course_route_images
+    if (etapeNumero !== null) {
+      const sortOrder = etapeNumero;
+      
+      // Upsert: use the unique index (course_id, COALESCE(etape_numero, -1))
+      // First try to find existing
+      const { data: existing } = await supabaseAdmin
+        .from('course_route_images')
+        .select('id')
+        .eq('course_id', raceId)
+        .eq('etape_numero', etapeNumero)
+        .maybeSingle();
+
+      if (existing) {
+        await supabaseAdmin
+          .from('course_route_images')
+          .update({ image_url: publicUrl, label: label || null, sort_order: sortOrder })
+          .eq('id', existing.id);
+      } else {
+        await supabaseAdmin
+          .from('course_route_images')
+          .insert({ 
+            course_id: raceId, 
+            etape_numero: etapeNumero, 
+            image_url: publicUrl, 
+            label: label || null, 
+            sort_order: sortOrder 
+          });
+      }
+
+      console.log(`Route image uploaded for course ${raceId}, étape ${etapeNumero}: ${publicUrl}`);
+
+      return new Response(
+        JSON.stringify({ route_image_url: publicUrl, etape_numero: etapeNumero }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Single image mode (overview or one-day race): update courses table
+    // Also upsert into course_route_images with etape_numero = NULL for overview
     const { error: updateError } = await supabaseAdmin
       .from('courses')
       .update({ route_image_url: publicUrl })
@@ -116,10 +139,31 @@ serve(async (req) => {
 
     if (updateError) {
       console.error('Update error:', updateError);
-      return new Response(
-        JSON.stringify({ error: `Failed to update course: ${updateError.message}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    }
+
+    // Also store in course_route_images as overview (etape_numero = NULL)
+    const { data: existingOverview } = await supabaseAdmin
+      .from('course_route_images')
+      .select('id')
+      .eq('course_id', raceId)
+      .is('etape_numero', null)
+      .maybeSingle();
+
+    if (existingOverview) {
+      await supabaseAdmin
+        .from('course_route_images')
+        .update({ image_url: publicUrl, label: label || 'Vue d\'ensemble', sort_order: 0 })
+        .eq('id', existingOverview.id);
+    } else {
+      await supabaseAdmin
+        .from('course_route_images')
+        .insert({ 
+          course_id: raceId, 
+          etape_numero: null, 
+          image_url: publicUrl, 
+          label: label || 'Vue d\'ensemble', 
+          sort_order: 0 
+        });
     }
 
     console.log(`Route image uploaded for course ${raceId}: ${publicUrl}`);
