@@ -112,18 +112,16 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
                 )}
               </Card>
               
-              {/* Image parcours - 1/3, plus grande */}
-              {startlistData.route_image_url && (
+              {/* Image parcours - 1/3, supports multi-stage */}
+              {(startlistData.route_images?.length > 0 || startlistData.route_image_url) && (
                 <Card className="p-3 overflow-hidden col-span-1">
                   <h4 className="font-semibold text-xs mb-2">Parcours</h4>
-                  <div className="overflow-hidden rounded-lg border-2 shadow-md">
-                    <img 
-                      src={startlistData.route_image_url} 
-                      alt="Parcours" 
-                      className={cn("w-full h-auto object-cover", onRouteImageClick && "cursor-zoom-in")}
-                      onClick={onRouteImageClick}
-                    />
-                  </div>
+                  <RouteImageGallery
+                    images={startlistData.route_images || []}
+                    fallbackUrl={startlistData.route_image_url}
+                    onImageClick={onRouteImageClick}
+                    compact
+                  />
                 </Card>
               )}
             </div>
