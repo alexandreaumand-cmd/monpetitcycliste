@@ -598,7 +598,10 @@ export const StartlistMobile = () => {
 
         {/* Image modal */}
         <MobileBottomSheet open={imageModalOpen} onOpenChange={setImageModalOpen} title={t('startlist.route')}>
-          {startlistViewData.route_image_url && <img src={startlistViewData.route_image_url} alt={t('startlist.route')} className="w-full h-auto rounded-lg" />}
+          <RouteImageGallery
+            images={startlistViewData.route_images || []}
+            fallbackUrl={startlistViewData.route_image_url}
+          />
         </MobileBottomSheet>
       </div>;
   }
