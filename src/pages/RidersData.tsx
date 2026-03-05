@@ -871,7 +871,7 @@ export default function RidersData() {
                       onClick={() => { setSelectedRider({ id: rider.coureur_id, nom: rider.coureur_nom }); setResultsPanelOpen(true); }}
                     >
                       <p className="font-semibold text-sm leading-tight truncate">{rider.coureur_nom}</p>
-                      <p className="text-xs text-muted-foreground truncate">{rider.equipe_trigramme || "-"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{rider.equipe_trigramme || "-"}{rider.equipe_categorie ? ` · ${rider.equipe_categorie}` : ""}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-bold">{rider.total_points} <span className="text-xs font-normal text-muted-foreground">pts</span></p>
@@ -879,11 +879,8 @@ export default function RidersData() {
                     </div>
                   </div>
                   {/* Row 2: Category + Program */}
-                  {(rider.equipe_categorie || upcomingRaces.length > 0) && (
+                  {upcomingRaces.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1 pl-9">
-                      {rider.equipe_categorie && (
-                        <Badge variant="secondary" className="text-xs">{rider.equipe_categorie}</Badge>
-                      )}
                       {upcomingRaces.map((race) => (
                         <Badge
                           key={race.race_id}
