@@ -161,29 +161,37 @@ Deno.serve(async (req) => {
         bib_no: e.bib_no
       })).sort((a, b) => a.nom.localeCompare(b.nom));
 
-      const result = {
-        race: {
-          id: race.id,
-          nom: race.nom,
-          date_debut: race.date_debut,
-          phase_id: phaseId,
-          categorie: race.categorie
-        },
-        route_image_url: race.route_image_url || null,
-        startlisteur_note: startlist.startlisteur_note || null,
-        admin_rating_note: null,
-        admin_rating_author: null,
-        managers: [],
-        starters: starters,
-        scoring: {
-          categorie: race.categorie,
-          rules: scoringRules || []
-        },
-        totals: {
-          managers: 0,
-          starters_all: enrichedEntries.length
-        }
-      };
+    // Fetch multi-stage route images
+    const { data: routeImages } = await supabase
+      .from('course_route_images')
+      .select('etape_numero, image_url, label, sort_order')
+      .eq('course_id', race.id)
+      .order('sort_order', { ascending: true });
+
+    const result = {
+      race: {
+        id: race.id,
+        nom: race.nom,
+        date_debut: race.date_debut,
+        phase_id: phaseId,
+        categorie: race.categorie
+      },
+      route_image_url: race.route_image_url || null,
+      route_images: routeImages || [],
+      startlisteur_note: startlist.startlisteur_note || null,
+      admin_rating_note: null,
+      admin_rating_author: null,
+      managers: [],
+      starters: starters,
+      scoring: {
+        categorie: race.categorie,
+        rules: scoringRules || []
+      },
+      totals: {
+        managers: 0,
+        starters_all: enrichedEntries.length
+      }
+    };
 
       console.log('SuperAdmin generic view:', result.totals, 'starters:', starters.length);
 
