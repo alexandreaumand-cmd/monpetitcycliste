@@ -879,11 +879,8 @@ export default function RidersData() {
                     </div>
                   </div>
                   {/* Row 2: Category + Program */}
-                  {(rider.equipe_categorie || upcomingRaces.length > 0) && (
+                  {upcomingRaces.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1 pl-9">
-                      {rider.equipe_categorie && (
-                        <Badge variant="secondary" className="text-xs">{rider.equipe_categorie}</Badge>
-                      )}
                       {upcomingRaces.map((race) => (
                         <Badge
                           key={race.race_id}
