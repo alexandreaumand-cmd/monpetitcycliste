@@ -5,6 +5,7 @@ import { MessageSquare, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ManagerStars } from '@/components/startlist/ManagerStars';
+import { RouteImageGallery } from '@/components/startlist/RouteImageGallery';
 import { cn } from '@/lib/utils';
 
 interface StartlistDesktopExportProps {
