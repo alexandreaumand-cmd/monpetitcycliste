@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { Upload, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -20,10 +20,39 @@ interface RouteImageUploaderProps {
   totalStages?: number;
 }
 
-export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, isStageRace = false, totalStages = 0 }: RouteImageUploaderProps) {
+export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, isStageRace: isStageRaceProp, totalStages: totalStagesProp }: RouteImageUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedStage, setSelectedStage] = useState<number | null>(null); // null = overview
+  const [selectedStage, setSelectedStage] = useState<number | null>(null);
   const [existingImages, setExistingImages] = useState<RouteImage[]>([]);
+  const [autoDetected, setAutoDetected] = useState<{ isStageRace: boolean; totalStages: number } | null>(null);
+
+  // Auto-detect stage race from course data if not provided as props
+  useEffect(() => {
+    if (isStageRaceProp !== undefined) return;
+    
+    const detect = async () => {
+      const { data: course } = await supabase
+        .from('courses')
+        .select('type_course, date_debut, date_fin')
+        .eq('id', raceId)
+        .single();
+      
+      if (course) {
+        const isStage = course.type_course === 'Stage race' || course.type_course === 'stage_race';
+        let stages = 0;
+        if (isStage && course.date_debut && course.date_fin) {
+          const start = new Date(course.date_debut);
+          const end = new Date(course.date_fin);
+          stages = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+        }
+        setAutoDetected({ isStageRace: isStage, totalStages: stages });
+      }
+    };
+    detect();
+  }, [raceId, isStageRaceProp]);
+
+  const isStageRace = isStageRaceProp ?? autoDetected?.isStageRace ?? false;
+  const totalStages = totalStagesProp ?? autoDetected?.totalStages ?? 0;
 
   useEffect(() => {
     if (isStageRace) {
@@ -105,13 +134,15 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
     }
   };
 
+  const inputId = `route-image-upload-${raceId}`;
+
   // Simple mode for one-day races
   if (!isStageRace) {
     return (
       <div>
         <input
           type="file"
-          id="route-image-upload"
+          id={inputId}
           accept="image/png,image/jpeg,image/jpg,image/webp"
           onChange={handleFileChange}
           className="hidden"
@@ -119,7 +150,7 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
         <Button
           variant="outline"
           size="sm"
-          onClick={() => document.getElementById('route-image-upload')?.click()}
+          onClick={() => document.getElementById(inputId)?.click()}
           disabled={isUploading}
         >
           <Upload className="h-4 w-4 mr-2" />
@@ -132,7 +163,7 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
   // Multi-stage mode
   const stageOptions = [
     { value: null as number | null, label: 'Vue d\'ensemble' },
-    ...Array.from({ length: totalStages }, (_, i) => ({ value: i + 1, label: `Étape ${i + 1}` }))
+    ...Array.from({ length: totalStages }, (_, i) => ({ value: i + 1, label: `Ét. ${i + 1}` }))
   ];
 
   const getImageForStage = (stageNum: number | null) => 
@@ -142,7 +173,7 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
     <div className="space-y-3">
       <input
         type="file"
-        id="route-image-upload-stage"
+        id={inputId}
         accept="image/png,image/jpeg,image/jpg,image/webp"
         onChange={handleFileChange}
         className="hidden"
@@ -159,7 +190,7 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
               size="sm"
               className={cn(
                 "text-xs h-7 px-2",
-                hasImage && selectedStage !== opt.value && "border-green-500/50 text-green-700"
+                hasImage && selectedStage !== opt.value && "border-primary/50 text-primary"
               )}
               onClick={() => setSelectedStage(opt.value)}
             >
@@ -175,12 +206,12 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
         <Button
           variant="outline"
           size="sm"
-          onClick={() => document.getElementById('route-image-upload-stage')?.click()}
+          onClick={() => document.getElementById(inputId)?.click()}
           disabled={isUploading}
         >
           <Upload className="h-4 w-4 mr-2" />
           {isUploading ? 'Téléchargement...' : getImageForStage(selectedStage) ? 'Remplacer' : 'Ajouter'}
-          {selectedStage !== null ? ` Étape ${selectedStage}` : ' Vue d\'ensemble'}
+          {selectedStage !== null ? ` Ét. ${selectedStage}` : ' Vue d\'ensemble'}
         </Button>
       </div>
 
@@ -190,11 +221,14 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
           {existingImages.map((img) => (
             <div 
               key={img.etape_numero ?? 'overview'} 
-              className="relative w-16 h-16 rounded-md overflow-hidden border cursor-pointer"
+              className={cn(
+                "relative w-16 h-16 rounded-md overflow-hidden border-2 cursor-pointer",
+                selectedStage === img.etape_numero ? "border-primary" : "border-border"
+              )}
               onClick={() => setSelectedStage(img.etape_numero)}
             >
               <img src={img.image_url} alt={img.label || ''} className="w-full h-full object-cover" />
-              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] text-center py-0.5">
+              <div className="absolute bottom-0 left-0 right-0 bg-background/80 text-foreground text-[9px] text-center py-0.5">
                 {img.etape_numero ? `É${img.etape_numero}` : 'VE'}
               </div>
             </div>
