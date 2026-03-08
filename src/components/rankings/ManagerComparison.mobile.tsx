@@ -1,16 +1,13 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useLeagueClient } from "@/lib/supabase/leagueClient";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MobileCard } from "@/components/mobile/MobileCard";
 import { MobileEmptyState } from "@/components/mobile/MobileEmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trophy, Users, TrendingUp, Target } from "lucide-react";
+import { Trophy, Users, TrendingUp, Target, BarChart3 } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend, ResponsiveContainer } from "recharts";
 import { useLeague } from "@/contexts/LeagueContext";
 import { ManagerSelect } from "@/components/shared/ManagerSelect";
@@ -24,294 +21,146 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
   const [managerA, setManagerA] = useState<string>("");
   const [managerB, setManagerB] = useState<string>("");
   const { leagueId } = useLeague();
+  const leagueClient = useLeagueClient();
 
-  // Récupérer les noms des managers sélectionnés
   const { data: selectedManagers } = useQuery({
     queryKey: ["selected-managers", managerA, managerB],
     queryFn: async () => {
       const ids = [managerA, managerB].filter(Boolean);
       if (ids.length === 0) return [];
-      
       const { data, error } = await supabase
         .from("managers")
         .select("id, nom")
         .in("id", ids);
-      
       if (error) throw error;
       return data;
     },
     enabled: !!(managerA || managerB),
   });
 
-  // Fetch rosters for manager A
+  // Helper to get phase IDs for the season
+  const getPhaseIds = async () => {
+    if (phaseId) return [phaseId];
+    if (saisonId) {
+      const { data: phases } = await supabase
+        .from("phases")
+        .select("id")
+        .eq("saison_id", saisonId);
+      return phases?.map(p => p.id) || [];
+    }
+    return [];
+  };
+
+  // Fetch rosters for a manager using league-scoped client
+  const fetchRosters = async (managerId: string) => {
+    if (!managerId) return null;
+    let query = leagueClient
+      .from("rosters")
+      .select("coureur_id, prix_signature, phase_id")
+      .eq("manager_id", managerId);
+
+    const pIds = await getPhaseIds();
+    if (pIds.length > 0) query = query.in("phase_id", pIds);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  };
+
   const { data: rostersA } = useQuery({
     queryKey: ["rosters-a", managerA, phaseId, saisonId, leagueId],
-    queryFn: async () => {
-      if (!managerA) return null;
-
-      let query = supabase
-        .from("rosters")
-        .select(`
-          coureur_id,
-          prix_signature,
-          coureurs (nom, equipe)
-        `)
-        .eq("manager_id", managerA);
-
-      if (leagueId) {
-        query = query.eq("league_id", leagueId);
-      }
-
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          const phaseIds = phases.map(p => p.id);
-          query = query.in("phase_id", phaseIds);
-        }
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchRosters(managerA),
     enabled: !!managerA,
   });
 
-  // Fetch rosters for manager B
   const { data: rostersB } = useQuery({
     queryKey: ["rosters-b", managerB, phaseId, saisonId, leagueId],
-    queryFn: async () => {
-      if (!managerB) return null;
-
-      let query = supabase
-        .from("rosters")
-        .select(`
-          coureur_id,
-          prix_signature,
-          coureurs (nom, equipe)
-        `)
-        .eq("manager_id", managerB);
-
-      if (leagueId) {
-        query = query.eq("league_id", leagueId);
-      }
-
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          const phaseIds = phases.map(p => p.id);
-          query = query.in("phase_id", phaseIds);
-        }
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchRosters(managerB),
     enabled: !!managerB,
   });
 
-  // Fetch points for manager A
-  const { data: pointsA } = useQuery({
-    queryKey: ["points-manager-a", managerA, phaseId, saisonId, rostersA],
-    queryFn: async () => {
-      if (!managerA || !rostersA) return null;
-
-      const coureurIds = rostersA.map(r => r.coureur_id);
-
+  // Fetch points for a manager's riders
+  const fetchPoints = async (rosters: any[] | null) => {
+    if (!rosters) return null;
+    const coureurIds = rosters.map(r => r.coureur_id);
     let query = supabase
       .from("points_ledger")
       .select("coureur_id, points, type_classement, course_id, phase_id")
       .in("coureur_id", coureurIds);
 
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          const phaseIds = phases.map(p => p.id);
-          query = query.in("phase_id", phaseIds);
-        }
-      }
+    const pIds = await getPhaseIds();
+    if (pIds.length > 0) query = query.in("phase_id", pIds);
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  };
+
+  const { data: pointsA } = useQuery({
+    queryKey: ["points-manager-a", managerA, phaseId, saisonId, rostersA],
+    queryFn: () => fetchPoints(rostersA),
     enabled: !!managerA && !!rostersA,
   });
 
-  // Fetch points for manager B
   const { data: pointsB } = useQuery({
     queryKey: ["points-manager-b", managerB, phaseId, saisonId, rostersB],
-    queryFn: async () => {
-      if (!managerB || !rostersB) return null;
-
-      const coureurIds = rostersB.map(r => r.coureur_id);
-
-    let query = supabase
-      .from("points_ledger")
-      .select("coureur_id, points, type_classement, course_id, phase_id")
-      .in("coureur_id", coureurIds);
-
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          const phaseIds = phases.map(p => p.id);
-          query = query.in("phase_id", phaseIds);
-        }
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchPoints(rostersB),
     enabled: !!managerB && !!rostersB,
   });
 
-  // Fetch bonus_points for manager A
+  // Fetch bonus_points for a manager
+  const fetchBonusPoints = async (managerId: string) => {
+    if (!managerId) return null;
+    let query = supabase
+      .from("bonus_points")
+      .select("points")
+      .or(`target_manager_id.eq.${managerId},manager_id.eq.${managerId}`);
+
+    const pIds = await getPhaseIds();
+    if (pIds.length > 0) query = query.in("phase_id", pIds);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  };
+
   const { data: bonusPointsA } = useQuery({
     queryKey: ["bonus-points-a", managerA, phaseId, saisonId],
-    queryFn: async () => {
-      if (!managerA) return null;
-
-      let query = supabase
-        .from("bonus_points")
-        .select("points")
-        .or(`target_manager_id.eq.${managerA},manager_id.eq.${managerA}`);
-
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          query = query.in("phase_id", phases.map(p => p.id));
-        }
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchBonusPoints(managerA),
     enabled: !!managerA,
   });
 
-  // Fetch bonus_points for manager B
   const { data: bonusPointsB } = useQuery({
     queryKey: ["bonus-points-b", managerB, phaseId, saisonId],
-    queryFn: async () => {
-      if (!managerB) return null;
-
-      let query = supabase
-        .from("bonus_points")
-        .select("points")
-        .or(`target_manager_id.eq.${managerB},manager_id.eq.${managerB}`);
-
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          query = query.in("phase_id", phases.map(p => p.id));
-        }
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchBonusPoints(managerB),
     enabled: !!managerB,
   });
 
-  // Fetch manager_bonus_points for manager A
+  // Fetch manager_bonus_points
+  const fetchManagerBonus = async (managerId: string) => {
+    if (!managerId) return null;
+    let query = leagueClient
+      .from("manager_bonus_points")
+      .select("bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs")
+      .eq("manager_id", managerId);
+
+    const pIds = await getPhaseIds();
+    if (pIds.length > 0) query = query.in("phase_id", pIds);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  };
+
   const { data: managerBonusA } = useQuery({
     queryKey: ["manager-bonus-a", managerA, phaseId, saisonId],
-    queryFn: async () => {
-      if (!managerA) return null;
-
-      let query = supabase
-        .from("manager_bonus_points")
-        .select("bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs")
-        .eq("manager_id", managerA);
-
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          query = query.in("phase_id", phases.map(p => p.id));
-        }
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchManagerBonus(managerA),
     enabled: !!managerA,
   });
 
-  // Fetch manager_bonus_points for manager B
   const { data: managerBonusB } = useQuery({
     queryKey: ["manager-bonus-b", managerB, phaseId, saisonId],
-    queryFn: async () => {
-      if (!managerB) return null;
-
-      let query = supabase
-        .from("manager_bonus_points")
-        .select("bonus_itt, bonus_ttt, bonus_first_win, bonus_coureurs, bonus_scoreurs")
-        .eq("manager_id", managerB);
-
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          query = query.in("phase_id", phases.map(p => p.id));
-        }
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => fetchManagerBonus(managerB),
     enabled: !!managerB,
   });
 
@@ -323,19 +172,8 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
         .from("courses")
         .select("id, nom, type_course, categorie");
 
-      if (phaseId) {
-        query = query.eq("phase_id", phaseId);
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        
-        if (phases) {
-          const phaseIds = phases.map(p => p.id);
-          query = query.in("phase_id", phaseIds);
-        }
-      }
+      const pIds = await getPhaseIds();
+      if (pIds.length > 0) query = query.in("phase_id", pIds);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -343,158 +181,81 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     },
   });
 
-  // Fetch victories for manager A - CORRIGÉ: avec jointure rosters
+  // Fetch victories excluding ties
+  const fetchVictories = async (managerId: string) => {
+    if (!managerId) return null;
+    const pIds = await getPhaseIds();
+
+    // Fetch ALL position=1 results
+    const { data: allWins, error } = await supabase
+      .from("race_results")
+      .select(`
+        id, coureur_id, course_id, type_classement, etape_numero,
+        courses!inner(phase_id)
+      `)
+      .eq("position", 1)
+      .eq("statut", "finished")
+      .in("type_classement", ["Etape", "General"]);
+
+    if (error) throw error;
+
+    // Exclude ties
+    const groupKey = (v: any) => `${v.course_id}|${v.type_classement}|${v.etape_numero ?? 'null'}`;
+    const groups = new Map<string, any[]>();
+    allWins?.forEach(v => {
+      const key = groupKey(v);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(v);
+    });
+    const uniqueWins = Array.from(groups.values())
+      .filter(g => g.length === 1)
+      .map(g => g[0]);
+
+    // Get manager's rosters (league-scoped)
+    let rostersQuery = leagueClient
+      .from("rosters")
+      .select("coureur_id, phase_id")
+      .eq("manager_id", managerId);
+    if (pIds.length > 0) rostersQuery = rostersQuery.in("phase_id", pIds);
+
+    const { data: rostersData, error: re } = await rostersQuery;
+    if (re) throw re;
+
+    const rostersByRider = new Map<string, Set<string>>();
+    rostersData?.forEach(r => {
+      if (!rostersByRider.has(r.coureur_id)) rostersByRider.set(r.coureur_id, new Set());
+      rostersByRider.get(r.coureur_id)!.add(r.phase_id);
+    });
+
+    return uniqueWins.filter(v => {
+      const coursePhaseId = v.courses?.phase_id;
+      if (!coursePhaseId) return false;
+      const riderPhases = rostersByRider.get(v.coureur_id);
+      if (!riderPhases) return false;
+      return riderPhases.has(coursePhaseId) &&
+        (pIds.length === 0 || pIds.includes(coursePhaseId));
+    });
+  };
+
   const { data: victoriesA } = useQuery({
-    queryKey: ["victories-a", managerA, phaseId, saisonId],
-    queryFn: async () => {
-      if (!managerA) return null;
-
-      // Récupérer les phase_ids concernés
-      let phaseIds: string[] = [];
-      if (phaseId) {
-        phaseIds = [phaseId];
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        phaseIds = phases?.map(p => p.id) || [];
-      }
-
-      // Récupérer les victoires avec courses
-      const { data: victories, error } = await supabase
-        .from("race_results")
-        .select(`
-          id, 
-          coureur_id, 
-          course_id,
-          courses!inner(phase_id)
-        `)
-        .eq("position", 1)
-        .eq("statut", "finished")
-        .in("type_classement", ["Etape", "General"]);
-
-      if (error) throw error;
-
-      // Récupérer tous les rosters du manager
-      let rostersQuery = supabase
-        .from("rosters")
-        .select("coureur_id, phase_id")
-        .eq("manager_id", managerA);
-
-      if (phaseIds.length > 0) {
-        rostersQuery = rostersQuery.in("phase_id", phaseIds);
-      }
-
-      const { data: rostersData, error: rostersError } = await rostersQuery;
-      if (rostersError) throw rostersError;
-
-      // Map coureur -> phases
-      const rostersByRider = new Map<string, Set<string>>();
-      rostersData?.forEach(r => {
-        if (!rostersByRider.has(r.coureur_id)) {
-          rostersByRider.set(r.coureur_id, new Set());
-        }
-        rostersByRider.get(r.coureur_id)!.add(r.phase_id);
-      });
-
-      // Filtrer victoires
-      const filtered = victories?.filter(v => {
-        const coursePhaseId = v.courses?.phase_id;
-        if (!coursePhaseId) return false;
-        
-        const riderPhases = rostersByRider.get(v.coureur_id);
-        if (!riderPhases) return false;
-        
-        return riderPhases.has(coursePhaseId) && 
-               (phaseIds.length === 0 || phaseIds.includes(coursePhaseId));
-      }) || [];
-
-      return filtered;
-    },
+    queryKey: ["victories-a", managerA, phaseId, saisonId, leagueId],
+    queryFn: () => fetchVictories(managerA),
     enabled: !!managerA,
   });
 
-  // Fetch victories for manager B - CORRIGÉ: avec jointure rosters
   const { data: victoriesB } = useQuery({
-    queryKey: ["victories-b", managerB, phaseId, saisonId],
-    queryFn: async () => {
-      if (!managerB) return null;
-
-      // Récupérer les phase_ids concernés
-      let phaseIds: string[] = [];
-      if (phaseId) {
-        phaseIds = [phaseId];
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        phaseIds = phases?.map(p => p.id) || [];
-      }
-
-      // Récupérer les victoires avec courses
-      const { data: victories, error } = await supabase
-        .from("race_results")
-        .select(`
-          id, 
-          coureur_id, 
-          course_id,
-          courses!inner(phase_id)
-        `)
-        .eq("position", 1)
-        .eq("statut", "finished")
-        .in("type_classement", ["Etape", "General"]);
-
-      if (error) throw error;
-
-      // Récupérer tous les rosters du manager
-      let rostersQuery = supabase
-        .from("rosters")
-        .select("coureur_id, phase_id")
-        .eq("manager_id", managerB);
-
-      if (phaseIds.length > 0) {
-        rostersQuery = rostersQuery.in("phase_id", phaseIds);
-      }
-
-      const { data: rostersData, error: rostersError } = await rostersQuery;
-      if (rostersError) throw rostersError;
-
-      // Map coureur -> phases
-      const rostersByRider = new Map<string, Set<string>>();
-      rostersData?.forEach(r => {
-        if (!rostersByRider.has(r.coureur_id)) {
-          rostersByRider.set(r.coureur_id, new Set());
-        }
-        rostersByRider.get(r.coureur_id)!.add(r.phase_id);
-      });
-
-      // Filtrer victoires
-      const filtered = victories?.filter(v => {
-        const coursePhaseId = v.courses?.phase_id;
-        if (!coursePhaseId) return false;
-        
-        const riderPhases = rostersByRider.get(v.coureur_id);
-        if (!riderPhases) return false;
-        
-        return riderPhases.has(coursePhaseId) && 
-               (phaseIds.length === 0 || phaseIds.includes(coursePhaseId));
-      }) || [];
-
-      return filtered;
-    },
+    queryKey: ["victories-b", managerB, phaseId, saisonId, leagueId],
+    queryFn: () => fetchVictories(managerB),
     enabled: !!managerB,
   });
 
-
-  // Calculate metrics - CORRIGÉ: ajouter bonus
+  // Metrics
   const totalPointsA = useMemo(() => {
     const racePts = pointsA?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
     const bonusPts = bonusPointsA?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
-    const mgrBonus = managerBonusA?.reduce((sum, mb) => 
-      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) + 
-      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) + 
+    const mgrBonus = managerBonusA?.reduce((sum, mb) =>
+      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) +
+      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) +
       (mb.bonus_scoreurs || 0), 0) || 0;
     return racePts + bonusPts + mgrBonus;
   }, [pointsA, bonusPointsA, managerBonusA]);
@@ -502,93 +263,100 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
   const totalPointsB = useMemo(() => {
     const racePts = pointsB?.reduce((sum, p) => sum + (p.points || 0), 0) || 0;
     const bonusPts = bonusPointsB?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;
-    const mgrBonus = managerBonusB?.reduce((sum, mb) => 
-      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) + 
-      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) + 
+    const mgrBonus = managerBonusB?.reduce((sum, mb) =>
+      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) +
+      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) +
       (mb.bonus_scoreurs || 0), 0) || 0;
     return racePts + bonusPts + mgrBonus;
   }, [pointsB, bonusPointsB, managerBonusB]);
 
   const scoreursA = useMemo(() => {
     if (!pointsA) return 0;
-    return new Set(
-      pointsA
-        .filter(p => (p.points || 0) > 0)
-        .map(p => `${p.coureur_id}|${p.phase_id}`)
-    ).size;
+    return new Set(pointsA.filter(p => (p.points || 0) > 0).map(p => `${p.coureur_id}|${p.phase_id}`)).size;
   }, [pointsA]);
 
   const scoreursB = useMemo(() => {
     if (!pointsB) return 0;
-    return new Set(
-      pointsB
-        .filter(p => (p.points || 0) > 0)
-        .map(p => `${p.coureur_id}|${p.phase_id}`)
-    ).size;
+    return new Set(pointsB.filter(p => (p.points || 0) > 0).map(p => `${p.coureur_id}|${p.phase_id}`)).size;
   }, [pointsB]);
 
-  const budgetA = useMemo(() => {
-    if (!rostersA) return 0;
-    return rostersA.reduce((sum, r) => sum + (r.prix_signature || 0), 0);
-  }, [rostersA]);
-
-  const budgetB = useMemo(() => {
-    if (!rostersB) return 0;
-    return rostersB.reduce((sum, r) => sum + (r.prix_signature || 0), 0);
-  }, [rostersB]);
+  const budgetA = useMemo(() => rostersA?.reduce((sum, r) => sum + (r.prix_signature || 0), 0) || 0, [rostersA]);
+  const budgetB = useMemo(() => rostersB?.reduce((sum, r) => sum + (r.prix_signature || 0), 0) || 0, [rostersB]);
 
   const roiA = budgetA > 0 ? totalPointsA / budgetA : 0;
   const roiB = budgetB > 0 ? totalPointsB / budgetB : 0;
-
   const victoiresA = victoriesA?.length || 0;
   const victoiresB = victoriesB?.length || 0;
-
-  // Points by category
-  const categoriesConfig = [
-    { key: "ONE_DAY", label: "Courses d'un jour", filterCourse: (c: any) => c.type_course === "One-day race" },
-    { key: "ETAPES", label: "Courses par étapes", filterType: (typeClass: string) => typeClass === "Etape" },
-    { key: "GC", label: "CG", filterType: (typeClass: string) => typeClass === "GC" },
-    { key: "POINTS", label: "Points", filterType: (typeClass: string) => typeClass === "Points" },
-    { key: "MOUNTAIN", label: "Montagne", filterType: (typeClass: string) => typeClass === "Mountain" },
-    { key: "YOUTH", label: "Jeunes", filterType: (typeClass: string) => typeClass === "Youth" },
-    { key: "PORTEUR", label: "Porteur", filterType: (typeClass: string) => typeClass === "Porteur" },
-  ];
 
   const coursesMap = useMemo(() => {
     if (!courses) return new Map();
     return new Map(courses.map(c => [c.id, c]));
   }, [courses]);
 
+  // Points by category - fixed type_classement values
+  const categoriesConfig = [
+    { key: "1J", label: "1 Jour", filterCourse: (c: any) => c.type_course === "One-day race" },
+    { key: "ETAPES", label: "Étapes", filterType: (t: string) => t === "Etape" },
+    { key: "GC", label: "CG", filterType: (t: string) => t === "General" },
+    { key: "PTS", label: "Points", filterType: (t: string) => t === "Points" },
+    { key: "MONT", label: "Montagne", filterType: (t: string) => t === "Montagne" },
+    { key: "JEUNE", label: "Jeune", filterType: (t: string) => t === "Jeune" },
+    { key: "PORTEUR", label: "Porteur", filterType: (t: string) => t?.startsWith("Porteur") },
+  ];
+
   const pointsByCategory = useMemo(() => {
     if (!pointsA || !pointsB || !courses) return [];
-
     return categoriesConfig.map(cat => {
-      let ptsA = 0;
-      let ptsB = 0;
-
+      let ptsA = 0, ptsB = 0;
       if (cat.filterCourse) {
-        ptsA = pointsA.filter(p => {
-          const course = coursesMap.get(p.course_id);
-          return course && cat.filterCourse(course);
-        }).reduce((sum, p) => sum + (p.points || 0), 0);
-
-        ptsB = pointsB.filter(p => {
-          const course = coursesMap.get(p.course_id);
-          return course && cat.filterCourse(course);
-        }).reduce((sum, p) => sum + (p.points || 0), 0);
+        ptsA = pointsA.filter(p => { const c = coursesMap.get(p.course_id); return c && cat.filterCourse(c); }).reduce((s, p) => s + (p.points || 0), 0);
+        ptsB = pointsB.filter(p => { const c = coursesMap.get(p.course_id); return c && cat.filterCourse(c); }).reduce((s, p) => s + (p.points || 0), 0);
       } else if (cat.filterType) {
-        ptsA = pointsA.filter(p => cat.filterType(p.type_classement)).reduce((sum, p) => sum + (p.points || 0), 0);
-        ptsB = pointsB.filter(p => cat.filterType(p.type_classement)).reduce((sum, p) => sum + (p.points || 0), 0);
+        ptsA = pointsA.filter(p => cat.filterType!(p.type_classement)).reduce((s, p) => s + (p.points || 0), 0);
+        ptsB = pointsB.filter(p => cat.filterType!(p.type_classement)).reduce((s, p) => s + (p.points || 0), 0);
       }
-
-      return {
-        category: cat.label,
-        managerA: ptsA,
-        managerB: ptsB,
-      };
+      return { category: cat.label, managerA: ptsA, managerB: ptsB };
     });
   }, [pointsA, pointsB, courses, coursesMap]);
 
+  // Radar data normalized
+  const radarData = useMemo(() => {
+    return pointsByCategory.map(cat => {
+      const max = Math.max(cat.managerA, cat.managerB);
+      if (max === 0) return { category: cat.category, managerA: 0, managerB: 0 };
+      return { category: cat.category, managerA: (cat.managerA / max) * 100, managerB: (cat.managerB / max) * 100 };
+    });
+  }, [pointsByCategory]);
+
+  // Points by barème type
+  const baremesConfig = [
+    { label: "1.1", filter: (c: any) => (c.categorie || "").startsWith("1.1") },
+    { label: "2.1", filter: (c: any) => (c.categorie || "").startsWith("2.1") },
+    { label: "1.pro", filter: (c: any) => (c.categorie || "").toLowerCase().startsWith("1.pro") },
+    { label: "2.pro", filter: (c: any) => (c.categorie || "").toLowerCase().startsWith("2.pro") },
+    { label: "Tours WT", filter: (c: any) => (c.categorie || "").startsWith("Tours WT") },
+    { label: "Class. WT", filter: (c: any) => (c.categorie || "").startsWith("Classiques WT") },
+    { label: "GT", filter: (c: any) => c.categorie === "WT GT" },
+    { label: "Monum.", filter: (c: any) => c.categorie === "WT Monument" },
+    { label: "Champ.", filter: (c: any) => { const cat = c.categorie || ""; return cat.startsWith("CN") || cat.startsWith("WC") || cat.startsWith("EC"); } },
+  ];
+
+  const pointsByBareme = useMemo(() => {
+    if (!pointsA || !pointsB || !courses) return [];
+    return baremesConfig.map(b => {
+      const ptsA = pointsA.filter(p => { const c = coursesMap.get(p.course_id); return c && b.filter(c); }).reduce((s, p) => s + (p.points || 0), 0);
+      const ptsB = pointsB.filter(p => { const c = coursesMap.get(p.course_id); return c && b.filter(c); }).reduce((s, p) => s + (p.points || 0), 0);
+      return { category: b.label, managerA: ptsA, managerB: ptsB };
+    });
+  }, [pointsA, pointsB, courses, coursesMap]);
+
+  const radarDataBareme = useMemo(() => {
+    return pointsByBareme.map(item => {
+      const max = Math.max(item.managerA, item.managerB);
+      if (max === 0) return { category: item.category, managerA: 0, managerB: 0 };
+      return { category: item.category, managerA: (item.managerA / max) * 100, managerB: (item.managerB / max) * 100 };
+    });
+  }, [pointsByBareme]);
 
   const managerAName = selectedManagers?.find(m => m.id === managerA)?.nom || "Manager A";
   const managerBName = selectedManagers?.find(m => m.id === managerB)?.nom || "Manager B";
@@ -598,30 +366,14 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
       <div className="space-y-4">
         <div className="space-y-3">
           <div>
-            <Label htmlFor="manager-a" className="text-xs text-muted-foreground mb-2 block">
-              Manager A
-            </Label>
-            <ManagerSelect 
-              value={managerA} 
-              onValueChange={setManagerA}
-              placeholder="Sélectionner un manager"
-              leagueId={leagueId}
-            />
+            <Label className="text-xs text-muted-foreground mb-2 block">Manager A</Label>
+            <ManagerSelect value={managerA} onValueChange={setManagerA} placeholder="Sélectionner" leagueId={leagueId} />
           </div>
-
           <div>
-            <Label htmlFor="manager-b" className="text-xs text-muted-foreground mb-2 block">
-              Manager B
-            </Label>
-            <ManagerSelect 
-              value={managerB} 
-              onValueChange={setManagerB}
-              placeholder="Sélectionner un manager"
-              leagueId={leagueId}
-            />
+            <Label className="text-xs text-muted-foreground mb-2 block">Manager B</Label>
+            <ManagerSelect value={managerB} onValueChange={setManagerB} placeholder="Sélectionner" leagueId={leagueId} />
           </div>
         </div>
-
         <MobileEmptyState
           icon={<Users className="h-12 w-12" />}
           title="Comparer deux managers"
@@ -638,7 +390,6 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
       <div className="space-y-4">
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-40 w-full" />
         <Skeleton className="h-40 w-full" />
       </div>
     );
@@ -660,37 +411,28 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     decimal?: number;
   }) => {
     const diff = valueA - valueB;
-    const formatValue = (v: number) => decimal > 0 ? v.toFixed(decimal) : v.toString();
+    const fmt = (v: number) => decimal > 0 ? v.toFixed(decimal) : v.toString();
 
     return (
       <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-3">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-2 mb-2">
             <Icon className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground">{label}</span>
           </div>
-          
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">{managerAName}</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-lg font-bold text-primary">{formatValue(valueA)}</span>
-                <span className="text-xs text-muted-foreground">{suffix}</span>
-              </div>
+              <span className="text-xs text-muted-foreground truncate max-w-[40%]">{managerAName}</span>
+              <span className="text-base font-bold text-primary">{fmt(valueA)}{suffix && <span className="text-xs font-normal text-muted-foreground ml-0.5">{suffix}</span>}</span>
             </div>
-
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">{managerBName}</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-lg font-bold text-destructive">{formatValue(valueB)}</span>
-                <span className="text-xs text-muted-foreground">{suffix}</span>
-              </div>
+              <span className="text-xs text-muted-foreground truncate max-w-[40%]">{managerBName}</span>
+              <span className="text-base font-bold text-destructive">{fmt(valueB)}{suffix && <span className="text-xs font-normal text-muted-foreground ml-0.5">{suffix}</span>}</span>
             </div>
-
             {diff !== 0 && (
-              <div className="pt-2 border-t">
+              <div className="pt-1.5 border-t">
                 <Badge variant={diff > 0 ? "default" : "destructive"} className="w-full justify-center text-xs">
-                  {diff > 0 ? `+${formatValue(Math.abs(diff))}` : formatValue(diff)} {suffix}
+                  {diff > 0 ? `+${fmt(Math.abs(diff))}` : fmt(diff)} {suffix}
                 </Badge>
               </div>
             )}
@@ -701,120 +443,101 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
   };
 
   return (
-    <div className="space-y-6 pb-4">
+    <div className="space-y-5 pb-4">
       {/* Manager Selection */}
       <div className="space-y-3">
         <div>
-          <Label htmlFor="manager-a-selected" className="text-xs text-muted-foreground mb-2 block">
-            Manager A
-          </Label>
-          <ManagerSelect 
-            value={managerA} 
-            onValueChange={setManagerA}
-            placeholder="Manager A"
-            leagueId={leagueId}
-          />
+          <Label className="text-xs text-muted-foreground mb-2 block">Manager A</Label>
+          <ManagerSelect value={managerA} onValueChange={setManagerA} placeholder="Manager A" leagueId={leagueId} />
         </div>
-
         <div>
-          <Label htmlFor="manager-b-selected" className="text-xs text-muted-foreground mb-2 block">
-            Manager B
-          </Label>
-          <ManagerSelect 
-            value={managerB} 
-            onValueChange={setManagerB}
-            placeholder="Manager B"
-            leagueId={leagueId}
-          />
+          <Label className="text-xs text-muted-foreground mb-2 block">Manager B</Label>
+          <ManagerSelect value={managerB} onValueChange={setManagerB} placeholder="Manager B" leagueId={leagueId} />
         </div>
       </div>
 
       {/* Global Metrics */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         <h3 className="text-sm font-semibold">Métriques globales</h3>
-        <ComparisonMetricCard
-          icon={Trophy}
-          label="Total Points"
-          valueA={totalPointsA}
-          valueB={totalPointsB}
-          suffix="pts"
-        />
-        <ComparisonMetricCard
-          icon={Users}
-          label="Nombre de scoreurs"
-          valueA={scoreursA}
-          valueB={scoreursB}
-        />
-        <ComparisonMetricCard
-          icon={TrendingUp}
-          label="ROI moyen"
-          valueA={roiA}
-          valueB={roiB}
-          decimal={2}
-        />
-        <ComparisonMetricCard
-          icon={Target}
-          label="Nombre de victoires"
-          valueA={victoiresA}
-          valueB={victoiresB}
-        />
+        <div className="grid grid-cols-2 gap-2">
+          <ComparisonMetricCard icon={Trophy} label="Total Points" valueA={totalPointsA} valueB={totalPointsB} suffix="pts" />
+          <ComparisonMetricCard icon={Target} label="Victoires" valueA={victoiresA} valueB={victoiresB} />
+          <ComparisonMetricCard icon={Users} label="Scoreurs" valueA={scoreursA} valueB={scoreursB} />
+          <ComparisonMetricCard icon={TrendingUp} label="ROI" valueA={roiA} valueB={roiB} decimal={2} />
+        </div>
       </div>
 
-      {/* Radar Chart */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold">Performance par catégorie</h3>
+      {/* Radar - Catégories */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold">Radar — Catégories</h3>
         <Card>
-          <CardContent className="p-4">
-            <ResponsiveContainer width="100%" height={300}>
-              <RadarChart data={pointsByCategory}>
+          <CardContent className="p-2">
+            <ResponsiveContainer width="100%" height={260}>
+              <RadarChart data={radarData}>
                 <PolarGrid />
-                <PolarAngleAxis dataKey="category" tick={{ fontSize: 10 }} />
-                <PolarRadiusAxis tick={{ fontSize: 10 }} />
-                <Radar name={managerAName} dataKey="managerA" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
-                <Radar name={managerBName} dataKey="managerB" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <PolarAngleAxis dataKey="category" tick={{ fontSize: 9 }} />
+                <PolarRadiusAxis tick={{ fontSize: 8 }} />
+                <Radar name={managerAName} dataKey="managerA" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.5} />
+                <Radar name={managerBName} dataKey="managerB" stroke="hsl(var(--destructive))" fill="hsl(var(--destructive))" fillOpacity={0.5} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
               </RadarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
-      {/* Points by Category Table */}
-      <div className="space-y-3">
+      {/* Points par catégorie — cards instead of table */}
+      <div className="space-y-2">
         <h3 className="text-sm font-semibold">Points par catégorie</h3>
+        <div className="grid grid-cols-2 gap-2">
+          {pointsByCategory.map((row, idx) => (
+            <ComparisonMetricCard
+              key={idx}
+              icon={BarChart3}
+              label={row.category}
+              valueA={row.managerA}
+              valueB={row.managerB}
+              suffix="pts"
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Radar - Barème */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold">Radar — Barème</h3>
         <Card>
-          <ScrollArea className="w-full">
-            <div className="min-w-[500px]">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-medium">Catégorie</th>
-                    <th className="text-right p-3 font-medium text-primary">{managerAName}</th>
-                    <th className="text-right p-3 font-medium text-destructive">{managerBName}</th>
-                    <th className="text-right p-3 font-medium">Écart</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pointsByCategory.map((row, idx) => (
-                    <tr key={idx} className="border-b">
-                      <td className="p-3">{row.category}</td>
-                      <td className="p-3 text-right font-mono font-semibold text-primary">{row.managerA}</td>
-                      <td className="p-3 text-right font-mono font-semibold text-destructive">{row.managerB}</td>
-                      <td className="p-3 text-right">
-                        <Badge variant={row.managerA > row.managerB ? "default" : "destructive"}>
-                          {row.managerA > row.managerB ? "+" : ""}
-                          {row.managerA - row.managerB}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </ScrollArea>
+          <CardContent className="p-2">
+            <ResponsiveContainer width="100%" height={260}>
+              <RadarChart data={radarDataBareme}>
+                <PolarGrid />
+                <PolarAngleAxis dataKey="category" tick={{ fontSize: 8 }} />
+                <PolarRadiusAxis tick={{ fontSize: 8 }} />
+                <Radar name={managerAName} dataKey="managerA" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.5} />
+                <Radar name={managerBName} dataKey="managerB" stroke="hsl(var(--destructive))" fill="hsl(var(--destructive))" fillOpacity={0.5} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </CardContent>
         </Card>
       </div>
 
+      {/* Points par barème — cards */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold">Points par barème</h3>
+        <div className="grid grid-cols-2 gap-2">
+          {pointsByBareme.map((row, idx) => (
+            <ComparisonMetricCard
+              key={idx}
+              icon={BarChart3}
+              label={row.category}
+              valueA={row.managerA}
+              valueB={row.managerB}
+              suffix="pts"
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
