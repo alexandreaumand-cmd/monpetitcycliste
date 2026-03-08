@@ -140,6 +140,13 @@ export const SuperAdminLiveBroadcastPage = () => {
     (c) => !liveCourses?.some((lc) => lc.course_id === c.id)
   );
 
+  const filteredHistory = useMemo(() => {
+    if (!isMultiStage || selectedEtape == null) return broadcastHistory;
+    return broadcastHistory.filter(
+      (msg) => (msg.metadata as any)?.etape_numero === selectedEtape
+    );
+  }, [broadcastHistory, isMultiStage, selectedEtape]);
+
   return (
     <div className="space-y-6">
       <div>
