@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, CheckCircle, XCircle, Clock, Lock, Target, ArrowRight, Users } from "lucide-react";
 import { PronosticStartlistCombobox } from "./PronosticStartlistCombobox";
+import { PronosticStartlistTeamCombobox } from "./PronosticStartlistTeamCombobox";
 import { useSavePronostic, useLeaguePronostics, type PronosticDeadline, type MyPronostic } from "@/hooks/useArenaPronostics";
 import { toast } from "sonner";
 import { isPast, differenceInMinutes, differenceInHours, differenceInDays, differenceInWeeks } from "date-fns";
@@ -48,8 +49,12 @@ export const PronosticRaceCard = ({
 
   const isExpired = isPast(new Date(deadline.deadline_at));
   const isEvaluated = pronostic?.is_correct !== null && pronostic?.is_correct !== undefined;
+  const isTTT = deadline.is_ttt;
 
   const typeLabel = useMemo(() => {
+    if (isTTT) {
+      return `TTT ${deadline.etape_numero ? `#${deadline.etape_numero}` : ""}`;
+    }
     switch (deadline.pronostic_type) {
       case "stage_winner":
         return `${t("pronostics.types.stageWinner")} ${deadline.etape_numero ? `#${deadline.etape_numero}` : ""}`;
@@ -60,7 +65,7 @@ export const PronosticRaceCard = ({
       default:
         return deadline.pronostic_type;
     }
-  }, [deadline, t]);
+  }, [deadline, t, isTTT]);
 
   const statusInfo = useMemo(() => {
     if (isEvaluated && pronostic) {
@@ -74,7 +79,7 @@ export const PronosticRaceCard = ({
     return { icon: Clock, color: "text-primary", bg: "bg-primary/5", label: t("pronostics.status.open") };
   }, [isEvaluated, isExpired, pronostic, t]);
 
-  const handleSelect = async (coureurId: string, coureurNom: string) => {
+  const handleSelectRider = async (coureurId: string, coureurNom: string) => {
     try {
       await savePronostic.mutateAsync({
         leagueId,
@@ -91,9 +96,30 @@ export const PronosticRaceCard = ({
     }
   };
 
-  const StatusIcon = statusInfo.icon;
+  const handleSelectTeam = async (equipeSaisonId: string, equipeName: string) => {
+    try {
+      await savePronostic.mutateAsync({
+        leagueId,
+        managerId,
+        courseId: deadline.course_id,
+        etapeNumero: deadline.etape_numero,
+        pronosticType: deadline.pronostic_type,
+        equipeSaisonId,
+      });
+      toast.success(t("pronostics.saved", { rider: equipeName }));
+    } catch (error: any) {
+      console.error("Error saving pronostic:", error);
+      toast.error(t("pronostics.saveError"));
+    }
+  };
 
+  const StatusIcon = statusInfo.icon;
   const shortDeadline = !isExpired ? formatShortDeadline(new Date(deadline.deadline_at), lang) : null;
+
+  // Display name for current pick
+  const pickDisplayName = isTTT
+    ? (pronostic?.equipe_nom || null)
+    : (pronostic?.coureur_nom || null);
 
   return (
     <Card className={`transition-all ${statusInfo.bg}`}>
@@ -122,24 +148,33 @@ export const PronosticRaceCard = ({
           </div>
         </div>
 
-        {/* Line 2: Full-width rider selector or result */}
+        {/* Line 2: Full-width selector or result */}
         <div>
           {!isExpired ? (
             <div className="flex items-center gap-1">
-              <PronosticStartlistCombobox
-                courseId={deadline.course_id}
-                value={pronostic?.coureur_id || null}
-                onSelect={handleSelect}
-                disabled={savePronostic.isPending}
-              />
+              {isTTT ? (
+                <PronosticStartlistTeamCombobox
+                  courseId={deadline.course_id}
+                  value={pronostic?.equipe_saison_id || null}
+                  onSelect={handleSelectTeam}
+                  disabled={savePronostic.isPending}
+                />
+              ) : (
+                <PronosticStartlistCombobox
+                  courseId={deadline.course_id}
+                  value={pronostic?.coureur_id || null}
+                  onSelect={handleSelectRider}
+                  disabled={savePronostic.isPending}
+                />
+              )}
               {savePronostic.isPending && (
                 <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
               )}
             </div>
-          ) : pronostic ? (
+          ) : pickDisplayName ? (
             <div className="flex items-center gap-1 text-sm">
               <Target className="h-3 w-3 text-muted-foreground shrink-0" />
-              <span className="truncate font-medium">{pronostic.coureur_nom}</span>
+              <span className="truncate font-medium">{pickDisplayName}</span>
             </div>
           ) : (
             <span className="text-xs text-muted-foreground italic">{t("pronostics.noPick")}</span>
@@ -154,6 +189,7 @@ export const PronosticRaceCard = ({
             pronostic={pronostic}
             managerId={managerId}
             isExpired={isExpired}
+            isTTT={isTTT}
             t={t}
           />
         )}
@@ -162,13 +198,14 @@ export const PronosticRaceCard = ({
   );
 };
 
-// Sub-component for the closed state showing all managers' picks (collapsed by default)
+// Sub-component for the closed state showing all managers' picks
 const ClosedPronosticsList = ({
   leagueId,
   deadline,
   pronostic,
   managerId,
   isExpired,
+  isTTT,
   t,
 }: {
   leagueId: string;
@@ -176,6 +213,7 @@ const ClosedPronosticsList = ({
   pronostic: MyPronostic | null;
   managerId: string;
   isExpired: boolean;
+  isTTT: boolean;
   t: (key: string) => string;
 }) => {
   const { data: allPicks, isLoading } = useLeaguePronostics(
@@ -206,6 +244,7 @@ const ClosedPronosticsList = ({
             <div className="space-y-1">
               {allPicks.map((pick) => {
                 const isCurrentUser = pick.manager_id === managerId;
+                const pickName = isTTT ? pick.equipe_nom : pick.coureur_nom;
                 return (
                   <div
                     key={pick.manager_id}
@@ -227,7 +266,7 @@ const ClosedPronosticsList = ({
                       )}
                     </span>
                     <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span className="truncate flex-1 text-xs">{pick.coureur_nom}</span>
+                    <span className="truncate flex-1 text-xs">{pickName || '—'}</span>
                     {pick.is_correct !== null && (
                       pick.is_correct ? (
                         <CheckCircle className="h-3.5 w-3.5 text-green-600 shrink-0" />

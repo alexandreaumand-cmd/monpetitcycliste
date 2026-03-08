@@ -26,6 +26,7 @@ export interface PronosticDeadline {
   etape_numero: number | null;
   pronostic_type: string;
   deadline_at: string;
+  is_ttt: boolean;
   courses: {
     nom: string;
     categorie: string | null;
@@ -41,7 +42,7 @@ export function usePronosticDeadlines() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('arena_pronostic_deadlines')
-        .select('id, course_id, etape_numero, pronostic_type, deadline_at, courses(nom, categorie, type_course, date_debut, date_fin)')
+        .select('id, course_id, etape_numero, pronostic_type, deadline_at, is_ttt, courses(nom, categorie, type_course, date_debut, date_fin)')
         .order('deadline_at', { ascending: true });
       if (error) throw error;
       return (data || []) as PronosticDeadline[];
@@ -54,10 +55,12 @@ export interface MyPronostic {
   course_id: string;
   etape_numero: number | null;
   pronostic_type: string;
-  coureur_id: string;
+  coureur_id: string | null;
+  equipe_saison_id: string | null;
   is_correct: boolean | null;
   evaluated_at: string | null;
   coureur_nom?: string;
+  equipe_nom?: string;
 }
 
 export function useMyPronostics(leagueId: string, managerId: string | null) {
@@ -68,28 +71,43 @@ export function useMyPronostics(leagueId: string, managerId: string | null) {
 
       const { data, error } = await supabase
         .from('arena_pronostics')
-        .select('id, course_id, etape_numero, pronostic_type, coureur_id, is_correct, evaluated_at')
+        .select('id, course_id, etape_numero, pronostic_type, coureur_id, equipe_saison_id, is_correct, evaluated_at')
         .eq('league_id', leagueId)
         .eq('manager_id', managerId);
 
       if (error) throw error;
       if (!data || data.length === 0) return [];
 
-      // Fetch coureur names separately
-      const coureurIds = [...new Set(data.map(p => p.coureur_id))];
-      const { data: coureurs } = await supabase
-        .from('coureurs')
-        .select('id, nom')
-        .in('id', coureurIds);
-
+      // Fetch coureur names for non-TTT pronostics
+      const coureurIds = [...new Set(data.filter(p => p.coureur_id).map(p => p.coureur_id!))];
       const coureurMap: Record<string, string> = {};
-      for (const c of (coureurs || [])) {
-        coureurMap[c.id] = c.nom;
+      if (coureurIds.length > 0) {
+        const { data: coureurs } = await supabase
+          .from('coureurs')
+          .select('id, nom')
+          .in('id', coureurIds);
+        for (const c of (coureurs || [])) {
+          coureurMap[c.id] = c.nom;
+        }
+      }
+
+      // Fetch equipe names for TTT pronostics
+      const equipeSaisonIds = [...new Set(data.filter(p => p.equipe_saison_id).map(p => p.equipe_saison_id!))];
+      const equipeMap: Record<string, string> = {};
+      if (equipeSaisonIds.length > 0) {
+        const { data: equipes } = await supabase
+          .from('equipes_saisons')
+          .select('id, nom_affiche')
+          .in('id', equipeSaisonIds);
+        for (const e of (equipes || [])) {
+          equipeMap[e.id] = e.nom_affiche;
+        }
       }
 
       return data.map(p => ({
         ...p,
-        coureur_nom: coureurMap[p.coureur_id] || p.coureur_id,
+        coureur_nom: p.coureur_id ? (coureurMap[p.coureur_id] || p.coureur_id) : undefined,
+        equipe_nom: p.equipe_saison_id ? (equipeMap[p.equipe_saison_id] || undefined) : undefined,
       })) as MyPronostic[];
     },
     enabled: !!managerId && !!leagueId,
@@ -106,7 +124,8 @@ export function useSavePronostic() {
       courseId: string;
       etapeNumero: number | null;
       pronosticType: string;
-      coureurId: string;
+      coureurId?: string;
+      equipeSaisonId?: string;
     }) => {
       // Check if a pronostic already exists
       let existingQuery = supabase
@@ -125,21 +144,27 @@ export function useSavePronostic() {
 
       const { data: existing } = await existingQuery.maybeSingle();
 
+      const updatePayload: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+      };
+      if (params.equipeSaisonId) {
+        updatePayload.equipe_saison_id = params.equipeSaisonId;
+        updatePayload.coureur_id = null;
+      } else {
+        updatePayload.coureur_id = params.coureurId;
+        updatePayload.equipe_saison_id = null;
+      }
+
       if (existing) {
-        // Update existing pronostic
         const { data, error } = await supabase
           .from('arena_pronostics')
-          .update({
-            coureur_id: params.coureurId,
-            updated_at: new Date().toISOString(),
-          })
+          .update(updatePayload)
           .eq('id', existing.id)
           .select()
           .single();
         if (error) throw error;
         return data;
       } else {
-        // Insert new pronostic
         const { data, error } = await supabase
           .from('arena_pronostics')
           .insert({
@@ -148,7 +173,8 @@ export function useSavePronostic() {
             course_id: params.courseId,
             etape_numero: params.etapeNumero,
             pronostic_type: params.pronosticType,
-            coureur_id: params.coureurId,
+            coureur_id: params.coureurId || null,
+            equipe_saison_id: params.equipeSaisonId || null,
           })
           .select()
           .single();
@@ -189,8 +215,10 @@ export interface LeaguePronostic {
   manager_id: string;
   manager_nom: string;
   avatar_url: string | null;
-  coureur_id: string;
-  coureur_nom: string;
+  coureur_id: string | null;
+  coureur_nom: string | null;
+  equipe_saison_id: string | null;
+  equipe_nom: string | null;
   is_correct: boolean | null;
 }
 
@@ -204,10 +232,9 @@ export function useLeaguePronostics(
   return useQuery({
     queryKey: ['arena-league-pronostics', leagueId, courseId, etapeNumero, pronosticType],
     queryFn: async () => {
-      // Fetch all pronostics for this league/course/stage/type
       let query = supabase
         .from('arena_pronostics')
-        .select('manager_id, coureur_id, is_correct')
+        .select('manager_id, coureur_id, equipe_saison_id, is_correct')
         .eq('league_id', leagueId)
         .eq('course_id', courseId)
         .eq('pronostic_type', pronosticType);
@@ -235,15 +262,29 @@ export function useLeaguePronostics(
       }
 
       // Fetch coureur names
-      const coureurIds = [...new Set(pronostics.map(p => p.coureur_id))];
-      const { data: coureurs } = await supabase
-        .from('coureurs')
-        .select('id, nom')
-        .in('id', coureurIds);
-
+      const coureurIds = [...new Set(pronostics.filter(p => p.coureur_id).map(p => p.coureur_id!))];
       const coureurMap: Record<string, string> = {};
-      for (const c of (coureurs || [])) {
-        coureurMap[c.id] = c.nom;
+      if (coureurIds.length > 0) {
+        const { data: coureurs } = await supabase
+          .from('coureurs')
+          .select('id, nom')
+          .in('id', coureurIds);
+        for (const c of (coureurs || [])) {
+          coureurMap[c.id] = c.nom;
+        }
+      }
+
+      // Fetch equipe names
+      const equipeSaisonIds = [...new Set(pronostics.filter(p => p.equipe_saison_id).map(p => p.equipe_saison_id!))];
+      const equipeMap: Record<string, string> = {};
+      if (equipeSaisonIds.length > 0) {
+        const { data: equipes } = await supabase
+          .from('equipes_saisons')
+          .select('id, nom_affiche')
+          .in('id', equipeSaisonIds);
+        for (const e of (equipes || [])) {
+          equipeMap[e.id] = e.nom_affiche;
+        }
       }
 
       return pronostics
@@ -252,7 +293,9 @@ export function useLeaguePronostics(
           manager_nom: managerMap[p.manager_id]?.nom || 'Inconnu',
           avatar_url: managerMap[p.manager_id]?.avatar_url || null,
           coureur_id: p.coureur_id,
-          coureur_nom: coureurMap[p.coureur_id] || p.coureur_id,
+          coureur_nom: p.coureur_id ? (coureurMap[p.coureur_id] || p.coureur_id) : null,
+          equipe_saison_id: p.equipe_saison_id,
+          equipe_nom: p.equipe_saison_id ? (equipeMap[p.equipe_saison_id] || null) : null,
           is_correct: p.is_correct,
         }))
         .sort((a, b) => a.manager_nom.localeCompare(b.manager_nom)) as LeaguePronostic[];
@@ -267,7 +310,6 @@ export function useLeaguePronostics(
  * meaning evaluation has occurred even if the manager didn't make a pick.
  */
 export function useEvaluatedDeadlineIds(deadlines: PronosticDeadline[] | undefined) {
-  // Only look at closed deadlines
   const closedDeadlines = useMemo(() => {
     if (!deadlines) return [];
     return deadlines.filter((d) => isPast(new Date(d.deadline_at)));
@@ -280,7 +322,6 @@ export function useEvaluatedDeadlineIds(deadlines: PronosticDeadline[] | undefin
 
       const courseIds = [...new Set(closedDeadlines.map(d => d.course_id))];
 
-      // Fetch race_results with position=1 for these courses
       const { data: results, error } = await supabase
         .from('race_results')
         .select('course_id, etape_numero, type_classement')
@@ -289,13 +330,11 @@ export function useEvaluatedDeadlineIds(deadlines: PronosticDeadline[] | undefin
 
       if (error) throw error;
 
-      // Build a lookup set of "course_id|etape_numero|type_classement"
       const resultKeys = new Set<string>();
       for (const r of (results || [])) {
         resultKeys.add(`${r.course_id}|${r.etape_numero ?? 'null'}|${r.type_classement}`);
       }
 
-      // Map pronostic_type to type_classement for matching
       const pronosticToClassement: Record<string, string[]> = {
         stage_winner: ['Etape'],
         gc_winner: ['General'],
@@ -333,7 +372,6 @@ export function useStartlistRiders(courseId: string | null) {
     queryFn: async () => {
       if (!courseId) return [];
 
-      // Find latest startlist import for this course
       const { data: importData } = await supabase
         .from('startlist_imports')
         .select('id')
@@ -344,7 +382,6 @@ export function useStartlistRiders(courseId: string | null) {
 
       if (!importData) return [];
 
-      // Fetch entries with matched riders
       const { data: entries, error } = await supabase
         .from('startlist_entries')
         .select('coureur_id, source_name, source_team')
@@ -354,7 +391,6 @@ export function useStartlistRiders(courseId: string | null) {
 
       if (error) throw error;
 
-      // Fetch coureur names
       const coureurIds = (entries || []).map(e => e.coureur_id!).filter(Boolean);
       if (coureurIds.length === 0) return [];
 
@@ -375,6 +411,76 @@ export function useStartlistRiders(courseId: string | null) {
           nom: coureurMap[e.coureur_id!] || e.source_name,
           team: e.source_team,
         })) as StartlistRider[];
+    },
+    enabled: !!courseId,
+    staleTime: 1000 * 60 * 10,
+  });
+}
+
+export interface StartlistTeam {
+  equipe_saison_id: string;
+  nom_affiche: string;
+}
+
+export function useStartlistTeams(courseId: string | null) {
+  return useQuery({
+    queryKey: ['arena-startlist-teams', courseId],
+    queryFn: async () => {
+      if (!courseId) return [];
+
+      // Find latest startlist import
+      const { data: importData } = await supabase
+        .from('startlist_imports')
+        .select('id, saison_id')
+        .eq('race_id', courseId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!importData) return [];
+
+      // Get distinct source_team names from startlist
+      const { data: entries, error } = await supabase
+        .from('startlist_entries')
+        .select('source_team')
+        .eq('startlist_id', importData.id)
+        .not('source_team', 'is', null);
+
+      if (error) throw error;
+
+      const uniqueTeamNames = [...new Set((entries || []).map(e => e.source_team).filter(Boolean))] as string[];
+      if (uniqueTeamNames.length === 0) return [];
+
+      // Fetch equipes_saisons for this season, match by nom_affiche or trigramme
+      const { data: equipesSaisons } = await supabase
+        .from('equipes_saisons')
+        .select('id, nom_affiche, trigramme')
+        .eq('saison_id', importData.saison_id)
+        .eq('actif', true);
+
+      if (!equipesSaisons || equipesSaisons.length === 0) return [];
+
+      // Match source_team names to equipes_saisons
+      const matched: StartlistTeam[] = [];
+      const usedIds = new Set<string>();
+
+      for (const teamName of uniqueTeamNames) {
+        const lower = teamName.toLowerCase();
+        const match = equipesSaisons.find(es =>
+          !usedIds.has(es.id) && (
+            es.nom_affiche.toLowerCase() === lower ||
+            es.trigramme?.toLowerCase() === lower ||
+            es.nom_affiche.toLowerCase().includes(lower) ||
+            lower.includes(es.nom_affiche.toLowerCase())
+          )
+        );
+        if (match) {
+          usedIds.add(match.id);
+          matched.push({ equipe_saison_id: match.id, nom_affiche: match.nom_affiche });
+        }
+      }
+
+      return matched.sort((a, b) => a.nom_affiche.localeCompare(b.nom_affiche));
     },
     enabled: !!courseId,
     staleTime: 1000 * 60 * 10,
