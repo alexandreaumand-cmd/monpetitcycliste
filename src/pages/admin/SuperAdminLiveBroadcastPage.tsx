@@ -22,6 +22,8 @@ import {
 import { useBroadcastLiveMessage } from "@/hooks/useArenaMessages";
 import { useCurrentManagerId, useStartlistRiders } from "@/hooks/useArenaPronostics";
 import { MessageInput } from "@/components/arena/MessageInput";
+import { RaceSituationEditor, type RaceSituation } from "@/components/arena/RaceSituationEditor";
+import { RaceSituationDisplay } from "@/components/arena/RaceSituationDisplay";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
