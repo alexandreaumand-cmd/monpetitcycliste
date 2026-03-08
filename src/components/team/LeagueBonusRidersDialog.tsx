@@ -25,8 +25,8 @@ interface BonusRiderInfo {
   coureur_nom: string;
   equipe: string;
   prix_achat: number;
-  cote_initiale: number;
   points_total: number;
+  bonus_points: number;
   ratio: number;
 }
 
