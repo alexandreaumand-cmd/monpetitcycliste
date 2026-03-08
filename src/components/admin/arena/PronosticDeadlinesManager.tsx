@@ -51,6 +51,7 @@ export const PronosticDeadlinesManager = () => {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deadlineOverrides, setDeadlineOverrides] = useState<Record<string, string>>({});
+  const [tttOverrides, setTttOverrides] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
   const [evaluating, setEvaluating] = useState<string | null>(null);
