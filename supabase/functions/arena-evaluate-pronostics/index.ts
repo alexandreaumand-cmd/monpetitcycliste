@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
           .update({ is_correct: true, evaluated_at: now })
       ).eq('equipe_saison_id', winnerEquipeSaisonId);
 
-      const { data: correct, error: correctError } = await correctQuery.select('id');
+      const { data: correct, error: correctError } = await correctQuery.select('id, league_id, manager_id');
       if (correctError) console.error('[evaluate] Correct update error:', correctError);
       correctUpdated = correct || [];
 
@@ -243,7 +243,7 @@ Deno.serve(async (req) => {
           .update({ is_correct: true, evaluated_at: now })
       ).eq('coureur_id', winnerId);
 
-      const { data: correct, error: correctError } = await correctQuery.select('id');
+      const { data: correct, error: correctError } = await correctQuery.select('id, league_id, manager_id');
       if (correctError) console.error('[evaluate] Correct update error:', correctError);
       correctUpdated = correct || [];
 
@@ -256,6 +256,22 @@ Deno.serve(async (req) => {
       const { data: incorrect, error: incorrectError } = await incorrectQuery.select('id');
       if (incorrectError) console.error('[evaluate] Incorrect update error:', incorrectError);
       incorrectUpdated = incorrect || [];
+    }
+
+    // Insert prestige points for correct pronostics (+1 each)
+    if (correctUpdated.length > 0) {
+      const prestigeRows = correctUpdated.map((p: any) => ({
+        league_id: p.league_id,
+        manager_id: p.manager_id,
+        points: 1,
+        source_type: 'pronostic',
+        source_id: p.id,
+      }));
+      const { error: prestigeError } = await adminClient
+        .from('arena_prestige_points')
+        .upsert(prestigeRows, { onConflict: 'source_type,source_id' });
+      if (prestigeError) console.error('[evaluate] Prestige insert error:', prestigeError);
+      else console.log(`[evaluate] Inserted ${prestigeRows.length} prestige points`);
     }
 
     const result = {

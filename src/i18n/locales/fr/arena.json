@@ -157,8 +157,13 @@
   },
   "hallOfFame": {
     "title": "Hall of Fame",
-    "comingSoon": "Bientôt disponible",
-    "comingSoonDesc": "Le classement des managers par Points de Prestige"
+    "empty": "Pas encore de points",
+    "emptyDesc": "Les points de prestige seront attribués via les pronostics et les réactions",
+    "pts": "pts",
+    "sources": {
+      "pronostic": "Pronostics",
+      "reaction": "Réactions"
+    }
   },
   "admin": {
     "deadlines": {

@@ -1,50 +1,38 @@
 
 
-# Plan: Activer le Hall of Fame
+## Diagnostic
 
-## État actuel
-- La table `arena_prestige_points` existe (source_type: pronostic, vote_received, reaction_received, bonus)
-- **Rien n'écrit dedans** — ni l'évaluation des pronostics, ni les réactions, ni les votes
-- Le composant `HallOfFameSection` affiche juste "Coming soon"
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-## Ce qu'il faut faire
+## Cause racine
 
-### 1. Attribuer les points de prestige automatiquement
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-**a) Pronostics corrects (+1 pt)** — Modifier `arena-evaluate-pronostics/index.ts`
-- Après le update `is_correct: true`, insérer dans `arena_prestige_points` pour chaque pronostic correct (source_type='pronostic', source_id=pronostic_id)
-- Nécessite de connaître le `league_id` → le récupérer depuis les pronostics
+## Plan de correction
 
-**b) Réactions reçues (+1 pt)** — Créer un trigger SQL `on INSERT on arena_reactions`
-- Insère un point prestige pour le manager auteur du message réactionné (source_type='reaction_received', source_id=reaction_id)
-- Supprime le point `on DELETE` de la réaction (idempotent)
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
+```
 
-**c) Votes MVP reçus (+2 pts)** — Créer un trigger SQL `on INSERT on arena_poll_votes`
-- Pour les polls de type MVP, attribue 2 pts au manager voté (source_type='vote_received', source_id=vote_id)
-- Note: nécessite d'identifier les "polls MVP" — on peut utiliser le champ existant ou ajouter un flag. Pour simplifier, on skip ce point dans un premier temps et on se concentre sur pronostics + réactions.
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
 
-### 2. Créer le hook `usePrestigeStandings`
-- Query `arena_prestige_points` groupé par `manager_id` avec SUM(points)
-- Join sur `managers` pour nom + avatar
-- Retourne le classement trié par points décroissants
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
 
-### 3. Refaire le composant `HallOfFameSection`
-- Classement avec podium visuel (🥇🥈🥉) pour le top 3
-- Liste scrollable pour le reste
-- Détail par source_type (breakdown: X pronostics, Y réactions)
-- État vide si aucun point
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
 
-### 4. Traductions
-- Ajouter les clés fr/en pour le leaderboard, les labels de source, etc.
-
-## Fichiers impactés
-
-| Fichier | Action |
-|---|---|
-| `supabase/functions/arena-evaluate-pronostics/index.ts` | Modifier — insérer prestige points après évaluation |
-| Migration SQL | Créer — trigger pour réactions → prestige points |
-| `src/hooks/usePrestigeStandings.ts` | Créer — hook d'agrégation |
-| `src/components/arena/HallOfFameSection.tsx` | Réécrire — leaderboard complet |
-| `src/i18n/locales/fr/arena.json` | Modifier — clés hallOfFame |
-| `src/i18n/locales/en/arena.json` | Modifier — clés hallOfFame |
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 
