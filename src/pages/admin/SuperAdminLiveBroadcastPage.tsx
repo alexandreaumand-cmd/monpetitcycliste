@@ -32,6 +32,7 @@ export const SuperAdminLiveBroadcastPage = () => {
   const { t } = useTranslation("arena");
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [selectedNewCourseId, setSelectedNewCourseId] = useState("");
+  const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
 
   const { data: managerId } = useCurrentManagerId();
   const { data: liveCourses, isLoading: liveCoursesLoading } = useLiveCourses();
