@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { Bot, Shield } from "lucide-react";
+import { Bot, Radio, Shield } from "lucide-react";
 import { ReactionBar } from "./ReactionBar";
 import { RaceSituationDisplay } from "./RaceSituationDisplay";
 import { type ArenaMessage, type ReactionSummary } from "@/hooks/useArenaMessages";
