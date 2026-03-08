@@ -56,6 +56,7 @@ const navSections: NavSection[] = [
       { label: "Ligues", path: "leagues", icon: Users },
       { label: "Utilisateurs", path: "users", icon: Shield },
       { label: "Arène", path: "arena", icon: Swords },
+      { label: "Live Broadcast", path: "live-broadcast", icon: Radio },
     ],
   },
   {
