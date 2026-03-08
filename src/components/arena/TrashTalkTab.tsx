@@ -1,9 +1,7 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useRef, useEffect, useMemo, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, MessageCircle, Radio } from "lucide-react";
+import { Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ChannelSelector } from "./ChannelSelector";
-import { LiveCourseSelector } from "./LiveCourseSelector";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import {
@@ -11,14 +9,12 @@ import {
   useArenaMessages,
   useArenaRealtime,
   useSendArenaMessage,
-  useBroadcastLiveMessage,
   useToggleReaction,
   useMessageReactions,
   useLeagueManagers,
   useLeagueRosterOwners,
 } from "@/hooks/useArenaMessages";
-import { useCurrentManagerId, useStartlistRiders } from "@/hooks/useArenaPronostics";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useCurrentManagerId } from "@/hooks/useArenaPronostics";
 import { toast } from "sonner";
 
 interface TrashTalkTabProps {
@@ -27,27 +23,16 @@ interface TrashTalkTabProps {
 
 export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
   const { t } = useTranslation("arena");
-  const [activeSlug, setActiveSlug] = useState<string>("general");
-  const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
   const { data: managerId } = useCurrentManagerId();
-  const { isSuperAdmin } = useUserRole();
   const { data: channels } = useArenaChannels(leagueId);
   const { data: managers = [] } = useLeagueManagers(leagueId);
   const { data: rosterOwners = {} } = useLeagueRosterOwners(leagueId);
 
-  // Fetch startlist riders for the active live course
-  const { data: startlistRiders = [] } = useStartlistRiders(
-    activeSlug === "live-courses" ? activeCourseId : null
-  );
-
-  const activeChannel = channels?.find((c) => c.slug === activeSlug);
-  const channelId = activeChannel?.id || null;
-
-  // For live-courses, filter messages by selected course
-  const courseFilter = activeSlug === "live-courses" ? activeCourseId : null;
+  const generalChannel = channels?.find((c) => c.slug === "general");
+  const channelId = generalChannel?.id || null;
 
   const {
     data: messagesData,
@@ -55,28 +40,21 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
     hasNextPage,
     isFetchingNextPage,
     isLoading: messagesLoading,
-  } = useArenaMessages(channelId, leagueId, courseFilter);
+  } = useArenaMessages(channelId, leagueId, null);
 
   useArenaRealtime(channelId, leagueId);
 
   const sendMessage = useSendArenaMessage();
-  const broadcastMessage = useBroadcastLiveMessage();
   const toggleReaction = useToggleReaction();
 
-  // Flatten pages → chronological order (oldest first)
   const allMessages = useMemo(() => {
     if (!messagesData?.pages) return [];
     return messagesData.pages.flatMap((p) => p.messages).reverse();
   }, [messagesData]);
 
-  // Reactions
   const messageIds = useMemo(() => allMessages.map((m) => m.id), [allMessages]);
-  const { data: reactionsMap = {} } = useMessageReactions(
-    messageIds,
-    managerId || null
-  );
+  const { data: reactionsMap = {} } = useMessageReactions(messageIds, managerId || null);
 
-  // Auto-scroll to bottom
   useEffect(() => {
     if (autoScroll && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -91,50 +69,18 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
 
   const handleSend = useCallback(
     (content: string, metadata?: any) => {
-      if (!managerId) return;
-
-      // Super-admin in live-courses uses broadcast to ALL leagues
-      if (activeSlug === "live-courses" && isSuperAdmin && activeCourseId) {
-        broadcastMessage.mutate(
-          {
-            content,
-            courseId: activeCourseId,
-            managerId,
-            metadata,
+      if (!managerId || !channelId) return;
+      sendMessage.mutate(
+        { channelId, leagueId, managerId, content, messageType: "user", metadata },
+        {
+          onError: (error: any) => {
+            toast.error(error.message || t("trashTalk.sendError"));
           },
-          {
-            onSuccess: (data) => {
-              toast.success(t("trashTalk.broadcast.success", { count: data.leagues_count }));
-            },
-            onError: (error: any) => {
-              toast.error(error.message || t("trashTalk.sendError"));
-            },
-          }
-        );
-      } else {
-        // Regular message to current league's channel
-        if (!channelId) return;
-        
-        sendMessage.mutate(
-          {
-            channelId,
-            leagueId,
-            managerId,
-            content,
-            messageType: "user",
-            metadata,
-          },
-          {
-            onError: (error: any) => {
-              toast.error(error.message || t("trashTalk.sendError"));
-            },
-          }
-        );
-      }
-
+        }
+      );
       setAutoScroll(true);
     },
-    [channelId, leagueId, managerId, activeSlug, activeCourseId, isSuperAdmin, sendMessage, broadcastMessage, t]
+    [channelId, leagueId, managerId, sendMessage, t]
   );
 
   const handleToggleReaction = useCallback(
@@ -144,18 +90,6 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
     },
     [managerId, toggleReaction]
   );
-
-  // live-courses is read-only except for super-admins
-  const isReadOnly = activeSlug === "live-courses" && !isSuperAdmin;
-  // For live-courses, require a selected course to send messages
-  const canSend = activeSlug !== "live-courses" || (isSuperAdmin && !!activeCourseId);
-
-  // Reset course selection when switching away from live-courses
-  useEffect(() => {
-    if (activeSlug !== "live-courses") {
-      setActiveCourseId(null);
-    }
-  }, [activeSlug]);
 
   if (!managerId) {
     return (
@@ -167,32 +101,8 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-280px)] min-h-[400px] border rounded-lg overflow-hidden bg-background">
-      {/* Channel selector */}
-      <div className="p-3 border-b space-y-2">
-        <ChannelSelector activeChannel={activeSlug} onSelect={setActiveSlug} />
-        {activeSlug === "live-courses" && (
-          <>
-            <LiveCourseSelector
-              activeCourseId={activeCourseId}
-              onSelect={setActiveCourseId}
-              isSuperAdmin={isSuperAdmin}
-            />
-            {/* Broadcast mode indicator for super-admin */}
-            {isSuperAdmin && activeCourseId && (
-              <div className="flex items-center gap-2 p-2 rounded-md bg-primary/10 border border-primary/20">
-                <Radio className="h-4 w-4 text-primary animate-pulse" />
-                <span className="text-xs font-medium text-primary">
-                  {t("trashTalk.broadcast.indicator")}
-                </span>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
       {/* Messages */}
       <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
-        {/* Load more */}
         {hasNextPage && (
           <div className="flex justify-center py-3">
             <Button
@@ -201,20 +111,13 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
             >
-              {isFetchingNextPage && (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              )}
+              {isFetchingNextPage && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               {t("trashTalk.loadMore")}
             </Button>
           </div>
         )}
 
-        {activeSlug === "live-courses" && !activeCourseId ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-            <MessageCircle className="h-12 w-12 mb-4 opacity-30" />
-            <p className="font-medium">{t("trashTalk.liveCourses.selectPrompt")}</p>
-          </div>
-        ) : messagesLoading ? (
+        {messagesLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
@@ -232,18 +135,14 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
                 !prevMsg ||
                 prevMsg.author_manager_id !== msg.author_manager_id ||
                 msg.message_type !== prevMsg.message_type ||
-                new Date(msg.created_at).getTime() -
-                  new Date(prevMsg.created_at).getTime() >
-                  5 * 60 * 1000;
+                new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() > 5 * 60 * 1000;
 
               return (
                 <MessageBubble
                   key={msg.id}
                   message={msg}
                   reactions={reactionsMap[msg.id] || []}
-                  onToggleReaction={(emoji) =>
-                    handleToggleReaction(msg.id, emoji)
-                  }
+                  onToggleReaction={(emoji) => handleToggleReaction(msg.id, emoji)}
                   isOwnMessage={msg.author_manager_id === managerId}
                   showAuthor={showAuthor}
                   disabled={!managerId}
@@ -259,9 +158,9 @@ export const TrashTalkTab = ({ leagueId }: TrashTalkTabProps) => {
       <MessageInput
         onSend={handleSend}
         managers={managers}
-        riders={startlistRiders}
-        disabled={sendMessage.isPending || broadcastMessage.isPending || !canSend}
-        readOnly={isReadOnly}
+        riders={[]}
+        disabled={sendMessage.isPending}
+        readOnly={false}
       />
     </div>
   );
