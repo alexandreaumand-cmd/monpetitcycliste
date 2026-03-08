@@ -32,9 +32,8 @@ export const MessageBubble = ({
   const dateLocale = i18n.language === "fr" ? fr : enUS;
 
   const isSystem = message.message_type === "system";
-  const isAdmin =
-    message.message_type === "admin_broadcast" ||
-    message.message_type === "admin_local";
+  const isBroadcast = message.message_type === "admin_broadcast";
+  const isAdmin = isBroadcast || message.message_type === "admin_local";
 
   const timeStr = useMemo(
     () => format(new Date(message.created_at), "HH:mm", { locale: dateLocale }),
