@@ -32,6 +32,7 @@ export const SuperAdminLiveBroadcastPage = () => {
   const { t } = useTranslation("arena");
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [selectedNewCourseId, setSelectedNewCourseId] = useState("");
+  const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
 
   const { data: managerId } = useCurrentManagerId();
   const { data: liveCourses, isLoading: liveCoursesLoading } = useLiveCourses();
@@ -40,6 +41,17 @@ export const SuperAdminLiveBroadcastPage = () => {
   const broadcastMessage = useBroadcastLiveMessage();
   const { data: startlistRiders = [] } = useStartlistRiders(activeCourseId);
 
+  // Selected course info
+  const selectedCourse = liveCourses?.find((lc) => lc.course_id === activeCourseId);
+  const isMultiStage = selectedCourse?.courses?.type_course === "stage_race" ||
+    (selectedCourse?.courses?.date_debut && selectedCourse?.courses?.date_fin &&
+     selectedCourse.courses.date_debut !== selectedCourse.courses.date_fin);
+
+  // Reset etape when course changes
+  useEffect(() => {
+    setSelectedEtape(isMultiStage ? 1 : null);
+  }, [activeCourseId, isMultiStage]);
+
   // Upcoming courses for the "add" selector
   const { data: upcomingCourses } = useQuery({
     queryKey: ["admin-upcoming-courses-live"],
@@ -47,7 +59,7 @@ export const SuperAdminLiveBroadcastPage = () => {
       const today = new Date().toISOString().split("T")[0];
       const { data, error } = await supabase
         .from("courses")
-        .select("id, nom, categorie, date_debut, date_fin")
+        .select("id, nom, categorie, date_debut, date_fin, type_course")
         .or(`date_fin.gte.${today},date_debut.gte.${today}`)
         .order("date_debut", { ascending: true })
         .limit(100);
@@ -105,8 +117,12 @@ export const SuperAdminLiveBroadcastPage = () => {
   const handleSend = useCallback(
     (content: string, metadata?: any) => {
       if (!managerId || !activeCourseId) return;
+      const enrichedMetadata = {
+        ...metadata,
+        ...(selectedEtape != null ? { etape_numero: selectedEtape } : {}),
+      };
       broadcastMessage.mutate(
-        { content, courseId: activeCourseId, managerId, metadata },
+        { content, courseId: activeCourseId, managerId, metadata: enrichedMetadata },
         {
           onSuccess: (data) => {
             toast.success(`Message diffusé dans ${data.leagues_count} ligues`);
@@ -117,12 +133,19 @@ export const SuperAdminLiveBroadcastPage = () => {
         }
       );
     },
-    [managerId, activeCourseId, broadcastMessage]
+    [managerId, activeCourseId, broadcastMessage, selectedEtape]
   );
 
   const availableCourses = upcomingCourses?.filter(
     (c) => !liveCourses?.some((lc) => lc.course_id === c.id)
   );
+
+  const filteredHistory = useMemo(() => {
+    if (!isMultiStage || selectedEtape == null) return broadcastHistory;
+    return broadcastHistory.filter(
+      (msg) => (msg.metadata as any)?.etape_numero === selectedEtape
+    );
+  }, [broadcastHistory, isMultiStage, selectedEtape]);
 
   return (
     <div className="space-y-6">
@@ -229,12 +252,25 @@ export const SuperAdminLiveBroadcastPage = () => {
         </CardContent>
       </Card>
 
-      {/* Section 2: Broadcast composer */}
+      {/* Section 2: Stage selector + Broadcast composer */}
       {activeCourseId && (
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <CardTitle className="text-base">Composer un message</CardTitle>
+              {isMultiStage && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Étape</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={21}
+                    value={selectedEtape ?? 1}
+                    onChange={(e) => setSelectedEtape(parseInt(e.target.value) || 1)}
+                    className="w-16 h-8 rounded-md border border-input bg-background px-2 text-sm text-center"
+                  />
+                </div>
+              )}
               <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 border border-primary/20">
                 <Radio className="h-3 w-3 text-primary animate-pulse" />
                 <span className="text-[11px] font-medium text-primary">
@@ -285,21 +321,28 @@ export const SuperAdminLiveBroadcastPage = () => {
       {activeCourseId && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Historique des messages</CardTitle>
+            <CardTitle className="text-base">
+              Historique des messages
+              {isMultiStage && selectedEtape && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  — Étape {selectedEtape}
+                </span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {historyLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
-            ) : broadcastHistory.length === 0 ? (
+            ) : filteredHistory.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">Aucun message diffusé pour cette course</p>
               </div>
             ) : (
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {broadcastHistory.map((msg) => (
+                {filteredHistory.map((msg) => (
                   <div
                     key={msg.id}
                     className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border"

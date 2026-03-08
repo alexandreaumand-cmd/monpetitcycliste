@@ -19,6 +19,7 @@ interface LiveCourse {
     categorie: string | null;
     date_debut: string | null;
     date_fin: string | null;
+    type_course: string | null;
   };
 }
 
@@ -28,7 +29,7 @@ export function useLiveCourses() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("arena_live_courses")
-        .select("id, course_id, is_active, courses(nom, categorie, date_debut, date_fin)")
+        .select("id, course_id, is_active, courses(nom, categorie, date_debut, date_fin, type_course)")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
       if (error) throw error;
