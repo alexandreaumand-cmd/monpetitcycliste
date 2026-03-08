@@ -838,6 +838,7 @@ export type Database = {
           deadline_at: string
           etape_numero: number | null
           id: string
+          is_ttt: boolean
           pronostic_type: string
           reminder_sent_at: string | null
           updated_at: string
@@ -849,6 +850,7 @@ export type Database = {
           deadline_at: string
           etape_numero?: number | null
           id?: string
+          is_ttt?: boolean
           pronostic_type: string
           reminder_sent_at?: string | null
           updated_at?: string
@@ -860,6 +862,7 @@ export type Database = {
           deadline_at?: string
           etape_numero?: number | null
           id?: string
+          is_ttt?: boolean
           pronostic_type?: string
           reminder_sent_at?: string | null
           updated_at?: string
@@ -939,9 +942,10 @@ export type Database = {
       }
       arena_pronostics: {
         Row: {
-          coureur_id: string
+          coureur_id: string | null
           course_id: string
           created_at: string
+          equipe_saison_id: string | null
           etape_numero: number | null
           evaluated_at: string | null
           id: string
@@ -952,9 +956,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          coureur_id: string
+          coureur_id?: string | null
           course_id: string
           created_at?: string
+          equipe_saison_id?: string | null
           etape_numero?: number | null
           evaluated_at?: string | null
           id?: string
@@ -965,9 +970,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          coureur_id?: string
+          coureur_id?: string | null
           course_id?: string
           created_at?: string
+          equipe_saison_id?: string | null
           etape_numero?: number | null
           evaluated_at?: string | null
           id?: string
@@ -1040,6 +1046,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_home_recent_results"
             referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "arena_pronostics_equipe_saison_id_fkey"
+            columns: ["equipe_saison_id"]
+            isOneToOne: false
+            referencedRelation: "equipes_saisons"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "arena_pronostics_league_id_fkey"

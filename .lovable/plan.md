@@ -1,61 +1,38 @@
 
 
-# Plan: Pronostics TTT (Team Time Trial)
+## Diagnostic
 
-## Contexte
-Certaines étapes sont des contre-la-montre par équipes (TTT). Le super admin doit pouvoir marquer une étape comme TTT, et les managers doivent alors choisir une équipe (pas un coureur) pour leur pronostic.
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-## Modifications base de données
+## Cause racine
 
-### 1. Table `arena_pronostic_deadlines`
-- Ajouter colonne `is_ttt BOOLEAN NOT NULL DEFAULT false`
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-### 2. Table `arena_pronostics`
-- Ajouter colonne `equipe_saison_id UUID NULL REFERENCES equipes_saisons(id)`
-- Rendre `coureur_id` nullable (actuellement NOT NULL avec FK vers coureurs)
-- Contrainte : soit coureur_id soit equipe_saison_id doit être renseigné
+## Plan de correction
 
-## Modifications Frontend
-
-### 3. Admin - PronosticDeadlinesManager.tsx
-- Ajouter une case à cocher "TTT" sur chaque ligne d'étape (stage_winner uniquement)
-- Stocker l'état TTT dans les overrides et l'inclure lors de l'insertion des deadlines
-
-### 4. Hook useArenaPronostics.ts
-- Mettre à jour `PronosticDeadline` pour inclure `is_ttt`
-- Ajouter le champ dans les requêtes select
-- Ajouter un hook `useStartlistTeams(courseId)` qui retourne les équipes distinctes présentes sur la startlist
-- Adapter `useSavePronostic` pour gérer `equipe_saison_id` au lieu de `coureur_id` quand TTT
-- Adapter `useMyPronostics` pour récupérer le nom d'équipe quand TTT
-- Adapter `useLeaguePronostics` pour afficher le nom d'équipe quand TTT
-
-### 5. Nouveau composant PronosticStartlistTeamCombobox.tsx
-- Combobox similaire à PronosticStartlistCombobox mais affichant les équipes de la startlist
-- Déduplique les équipes à partir des `source_team` des startlist_entries + matching vers `equipes_saisons`
-
-### 6. PronosticRaceCard.tsx
-- Conditionner le rendu : si `deadline.is_ttt`, afficher le combobox équipe au lieu du combobox coureur
-- Adapter l'affichage du résultat (nom d'équipe au lieu de nom de coureur)
-
-### 7. Edge Function arena-evaluate-pronostics
-- Adapter pour les TTT : le gagnant est une équipe (position 1 dans race_results avec type TTT)
-- Comparer `equipe_saison_id` des pronostics avec l'équipe du coureur gagnant
-
-## Détails techniques
-
-```text
-arena_pronostic_deadlines
-├── + is_ttt (boolean, default false)
-
-arena_pronostics  
-├── coureur_id (text, NOW NULLABLE)
-├── + equipe_saison_id (uuid, nullable, FK → equipes_saisons)
-├── + CHECK: coureur_id IS NOT NULL OR equipe_saison_id IS NOT NULL
-
-Flow TTT:
-Admin coche TTT → deadline.is_ttt = true
-Manager ouvre pronostic → voit combobox équipes (depuis startlist)
-Manager choisit équipe → arena_pronostics.equipe_saison_id = <id>
-Évaluation → compare equipe_saison_id avec l'équipe du vainqueur TTT
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
 ```
+
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
+
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
+
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
+
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 

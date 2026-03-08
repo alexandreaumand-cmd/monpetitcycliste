@@ -61,6 +61,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Check if this deadline is TTT
+    let deadlineQuery = adminClient
+      .from('arena_pronostic_deadlines')
+      .select('is_ttt')
+      .eq('course_id', course_id)
+      .eq('pronostic_type', pronostic_type);
+
+    if (etape_numero !== null && etape_numero !== undefined) {
+      deadlineQuery = deadlineQuery.eq('etape_numero', etape_numero);
+    } else {
+      deadlineQuery = deadlineQuery.is('etape_numero', null);
+    }
+
+    const { data: deadlineData } = await deadlineQuery.maybeSingle();
+    const isTTT = deadlineData?.is_ttt === true;
+
     // Map pronostic_type to race_results type_classement
     let type_classement: string;
     if (pronostic_type === 'stage_winner') {
@@ -68,7 +84,7 @@ Deno.serve(async (req) => {
     } else if (pronostic_type === 'gc_winner') {
       type_classement = 'General';
     } else if (pronostic_type === 'one_day_winner') {
-      type_classement = 'General'; // One-day races store results as 'General'
+      type_classement = 'General';
     } else {
       return new Response(JSON.stringify({ error: 'Invalid pronostic_type' }), {
         status: 400,
@@ -126,14 +142,66 @@ Deno.serve(async (req) => {
     const winnerId = winnerData.coureur_id;
     const now = new Date().toISOString();
 
-    console.log(`[evaluate] Winner: ${winnerId} for ${course_id} ${pronostic_type} etape=${etape_numero}`);
+    console.log(`[evaluate] Winner: ${winnerId} for ${course_id} ${pronostic_type} etape=${etape_numero} isTTT=${isTTT}`);
+
+    // For TTT: find the equipe_saison_id of the winning rider
+    let winnerEquipeSaisonId: string | null = null;
+    if (isTTT) {
+      // Get the course's season
+      const { data: courseData } = await adminClient
+        .from('courses')
+        .select('phase_id')
+        .eq('id', course_id)
+        .maybeSingle();
+
+      if (courseData?.phase_id) {
+        const { data: phaseData } = await adminClient
+          .from('phases')
+          .select('saison_id')
+          .eq('id', courseData.phase_id)
+          .maybeSingle();
+
+        if (phaseData?.saison_id) {
+          // Find the rider's equipe_saison_id
+          const { data: coureurSaison } = await adminClient
+            .from('coureurs_saisons')
+            .select('equipe_id')
+            .eq('coureur_id', winnerId)
+            .eq('saison_id', phaseData.saison_id)
+            .maybeSingle();
+
+          if (coureurSaison?.equipe_id) {
+            const { data: equipeSaison } = await adminClient
+              .from('equipes_saisons')
+              .select('id')
+              .eq('equipe_id', coureurSaison.equipe_id)
+              .eq('saison_id', phaseData.saison_id)
+              .maybeSingle();
+
+            winnerEquipeSaisonId = equipeSaison?.id || null;
+          }
+        }
+      }
+
+      console.log(`[evaluate] TTT winner equipe_saison_id: ${winnerEquipeSaisonId}`);
+
+      if (!winnerEquipeSaisonId) {
+        return new Response(JSON.stringify({
+          error: 'Could not resolve winning team for TTT',
+          details: `Winner rider ${winnerId} could not be mapped to an equipe_saison`,
+        }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     // Build base filter for pronostics
     const buildFilter = (query: any) => {
       let q = query
         .eq('course_id', course_id)
         .eq('pronostic_type', pronostic_type)
-        .is('is_correct', null); // Only evaluate non-evaluated pronostics
+        .is('is_correct', null);
 
       if (etape_numero !== null && etape_numero !== undefined) {
         q = q.eq('etape_numero', etape_numero);
@@ -143,30 +211,59 @@ Deno.serve(async (req) => {
       return q;
     };
 
-    // Update correct pronostics
-    const correctQuery = buildFilter(
-      adminClient
-        .from('arena_pronostics')
-        .update({ is_correct: true, evaluated_at: now })
-    ).eq('coureur_id', winnerId);
+    let correctUpdated: any[] = [];
+    let incorrectUpdated: any[] = [];
 
-    const { data: correctUpdated, error: correctError } = await correctQuery.select('id');
-    if (correctError) console.error('[evaluate] Correct update error:', correctError);
+    if (isTTT && winnerEquipeSaisonId) {
+      // TTT: compare equipe_saison_id
+      const correctQuery = buildFilter(
+        adminClient
+          .from('arena_pronostics')
+          .update({ is_correct: true, evaluated_at: now })
+      ).eq('equipe_saison_id', winnerEquipeSaisonId);
 
-    // Update incorrect pronostics
-    const incorrectQuery = buildFilter(
-      adminClient
-        .from('arena_pronostics')
-        .update({ is_correct: false, evaluated_at: now })
-    ).neq('coureur_id', winnerId);
+      const { data: correct, error: correctError } = await correctQuery.select('id');
+      if (correctError) console.error('[evaluate] Correct update error:', correctError);
+      correctUpdated = correct || [];
 
-    const { data: incorrectUpdated, error: incorrectError } = await incorrectQuery.select('id');
-    if (incorrectError) console.error('[evaluate] Incorrect update error:', incorrectError);
+      const incorrectQuery = buildFilter(
+        adminClient
+          .from('arena_pronostics')
+          .update({ is_correct: false, evaluated_at: now })
+      ).neq('equipe_saison_id', winnerEquipeSaisonId);
+
+      const { data: incorrect, error: incorrectError } = await incorrectQuery.select('id');
+      if (incorrectError) console.error('[evaluate] Incorrect update error:', incorrectError);
+      incorrectUpdated = incorrect || [];
+    } else {
+      // Standard: compare coureur_id
+      const correctQuery = buildFilter(
+        adminClient
+          .from('arena_pronostics')
+          .update({ is_correct: true, evaluated_at: now })
+      ).eq('coureur_id', winnerId);
+
+      const { data: correct, error: correctError } = await correctQuery.select('id');
+      if (correctError) console.error('[evaluate] Correct update error:', correctError);
+      correctUpdated = correct || [];
+
+      const incorrectQuery = buildFilter(
+        adminClient
+          .from('arena_pronostics')
+          .update({ is_correct: false, evaluated_at: now })
+      ).neq('coureur_id', winnerId);
+
+      const { data: incorrect, error: incorrectError } = await incorrectQuery.select('id');
+      if (incorrectError) console.error('[evaluate] Incorrect update error:', incorrectError);
+      incorrectUpdated = incorrect || [];
+    }
 
     const result = {
       winner_coureur_id: winnerId,
-      correct_count: correctUpdated?.length || 0,
-      incorrect_count: incorrectUpdated?.length || 0,
+      winner_equipe_saison_id: winnerEquipeSaisonId,
+      is_ttt: isTTT,
+      correct_count: correctUpdated.length,
+      incorrect_count: incorrectUpdated.length,
     };
 
     console.log('[evaluate] Result:', result);

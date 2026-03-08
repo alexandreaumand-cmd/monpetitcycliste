@@ -30,6 +30,7 @@ interface ExistingDeadline {
   pronostic_type: string;
   deadline_at: string;
   reminder_sent_at: string | null;
+  is_ttt: boolean;
   courses?: { nom: string; categorie: string | null };
 }
 
@@ -51,6 +52,7 @@ export const PronosticDeadlinesManager = () => {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deadlineOverrides, setDeadlineOverrides] = useState<Record<string, string>>({});
+  const [tttOverrides, setTttOverrides] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
   const [evaluating, setEvaluating] = useState<string | null>(null);
@@ -79,7 +81,7 @@ export const PronosticDeadlinesManager = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("arena_pronostic_deadlines")
-        .select("id, course_id, etape_numero, pronostic_type, deadline_at, reminder_sent_at, courses(nom, categorie)")
+        .select("id, course_id, etape_numero, pronostic_type, deadline_at, reminder_sent_at, is_ttt, courses(nom, categorie)")
         .order("deadline_at", { ascending: false });
       if (error) throw error;
       return data as unknown as ExistingDeadline[];
@@ -252,6 +254,7 @@ export const PronosticDeadlinesManager = () => {
           pronostic_type: pd.pronosticType,
           deadline_at: getEffectiveDeadline(pd),
           created_by: manager.id,
+          is_ttt: tttOverrides[getKey(pd)] || false,
         }));
 
       if (toInsert.length === 0) return;
@@ -487,6 +490,23 @@ export const PronosticDeadlinesManager = () => {
                                 <span className="font-medium w-20 shrink-0">
                                   {pd.courseTypeLabel}
                                 </span>
+
+                                {/* TTT checkbox for stage_winner */}
+                                {pd.pronosticType === 'stage_winner' && !opened && (
+                                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                    <Checkbox
+                                      checked={tttOverrides[key] || false}
+                                      onCheckedChange={(checked) => {
+                                        setTttOverrides(prev => ({ ...prev, [key]: !!checked }));
+                                      }}
+                                      className="h-3.5 w-3.5"
+                                    />
+                                    <span className="text-[10px] text-muted-foreground">TTT</span>
+                                  </div>
+                                )}
+                                {opened && existing && (existing as any).is_ttt && (
+                                  <Badge variant="outline" className="text-[10px] px-1 py-0">TTT</Badge>
+                                )}
 
                                 <div className="flex-1" />
 
