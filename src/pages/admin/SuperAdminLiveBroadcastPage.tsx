@@ -41,6 +41,17 @@ export const SuperAdminLiveBroadcastPage = () => {
   const broadcastMessage = useBroadcastLiveMessage();
   const { data: startlistRiders = [] } = useStartlistRiders(activeCourseId);
 
+  // Selected course info
+  const selectedCourse = liveCourses?.find((lc) => lc.course_id === activeCourseId);
+  const isMultiStage = selectedCourse?.courses?.type_course === "stage_race" ||
+    (selectedCourse?.courses?.date_debut && selectedCourse?.courses?.date_fin &&
+     selectedCourse.courses.date_debut !== selectedCourse.courses.date_fin);
+
+  // Reset etape when course changes
+  useEffect(() => {
+    setSelectedEtape(isMultiStage ? 1 : null);
+  }, [activeCourseId, isMultiStage]);
+
   // Upcoming courses for the "add" selector
   const { data: upcomingCourses } = useQuery({
     queryKey: ["admin-upcoming-courses-live"],
@@ -48,7 +59,7 @@ export const SuperAdminLiveBroadcastPage = () => {
       const today = new Date().toISOString().split("T")[0];
       const { data, error } = await supabase
         .from("courses")
-        .select("id, nom, categorie, date_debut, date_fin")
+        .select("id, nom, categorie, date_debut, date_fin, type_course")
         .or(`date_fin.gte.${today},date_debut.gte.${today}`)
         .order("date_debut", { ascending: true })
         .limit(100);
