@@ -1,37 +1,38 @@
 
 
-# Plan: Déplacer le broadcast Live Courses dans le Super Admin
+## Diagnostic
 
-## Contexte actuel
-- Le super admin broadcast les messages live depuis la tab "Live" de l'Arena (dans le contexte d'une ligue)
-- Le RPC `arena_broadcast_live_message` copie déjà le message dans toutes les ligues
-- La gestion des courses actives (activer/désactiver) se fait aussi depuis l'Arena
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-## Ce qui change
-Créer une page dédiée dans le Super Admin pour le broadcast live, indépendante de toute ligue. L'Arena côté user reste en lecture seule.
+## Cause racine
 
-## Fichiers impactés
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-| Fichier | Action |
-|---|---|
-| `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` | **Créer** — Page complète : sélection course active, composition de messages, historique des messages broadcastés |
-| `src/pages/SuperAdminPage.desktop.tsx` | **Modifier** — Ajouter route "Live Broadcast" dans le groupe "Ligues & Arène" |
-| `src/pages/SuperAdminPage.mobile.tsx` | **Modifier** — Ajouter le lien nav mobile |
-| `src/components/arena/LiveCoursesTab.tsx` | **Modifier** — Supprimer la logique de broadcast (handleSend superadmin), garder uniquement la lecture + réactions |
-| `src/components/arena/LiveCourseSelector.tsx` | **Modifier** — Supprimer le bouton "Manage" (activer/désactiver) de la vue user, déplacer dans la page admin |
+## Plan de correction
 
-## Architecture de la page admin
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
+```
 
-La page `SuperAdminLiveBroadcastPage` contient :
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
 
-1. **Gestion des courses live** — Activer/désactiver des courses (même logique que `AddLiveCourseButton` actuel, mais en tant que section permanente)
-2. **Sélection de la course active** — Chips comme actuellement
-3. **Composition du message** — Réutilise `MessageInput` avec la liste des coureurs de la startlist de la course sélectionnée (pas de mentions managers car pas de contexte ligue)
-4. **Historique** — Affiche les messages broadcastés récents (query `arena_messages` filtrée `message_type = 'admin_broadcast'` + `course_id`, sans filtre league — on prend une ligue au hasard via `source_message_id IS NULL` ou on query directement)
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
 
-Le broadcast utilise le même RPC `arena_broadcast_live_message` existant.
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
 
-## Simplification côté Arena user
-- `LiveCoursesTab` : retirer le `if (isSuperAdmin)` dans `handleSend`, le canal devient **100% lecture seule** pour tout le monde (les réactions restent)
-- `LiveCourseSelector` : retirer `AddLiveCourseButton` et le prop `isSuperAdmin`
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 

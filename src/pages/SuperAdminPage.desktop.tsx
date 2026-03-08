@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
-import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Swords, ChevronDown } from "lucide-react";
+import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Gift, Swords, ChevronDown, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DataManagementTabs } from "@/components/admin/DataManagementTabs";
@@ -16,6 +16,7 @@ import { PointsLedgerTable } from "@/components/admin/PointsLedgerTable";
 import { SuperAdminBonusPage } from "@/pages/admin/SuperAdminBonusPage";
 import { StartlistHub } from "@/components/admin/StartlistHub";
 import { PronosticDeadlinesManager } from "@/components/admin/arena/PronosticDeadlinesManager";
+import { SuperAdminLiveBroadcastPage } from "@/pages/admin/SuperAdminLiveBroadcastPage";
 
 interface NavGroup {
   label: string;
@@ -50,6 +51,7 @@ const navGroups: NavGroup[] = [
       { label: "Ligues", path: "leagues", icon: Users },
       { label: "Utilisateurs", path: "users", icon: Shield },
       { label: "Arène", path: "arena", icon: Swords },
+      { label: "Live Broadcast", path: "live-broadcast", icon: Radio },
     ],
   },
   {
@@ -142,6 +144,7 @@ export const SuperAdminPageDesktop = ({ manager, onSignOut }: SuperAdminPageDesk
               <Route path="leagues/:id" element={<LeagueDetailPage />} />
               <Route path="users" element={<UsersManagementPage />} />
               <Route path="arena" element={<PronosticDeadlinesManager />} />
+              <Route path="live-broadcast" element={<SuperAdminLiveBroadcastPage />} />
               <Route path="data" element={<DataManagementTabs />} />
               <Route path="points-ledger" element={<PointsLedgerTable />} />
             </Routes>

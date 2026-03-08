@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation, Link } from "react-router-dom";
-import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Menu, LogOut, ArrowLeft, Gift, Swords } from "lucide-react";
+import { Trophy, FileText, Database, Users, Shield, Calendar, UserCircle, BarChart, Menu, LogOut, ArrowLeft, Gift, Swords, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -18,6 +18,7 @@ import { BaremesManager } from "@/components/admin/BaremesManager";
 import { PointsLedgerTable } from "@/components/admin/PointsLedgerTable";
 import { SuperAdminBonusPage } from "@/pages/admin/SuperAdminBonusPage";
 import { PronosticDeadlinesManager } from "@/components/admin/arena/PronosticDeadlinesManager";
+import { SuperAdminLiveBroadcastPage } from "@/pages/admin/SuperAdminLiveBroadcastPage";
 import { StartlistHub } from "@/components/admin/StartlistHub";
 import mpcLogo from "@/assets/mpc-logo-horizontal.png";
 import { useTranslation } from "react-i18next";
@@ -55,6 +56,7 @@ const navSections: NavSection[] = [
       { label: "Ligues", path: "leagues", icon: Users },
       { label: "Utilisateurs", path: "users", icon: Shield },
       { label: "Arène", path: "arena", icon: Swords },
+      { label: "Live Broadcast", path: "live-broadcast", icon: Radio },
     ],
   },
   {
@@ -232,6 +234,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
             <Route path="leagues/:id" element={<LeagueDetailPage />} />
             <Route path="users" element={<UsersManagementPage />} />
             <Route path="arena" element={<PronosticDeadlinesManager />} />
+            <Route path="live-broadcast" element={<SuperAdminLiveBroadcastPage />} />
             <Route path="data" element={<DataManagementTabs />} />
             <Route path="points-ledger" element={<PointsLedgerTable />} />
           </Routes>
