@@ -16,6 +16,7 @@ import { PointsLedgerTable } from "@/components/admin/PointsLedgerTable";
 import { SuperAdminBonusPage } from "@/pages/admin/SuperAdminBonusPage";
 import { StartlistHub } from "@/components/admin/StartlistHub";
 import { PronosticDeadlinesManager } from "@/components/admin/arena/PronosticDeadlinesManager";
+import { SuperAdminLiveBroadcastPage } from "@/pages/admin/SuperAdminLiveBroadcastPage";
 
 interface NavGroup {
   label: string;
