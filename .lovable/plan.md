@@ -1,35 +1,38 @@
 
 
-# Plan: Corriger les victoires et améliorer le rendu mobile de la Comparaison
+## Diagnostic
 
-## Problème 1: Calcul des victoires incorrect
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-La vue SQL `v_manager_standings_by_season_v2` exclut les ex-aequo (quand plusieurs coureurs ont position=1 sur le même résultat) et filtre par `league_scopes`. Les composants de comparaison (desktop + mobile) ne font ni l'un ni l'autre :
+## Cause racine
 
-- **Pas d'exclusion des doublons/ex-aequo** sur une même étape
-- **Pas de filtrage par `etape_numero`** — deux résultats position=1 sur la même course mais étapes différentes sont traités comme une seule victoire au lieu de deux
-- **Mobile : pas de filtre `league_id`** sur les rosters (utilise `supabase` brut au lieu du client scoped)
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-**Correction** : Remplacer les 2 queries de victoires (A et B) dans les deux fichiers par une logique alignée sur la vue :
-- Filtrer `race_results` position=1, statut=finished, type_classement IN (Etape, General)  
-- Joindre avec rosters filtrés par league + phase
-- Exclure les résultats avec plusieurs coureurs position=1 sur le même (course, type_classement, etape_numero)
+## Plan de correction
 
-## Problème 2: Rendu mobile dégradé
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
+```
 
-- Le tableau "Points par catégorie" force `min-w-[500px]` → scroll horizontal pénible
-- Pas de radar par barème (desktop en a 2, mobile n'en a qu'un)
-- Les labels du radar sont trop longs et se chevauchent sur petit écran
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
 
-**Amélioration mobile** :
-- Remplacer le tableau scrollable par des `ComparisonMetricCard` empilées pour chaque catégorie (même design que les métriques globales)
-- Ajouter la section "Points par barème" manquante en mobile
-- Raccourcir les labels radar pour mobile (ex: "Courses 1 Jour" → "1J", "Courses par étapes" → "Étapes")
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
 
-## Fichiers impactés
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
 
-| Fichier | Action |
-|---|---|
-| `src/components/rankings/ManagerComparison.tsx` | Corriger queries victoires (exclure ex-aequo, ajouter etape_numero) |
-| `src/components/rankings/ManagerComparison.mobile.tsx` | Corriger victoires + ajouter league filter + refonte UI catégories/barèmes |
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 
