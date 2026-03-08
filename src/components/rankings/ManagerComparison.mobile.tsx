@@ -411,7 +411,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     decimal?: number;
   }) => {
     const diff = valueA - valueB;
-    const fmt = (v: number) => decimal > 0 ? v.toFixed(decimal) : v.toString();
+    const fmt = (v: number) => Math.round(v).toString();
 
     return (
       <Card>
