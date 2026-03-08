@@ -117,8 +117,12 @@ export const SuperAdminLiveBroadcastPage = () => {
   const handleSend = useCallback(
     (content: string, metadata?: any) => {
       if (!managerId || !activeCourseId) return;
+      const enrichedMetadata = {
+        ...metadata,
+        ...(selectedEtape != null ? { etape_numero: selectedEtape } : {}),
+      };
       broadcastMessage.mutate(
-        { content, courseId: activeCourseId, managerId, metadata },
+        { content, courseId: activeCourseId, managerId, metadata: enrichedMetadata },
         {
           onSuccess: (data) => {
             toast.success(`Message diffusé dans ${data.leagues_count} ligues`);
@@ -129,7 +133,7 @@ export const SuperAdminLiveBroadcastPage = () => {
         }
       );
     },
-    [managerId, activeCourseId, broadcastMessage]
+    [managerId, activeCourseId, broadcastMessage, selectedEtape]
   );
 
   const availableCourses = upcomingCourses?.filter(
