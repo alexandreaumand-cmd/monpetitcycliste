@@ -28,7 +28,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 
-type TabView = "standings" | "riders" | "timeline" | "comparison" | "weekly";
+type TabView = "standings" | "riders" | "timeline" | "comparison" | "weekly" | "mountain";
 
 export const RankingsMobile = () => {
   const { t } = useTranslation('rankings');
