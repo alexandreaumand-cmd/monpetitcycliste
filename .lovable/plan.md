@@ -1,45 +1,38 @@
 
 
-# Plan: Corriger les vélos, afficher coureurs+managers, masquer le super admin
+## Diagnostic
 
-## 3 changements
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-### 1. Retourner les vélos (face à droite → vers l'arrivée)
-**Fichier**: `src/components/arena/RaceSituationDisplay.tsx`
-- Appliquer `style={{ transform: 'scaleX(-1)' }}` sur les emoji 🚴 pour qu'ils soient orientés vers la droite (vers le drapeau d'arrivée)
+## Cause racine
 
-### 2. Afficher les noms des coureurs + leur manager dans le display
-**Fichier**: `src/components/arena/RaceSituationDisplay.tsx`
-- Ajouter une prop `rosterOwners?: Record<string, string>` (coureur_id → manager name)
-- Ajouter une prop `riderMentions?: { rider_nom: string; coureur_id: string }[]` (pour mapper nom → coureur_id)
-- Sous chaque groupe (sous le nombre de coureurs), afficher la liste des riders avec leur manager entre parenthèses : `Pogačar (Ludo)`
-- Si trop de noms, afficher les premiers + "+N autres" en tooltip
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-**Fichier**: `src/components/arena/RaceSituationEditor.tsx`
-- Quand le super admin saisit des noms de coureurs, stocker aussi les `coureur_id` correspondants dans la metadata (matcher contre `startlistRiders`)
-- Enrichir l'interface `RaceGroup` avec un champ optionnel `riderIds: string[]`
+## Plan de correction
 
-**Fichier**: `src/pages/admin/SuperAdminLiveBroadcastPage.tsx`
-- Passer les `startlistRiders` au `RaceSituationEditor` (déjà fait)
-- Enrichir la metadata broadcast avec un tableau `rider_mentions` extrait des groupes (nom + coureur_id)
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
+```
 
-**Fichier**: `src/components/arena/MessageBubble.tsx`
-- Passer `rosterOwners` et les `rider_mentions` de la metadata au `RaceSituationDisplay`
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
 
-**Fichier**: `src/components/arena/LiveCoursesTab.tsx`
-- `rosterOwners` est déjà chargé et passé au `MessageBubble` — pas de changement
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
 
-### 3. Masquer le nom du super admin sur les messages broadcast
-**Fichier**: `src/components/arena/MessageBubble.tsx`
-- Pour les messages `admin_broadcast`, ne pas afficher l'auteur (nom + avatar). Afficher à la place un indicateur générique type "📡 Live" ou juste le shield icon sans nom
-- Supprimer `isOwnMessage` pour les broadcasts (toujours affiché côté gauche)
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
 
-## Résumé fichiers
-
-| Fichier | Action |
-|---|---|
-| `RaceSituationDisplay.tsx` | Flip vélos + afficher riders avec managers |
-| `RaceSituationEditor.tsx` | Stocker riderIds dans les groupes |
-| `SuperAdminLiveBroadcastPage.tsx` | Enrichir metadata avec rider_mentions depuis les groupes |
-| `MessageBubble.tsx` | Passer props au display + masquer auteur sur broadcast |
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 

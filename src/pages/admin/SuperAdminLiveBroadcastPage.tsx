@@ -311,8 +311,16 @@ export const SuperAdminLiveBroadcastPage = () => {
           <CardContent>
             <RaceSituationEditor
               onBroadcast={(situation: RaceSituation) => {
+                // Build rider_mentions from all groups for dynamic resolution
+                const riderMentions: { rider_nom: string; coureur_id: string }[] = [];
+                for (const g of situation.groups) {
+                  g.riders.forEach((name, ri) => {
+                    const id = g.riderIds?.[ri];
+                    if (id) riderMentions.push({ rider_nom: name, coureur_id: id });
+                  });
+                }
                 const content = `🏁 Situation à ${situation.kmRemaining} km de l'arrivée`;
-                handleSend(content, { race_situation: situation });
+                handleSend(content, { race_situation: situation, rider_mentions: riderMentions });
               }}
               disabled={broadcastMessage.isPending || !managerId}
               startlistRiders={startlistRiders}

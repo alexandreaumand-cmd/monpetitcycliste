@@ -1,16 +1,15 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Plus, Minus, Bike, Flag, Users, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export interface RaceGroup {
   name: string;
   riders: string[];
+  riderIds: string[];
   riderCount: number;
   gap: string; // "0:00" or "+1:30"
   isPeloton: boolean;
@@ -30,6 +29,7 @@ interface RaceSituationEditorProps {
 const DEFAULT_GROUP: RaceGroup = {
   name: "",
   riders: [],
+  riderIds: [],
   riderCount: 1,
   gap: "0:00",
   isPeloton: false,
@@ -41,14 +41,34 @@ export const RaceSituationEditor = ({
   startlistRiders = [],
 }: RaceSituationEditorProps) => {
   const [groups, setGroups] = useState<RaceGroup[]>([
-    { name: "Échappée", riders: [], riderCount: 3, gap: "0:00", isPeloton: false },
-    { name: "Peloton", riders: [], riderCount: 150, gap: "+4:00", isPeloton: true },
+    { name: "Échappée", riders: [], riderIds: [], riderCount: 3, gap: "0:00", isPeloton: false },
+    { name: "Peloton", riders: [], riderIds: [], riderCount: 150, gap: "+4:00", isPeloton: true },
   ]);
   const [kmRemaining, setKmRemaining] = useState(100);
+
+  // Build a name→id lookup from startlist
+  const riderLookup = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const r of startlistRiders) {
+      map[r.nom.toLowerCase()] = r.coureur_id;
+    }
+    return map;
+  }, [startlistRiders]);
 
   const updateGroup = useCallback((index: number, partial: Partial<RaceGroup>) => {
     setGroups((prev) => prev.map((g, i) => (i === index ? { ...g, ...partial } : g)));
   }, []);
+
+  /** When riders text changes, also resolve riderIds from startlist */
+  const handleRidersChange = useCallback((index: number, text: string) => {
+    const names = text.split("\n").filter((r) => r.trim());
+    const ids = names.map((name) => {
+      // Try exact match first, then lowercase
+      const key = name.trim().toLowerCase();
+      return riderLookup[key] || "";
+    });
+    updateGroup(index, { riders: names, riderIds: ids });
+  }, [riderLookup, updateGroup]);
 
   const addGroup = () => {
     setGroups((prev) => [...prev, { ...DEFAULT_GROUP, name: `Groupe ${prev.length + 1}` }]);
@@ -151,11 +171,7 @@ export const RaceSituationEditor = ({
               </Label>
               <Textarea
                 value={group.riders.join("\n")}
-                onChange={(e) =>
-                  updateGroup(index, {
-                    riders: e.target.value.split("\n").filter((r) => r.trim()),
-                  })
-                }
+                onChange={(e) => handleRidersChange(index, e.target.value)}
                 className="min-h-[60px] text-xs"
                 placeholder="Pogačar&#10;Vingegaard&#10;Evenepoel"
               />
