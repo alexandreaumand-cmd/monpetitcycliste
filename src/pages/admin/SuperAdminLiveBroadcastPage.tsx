@@ -22,6 +22,8 @@ import {
 import { useBroadcastLiveMessage } from "@/hooks/useArenaMessages";
 import { useCurrentManagerId, useStartlistRiders } from "@/hooks/useArenaPronostics";
 import { MessageInput } from "@/components/arena/MessageInput";
+import { RaceSituationEditor, type RaceSituation } from "@/components/arena/RaceSituationEditor";
+import { RaceSituationDisplay } from "@/components/arena/RaceSituationDisplay";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -260,7 +262,26 @@ export const SuperAdminLiveBroadcastPage = () => {
         </Card>
       )}
 
-      {/* Section 3: Broadcast history */}
+      {/* Section 3: Race Situation */}
+      {activeCourseId && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Situation de course</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RaceSituationEditor
+              onBroadcast={(situation: RaceSituation) => {
+                const content = `🏁 Situation à ${situation.kmRemaining} km de l'arrivée`;
+                handleSend(content, { race_situation: situation });
+              }}
+              disabled={broadcastMessage.isPending || !managerId}
+              startlistRiders={startlistRiders}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Section 4: Broadcast history */}
       {activeCourseId && (
         <Card>
           <CardHeader className="pb-3">
@@ -288,6 +309,14 @@ export const SuperAdminLiveBroadcastPage = () => {
                       <p className="text-sm whitespace-pre-wrap break-words">
                         {msg.content}
                       </p>
+                      {(msg.metadata as any)?.race_situation && (
+                        <div className="mt-2">
+                          <RaceSituationDisplay
+                            groups={(msg.metadata as any).race_situation.groups}
+                            kmRemaining={(msg.metadata as any).race_situation.kmRemaining}
+                          />
+                        </div>
+                      )}
                       <p className="text-[11px] text-muted-foreground mt-1">
                         {format(new Date(msg.created_at), "d MMM HH:mm", {
                           locale: fr,

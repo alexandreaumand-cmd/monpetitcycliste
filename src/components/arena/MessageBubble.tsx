@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Bot, Shield } from "lucide-react";
 import { ReactionBar } from "./ReactionBar";
+import { RaceSituationDisplay } from "./RaceSituationDisplay";
 import { type ArenaMessage, type ReactionSummary } from "@/hooks/useArenaMessages";
 import { format } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
@@ -170,6 +171,16 @@ export const MessageBubble = ({
         >
           {renderedContent}
         </div>
+
+        {/* Race situation visualization */}
+        {(message.metadata as any)?.race_situation && (
+          <div className="mt-2">
+            <RaceSituationDisplay
+              groups={(message.metadata as any).race_situation.groups}
+              kmRemaining={(message.metadata as any).race_situation.kmRemaining}
+            />
+          </div>
+        )}
 
         {/* Reactions */}
         <div className={cn("mt-1", isOwnMessage && "flex justify-end")}>
