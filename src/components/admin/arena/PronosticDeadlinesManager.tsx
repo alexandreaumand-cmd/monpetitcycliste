@@ -30,6 +30,7 @@ interface ExistingDeadline {
   pronostic_type: string;
   deadline_at: string;
   reminder_sent_at: string | null;
+  is_ttt: boolean;
   courses?: { nom: string; categorie: string | null };
 }
 
