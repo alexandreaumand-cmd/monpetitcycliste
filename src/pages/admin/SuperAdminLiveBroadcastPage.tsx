@@ -204,15 +204,19 @@ export const SuperAdminLiveBroadcastPage = () => {
                     )}
                   </div>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
+                    className="text-xs gap-1.5"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeactivate(lc.course_id);
+                      if (confirm(`Archiver "${lc.courses?.nom || lc.course_id}" ? Elle ne sera plus visible dans l'arène.`)) {
+                        handleDeactivate(lc.course_id);
+                      }
                     }}
                     disabled={deactivate.isPending}
                   >
-                    <X className="h-4 w-4 text-destructive" />
+                    <Archive className="h-3.5 w-3.5" />
+                    Archiver
                   </Button>
                 </div>
               ))}
