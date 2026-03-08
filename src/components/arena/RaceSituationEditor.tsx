@@ -24,7 +24,7 @@ export interface RaceSituation {
 interface RaceSituationEditorProps {
   onBroadcast: (situation: RaceSituation) => void;
   disabled?: boolean;
-  startlistRiders?: { rider_nom: string; coureur_id: string }[];
+  startlistRiders?: { nom: string; coureur_id: string }[];
 }
 
 const DEFAULT_GROUP: RaceGroup = {
