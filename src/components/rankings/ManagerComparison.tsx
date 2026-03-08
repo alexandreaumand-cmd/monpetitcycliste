@@ -745,8 +745,8 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
   const budgetA = rostersA?.reduce((sum, r) => sum + (r.prix_signature || 0), 0) || 1;
   const budgetB = rostersB?.reduce((sum, r) => sum + (r.prix_signature || 0), 0) || 1;
 
-  const roiA = (totalPointsA / budgetA).toFixed(2);
-  const roiB = (totalPointsB / budgetB).toFixed(2);
+   const roiA = Math.round(totalPointsA / budgetA).toString();
+   const roiB = Math.round(totalPointsB / budgetB).toString();
 
   const victoiresA = victoriesA?.length || 0;
   const victoiresB = victoriesB?.length || 0;
