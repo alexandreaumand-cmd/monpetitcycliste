@@ -1,37 +1,38 @@
 
 
-# Plan: Classement visuel "Route de montagne" avec vélos
+## Diagnostic
 
-## Concept
-Un nouveau composant visuel SVG représentant une route de col de montagne sinueuse (inspirée de l'image). Chaque manager est un vélo positionné le long de la route, avec des écarts proportionnels aux points. Sélecteur total / par phase intégré.
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-## Nouveau composant : `src/components/rankings/MountainRoadStandings.tsx`
+## Cause racine
 
-### Visuel
-- Route sinueuse SVG en lacets (type col alpin), du bas vers le haut
-- Chaque manager = un vélo 🚴 positionné sur la route, avec son nom à côté
-- Le leader est en haut (proche du sommet), le dernier en bas
-- Les écarts entre les vélos sont proportionnels aux écarts de points
-- Couleurs podium (or/argent/bronze) pour les 3 premiers
-- Responsive : fonctionne en mobile et desktop
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-### Sélecteur intégré
-- Tabs en haut : "Total" | phases individuelles (Phase 1, Phase 2...)
-- Réutilise `useSeasonContext()` pour les phases et `useLeague()` pour le leagueId
-- Appelle `v_manager_standings_by_season_v2` (total) ou `v_manager_standings_by_phase_v2` (par phase)
+## Plan de correction
 
-### Données
-- Récupère standings + avatar_url depuis managers
-- Calcule les écarts relatifs : `(leader_points - manager_points) / leader_points` pour positionner les vélos
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
+```
 
-## Intégration
-- Ajouter un onglet "mountain" ou "visual" dans `Rankings.mobile.tsx` dans les `tabChips`
-- Ou l'afficher directement en haut de la page classement comme un header visuel
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
 
-## Fichiers impactés
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
 
-| Fichier | Action |
-|---|---|
-| `src/components/rankings/MountainRoadStandings.tsx` | **Créer** — Composant SVG route de montagne avec vélos |
-| `src/pages/Rankings.mobile.tsx` | **Modifier** — Ajouter onglet/tab "Route" pour afficher le visuel |
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
+
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 

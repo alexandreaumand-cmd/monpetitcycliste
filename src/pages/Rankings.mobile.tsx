@@ -18,6 +18,7 @@ import { useSeasonContext } from "@/contexts/SeasonContext";
 import { normalizeString } from "@/lib/stringUtils";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { ManagerBreakdown } from "@/components/rankings/ManagerBreakdown";
+import { MountainRoadStandings } from "@/components/rankings/MountainRoadStandings";
 import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
 import { RecentPointsChart } from "@/components/rankings/RecentPointsChart";
 import { ManagerComparisonMobile } from "@/components/rankings/ManagerComparison.mobile";
@@ -28,7 +29,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { computeRiderROI, formatROICompact } from "@/domain/stats/roi";
 
-type TabView = "standings" | "riders" | "timeline" | "comparison" | "weekly";
+type TabView = "standings" | "riders" | "timeline" | "comparison" | "weekly" | "mountain";
 
 export const RankingsMobile = () => {
   const { t } = useTranslation('rankings');
@@ -219,6 +220,7 @@ export const RankingsMobile = () => {
 
   const tabChips = [
     { label: t('tabs.managers'), value: "standings" as TabView },
+    { label: "🏔️", value: "mountain" as TabView },
     { label: t('tabs.topRiders'), value: "riders" as TabView },
     { label: t('tabs.weekly'), value: "weekly" as TabView },
     { label: t('tabs.timeline'), value: "timeline" as TabView },
@@ -334,6 +336,10 @@ export const RankingsMobile = () => {
       </div>
 
       <div className="p-4 pt-4">
+        {activeTab === "mountain" && (
+          <MountainRoadStandings />
+        )}
+
         {activeTab === "standings" && (
           <div className="space-y-3 pb-4">
             {standingsLoading ? (
