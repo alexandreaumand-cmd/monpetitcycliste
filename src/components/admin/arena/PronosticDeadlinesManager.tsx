@@ -490,6 +490,23 @@ export const PronosticDeadlinesManager = () => {
                                   {pd.courseTypeLabel}
                                 </span>
 
+                                {/* TTT checkbox for stage_winner */}
+                                {pd.pronosticType === 'stage_winner' && !opened && (
+                                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                    <Checkbox
+                                      checked={tttOverrides[key] || false}
+                                      onCheckedChange={(checked) => {
+                                        setTttOverrides(prev => ({ ...prev, [key]: !!checked }));
+                                      }}
+                                      className="h-3.5 w-3.5"
+                                    />
+                                    <span className="text-[10px] text-muted-foreground">TTT</span>
+                                  </div>
+                                )}
+                                {opened && existing && (existing as any).is_ttt && (
+                                  <Badge variant="outline" className="text-[10px] px-1 py-0">TTT</Badge>
+                                )}
+
                                 <div className="flex-1" />
 
                                 {opened ? (
