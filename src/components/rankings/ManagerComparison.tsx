@@ -411,150 +411,84 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     },
   });
 
-  // 6. Récupérer les victoires (position = 1) - CORRIGÉ: avec jointure rosters
+  // Helper: fetch victories for a manager, excluding ties
+  const fetchVictories = async (managerId: string) => {
+    let phaseIds: string[] = [];
+    if (phaseId) {
+      phaseIds = [phaseId];
+    } else if (saisonId) {
+      const { data: phases } = await supabase
+        .from("phases")
+        .select("id")
+        .eq("saison_id", saisonId);
+      phaseIds = phases?.map(p => p.id) || [];
+    }
+
+    // Fetch ALL position=1 results to detect ties
+    const { data: allWins, error } = await supabase
+      .from("race_results")
+      .select(`
+        id, coureur_id, course_id, type_classement, etape_numero,
+        courses!inner(phase_id)
+      `)
+      .eq("position", 1)
+      .eq("statut", "finished")
+      .in("type_classement", ["Etape", "General"]);
+
+    if (error) throw error;
+
+    // Exclude ties: group by (course_id, type_classement, etape_numero)
+    const groupKey = (v: any) => `${v.course_id}|${v.type_classement}|${v.etape_numero ?? 'null'}`;
+    const groups = new Map<string, any[]>();
+    allWins?.forEach(v => {
+      const key = groupKey(v);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(v);
+    });
+    const uniqueWins = Array.from(groups.values())
+      .filter(g => g.length === 1)
+      .map(g => g[0]);
+
+    // Get manager's rosters (league-scoped)
+    let rostersQuery = leagueClient
+      .from("rosters")
+      .select("coureur_id, phase_id")
+      .eq("manager_id", managerId);
+    if (phaseIds.length > 0) {
+      rostersQuery = rostersQuery.in("phase_id", phaseIds);
+    }
+
+    const { data: rostersData, error: rostersError } = await rostersQuery;
+    if (rostersError) throw rostersError;
+
+    const rostersByRider = new Map<string, Set<string>>();
+    rostersData?.forEach(r => {
+      if (!rostersByRider.has(r.coureur_id)) {
+        rostersByRider.set(r.coureur_id, new Set());
+      }
+      rostersByRider.get(r.coureur_id)!.add(r.phase_id);
+    });
+
+    return uniqueWins.filter(v => {
+      const coursePhaseId = v.courses?.phase_id;
+      if (!coursePhaseId) return false;
+      const riderPhases = rostersByRider.get(v.coureur_id);
+      if (!riderPhases) return false;
+      return riderPhases.has(coursePhaseId) &&
+        (phaseIds.length === 0 || phaseIds.includes(coursePhaseId));
+    });
+  };
+
+  // 6. Récupérer les victoires (position = 1) - excluant les ex-aequo
   const { data: victoriesA } = useQuery({
     queryKey: ["victories-manager-a", managerA, phaseId, saisonId],
-    queryFn: async () => {
-      if (!managerA) return null;
-
-      // Récupérer les phase_ids concernés
-      let phaseIds: string[] = [];
-      if (phaseId) {
-        phaseIds = [phaseId];
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        phaseIds = phases?.map(p => p.id) || [];
-      }
-
-      // Récupérer les victoires avec rosters pour vérifier appartenance au roster
-      const { data: victories, error } = await supabase
-        .from("race_results")
-        .select(`
-          id, 
-          coureur_id, 
-          course_id, 
-          type_classement,
-          courses!inner(phase_id)
-        `)
-        .eq("position", 1)
-        .eq("statut", "finished")
-        .in("type_classement", ["Etape", "General"]);
-
-      if (error) throw error;
-
-      // Récupérer tous les rosters du manager pour les phases concernées
-      let rostersQuery = leagueClient
-        .from("rosters")
-        .select("coureur_id, phase_id")
-        .eq("manager_id", managerA);
-
-      if (phaseIds.length > 0) {
-        rostersQuery = rostersQuery.in("phase_id", phaseIds);
-      }
-
-      const { data: rostersData, error: rostersError } = await rostersQuery;
-      if (rostersError) throw rostersError;
-
-      // Créer un Map pour accès rapide: coureur_id -> Set<phase_id>
-      const rostersByRider = new Map<string, Set<string>>();
-      rostersData?.forEach(r => {
-        if (!rostersByRider.has(r.coureur_id)) {
-          rostersByRider.set(r.coureur_id, new Set());
-        }
-        rostersByRider.get(r.coureur_id)!.add(r.phase_id);
-      });
-
-      // Filtrer les victoires pour ne garder que celles où le coureur était dans le roster
-      const filtered = victories?.filter(v => {
-        const coursePhaseId = v.courses?.phase_id;
-        if (!coursePhaseId) return false;
-        
-        // Vérifier si le coureur était dans le roster pour cette phase
-        const riderPhases = rostersByRider.get(v.coureur_id);
-        if (!riderPhases) return false;
-        
-        return riderPhases.has(coursePhaseId) && 
-               (phaseIds.length === 0 || phaseIds.includes(coursePhaseId));
-      }) || [];
-
-      return filtered;
-    },
+    queryFn: () => fetchVictories(managerA!),
     enabled: !!managerA,
   });
 
   const { data: victoriesB } = useQuery({
     queryKey: ["victories-manager-b", managerB, phaseId, saisonId],
-    queryFn: async () => {
-      if (!managerB) return null;
-
-      // Récupérer les phase_ids concernés
-      let phaseIds: string[] = [];
-      if (phaseId) {
-        phaseIds = [phaseId];
-      } else if (saisonId) {
-        const { data: phases } = await supabase
-          .from("phases")
-          .select("id")
-          .eq("saison_id", saisonId);
-        phaseIds = phases?.map(p => p.id) || [];
-      }
-
-      // Récupérer les victoires avec rosters pour vérifier appartenance au roster
-      const { data: victories, error } = await supabase
-        .from("race_results")
-        .select(`
-          id, 
-          coureur_id, 
-          course_id, 
-          type_classement,
-          courses!inner(phase_id)
-        `)
-        .eq("position", 1)
-        .eq("statut", "finished")
-        .in("type_classement", ["Etape", "General"]);
-
-      if (error) throw error;
-
-      // Récupérer tous les rosters du manager pour les phases concernées
-      let rostersQuery = leagueClient
-        .from("rosters")
-        .select("coureur_id, phase_id")
-        .eq("manager_id", managerB);
-
-      if (phaseIds.length > 0) {
-        rostersQuery = rostersQuery.in("phase_id", phaseIds);
-      }
-
-      const { data: rostersData, error: rostersError } = await rostersQuery;
-      if (rostersError) throw rostersError;
-
-      // Créer un Map pour accès rapide: coureur_id -> Set<phase_id>
-      const rostersByRider = new Map<string, Set<string>>();
-      rostersData?.forEach(r => {
-        if (!rostersByRider.has(r.coureur_id)) {
-          rostersByRider.set(r.coureur_id, new Set());
-        }
-        rostersByRider.get(r.coureur_id)!.add(r.phase_id);
-      });
-
-      // Filtrer les victoires pour ne garder que celles où le coureur était dans le roster
-      const filtered = victories?.filter(v => {
-        const coursePhaseId = v.courses?.phase_id;
-        if (!coursePhaseId) return false;
-        
-        // Vérifier si le coureur était dans le roster pour cette phase
-        const riderPhases = rostersByRider.get(v.coureur_id);
-        if (!riderPhases) return false;
-        
-        return riderPhases.has(coursePhaseId) && 
-               (phaseIds.length === 0 || phaseIds.includes(coursePhaseId));
-      }) || [];
-
-      return filtered;
-    },
+    queryFn: () => fetchVictories(managerB!),
     enabled: !!managerB,
   });
 
