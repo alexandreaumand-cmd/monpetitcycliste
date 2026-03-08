@@ -245,12 +245,25 @@ export const SuperAdminLiveBroadcastPage = () => {
         </CardContent>
       </Card>
 
-      {/* Section 2: Broadcast composer */}
+      {/* Section 2: Stage selector + Broadcast composer */}
       {activeCourseId && (
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <CardTitle className="text-base">Composer un message</CardTitle>
+              {isMultiStage && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Étape</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={21}
+                    value={selectedEtape ?? 1}
+                    onChange={(e) => setSelectedEtape(parseInt(e.target.value) || 1)}
+                    className="w-16 h-8 rounded-md border border-input bg-background px-2 text-sm text-center"
+                  />
+                </div>
+              )}
               <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 border border-primary/20">
                 <Radio className="h-3 w-3 text-primary animate-pulse" />
                 <span className="text-[11px] font-medium text-primary">
