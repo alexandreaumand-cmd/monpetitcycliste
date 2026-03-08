@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader2, MessageCircle, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { LiveCourseSelector } from "./LiveCourseSelector";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
@@ -15,6 +16,7 @@ import {
   useLeagueRosterOwners,
 } from "@/hooks/useArenaMessages";
 import { useCurrentManagerId } from "@/hooks/useArenaPronostics";
+import { cn } from "@/lib/utils";
 
 interface LiveCoursesTabProps {
   leagueId: string;
@@ -23,6 +25,7 @@ interface LiveCoursesTabProps {
 export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   const { t } = useTranslation("arena");
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
+  const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
@@ -51,14 +54,37 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     return messagesData.pages.flatMap((p) => p.messages).reverse();
   }, [messagesData]);
 
-  const messageIds = useMemo(() => allMessages.map((m) => m.id), [allMessages]);
+  // Extract available stages from messages metadata
+  const availableStages = useMemo(() => {
+    const stages = new Set<number>();
+    allMessages.forEach((msg) => {
+      const etape = (msg.metadata as any)?.etape_numero;
+      if (etape != null) stages.add(etape);
+    });
+    return Array.from(stages).sort((a, b) => a - b);
+  }, [allMessages]);
+
+  // Reset stage filter when course changes
+  useEffect(() => {
+    setSelectedEtape(null);
+  }, [activeCourseId]);
+
+  // Filter messages by selected stage
+  const filteredMessages = useMemo(() => {
+    if (selectedEtape == null) return allMessages;
+    return allMessages.filter(
+      (msg) => (msg.metadata as any)?.etape_numero === selectedEtape
+    );
+  }, [allMessages, selectedEtape]);
+
+  const messageIds = useMemo(() => filteredMessages.map((m) => m.id), [filteredMessages]);
   const { data: reactionsMap = {} } = useMessageReactions(messageIds, managerId || null);
 
   useEffect(() => {
     if (autoScroll && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [allMessages.length, autoScroll]);
+  }, [filteredMessages.length, autoScroll]);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
@@ -92,6 +118,36 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
         />
       </div>
 
+      {/* Stage filter chips */}
+      {activeCourseId && availableStages.length > 1 && (
+        <div className="px-3 py-2 border-b flex items-center gap-2 overflow-x-auto">
+          <span className="text-xs font-medium text-muted-foreground shrink-0">Étape :</span>
+          <Badge
+            variant={selectedEtape == null ? "default" : "outline"}
+            className={cn(
+              "cursor-pointer min-h-[32px] px-2.5 py-1 text-xs whitespace-nowrap",
+              "active:scale-95 transition-all"
+            )}
+            onClick={() => setSelectedEtape(null)}
+          >
+            Toutes
+          </Badge>
+          {availableStages.map((stage) => (
+            <Badge
+              key={stage}
+              variant={selectedEtape === stage ? "default" : "outline"}
+              className={cn(
+                "cursor-pointer min-h-[32px] px-2.5 py-1 text-xs whitespace-nowrap",
+                "active:scale-95 transition-all"
+              )}
+              onClick={() => setSelectedEtape(stage)}
+            >
+              É{stage}
+            </Badge>
+          ))}
+        </div>
+      )}
+
       {/* Messages */}
       <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
         {hasNextPage && (
@@ -117,7 +173,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : allMessages.length === 0 ? (
+        ) : filteredMessages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
             <MessageCircle className="h-12 w-12 mb-4 opacity-30" />
             <p className="font-medium">{t("trashTalk.empty")}</p>
@@ -125,8 +181,8 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
           </div>
         ) : (
           <div className="py-2">
-            {allMessages.map((msg, idx) => {
-              const prevMsg = idx > 0 ? allMessages[idx - 1] : null;
+            {filteredMessages.map((msg, idx) => {
+              const prevMsg = idx > 0 ? filteredMessages[idx - 1] : null;
               const showAuthor =
                 !prevMsg ||
                 prevMsg.author_manager_id !== msg.author_manager_id ||
