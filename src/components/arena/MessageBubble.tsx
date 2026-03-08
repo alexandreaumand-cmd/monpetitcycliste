@@ -172,6 +172,16 @@ export const MessageBubble = ({
           {renderedContent}
         </div>
 
+        {/* Race situation visualization */}
+        {(message.metadata as any)?.race_situation && (
+          <div className="mt-2">
+            <RaceSituationDisplay
+              groups={(message.metadata as any).race_situation.groups}
+              kmRemaining={(message.metadata as any).race_situation.kmRemaining}
+            />
+          </div>
+        )}
+
         {/* Reactions */}
         <div className={cn("mt-1", isOwnMessage && "flex justify-end")}>
           <ReactionBar

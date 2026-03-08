@@ -309,6 +309,14 @@ export const SuperAdminLiveBroadcastPage = () => {
                       <p className="text-sm whitespace-pre-wrap break-words">
                         {msg.content}
                       </p>
+                      {(msg.metadata as any)?.race_situation && (
+                        <div className="mt-2">
+                          <RaceSituationDisplay
+                            groups={(msg.metadata as any).race_situation.groups}
+                            kmRemaining={(msg.metadata as any).race_situation.kmRemaining}
+                          />
+                        </div>
+                      )}
                       <p className="text-[11px] text-muted-foreground mt-1">
                         {format(new Date(msg.created_at), "d MMM HH:mm", {
                           locale: fr,
