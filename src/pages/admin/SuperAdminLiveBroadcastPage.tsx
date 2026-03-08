@@ -262,7 +262,26 @@ export const SuperAdminLiveBroadcastPage = () => {
         </Card>
       )}
 
-      {/* Section 3: Broadcast history */}
+      {/* Section 3: Race Situation */}
+      {activeCourseId && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Situation de course</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RaceSituationEditor
+              onBroadcast={(situation: RaceSituation) => {
+                const content = `🏁 Situation à ${situation.kmRemaining} km de l'arrivée`;
+                handleSend(content, { race_situation: situation });
+              }}
+              disabled={broadcastMessage.isPending || !managerId}
+              startlistRiders={startlistRiders}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Section 4: Broadcast history */}
       {activeCourseId && (
         <Card>
           <CardHeader className="pb-3">
