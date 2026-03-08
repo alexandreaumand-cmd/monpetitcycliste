@@ -335,6 +335,10 @@ export const RankingsMobile = () => {
       </div>
 
       <div className="p-4 pt-4">
+        {activeTab === "mountain" && (
+          <MountainRoadStandings />
+        )}
+
         {activeTab === "standings" && (
           <div className="space-y-3 pb-4">
             {standingsLoading ? (
