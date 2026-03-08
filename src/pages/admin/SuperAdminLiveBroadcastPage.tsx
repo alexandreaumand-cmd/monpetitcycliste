@@ -314,21 +314,28 @@ export const SuperAdminLiveBroadcastPage = () => {
       {activeCourseId && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Historique des messages</CardTitle>
+            <CardTitle className="text-base">
+              Historique des messages
+              {isMultiStage && selectedEtape && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  — Étape {selectedEtape}
+                </span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {historyLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
-            ) : broadcastHistory.length === 0 ? (
+            ) : filteredHistory.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">Aucun message diffusé pour cette course</p>
               </div>
             ) : (
               <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {broadcastHistory.map((msg) => (
+                {filteredHistory.map((msg) => (
                   <div
                     key={msg.id}
                     className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border"
