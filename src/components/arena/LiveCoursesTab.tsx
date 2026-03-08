@@ -9,16 +9,12 @@ import {
   useArenaChannels,
   useArenaMessages,
   useArenaRealtime,
-  useBroadcastLiveMessage,
-  useSendArenaMessage,
   useToggleReaction,
   useMessageReactions,
   useLeagueManagers,
   useLeagueRosterOwners,
 } from "@/hooks/useArenaMessages";
-import { useCurrentManagerId, useStartlistRiders } from "@/hooks/useArenaPronostics";
-import { useUserRole } from "@/hooks/useUserRole";
-import { toast } from "sonner";
+import { useCurrentManagerId } from "@/hooks/useArenaPronostics";
 
 interface LiveCoursesTabProps {
   leagueId: string;
@@ -31,12 +27,9 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   const [autoScroll, setAutoScroll] = useState(true);
 
   const { data: managerId } = useCurrentManagerId();
-  const { isSuperAdmin } = useUserRole();
   const { data: channels } = useArenaChannels(leagueId);
   const { data: managers = [] } = useLeagueManagers(leagueId);
   const { data: rosterOwners = {} } = useLeagueRosterOwners(leagueId);
-
-  const { data: startlistRiders = [] } = useStartlistRiders(activeCourseId);
 
   const liveChannel = channels?.find((c) => c.slug === "live-courses");
   const channelId = liveChannel?.id || null;
@@ -51,8 +44,6 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
 
   useArenaRealtime(channelId, leagueId);
 
-  const broadcastMessage = useBroadcastLiveMessage();
-  const sendMessage = useSendArenaMessage();
   const toggleReaction = useToggleReaction();
 
   const allMessages = useMemo(() => {
@@ -75,37 +66,6 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     setAutoScroll(scrollHeight - scrollTop - clientHeight < 50);
   }, []);
 
-  const handleSend = useCallback(
-    (content: string, metadata?: any) => {
-      if (!managerId || !activeCourseId) return;
-
-      if (isSuperAdmin) {
-        broadcastMessage.mutate(
-          { content, courseId: activeCourseId, managerId, metadata },
-          {
-            onSuccess: (data) => {
-              toast.success(t("trashTalk.broadcast.success", { count: data.leagues_count }));
-            },
-            onError: (error: any) => {
-              toast.error(error.message || t("trashTalk.sendError"));
-            },
-          }
-        );
-      } else if (channelId) {
-        sendMessage.mutate(
-          { channelId, leagueId, managerId, content, messageType: "user", metadata },
-          {
-            onError: (error: any) => {
-              toast.error(error.message || t("trashTalk.sendError"));
-            },
-          }
-        );
-      }
-      setAutoScroll(true);
-    },
-    [channelId, leagueId, managerId, activeCourseId, isSuperAdmin, sendMessage, broadcastMessage, t]
-  );
-
   const handleToggleReaction = useCallback(
     (messageId: string, emoji: string) => {
       if (!managerId) return;
@@ -113,9 +73,6 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     },
     [managerId, toggleReaction]
   );
-
-  const isReadOnly = !isSuperAdmin;
-  const canSend = isSuperAdmin && !!activeCourseId;
 
   if (!managerId) {
     return (
@@ -127,21 +84,12 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-280px)] min-h-[400px] border rounded-lg overflow-hidden bg-background">
-      {/* Course selector + broadcast indicator */}
-      <div className="p-3 border-b space-y-2">
+      {/* Course selector */}
+      <div className="p-3 border-b">
         <LiveCourseSelector
           activeCourseId={activeCourseId}
           onSelect={setActiveCourseId}
-          isSuperAdmin={isSuperAdmin}
         />
-        {isSuperAdmin && activeCourseId && (
-          <div className="flex items-center gap-2 p-2 rounded-md bg-primary/10 border border-primary/20">
-            <Radio className="h-4 w-4 text-primary animate-pulse" />
-            <span className="text-xs font-medium text-primary">
-              {t("trashTalk.broadcast.indicator")}
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Messages */}
@@ -202,13 +150,12 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
         )}
       </div>
 
-      {/* Input */}
+      {/* Read-only indicator */}
       <MessageInput
-        onSend={handleSend}
+        onSend={() => {}}
         managers={managers}
-        riders={startlistRiders}
-        disabled={sendMessage.isPending || broadcastMessage.isPending || !canSend}
-        readOnly={isReadOnly}
+        disabled
+        readOnly
       />
     </div>
   );
