@@ -1,71 +1,38 @@
 
 
-# Plan: Réorganisation du Super Admin (Desktop & Mobile)
+## Diagnostic
 
-## Problèmes identifiés
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-1. **14 items de navigation en liste plate** -- trop d'entrées sans hiérarchie, difficile de s'y retrouver
-2. **Redondance Startlists** -- 3 entrées séparées (Startlists, Startlist Tracker, Données Startlists) qui pourraient être regroupées
-3. **"Données" fourre-tout** -- contient import, export, managers, enchères, saisons, maintenance en sous-onglets
-4. **Ordre différent mobile/desktop** -- Bonus n'est pas au même endroit
-5. **Sidebar desktop non repliable** -- pas de groupes visuels, longue liste monotone
-6. **Pas de titre de section** -- aucune séparation logique entre les catégories
+## Cause racine
 
-## Proposition de réorganisation
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-Regrouper les 14 items en **4 catégories** avec des séparateurs visuels (collapsible groups sur desktop, sections dans le sheet mobile) :
+## Plan de correction
 
-```text
-📊 COURSES & RÉSULTATS
-  ├── Résultats        (CourseManagementTabs)
-  ├── Bonus            (SuperAdminBonusPage)
-  ├── Courses          (CoursesManager)
-  └── Barèmes          (BaremesManager)
-
-👥 COUREURS & ÉQUIPES
-  ├── Coureurs         (CoureursManager)
-  ├── Équipes          (EquipesSaisonsManager)
-  └── Startlists       (nouveau: regroupe les 3 onglets startlist)
-
-🏆 LIGUES & ARÈNE
-  ├── Ligues           (SuperAdminLeaguesPage)
-  ├── Utilisateurs     (UsersManagementPage)
-  └── Arène            (PronosticDeadlinesManager)
-
-⚙️ DONNÉES & MAINTENANCE
-  ├── Import / Export  (DataImportManager + DataExportManager)
-  ├── Points Ledger    (PointsLedgerTable)
-  └── Maintenance      (MaintenanceTabs + SeasonManager + etc.)
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
 ```
 
-## Modifications techniques
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
 
-### 1. Fusionner les 3 pages Startlist en une seule page à onglets
-Créer `StartlistHub.tsx` avec 3 onglets : Import, Tracker, Données. Supprime 3 nav items → 1 seul.
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
 
-### 2. Fusionner Import/Export + Maintenance
-Simplifier `DataManagementTabs` : retirer les sous-onglets Managers/Enchères/Saisons (déjà accessibles ailleurs ou à intégrer dans Maintenance). Garder Import, Export, Maintenance.
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
 
-### 3. Desktop - Sidebar groupée et repliable
-- Remplacer la sidebar custom par des `Collapsible` groups avec titres de section
-- Chaque groupe s'ouvre/ferme, le groupe actif reste ouvert par défaut
-- Réduire de 14 à ~11 items grâce aux fusions
-
-### 4. Mobile - Sheet avec sections
-- Même regroupement dans le Sheet de navigation mobile
-- Titres de section en `text-xs uppercase text-muted-foreground` comme séparateurs
-- Harmoniser l'ordre avec le desktop
-
-### 5. Harmoniser l'indentation et l'ordre des routes
-- Nettoyer l'indentation incohérente dans les deux fichiers de routes
-- S'assurer que l'ordre des `<Route>` correspond à l'ordre de la nav
-
-## Fichiers impactés
-
-| Fichier | Action |
-|---|---|
-| `src/components/admin/StartlistHub.tsx` | Créer — regroupe les 3 vues startlist |
-| `src/pages/SuperAdminPage.desktop.tsx` | Modifier — sidebar groupée, routes nettoyées |
-| `src/pages/SuperAdminPage.mobile.tsx` | Modifier — sheet avec sections, routes nettoyées |
-| `src/components/admin/DataManagementTabs.tsx` | Simplifier — retirer les sous-onglets redondants |
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 

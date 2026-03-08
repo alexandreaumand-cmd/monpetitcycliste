@@ -2,18 +2,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataImportManager } from "./DataImportManager";
 import { DataExportManager } from "./DataExportManager";
 import { MaintenanceTabs } from "./MaintenanceTabs";
-import { AuctionCleanupTab } from "./auctions/AuctionCleanupTab";
 import { SeasonManager } from "./SeasonManager";
-import { SponsorJerseyManager } from "./SponsorJerseyManager";
 
 export const DataManagementTabs = () => {
   return (
     <Tabs defaultValue="import" className="w-full">
-      <TabsList className="grid w-full grid-cols-6">
+      <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="import">📥 Import</TabsTrigger>
         <TabsTrigger value="export">📤 Export</TabsTrigger>
-        <TabsTrigger value="managers">👤 Managers</TabsTrigger>
-        <TabsTrigger value="auctions">🗑️ Enchères</TabsTrigger>
         <TabsTrigger value="seasons">📅 Saisons</TabsTrigger>
         <TabsTrigger value="maintenance">🔧 Maintenance</TabsTrigger>
       </TabsList>
@@ -24,14 +20,6 @@ export const DataManagementTabs = () => {
 
       <TabsContent value="export" className="space-y-6">
         <DataExportManager />
-      </TabsContent>
-
-      <TabsContent value="managers" className="space-y-6">
-        <SponsorJerseyManager />
-      </TabsContent>
-
-      <TabsContent value="auctions" className="space-y-6">
-        <AuctionCleanupTab />
       </TabsContent>
 
       <TabsContent value="seasons" className="space-y-6">
