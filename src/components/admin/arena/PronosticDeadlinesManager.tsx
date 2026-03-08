@@ -80,7 +80,7 @@ export const PronosticDeadlinesManager = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("arena_pronostic_deadlines")
-        .select("id, course_id, etape_numero, pronostic_type, deadline_at, reminder_sent_at, courses(nom, categorie)")
+        .select("id, course_id, etape_numero, pronostic_type, deadline_at, reminder_sent_at, is_ttt, courses(nom, categorie)")
         .order("deadline_at", { ascending: false });
       if (error) throw error;
       return data as unknown as ExistingDeadline[];
