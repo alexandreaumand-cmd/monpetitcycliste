@@ -173,10 +173,6 @@ function MountainRoadSVG({
         <p className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">Sommet</p>
       </div>
 
-      {/* Finish flag at bottom */}
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-center z-10">
-        <span className="text-lg">🏁</span>
-      </div>
 
       <svg
         viewBox={`0 0 ${svgW} ${svgH}`}
