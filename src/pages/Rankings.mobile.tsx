@@ -18,6 +18,7 @@ import { useSeasonContext } from "@/contexts/SeasonContext";
 import { normalizeString } from "@/lib/stringUtils";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { ManagerBreakdown } from "@/components/rankings/ManagerBreakdown";
+import { MountainRoadStandings } from "@/components/rankings/MountainRoadStandings";
 import { RiderPointsDetail } from "@/components/team/RiderPointsDetail";
 import { RecentPointsChart } from "@/components/rankings/RecentPointsChart";
 import { ManagerComparisonMobile } from "@/components/rankings/ManagerComparison.mobile";
