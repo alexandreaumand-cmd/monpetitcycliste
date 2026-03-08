@@ -173,10 +173,6 @@ function MountainRoadSVG({
         <p className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">Sommet</p>
       </div>
 
-      {/* Finish flag at bottom */}
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-center z-10">
-        <span className="text-lg">🏁</span>
-      </div>
 
       <svg
         viewBox={`0 0 ${svgW} ${svgH}`}
@@ -258,10 +254,10 @@ function MountainRoadSVG({
               {/* Name + points label */}
               <text
                 x={labelX}
-                y={m.cy - 4}
+                y={m.cy - 6}
                 textAnchor={anchor}
-                fontSize={10}
-                fontWeight="600"
+                fontSize={13}
+                fontWeight="700"
                 fill="hsl(var(--foreground))"
                 className="drop-shadow"
               >
@@ -271,11 +267,11 @@ function MountainRoadSVG({
                 x={labelX}
                 y={m.cy + 8}
                 textAnchor={anchor}
-                fontSize={9}
+                fontSize={11}
+                fontWeight="500"
                 fill="hsl(var(--muted-foreground))"
               >
                 {Math.round(m.total_points)} pts
-                {m.rank > 1 && ` (-${Math.round(leaderPts - m.total_points)})`}
               </text>
             </g>
           );
