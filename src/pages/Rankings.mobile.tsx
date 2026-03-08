@@ -219,6 +219,7 @@ export const RankingsMobile = () => {
 
   const tabChips = [
     { label: t('tabs.managers'), value: "standings" as TabView },
+    { label: "🏔️", value: "mountain" as TabView },
     { label: t('tabs.topRiders'), value: "riders" as TabView },
     { label: t('tabs.weekly'), value: "weekly" as TabView },
     { label: t('tabs.timeline'), value: "timeline" as TabView },
