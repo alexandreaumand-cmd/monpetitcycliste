@@ -1,38 +1,53 @@
 
 
-## Diagnostic
+# Plan: Modélisation visuelle de la course avec groupes
 
-L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
+## Concept
+Ajouter un éditeur de "situation de course" dans la page Super Admin Live Broadcast. L'admin configure les groupes (nombre, coureurs, écarts), puis broadcast cette situation comme un message spécial via le même RPC existant. Côté user, le `MessageBubble` détecte la metadata `race_situation` et affiche une visualisation horizontale avec des petits vélos.
 
-## Cause racine
+## Architecture
 
-La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
-
-## Plan de correction
-
-### 1. Action immédiate — Nettoyer les doublons en production
-Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
-```sql
-DELETE FROM race_result_sets
-WHERE id NOT IN (
-  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
-    id
-  FROM race_result_sets
-  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
-);
+La situation de course est stockée dans le champ `metadata` (jsonb) des messages broadcast :
+```json
+{
+  "race_situation": {
+    "groups": [
+      { "name": "Échappée", "riders": ["Pogačar", "Vingegaard"], "riderCount": 2, "gap": "0:00", "isPeloton": false },
+      { "name": "Chasse", "riders": ["Evenepoel"], "riderCount": 3, "gap": "+1:30", "isPeloton": false },
+      { "name": "Peloton", "riders": [], "riderCount": 150, "gap": "+4:00", "isPeloton": true }
+    ],
+    "kmRemaining": 45
+  }
+}
 ```
 
-### 2. Migration — Ajouter une contrainte d'unicité
-Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
+Aucune migration SQL nécessaire — tout passe par le champ `metadata` existant.
 
-### 3. Corriger `admin_compute_points_for_course`
-Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
+## Fichiers impactés
 
-### 4. Corriger le flux de saisie des résultats
-Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
+| Fichier | Action |
+|---|---|
+| `src/components/arena/RaceSituationEditor.tsx` | **Créer** — Formulaire admin : ajouter/supprimer groupes, nommer, indiquer isPeloton, saisir coureurs et écarts, km restants |
+| `src/components/arena/RaceSituationDisplay.tsx` | **Créer** — Rendu visuel : barre horizontale représentant la course, petits vélos 🚴 pour chaque groupe, proportionnel aux écarts, tooltip avec détail coureurs |
+| `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` | **Modifier** — Ajouter section "Situation de course" avec le RaceSituationEditor + bouton broadcast qui envoie via handleSend avec metadata |
+| `src/components/arena/MessageBubble.tsx` | **Modifier** — Détecter `metadata.race_situation` et afficher `RaceSituationDisplay` au lieu du texte brut |
 
-### Fichiers impactés
-- Migration SQL (nettoyage + contrainte unique)
-- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
-- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
+## Détail des composants
+
+### RaceSituationEditor (admin)
+- État local : tableau de groupes + km restants
+- Boutons +/- pour ajouter/supprimer des groupes
+- Pour chaque groupe : champ nom, toggle "Peloton", input nombre de coureurs, textarea noms coureurs (un par ligne ou virgule), input écart (format mm:ss)
+- Autocomplete coureurs depuis la startlist (réutilise `startlistRiders`)
+- Bouton "Diffuser la situation" qui appelle handleSend avec content auto-généré (ex: "🏁 Situation à 45km") et metadata contenant race_situation
+
+### RaceSituationDisplay (user + admin history)
+- Barre horizontale (la "route") avec marqueur arrivée à droite
+- Groupes positionnés de droite (tête) à gauche (queue) proportionnellement aux écarts
+- Icône vélo (emoji ou SVG) par groupe, taille proportionnelle au nombre de coureurs
+- Label du groupe + écart au-dessus
+- Badge "Peloton" distinctif (couleur différente, plus gros)
+- Noms des coureurs affichés en dessous du groupe (ou en tooltip si trop nombreux)
+- Km restants affiché sur la barre
+- Responsive : fonctionne en mobile (scroll horizontal si nécessaire)
 
