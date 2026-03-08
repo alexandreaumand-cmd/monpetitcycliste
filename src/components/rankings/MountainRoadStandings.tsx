@@ -167,11 +167,6 @@ function MountainRoadSVG({
 
   return (
     <div className="relative w-full overflow-hidden rounded-2xl bg-gradient-to-b from-sky-100 via-green-50 to-green-200 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 border">
-      {/* Summit decoration */}
-      <div className="absolute top-2 left-1/2 -translate-x-1/2 text-center z-10">
-        <span className="text-2xl">🏔️</span>
-        <p className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase">Sommet</p>
-      </div>
 
 
       <svg
