@@ -157,8 +157,13 @@
   },
   "hallOfFame": {
     "title": "Hall of Fame",
-    "comingSoon": "Coming soon",
-    "comingSoonDesc": "Manager leaderboard by Prestige Points"
+    "empty": "No points yet",
+    "emptyDesc": "Prestige points will be awarded through predictions and reactions",
+    "pts": "pts",
+    "sources": {
+      "pronostic": "Predictions",
+      "reaction": "Reactions"
+    }
   },
   "admin": {
     "deadlines": {
