@@ -25,8 +25,8 @@ interface BonusRiderInfo {
   coureur_nom: string;
   equipe: string;
   prix_achat: number;
-  cote_initiale: number;
   points_total: number;
+  bonus_points: number;
   ratio: number;
 }
 
@@ -43,7 +43,6 @@ export function LeagueBonusRidersDialog({
     queryFn: async () => {
       if (!leagueId || !phaseId) return [];
 
-      // Get all bonus rider selections for this phase and league
       const { data: selections, error: selectionsError } = await supabase
         .from("bonus_rider_selections")
         .select(`
@@ -57,7 +56,6 @@ export function LeagueBonusRidersDialog({
       if (selectionsError) throw selectionsError;
       if (!selections || selections.length === 0) return [];
 
-      // Get rider details from rosters
       const coureurIds = selections.map((s) => s.coureur_id);
       const managerIds = selections.map((s) => s.manager_id);
 
@@ -76,7 +74,6 @@ export function LeagueBonusRidersDialog({
 
       if (rosterError) throw rosterError;
 
-      // Get season id and initial ratings + team names from coureurs_saisons with equipes_saisons
       const { data: saisonData } = await supabase
         .from("phases")
         .select("saison_id")
@@ -84,22 +81,17 @@ export function LeagueBonusRidersDialog({
         .single();
 
       const saisonId = saisonData?.saison_id;
-      let coureursInitialData: Record<string, number> = {};
       let coureursTeamData: Record<string, string> = {};
 
       if (saisonId) {
-        // Step 1: Get coureurs_saisons with equipe_id
         const { data: csData } = await supabase
           .from("coureurs_saisons")
-          .select("coureur_id, prix_initial, equipe_id")
+          .select("coureur_id, equipe_id")
           .eq("saison_id", saisonId)
           .in("coureur_id", coureurIds);
 
         if (csData) {
-          // Collect unique equipe_ids
           const equipeIds = [...new Set(csData.map(cs => cs.equipe_id).filter(Boolean))] as string[];
-          
-          // Step 2: Get team names from equipes_saisons
           let equipeNoms: Record<string, string> = {};
           if (equipeIds.length > 0) {
             const { data: esData } = await supabase
@@ -107,23 +99,18 @@ export function LeagueBonusRidersDialog({
               .select("equipe_id, nom_affiche")
               .eq("saison_id", saisonId)
               .in("equipe_id", equipeIds);
-            
             if (esData) {
               esData.forEach(es => {
                 equipeNoms[es.equipe_id] = es.nom_affiche || "";
               });
             }
           }
-          
-          // Map data by coureur
           csData.forEach((cs) => {
-            coureursInitialData[cs.coureur_id] = cs.prix_initial ?? 0;
             coureursTeamData[cs.coureur_id] = cs.equipe_id ? equipeNoms[cs.equipe_id] || "" : "";
           });
         }
       }
 
-      // Get points for each rider in this phase
       const { data: pointsData } = await supabase
         .from("points_ledger")
         .select("coureur_id, points")
@@ -139,7 +126,23 @@ export function LeagueBonusRidersDialog({
         });
       }
 
-      // Build the result
+      // Get bonus points earned per rider
+      const { data: bonusData } = await supabase
+        .from("bonus_points")
+        .select("coureur_id, points")
+        .eq("phase_id", phaseId)
+        .in("bonus_type", ["first_win", "coureur_bonuse", "itt"])
+        .in("coureur_id", coureurIds);
+
+      const bonusByRider: Record<string, number> = {};
+      if (bonusData) {
+        bonusData.forEach((b) => {
+          if (b.coureur_id) {
+            bonusByRider[b.coureur_id] = (bonusByRider[b.coureur_id] || 0) + b.points;
+          }
+        });
+      }
+
       const result: BonusRiderInfo[] = selections.map((s) => {
         const roster = rosterData?.find(
           (r) => r.manager_id === s.manager_id && r.coureur_id === s.coureur_id
@@ -148,8 +151,8 @@ export function LeagueBonusRidersDialog({
         const coureurNom = roster?.coureurs?.nom || "Inconnu";
         const equipe = coureursTeamData[s.coureur_id] || "";
         const prixAchat = roster?.prix_signature || 0;
-        const coteInitiale = coureursInitialData[s.coureur_id] || 0;
         const pointsTotal = pointsByRider[s.coureur_id] || 0;
+        const bonusPoints = bonusByRider[s.coureur_id] || 0;
         const ratio = computeRiderROI({
           pointsTotal,
           purchasePriceTotal: prixAchat,
@@ -162,13 +165,12 @@ export function LeagueBonusRidersDialog({
           coureur_nom: coureurNom,
           equipe,
           prix_achat: prixAchat,
-          cote_initiale: coteInitiale,
           points_total: pointsTotal,
+          bonus_points: bonusPoints,
           ratio,
         };
       });
 
-      // Sort by points descending
       return result.sort((a, b) => b.points_total - a.points_total);
     },
     enabled: open && !!leagueId && !!phaseId,
@@ -176,7 +178,7 @@ export function LeagueBonusRidersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Star className="h-5 w-5 text-[#FFD500] fill-[#FFD500]" />
@@ -193,57 +195,47 @@ export function LeagueBonusRidersDialog({
             {t("bonusRider.noData")}
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">{t("bonusRider.manager")}</th>
-                  <th className="text-left p-2">{t("bonusRider.rider")}</th>
-                  <th className="text-right p-2">{t("price")}</th>
-                  <th className="text-right p-2">{t("rating")}</th>
-                  <th className="text-right p-2">{t("points")}</th>
-                  <th className="text-right p-2">{t("ratio")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bonusRiders.map((rider) => (
-                  <tr key={rider.manager_id} className="border-b hover:bg-muted/50">
-                    <td className="p-2 font-medium truncate max-w-[100px]">
-                      {rider.manager_nom}
-                    </td>
-                    <td className="p-2">
-                      <div className="flex items-center gap-1">
-                        <Star className="h-3 w-3 text-[#FFD500] fill-[#FFD500]" />
-                        <span className="truncate max-w-[200px]" title={rider.coureur_nom}>{rider.coureur_nom}</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground truncate max-w-[200px]" title={rider.equipe}>
-                        {rider.equipe}
-                      </div>
-                    </td>
-                    <td className="p-2 text-right font-mono">
-                      {rider.prix_achat.toFixed(0)}
-                    </td>
-                    <td className="p-2 text-right">
-                      <Badge variant="outline">{rider.cote_initiale}</Badge>
-                    </td>
-                    <td className="p-2 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Trophy className="h-3 w-3 text-primary" />
-                        <span className="font-bold">{rider.points_total}</span>
-                      </div>
-                    </td>
-                    <td className="p-2 text-right">
-                      <Badge
-                        variant={rider.ratio > 1 ? "default" : "secondary"}
-                        className={rider.ratio > 1 ? "bg-green-600" : ""}
-                      >
-                        {formatROICompact(rider.ratio)}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-2">
+            {bonusRiders.map((rider) => (
+              <div
+                key={rider.manager_id}
+                className="flex items-center gap-3 rounded-lg border border-border bg-card p-3"
+              >
+                {/* Left: manager + rider info */}
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm truncate">{rider.manager_nom}</div>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Star className="h-3 w-3 shrink-0 text-[#FFD500] fill-[#FFD500]" />
+                    <span className="text-xs truncate" title={rider.coureur_nom}>{rider.coureur_nom}</span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground truncate" title={rider.equipe}>
+                    {rider.equipe}
+                  </div>
+                </div>
+
+                {/* Right: stats */}
+                <div className="shrink-0 text-right space-y-0.5">
+                  <div className="flex items-center justify-end gap-1">
+                    <Trophy className="h-3 w-3 text-primary" />
+                    <span className="font-bold text-sm">{rider.points_total}</span>
+                  </div>
+                  {rider.bonus_points > 0 && (
+                    <div className="text-[11px] text-green-500 font-medium">
+                      +{rider.bonus_points.toFixed(1)} bonus
+                    </div>
+                  )}
+                  <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+                    <span>{rider.prix_achat.toFixed(0)}M</span>
+                    <Badge
+                      variant={rider.ratio > 1 ? "default" : "secondary"}
+                      className={`text-[10px] px-1.5 py-0 ${rider.ratio > 1 ? "bg-green-600" : ""}`}
+                    >
+                      {formatROICompact(rider.ratio)}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </DialogContent>
