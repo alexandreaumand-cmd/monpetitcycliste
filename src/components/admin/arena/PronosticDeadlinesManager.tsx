@@ -253,6 +253,7 @@ export const PronosticDeadlinesManager = () => {
           pronostic_type: pd.pronosticType,
           deadline_at: getEffectiveDeadline(pd),
           created_by: manager.id,
+          is_ttt: tttOverrides[getKey(pd)] || false,
         }));
 
       if (toInsert.length === 0) return;
