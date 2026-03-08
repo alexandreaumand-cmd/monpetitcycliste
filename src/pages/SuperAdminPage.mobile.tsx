@@ -18,6 +18,7 @@ import { BaremesManager } from "@/components/admin/BaremesManager";
 import { PointsLedgerTable } from "@/components/admin/PointsLedgerTable";
 import { SuperAdminBonusPage } from "@/pages/admin/SuperAdminBonusPage";
 import { PronosticDeadlinesManager } from "@/components/admin/arena/PronosticDeadlinesManager";
+import { SuperAdminLiveBroadcastPage } from "@/pages/admin/SuperAdminLiveBroadcastPage";
 import { StartlistHub } from "@/components/admin/StartlistHub";
 import mpcLogo from "@/assets/mpc-logo-horizontal.png";
 import { useTranslation } from "react-i18next";
