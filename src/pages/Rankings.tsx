@@ -54,6 +54,7 @@ export default function Rankings() {
               <TabsTrigger value="weekly">{t('tabs.weekly')}</TabsTrigger>
               <TabsTrigger value="timeline">{t('tabs.timeline')}</TabsTrigger>
               <TabsTrigger value="comparison">{t('tabs.comparison')}</TabsTrigger>
+              <TabsTrigger value="mountain">{t('tabs.mountain', '🏔️ Montagne')}</TabsTrigger>
             </TabsList>
             
             <Select 
