@@ -102,6 +102,10 @@ export default function Rankings() {
           <TabsContent value="comparison" className="space-y-4">
             <ManagerComparison phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
           </TabsContent>
+
+          <TabsContent value="mountain" className="space-y-4">
+            <MountainRoadStandings />
+          </TabsContent>
         </Tabs>
 
 
