@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { TeamScoring } from "@/components/rankings/TeamScoring";
 import { ManagerComparison } from "@/components/rankings/ManagerComparison";
 import { WeeklyHeatmap } from "@/components/rankings/WeeklyHeatmap";
+import { MountainRoadStandings } from "@/components/rankings/MountainRoadStandings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
