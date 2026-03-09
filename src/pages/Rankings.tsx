@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { TeamScoring } from "@/components/rankings/TeamScoring";
 import { ManagerComparison } from "@/components/rankings/ManagerComparison";
 import { WeeklyHeatmap } from "@/components/rankings/WeeklyHeatmap";
+import { MountainRoadStandings } from "@/components/rankings/MountainRoadStandings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
@@ -53,6 +54,7 @@ export default function Rankings() {
               <TabsTrigger value="weekly">{t('tabs.weekly')}</TabsTrigger>
               <TabsTrigger value="timeline">{t('tabs.timeline')}</TabsTrigger>
               <TabsTrigger value="comparison">{t('tabs.comparison')}</TabsTrigger>
+              <TabsTrigger value="mountain">{t('tabs.mountain', '🏔️ Montagne')}</TabsTrigger>
             </TabsList>
             
             <Select 
@@ -99,6 +101,10 @@ export default function Rankings() {
 
           <TabsContent value="comparison" className="space-y-4">
             <ManagerComparison phaseId={selectedPhase} saisonId={selectedSeason?.id || null} />
+          </TabsContent>
+
+          <TabsContent value="mountain" className="space-y-4">
+            <MountainRoadStandings />
           </TabsContent>
         </Tabs>
 
