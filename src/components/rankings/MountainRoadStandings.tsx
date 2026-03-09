@@ -361,7 +361,7 @@ function MountainRoadSVG({
                   animate={{ opacity: 0, r: 28 }}
                   transition={{
                     duration: 1.5,
-                    delay: hasMovement ? 2.0 + delay : 0.6 + delay,
+                    delay: hasMovement ? 10.5 + delay : 0.6 + delay,
                     ease: "easeOut",
                   }}
                 />
