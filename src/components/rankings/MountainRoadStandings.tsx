@@ -334,26 +334,24 @@ function MountainRoadSVG({
           // If today points exist, animate from start position to end
           // Otherwise just fade in with a staggered entrance
           const hasMovement = hasTodayPoints && m.todayPts > 0;
-          const dx = m.cx - m.startCx;
-          const dy = m.cy - m.startCy;
 
           return (
             <motion.g
               key={m.manager_id}
               initial={{
                 opacity: 0,
-                x: hasMovement ? -dx : 0,
-                y: hasMovement ? -dy : 15,
+                x: hasMovement ? m.keyframesX[0] : 0,
+                y: hasMovement ? m.keyframesY[0] : 15,
               }}
               animate={{
                 opacity: 1,
-                x: 0,
-                y: 0,
+                x: hasMovement ? m.keyframesX : 0,
+                y: hasMovement ? m.keyframesY : 0,
               }}
               transition={{
                 duration: hasMovement ? 10 : 0.6,
                 delay: hasMovement ? 0.3 + delay : delay,
-                ease: hasMovement ? [0.25, 0.1, 0.25, 1] : "easeOut",
+                ease: hasMovement ? "linear" : "easeOut",
               }}
             >
               {/* Podium glow */}
