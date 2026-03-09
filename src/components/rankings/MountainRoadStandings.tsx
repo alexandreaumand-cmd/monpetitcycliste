@@ -225,16 +225,14 @@ function MountainRoadSVG({
     .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
     .join(" ");
 
-  // Compute start (without today) and end positions for each manager
+  // Compute start/end positions and road-following keyframes for each manager
   const managers = useMemo(() => {
-    // Recalculate standings without today's points for start positions
     const withoutToday = standings.map((s) => ({
       ...s,
       points_before: s.total_points - (todayPointsMap[s.manager_id] || 0),
       today_points: todayPointsMap[s.manager_id] || 0,
     }));
 
-    // Leader/last for "before" state
     const sortedBefore = [...withoutToday].sort((a, b) => b.points_before - a.points_before);
     const leaderBefore = sortedBefore[0]?.points_before || 0;
     const lastBefore = sortedBefore[sortedBefore.length - 1]?.points_before || 0;
@@ -244,24 +242,37 @@ function MountainRoadSVG({
       const todayPts = todayPointsMap[s.manager_id] || 0;
       const pointsBefore = s.total_points - todayPts;
 
-      // End position (current standings)
+      // End t (current)
       const gapEnd = leaderPts - s.total_points;
       const tEnd = range > 0 ? gapEnd / range : idx / Math.max(count - 1, 1);
       const endPos = getPositionOnRoad(tEnd, roadGeometry);
 
-      // Start position (before today's points)
+      // Start t (before today)
       const gapStart = leaderBefore - pointsBefore;
       const tStart = rangeBefore > 0 ? gapStart / rangeBefore : idx / Math.max(count - 1, 1);
-      const startPos = getPositionOnRoad(tStart, roadGeometry);
+
+      // Sample keyframes along the road from tStart to tEnd (going UP = decreasing t)
+      const STEPS = 30;
+      const keyframesX: number[] = [];
+      const keyframesY: number[] = [];
+
+      for (let step = 0; step <= STEPS; step++) {
+        const progress = step / STEPS;
+        const tCurrent = tStart + (tEnd - tStart) * progress;
+        const pos = getPositionOnRoad(tCurrent, roadGeometry);
+        // Store as offsets from final position
+        keyframesX.push(pos.x - endPos.x);
+        keyframesY.push(pos.y - endPos.y);
+      }
 
       return {
         ...s,
         rank: idx + 1,
         cx: endPos.x,
         cy: endPos.y,
-        startCx: startPos.x,
-        startCy: startPos.y,
         todayPts,
+        keyframesX,
+        keyframesY,
       };
     });
   }, [standings, todayPointsMap, leaderPts, range, count, roadGeometry]);
