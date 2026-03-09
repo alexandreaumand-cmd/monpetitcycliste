@@ -340,9 +340,9 @@ function MountainRoadSVG({
                 y: 0,
               }}
               transition={{
-                duration: hasMovement ? 1.8 : 0.6,
+                duration: hasMovement ? 10 : 0.6,
                 delay: hasMovement ? 0.3 + delay : delay,
-                ease: hasMovement ? [0.16, 1, 0.3, 1] : "easeOut",
+                ease: hasMovement ? [0.25, 0.1, 0.25, 1] : "easeOut",
               }}
             >
               {/* Podium glow */}
