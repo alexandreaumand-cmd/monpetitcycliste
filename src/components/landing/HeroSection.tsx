@@ -70,6 +70,9 @@ const HeroSection = () => {
             alt="Vue aérienne du peloton cycliste en montagne"
             className="w-full h-full object-cover"
             loading="eager"
+            fetchPriority="high"
+            width={1920}
+            height={1080}
           />
         </motion.div>
 
