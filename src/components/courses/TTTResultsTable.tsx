@@ -53,12 +53,11 @@ export const TTTResultsTable = ({ results, compact = false }: TTTResultsTablePro
       
       if (!teamMap.has(teamPosition)) {
         
-        // Use the FIRST rider's team info for this position
         teamMap.set(teamPosition, {
           teamPosition,
           teamName: row.equipe_nom_uci || row.equipe || 'Équipe inconnue',
           equipeIdUci: row.equipe_id_uci || row.equipe || '',
-          baremePoints,
+          baremePoints: 0, // Will be computed after all riders are added
           riders: [],
           hasMyRider: false
         });
