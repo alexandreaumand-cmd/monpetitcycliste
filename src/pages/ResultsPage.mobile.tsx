@@ -212,7 +212,7 @@ export const ResultsPageMobile = () => {
                   {racePodium.length > 0 && <div className="mt-3 pt-3 border-t border-border/50">
                       {racePodium.slice(0, 3).map((manager, idx) => <div key={manager.manager_nom} className="flex items-center justify-between py-1">
                           <div className="flex items-center gap-2">
-                            {jerseys[manager.manager_id] ? <img src={jerseys[manager.manager_id]} alt="Maillot" className="h-5 w-5 object-contain" /> : <span className="text-sm">
+                            {jerseys[manager.manager_id] ? <img src={jerseys[manager.manager_id]} alt={`Maillot de ${manager.manager_nom}`} className="h-5 w-5 object-contain" loading="lazy" width={20} height={20} /> : <span className="text-sm">
                                 {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
                               </span>}
                             <span className="text-sm text-muted-foreground truncate max-w-[140px]">
