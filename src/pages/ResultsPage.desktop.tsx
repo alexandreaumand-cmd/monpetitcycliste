@@ -284,7 +284,7 @@ export const ResultsPage = () => {
                             <span className="font-medium truncate">{manager.manager_nom}</span>
                           </div>
                           <span className="text-muted-foreground">
-                            {manager.points} pts
+                            {Math.round(manager.points)} pts
                           </span>
                         </div>
                       ))}

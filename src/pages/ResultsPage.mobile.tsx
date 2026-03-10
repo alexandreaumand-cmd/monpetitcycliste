@@ -220,7 +220,7 @@ export const ResultsPageMobile = () => {
                             </span>
                           </div>
                           <span className="text-sm font-medium tabular-nums">
-                            {manager.points} pts
+                            {Math.round(manager.points)} pts
                           </span>
                         </div>)}
                     </div>}

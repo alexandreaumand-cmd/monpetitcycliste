@@ -584,7 +584,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                         )}
                                       </TableCell>
                                       <TableCell className="text-right font-bold">
-                                        {rider.total_points}
+                                        {Math.round(rider.total_points)}
                                       </TableCell>
                                     </TableRow>
                                   </CollapsibleTrigger>
@@ -597,7 +597,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                               <span className="text-muted-foreground">
                                                 {item.type_classement} {item.etape_numero && `(Étape ${item.etape_numero})`}
                                               </span>
-                                              <span className="font-semibold">{item.points} pts</span>
+                                              <span className="font-semibold">{Math.round(item.points)} pts</span>
                                             </div>
                                           ))}
                                         </div>
