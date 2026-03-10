@@ -52,8 +52,6 @@ export const TTTResultsTable = ({ results, compact = false }: TTTResultsTablePro
       const teamPosition = Math.floor(row.position_decimal!);
       
       if (!teamMap.has(teamPosition)) {
-        // Use barème points for team (0-indexed, so position 1 = index 0)
-        const baremePoints = TTT_BAREME[teamPosition - 1] || 0;
         
         // Use the FIRST rider's team info for this position
         teamMap.set(teamPosition, {
