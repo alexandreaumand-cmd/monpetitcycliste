@@ -584,7 +584,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                         )}
                                       </TableCell>
                                       <TableCell className="text-right font-bold">
-                                        {rider.total_points}
+                                        {Math.round(rider.total_points)}
                                       </TableCell>
                                     </TableRow>
                                   </CollapsibleTrigger>
@@ -597,7 +597,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                               <span className="text-muted-foreground">
                                                 {item.type_classement} {item.etape_numero && `(Étape ${item.etape_numero})`}
                                               </span>
-                                              <span className="font-semibold">{item.points} pts</span>
+                                              <span className="font-semibold">{Math.round(item.points)} pts</span>
                                             </div>
                                           ))}
                                         </div>
@@ -902,7 +902,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                       </Badge>
                                     )}
                                   </TableCell>
-                                  <TableCell className="text-right font-bold">{rider.total_points}</TableCell>
+                                  <TableCell className="text-right font-bold">{Math.round(rider.total_points)}</TableCell>
                                 </TableRow>
                               </CollapsibleTrigger>
                     <CollapsibleContent asChild>
@@ -921,7 +921,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                             <Badge variant="outline" className="text-xs">
                                               {formatClassementLabel(entry.type_classement, entry.etape_numero)}
                                             </Badge>
-                                            <div className="font-bold">{entry.points} pts</div>
+                                            <div className="font-bold">{Math.round(entry.points)} pts</div>
                                           </div>
                                         ))}
                                       </div>
@@ -1100,7 +1100,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                     #{entry.rank}
                                   </TableCell>
                                   <TableCell className="font-medium">{entry.manager_nom}</TableCell>
-                                  <TableCell className="text-right font-bold text-lg">{entry.points}</TableCell>
+                                  <TableCell className="text-right font-bold text-lg">{Math.round(entry.points)}</TableCell>
                                 </TableRow>
                               </CollapsibleTrigger>
                               <CollapsibleContent asChild>
@@ -1122,7 +1122,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                                 {formatClassementLabel(contributor.type_classement, contributor.etape_numero)}
                                               </Badge>
                                             </div>
-                                            <div className="font-bold">{contributor.points} pts</div>
+                                            <div className="font-bold">{Math.round(contributor.points)} pts</div>
                                           </div>
                                         ))}
                                       </div>
