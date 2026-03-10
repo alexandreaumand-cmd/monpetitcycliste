@@ -921,7 +921,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                             <Badge variant="outline" className="text-xs">
                                               {formatClassementLabel(entry.type_classement, entry.etape_numero)}
                                             </Badge>
-                                            <div className="font-bold">{entry.points} pts</div>
+                                            <div className="font-bold">{Math.round(entry.points)} pts</div>
                                           </div>
                                         ))}
                                       </div>
