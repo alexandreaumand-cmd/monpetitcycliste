@@ -1100,7 +1100,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                     #{entry.rank}
                                   </TableCell>
                                   <TableCell className="font-medium">{entry.manager_nom}</TableCell>
-                                  <TableCell className="text-right font-bold text-lg">{entry.points}</TableCell>
+                                  <TableCell className="text-right font-bold text-lg">{Math.round(entry.points)}</TableCell>
                                 </TableRow>
                               </CollapsibleTrigger>
                               <CollapsibleContent asChild>
