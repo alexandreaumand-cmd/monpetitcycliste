@@ -64,7 +64,10 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
         <div className="flex items-center gap-2 px-2 py-4">
           <img 
             src={mpcLogo} 
-            alt="Logo Mon Petit Cycliste" 
+            alt="Logo Mon Petit Cycliste"
+            loading="eager"
+            width={40}
+            height={40}
             className={`transition-all ${isCollapsed ? 'h-8 w-8' : 'h-10 w-10'}`}
           />
           {!isCollapsed && (

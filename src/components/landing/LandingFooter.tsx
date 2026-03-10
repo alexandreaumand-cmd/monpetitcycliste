@@ -12,7 +12,7 @@ const LandingFooter = () => {
           {/* Brand */}
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center gap-3 mb-4">
-              <img src={mpcLogo} alt="Mon Petit Cycliste" className="h-10 w-10" />
+              <img src={mpcLogo} alt="Mon Petit Cycliste" className="h-10 w-10" loading="lazy" width={40} height={40} />
               <span className="text-white font-poppins font-bold">
                 Mon Petit Cycliste
               </span>

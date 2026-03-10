@@ -17,7 +17,8 @@ export function useGlobalStandings() {
         .from("v_manager_standings_total")
         .select("*")
         .eq("league_id", leagueId)
-        .order("total_points", { ascending: false });
+        .order("total_points", { ascending: false })
+        .limit(50);
 
       if (error) throw error;
 

@@ -10,28 +10,32 @@ import { cn } from "@/lib/utils";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { BonusPointsDetailDialog } from "./BonusPointsDetailDialog";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ManagerPrestigeIcons } from "./ManagerPrestigeIcons";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useLeagueStandingsBySeason, useLeagueStandingsByPhase } from "@/hooks/useLeagueStandings";
 import { useTranslation } from "react-i18next";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 type StandingsProps = {
   phaseId?: string | null;
   onManagerClick?: (managerId: string) => void;
 };
 
-const ManagerNameWithJersey = ({ managerId, managerName }: { managerId: string; managerName: string }) => {
+const ManagerNameWithJersey = memo(({ managerId, managerName }: { managerId: string; managerName: string }) => {
   const { selectedSeason } = useSeasonContext();
   const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
   
   return (
     <div className="flex items-center gap-2">
       {sponsorData?.jersey_image_url ? (
-        <img 
+        <OptimizedImage 
           src={sponsorData.jersey_image_url} 
-          alt="Maillot" 
+          alt={`Maillot de ${managerName}`}
+          inline
+          width={32}
+          height={32}
           className="h-8 w-8 object-contain rounded"
         />
       ) : (
@@ -47,7 +51,7 @@ const ManagerNameWithJersey = ({ managerId, managerName }: { managerId: string; 
       </div>
     </div>
   );
-};
+});
 
 // Note: enrichWithManagerNames removed - now handled directly by views
 

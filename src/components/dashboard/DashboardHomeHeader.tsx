@@ -41,6 +41,10 @@ export function DashboardHomeHeader({
           <img
             src={mpcLogo}
             alt="Logo Mon Petit Cycliste"
+            loading="eager"
+            fetchPriority="high"
+            width={32}
+            height={32}
             className="h-8 w-8"
           />
 
@@ -86,6 +90,10 @@ export function DashboardHomeHeader({
           <img
             src={mpcLogo}
             alt="Logo Mon Petit Cycliste"
+            loading="eager"
+            fetchPriority="high"
+            width={40}
+            height={40}
             className="h-10 w-10"
           />
           <h1 className="font-montserrat font-bold text-white text-lg">

@@ -57,6 +57,9 @@ export const MobileLayout = ({
                 <img 
                   src={mpcLogo} 
                   alt="Logo Mon Petit Cycliste" 
+                  loading="eager"
+                  width={28}
+                  height={28}
                   className="h-7 w-auto"
                 />
               </Link>

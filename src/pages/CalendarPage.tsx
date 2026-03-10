@@ -368,7 +368,7 @@ export default function CalendarPage() {
               <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/home')}>
                 <ArrowLeft className="h-5 w-5 text-white" />
               </Button>
-              <img src={mpcLogo} alt="Logo" className="h-8 w-8 md:h-10 md:w-10" />
+              <img src={mpcLogo} alt="Logo Mon Petit Cycliste" className="h-8 w-8 md:h-10 md:w-10" loading="eager" width={40} height={40} />
               <h1 className="font-montserrat font-bold text-white text-sm md:text-xl">{t('title')}</h1>
             </div>
             <Button variant="ghost" size="icon" onClick={handleSignOut}>
@@ -394,7 +394,7 @@ export default function CalendarPage() {
             <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/home')}>
               <ArrowLeft className="h-5 w-5 text-white" />
             </Button>
-            <img src={mpcLogo} alt="Logo" className="h-8 w-8 md:h-10 md:w-10" />
+            <img src={mpcLogo} alt="Logo Mon Petit Cycliste" className="h-8 w-8 md:h-10 md:w-10" loading="eager" width={40} height={40} />
             <h1 className="font-montserrat font-bold text-white text-sm md:text-xl">{t('title')}</h1>
           </div>
           <div className="flex items-center gap-2">

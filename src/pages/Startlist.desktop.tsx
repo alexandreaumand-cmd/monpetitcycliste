@@ -30,6 +30,7 @@ import { useLeague } from "@/contexts/LeagueContext";
 import { StartlistCalendarView } from "@/components/startlist/StartlistCalendarView";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { StartlistTrackerMovements } from "@/components/startlist/StartlistTrackerMovements";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 const StartlistDesktop = () => {
   
@@ -606,9 +607,12 @@ const ManagerJerseyDisplay = ({ managerName, managerId }: { managerName: string;
   return (
     <div className="flex items-center gap-2">
       {sponsorData?.jersey_image_url ? (
-        <img 
+        <OptimizedImage 
           src={sponsorData.jersey_image_url} 
-          alt="Maillot" 
+          alt={`Maillot de ${managerName}`}
+          inline
+          width={48}
+          height={48}
           className="h-12 w-12 object-contain rounded"
         />
       ) : (

@@ -204,7 +204,7 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
           {/* Logo & Page Title */}
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <Link to="/dashboard/home" className="shrink-0">
-              <img src={mpcLogo} alt="Logo Mon Petit Cycliste" className="h-7 w-auto" />
+              <img src={mpcLogo} alt="Logo Mon Petit Cycliste" className="h-7 w-auto" loading="eager" width={28} height={28} />
             </Link>
             <div className="h-4 w-px bg-border" />
             <h1 className="text-sm font-semibold truncate">{getCurrentPageTitle()}</h1>
