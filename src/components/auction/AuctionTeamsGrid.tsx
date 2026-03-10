@@ -10,6 +10,7 @@ import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useTranslation } from "react-i18next";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 import {
   Accordion,
   AccordionContent,
