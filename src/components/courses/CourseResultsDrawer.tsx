@@ -902,7 +902,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                       </Badge>
                                     )}
                                   </TableCell>
-                                  <TableCell className="text-right font-bold">{rider.total_points}</TableCell>
+                                  <TableCell className="text-right font-bold">{Math.round(rider.total_points)}</TableCell>
                                 </TableRow>
                               </CollapsibleTrigger>
                     <CollapsibleContent asChild>
