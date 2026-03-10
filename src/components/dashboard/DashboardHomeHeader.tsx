@@ -41,6 +41,10 @@ export function DashboardHomeHeader({
           <img
             src={mpcLogo}
             alt="Logo Mon Petit Cycliste"
+            loading="eager"
+            fetchPriority="high"
+            width={32}
+            height={32}
             className="h-8 w-8"
           />
 
