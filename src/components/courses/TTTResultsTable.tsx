@@ -3,8 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
-// Barème officiel TTT par position (1.1 category)
-const TTT_BAREME = [100, 80, 65, 50, 40, 30, 20, 15, 10, 5];
+// No more hardcoded barème - team points are computed from rider data
 
 interface TTTResultRow {
   race_result_id: string;
@@ -53,15 +52,12 @@ export const TTTResultsTable = ({ results, compact = false }: TTTResultsTablePro
       const teamPosition = Math.floor(row.position_decimal!);
       
       if (!teamMap.has(teamPosition)) {
-        // Use barème points for team (0-indexed, so position 1 = index 0)
-        const baremePoints = TTT_BAREME[teamPosition - 1] || 0;
         
-        // Use the FIRST rider's team info for this position
         teamMap.set(teamPosition, {
           teamPosition,
           teamName: row.equipe_nom_uci || row.equipe || 'Équipe inconnue',
           equipeIdUci: row.equipe_id_uci || row.equipe || '',
-          baremePoints,
+          baremePoints: 0, // Will be computed after all riders are added
           riders: [],
           hasMyRider: false
         });
@@ -72,6 +68,13 @@ export const TTTResultsTable = ({ results, compact = false }: TTTResultsTablePro
       if (row.is_my_rider) {
         team.hasMyRider = true;
       }
+    });
+
+    // Compute team baremePoints as sum of rider points_theoriques
+    teamMap.forEach((team) => {
+      team.baremePoints = Math.round(
+        team.riders.reduce((sum, r) => sum + (r.points_theoriques || 0), 0)
+      );
     });
 
     // Sort teams by position
