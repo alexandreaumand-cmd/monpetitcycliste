@@ -1122,7 +1122,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                                 {formatClassementLabel(contributor.type_classement, contributor.etape_numero)}
                                               </Badge>
                                             </div>
-                                            <div className="font-bold">{contributor.points} pts</div>
+                                            <div className="font-bold">{Math.round(contributor.points)} pts</div>
                                           </div>
                                         ))}
                                       </div>
