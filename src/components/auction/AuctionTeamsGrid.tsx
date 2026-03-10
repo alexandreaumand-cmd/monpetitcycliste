@@ -59,9 +59,12 @@ const ManagerJerseyIcon = ({ managerId }: { managerId: string }) => {
   const { data: sponsorData } = useManagerSponsor(managerId, selectedSeason?.id);
   
   return sponsorData?.jersey_image_url ? (
-    <img 
+    <OptimizedImage 
       src={sponsorData.jersey_image_url} 
-      alt="Maillot" 
+      alt="Maillot d'équipe"
+      inline
+      width={24}
+      height={24}
       className="h-6 w-6 object-contain rounded"
     />
   ) : (
