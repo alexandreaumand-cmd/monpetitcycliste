@@ -17,11 +17,6 @@ import { useLeague } from "@/contexts/LeagueContext";
 import { useLeagueStandingsBySeason, useLeagueStandingsByPhase } from "@/hooks/useLeagueStandings";
 import { useTranslation } from "react-i18next";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ManagerPrestigeIcons } from "./ManagerPrestigeIcons";
-import { useLeague } from "@/contexts/LeagueContext";
-import { useLeagueStandingsBySeason, useLeagueStandingsByPhase } from "@/hooks/useLeagueStandings";
-import { useTranslation } from "react-i18next";
 
 type StandingsProps = {
   phaseId?: string | null;
