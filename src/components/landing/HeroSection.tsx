@@ -114,6 +114,9 @@ const HeroSection = () => {
             src={heroHandlebar}
             alt="Guidon drop bar vue POV"
             className="w-full h-full object-cover object-top"
+            loading="eager"
+            width={1920}
+            height={540}
             style={{ mixBlendMode: "screen" }}
           />
         </motion.div>
