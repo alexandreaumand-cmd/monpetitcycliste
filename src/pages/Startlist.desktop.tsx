@@ -30,6 +30,7 @@ import { useLeague } from "@/contexts/LeagueContext";
 import { StartlistCalendarView } from "@/components/startlist/StartlistCalendarView";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { StartlistTrackerMovements } from "@/components/startlist/StartlistTrackerMovements";
+import { OptimizedImage } from "@/components/shared/OptimizedImage";
 
 const StartlistDesktop = () => {
   
