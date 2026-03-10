@@ -70,6 +70,13 @@ export const TTTResultsTable = ({ results, compact = false }: TTTResultsTablePro
       }
     });
 
+    // Compute team baremePoints as sum of rider points_theoriques
+    teamMap.forEach((team) => {
+      team.baremePoints = Math.round(
+        team.riders.reduce((sum, r) => sum + (r.points_theoriques || 0), 0)
+      );
+    });
+
     // Sort teams by position
     return Array.from(teamMap.values())
       .sort((a, b) => a.teamPosition - b.teamPosition);
