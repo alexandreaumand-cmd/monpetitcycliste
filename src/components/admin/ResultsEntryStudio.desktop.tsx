@@ -615,36 +615,58 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
         .single();
 
       // Update/create race_result_sets with TTT info
-      await leagueClient
-        .from('race_result_sets')
-        .upsert({
-          course_id: course.course_id,
-          saison_id: phaseData.saison_id,
-          type_classement: classementType,
-          etape_numero: etapeNumeroValue,
-          is_cancelled: isCancelled,
-          is_ttt: isTTT,
-          ttt_riders_count: isTTT ? tttRidersCount : null,
-          created_by: managerData?.id
-        }, {
-          onConflict: 'course_id,type_classement,etape_numero',
-          ignoreDuplicates: false
-        });
+      // Use delete-then-insert to work with COALESCE-based unique index
+      {
+        let delRrs = supabase
+          .from('race_result_sets')
+          .delete()
+          .eq('course_id', course.course_id)
+          .eq('type_classement', classementType);
+        if (etapeNumeroValue === null) {
+          delRrs = delRrs.is('etape_numero', null);
+        } else {
+          delRrs = delRrs.eq('etape_numero', etapeNumeroValue);
+        }
+        await delRrs;
+
+        const { error: rrsError } = await supabase
+          .from('race_result_sets')
+          .insert({
+            course_id: course.course_id,
+            saison_id: phaseData.saison_id,
+            type_classement: classementType,
+            etape_numero: etapeNumeroValue,
+            is_cancelled: isCancelled,
+            is_ttt: isTTT,
+            ttt_riders_count: isTTT ? tttRidersCount : null,
+            created_by: managerData?.id
+          });
+        if (rrsError) console.error('race_result_sets insert error:', rrsError);
+      }
 
       // Save TTT config to course_stage_config for points calculation
-      // Allow etapeNumeroValue to be null for one-day races
+      // Use delete-then-insert to work with COALESCE-based unique index
       if (isTTT && tttRidersCount) {
-        await supabase
+        let delCsc = supabase
           .from('course_stage_config')
-          .upsert({
+          .delete()
+          .eq('course_id', course.course_id);
+        if (etapeNumeroValue === null) {
+          delCsc = delCsc.is('etape_numero', null);
+        } else {
+          delCsc = delCsc.eq('etape_numero', etapeNumeroValue);
+        }
+        await delCsc;
+
+        const { error: cscError } = await supabase
+          .from('course_stage_config')
+          .insert({
             course_id: course.course_id,
-            etape_numero: etapeNumeroValue, // null for one-day races
+            etape_numero: etapeNumeroValue,
             ttt_riders_per_team: tttRidersCount,
             is_ttt: true
-          }, {
-            onConflict: 'course_id,etape_numero',
-            ignoreDuplicates: false
           });
+        if (cscError) console.error('course_stage_config insert error:', cscError);
       }
 
       // If cancelled, delete all results AND points and return
