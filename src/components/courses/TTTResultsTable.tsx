@@ -3,8 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
-// Barème officiel TTT par position (1.1 category)
-const TTT_BAREME = [100, 80, 65, 50, 40, 30, 20, 15, 10, 5];
+// No more hardcoded barème - team points are computed from rider data
 
 interface TTTResultRow {
   race_result_id: string;
