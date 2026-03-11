@@ -48,10 +48,11 @@ export function MountainRoadStandings() {
       const courseIds = [...new Set(todayResults.map((r) => r.course_id))];
       const coureurIds = [...new Set(todayResults.map((r) => r.coureur_id))];
 
-      const { data: pointsData } = await (supabase
+      const pointsQuery = supabase
         .from("points_ledger")
         .select("coureur_id, points, phase_id")
-        .eq("league_id", leagueId) as any)
+        .eq("league_id", leagueId!);
+      const { data: pointsData } = await (pointsQuery as any)
         .in("course_id", courseIds)
         .in("coureur_id", coureurIds);
 
