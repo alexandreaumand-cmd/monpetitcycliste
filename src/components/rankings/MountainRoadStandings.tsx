@@ -51,6 +51,7 @@ export function MountainRoadStandings() {
       const { data: pointsData } = await supabase
         .from("points_ledger")
         .select("coureur_id, points, phase_id")
+        .eq("league_id", leagueId)
         .in("course_id", courseIds)
         .in("coureur_id", coureurIds);
 
