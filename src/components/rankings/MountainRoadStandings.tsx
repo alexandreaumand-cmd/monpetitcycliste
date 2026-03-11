@@ -36,29 +36,40 @@ export function MountainRoadStandings() {
       if (!leagueId) return {};
       const today = new Date().toISOString().split("T")[0];
 
-      // 1. Get today's race results (coureur_id + course_id combos)
+      // 1. Get phase_ids for this league to scope points_ledger (no league_id column)
+      const { data: leaguePhases } = await supabase
+        .from("rosters")
+        .select("phase_id")
+        .eq("league_id", leagueId);
+
+      if (!leaguePhases?.length) return {};
+      const leaguePhaseIds = [...new Set(leaguePhases.map((r) => r.phase_id))];
+
+      // 2. Get today's race results (coureur_id + course_id + etape_numero)
       const { data: todayResults } = await supabase
         .from("race_results")
-        .select("coureur_id, course_id, type_classement, etape_numero")
+        .select("coureur_id, course_id, etape_numero")
         .eq("date_classement", today);
 
       if (!todayResults?.length) return {};
 
-      // 2. Get points for those results
       const courseIds = [...new Set(todayResults.map((r) => r.course_id))];
       const coureurIds = [...new Set(todayResults.map((r) => r.coureur_id))];
+      const etapeNums = [...new Set(todayResults.map((r) => r.etape_numero).filter((e): e is number => e !== null))];
 
+      // 3. Get points matching today's stage results, scoped to league phases
       const { data: pointsData } = await (supabase as any)
         .from("points_ledger")
-        .select("coureur_id, points, phase_id")
-        .eq("league_id", leagueId)
+        .select("coureur_id, points, phase_id, etape_numero")
+        .in("phase_id", leaguePhaseIds)
         .in("course_id", courseIds)
-        .in("coureur_id", coureurIds);
+        .in("coureur_id", coureurIds)
+        .in("etape_numero", etapeNums);
 
       if (!pointsData?.length) return {};
 
-      // 3. Get rosters for this league to map coureur → manager
-      const phaseIds = [...new Set(pointsData.map((p) => p.phase_id).filter(Boolean))];
+      // 4. Get rosters for this league to map coureur → manager
+      const phaseIds = [...new Set(pointsData.map((p: any) => p.phase_id).filter(Boolean))];
       const { data: rosterData } = await supabase
         .from("rosters")
         .select("coureur_id, manager_id, phase_id")
