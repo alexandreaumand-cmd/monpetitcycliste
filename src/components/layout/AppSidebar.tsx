@@ -77,7 +77,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
               src={logoBordure} 
               alt="La Bordure Fantasy Cycling"
               loading="eager"
-              className="h-14 w-auto max-w-[220px] transition-all"
+              className="h-20 w-auto max-w-[220px] transition-all"
             />
           )}
         </div>
