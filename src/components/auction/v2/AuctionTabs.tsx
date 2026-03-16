@@ -123,8 +123,8 @@ export const AuctionTabs = ({
                 data-[state=inactive]:shadow-sm
                 hover:bg-accent
                 hover:border-bordure-gold
-                dark:data-[state=inactive]:bg-gray-800
-                dark:data-[state=inactive]:text-foreground
+                dark:data-[state=inactive]:bg-card
+                dark:data-[state=inactive]:text-muted-foreground
                 rounded-lg 
                 px-5 
                 py-2.5
