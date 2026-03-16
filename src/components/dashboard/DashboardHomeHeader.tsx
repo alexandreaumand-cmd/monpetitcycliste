@@ -37,9 +37,9 @@ export function DashboardHomeHeader({
             alt="Logo La Bordure"
             loading="eager"
             fetchPriority="high"
-            width={32}
-            height={32}
-            className="h-8 w-8"
+            width={48}
+            height={48}
+            className="h-12 w-12"
           />
 
           <div className="flex items-center gap-1">
