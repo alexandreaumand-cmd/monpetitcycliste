@@ -59,7 +59,7 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       points: course.points_gc || 0,
       icon: Trophy,
       color: "text-bordure-gold",
-      bgColor: "bg-yellow-100",
+      bgColor: "bg-bordure-gold/20",
       detail: null,
       typeClassement: "General"
     },
