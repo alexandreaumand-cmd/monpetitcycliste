@@ -60,8 +60,8 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
   }));
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b">
+    <Sidebar collapsible="icon" className="bg-secondary border-r-0">
+      <SidebarHeader className="bg-background">
         <div className="flex items-center justify-center px-2 py-4">
           {isCollapsed ? (
             <img 
@@ -83,10 +83,10 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="bg-secondary">
         {/* Navigation */}
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-white/60">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <TooltipProvider delayDuration={0}>
@@ -94,11 +94,11 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                   <SidebarMenuItem key={item.href}>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <SidebarMenuButton asChild>
+                        <SidebarMenuButton asChild className="text-white/80 hover:bg-white/10 hover:text-white">
                           <NavLink
                             to={buildNavUrl(item.href)}
                             className={({ isActive }) =>
-                              isActive ? "bg-accent text-accent-foreground" : ""
+                              isActive ? "bg-white/15 text-white" : ""
                             }
                           >
                             <item.icon className="h-4 w-4" />
@@ -120,11 +120,11 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                   <SidebarMenuItem>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <SidebarMenuButton asChild>
+                        <SidebarMenuButton asChild className="text-white/80 hover:bg-white/10 hover:text-white">
                           <NavLink
                             to={buildNavUrl("/dashboard/admin")}
                             className={({ isActive }) =>
-                              isActive ? "bg-accent text-accent-foreground" : ""
+                              isActive ? "bg-white/15 text-white" : ""
                             }
                           >
                             <Settings className="h-4 w-4" />
@@ -146,11 +146,11 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
                   <SidebarMenuItem>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <SidebarMenuButton asChild>
+                        <SidebarMenuButton asChild className="text-white/80 hover:bg-white/10 hover:text-white">
                           <NavLink
                             to={buildNavUrl("/dashboard/super-admin")}
                             className={({ isActive }) =>
-                              isActive ? "bg-accent text-accent-foreground" : ""
+                              isActive ? "bg-white/15 text-white" : ""
                             }
                           >
                             <Shield className="h-4 w-4" />
