@@ -364,7 +364,7 @@ export const LeagueRostersOverviewDialog = ({
         ) : (
           <div className="flex-1 overflow-auto max-h-[50vh] border rounded-md">
             {/* Table container for export */}
-            <div ref={tableRef} className="bg-white p-4 min-w-max">
+            <div ref={tableRef} className="bg-card p-4 min-w-max">
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr>
