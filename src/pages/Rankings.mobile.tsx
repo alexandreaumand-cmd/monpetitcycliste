@@ -267,7 +267,7 @@ export const RankingsMobile = () => {
   const RankBadge = ({ rank }: { rank: number }) => {
     if (rank === 1) {
       return (
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[hsl(var(--bordure-gold))] border-2 border-black">
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-bordure-gold border-2 border-black">
           <span className="text-sm font-bold text-black">1er</span>
         </div>
       );

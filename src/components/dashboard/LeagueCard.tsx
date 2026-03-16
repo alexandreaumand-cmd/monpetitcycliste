@@ -165,7 +165,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
             {isAdmin && (
               <Button 
                 onClick={() => setInvitesSheetOpen(true)}
-                className="w-full bg-[hsl(var(--bordure-gold))] text-black border-2 border-foreground font-montserrat font-semibold hover:bg-bordure-gold gap-2"
+                className="w-full bg-bordure-gold text-black border-2 border-foreground font-montserrat font-semibold hover:bg-bordure-gold gap-2"
               >
                 <UserPlus className="h-4 w-4" />
                 {t('leagueCard.invitePlayers')}
@@ -177,7 +177,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
         {/* PRÊT À LANCER */}
         {isReadyToLaunch && (
           <>
-            <div className="bg-[hsl(var(--bordure-gold))] border-2 border-black rounded-lg p-4 text-center shadow-md">
+            <div className="bg-bordure-gold border-2 border-black rounded-lg p-4 text-center shadow-md">
               <CheckCircle className="h-8 w-8 text-black mx-auto mb-2" />
               <p className="font-montserrat font-bold text-black">
                 {t('leagueCard.allPlayersHere')}

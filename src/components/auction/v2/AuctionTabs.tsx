@@ -110,7 +110,7 @@ export const AuctionTabs = ({
             <TabsTrigger 
               value="bid" 
               className="
-                data-[state=active]:bg-[hsl(var(--bordure-gold))] 
+                data-[state=active]:bg-bordure-gold 
                 data-[state=active]:text-black 
                 data-[state=active]:font-bold
                 data-[state=active]:shadow-md
@@ -177,7 +177,7 @@ export const AuctionTabs = ({
             <TabsTrigger 
               value="teams" 
               className="
-                data-[state=active]:bg-[hsl(var(--bordure-gold))] 
+                data-[state=active]:bg-bordure-gold 
                 data-[state=active]:text-black 
                 data-[state=active]:font-bold
                 data-[state=active]:shadow-md
