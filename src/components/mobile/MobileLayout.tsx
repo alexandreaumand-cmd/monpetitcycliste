@@ -55,12 +55,10 @@ export const MobileLayout = ({
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <Link to="/dashboard/home" className="shrink-0">
                 <img 
-                  src={faviconLogo} 
-                  alt="Logo La Bordure" 
+                  src={logoBordure} 
+                  alt="La Bordure" 
                   loading="eager"
-                  width={32}
-                  height={32}
-                  className="h-8 w-8"
+                  className="h-7 w-auto"
                 />
               </Link>
               
