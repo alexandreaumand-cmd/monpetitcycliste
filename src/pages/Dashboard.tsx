@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useCurrentManager } from "@/hooks/useCurrentManager";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { MobileLayout } from "@/components/mobile/MobileLayout";
 import { AppSidebar } from "@/components/layout/AppSidebar";
