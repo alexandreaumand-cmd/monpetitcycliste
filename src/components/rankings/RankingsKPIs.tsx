@@ -174,43 +174,31 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
         return (
           <Card 
             key={kpi.type}
-            className={cn(
-              "border-2 transition-all duration-300",
-              kpi.borderColor,
-              "hover:shadow-lg",
-              kpi.shadowColor
-            )}
+            className="border-l-4 border-bordure-gold bg-bordure-cream/50 dark:bg-secondary/30 transition-all duration-300 hover:shadow-md hover:border-bordure-gold"
           >
-            <CardContent className={cn(
-              "p-6 bg-gradient-to-br",
-              kpi.gradient
-            )}>
-              <div className="space-y-4">
-                {/* En-tête avec emoji géant */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="text-5xl">{kpi.emoji}</div>
-                    <h3 className="font-bold text-base">{kpi.label}</h3>
-                  </div>
+            <CardContent className="p-5">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-3xl">{kpi.emoji}</span>
+                  <h3 className="font-montserrat font-semibold uppercase tracking-wider text-sm text-foreground">{kpi.label}</h3>
                 </div>
                 
-                {/* Nom du manager */}
                 {isSuperAdmin ? (
                   <Popover>
                     <PopoverTrigger asChild>
-                      <div className="cursor-pointer hover:scale-105 transition-transform">
+                      <div className="cursor-pointer hover:scale-[1.02] transition-transform">
                         {award?.managerName ? (
-                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-bordure-gold shadow-md">
+                          <div className="bg-card dark:bg-card border border-bordure-gold/30 rounded-lg p-2.5">
                             <div className="flex items-center justify-center gap-2">
-                              <Avatar className="h-8 w-8">
+                              <Avatar className="h-7 w-7">
                                 <AvatarImage src={award.avatarUrl || undefined} alt={award.managerName} />
-                                <AvatarFallback className="text-xs">{award.managerName[0]}</AvatarFallback>
+                                <AvatarFallback className="text-xs bg-primary/10 text-primary">{award.managerName[0]}</AvatarFallback>
                               </Avatar>
-                              <p className="text-xl font-bold">{award.managerName}</p>
+                              <p className="text-lg font-bold text-foreground">{award.managerName}</p>
                             </div>
                           </div>
                         ) : (
-                          <div className="bg-white/50 dark:bg-white/5 rounded-lg p-3 border-2 border-dashed border-gray-300">
+                          <div className="bg-card/50 dark:bg-card/30 rounded-lg p-2.5 border border-dashed border-muted-foreground/30">
                             <p className="text-sm text-muted-foreground text-center italic">
                               {t('kpis.clickToAssign')}
                             </p>
@@ -222,20 +210,11 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                       <div className="space-y-2">
                         <h4 className="font-medium text-sm mb-2">{t('kpis.chooseManager')}</h4>
                         <div className="space-y-1 max-h-64 overflow-y-auto">
-                          <Button
-                            variant="ghost"
-                            className="w-full justify-start"
-                            onClick={() => updateAward.mutate({ awardType: kpi.type, managerId: null })}
-                          >
+                          <Button variant="ghost" className="w-full justify-start" onClick={() => updateAward.mutate({ awardType: kpi.type, managerId: null })}>
                             {t('kpis.none')}
                           </Button>
                           {managers?.map((m) => (
-                            <Button
-                              key={m.id}
-                              variant="ghost"
-                              className="w-full justify-start"
-                              onClick={() => updateAward.mutate({ awardType: kpi.type, managerId: m.id })}
-                            >
+                            <Button key={m.id} variant="ghost" className="w-full justify-start" onClick={() => updateAward.mutate({ awardType: kpi.type, managerId: m.id })}>
                               {m.nom}
                             </Button>
                           ))}
@@ -244,25 +223,23 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                     </PopoverContent>
                   </Popover>
                 ) : (
-                  <>
-                    {award?.managerName ? (
-                      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-bordure-gold shadow-md">
-                        <div className="flex items-center justify-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={award.avatarUrl || undefined} alt={award.managerName} />
-                            <AvatarFallback className="text-xs">{award.managerName[0]}</AvatarFallback>
-                          </Avatar>
-                          <p className="text-xl font-bold">{award.managerName}</p>
-                        </div>
+                  award?.managerName ? (
+                    <div className="bg-card dark:bg-card border border-bordure-gold/30 rounded-lg p-2.5">
+                      <div className="flex items-center justify-center gap-2">
+                        <Avatar className="h-7 w-7">
+                          <AvatarImage src={award.avatarUrl || undefined} alt={award.managerName} />
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary">{award.managerName[0]}</AvatarFallback>
+                        </Avatar>
+                        <p className="text-lg font-bold text-foreground">{award.managerName}</p>
                       </div>
-                    ) : (
-                      <div className="bg-white/50 dark:bg-white/5 rounded-lg p-3 border-2 border-dashed border-gray-300">
-                        <p className="text-sm text-muted-foreground text-center italic">
-                          {t('kpis.notAssigned')}
-                        </p>
-                      </div>
-                    )}
-                  </>
+                    </div>
+                  ) : (
+                    <div className="bg-card/50 dark:bg-card/30 rounded-lg p-2.5 border border-dashed border-muted-foreground/30">
+                      <p className="text-sm text-muted-foreground text-center italic">
+                        {t('kpis.notAssigned')}
+                      </p>
+                    </div>
+                  )
                 )}
               </div>
             </CardContent>
