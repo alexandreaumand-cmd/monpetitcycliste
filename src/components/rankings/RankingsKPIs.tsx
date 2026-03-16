@@ -221,7 +221,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                     <PopoverTrigger asChild>
                       <div className="cursor-pointer hover:scale-105 transition-transform">
                         {award?.managerName ? (
-                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-[#FFD500] shadow-md">
+                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-[hsl(var(--bordure-gold))] shadow-md">
                             <div className="flex items-center justify-center gap-2">
                               <Avatar className="h-8 w-8">
                                 <AvatarImage src={award.avatarUrl || undefined} alt={award.managerName} />
@@ -267,7 +267,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                 ) : (
                   <>
                     {award?.managerName ? (
-                      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-[#FFD500] shadow-md">
+                      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-[hsl(var(--bordure-gold))] shadow-md">
                         <div className="flex items-center justify-center gap-2">
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={award.avatarUrl || undefined} alt={award.managerName} />

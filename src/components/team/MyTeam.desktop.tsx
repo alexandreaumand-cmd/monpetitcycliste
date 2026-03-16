@@ -653,7 +653,7 @@ export const MyTeamDesktop = () => {
             <div className="grid grid-cols-5 gap-4">
               {/* Total Points */}
               <div className="text-center">
-                <Trophy className="h-5 w-5 mx-auto text-[#FFD500] mb-1" />
+                <Trophy className="h-5 w-5 mx-auto text-bordure-gold mb-1" />
                 <div className="text-2xl font-bold">{kpis.total_points}</div>
                 <div className="text-xs text-muted-foreground">{t('totalPts')}</div>
               </div>
@@ -778,7 +778,7 @@ export const MyTeamDesktop = () => {
                     <TableCell className="font-medium py-2">
                       <div className="flex items-center gap-2">
                         {bonusRiderSelection?.coureur_id === coureur.coureur_id && (
-                          <Star className="h-4 w-4 text-[#FFD500] fill-[#FFD500]" />
+                          <Star className="h-4 w-4 text-bordure-gold fill-[hsl(var(--bordure-gold))]" />
                         )}
                         {coureur.nom}
                         <RiderRaceIcons 

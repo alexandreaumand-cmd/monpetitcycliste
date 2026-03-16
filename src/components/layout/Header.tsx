@@ -199,7 +199,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                   className={cn(
                     "px-4 py-2 rounded-full font-poppins font-semibold transition-all flex items-center gap-2",
                     active 
-                      ? "bg-[#FFD500] text-black shadow-lg shadow-yellow-500/30" 
+                      ? "bg-[hsl(var(--bordure-gold))] text-black shadow-lg shadow-yellow-500/30" 
                       : "text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10"
                   )}
                 >
@@ -240,7 +240,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                     className={cn(
                       "px-4 py-3 rounded-xl font-poppins font-semibold transition-all flex items-center gap-3",
                       active 
-                        ? "bg-[#FFD500] text-black shadow-lg" 
+                        ? "bg-[hsl(var(--bordure-gold))] text-black shadow-lg" 
                         : "text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10"
                     )}
                   >

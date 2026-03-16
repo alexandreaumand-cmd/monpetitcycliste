@@ -181,7 +181,7 @@ export function LeagueBonusRidersDialog({
       <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5 text-[#FFD500] fill-[#FFD500]" />
+            <Star className="h-5 w-5 text-bordure-gold fill-[hsl(var(--bordure-gold))]" />
             {t("bonusRider.othersTitle")}
           </DialogTitle>
         </DialogHeader>
@@ -205,7 +205,7 @@ export function LeagueBonusRidersDialog({
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-sm truncate">{rider.manager_nom}</div>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <Star className="h-3 w-3 shrink-0 text-[#FFD500] fill-[#FFD500]" />
+                    <Star className="h-3 w-3 shrink-0 text-bordure-gold fill-[hsl(var(--bordure-gold))]" />
                     <span className="text-xs truncate" title={rider.coureur_nom}>{rider.coureur_nom}</span>
                   </div>
                   <div className="text-[11px] text-muted-foreground truncate" title={rider.equipe}>

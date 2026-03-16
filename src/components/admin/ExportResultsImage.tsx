@@ -493,7 +493,7 @@ export const ExportResultsImage = ({
           <div style={{ 
             textAlign: "center", 
             marginBottom: "40px",
-            borderBottom: "3px solid #FFD500",
+            borderBottom: "3px solid hsl(var(--bordure-gold))",
             paddingBottom: "25px"
           }}>
             <h1 style={{ fontSize: "56px", margin: "0 0 12px 0", fontWeight: "bold", color: "#1a1a1a" }}>
@@ -514,7 +514,7 @@ export const ExportResultsImage = ({
             <div style={{ marginBottom: "40px" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
-                  <tr style={{ borderBottom: "2px solid #FFD500", background: "#f9fafb" }}>
+                  <tr style={{ borderBottom: "2px solid hsl(var(--bordure-gold))", background: "#f9fafb" }}>
                     <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "24px", fontWeight: "600" }}>#</th>
                     <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "24px", fontWeight: "600" }}>Coureur</th>
                     <th style={{ textAlign: "left", padding: "16px 20px", fontSize: "24px", fontWeight: "600" }}>Manager</th>
@@ -583,7 +583,7 @@ export const ExportResultsImage = ({
           {managerRanking && managerRanking.length > 0 && (
             <div style={{
               marginTop: "30px",
-              borderTop: "2px solid #FFD500",
+              borderTop: "2px solid hsl(var(--bordure-gold))",
               paddingTop: "20px",
             }}>
               <p style={{ fontSize: "18px", fontWeight: "600", marginBottom: "10px", color: "#1a1a1a" }}>

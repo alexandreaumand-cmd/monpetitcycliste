@@ -75,7 +75,7 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
         {/* My Leagues Section */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-[#FFD500]" />
+            <Users className="h-5 w-5 text-bordure-gold" />
             <h2 className="text-2xl font-montserrat font-semibold">{t('myLeagues.title')}</h2>
           </div>
 
