@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import mpcLogo from "@/assets/mpc-logo.png";
+import mpcLogoHorizontal from "@/assets/mpc-logo-horizontal.png";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useUserLeagues } from "@/hooks/useUserLeagues";
 
@@ -61,17 +62,23 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b">
-        <div className="flex items-center gap-2 px-2 py-4">
-          <img 
-            src={mpcLogo} 
-            alt="Logo Mon Petit Cycliste"
-            loading="eager"
-            width={40}
-            height={40}
-            className={`transition-all ${isCollapsed ? 'h-8 w-8' : 'h-10 w-10'}`}
-          />
-          {!isCollapsed && (
-            <span className="font-bold text-lg">La Bordure</span>
+        <div className="flex items-center justify-center px-2 py-4">
+          {isCollapsed ? (
+            <img 
+              src={mpcLogo} 
+              alt="La Bordure"
+              loading="eager"
+              width={32}
+              height={32}
+              className="h-8 w-8 transition-all"
+            />
+          ) : (
+            <img 
+              src={mpcLogoHorizontal} 
+              alt="La Bordure Fantasy Cycling"
+              loading="eager"
+              className="h-10 w-auto max-w-[180px] transition-all"
+            />
           )}
         </div>
       </SidebarHeader>
