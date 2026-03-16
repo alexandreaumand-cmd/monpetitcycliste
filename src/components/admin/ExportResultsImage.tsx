@@ -620,7 +620,7 @@ export const ExportResultsImage = ({
             paddingTop: "25px"
           }}>
             <p style={{ fontSize: "28px", fontWeight: "600", color: "#1a1a1a", margin: 0 }}>
-              {leagueName || "Mon Petit Cycliste"}
+              {leagueName || "La Bordure"}
             </p>
           </div>
         </div>

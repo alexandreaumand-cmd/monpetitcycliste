@@ -120,8 +120,8 @@
     "inviteCopied": "Invitation copied!",
     "copyError": "Unable to copy",
     "createError": "Unable to create invitation",
-    "shareMessage": "🚴 Join my league \"{{leagueName}}\" on Mon Petit Cycliste!\n\n{{url}}\n\nUse this link to join us.",
-    "shareTitle": "Mon Petit Cycliste Invitation",
+    "shareMessage": "🚴 Join my league \"{{leagueName}}\" on La Bordure!\n\n{{url}}\n\nUse this link to join us.",
+    "shareTitle": "La Bordure Invitation",
     "shareText": "Join my league \"{{leagueName}}\"!"
   }
 }
