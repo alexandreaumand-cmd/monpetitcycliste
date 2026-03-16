@@ -6,7 +6,7 @@ import { MobileDrawer } from "./MobileDrawer";
 import { Button } from "@/components/ui/button";
 
 import { Menu } from "lucide-react";
-import mpcLogo from "@/assets/mpc-logo-horizontal.png";
+import faviconLogo from "@/assets/logo-carré-sans-marque.png";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { useLeague } from "@/contexts/LeagueContext";
