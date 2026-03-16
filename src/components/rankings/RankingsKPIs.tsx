@@ -8,7 +8,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useLeague } from "@/contexts/LeagueContext";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+
 import { useTranslation } from "react-i18next";
 
 type RankingsKPIsProps = {
