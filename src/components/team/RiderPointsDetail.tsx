@@ -214,7 +214,7 @@ export const RiderPointsDetail = ({
                                 {row.position && `Position ${row.position}`}
                               </p>
                               {row.commentaire && (
-                                <p className="text-xs text-blue-600 italic mt-1">
+                                <p className="text-xs text-primary italic mt-1">
                                   {row.commentaire}
                                 </p>
                               )}
