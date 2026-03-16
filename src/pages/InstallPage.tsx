@@ -5,6 +5,7 @@ import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, Zap, WifiOff, Maximize, Share, Plus, Check, MoreVertical, Download } from 'lucide-react';
+import appLogo from '@/assets/logo-carre-sans-marque.png';
 
 const InstallPage: React.FC = () => {
   const { t } = useTranslation('install');
