@@ -5,7 +5,7 @@ import mpcLogo from "@/assets/mpc-logo.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { UnifiedProfileDropdown } from "@/components/layout/UnifiedProfileDropdown";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
-import { ManagerDropdown } from "@/components/layout/ManagerDropdown";
+import BordureStripes from "@/components/landing/BordureStripes";
 
 interface DashboardHomeHeaderProps {
   manager: any;
@@ -28,19 +28,13 @@ export function DashboardHomeHeader({
   const [searchParams] = useSearchParams();
   const currentLeagueId = searchParams.get('leagueId');
 
-  const buildNavUrl = (path: string) => {
-    return currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
-  };
-
-  // Mobile: optimized compact layout
   if (isMobile) {
     return (
-      <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30 safe-top">
+      <header className="sticky top-0 z-50 bg-secondary/95 backdrop-blur-sm border-b border-bordure-gold/30 safe-top">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          {/* Logo only - no title on mobile */}
           <img
             src={mpcLogo}
-            alt="Logo Mon Petit Cycliste"
+            alt="Logo La Bordure"
             loading="eager"
             fetchPriority="high"
             width={32}
@@ -48,18 +42,17 @@ export function DashboardHomeHeader({
             className="h-8 w-8"
           />
 
-          {/* Mobile actions */}
           <div className="flex items-center gap-1">
             <button
               onClick={() => navigate('/dashboard/calendar')}
-              className="p-2 text-yellow-500 hover:bg-yellow-500/10 rounded-md"
+              className="p-2 text-bordure-gold hover:bg-bordure-gold/10 rounded-md"
               aria-label={t('header.calendar')}
             >
               <Calendar className="h-5 w-5" />
             </button>
             <button
               onClick={() => navigate('/dashboard/data')}
-              className="p-2 text-yellow-500 hover:bg-yellow-500/10 rounded-md"
+              className="p-2 text-bordure-gold hover:bg-bordure-gold/10 rounded-md"
               aria-label={t('header.data')}
             >
               <Bike className="h-5 w-5" />
@@ -81,15 +74,14 @@ export function DashboardHomeHeader({
     );
   }
 
-  // Desktop: new clean layout with 3 zones
   return (
-    <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30 safe-top">
+    <header className="sticky top-0 z-50 bg-secondary/95 backdrop-blur-sm border-b border-bordure-gold/30 safe-top">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        {/* Left: Logo + Title */}
         <div className="flex items-center gap-3">
+          <BordureStripes className="h-8" />
           <img
             src={mpcLogo}
-            alt="Logo Mon Petit Cycliste"
+            alt="Logo La Bordure"
             loading="eager"
             fetchPriority="high"
             width={40}
@@ -97,29 +89,27 @@ export function DashboardHomeHeader({
             className="h-10 w-10"
           />
           <h1 className="font-montserrat font-bold text-white text-lg">
-            Mon Petit Cycliste
+            La Bordure
           </h1>
         </div>
 
-        {/* Center: Navigation links */}
         <nav className="flex items-center gap-1 text-sm">
           <button
             onClick={() => navigate('/dashboard/calendar')}
-            className="px-3 py-1.5 text-yellow-500 hover:text-yellow-400 hover:underline underline-offset-4 transition-colors font-medium"
+            className="px-3 py-1.5 text-bordure-gold hover:text-white hover:underline underline-offset-4 transition-colors font-medium font-inter"
           >
             {t('header.calendar')}
           </button>
-          <span className="text-yellow-500/30">|</span>
+          <span className="text-bordure-gold/30">|</span>
           <button
             onClick={() => navigate('/dashboard/data')}
-            className="px-3 py-1.5 text-yellow-500 hover:text-yellow-400 hover:underline underline-offset-4 transition-colors font-medium flex items-center gap-1.5"
+            className="px-3 py-1.5 text-bordure-gold hover:text-white hover:underline underline-offset-4 transition-colors font-medium flex items-center gap-1.5 font-inter"
           >
             <Bike className="h-4 w-4" />
             {t('header.data')}
           </button>
         </nav>
 
-        {/* Right: Notifications + Profile Dropdown */}
         <div className="flex items-center gap-2">
           <NotificationCenter variant="dark" />
           {manager && (

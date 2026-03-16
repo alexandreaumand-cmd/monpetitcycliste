@@ -28,11 +28,11 @@ export const MobileHeader = ({ title, navItems }: MobileHeaderProps) => {
   const location = useLocation();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-yellow-500/30 bg-black/95 backdrop-blur safe-top">
+    <header className="sticky top-0 z-50 w-full border-b border-bordure-gold/30 bg-secondary/95 backdrop-blur safe-top">
       <div className="flex h-14 items-center justify-between px-4">
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-yellow-400 hover:text-yellow-500 touch-target">
+            <Button variant="ghost" size="icon" className="text-bordure-gold hover:text-white touch-target">
               <Menu className="h-6 w-6" />
               <span className="sr-only">{t('menu.openMenu')}</span>
             </Button>
@@ -51,13 +51,9 @@ export const MobileHeader = ({ title, navItems }: MobileHeaderProps) => {
                       "w-full justify-start touch-target",
                       isActive && "shadow-sm"
                     )}
-                    onClick={() => {
-                      navigate(item.path);
-                    }}
+                    onClick={() => navigate(item.path)}
                   >
-                    {item.icon && (
-                      <span className="mr-2">{item.icon}</span>
-                    )}
+                    {item.icon && <span className="mr-2">{item.icon}</span>}
                     {item.label}
                   </Button>
                 );
@@ -70,14 +66,14 @@ export const MobileHeader = ({ title, navItems }: MobileHeaderProps) => {
           <Link to="/dashboard/home" className="shrink-0">
             <img 
               src={mpcLogo} 
-              alt="Logo Mon Petit Cycliste" 
+              alt="Logo La Bordure" 
               className="h-8 w-auto"
             />
           </Link>
           <LeagueSwitcherHeaderMobile />
         </div>
 
-        <div className="w-10" /> {/* Spacer for alignment */}
+        <div className="w-10" />
       </div>
     </header>
   );

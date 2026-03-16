@@ -18,25 +18,14 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
   const queryClient = useQueryClient();
   const { selectedSeason } = useSeasonContext();
 
-  // Prefetch data for target page on touch start
   const prefetchPageData = (path: string) => {
     if (!currentLeagueId) return;
-    
     if (path.includes('classement')) {
-      queryClient.prefetchQuery({
-        queryKey: ["manager-standings-mobile", null, selectedSeason?.id, currentLeagueId],
-        staleTime: 30000,
-      });
+      queryClient.prefetchQuery({ queryKey: ["manager-standings-mobile", null, selectedSeason?.id, currentLeagueId], staleTime: 30000 });
     } else if (path.includes('resultats')) {
-      queryClient.prefetchQuery({
-        queryKey: ["mobile-races", currentLeagueId],
-        staleTime: 30000,
-      });
+      queryClient.prefetchQuery({ queryKey: ["mobile-races", currentLeagueId], staleTime: 30000 });
     } else if (path.includes('startlist')) {
-      queryClient.prefetchQuery({
-        queryKey: ["startlists-info"],
-        staleTime: 30000,
-      });
+      queryClient.prefetchQuery({ queryKey: ["startlists-info"], staleTime: 30000 });
     }
   };
 
@@ -48,17 +37,12 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
     { label: t('navigation.arena'), path: "/dashboard/arene", icon: Swords },
   ];
 
-  const buildNavUrl = (path: string) => {
-    return currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
-  };
-
-  const isActive = (path: string) => {
-    return location.pathname.startsWith(path);
-  };
+  const buildNavUrl = (path: string) => currentLeagueId ? `${path}?leagueId=${currentLeagueId}` : path;
+  const isActive = (path: string) => location.pathname.startsWith(path);
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-t border-yellow-500/30 safe-bottom"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-secondary/95 backdrop-blur-sm border-t border-bordure-gold/30 safe-bottom"
       role="navigation"
       aria-label={t('navigation.dashboard')}
     >
@@ -77,8 +61,8 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
                 "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl touch-target transition-all",
                 "active:scale-95",
                 active
-                  ? "bg-[#FFD500] text-black shadow-lg shadow-yellow-500/40"
-                  : "text-gray-400 hover:text-yellow-400"
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-bordure-gold/40"
+                  : "text-white/50 hover:text-bordure-gold"
               )}
               aria-current={active ? "page" : undefined}
             >
