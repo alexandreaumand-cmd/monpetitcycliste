@@ -13,7 +13,7 @@ export function QuickActions() {
 
   return (
     <>
-      <Card className="p-6 bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-500/20 dark:to-yellow-600/20 border border-border shadow-lg">
+      <Card className="p-6 bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-bordure-gold/20 dark:to-bordure-gold/20 border border-border shadow-lg">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-center">
           <div className="text-center md:text-left md:flex-1">
             <h2 className="text-xl font-montserrat font-semibold mb-1 text-foreground">{t('quickActions.title')}</h2>

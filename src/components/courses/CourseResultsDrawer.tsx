@@ -1089,7 +1089,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                   <TableCell className="font-bold">
                                     {entry.rank <= 3 && (
                                       <span className={`text-lg mr-1 ${
-                                        entry.rank === 1 ? "text-yellow-500" :
+                                        entry.rank === 1 ? "text-bordure-gold" :
                                         entry.rank === 2 ? "text-gray-400" :
                                         "text-amber-600"
                                       }`}>

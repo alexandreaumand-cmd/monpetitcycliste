@@ -16,7 +16,7 @@ interface PerformanceHeatmapProps {
 const getColorForPercentile = (percentile: number) => {
   if (percentile >= 90) return 'bg-green-600 text-white hover:bg-green-700';
   if (percentile >= 75) return 'bg-green-400 text-foreground hover:bg-green-500';
-  if (percentile >= 50) return 'bg-yellow-300 text-foreground hover:bg-yellow-400';
+  if (percentile >= 50) return 'bg-yellow-300 text-foreground hover:bg-bordure-gold';
   if (percentile >= 25) return 'bg-orange-400 text-foreground hover:bg-orange-500';
   return 'bg-red-500 text-white hover:bg-red-600';
 };
@@ -167,7 +167,7 @@ export const PerformanceHeatmap = ({ saisonId }: PerformanceHeatmapProps) => {
                   <tr key={manager.manager_id} className="border-b hover:bg-muted/50">
                     <td className="sticky left-0 bg-card p-2 font-medium">
                       {idx < 3 && sortBy === 'points' && (
-                        <Trophy className="inline-block h-4 w-4 mr-1 text-yellow-500" />
+                        <Trophy className="inline-block h-4 w-4 mr-1 text-bordure-gold" />
                       )}
                       {manager.manager_nom}
                     </td>

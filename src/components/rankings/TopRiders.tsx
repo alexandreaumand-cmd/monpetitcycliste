@@ -606,7 +606,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                     <div className="text-sm text-muted-foreground">{t('riderDetails.racesWithPoints')}</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-yellow-600">{riderStats.wins}</div>
+                    <div className="text-3xl font-bold text-bordure-gold">{riderStats.wins}</div>
                     <div className="text-sm text-muted-foreground">{t('riderDetails.victories')}</div>
                   </div>
                   <div className="text-center">
@@ -695,7 +695,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                                 <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-muted/50 rounded">
                                   <div className="flex items-center justify-between w-full pr-4">
                                     <div className="flex items-center gap-2">
-                                      {hasWin && <Trophy className="h-4 w-4 text-yellow-600" />}
+                                      {hasWin && <Trophy className="h-4 w-4 text-bordure-gold" />}
                                       <span className="font-medium">{courseName}</span>
                                     </div>
                                     <Badge variant="outline">{courseTotal} pts</Badge>

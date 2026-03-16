@@ -121,7 +121,7 @@ export function ManagerRatingModal({
             <Star
               className={`h-6 w-6 ${
                 star <= currentRating
-                  ? 'fill-yellow-400 text-yellow-400'
+                  ? 'fill-yellow-400 text-bordure-gold'
                   : 'text-muted-foreground/30'
               }`}
             />

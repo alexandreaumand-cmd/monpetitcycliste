@@ -90,10 +90,10 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30 safe-top">
+    <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-bordure-gold/30 safe-top">
       {/* Top Bar */}
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-12 border-b border-yellow-500/20">
+        <div className="flex items-center justify-between h-12 border-b border-bordure-gold/20">
           {/* Left: Logo + Manager Info */}
           <div className="flex items-center gap-3">
             <Link to="/dashboard" className="flex items-center gap-3">
@@ -199,8 +199,8 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                   className={cn(
                     "px-4 py-2 rounded-full font-poppins font-semibold transition-all flex items-center gap-2",
                     active 
-                      ? "bg-[hsl(var(--bordure-gold))] text-black shadow-lg shadow-yellow-500/30" 
-                      : "text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10"
+                      ? "bg-[hsl(var(--bordure-gold))] text-black shadow-lg shadow-bordure-gold/30" 
+                      : "text-gray-400 hover:text-bordure-gold hover:bg-bordure-gold/10"
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -226,7 +226,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <nav className="md:hidden py-4 border-t border-yellow-500/20 bg-black/95">
+          <nav className="md:hidden py-4 border-t border-bordure-gold/20 bg-black/95">
             <div className="flex flex-col gap-2">
               {allMobileLinks.map((link) => {
                 const Icon = link.icon;
@@ -241,7 +241,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                       "px-4 py-3 rounded-xl font-poppins font-semibold transition-all flex items-center gap-3",
                       active 
                         ? "bg-[hsl(var(--bordure-gold))] text-black shadow-lg" 
-                        : "text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10"
+                        : "text-gray-400 hover:text-bordure-gold hover:bg-bordure-gold/10"
                     )}
                   >
                     <Icon className="h-4 w-4" />

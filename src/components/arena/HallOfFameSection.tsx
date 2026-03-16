@@ -63,7 +63,7 @@ export const HallOfFameSection = ({ leagueId }: HallOfFameSectionProps) => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Crown className="h-5 w-5 text-yellow-500" />
+          <Crown className="h-5 w-5 text-bordure-gold" />
           {t("hallOfFame.title")}
         </CardTitle>
       </CardHeader>

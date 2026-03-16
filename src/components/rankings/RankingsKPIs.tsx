@@ -166,7 +166,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
       label: t('kpis.funniest'),
       emoji: "😂",
       gradient: "from-yellow-100 via-yellow-50 to-white dark:from-yellow-900/30 dark:via-yellow-800/20 dark:to-transparent",
-      borderColor: "border-yellow-400",
+      borderColor: "border-bordure-gold",
       shadowColor: "shadow-yellow-200 dark:shadow-yellow-900/50",
     },
     {

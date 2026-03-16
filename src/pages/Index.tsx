@@ -44,7 +44,7 @@ const Index = () => {
           alt="Mon Petit Cycliste" 
           className="h-24 w-24 mb-6 animate-pulse" 
         />
-        <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-bordure-gold border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }

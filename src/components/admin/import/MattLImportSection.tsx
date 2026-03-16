@@ -98,9 +98,9 @@ export const MattLImportSection = () => {
     <AccordionItem value="matt-l">
       <AccordionTrigger>
         <div className="flex items-center gap-2">
-          <Zap className="h-4 w-4 text-yellow-500" />
+          <Zap className="h-4 w-4 text-bordure-gold" />
           <span>Import Matt L</span>
-          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
+          <Badge variant="outline" className="bg-bordure-gold/10 text-bordure-gold border-bordure-gold/20">
             Format spécial
           </Badge>
         </div>
@@ -132,8 +132,8 @@ export const MattLImportSection = () => {
           </AlertDescription>
         </Alert>
 
-        <Alert variant="default" className="border-yellow-500/50 bg-yellow-500/5">
-          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+        <Alert variant="default" className="border-bordure-gold/50 bg-bordure-gold/5">
+          <AlertTriangle className="h-4 w-4 text-bordure-gold" />
           <AlertTitle>Transformations automatiques</AlertTitle>
           <AlertDescription className="text-xs space-y-1">
             <p>• Noms coureurs : normalisation + matching fuzzy (≥80% similarité)</p>
@@ -169,8 +169,8 @@ export const MattLImportSection = () => {
         {result && result.imported !== undefined && (
           <div className="space-y-3 pt-2">
             {/* Résumé global */}
-            <Alert className={result.imported > 0 ? "bg-green-500/10 border-green-500/20" : "bg-yellow-500/10 border-yellow-500/20"}>
-              <AlertTitle className={result.imported > 0 ? "text-green-600" : "text-yellow-600"}>
+            <Alert className={result.imported > 0 ? "bg-green-500/10 border-green-500/20" : "bg-bordure-gold/10 border-bordure-gold/20"}>
+              <AlertTitle className={result.imported > 0 ? "text-green-600" : "text-bordure-gold"}>
                 Résultat de l'import
               </AlertTitle>
               <AlertDescription className="text-xs space-y-1">
@@ -304,15 +304,15 @@ export const MattLImportSection = () => {
               <Collapsible>
                 <CollapsibleTrigger asChild>
                   <Button variant="outline" size="sm" className="w-full">
-                    <AlertTriangle className="h-4 w-4 mr-2 text-yellow-600" />
+                    <AlertTriangle className="h-4 w-4 mr-2 text-bordure-gold" />
                     Voir les {result.warnings.length} correspondances approximatives
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-2">
-                  <Alert className="border-yellow-500/50">
+                  <Alert className="border-bordure-gold/50">
                     <AlertDescription className="text-xs max-h-60 overflow-y-auto space-y-2">
                       {result.warnings.map((warn: any, idx: number) => (
-                        <div key={idx} className="border-l-2 border-yellow-500 pl-2">
+                        <div key={idx} className="border-l-2 border-bordure-gold pl-2">
                           <div className="font-semibold">Ligne {warn.line || 'N/A'}</div>
                           {warn.inputValue && warn.matchedValue && (
                             <div>"{warn.inputValue}" → "{warn.matchedValue}"</div>

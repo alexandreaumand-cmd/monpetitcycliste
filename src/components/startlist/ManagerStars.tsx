@@ -25,9 +25,9 @@ export function ManagerStars({ avgStars, votes = 0, showVotes = false }: Manager
   return (
     <div className="flex items-center gap-1" aria-label={`Note ${avgStars.toFixed(1)} sur 5`}>
       {Array.from({ length: full }).map((_, i) => (
-        <Star key={`full-${i}`} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+        <Star key={`full-${i}`} className="h-4 w-4 fill-yellow-400 text-bordure-gold" />
       ))}
-      {hasHalf && <StarHalf className="h-4 w-4 fill-yellow-400 text-yellow-400" />}
+      {hasHalf && <StarHalf className="h-4 w-4 fill-yellow-400 text-bordure-gold" />}
       {Array.from({ length: empty }).map((_, i) => (
         <Star key={`empty-${i}`} className="h-4 w-4 text-muted-foreground/30" />
       ))}

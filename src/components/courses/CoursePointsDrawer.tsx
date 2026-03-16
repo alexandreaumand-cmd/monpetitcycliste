@@ -58,7 +58,7 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       label: "Classement Général",
       points: course.points_gc || 0,
       icon: Trophy,
-      color: "text-yellow-600",
+      color: "text-bordure-gold",
       bgColor: "bg-yellow-100",
       detail: null,
       typeClassement: "General"

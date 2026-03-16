@@ -122,7 +122,7 @@ export const AuctionTabs = ({
                 data-[state=inactive]:border-gray-300
                 data-[state=inactive]:shadow-sm
                 hover:bg-yellow-100
-                hover:border-yellow-500
+                hover:border-bordure-gold
                 dark:data-[state=inactive]:bg-gray-800
                 dark:data-[state=inactive]:text-gray-300
                 rounded-lg 
@@ -189,7 +189,7 @@ export const AuctionTabs = ({
                 data-[state=inactive]:border-gray-300
                 data-[state=inactive]:shadow-sm
                 hover:bg-yellow-100
-                hover:border-yellow-500
+                hover:border-bordure-gold
                 dark:data-[state=inactive]:bg-gray-800
                 dark:data-[state=inactive]:text-gray-300
                 rounded-lg 

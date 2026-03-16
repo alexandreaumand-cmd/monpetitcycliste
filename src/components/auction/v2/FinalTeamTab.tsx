@@ -255,7 +255,7 @@ export function FinalTeamTab({
                       <Card
                         key={rider.coureur_id}
                         className={`transition-all hover:shadow-lg hover:scale-[1.02] ${
-                          podiumPosition === 1 ? 'border-yellow-500/50 bg-gradient-to-br from-yellow-500/10 to-background' :
+                          podiumPosition === 1 ? 'border-bordure-gold/50 bg-gradient-to-br from-bordure-gold/10 to-background' :
                           podiumPosition === 2 ? 'border-gray-400/50 bg-gradient-to-br from-gray-400/10 to-background' :
                           podiumPosition === 3 ? 'border-orange-600/50 bg-gradient-to-br from-orange-600/10 to-background' :
                           ''

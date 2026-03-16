@@ -182,7 +182,7 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                       {items.map((item) => (
                         <TableRow key={item.id} className={
                           currentManager && rosterMap?.get(item.coureur_id || "")?.managerId === currentManager.id
-                            ? "bg-yellow-500/15"
+                            ? "bg-bordure-gold/15"
                             : rosterMap?.get(item.coureur_id || "")
                               ? "bg-blue-500/8"
                               : ""
@@ -217,7 +217,7 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                   {items.map((item) => (
                     <div key={item.id} className={`flex items-start gap-3 p-2 rounded-lg border ${
                       currentManager && rosterMap?.get(item.coureur_id || "")?.managerId === currentManager.id
-                        ? "bg-yellow-500/15 border-yellow-500/30"
+                        ? "bg-bordure-gold/15 border-bordure-gold/30"
                         : rosterMap?.get(item.coureur_id || "")
                           ? "bg-blue-500/8 border-blue-500/20"
                           : "bg-card"

@@ -118,7 +118,7 @@ export const AuctionSidePanel = ({ phaseId, managerId, open, onOpenChange }: Auc
                   <div key={bid.bid_id} className="flex items-center gap-2 p-2 bg-muted/50 rounded text-xs">
                     {bid.outcome === 'won' && <Trophy className="h-3 w-3 text-green-600" />}
                     {bid.outcome === 'lost' && <XCircle className="h-3 w-3 text-red-600" />}
-                    {bid.outcome === 'carried_over' && <Clock className="h-3 w-3 text-yellow-600" />}
+                    {bid.outcome === 'carried_over' && <Clock className="h-3 w-3 text-bordure-gold" />}
                     <div className="flex-1 truncate">
                       <p className="font-medium">{bid.coureur_nom}</p>
                       <p className="text-muted-foreground">Round {bid.round_number}</p>

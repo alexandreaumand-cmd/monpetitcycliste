@@ -13,7 +13,7 @@ interface PronosticStandingsProps {
 const getRankStyle = (index: number) => {
   switch (index) {
     case 0:
-      return "text-yellow-600 font-bold";
+      return "text-bordure-gold font-bold";
     case 1:
       return "text-gray-500 font-semibold";
     case 2:

@@ -153,7 +153,7 @@ export const AnnouncementsLive = ({
                       <div key={`wrapper-${annonce.id}`}>
                         {/* Message Top 10 */}
                         {showTop10Before && (
-                          <div className="p-3 rounded bg-gradient-to-r from-yellow-500/30 to-orange-500/30 border border-yellow-500 text-center mb-2">
+                          <div className="p-3 rounded bg-gradient-to-r from-bordure-gold/30 to-orange-500/30 border border-bordure-gold text-center mb-2">
                             <p className="font-bold text-sm">🏆 {t('admin.top10')} 🏆</p>
                           </div>
                         )}

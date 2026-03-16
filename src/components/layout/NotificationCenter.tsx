@@ -119,11 +119,11 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
         <Button 
           variant="ghost" 
           size="icon" 
-          className={cn("relative", variant === 'dark' && "hover:bg-yellow-500/10")}
+          className={cn("relative", variant === 'dark' && "hover:bg-bordure-gold/10")}
         >
           <Bell className={cn(
             "h-5 w-5",
-            variant === 'dark' ? "text-yellow-500" : "text-primary"
+            variant === 'dark' ? "text-bordure-gold" : "text-primary"
           )} />
           {unreadCount > 0 && (
             <Badge 
@@ -184,7 +184,7 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
                         </p>
                       </div>
                       {!notif.is_read && (
-                        <span className="h-2 w-2 mt-2 rounded-full bg-yellow-500 flex-shrink-0" />
+                        <span className="h-2 w-2 mt-2 rounded-full bg-bordure-gold flex-shrink-0" />
                       )}
                     </div>
                   </button>

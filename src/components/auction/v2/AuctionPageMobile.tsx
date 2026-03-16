@@ -615,12 +615,12 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
               <button
                 onClick={handleImportFavorites}
                 disabled={importFavoritesMutation.isPending}
-                className="h-9 px-3 rounded-md border border-yellow-500 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-950 flex items-center gap-1 text-sm font-medium disabled:opacity-50"
+                className="h-9 px-3 rounded-md border border-bordure-gold text-yellow-700 hover:bg-yellow-50 dark:border-bordure-gold dark:text-bordure-gold dark:hover:bg-yellow-950 flex items-center gap-1 text-sm font-medium disabled:opacity-50"
               >
                 {importFavoritesMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <svg className="h-4 w-4 fill-yellow-400 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" /></svg>
+                  <svg className="h-4 w-4 fill-yellow-400 text-bordure-gold" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" /></svg>
                 )}
                 <span className="hidden sm:inline">Favoris</span>
               </button>

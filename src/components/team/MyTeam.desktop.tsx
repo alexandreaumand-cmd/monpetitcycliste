@@ -431,7 +431,7 @@ export const MyTeamDesktop = () => {
   const getRatioColor = (ratio: number) => {
     if (ratio > 10) return "text-green-800 dark:text-green-300";
     if (ratio >= 4 && ratio <= 10) return "text-green-600 dark:text-green-400";
-    if (ratio >= 2 && ratio < 4) return "text-yellow-600 dark:text-yellow-400";
+    if (ratio >= 2 && ratio < 4) return "text-bordure-gold dark:text-bordure-gold";
     if (ratio > 0 && ratio < 2) return "text-orange-600 dark:text-orange-400";
     if (ratio === 0) return "text-red-600 dark:text-red-400";
     return "text-muted-foreground";
@@ -453,7 +453,7 @@ export const MyTeamDesktop = () => {
     if (ratio >= 15) return "bg-green-600 text-white border-green-700 font-bold";
     if (ratio >= 10) return "bg-green-500 text-white border-green-600 font-semibold";
     if (ratio >= 7) return "bg-lime-500 text-white border-lime-600";
-    if (ratio >= 5) return "bg-yellow-400 text-gray-900 border-yellow-500";
+    if (ratio >= 5) return "bg-bordure-gold text-gray-900 border-bordure-gold";
     if (ratio >= 3) return "bg-orange-400 text-gray-900 border-orange-500";
     
     return "bg-red-500 text-white border-red-600";
@@ -807,7 +807,7 @@ export const MyTeamDesktop = () => {
                       <div className="flex items-center justify-end gap-2">
                         {/* Icône top 3 FIXE basée sur les points */}
                         {coureur.coureur_id === top3ByPoints.first && (
-                          <Trophy className="h-5 w-5 text-yellow-500" />
+                          <Trophy className="h-5 w-5 text-bordure-gold" />
                         )}
                         {coureur.coureur_id === top3ByPoints.second && (
                           <Award className="h-5 w-5 text-gray-400" />

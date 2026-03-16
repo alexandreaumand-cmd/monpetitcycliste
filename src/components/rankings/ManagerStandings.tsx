@@ -207,7 +207,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
                   key={standing.manager_id}
               className={cn(
                 "cursor-pointer transition-colors duration-200 h-12",
-                rank === 1 && "bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-950/30 border-l-4 border-yellow-500 font-bold",
+                rank === 1 && "bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-950/30 border-l-4 border-bordure-gold font-bold",
                 rank === 2 && "bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-900/30 border-l-4 border-gray-400 font-semibold",
                 rank === 3 && "bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-950/30 border-l-4 border-amber-600 font-semibold",
                 rank <= 3 && "shadow-sm",

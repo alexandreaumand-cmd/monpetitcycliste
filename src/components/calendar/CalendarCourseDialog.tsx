@@ -51,7 +51,7 @@ const RiderRow = ({ entry }: { entry: StartlistEntry }) => (
     {entry.coureur_id ? (
       <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
     ) : (
-      <AlertCircle className="h-3 w-3 text-yellow-500 flex-shrink-0" />
+      <AlertCircle className="h-3 w-3 text-bordure-gold flex-shrink-0" />
     )}
   </div>
 );
@@ -178,7 +178,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
       label: t('drawer.classifications.gc'),
       points: courseDetails.points_gc || 0,
       icon: Trophy,
-      color: "text-yellow-600",
+      color: "text-bordure-gold",
       bgColor: "bg-yellow-100",
       detail: null,
       typeClassement: "General"
@@ -357,7 +357,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
                       <span>{startlistData.stats.matched}</span>
                     </div>
                     {startlistData.stats.unmatched > 0 && (
-                      <div className="flex items-center gap-1 text-yellow-600">
+                      <div className="flex items-center gap-1 text-bordure-gold">
                         <AlertCircle className="h-3 w-3" />
                         <span>{startlistData.stats.unmatched}</span>
                       </div>
