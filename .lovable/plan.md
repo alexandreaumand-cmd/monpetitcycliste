@@ -1,38 +1,66 @@
 
 
-## Diagnostic
+## Plan : Alignement palette UI sur le mockup (UI only, aucun changement UX)
 
-L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
+### Constat
 
-## Cause racine
+Le mockup définit 6 couleurs précises. L'app actuelle en utilise des versions légèrement différentes, et surtout les **cards sont crème au lieu de blanches**.
 
-La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
+| Élément | Actuel | Mockup | Delta |
+|---|---|---|---|
+| Vert forêt (header/nav) | `#1E4D2B` (147 45% 21%) | `#1B5E3B` (150 55% 24%) | Plus vif, plus clair |
+| Or podium (CTA/accents) | `#C9922A` (38 66% 48%) | `#C8963A` (38 58% 50%) | Quasi identique, léger ajust |
+| Rose sprint | `#E8A0B0` (346 52% 77%) | `#E8A0B4` (343 52% 77%) | Micro-ajust |
+| Crème fond | `#F5F0E8` (38 38% 93%) | `#F6F3ED` (40 30% 95%) | Un poil plus clair/neutre |
+| **Cards** | **Crème** (= fond) | **Blanc #FFFFFF** | **Changement majeur** |
+| Foreground texte | `#1E4D2B` (vert foncé) | `#2D3D32` (vert texte) | Plus doux, moins saturé |
+| Texte secondaire | `147 20% 40%` | `#8A9188` (gris peloton) | Nouveau gris verdâtre |
+| Bordures | `147 20% 80%` | `#EAE6DE` (38 20% 89%) | Plus chaudes, plus fines |
 
-## Plan de correction
+### Changements
 
-### 1. Action immédiate — Nettoyer les doublons en production
-Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
-```sql
-DELETE FROM race_result_sets
-WHERE id NOT IN (
-  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
-    id
-  FROM race_result_sets
-  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
-);
+#### 1. `src/index.css` — Mettre à jour les CSS variables light mode
+
+```
+--background: 40 30% 95%;         /* Crème #F6F3ED */
+--foreground: 153 16% 21%;        /* Vert texte #2D3D32 */
+
+--bordure-green: 150 55% 24%;     /* #1B5E3B */
+--bordure-gold: 38 58% 50%;       /* #C8963A */
+--bordure-pink: 343 52% 77%;      /* #E8A0B4 */
+--bordure-cream: 40 30% 95%;      /* #F6F3ED */
+
+--card: 0 0% 100%;                /* Blanc pur #FFFFFF */
+--card-foreground: 153 16% 21%;   /* Vert texte */
+
+--primary: 38 58% 50%;            /* Or podium */
+--secondary: 150 55% 24%;         /* Vert forêt */
+
+--muted-foreground: 140 5% 55%;   /* Gris peloton #8A9188 */
+--border: 38 20% 89%;             /* #EAE6DE */
+--input: 38 20% 89%;
 ```
 
-### 2. Migration — Ajouter une contrainte d'unicité
-Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
+Ajuster aussi le dark mode en conséquence (vert forêt + gris peloton adaptés).
 
-### 3. Corriger `admin_compute_points_for_course`
-Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
+#### 2. `src/components/ui/card.tsx` — Bordure fine
 
-### 4. Corriger le flux de saisie des résultats
-Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
+Ajouter `border-[0.5px]` pour correspondre au style mockup (bordures très fines sur les cards blanches).
 
-### Fichiers impactés
-- Migration SQL (nettoyage + contrainte unique)
-- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
-- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
+#### 3. `tailwind.config.ts` — Aucun changement structurel
+
+Les custom colors (`bordure-green`, `bordure-gold`, etc.) pointent déjà sur les CSS variables. Ils suivront automatiquement.
+
+### Résultat
+
+- Cards blanches sur fond crème (contraste visuel net)
+- Couleurs légèrement recalibrées pour correspondre au mockup
+- Aucun changement de navigation, layout, composants, ou fonctionnalités
+
+### Fichiers modifiés
+
+| Fichier | Nature |
+|---|---|
+| `src/index.css` | CSS variables light + dark |
+| `src/components/ui/card.tsx` | Bordure 0.5px |
 
