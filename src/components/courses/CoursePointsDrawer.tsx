@@ -85,8 +85,8 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       label: "Jeune",
       points: course.points_jeune || 0,
       icon: Star,
-      color: "text-purple-600",
-      bgColor: "bg-purple-100",
+      color: "text-primary",
+      bgColor: "bg-primary/10",
       detail: null,
       typeClassement: "Jeune"
     }
