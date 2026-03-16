@@ -14,11 +14,11 @@ interface PerformanceHeatmapProps {
 }
 
 const getColorForPercentile = (percentile: number) => {
-  if (percentile >= 90) return 'bg-green-600 text-white hover:bg-green-700';
-  if (percentile >= 75) return 'bg-green-400 text-foreground hover:bg-green-500';
-  if (percentile >= 50) return 'bg-yellow-300 text-foreground hover:bg-bordure-gold';
-  if (percentile >= 25) return 'bg-orange-400 text-foreground hover:bg-orange-500';
-  return 'bg-red-500 text-white hover:bg-red-600';
+  if (percentile >= 90) return 'bg-secondary text-secondary-foreground hover:bg-secondary/90';
+  if (percentile >= 75) return 'bg-secondary/70 text-secondary-foreground hover:bg-secondary/80';
+  if (percentile >= 50) return 'bg-primary/30 text-foreground hover:bg-primary/40';
+  if (percentile >= 25) return 'bg-primary/60 text-primary-foreground hover:bg-primary/70';
+  return 'bg-bordure-gold text-primary-foreground hover:bg-primary';
 };
 
 const getInterpretationForPercentile = (percentile: number) => {
