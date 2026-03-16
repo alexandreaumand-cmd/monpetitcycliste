@@ -1,38 +1,32 @@
 
 
-## Diagnostic
+## Plan : Sidebar desktop verte avec coin logo crème
 
-L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
+### Concept
 
-## Cause racine
+La sidebar devient **fond vert forêt** (`bg-secondary`) avec texte/icônes blancs. Le **header** (coin haut gauche avec le logo) reste sur fond **crème** (`bg-background`) pour conserver la lisibilité du logo vert "La Bordure".
 
-La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
+### Changements dans `src/components/layout/AppSidebar.tsx`
 
-## Plan de correction
+1. **Header (logo)** : garder le fond crème actuel, supprimer `border-b`, ajouter une légère séparation via un filet or ou un simple espacement.
 
-### 1. Action immédiate — Nettoyer les doublons en production
-Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
-```sql
-DELETE FROM race_result_sets
-WHERE id NOT IN (
-  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
-    id
-  FROM race_result_sets
-  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
-);
-```
+2. **SidebarContent** : ajouter `className="bg-secondary"` pour le fond vert.
 
-### 2. Migration — Ajouter une contrainte d'unicité
-Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
+3. **Sidebar root** : passer `className="bg-secondary border-r-0"` sur `<Sidebar>` pour colorer toute la sidebar en vert (le header override avec crème).
 
-### 3. Corriger `admin_compute_points_for_course`
-Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
+4. **Texte & icônes** : passer en blanc (`text-white`) pour les labels de navigation et les icônes. Le `SidebarGroupLabel` "Navigation" aussi en `text-white/60`.
 
-### 4. Corriger le flux de saisie des résultats
-Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
+5. **État actif** : remplacer `bg-accent text-accent-foreground` par `bg-white/15 text-white` pour un effet de surbrillance subtil sur fond vert.
 
-### Fichiers impactés
-- Migration SQL (nettoyage + contrainte unique)
-- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
-- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
+6. **État hover** : `hover:bg-white/10 hover:text-white` via les classes du `SidebarMenuButton`.
+
+7. **Logo header** : utiliser `logo-bordure.png` (vert sur crème) quand expanded, `logo-carre-sans-marque.png` quand collapsed — déjà en place.
+
+### Fichier modifié
+
+| Fichier | Changement |
+|---|---|
+| `src/components/layout/AppSidebar.tsx` | Classes CSS : fond vert, texte blanc, états actif/hover adaptés |
+
+Aucune modification du composant `sidebar.tsx` ni d'autre fichier nécessaire — tout se fait via les classes Tailwind dans `AppSidebar`.
 
