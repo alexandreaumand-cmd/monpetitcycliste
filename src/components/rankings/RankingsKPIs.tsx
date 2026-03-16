@@ -161,30 +161,9 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
   }
 
   const kpis = [
-    {
-      type: 'funniest' as AwardType,
-      label: t('kpis.funniest'),
-      emoji: "😂",
-      gradient: "from-yellow-100 via-yellow-50 to-white dark:from-yellow-900/30 dark:via-yellow-800/20 dark:to-transparent",
-      borderColor: "border-bordure-gold",
-      shadowColor: "shadow-yellow-200 dark:shadow-yellow-900/50",
-    },
-    {
-      type: 'grumpiest' as AwardType,
-      label: t('kpis.grumpiest'),
-      emoji: "😤",
-      gradient: "from-blue-100 via-blue-50 to-white dark:from-blue-900/30 dark:via-blue-800/20 dark:to-transparent",
-      borderColor: "border-blue-400",
-      shadowColor: "shadow-blue-200 dark:shadow-blue-900/50",
-    },
-    {
-      type: 'luckiest' as AwardType,
-      label: t('kpis.luckiest'),
-      emoji: "🍀",
-      gradient: "from-green-100 via-green-50 to-white dark:from-green-900/30 dark:via-green-800/20 dark:to-transparent",
-      borderColor: "border-green-400",
-      shadowColor: "shadow-green-200 dark:shadow-green-900/50",
-    },
+    { type: 'funniest' as AwardType, label: t('kpis.funniest'), emoji: "😂" },
+    { type: 'grumpiest' as AwardType, label: t('kpis.grumpiest'), emoji: "😤" },
+    { type: 'luckiest' as AwardType, label: t('kpis.luckiest'), emoji: "🍀" },
   ];
 
   return (
