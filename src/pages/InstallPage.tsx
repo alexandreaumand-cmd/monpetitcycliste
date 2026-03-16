@@ -5,6 +5,7 @@ import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, Zap, WifiOff, Maximize, Share, Plus, Check, MoreVertical, Download } from 'lucide-react';
+import appLogo from '@/assets/logo-carre-sans-marque.png';
 
 const InstallPage: React.FC = () => {
   const { t } = useTranslation('install');
@@ -20,7 +21,7 @@ const InstallPage: React.FC = () => {
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
         <div className="text-center mb-8">
           <img 
-            src="/favicon.png" 
+            src={appLogo} 
             alt="La Bordure" 
             className="w-24 h-24 mx-auto mb-4 rounded-2xl shadow-lg"
           />
