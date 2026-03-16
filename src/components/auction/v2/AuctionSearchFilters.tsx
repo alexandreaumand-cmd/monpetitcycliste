@@ -175,7 +175,7 @@ export function AuctionSearchFilters({
               <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 p-0 bg-white dark:bg-gray-800 z-50" align="start">
+          <PopoverContent className="w-80 p-0 bg-popover z-50" align="start">
             {/* Header with search and actions */}
             <div className="p-3 border-b">
               <div className="flex items-center justify-between mb-2">
