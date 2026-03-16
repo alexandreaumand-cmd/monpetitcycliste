@@ -186,11 +186,11 @@ export const BidHistory = ({ managerId, phaseId }: BidHistoryProps) => {
                       <div>
                         <p className="font-medium">{bid.coureur_nom}</p>
                         <p className="text-sm text-muted-foreground">{bid.coureur_equipe}</p>
-                        <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
+                        <p className="text-sm text-yellow-700 dark:text-bordure-gold mt-1">
                           Ex æquo — repart au prochain round
                         </p>
                       </div>
-                      <Badge variant="outline" className="text-yellow-700 dark:text-yellow-400">
+                      <Badge variant="outline" className="text-yellow-700 dark:text-bordure-gold">
                         {formatAmount(bid.my_bid)}
                       </Badge>
                     </div>

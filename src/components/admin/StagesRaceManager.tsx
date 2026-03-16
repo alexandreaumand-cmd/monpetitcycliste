@@ -495,7 +495,7 @@ function StageEditor({
         <div>
           <h3 className="text-sm font-semibold mb-3">Porteurs de maillots (optionnel)</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div className={`space-y-2 p-3 rounded border ${generalHolderEdit !== (jerseyHoldersBase.general_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-400' : 'border-border'}`}>
+            <div className={`space-y-2 p-3 rounded border ${generalHolderEdit !== (jerseyHoldersBase.general_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-bordure-gold' : 'border-border'}`}>
               <label className="text-sm font-medium flex items-center gap-2">
                 <span className="text-lg">🟡</span>
                 Maillot Jaune
@@ -508,7 +508,7 @@ function StageEditor({
                 showTakenRiders={true}
               />
             </div>
-            <div className={`space-y-2 p-3 rounded border ${vertHolderEdit !== (jerseyHoldersBase.vert_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-400' : 'border-border'}`}>
+            <div className={`space-y-2 p-3 rounded border ${vertHolderEdit !== (jerseyHoldersBase.vert_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-bordure-gold' : 'border-border'}`}>
               <label className="text-sm font-medium flex items-center gap-2">
                 <span className="text-lg">🟢</span>
                 Maillot Vert
@@ -521,7 +521,7 @@ function StageEditor({
                 showTakenRiders={true}
               />
             </div>
-            <div className={`space-y-2 p-3 rounded border ${montagneHolderEdit !== (jerseyHoldersBase.montagne_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-400' : 'border-border'}`}>
+            <div className={`space-y-2 p-3 rounded border ${montagneHolderEdit !== (jerseyHoldersBase.montagne_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-bordure-gold' : 'border-border'}`}>
               <label className="text-sm font-medium flex items-center gap-2">
                 <span className="text-lg">🔴</span>
                 Maillot à Pois
@@ -534,7 +534,7 @@ function StageEditor({
                 showTakenRiders={true}
               />
             </div>
-            <div className={`space-y-2 p-3 rounded border ${jeuneHolderEdit !== (jerseyHoldersBase.jeune_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-400' : 'border-border'}`}>
+            <div className={`space-y-2 p-3 rounded border ${jeuneHolderEdit !== (jerseyHoldersBase.jeune_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-bordure-gold' : 'border-border'}`}>
               <label className="text-sm font-medium flex items-center gap-2">
                 <span className="text-lg">⚪</span>
                 Maillot Blanc
@@ -547,7 +547,7 @@ function StageEditor({
                 showTakenRiders={true}
               />
             </div>
-            <div className={`space-y-2 p-3 rounded border ${combattifHolderEdit !== (jerseyHoldersBase.combattif_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-400' : 'border-border'}`}>
+            <div className={`space-y-2 p-3 rounded border ${combattifHolderEdit !== (jerseyHoldersBase.combattif_holder_id || "") ? 'bg-yellow-100 dark:bg-yellow-900/20 border-bordure-gold' : 'border-border'}`}>
               <label className="text-sm font-medium flex items-center gap-2">
                 <span className="text-lg">🔵</span>
                 Maillot Combattif

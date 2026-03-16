@@ -204,7 +204,7 @@ export function AuctionLiveAnnouncements({
                           <div key={`wrapper-${annonce.id}`}>
                             {/* Message Top 10 */}
                             {showTop10Before && (
-                              <div className="p-3 sm:p-6 rounded-lg bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500 text-center animate-fade-in mb-3 sm:mb-4">
+                              <div className="p-3 sm:p-6 rounded-lg bg-gradient-to-r from-bordure-gold/20 to-orange-500/20 border-2 border-bordure-gold text-center animate-fade-in mb-3 sm:mb-4">
                                 <p className="font-bold text-base sm:text-xl">🏆 {t('live.top10Message')} 🏆</p>
                               </div>
                             )}
@@ -223,7 +223,7 @@ export function AuctionLiveAnnouncements({
                                     {annonce.type === 'gain' ? (
                                       <Trophy className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
                                     ) : (
-                                      <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-500 shrink-0" />
+                                      <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-bordure-gold shrink-0" />
                                     )}
                                     <span className="font-semibold text-sm sm:text-base truncate">
                                       {annonce.coureur?.nom}
@@ -389,7 +389,7 @@ export function AuctionLiveAnnouncements({
                           <div 
                             className={`rounded-lg border transition-all duration-500 ${
                               isRecentlyAnnounced 
-                                ? 'border-yellow-500 bg-yellow-500/10 ring-2 ring-yellow-500/50 animate-pulse' 
+                                ? 'border-bordure-gold bg-bordure-gold/10 ring-2 ring-bordure-gold/50 animate-pulse' 
                                 : 'bg-card'
                             }`}
                           >
@@ -397,9 +397,9 @@ export function AuctionLiveAnnouncements({
                               <div className="flex items-center justify-between p-2 sm:p-3 cursor-pointer hover:bg-muted/50 transition-colors rounded-lg">
                                 <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
                                   {isRecentlyAnnounced && (
-                                    <span className="text-yellow-500 animate-bounce shrink-0">🎯</span>
+                                    <span className="text-bordure-gold animate-bounce shrink-0">🎯</span>
                                   )}
-                                  <span className={`font-medium text-sm sm:text-base truncate ${isRecentlyAnnounced ? 'text-yellow-600 dark:text-yellow-400' : ''}`}>
+                                  <span className={`font-medium text-sm sm:text-base truncate ${isRecentlyAnnounced ? 'text-bordure-gold dark:text-bordure-gold' : ''}`}>
                                     {mgrData.manager_nom}
                                   </span>
                                 </div>
@@ -407,7 +407,7 @@ export function AuctionLiveAnnouncements({
                                   <Badge 
                                     variant={mgrData.recruits.length > 0 ? "default" : "outline"}
                                     className={`min-w-[2rem] sm:min-w-[2.5rem] justify-center text-xs sm:text-sm ${
-                                      isRecentlyAnnounced ? 'bg-yellow-500 text-yellow-950' : ''
+                                      isRecentlyAnnounced ? 'bg-bordure-gold text-yellow-950' : ''
                                     }`}
                                   >
                                     {mgrData.recruits.length}

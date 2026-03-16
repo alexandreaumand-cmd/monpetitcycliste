@@ -155,7 +155,7 @@ export const RiderPointsDetail = ({
             
             {/* Ligne 2: Victoires | Cote | Ratio */}
             <div className="text-center p-2 rounded-lg border bg-card">
-              <div className="text-xl font-bold text-yellow-600">{riderStats.wins}</div>
+              <div className="text-xl font-bold text-bordure-gold">{riderStats.wins}</div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Victoires</div>
             </div>
             <div className="text-center p-2 rounded-lg border bg-card">

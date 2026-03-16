@@ -166,7 +166,7 @@ export const WeeklyHeatmap = ({ saisonId }: WeeklyHeatmapProps) => {
                       key={w}
                       className={`border-b px-1 sm:px-2 py-1.5 sm:py-2 text-center font-medium min-w-[40px] sm:min-w-[56px] ${
                         w === currentWeek
-                          ? "bg-yellow-500/20 text-yellow-300 border-x border-yellow-500/30"
+                          ? "bg-bordure-gold/20 text-yellow-300 border-x border-bordure-gold/30"
                           : "text-muted-foreground"
                       }`}
                     >
@@ -191,7 +191,7 @@ export const WeeklyHeatmap = ({ saisonId }: WeeklyHeatmapProps) => {
                         <td
                           key={w}
                           className={`px-1 sm:px-2 py-1.5 sm:py-2 text-center tabular-nums ${color} ${
-                            w === currentWeek ? "border-x border-yellow-500/30" : ""
+                            w === currentWeek ? "border-x border-bordure-gold/30" : ""
                           }`}
                         >
                           {pts > 0 ? Math.round(pts) : ""}
@@ -213,7 +213,7 @@ export const WeeklyHeatmap = ({ saisonId }: WeeklyHeatmapProps) => {
                       <td
                         key={w}
                         className={`px-1 sm:px-2 py-1.5 sm:py-2 text-center tabular-nums text-muted-foreground ${
-                          w === currentWeek ? "border-x border-yellow-500/30" : ""
+                          w === currentWeek ? "border-x border-bordure-gold/30" : ""
                         }`}
                       >
                         {total > 0 ? Math.round(total) : ""}

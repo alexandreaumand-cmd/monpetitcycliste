@@ -83,7 +83,7 @@ export function LeagueSwitcher() {
                 <div className="flex flex-col gap-1">
                   <span className="font-medium">{league.name}</span>
                   {league.id === leagueId && (
-                    <Badge className="w-fit text-xs bg-[#FFF4CC] text-black border border-[#FFD500] font-semibold">{t('switcher.current')}</Badge>
+                    <Badge className="w-fit text-xs bg-[#FFF4CC] text-foreground border border-bordure-gold font-semibold">{t('switcher.current')}</Badge>
                   )}
                 </div>
                 <Badge variant="outline" className="ml-2">

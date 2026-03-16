@@ -198,7 +198,7 @@ export const LastRoundResults = ({ phaseId, managerId }: LastRoundResultsProps) 
                   {winners.map((winner, idx) => (
                     <div key={idx} className="p-2 bg-muted/50 rounded text-sm flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Trophy className="h-3 w-3 text-yellow-600" />
+                        <Trophy className="h-3 w-3 text-bordure-gold" />
                         <div>
                           <p className="font-medium">{winner.coureur_nom}</p>
                           <p className="text-xs text-muted-foreground">{winner.coureur_equipe}</p>

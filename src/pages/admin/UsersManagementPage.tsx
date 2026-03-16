@@ -489,7 +489,7 @@ export default function UsersManagementPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Non confirmés</CardTitle>
-            <Mail className="h-4 w-4 text-yellow-600" />
+            <Mail className="h-4 w-4 text-bordure-gold" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{isError ? '—' : stats.unconfirmed}</div>

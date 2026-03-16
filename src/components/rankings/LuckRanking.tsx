@@ -87,7 +87,7 @@ export const LuckRanking = ({ saisonId }: LuckRankingProps) => {
               </div>
               <div className="bg-muted rounded-full h-3 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-green-500 to-yellow-500 transition-all duration-500"
+                  className="h-full bg-gradient-to-r from-green-500 to-bordure-gold transition-all duration-500"
                   style={{ width: `${manager.luck_score}%` }}
                 />
               </div>

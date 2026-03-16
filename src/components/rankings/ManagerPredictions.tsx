@@ -99,18 +99,18 @@ export function ManagerPredictions({ saisonId }: ManagerPredictionsProps) {
   const getTrendIcon = (icon: string) => {
     if (icon === "📈") return <TrendingUp className="h-4 w-4 text-green-500" />;
     if (icon === "📉") return <TrendingDown className="h-4 w-4 text-red-500" />;
-    return <Minus className="h-4 w-4 text-yellow-500" />;
+    return <Minus className="h-4 w-4 text-bordure-gold" />;
   };
 
   const getTrendColor = (color: string) => {
     if (color === "green") return "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20";
     if (color === "red") return "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20";
-    return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20";
+    return "bg-bordure-gold/10 text-yellow-700 dark:text-bordure-gold border-bordure-gold/20";
   };
 
   const getConfidenceColor = (confidence: string) => {
     if (confidence === "Haute") return "bg-green-500/10 text-green-700 dark:text-green-400";
-    if (confidence === "Moyenne") return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400";
+    if (confidence === "Moyenne") return "bg-bordure-gold/10 text-yellow-700 dark:text-bordure-gold";
     return "bg-red-500/10 text-red-700 dark:text-red-400";
   };
 

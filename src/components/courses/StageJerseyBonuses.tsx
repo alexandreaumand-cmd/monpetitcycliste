@@ -69,7 +69,7 @@ export const StageJerseyBonuses = ({ courseId, etapeNumero }: StageJerseyBonuses
             className={`
               rounded-lg border p-4 space-y-2 transition-all
               ${bonus.is_my_rider 
-                ? 'bg-yellow-100/60 dark:bg-yellow-900/20 border-yellow-400 border-2' 
+                ? 'bg-yellow-100/60 dark:bg-yellow-900/20 border-bordure-gold border-2' 
                 : 'bg-card hover:bg-muted/50'}
             `}
           >

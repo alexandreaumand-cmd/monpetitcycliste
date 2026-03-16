@@ -110,8 +110,8 @@ export const AuctionTabs = ({
             <TabsTrigger 
               value="bid" 
               className="
-                data-[state=active]:bg-[#FFD500] 
-                data-[state=active]:text-black 
+                data-[state=active]:bg-bordure-gold 
+                data-[state=active]:text-foreground 
                 data-[state=active]:font-bold
                 data-[state=active]:shadow-md
                 data-[state=active]:border-2
@@ -122,9 +122,9 @@ export const AuctionTabs = ({
                 data-[state=inactive]:border-gray-300
                 data-[state=inactive]:shadow-sm
                 hover:bg-yellow-100
-                hover:border-yellow-500
+                hover:border-bordure-gold
                 dark:data-[state=inactive]:bg-gray-800
-                dark:data-[state=inactive]:text-gray-300
+                dark:data-[state=inactive]:text-foreground
                 rounded-lg 
                 px-5 
                 py-2.5
@@ -145,12 +145,12 @@ export const AuctionTabs = ({
                 key={round.round_number}
                 value={`round-${round.round_number}`}
                 className="
-                  data-[state=active]:bg-black 
-                  data-[state=active]:text-[#FFD500] 
+                  data-[state=active]:bg-secondary 
+                  data-[state=active]:text-bordure-gold 
                   data-[state=active]:font-bold
                   data-[state=active]:shadow-md
                   data-[state=active]:border-2
-                  data-[state=active]:border-[#FFD500]
+                  data-[state=active]:border-bordure-gold
                   data-[state=inactive]:bg-white 
                   data-[state=inactive]:text-gray-700
                   data-[state=inactive]:border-2
@@ -159,7 +159,7 @@ export const AuctionTabs = ({
                   hover:bg-gray-100
                   hover:border-gray-600
                   dark:data-[state=inactive]:bg-gray-800
-                  dark:data-[state=inactive]:text-gray-300
+                  dark:data-[state=inactive]:text-foreground
                   rounded-lg 
                   px-5 
                   py-2.5
@@ -177,8 +177,8 @@ export const AuctionTabs = ({
             <TabsTrigger 
               value="teams" 
               className="
-                data-[state=active]:bg-[#FFD500] 
-                data-[state=active]:text-black 
+                data-[state=active]:bg-bordure-gold 
+                data-[state=active]:text-foreground 
                 data-[state=active]:font-bold
                 data-[state=active]:shadow-md
                 data-[state=active]:border-2
@@ -189,9 +189,9 @@ export const AuctionTabs = ({
                 data-[state=inactive]:border-gray-300
                 data-[state=inactive]:shadow-sm
                 hover:bg-yellow-100
-                hover:border-yellow-500
+                hover:border-bordure-gold
                 dark:data-[state=inactive]:bg-gray-800
-                dark:data-[state=inactive]:text-gray-300
+                dark:data-[state=inactive]:text-foreground
                 rounded-lg 
                 px-5 
                 py-2.5

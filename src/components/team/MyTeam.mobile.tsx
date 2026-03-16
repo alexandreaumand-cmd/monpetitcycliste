@@ -224,7 +224,7 @@ export const MyTeamMobile = () => {
   const getRatioColor = (ratio: number) => {
     if (ratio > 10) return "text-green-600";
     if (ratio >= 4) return "text-green-500";
-    if (ratio >= 2) return "text-yellow-500";
+    if (ratio >= 2) return "text-bordure-gold";
     if (ratio > 0) return "text-orange-500";
     return "text-red-500";
   };
@@ -232,7 +232,7 @@ export const MyTeamMobile = () => {
   const getRatioBgColor = (ratio: number) => {
     if (ratio > 10) return "bg-green-500/10 border-green-500/20";
     if (ratio >= 4) return "bg-green-500/5 border-green-500/10";
-    if (ratio >= 2) return "bg-yellow-500/5 border-yellow-500/10";
+    if (ratio >= 2) return "bg-bordure-gold/5 border-bordure-gold/10";
     if (ratio > 0) return "bg-orange-500/5 border-orange-500/10";
     return "bg-red-500/5 border-red-500/10";
   };

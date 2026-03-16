@@ -166,7 +166,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
       label: t('kpis.funniest'),
       emoji: "😂",
       gradient: "from-yellow-100 via-yellow-50 to-white dark:from-yellow-900/30 dark:via-yellow-800/20 dark:to-transparent",
-      borderColor: "border-yellow-400",
+      borderColor: "border-bordure-gold",
       shadowColor: "shadow-yellow-200 dark:shadow-yellow-900/50",
     },
     {
@@ -221,7 +221,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                     <PopoverTrigger asChild>
                       <div className="cursor-pointer hover:scale-105 transition-transform">
                         {award?.managerName ? (
-                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-[#FFD500] shadow-md">
+                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-bordure-gold shadow-md">
                             <div className="flex items-center justify-center gap-2">
                               <Avatar className="h-8 w-8">
                                 <AvatarImage src={award.avatarUrl || undefined} alt={award.managerName} />
@@ -231,7 +231,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                             </div>
                           </div>
                         ) : (
-                          <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3 border-2 border-dashed border-gray-300">
+                          <div className="bg-white/50 dark:bg-white/5 rounded-lg p-3 border-2 border-dashed border-gray-300">
                             <p className="text-sm text-muted-foreground text-center italic">
                               {t('kpis.clickToAssign')}
                             </p>
@@ -267,7 +267,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                 ) : (
                   <>
                     {award?.managerName ? (
-                      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-[#FFD500] shadow-md">
+                      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-2 border-bordure-gold shadow-md">
                         <div className="flex items-center justify-center gap-2">
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={award.avatarUrl || undefined} alt={award.managerName} />
@@ -277,7 +277,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3 border-2 border-dashed border-gray-300">
+                      <div className="bg-white/50 dark:bg-white/5 rounded-lg p-3 border-2 border-dashed border-gray-300">
                         <p className="text-sm text-muted-foreground text-center italic">
                           {t('kpis.notAssigned')}
                         </p>

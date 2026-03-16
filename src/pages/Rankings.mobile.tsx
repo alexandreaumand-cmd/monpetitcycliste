@@ -267,24 +267,24 @@ export const RankingsMobile = () => {
   const RankBadge = ({ rank }: { rank: number }) => {
     if (rank === 1) {
       return (
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#FFD500] border-2 border-black">
-          <span className="text-sm font-bold text-black">1er</span>
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-bordure-gold border-2 border-black">
+          <span className="text-sm font-bold text-foreground">1er</span>
         </div>
       );
     }
     
     if (rank === 2) {
       return (
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-black border-2 border-[#FFD500]">
-          <span className="text-sm font-bold text-[#FFD500]">2e</span>
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-secondary border-2 border-bordure-gold">
+          <span className="text-sm font-bold text-bordure-gold">2e</span>
         </div>
       );
     }
     
     if (rank === 3) {
       return (
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white border-2 border-[#FFD500]">
-          <span className="text-sm font-bold text-black">3e</span>
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white border-2 border-bordure-gold">
+          <span className="text-sm font-bold text-foreground">3e</span>
         </div>
       );
     }

@@ -204,7 +204,7 @@ export const ResultsPageMobile = () => {
                     </Badge>} onClick={() => openRaceDrawer(race)}>
                   {/* Winner section */}
                   {raceWinner && <div className="flex items-center gap-2 mt-3">
-                      <Trophy className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                      <Trophy className="h-4 w-4 text-bordure-gold flex-shrink-0" />
                       <span className="font-medium text-sm text-foreground">{raceWinner.coureur_nom}</span>
                     </div>}
                   

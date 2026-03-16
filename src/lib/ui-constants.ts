@@ -15,7 +15,7 @@ export const UI_CONSTANTS = {
   
   // Cards
   card: 'rounded-lg border bg-card text-card-foreground shadow-sm',
-  cardHover: 'hover:shadow-lg hover:scale-[1.02] transition-all duration-200',
+  cardHover: 'hover:shadow-lg hover:border-bordure-gold/50 hover:scale-[1.02] transition-all duration-200',
   cardPadding: 'p-6',
   
   // Filters

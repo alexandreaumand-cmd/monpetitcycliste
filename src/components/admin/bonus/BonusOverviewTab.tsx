@@ -198,7 +198,7 @@ export const BonusOverviewTab = ({ phaseId, leagueId, saisonId }: BonusOverviewT
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <Star className="h-4 w-4 text-yellow-500" />
+              <Star className="h-4 w-4 text-bordure-gold" />
               <span className="text-sm text-muted-foreground">Total</span>
             </div>
             <p className="text-2xl font-bold">{totalPoints}</p>

@@ -585,7 +585,7 @@ export default function RidersData() {
     return (
       <div className="min-h-screen bg-background">
         {/* Header */}
-        <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
+        <header className="sticky top-0 z-50 bg-secondary/95 backdrop-blur-sm border-b border-bordure-gold/30">
           <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/home')}>
@@ -611,7 +611,7 @@ export default function RidersData() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
+      <header className="sticky top-0 z-50 bg-secondary/95 backdrop-blur-sm border-b border-bordure-gold/30">
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/home')}>
@@ -628,7 +628,7 @@ export default function RidersData() {
                 if (season) setLocalSelectedSeason(season);
               }}
             >
-              <SelectTrigger className="w-[100px] md:w-[140px] border-yellow-500/50 bg-black/80 text-white">
+              <SelectTrigger className="w-[100px] md:w-[140px] border-bordure-gold/50 bg-secondary/80 text-white">
                 <SelectValue placeholder="Saison" />
               </SelectTrigger>
               <SelectContent className="bg-popover">
@@ -864,7 +864,7 @@ export default function RidersData() {
                       onClick={() => toggleFavorite.mutate({ coureurId: rider.coureur_id, isFavorite: rider.is_favorite })}
                       disabled={!managerId}
                     >
-                      <Star className={cn("h-4 w-4", rider.is_favorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground")} />
+                      <Star className={cn("h-4 w-4", rider.is_favorite ? "fill-yellow-400 text-bordure-gold" : "text-muted-foreground")} />
                     </Button>
                     <div
                       className="flex-1 min-w-0 cursor-pointer"
@@ -883,7 +883,7 @@ export default function RidersData() {
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-9">
                       {upcomingRaces.map((race) => (
                         <span key={race.race_id} className="text-[11px] text-muted-foreground leading-tight">
-                          <span className={race.is_confirmed ? "text-green-500" : "text-yellow-500"}>
+                          <span className={race.is_confirmed ? "text-green-500" : "text-bordure-gold"}>
                             {race.is_confirmed ? "✓" : "?"}
                           </span>
                           {" "}{race.race_nom}
@@ -932,7 +932,7 @@ export default function RidersData() {
                           onClick={() => toggleFavorite.mutate({ coureurId: rider.coureur_id, isFavorite: rider.is_favorite })}
                           disabled={!managerId}
                         >
-                          <Star className={cn("h-4 w-4", rider.is_favorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground")} />
+                          <Star className={cn("h-4 w-4", rider.is_favorite ? "fill-yellow-400 text-bordure-gold" : "text-muted-foreground")} />
                         </Button>
                       </TableCell>
                       <TableCell className="font-medium cursor-pointer hover:text-primary hover:underline transition-colors"
@@ -949,7 +949,7 @@ export default function RidersData() {
                           <div className="flex flex-wrap gap-x-3 gap-y-0.5">
                             {upcomingRaces.map((race) => (
                               <span key={race.race_id} className="text-xs text-muted-foreground leading-tight">
-                                <span className={race.is_confirmed ? "text-green-500" : "text-yellow-500"}>
+                                <span className={race.is_confirmed ? "text-green-500" : "text-bordure-gold"}>
                                   {race.is_confirmed ? "✓" : "?"}
                                 </span>
                                 {" "}{race.race_nom}

@@ -29,7 +29,7 @@ export function LeagueParticipantsHover({
       {/* Admin Section */}
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <Crown className="h-4 w-4 text-[#FFD500]" />
+          <Crown className="h-4 w-4 text-bordure-gold" />
           <h4 className="font-semibold text-sm">{t('leagueCard.participantsHover.administrator')}</h4>
         </div>
         {isLoading ? (
@@ -69,7 +69,7 @@ export function LeagueParticipantsHover({
                 <div className="w-1 h-1 rounded-full bg-primary" />
                 {member.name}
                 {ownerName === member.name && (
-                  <Crown className="h-3 w-3 text-[#FFD500] ml-1" />
+                  <Crown className="h-3 w-3 text-bordure-gold ml-1" />
                 )}
               </li>
             ))}

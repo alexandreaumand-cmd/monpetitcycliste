@@ -53,11 +53,11 @@ export function UnifiedProfileDropdown({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-10 px-2 gap-2 hover:bg-yellow-500/10"
+          className="relative h-10 px-2 gap-2 hover:bg-bordure-gold/10"
         >
-          <Avatar className="h-8 w-8 border border-yellow-500/30">
+          <Avatar className="h-8 w-8 border border-bordure-gold/30">
             <AvatarImage src={manager.avatar_url} alt={manager.nom} />
-            <AvatarFallback className="bg-yellow-500/20 text-yellow-500 text-xs font-medium">
+            <AvatarFallback className="bg-bordure-gold/20 text-bordure-gold text-xs font-medium">
               {getInitials(manager.nom)}
             </AvatarFallback>
           </Avatar>
@@ -73,7 +73,7 @@ export function UnifiedProfileDropdown({
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
               <AvatarImage src={manager.avatar_url} alt={manager.nom} />
-              <AvatarFallback className="bg-yellow-500/20 text-yellow-500">
+              <AvatarFallback className="bg-bordure-gold/20 text-bordure-gold">
                 {getInitials(manager.nom)}
               </AvatarFallback>
             </Avatar>

@@ -17,7 +17,7 @@ const getInterpretationColor = (interpretation: string) => {
   switch (interpretation) {
     case 'Excellent': return 'bg-green-500 text-white';
     case 'Bon': return 'bg-lime-500 text-foreground';
-    case 'Moyen': return 'bg-yellow-500 text-foreground';
+    case 'Moyen': return 'bg-bordure-gold text-foreground';
     case 'Variable': return 'bg-orange-500 text-foreground';
     case 'Très variable': return 'bg-red-500 text-white';
     default: return 'bg-muted text-muted-foreground';
@@ -38,7 +38,7 @@ const getInterpretationIcon = (interpretation: string) => {
 const getGaugeColor = (score: number) => {
   if (score >= 90) return 'bg-green-500';
   if (score >= 80) return 'bg-lime-500';
-  if (score >= 70) return 'bg-yellow-500';
+  if (score >= 70) return 'bg-bordure-gold';
   if (score >= 60) return 'bg-orange-500';
   return 'bg-red-500';
 };

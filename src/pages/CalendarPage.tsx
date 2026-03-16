@@ -351,7 +351,7 @@ export default function CalendarPage() {
     } else if (days === 0) {
       return <Badge className="bg-green-500 hover:bg-green-600">{t('badges.today')}</Badge>;
     } else if (days <= 7) {
-      return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-black">J-{days}</Badge>;
+      return <Badge className="bg-bordure-gold hover:bg-bordure-gold text-foreground">J-{days}</Badge>;
     } else if (days <= 30) {
       return <Badge variant="outline">J-{days}</Badge>;
     } else {
@@ -362,7 +362,7 @@ export default function CalendarPage() {
   if (!localSelectedSeason) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
+        <header className="sticky top-0 z-50 bg-secondary/95 backdrop-blur-sm border-b border-bordure-gold/30">
           <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/home')}>
@@ -388,7 +388,7 @@ export default function CalendarPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-yellow-500/30">
+      <header className="sticky top-0 z-50 bg-secondary/95 backdrop-blur-sm border-b border-bordure-gold/30">
         <div className="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/home')}>
@@ -405,7 +405,7 @@ export default function CalendarPage() {
                 if (season) setLocalSelectedSeason(season);
               }}
             >
-              <SelectTrigger className="w-[100px] md:w-[140px] border-yellow-500/50 bg-black/80 text-white">
+              <SelectTrigger className="w-[100px] md:w-[140px] border-bordure-gold/50 bg-secondary/80 text-white">
                 <SelectValue placeholder={t('header.season')} />
               </SelectTrigger>
               <SelectContent className="bg-popover">

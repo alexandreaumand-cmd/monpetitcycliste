@@ -15,8 +15,8 @@ export default {
     extend: {
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
+        inter: ["Inter", "system-ui", "sans-serif"],
         montserrat: ["Montserrat", "sans-serif"],
-        poppins: ["Poppins", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -62,6 +62,10 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        "bordure-green": "hsl(var(--bordure-green))",
+        "bordure-gold": "hsl(var(--bordure-gold))",
+        "bordure-pink": "hsl(var(--bordure-pink))",
+        "bordure-cream": "hsl(var(--bordure-cream))",
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -2,108 +2,102 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* La Bordure Fantasy Cycling — Design System
+   All colors are HSL.
+   Vert #1E4D2B → 147 45% 21%
+   Or   #C9922A → 38 66% 48%
+   Rose #E8A0B0 → 346 52% 77%
+   Crème #F5F0E8 → 38 38% 93%
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 0%; /* Noir pur pour texte */
-    
-    /* Tour de France Colors */
-    --tdf-yellow: 48 100% 50%; /* #FFD500 */
-    --tdf-black: 0 0% 0%;
-    --tdf-gray-light: 0 0% 96%;
-    --tdf-gray-dark: 0 0% 20%;
+    --background: 38 38% 93%;       /* Crème #F5F0E8 */
+    --foreground: 147 45% 21%;      /* Vert #1E4D2B */
+
+    --bordure-green: 147 45% 21%;
+    --bordure-gold: 38 66% 48%;
+    --bordure-pink: 346 52% 77%;
+    --bordure-cream: 38 38% 93%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
+    --card-foreground: 147 45% 21%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
+    --popover-foreground: 147 45% 21%;
 
-    /* PRIMARY = JAUNE VIF (remplace bleu) */
-    --primary: 48 100% 50%; /* #FFD500 - Le jaune iconique */
-    --primary-foreground: 0 0% 0%; /* Texte NOIR sur jaune */
-    --primary-light: 48 100% 60%;
-    --primary-dark: 45 93% 47%;
+    --primary: 38 66% 48%;          /* Or #C9922A */
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 38 66% 58%;
+    --primary-dark: 38 66% 40%;
 
-    /* SECONDARY = NOIR (remplace ancien) */
-    --secondary: 0 0% 0%; /* Noir pur */
-    --secondary-foreground: 48 100% 50%; /* Texte JAUNE sur noir */
+    --secondary: 147 45% 21%;       /* Vert #1E4D2B */
+    --secondary-foreground: 0 0% 100%;
 
-    /* MUTED = gris TdF */
-    --muted: 0 0% 96%; /* Gris très clair */
-    --muted-foreground: 0 0% 35%; /* Gris moyen pour texte */
+    --muted: 38 25% 88%;
+    --muted-foreground: 147 20% 40%;
 
-    /* ACCENT = jaune clair pour hovers */
-    --accent: 48 100% 95%; /* Jaune très pâle */
-    --accent-foreground: 0 0% 0%;
+    --accent: 346 52% 92%;          /* Rose pâle */
+    --accent-foreground: 147 45% 21%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 88%; /* Gris clair neutre */
-    --input: 0 0% 88%;
-    --ring: 48 100% 50%; /* Ring jaune au focus */
+    --border: 147 20% 80%;
+    --input: 147 20% 80%;
+    --ring: 38 66% 48%;
 
     --radius: 0.75rem;
 
-    /* Gradients TdF */
-    --gradient-primary: linear-gradient(135deg, hsl(48 100% 50%), hsl(48 100% 60%));
-    --gradient-hero: linear-gradient(135deg, hsl(0 0% 0%) 0%, hsl(0 0% 15%) 50%, hsl(48 100% 50%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(48 100% 50%), hsl(45 93% 67%));
-    
-    /* Shadows jaunes */
-    --shadow-elegant: 0 10px 30px -10px hsl(48 100% 50% / 0.3);
-    --shadow-card: 0 4px 12px hsl(48 100% 50% / 0.08);
-    
-    /* Animation */
+    /* Gradients La Bordure */
+    --gradient-primary: linear-gradient(135deg, hsl(38 66% 48%), hsl(38 66% 58%));
+    --gradient-hero: linear-gradient(135deg, hsl(147 45% 10%) 0%, hsl(147 45% 18%) 50%, hsl(38 66% 48%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(38 66% 48%), hsl(346 52% 77%));
+
+    /* Shadows or */
+    --shadow-elegant: 0 10px 30px -10px hsl(38 66% 48% / 0.3);
+    --shadow-card: 0 4px 12px hsl(38 66% 48% / 0.08);
+
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .dark {
-    /* TdF Dark Mode - conserve l'identité jaune */
-    --background: 0 0% 8%;
+    --background: 147 40% 8%;
     --foreground: 0 0% 98%;
 
-    --card: 0 0% 12%;
+    --card: 147 35% 12%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 12%;
+    --popover: 147 35% 12%;
     --popover-foreground: 0 0% 98%;
 
-    /* PRIMARY = JAUNE conservé */
-    --primary: 48 100% 50%;
-    --primary-foreground: 0 0% 0%;
-    --primary-light: 48 100% 60%;
-    --primary-dark: 45 93% 47%;
+    --primary: 38 66% 48%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 38 66% 58%;
+    --primary-dark: 38 66% 40%;
 
-    /* SECONDARY = gris clair sur fond sombre */
-    --secondary: 0 0% 20%;
-    --secondary-foreground: 48 100% 50%;
+    --secondary: 147 30% 25%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 147 25% 15%;
+    --muted-foreground: 147 15% 65%;
 
-    --accent: 48 100% 15%;
-    --accent-foreground: 48 100% 50%;
+    --accent: 346 30% 20%;
+    --accent-foreground: 346 52% 77%;
 
     --destructive: 0 70% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 48 100% 50%;
+    --border: 147 25% 22%;
+    --input: 147 25% 22%;
+    --ring: 38 66% 48%;
 
-    /* TdF gradients for dark mode */
-    --gradient-primary: linear-gradient(135deg, hsl(48 100% 40%), hsl(48 100% 50%));
-    --gradient-hero: linear-gradient(135deg, hsl(0 0% 5%) 0%, hsl(0 0% 12%) 50%, hsl(48 100% 50%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(48 100% 40%), hsl(48 100% 60%));
-    
-    --shadow-elegant: 0 10px 30px -10px hsl(48 100% 50% / 0.3);
-    --shadow-card: 0 4px 12px hsl(48 100% 50% / 0.08);
+    --gradient-primary: linear-gradient(135deg, hsl(38 66% 40%), hsl(38 66% 50%));
+    --gradient-hero: linear-gradient(135deg, hsl(147 40% 5%) 0%, hsl(147 35% 12%) 50%, hsl(38 66% 48%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(38 66% 40%), hsl(346 52% 70%));
+
+    --shadow-elegant: 0 10px 30px -10px hsl(38 66% 48% / 0.3);
+    --shadow-card: 0 4px 12px hsl(38 66% 48% / 0.08);
   }
 }
 
@@ -113,12 +107,18 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground font-poppins;
+    @apply bg-background text-foreground font-inter;
     font-feature-settings: "rlig" 1, "calt" 1;
+    line-height: 1.3;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-montserrat font-bold tracking-tight;
+  h1, h2, h3 {
+    @apply font-montserrat font-bold tracking-wider uppercase;
+    line-height: 1.3;
+  }
+
+  h4, h5, h6 {
+    @apply font-montserrat font-semibold tracking-tight;
   }
 }
 
@@ -126,45 +126,45 @@ All colors MUST be HSL.
   .gradient-primary {
     background: var(--gradient-primary);
   }
-  
+
   .gradient-hero {
     background: var(--gradient-hero);
   }
-  
+
   .gradient-accent {
     background: var(--gradient-accent);
   }
-  
+
   .shadow-elegant {
     box-shadow: var(--shadow-elegant);
   }
-  
+
   .shadow-card {
     box-shadow: var(--shadow-card);
   }
-  
+
   .transition-smooth {
     transition: var(--transition-smooth);
   }
 
   /* Mobile utilities */
   .safe-top {
-    padding-top: constant(safe-area-inset-top); /* iOS 11.0-11.2 */
-    padding-top: env(safe-area-inset-top); /* iOS 11.2+ */
+    padding-top: constant(safe-area-inset-top);
+    padding-top: env(safe-area-inset-top);
   }
-  
+
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
-  
+
   .safe-left {
     padding-left: env(safe-area-inset-left);
   }
-  
+
   .safe-right {
     padding-right: env(safe-area-inset-right);
   }
-  
+
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
@@ -177,12 +177,12 @@ All colors MUST be HSL.
 
   /* Hide scrollbar */
   .hide-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
-  
+
   .hide-scrollbar::-webkit-scrollbar {
-    display: none;  /* Chrome, Safari and Opera */
+    display: none;
   }
 
   /* Scrollable chips */
@@ -191,7 +191,7 @@ All colors MUST be HSL.
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
-  
+
   .chips-scroll::-webkit-scrollbar {
     display: none;
   }
@@ -224,39 +224,52 @@ All colors MUST be HSL.
     100% { transform: translateY(-100%); }
   }
 
-  /* Tour de France Utilities EXTENDED */
-  .tdf-yellow-bg {
-    background-color: hsl(var(--tdf-yellow));
+  /* La Bordure Utilities */
+  .bordure-green-bg {
+    background-color: hsl(var(--bordure-green));
   }
 
-  .tdf-yellow-text {
-    color: hsl(var(--tdf-yellow));
+  .bordure-gold-text {
+    color: hsl(var(--bordure-gold));
   }
 
-  .tdf-black-bg {
-    background-color: hsl(var(--tdf-black));
-  }
-
-  .tdf-black-text {
-    color: hsl(var(--tdf-black));
+  .bordure-green-text {
+    color: hsl(var(--bordure-green));
   }
 
   .hover-lift {
     @apply transition-all duration-300 hover:scale-105 hover:shadow-2xl;
   }
 
-  /* Effet hover jaune sur cards */
-  .card-tdf-hover {
-    @apply transition-all duration-300 hover:border-yellow-500 hover:shadow-lg hover:shadow-yellow-500/20;
+  /* Card hover La Bordure */
+  .card-bordure-hover {
+    @apply transition-all duration-300;
+    &:hover {
+      border-color: hsl(var(--bordure-gold) / 0.5);
+      box-shadow: 0 4px 20px hsl(var(--bordure-gold) / 0.15);
+    }
   }
 
-  /* Bouton jaune avec shadow */
-  .btn-tdf {
-    @apply bg-[#FFD500] text-black font-poppins font-semibold hover:bg-yellow-400 shadow-md hover:shadow-lg transition-all;
+  /* Bouton or La Bordure */
+  .btn-bordure {
+    @apply bg-primary text-primary-foreground font-montserrat font-bold uppercase hover:brightness-110 shadow-md hover:shadow-lg transition-all;
   }
 
-  /* Bouton noir inversé */
-  .btn-tdf-inverse {
-    @apply bg-black text-[#FFD500] font-poppins font-semibold hover:bg-gray-900 border-2 border-foreground transition-all;
+  /* Bouton vert inversé */
+  .btn-bordure-inverse {
+    @apply bg-secondary text-secondary-foreground font-montserrat font-bold uppercase hover:brightness-110 border-2 border-foreground transition-all;
+  }
+
+  /* Bandes verticales décoratives La Bordure */
+  .bordure-stripes {
+    display: flex;
+    gap: 3px;
+  }
+
+  .bordure-stripes > span {
+    display: block;
+    width: 4px;
+    height: 100%;
+    border-radius: 2px;
   }
 }

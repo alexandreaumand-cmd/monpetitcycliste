@@ -110,12 +110,12 @@ export function AuctionSearchFilters({
             size="default"
             onClick={onImportFavorites}
             disabled={isImportingFavorites}
-            className="gap-2 border-yellow-500 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-950"
+            className="gap-2 border-bordure-gold text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-bordure-gold dark:text-bordure-gold dark:hover:bg-yellow-950"
           >
             {isImportingFavorites ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+              <Star className="h-4 w-4 fill-yellow-400 text-bordure-gold" />
             )}
             {t("search.importFavorites")}
           </Button>
