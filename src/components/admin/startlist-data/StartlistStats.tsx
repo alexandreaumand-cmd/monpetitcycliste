@@ -55,9 +55,9 @@ export const StartlistStats = ({ entries, saisonId }: StartlistStatsProps) => {
   const StatCard = ({ label, value, icon, variant = 'default' }: any) => {
     const variants = {
       default: 'text-foreground',
-      success: 'text-green-600',
+      success: 'text-secondary',
       warning: 'text-bordure-gold',
-      destructive: 'text-red-600',
+      destructive: 'text-primary',
       muted: 'text-muted-foreground',
     };
 

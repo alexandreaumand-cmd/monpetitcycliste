@@ -257,7 +257,7 @@ export const CoureursTable = ({ coureurs, isLoading, onSave, onDelete, onBulkDel
                 const editing = isEditing(coureur.id);
                 
                 return (
-                  <TableRow key={coureur.id} className={editing ? "bg-blue-50/50" : ""}>
+                  <TableRow key={coureur.id} className={editing ? "bg-accent/50" : ""}>
                     <TableCell>
                       <Checkbox
                         checked={selectedIds.has(coureur.id)}

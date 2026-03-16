@@ -27,11 +27,11 @@ export const CourseDetailsDrawer = ({ open, onOpenChange, course }: CourseDetail
   if (!course) return null;
 
   const pointsBreakdown = [
-    { label: "Étapes", points: course.points_etapes, detail: `${course.nb_etapes_estimees} × ${course.points_etapes_unitaire}`, color: "bg-blue-500" },
+    { label: "Étapes", points: course.points_etapes, detail: `${course.nb_etapes_estimees} × ${course.points_etapes_unitaire}`, color: "bg-secondary" },
     { label: "Classement Général", points: course.points_gc, color: "bg-bordure-gold" },
-    { label: "Points (maillot vert)", points: course.points_pts, color: "bg-green-500" },
-    { label: "Montagne", points: course.points_mont, color: "bg-red-500" },
-    { label: "Jeune", points: course.points_jeune, color: "bg-purple-500" },
+    { label: "Points (maillot vert)", points: course.points_pts, color: "bg-secondary/70" },
+    { label: "Montagne", points: course.points_mont, color: "bg-bordure-pink" },
+    { label: "Jeune", points: course.points_jeune, color: "bg-primary/60" },
   ].filter(item => item.points > 0);
 
   const maxPoints = Math.max(...pointsBreakdown.map(p => p.points), 1);
