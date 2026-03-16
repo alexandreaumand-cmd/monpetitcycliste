@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import mpcLogo from "@/assets/mpc-logo.png";
-import mpcLogoHorizontal from "@/assets/mpc-logo-horizontal.png";
+import logoBordure from "@/assets/logo-bordure.png";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useUserLeagues } from "@/hooks/useUserLeagues";
 
@@ -74,10 +74,10 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
             />
           ) : (
             <img 
-              src={mpcLogoHorizontal} 
+              src={logoBordure} 
               alt="La Bordure Fantasy Cycling"
               loading="eager"
-              className="h-12 w-auto max-w-[200px] transition-all"
+              className="h-14 w-auto max-w-[220px] transition-all"
             />
           )}
         </div>
