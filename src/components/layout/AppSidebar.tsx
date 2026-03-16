@@ -74,10 +74,10 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
             />
           ) : (
             <img 
-              src={mpcLogoHorizontal} 
+              src={logoBordure} 
               alt="La Bordure Fantasy Cycling"
               loading="eager"
-              className="h-12 w-auto max-w-[200px] transition-all"
+              className="h-14 w-auto max-w-[220px] transition-all"
             />
           )}
         </div>
