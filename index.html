@@ -7,8 +7,7 @@
     <meta name="description" content="Joue la saison, gagne la gloire. Le jeu de fantasy cycling basé sur les vraies courses du calendrier UCI. Crée ta ligue, enchéris sur tes coureurs, domine le classement !" />
     <meta name="author" content="La Bordure Fantasy Cycling" />
     
-    <!-- PWA Meta Tags -->
-    <link rel="preconnect" href="https://khahpetvqjoyrwambaqn.supabase.co" />
+    <!-- DNS prefetch for API (not preconnect to avoid unused connection overhead) -->
     <link rel="dns-prefetch" href="https://khahpetvqjoyrwambaqn.supabase.co" />
     
     <!-- PWA Meta Tags -->
@@ -20,10 +19,12 @@
     <link rel="icon" type="image/png" href="/favicon-v2.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180-v2.png" />
     
-    <!-- Google Fonts: Montserrat + Inter -->
+    <!-- Google Fonts: preconnect + non-blocking load -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
 
     <meta property="og:title" content="La Bordure - Fantasy Cycling Français" />
     <meta property="og:description" content="Joue la saison, gagne la gloire. Le jeu de fantasy cycling basé sur les vraies courses du calendrier UCI" />
