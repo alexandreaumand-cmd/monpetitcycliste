@@ -1,13 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import mpcLogo from "@/assets/logo-carre-rose.png";
 import LandingPage from "./LandingPage";
+import { getRandomQuote, type CyclingQuote } from "@/lib/cycling-quotes";
 
 const Index = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [quote, setQuote] = useState<CyclingQuote>(getRandomQuote);
+  const [fade, setFade] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setQuote(getRandomQuote());
+        setFade(true);
+      }, 400);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     // Set up auth state listener first
@@ -44,7 +58,15 @@ const Index = () => {
           alt="La Bordure" 
           className="h-24 w-24 mb-6 animate-pulse" 
         />
-        <div className="w-8 h-8 border-4 border-bordure-gold border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-bordure-gold border-t-transparent rounded-full animate-spin mb-6" />
+        <p
+          className={`text-sm italic text-secondary-foreground/70 max-w-xs text-center px-4 transition-opacity duration-400 ${fade ? "opacity-100" : "opacity-0"}`}
+        >
+          « {quote.text} »
+          <span className="block mt-1 text-xs not-italic font-medium text-bordure-gold">
+            — {quote.author}
+          </span>
+        </p>
       </div>
     );
   }
