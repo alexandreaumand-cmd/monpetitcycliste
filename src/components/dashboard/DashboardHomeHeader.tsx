@@ -1,11 +1,11 @@
 import { Calendar, Bike } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
-import mpcLogo from "@/assets/mpc-logo.png";
+import faviconLogo from "@/assets/logo-carré-sans-marque.png";
+import logoBordureLight from "@/assets/logo-bordure-light.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { UnifiedProfileDropdown } from "@/components/layout/UnifiedProfileDropdown";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
-import BordureStripes from "@/components/landing/BordureStripes";
 
 interface DashboardHomeHeaderProps {
   manager: any;
@@ -33,7 +33,7 @@ export function DashboardHomeHeader({
       <header className="sticky top-0 z-50 bg-secondary/95 backdrop-blur-sm border-b border-bordure-gold/30 safe-top">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <img
-            src={mpcLogo}
+            src={faviconLogo}
             alt="Logo La Bordure"
             loading="eager"
             fetchPriority="high"
@@ -78,19 +78,13 @@ export function DashboardHomeHeader({
     <header className="sticky top-0 z-50 bg-secondary/95 backdrop-blur-sm border-b border-bordure-gold/30 safe-top">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <BordureStripes className="h-8" />
           <img
-            src={mpcLogo}
-            alt="Logo La Bordure"
+            src={logoBordureLight}
+            alt="La Bordure"
             loading="eager"
             fetchPriority="high"
-            width={40}
-            height={40}
-            className="h-10 w-10"
+            className="h-10 w-auto"
           />
-          <h1 className="font-montserrat font-bold text-white text-lg">
-            La Bordure
-          </h1>
         </div>
 
         <nav className="flex items-center gap-1 text-sm">
