@@ -10,7 +10,7 @@ self.addEventListener('push', function(event) {
     event.waitUntil(
       self.registration.showNotification('La Bordure', {
         body: 'Nouvelle notification reçue',
-        icon: '/pwa-192x192.png'
+        icon: '/pwa-192x192-v2.png'
       })
     );
     return;
