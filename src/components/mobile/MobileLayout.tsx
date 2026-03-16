@@ -6,7 +6,7 @@ import { MobileDrawer } from "./MobileDrawer";
 import { Button } from "@/components/ui/button";
 
 import { Menu } from "lucide-react";
-import mpcLogo from "@/assets/mpc-logo-horizontal.png";
+import faviconLogo from "@/assets/logo-carré-sans-marque.png";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { useLeague } from "@/contexts/LeagueContext";
@@ -55,12 +55,12 @@ export const MobileLayout = ({
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <Link to="/dashboard/home" className="shrink-0">
                 <img 
-                  src={mpcLogo} 
+                  src={faviconLogo} 
                   alt="Logo La Bordure" 
                   loading="eager"
-                  width={28}
-                  height={28}
-                  className="h-7 w-auto"
+                  width={32}
+                  height={32}
+                  className="h-8 w-8"
                 />
               </Link>
               
