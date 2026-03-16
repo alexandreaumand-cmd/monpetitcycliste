@@ -59,7 +59,7 @@ self.addEventListener('push', function(event) {
       }
     ],
     requireInteraction: false,
-    tag: type || 'mpc-notification',
+    tag: type || 'labordure-notification',
     renotify: true
   };
 
