@@ -1,59 +1,38 @@
 
 
-# Plan : Remplacement des logos La Bordure
+## Diagnostic
 
-## Logos uploadés
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-4 variantes identifiées dans les images :
+## Cause racine
 
-```text
-Image 2/3 → Icône seule (casquette)        → remplace mpc-logo.png
-Image 4   → Horizontal (casquette + texte)  → remplace mpc-logo-horizontal.png  
-Image 1   → Vertical (casquette + texte)    → nouveau : mpc-logo-vertical.png
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
+
+## Plan de correction
+
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
 ```
 
-## Correspondance fichier → logo
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
 
-### Icône seule (casquette) — `mpc-logo.png` (15 fichiers)
-Utilisé partout où le logo apparaît en petit (32-48px) : headers, sidebar, loading spinner, pages auth/invite/calendar/data.
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
 
-- `Header.tsx` — barre de navigation dashboard
-- `DashboardHomeHeader.tsx` — header accueil
-- `MobileHeader.tsx` — header mobile
-- `LandingHeader.tsx` — header landing
-- `LandingFooter.tsx` — footer landing
-- `AppSidebar.tsx` — sidebar desktop
-- `LoadingSpinner.tsx` — spinner de chargement
-- `Auth.tsx` — page connexion
-- `InvitePage.tsx` — page invitation
-- `CalendarPage.tsx` — calendrier
-- `RidersData.tsx` — données coureurs
-- `Index.tsx` — page index
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
 
-### Horizontal (casquette + texte) — `mpc-logo-horizontal.png` (3 fichiers)
-Utilisé dans les contextes mobiles où on affiche le logo en largeur :
-
-- `MobileLayout.tsx`
-- `AuctionHeaderMobile.tsx`
-- `SuperAdminPage.mobile.tsx`
-
-### Vertical (casquette + texte empilé) — `mpc-logo-vertical.png` (nouveau)
-À intégrer dans les contextes d'affichage grand format :
-
-- `Auth.tsx` — remplacer l'icône par le logo vertical complet
-- `InvitePage.tsx` — idem
-- `LandingFooter.tsx` — logo footer plus visible
-
-## Actions
-
-1. Copier les 3 images dans `src/assets/` :
-   - Image 2 → `src/assets/mpc-logo.png` (écrase l'ancien)
-   - Image 4 → `src/assets/mpc-logo-horizontal.png` (écrase l'ancien)
-   - Image 1 → `src/assets/mpc-logo-vertical.png` (nouveau)
-
-2. Mettre à jour `Auth.tsx`, `InvitePage.tsx`, `LandingFooter.tsx` pour importer et afficher `mpc-logo-vertical.png` au lieu de l'icône seule
-
-3. Aucun changement nécessaire pour les 12 autres fichiers — ils importent déjà `mpc-logo.png` qui sera écrasé
-
-**Fichiers impactés : 3 copies d'assets + 3 fichiers .tsx modifiés**
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 

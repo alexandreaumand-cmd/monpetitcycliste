@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import mpcLogo from "@/assets/mpc-logo.png";
+import mpcLogoVertical from "@/assets/mpc-logo-vertical.png";
 import BordureStripes from "./BordureStripes";
 
 const LandingFooter = () => {
@@ -13,7 +13,7 @@ const LandingFooter = () => {
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center gap-3 mb-4">
               <BordureStripes className="h-8" />
-              <img src={mpcLogo} alt="La Bordure Fantasy Cycling" className="h-10 w-10" loading="lazy" width={40} height={40} />
+              <img src={mpcLogoVertical} alt="La Bordure Fantasy Cycling" className="h-14 w-auto" loading="lazy" />
               <span className="text-white font-montserrat font-bold">
                 La Bordure
               </span>
