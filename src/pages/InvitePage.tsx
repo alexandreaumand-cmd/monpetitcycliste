@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Users, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
-import mpcLogo from "@/assets/mpc-logo.png";
+import mpcLogoVertical from "@/assets/mpc-logo-vertical.png";
 
 type InviteInfo = {
   valid: boolean;
