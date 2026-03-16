@@ -33,13 +33,11 @@ export function DashboardHomeHeader({
       <header className="sticky top-0 z-50 bg-secondary/95 backdrop-blur-sm border-b border-bordure-gold/30 safe-top">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <img
-            src={faviconLogo}
-            alt="Logo La Bordure"
+            src={logoBordureLight}
+            alt="La Bordure"
             loading="eager"
             fetchPriority="high"
-            width={48}
-            height={48}
-            className="h-12 w-12"
+            className="h-10 w-auto"
           />
 
           <div className="flex items-center gap-1">
