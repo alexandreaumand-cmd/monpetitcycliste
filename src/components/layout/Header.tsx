@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { LogOut, Trophy, Users, Calendar, BarChart3, Shield, Menu, X, ListChecks, LineChart, Lock, Swords } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import mpcLogo from "@/assets/mpc-logo.png";
+import mpcLogo from "@/assets/logo-carre-rose.png";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NotificationCenter } from "./NotificationCenter";

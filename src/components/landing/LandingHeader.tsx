@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import mpcLogo from "@/assets/mpc-logo.png";
+import mpcLogo from "@/assets/logo-carre-rose.png";
 import BordureStripes from "./BordureStripes";
 
 const LandingHeader = () => {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import mpcLogo from "@/assets/mpc-logo.png";
+import mpcLogo from "@/assets/logo-carre-rose.png";
 import LandingPage from "./LandingPage";
 
 const Index = () => {
