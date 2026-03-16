@@ -99,10 +99,10 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
             <Link to="/dashboard" className="flex items-center gap-3">
               <img 
                 src={mpcLogo} 
-                alt="Logo Mon Petit Cycliste" 
+                alt="Logo La Bordure" 
                 className="h-10 w-10 md:h-12 md:w-12"
               />
-              <span className="hidden lg:inline font-montserrat font-bold text-white">Mon Petit Cycliste</span>
+              <span className="hidden lg:inline font-montserrat font-bold text-white">La Bordure</span>
             </Link>
             {manager && (
               <ManagerInfoDropdown 
