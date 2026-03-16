@@ -47,8 +47,8 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       label: "Étapes",
       points: course.points_etapes || 0,
       icon: TrendingUp,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100",
+      color: "text-secondary",
+      bgColor: "bg-secondary/10",
       detail: isStageRace(course.type_course)
         ? `${course.nb_etapes_estimees} × ${course.points_etapes_unitaire} pts`
         : null,
