@@ -170,7 +170,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
       <CardContent className="pt-6">
         <Table>
         <TableHeader>
-          <TableRow className="border-b-2 border-[hsl(var(--bordure-gold))]">
+          <TableRow className="border-b-2 border-bordure-gold">
             <TableHead className="w-16 font-bold">{t('standings.rank')}</TableHead>
             <TableHead className="font-bold">{t('standings.manager')}</TableHead>
             <TableHead className="text-right font-bold">{t('standings.points')}</TableHead>

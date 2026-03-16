@@ -302,7 +302,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                     ? "bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-400 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
                     : auctionStatus.isScheduled 
                       ? "bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-400 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
-                      : "bg-gradient-to-br from-[#FFF4CC] to-[#FFE999] border-2 border-[hsl(var(--bordure-gold))] rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+                      : "bg-gradient-to-br from-[#FFF4CC] to-[#FFE999] border-2 border-bordure-gold rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
                 }
               >
                 <div className="flex items-center gap-2">
@@ -452,7 +452,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
         {/* TERMINÉE */}
         {isCompleted && (
           <>
-            <div className="bg-gradient-to-br from-secondary to-gray-900 rounded-lg p-4 border-2 border-[hsl(var(--bordure-gold))] text-center shadow-lg">
+            <div className="bg-gradient-to-br from-secondary to-gray-900 rounded-lg p-4 border-2 border-bordure-gold text-center shadow-lg">
               <Trophy className="h-8 w-8 text-bordure-gold mx-auto mb-2" />
               <p className="font-montserrat font-bold text-white">
                 {t('leagueCard.leagueEnded')}

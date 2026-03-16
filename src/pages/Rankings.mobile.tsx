@@ -275,7 +275,7 @@ export const RankingsMobile = () => {
     
     if (rank === 2) {
       return (
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-secondary border-2 border-[hsl(var(--bordure-gold))]">
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-secondary border-2 border-bordure-gold">
           <span className="text-sm font-bold text-bordure-gold">2e</span>
         </div>
       );
@@ -283,7 +283,7 @@ export const RankingsMobile = () => {
     
     if (rank === 3) {
       return (
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white border-2 border-[hsl(var(--bordure-gold))]">
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white border-2 border-bordure-gold">
           <span className="text-sm font-bold text-foreground">3e</span>
         </div>
       );
