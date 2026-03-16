@@ -1,38 +1,30 @@
 
 
-## Diagnostic
+## Problème
 
-L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
+L'écran que tu vois en premier (casquette centrée, pas de citation, pas de spinner) est le **splash screen natif Android**. Il est généré automatiquement par le système à partir des icônes PWA (`pwa-512x512-v2.png`). Ce n'est PAS contrôlé par le HTML — c'est l'OS qui l'affiche avant même que le navigateur ne charge la page.
 
-## Cause racine
+Ensuite, le HTML splash (avec citation + spinner) apparaît → d'où les 2 écrans.
 
-La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
+## Solution
 
-## Plan de correction
+On ne peut pas supprimer le splash natif Android, mais on peut le rendre **visuellement identique** au splash HTML pour que la transition soit invisible :
 
-### 1. Action immédiate — Nettoyer les doublons en production
-Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
-```sql
-DELETE FROM race_result_sets
-WHERE id NOT IN (
-  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
-    id
-  FROM race_result_sets
-  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
-);
-```
+1. **Régénérer `public/pwa-512x512-v2.png`** : au lieu de juste la casquette sur fond beige, inclure aussi le spinner et la citation dans l'icône n'est pas possible (c'est une image statique). Mais on peut s'assurer que le splash natif est aussi proche que possible du HTML splash en utilisant le **même logo** que celui affiché dans le HTML splash.
 
-### 2. Migration — Ajouter une contrainte d'unicité
-Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
+2. **Remplacer `public/splash-logo.png`** par le logo uploadé (`Logo_carré_500x500.png`) — c'est le logo que le HTML splash utilise. Actuellement le fichier `splash-logo.png` semble être un fichier vide/corrompu (le diff montre `<binary>` mais de très petite taille).
 
-### 3. Corriger `admin_compute_points_for_course`
-Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
+3. **Vérifier que `index.html`** référence bien `/splash-logo.png` dans le splash inline.
 
-### 4. Corriger le flux de saisie des résultats
-Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
+4. **Séparer les icônes PWA `maskable` et `any`** : actuellement la même icône est utilisée pour `any maskable`, ce qui peut causer des problèmes de rendu. Créer deux entrées distinctes.
 
-### Fichiers impactés
-- Migration SQL (nettoyage + contrainte unique)
-- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
-- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
+### Fichiers modifiés
+
+| Fichier | Modification |
+|---|---|
+| `public/splash-logo.png` | Remplacer par le vrai logo 500x500 (actuellement corrompu) |
+| `src/assets/logo-carre-sans-marque.png` | Remplacer par le même logo |
+| `vite.config.ts` | Séparer les icônes `any` et `maskable` |
+
+Le splash natif Android restera toujours visible ~0.5s (c'est le comportement système), mais avec le même logo + même fond beige, la transition sera imperceptible.
 
