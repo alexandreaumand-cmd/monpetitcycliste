@@ -9,6 +9,19 @@ const Index = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [quote, setQuote] = useState<CyclingQuote>(getRandomQuote);
+  const [fade, setFade] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setQuote(getRandomQuote());
+        setFade(true);
+      }, 400);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     // Set up auth state listener first
