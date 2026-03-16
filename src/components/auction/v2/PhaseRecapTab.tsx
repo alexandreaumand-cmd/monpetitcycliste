@@ -232,17 +232,17 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
       {/* Hero Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Manager qui a perdu le plus */}
-        <Card className="bg-gradient-to-br from-red-500/20 via-red-500/10 to-background border-red-500/30 hover-scale">
+        <Card className="bg-gradient-to-br from-primary/20 via-primary/10 to-background border-primary/30 hover-scale">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-red-600" />
+              <TrendingDown className="h-5 w-5 text-primary" />
               {t('recap.biggestLoser')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {biggestLoser ? (
               <>
-                <p className="text-3xl font-bold text-red-600 dark:text-red-400 truncate">
+                <p className="text-3xl font-bold text-primary truncate">
                   {biggestLoser[0]}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">

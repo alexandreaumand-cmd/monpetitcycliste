@@ -76,8 +76,8 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       label: "Montagne",
       points: course.points_mont || 0,
       icon: Mountain,
-      color: "text-red-600",
-      bgColor: "bg-red-100",
+      color: "text-bordure-pink",
+      bgColor: "bg-bordure-pink/20",
       detail: null,
       typeClassement: "Montagne"
     },

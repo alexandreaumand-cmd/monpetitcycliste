@@ -397,7 +397,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                       </div>
                       
                       {countdown.isExpired ? (
-                        <p className="text-sm font-montserrat font-bold text-red-600">
+                        <p className="text-sm font-montserrat font-bold text-primary">
                           {auctionStatus.isScheduled ? t('leagueCard.auction.openingInProgress') : t('leagueCard.auction.closingInProgress')}
                         </p>
                       ) : (
