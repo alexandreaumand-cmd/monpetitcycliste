@@ -11,6 +11,7 @@ import { SeasonProvider } from "./contexts/SeasonContext";
 import { LeagueProvider } from "./contexts/LeagueContext";
 import { ErrorBoundary } from "./components/shared/ErrorBoundary";
 import { LoadingSpinner } from "./components/shared/LoadingSpinner";
+import { ScrollToTop } from "./components/shared/ScrollToTop";
 
 // Lazy-loaded pages
 const Index = React.lazy(() => import("./pages/Index"));
@@ -39,6 +40,7 @@ const App = () => {
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
+            <ScrollToTop />
             <LeagueProvider>
               <SeasonProvider>
                 <TooltipProvider>
