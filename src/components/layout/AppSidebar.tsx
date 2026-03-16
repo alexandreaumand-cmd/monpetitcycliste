@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import mpcLogo from "@/assets/mpc-logo.png";
+import mpcLogoHorizontal from "@/assets/mpc-logo-horizontal.png";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useUserLeagues } from "@/hooks/useUserLeagues";
 
