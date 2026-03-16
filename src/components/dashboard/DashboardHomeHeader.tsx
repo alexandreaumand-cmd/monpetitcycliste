@@ -83,7 +83,7 @@ export function DashboardHomeHeader({
             alt="La Bordure"
             loading="eager"
             fetchPriority="high"
-            className="h-10 w-auto"
+            className="h-16 w-auto"
           />
         </div>
 
