@@ -40,6 +40,7 @@ const App = () => {
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
+            <ScrollToTop />
             <LeagueProvider>
               <SeasonProvider>
                 <TooltipProvider>
