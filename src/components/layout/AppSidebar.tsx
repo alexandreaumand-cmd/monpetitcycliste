@@ -65,7 +65,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
         <div className="flex items-center justify-center px-2 py-4">
           {isCollapsed ? (
             <img 
-              src={mpcLogo} 
+              src={faviconLogo} 
               alt="La Bordure"
               loading="eager"
               width={32}
