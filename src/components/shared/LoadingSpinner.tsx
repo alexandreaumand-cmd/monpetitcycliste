@@ -1,9 +1,9 @@
-import { useState } from "react";
 import splashLogo from "@/assets/logo-carre-sans-marque.png";
-import { getRandomQuote, type CyclingQuote } from "@/lib/cycling-quotes";
+import { getRandomQuote } from "@/lib/cycling-quotes";
+
+const quote = getRandomQuote();
 
 export const LoadingSpinner = () => {
-  const [quote] = useState<CyclingQuote>(getRandomQuote);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[hsl(37,38%,93%)]">
