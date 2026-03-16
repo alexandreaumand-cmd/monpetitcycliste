@@ -1,38 +1,38 @@
 
 
-## Diagnostic
+## Redesign des vignettes "Fun Awards" (RankingsKPIs)
 
-L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
+### Probleme
+Les cartes utilisent des gradients jaune/bleu/vert génériques (Tailwind par defaut) qui ne correspondent pas a la charte La Bordure (Green, Gold, Rose, Cream).
 
-## Cause racine
+### Proposition de design
 
-La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
+Approche unifiee et elegante : toutes les cartes partagent le meme style La Bordure, differenciees uniquement par leur emoji.
 
-## Plan de correction
-
-### 1. Action immédiate — Nettoyer les doublons en production
-Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
-```sql
-DELETE FROM race_result_sets
-WHERE id NOT IN (
-  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
-    id
-  FROM race_result_sets
-  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
-);
+```text
+┌─────────────────────────────────┐
+│  bg-bordure-cream / border-l-4 bordure-gold
+│                                 
+│  😂  LE PLUS DROLE              ← Montserrat uppercase, text-bordure-green
+│                                 
+│  ┌─ Avatar ─ Team Majer ──────┐ ← fond blanc, border bordure-gold/30
+│  └─────────────────────────────┘
+│                                 
+└─────────────────────────────────┘
 ```
 
-### 2. Migration — Ajouter une contrainte d'unicité
-Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
+### Modifications dans `RankingsKPIs.tsx`
 
-### 3. Corriger `admin_compute_points_for_course`
-Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
+1. **Supprimer les gradients/couleurs par carte** : retirer `gradient`, `borderColor`, `shadowColor` des configs kpi
+2. **Style unifie** pour chaque Card :
+   - `bg-bordure-cream/50 dark:bg-bordure-green/10`
+   - `border-l-4 border-bordure-gold`
+   - Pas de `border-2` multicolore
+3. **Label** : `font-semibold uppercase tracking-wider text-sm text-bordure-green` (style Montserrat)
+4. **Emoji** : taille reduite a `text-3xl` pour plus de finesse
+5. **Zone manager** : `bg-white dark:bg-card border border-bordure-gold/30 rounded-lg` — plus subtil que le `border-2 border-bordure-gold shadow-md` actuel
+6. **Hover** : `hover:shadow-md hover:border-bordure-gold` au lieu des shadow colorees
 
-### 4. Corriger le flux de saisie des résultats
-Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
-
-### Fichiers impactés
-- Migration SQL (nettoyage + contrainte unique)
-- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
-- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
+### Fichier modifie
+- `src/components/rankings/RankingsKPIs.tsx` — refonte visuelle uniquement, logique inchangee
 
