@@ -432,17 +432,17 @@ export const MyTeamDesktop = () => {
     if (ratio > 10) return "text-green-800 dark:text-green-300";
     if (ratio >= 4 && ratio <= 10) return "text-green-600 dark:text-green-400";
     if (ratio >= 2 && ratio < 4) return "text-bordure-gold dark:text-bordure-gold";
-    if (ratio > 0 && ratio < 2) return "text-orange-600 dark:text-orange-400";
-    if (ratio === 0) return "text-red-600 dark:text-red-400";
+    if (ratio > 0 && ratio < 2) return "text-primary dark:text-primary";
+    if (ratio === 0) return "text-muted-foreground";
     return "text-muted-foreground";
   };
 
   const getRatioBgColor = (ratio: number) => {
     if (ratio > 10) return "bg-green-100 dark:bg-green-950/30 border-green-300 dark:border-green-800";
     if (ratio >= 4 && ratio <= 10) return "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900";
-    if (ratio >= 2 && ratio < 4) return "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900";
-    if (ratio > 0 && ratio < 2) return "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900";
-    if (ratio === 0) return "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900";
+    if (ratio >= 2 && ratio < 4) return "bg-accent dark:bg-accent/20 border-bordure-gold/30 dark:border-bordure-gold/20";
+    if (ratio > 0 && ratio < 2) return "bg-primary/10 dark:bg-primary/10 border-primary/20 dark:border-primary/20";
+    if (ratio === 0) return "bg-muted dark:bg-muted border-border dark:border-border";
     return "";
   };
 
