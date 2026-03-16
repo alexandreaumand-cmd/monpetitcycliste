@@ -1,38 +1,44 @@
 
 
-## Diagnostic
+## Problème
 
-L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
+À l'ouverture de la PWA, l'utilisateur voit **3 écrans de chargement successifs** :
 
-## Cause racine
+1. **Suspense fallback** (`LoadingSpinner`) — fond blanc, logo rose, pendant le lazy-load de `Index.tsx`
+2. **Index.tsx loading** — fond vert (`bg-secondary`), logo rose, pendant la vérification de session auth
+3. **Dashboard loading** — fond blanc, simple spinner "Chargement...", pendant le chargement du manager/rôle
 
-La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
+Chacun a un style différent, ce qui crée un effet de "flash" entre écrans.
 
-## Plan de correction
+## Solution
 
-### 1. Action immédiate — Nettoyer les doublons en production
-Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
-```sql
-DELETE FROM race_result_sets
-WHERE id NOT IN (
-  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
-    id
-  FROM race_result_sets
-  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
-);
-```
+Unifier tous les écrans de chargement en **un seul design cohérent** : fond Cream (`#F5F0E8`), nouveau logo casquette, spinner gold, citations cyclistes.
 
-### 2. Migration — Ajouter une contrainte d'unicité
-Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
+### Étapes
 
-### 3. Corriger `admin_compute_points_for_course`
-Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
+1. **Copier le nouveau logo** uploadé dans `src/assets/logo-carre-sans-marque.png`
 
-### 4. Corriger le flux de saisie des résultats
-Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
+2. **Refactorer `LoadingSpinner`** pour qu'il devienne le composant de splash unique :
+   - Fond plein écran `min-h-screen` avec couleur Cream (`bg-[#F5F0E8]`)
+   - Nouveau logo casquette centré (import `logo-carre-sans-marque.png`)
+   - Spinner gold
+   - Citations cyclistes rotatives (déjà en place)
 
-### Fichiers impactés
-- Migration SQL (nettoyage + contrainte unique)
-- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
-- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
+3. **Aligner `Index.tsx`** loading screen :
+   - Remplacer le bloc `isLoading` par `<LoadingSpinner />` directement (évite la duplication)
+   - Supprimer le logo rose et le code de citations dupliqué dans Index
+
+4. **Aligner `Dashboard.tsx`** loading screen :
+   - Remplacer le spinner basique (lignes 66-74) par `<LoadingSpinner />`
+
+5. **Résultat** : un seul composant `LoadingSpinner` utilisé partout — Suspense, Index, Dashboard — même design, transition invisible entre les phases de chargement.
+
+### Fichiers modifiés
+
+| Fichier | Modification |
+|---|---|
+| `src/assets/logo-carre-sans-marque.png` | Nouveau logo casquette |
+| `src/components/shared/LoadingSpinner.tsx` | Full-screen, fond Cream, nouveau logo, spinner gold |
+| `src/pages/Index.tsx` | Utiliser `<LoadingSpinner />` au lieu du bloc custom |
+| `src/pages/Dashboard.tsx` | Utiliser `<LoadingSpinner />` au lieu du spinner basique |
 
