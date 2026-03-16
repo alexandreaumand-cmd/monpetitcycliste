@@ -204,7 +204,7 @@ export const RiderPointsDetail = ({
                               <div className="flex items-center gap-2">
                                 <p className="font-medium">{row.type_classement}</p>
                                 {row.is_ttt && (
-                                  <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded">
+                                  <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-accent text-accent-foreground dark:bg-accent dark:text-accent-foreground rounded">
                                     TTT
                                   </span>
                                 )}
