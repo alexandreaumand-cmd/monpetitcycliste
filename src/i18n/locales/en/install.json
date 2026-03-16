@@ -1,5 +1,5 @@
 {
-  "title": "Install Mon Petit Cycliste",
+  "title": "Install La Bordure",
   "subtitle": "Access the app with one tap from your home screen",
   "alreadyInstalled": "✓ App already installed!",
   "alreadyInstalledDesc": "You can close this page and open the app from your home screen.",
@@ -38,6 +38,6 @@
   "desktop": {
     "title": "How to install on desktop",
     "step1": "Click the install icon in the address bar",
-    "step2": "Or use the browser menu → \"Install Mon Petit Cycliste\""
+    "step2": "Or use the browser menu → \"Install La Bordure\""
   }
 }
