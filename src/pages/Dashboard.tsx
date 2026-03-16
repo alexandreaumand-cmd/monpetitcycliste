@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useCurrentManager } from "@/hooks/useCurrentManager";
 import { useActivityTracker } from "@/hooks/useActivityTracker";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { MobileLayout } from "@/components/mobile/MobileLayout";
 import { AppSidebar } from "@/components/layout/AppSidebar";
@@ -64,14 +65,7 @@ const Dashboard = () => {
   };
 
   if (managerLoading || roleLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Chargement...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   // SuperAdmin layout (isolé)
