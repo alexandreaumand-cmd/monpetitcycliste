@@ -17,7 +17,7 @@ export function QuickActions() {
         <div className="flex flex-col md:flex-row gap-4 items-center justify-center">
           <div className="text-center md:text-left md:flex-1">
             <h2 className="text-xl font-montserrat font-semibold mb-1 text-foreground">{t('quickActions.title')}</h2>
-            <p className="text-sm text-muted-foreground font-poppins">{t('quickActions.subtitle')}</p>
+            <p className="text-sm text-muted-foreground font-inter">{t('quickActions.subtitle')}</p>
           </div>
           <div className="flex gap-3">
             <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">

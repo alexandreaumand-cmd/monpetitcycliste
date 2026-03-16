@@ -231,7 +231,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                             </div>
                           </div>
                         ) : (
-                          <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3 border-2 border-dashed border-gray-300">
+                          <div className="bg-white/50 dark:bg-white/5 rounded-lg p-3 border-2 border-dashed border-gray-300">
                             <p className="text-sm text-muted-foreground text-center italic">
                               {t('kpis.clickToAssign')}
                             </p>
@@ -277,7 +277,7 @@ export const RankingsKPIs = ({ phaseId }: RankingsKPIsProps) => {
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3 border-2 border-dashed border-gray-300">
+                      <div className="bg-white/50 dark:bg-white/5 rounded-lg p-3 border-2 border-dashed border-gray-300">
                         <p className="text-sm text-muted-foreground text-center italic">
                           {t('kpis.notAssigned')}
                         </p>

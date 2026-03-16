@@ -15,7 +15,7 @@ const getRankStyle = (index: number) => {
     case 0:
       return "text-bordure-gold font-bold";
     case 1:
-      return "text-gray-500 font-semibold";
+      return "text-muted-foreground font-semibold";
     case 2:
       return "text-amber-700 font-semibold";
     default:

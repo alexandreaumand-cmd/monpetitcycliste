@@ -810,7 +810,7 @@ export const MyTeamDesktop = () => {
                           <Trophy className="h-5 w-5 text-bordure-gold" />
                         )}
                         {coureur.coureur_id === top3ByPoints.second && (
-                          <Award className="h-5 w-5 text-gray-400" />
+                          <Award className="h-5 w-5 text-muted-foreground" />
                         )}
                         {coureur.coureur_id === top3ByPoints.third && (
                           <Award className="h-5 w-5 text-amber-700" />

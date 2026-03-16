@@ -81,7 +81,7 @@ export function RiderResultsPanel({
     if (position <= 3) {
       const colors = [
         "bg-bordure-gold/20 text-bordure-gold border-bordure-gold/30",
-        "bg-gray-300/20 text-gray-500 border-gray-400/30",
+        "bg-gray-300/20 text-muted-foreground border-gray-400/30",
         "bg-orange-400/20 text-orange-600 border-orange-400/30",
       ];
       return (

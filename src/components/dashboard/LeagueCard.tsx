@@ -91,7 +91,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
           {gameMode && (
             <Badge 
               variant="outline" 
-              className="gap-1 text-xs text-muted-foreground border-muted-foreground/30 font-poppins"
+              className="gap-1 text-xs text-muted-foreground border-muted-foreground/30 font-inter"
             >
               <Zap className="h-3 w-3" />
               {t(`leagueCard.gameMode.${gameMode.id}`)}
@@ -108,7 +108,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
           ) : leagueSeason?.season?.annee ? (
             <Badge 
               variant="outline" 
-              className="gap-1 text-xs text-muted-foreground border-muted-foreground/30 font-poppins"
+              className="gap-1 text-xs text-muted-foreground border-muted-foreground/30 font-inter"
             >
               <Calendar className="h-3 w-3" />
               {leagueSeason.season.annee}
@@ -182,7 +182,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
               <p className="font-montserrat font-bold text-black">
                 {t('leagueCard.allPlayersHere')}
               </p>
-              <p className="text-sm font-poppins text-gray-900 mt-1">
+              <p className="text-sm font-inter text-gray-900 mt-1">
                 {t('leagueCard.readyToStart')}
               </p>
             </div>
@@ -333,7 +333,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                 <div className="space-y-2">
                   {/* Round number */}
                   <div className="flex items-center justify-between">
-                    <span className={`text-sm font-poppins ${
+                    <span className={`text-sm font-inter ${
                       auctionStatus.isAnnouncementsPending ? 'text-orange-800' 
                         : auctionStatus.isScheduled ? 'text-blue-800' 
                         : 'text-gray-900'
@@ -365,7 +365,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                   {!auctionStatus.isScheduled && !auctionStatus.isAnnouncementsPending && (
                     <>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-poppins text-gray-900 flex items-center gap-1">
+                        <span className="text-sm font-inter text-gray-900 flex items-center gap-1">
                           <CheckCircle2 className="h-4 w-4" />
                           {t('leagueCard.auction.validatedManagers')}
                         </span>
@@ -391,7 +391,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                     <div className={`${auctionStatus.isScheduled ? 'bg-blue-50/80' : 'bg-white/80'} rounded-lg p-3 border ${auctionStatus.isScheduled ? 'border-blue-200' : 'border-black/10'} mt-3`}>
                       <div className="flex items-center gap-2 mb-2">
                         <Clock className={`h-4 w-4 ${auctionStatus.isScheduled ? 'text-blue-600' : 'text-black'}`} />
-                        <span className={`text-xs font-poppins font-medium ${auctionStatus.isScheduled ? 'text-blue-800' : 'text-gray-900'}`}>
+                        <span className={`text-xs font-inter font-medium ${auctionStatus.isScheduled ? 'text-blue-800' : 'text-gray-900'}`}>
                           {auctionStatus.isScheduled ? t('leagueCard.auction.openingIn') : t('leagueCard.auction.timeRemaining')}
                         </span>
                       </div>
@@ -458,7 +458,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                 {t('leagueCard.leagueEnded')}
               </p>
               {stats?.seasonLeader && (
-                <p className="text-sm font-poppins text-gray-300 mt-1">
+                <p className="text-sm font-inter text-foreground mt-1">
                   {t('leagueCard.winner')} : {stats.seasonLeader.name}
                 </p>
               )}

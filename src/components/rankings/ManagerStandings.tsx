@@ -240,7 +240,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
                 <span className={cn(
                   "font-mono text-lg font-bold",
                   rank === 1 && "text-[#D4AF37]",
-                  rank === 2 && "text-gray-400",
+                  rank === 2 && "text-muted-foreground",
                   rank === 3 && "text-[#CD7F32]",
                   rank > 3 && "text-foreground"
                 )}>
