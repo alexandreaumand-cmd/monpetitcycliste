@@ -33,10 +33,89 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+
+    <style>
+      /* Inline splash styles — visible before any JS loads */
+      .splash-screen {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #F5F0E8;
+      }
+      .splash-inner {
+        text-align: center;
+        max-width: 20rem;
+        padding: 0 1rem;
+      }
+      .splash-logo {
+        width: 140px;
+        height: 140px;
+        margin: 0 auto 2rem;
+      }
+      .splash-spinner {
+        width: 2.5rem;
+        height: 2.5rem;
+        border: 4px solid #C9922A;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: splash-spin 1s linear infinite;
+        margin: 0 auto 2rem;
+      }
+      @keyframes splash-spin {
+        to { transform: rotate(360deg); }
+      }
+      .splash-quote {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.875rem;
+        font-style: italic;
+        color: #5a7a5a;
+        line-height: 1.5;
+      }
+      .splash-author {
+        display: block;
+        margin-top: 0.25rem;
+        font-size: 0.75rem;
+        font-style: normal;
+        font-weight: 500;
+        color: #C9922A;
+      }
+    </style>
   </head>
 
-  <body>
-    <div id="root"></div>
+  <body style="background:#F5F0E8;margin:0">
+    <div id="root">
+      <!-- Native splash — replaced when React mounts -->
+      <div class="splash-screen">
+        <div class="splash-inner">
+          <img src="/splash-logo.png" alt="La Bordure" width="140" height="140" class="splash-logo" />
+          <div class="splash-spinner"></div>
+          <p class="splash-quote" id="splash-quote"></p>
+        </div>
+      </div>
+      <script>
+        (function(){
+          var q=[
+            {t:"Le vélo ne ment jamais.",a:"Greg LeMond"},
+            {t:"La course, c'est la vie condensée.",a:"Eddy Merckx"},
+            {t:"Tant que je respire, j'attaque.",a:"Bernard Hinault"},
+            {t:"On ne gagne pas le Tour de France au repos.",a:"Jacques Anquetil"},
+            {t:"Le cyclisme est un sport de souffrance.",a:"Fausto Coppi"},
+            {t:"La montagne ne triche pas.",a:"Lucien Van Impe"},
+            {t:"Le vélo, c'est de l'art en mouvement.",a:"Laurent Fignon"},
+            {t:"Rouler, c'est méditer avec les jambes.",a:"Anonyme"},
+            {t:"La douleur est temporaire, l'abandon est définitif.",a:"Anonyme"},
+            {t:"Chaque coup de pédale est une promesse.",a:"Anonyme"},
+            {t:"Un bon grimpeur souffre autant que les autres, il va juste plus vite.",a:"Marco Pantani"},
+            {t:"Le peloton pardonne rarement.",a:"Sean Kelly"},
+            {t:"Le maillot jaune se mérite chaque jour.",a:"Anonyme"}
+          ];
+          var pick=q[Math.floor(Math.random()*q.length)];
+          var el=document.getElementById("splash-quote");
+          if(el) el.innerHTML="« "+pick.t+" »<span class='splash-author'>— "+pick.a+"</span>";
+        })();
+      </script>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
