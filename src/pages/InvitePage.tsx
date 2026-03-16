@@ -156,7 +156,7 @@ export function InvitePage() {
       <Card className="w-full max-w-md shadow-elegant">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <img src={mpcLogo} alt="Mon Petit Cycliste" className="h-24 w-24 object-contain" />
+            <img src={mpcLogoVertical} alt="La Bordure Fantasy Cycling" className="h-36 w-auto object-contain" />
           </div>
           <CardTitle>{t('invite.title')}</CardTitle>
           <CardDescription>
