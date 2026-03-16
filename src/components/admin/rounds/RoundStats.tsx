@@ -76,12 +76,12 @@ export const RoundStats = ({
       label: "Enchères terminées",
       value: completedManagerNames.length,
       icon: CircleCheckBig,
-      color: "text-emerald-700",
-      bgColor: "bg-emerald-100",
-      cardBg: "bg-emerald-100/50",
+      color: "text-secondary",
+      bgColor: "bg-secondary/10",
+      cardBg: "bg-secondary/5",
       tooltip: completedManagerNames.length > 0 && (
         <div>
-          <p className="font-semibold text-emerald-700">✔️ Roster complet :</p>
+          <p className="font-semibold text-secondary">✔️ Roster complet :</p>
           <p className="text-sm">{completedManagerNames.join(", ")}</p>
         </div>
       )
