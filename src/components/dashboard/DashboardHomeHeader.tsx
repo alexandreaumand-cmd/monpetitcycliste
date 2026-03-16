@@ -1,11 +1,11 @@
 import { Calendar, Bike } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
-import mpcLogo from "@/assets/mpc-logo.png";
+import faviconLogo from "@/assets/logo-carré-sans-marque.png";
+import logoBordureLight from "@/assets/logo-bordure-light.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { UnifiedProfileDropdown } from "@/components/layout/UnifiedProfileDropdown";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
-import BordureStripes from "@/components/landing/BordureStripes";
 
 interface DashboardHomeHeaderProps {
   manager: any;
