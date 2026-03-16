@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import faviconLogo from "@/assets/logo-carré-sans-marque.png";
+import faviconLogo from "@/assets/logo-carre-rose.png";
 import { getRandomQuote, type CyclingQuote } from "@/lib/cycling-quotes";
 
 export const LoadingSpinner = () => {
