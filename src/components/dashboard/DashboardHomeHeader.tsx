@@ -33,7 +33,7 @@ export function DashboardHomeHeader({
       <header className="sticky top-0 z-50 bg-secondary/95 backdrop-blur-sm border-b border-bordure-gold/30 safe-top">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <img
-            src={mpcLogo}
+            src={faviconLogo}
             alt="Logo La Bordure"
             loading="eager"
             fetchPriority="high"
