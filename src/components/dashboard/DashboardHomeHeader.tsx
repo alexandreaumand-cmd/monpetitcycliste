@@ -1,7 +1,7 @@
 import { Calendar, Bike } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
-import faviconLogo from "@/assets/logo-carré-sans-marque.png";
+import faviconLogo from "@/assets/logo-carre-rose.png";
 import logoBordureLight from "@/assets/logo-bordure-light.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { UnifiedProfileDropdown } from "@/components/layout/UnifiedProfileDropdown";

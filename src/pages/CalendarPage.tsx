@@ -24,7 +24,7 @@ import * as XLSX from "xlsx";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
-import mpcLogo from "@/assets/mpc-logo.png";
+import mpcLogo from "@/assets/logo-carre-rose.png";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
 import { CalendarCourseDialog } from "@/components/calendar/CalendarCourseDialog";

@@ -31,7 +31,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import mpcLogo from "@/assets/mpc-logo.png";
+import mpcLogo from "@/assets/logo-carre-rose.png";
 import * as XLSX from "xlsx";
 import { useTranslation } from "react-i18next";
 import { RiderResultsPanel } from "@/components/data/RiderResultsPanel";
