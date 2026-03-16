@@ -6,7 +6,7 @@ import { MobileDrawer } from "./MobileDrawer";
 import { Button } from "@/components/ui/button";
 
 import { Menu } from "lucide-react";
-import faviconLogo from "@/assets/logo-carre-rose.png";
+import logoBordure from "@/assets/logo-bordure.png";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { useLeague } from "@/contexts/LeagueContext";
