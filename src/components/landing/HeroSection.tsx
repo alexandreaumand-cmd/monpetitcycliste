@@ -5,7 +5,8 @@ import { ChevronDown } from "lucide-react";
 import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { useCallback, useEffect, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import heroPeloton from "@/assets/hero-peloton-aerial.webp";
+// LCP image served from public/ for immediate HTML discoverability
+const heroPeloton = "/hero-peloton-aerial.webp";
 import heroHandlebar from "@/assets/hero-handlebar.webp";
 
 const HeroSection = () => {
