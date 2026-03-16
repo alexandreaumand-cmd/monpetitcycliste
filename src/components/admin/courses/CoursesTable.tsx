@@ -225,7 +225,7 @@ export const CoursesTable = ({ courses, isLoading, onSave, onDelete }: CoursesTa
                 const isEdited = editedCourses.has(course.id);
                 
                 return (
-                  <TableRow key={course.id} className={isEdited ? "bg-blue-50/50 dark:bg-blue-950/20" : ""}>
+                  <TableRow key={course.id} className={isEdited ? "bg-accent/50 dark:bg-accent/20" : ""}>
                     {/* Nom */}
                     <TableCell>
                       <Input

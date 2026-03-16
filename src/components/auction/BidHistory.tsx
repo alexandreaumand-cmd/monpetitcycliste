@@ -159,17 +159,17 @@ export const BidHistory = ({ managerId, phaseId }: BidHistoryProps) => {
                   <p className="text-muted-foreground text-center py-4">Aucune enchère perdue</p>
                 ) : (
                   lost.map((bid) => (
-                    <div key={bid.bid_id} className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-900">
+                    <div key={bid.bid_id} className="p-3 bg-muted/50 dark:bg-muted/20 rounded-lg border border-border">
                       <div className="flex items-center justify-between mb-1">
                         <p className="font-medium">{bid.coureur_nom}</p>
-                        <Badge variant="outline" className="text-red-700 dark:text-red-400">
+                        <Badge variant="outline" className="text-muted-foreground">
                           {formatAmount(bid.my_bid)}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {bid.coureur_equipe}
                       </p>
-                      <p className="text-sm text-red-700 dark:text-red-400 mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         Perdu contre <strong>{bid.winning_manager}</strong> à {formatAmount(bid.winning_amount)}
                       </p>
                     </div>

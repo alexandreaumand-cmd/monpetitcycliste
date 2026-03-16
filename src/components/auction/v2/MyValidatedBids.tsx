@@ -148,8 +148,8 @@ export function MyValidatedBids({ phaseId, managerId, leagueId, onBack }: MyVali
           </div>
 
           {/* Info */}
-          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <p className="text-sm text-blue-900 dark:text-blue-100">
+          <div className="bg-accent dark:bg-accent/20 border border-bordure-gold/30 dark:border-bordure-gold/20 rounded-lg p-4">
+            <p className="text-sm text-foreground dark:text-foreground">
               💡 Ces enchères sont en attente de traitement. Tu ne peux plus les modifier.
               Le round se clôturera automatiquement à la deadline.
             </p>

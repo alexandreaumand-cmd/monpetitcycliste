@@ -224,8 +224,8 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                     }`}>
                       <div className={`flex-shrink-0 rounded-full p-1.5 mt-0.5 ${
                         item.change_type === "added"
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          ? "bg-secondary/10 text-secondary dark:bg-secondary/20 dark:text-secondary"
+                          : "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
                       }`}>
                         {item.change_type === "added" ? <Plus className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
                       </div>

@@ -20,10 +20,10 @@
     --bordure-pink: 346 52% 77%;
     --bordure-cream: 38 38% 93%;
 
-    --card: 0 0% 100%;
+    --card: 38 38% 93%;               /* Crème #F5F0E8 */
     --card-foreground: 147 45% 21%;
 
-    --popover: 0 0% 100%;
+    --popover: 38 38% 93%;
     --popover-foreground: 147 45% 21%;
 
     --primary: 38 66% 48%;          /* Or #C9922A */

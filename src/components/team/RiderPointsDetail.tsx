@@ -113,10 +113,10 @@ export const RiderPointsDetail = ({
   }, [rows]);
 
   const getRatioColor = (ratio: number) => {
-    if (ratio >= 1.5) return "text-green-600";
-    if (ratio >= 1.0) return "text-blue-600";
-    if (ratio >= 0.8) return "text-orange-500";
-    return "text-red-500";
+    if (ratio >= 1.5) return "text-secondary";
+    if (ratio >= 1.0) return "text-primary";
+    if (ratio >= 0.8) return "text-bordure-gold";
+    return "text-muted-foreground";
   };
 
   return (
@@ -204,7 +204,7 @@ export const RiderPointsDetail = ({
                               <div className="flex items-center gap-2">
                                 <p className="font-medium">{row.type_classement}</p>
                                 {row.is_ttt && (
-                                  <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded">
+                                  <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-accent text-accent-foreground dark:bg-accent dark:text-accent-foreground rounded">
                                     TTT
                                   </span>
                                 )}
@@ -214,13 +214,13 @@ export const RiderPointsDetail = ({
                                 {row.position && `Position ${row.position}`}
                               </p>
                               {row.commentaire && (
-                                <p className="text-xs text-blue-600 italic mt-1">
+                                <p className="text-xs text-primary italic mt-1">
                                   {row.commentaire}
                                 </p>
                               )}
                             </div>
                             <div className={`font-bold whitespace-nowrap ${
-                              row.commentaire ? 'text-blue-600' : 'text-primary'
+                              row.commentaire ? 'text-primary' : 'text-primary'
                             }`}>
                               {row.points} pts
                             </div>

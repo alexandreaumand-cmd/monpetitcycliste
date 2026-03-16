@@ -6,7 +6,7 @@
   "hero": {
     "title1": "Les cols c'est pour eux,",
     "title2": "les points, c'est pour toi.",
-    "subtitle": "Mon Petit Cycliste, le jeu de fantasy cycling basé sur les vraies courses du calendrier UCI.",
+    "subtitle": "La Bordure, le jeu de fantasy cycling basé sur les vraies courses du calendrier UCI.",
     "cta": {
       "createLeague": "Créer ma ligue",
       "myLeagues": "Mes Ligues",
@@ -119,7 +119,7 @@
     "points": "pts"
   },
   "stats": {
-    "title": "La communauté Mon Petit Cycliste",
+    "title": "La communauté La Bordure",
     "courses": "COURSES UCI",
     "leagues": "LIGUES ACTIVES",
     "riders": "COUREURS PRO",
@@ -170,7 +170,7 @@
   },
   "whyPlay": {
     "title": "Pourquoi jouer à",
-    "brandName": "Mon Petit Cycliste",
+    "brandName": "La Bordure",
     "questionMark": "?",
     "subtitle": "Le fantasy cycling le plus immersif basé sur les vraies courses UCI",
     "features": {
@@ -218,6 +218,6 @@
       "discord": "Discord",
       "instagram": "Instagram"
     },
-    "copyright": "© 2025 Mon Petit Cycliste. Tous droits réservés."
+    "copyright": "© 2025 La Bordure. Tous droits réservés."
   }
 }

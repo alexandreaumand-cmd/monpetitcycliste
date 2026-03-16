@@ -21,7 +21,7 @@ const InstallPage: React.FC = () => {
         <div className="text-center mb-8">
           <img 
             src="/favicon.png" 
-            alt="Mon Petit Cycliste" 
+            alt="La Bordure" 
             className="w-24 h-24 mx-auto mb-4 rounded-2xl shadow-lg"
           />
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">

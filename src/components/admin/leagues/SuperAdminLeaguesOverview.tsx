@@ -96,7 +96,7 @@ export function SuperAdminLeaguesOverview() {
       value: stats.total_members,
       description: "Joueurs uniques inscrits",
       icon: Users,
-      color: "text-blue-500",
+      color: "text-secondary",
     },
     {
       title: "Activité récente",

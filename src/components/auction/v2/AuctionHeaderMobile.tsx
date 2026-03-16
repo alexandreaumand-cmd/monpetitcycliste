@@ -94,7 +94,7 @@ export function AuctionHeaderMobile({
         <Link to="/dashboard/home" className="flex items-center">
           <img 
             src={mpcLogo} 
-            alt="Logo Mon Petit Cycliste" 
+            alt="Logo La Bordure" 
             className="h-7 w-auto max-w-[180px]"
           />
         </Link>

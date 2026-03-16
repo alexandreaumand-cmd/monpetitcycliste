@@ -47,8 +47,8 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       label: "Étapes",
       points: course.points_etapes || 0,
       icon: TrendingUp,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100",
+      color: "text-secondary",
+      bgColor: "bg-secondary/10",
       detail: isStageRace(course.type_course)
         ? `${course.nb_etapes_estimees} × ${course.points_etapes_unitaire} pts`
         : null,
@@ -59,7 +59,7 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       points: course.points_gc || 0,
       icon: Trophy,
       color: "text-bordure-gold",
-      bgColor: "bg-yellow-100",
+      bgColor: "bg-bordure-gold/20",
       detail: null,
       typeClassement: "General"
     },
@@ -67,8 +67,8 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       label: "Points (maillot vert)",
       points: course.points_pts || 0,
       icon: Award,
-      color: "text-green-600",
-      bgColor: "bg-green-100",
+      color: "text-secondary",
+      bgColor: "bg-secondary/10",
       detail: null,
       typeClassement: "Points"
     },
@@ -76,8 +76,8 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       label: "Montagne",
       points: course.points_mont || 0,
       icon: Mountain,
-      color: "text-red-600",
-      bgColor: "bg-red-100",
+      color: "text-bordure-pink",
+      bgColor: "bg-bordure-pink/20",
       detail: null,
       typeClassement: "Montagne"
     },
@@ -85,8 +85,8 @@ export const CoursePointsDrawer = ({ course, open, onOpenChange }: CoursePointsD
       label: "Jeune",
       points: course.points_jeune || 0,
       icon: Star,
-      color: "text-purple-600",
-      bgColor: "bg-purple-100",
+      color: "text-primary",
+      bgColor: "bg-primary/10",
       detail: null,
       typeClassement: "Jeune"
     }

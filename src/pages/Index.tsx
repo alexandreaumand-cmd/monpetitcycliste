@@ -41,7 +41,7 @@ const Index = () => {
       <div className="min-h-screen bg-secondary flex flex-col items-center justify-center">
         <img 
           src={mpcLogo} 
-          alt="Mon Petit Cycliste" 
+          alt="La Bordure" 
           className="h-24 w-24 mb-6 animate-pulse" 
         />
         <div className="w-8 h-8 border-4 border-bordure-gold border-t-transparent rounded-full animate-spin" />

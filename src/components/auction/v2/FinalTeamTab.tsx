@@ -198,9 +198,9 @@ export function FinalTeamTab({
             </div>
 
             {/* Coureur le plus surpayé */}
-            <div className="p-4 bg-background/80 rounded-xl border border-red-500/20">
+            <div className="p-4 bg-background/80 rounded-xl border border-primary/20">
               <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="h-4 w-4 text-red-600 dark:text-red-400" />
+                <TrendingUp className="h-4 w-4 text-primary" />
                 <p className="text-sm text-muted-foreground">{t('finalTeam.mostOverpaid')}</p>
               </div>
               <p className="text-lg font-bold truncate">{mostOverpaid.nom}</p>

@@ -6,7 +6,7 @@
   "hero": {
     "title1": "They climb the cols,",
     "title2": "you score the points.",
-    "subtitle": "Mon Petit Cycliste, the fantasy cycling game based on real UCI calendar races.",
+    "subtitle": "La Bordure, the fantasy cycling game based on real UCI calendar races.",
     "cta": {
       "createLeague": "Create my league",
       "myLeagues": "My Leagues",
@@ -119,7 +119,7 @@
     "points": "pts"
   },
   "stats": {
-    "title": "The Mon Petit Cycliste community",
+    "title": "The La Bordure community",
     "courses": "UCI RACES",
     "leagues": "ACTIVE LEAGUES",
     "riders": "PRO RIDERS",
@@ -170,7 +170,7 @@
   },
   "whyPlay": {
     "title": "Why play",
-    "brandName": "Mon Petit Cycliste",
+    "brandName": "La Bordure",
     "questionMark": "?",
     "subtitle": "The most immersive fantasy cycling based on real UCI races",
     "features": {
@@ -218,6 +218,6 @@
       "discord": "Discord",
       "instagram": "Instagram"
     },
-    "copyright": "© 2025 Mon Petit Cycliste. All rights reserved."
+    "copyright": "© 2025 La Bordure. All rights reserved."
   }
 }

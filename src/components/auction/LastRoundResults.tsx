@@ -141,15 +141,15 @@ export const LastRoundResults = ({ phaseId, managerId }: LastRoundResultsProps) 
                 {lostBids.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="text-sm font-semibold flex items-center gap-2">
-                      <XCircle className="h-4 w-4 text-red-600" />
+                      <XCircle className="h-4 w-4 text-muted-foreground" />
                       Perdues ({lostBids.length})
                     </h4>
                     <div className="space-y-1">
                       {lostBids.map((bid) => (
-                        <div key={bid.bid_id} className="p-2 bg-red-50 dark:bg-red-950/20 rounded text-sm">
+                        <div key={bid.bid_id} className="p-2 bg-muted/50 dark:bg-muted/20 rounded text-sm">
                           <div className="flex items-center justify-between">
                             <span className="font-medium">{bid.coureur_nom}</span>
-                            <span className="text-red-700 dark:text-red-400">
+                            <span className="text-muted-foreground">
                               {formatAmount(bid.my_bid)}
                             </span>
                           </div>

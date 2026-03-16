@@ -222,7 +222,7 @@ export const StartlistRaceCards = ({ onRaceClick, isSuperAdmin }: StartlistRaceC
                       
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {isOngoing && (
-                          <Badge className="bg-red-600 text-white border-red-600">
+                          <Badge className="bg-primary text-primary-foreground border-primary">
                             EN COURS
                           </Badge>
                         )}

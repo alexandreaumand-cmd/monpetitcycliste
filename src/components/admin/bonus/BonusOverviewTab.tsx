@@ -216,7 +216,7 @@ export const BonusOverviewTab = ({ phaseId, leagueId, saisonId }: BonusOverviewT
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-2">
-              <Timer className="h-4 w-4 text-blue-500" />
+              <Timer className="h-4 w-4 text-primary" />
               <span className="text-sm text-muted-foreground">ITT</span>
             </div>
             <p className="text-2xl font-bold">{totalItt}</p>

@@ -81,7 +81,7 @@ export const RiderBonusForm = ({ bonusType, phaseId, onBack, onSubmit, isSubmitt
                 <span className="ml-2">• Manager: {selectedCoureur.manager_nom}</span>
               )}
               {(bonusType === 'first_win' || bonusType === 'itt') && (
-                <span className="ml-2 text-blue-600 font-medium">• Sera attribué à tous les managers possesseurs</span>
+                <span className="ml-2 text-primary font-medium">• Sera attribué à tous les managers possesseurs</span>
               )}
             </p>
           )}

@@ -27,7 +27,7 @@ export const MobileLayout = ({
   manager,
   isAdmin,
   onSignOut,
-  title = "Mon Petit Cycliste",
+  title = "La Bordure",
 }: MobileLayoutProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
@@ -56,7 +56,7 @@ export const MobileLayout = ({
               <Link to="/dashboard/home" className="shrink-0">
                 <img 
                   src={mpcLogo} 
-                  alt="Logo Mon Petit Cycliste" 
+                  alt="Logo La Bordure" 
                   loading="eager"
                   width={28}
                   height={28}
