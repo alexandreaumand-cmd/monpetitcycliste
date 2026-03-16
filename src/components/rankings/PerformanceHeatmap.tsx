@@ -122,23 +122,23 @@ export const PerformanceHeatmap = ({ saisonId }: PerformanceHeatmapProps) => {
         {/* Légende */}
         <div className="flex gap-2 mb-4 text-xs flex-wrap">
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-green-600 rounded" />
+            <div className="w-4 h-4 bg-secondary rounded" />
             <span>Top 10%</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-green-400 rounded" />
+            <div className="w-4 h-4 bg-secondary/70 rounded" />
             <span>Top 25%</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-yellow-300 rounded" />
+            <div className="w-4 h-4 bg-primary/30 rounded" />
             <span>Milieu</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-orange-400 rounded" />
+            <div className="w-4 h-4 bg-primary/60 rounded" />
             <span>Danger</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-4 h-4 bg-red-500 rounded" />
+            <div className="w-4 h-4 bg-bordure-gold rounded" />
             <span>Bottom 25%</span>
           </div>
         </div>

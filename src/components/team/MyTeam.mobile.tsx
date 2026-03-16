@@ -446,7 +446,7 @@ export const MyTeamMobile = () => {
         </div>
         
         <div className="flex items-center gap-1 text-muted-foreground">
-          <Calendar className="h-4 w-4 text-blue-500" />
+          <Calendar className="h-4 w-4 text-primary" />
           <span>{kpis.total_race_days || 0}</span>
           <span>jours</span>
         </div>

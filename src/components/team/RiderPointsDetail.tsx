@@ -220,7 +220,7 @@ export const RiderPointsDetail = ({
                               )}
                             </div>
                             <div className={`font-bold whitespace-nowrap ${
-                              row.commentaire ? 'text-blue-600' : 'text-primary'
+                              row.commentaire ? 'text-primary' : 'text-primary'
                             }`}>
                               {row.points} pts
                             </div>

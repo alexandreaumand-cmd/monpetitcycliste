@@ -456,7 +456,7 @@ export const MyTeamDesktop = () => {
     if (ratio >= 5) return "bg-bordure-gold text-gray-900 border-bordure-gold";
     if (ratio >= 3) return "bg-orange-400 text-gray-900 border-orange-500";
     
-    return "bg-red-500 text-white border-red-600";
+    return "bg-muted text-muted-foreground border-border";
   };
 
   const getPhaseLabel = (phase: any) => {

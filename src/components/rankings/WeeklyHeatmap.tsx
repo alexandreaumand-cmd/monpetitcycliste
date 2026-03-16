@@ -104,10 +104,10 @@ export const WeeklyHeatmap = ({ saisonId }: WeeklyHeatmapProps) => {
 
     if (pts === 0) return "";
 
-    if (rank === 1) return "bg-green-700 text-white font-bold";
-    if (rank <= 3) return "bg-green-300 text-green-900 font-semibold";
-    if (rank === total) return "bg-red-600 text-white font-bold";
-    if (rank >= total - 1) return "bg-red-300 text-red-900 font-semibold";
+    if (rank === 1) return "bg-secondary text-secondary-foreground font-bold";
+    if (rank <= 3) return "bg-secondary/60 text-secondary-foreground font-semibold";
+    if (rank === total) return "bg-primary text-primary-foreground font-bold";
+    if (rank >= total - 1) return "bg-primary/60 text-primary-foreground font-semibold";
 
     return "";
   };
