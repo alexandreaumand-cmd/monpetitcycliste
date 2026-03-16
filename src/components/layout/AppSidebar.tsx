@@ -14,7 +14,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import mpcLogo from "@/assets/mpc-logo.png";
+import faviconLogo from "@/assets/logo-carré-sans-marque.png";
 import logoBordure from "@/assets/logo-bordure.png";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useUserLeagues } from "@/hooks/useUserLeagues";
@@ -65,7 +65,7 @@ export function AppSidebar({ isAdmin, isSuperAdmin = false, isLeagueAdminOnly = 
         <div className="flex items-center justify-center px-2 py-4">
           {isCollapsed ? (
             <img 
-              src={mpcLogo} 
+              src={faviconLogo} 
               alt="La Bordure"
               loading="eager"
               width={32}
