@@ -27,7 +27,7 @@ export const MobileLayout = ({
   manager,
   isAdmin,
   onSignOut,
-  title = "Mon Petit Cycliste",
+  title = "La Bordure",
 }: MobileLayoutProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
