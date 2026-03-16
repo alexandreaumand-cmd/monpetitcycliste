@@ -151,14 +151,14 @@ export const AuctionTabs = ({
                   data-[state=active]:shadow-md
                   data-[state=active]:border-2
                   data-[state=active]:border-bordure-gold
-                  data-[state=inactive]:bg-white 
-                  data-[state=inactive]:text-gray-700
+                  data-[state=inactive]:bg-background 
+                  data-[state=inactive]:text-muted-foreground
                   data-[state=inactive]:border-2
-                  data-[state=inactive]:border-gray-300
+                  data-[state=inactive]:border-border
                   data-[state=inactive]:shadow-sm
-                  hover:bg-gray-100
-                  hover:border-gray-600
-                  dark:data-[state=inactive]:bg-gray-800
+                  hover:bg-muted
+                  hover:border-muted-foreground
+                  dark:data-[state=inactive]:bg-card
                   dark:data-[state=inactive]:text-foreground
                   rounded-lg 
                   px-5 
