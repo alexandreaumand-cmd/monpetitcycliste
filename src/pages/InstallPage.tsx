@@ -52,7 +52,7 @@ const InstallPage: React.FC = () => {
           <Button 
             onClick={handleInstall}
             size="lg"
-            className="mb-6 bg-bordure-gold hover:bg-bordure-gold text-black font-semibold px-8 py-6 text-lg"
+            className="mb-6 bg-bordure-gold hover:bg-bordure-gold text-foreground font-semibold px-8 py-6 text-lg"
           >
             <Download className="w-5 h-5 mr-2" />
             {t('installButton')}

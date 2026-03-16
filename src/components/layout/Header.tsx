@@ -199,7 +199,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                   className={cn(
                     "px-4 py-2 rounded-full font-inter font-semibold transition-all flex items-center gap-2",
                     active 
-                      ? "bg-bordure-gold text-black shadow-lg shadow-bordure-gold/30" 
+                      ? "bg-bordure-gold text-foreground shadow-lg shadow-bordure-gold/30" 
                       : "text-muted-foreground hover:text-bordure-gold hover:bg-bordure-gold/10"
                   )}
                 >
@@ -240,7 +240,7 @@ export const Header = ({ manager, isAdmin, onSignOut }: HeaderProps) => {
                     className={cn(
                       "px-4 py-3 rounded-xl font-inter font-semibold transition-all flex items-center gap-3",
                       active 
-                        ? "bg-bordure-gold text-black shadow-lg" 
+                        ? "bg-bordure-gold text-foreground shadow-lg" 
                         : "text-muted-foreground hover:text-bordure-gold hover:bg-bordure-gold/10"
                     )}
                   >

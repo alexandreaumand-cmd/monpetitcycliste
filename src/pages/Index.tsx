@@ -38,7 +38,7 @@ const Index = () => {
   // Loading screen while checking session
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-secondary flex flex-col items-center justify-center">
         <img 
           src={mpcLogo} 
           alt="Mon Petit Cycliste" 

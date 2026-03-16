@@ -351,7 +351,7 @@ export default function CalendarPage() {
     } else if (days === 0) {
       return <Badge className="bg-green-500 hover:bg-green-600">{t('badges.today')}</Badge>;
     } else if (days <= 7) {
-      return <Badge className="bg-bordure-gold hover:bg-bordure-gold text-black">J-{days}</Badge>;
+      return <Badge className="bg-bordure-gold hover:bg-bordure-gold text-foreground">J-{days}</Badge>;
     } else if (days <= 30) {
       return <Badge variant="outline">J-{days}</Badge>;
     } else {

@@ -765,7 +765,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                         {groupedByPhase.bonus.map((bonus, idx) => (
                           <div 
                             key={idx}
-                            className="flex items-center justify-between py-2 px-3 bg-white/50 dark:bg-black/20 rounded"
+                            className="flex items-center justify-between py-2 px-3 bg-white/50 dark:bg-secondary/20 rounded"
                           >
                             <div className="flex-1">
                               <div className="font-medium">{bonus.type_classement}</div>
