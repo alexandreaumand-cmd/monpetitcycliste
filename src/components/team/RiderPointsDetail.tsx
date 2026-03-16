@@ -113,10 +113,10 @@ export const RiderPointsDetail = ({
   }, [rows]);
 
   const getRatioColor = (ratio: number) => {
-    if (ratio >= 1.5) return "text-green-600";
-    if (ratio >= 1.0) return "text-blue-600";
-    if (ratio >= 0.8) return "text-orange-500";
-    return "text-red-500";
+    if (ratio >= 1.5) return "text-secondary";
+    if (ratio >= 1.0) return "text-primary";
+    if (ratio >= 0.8) return "text-bordure-gold";
+    return "text-muted-foreground";
   };
 
   return (
