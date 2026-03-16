@@ -10,7 +10,7 @@ self.addEventListener('push', function(event) {
     event.waitUntil(
       self.registration.showNotification('La Bordure', {
         body: 'Nouvelle notification reçue',
-        icon: '/pwa-192x192.png'
+        icon: '/pwa-192x192-v2.png'
       })
     );
     return;
@@ -29,7 +29,7 @@ self.addEventListener('push', function(event) {
     event.waitUntil(
       self.registration.showNotification('La Bordure', {
         body: rawText || 'Notification reçue (format inconnu)',
-        icon: '/pwa-192x192.png'
+        icon: '/pwa-192x192-v2.png'
       })
     );
     return;
@@ -40,7 +40,7 @@ self.addEventListener('push', function(event) {
 
   const options = {
     body: message || '',
-    icon: '/pwa-192x192.png',
+    icon: '/pwa-192x192-v2.png',
     badge: '/notification-badge-96x96.png',
     vibrate: [100, 50, 100],
     data: {
