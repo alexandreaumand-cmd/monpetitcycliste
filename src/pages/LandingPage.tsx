@@ -13,7 +13,7 @@ import {
 
 const LandingPage = () => {
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-secondary">
       <LandingHeader />
       <main>
         <HeroSection />

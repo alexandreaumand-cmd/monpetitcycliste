@@ -13,7 +13,6 @@ const HeroSection = () => {
   const isMobile = useIsMobile();
   const sectionRef = useRef<HTMLElement>(null);
 
-  // Mouse tilt effect (desktop only)
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-3, 3]), { stiffness: 100, damping: 30 });
@@ -46,7 +45,6 @@ const HeroSection = () => {
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
       style={{ perspective: "1200px" }}
     >
-      {/* Phase 1-2: Background Peloton with cinematic dive zoom */}
       <motion.div
         className="absolute inset-0 will-change-transform"
         initial={{ scale: 0.6, filter: "blur(4px)" }}
@@ -58,7 +56,6 @@ const HeroSection = () => {
             : { rotateY, rotateX, transformStyle: "preserve-3d" }
         }
       >
-        {/* Peloton drift - slow continuous zoom after entry */}
         <motion.div
           className="w-full h-full"
           initial={{ scale: 1 }}
@@ -76,19 +73,16 @@ const HeroSection = () => {
           />
         </motion.div>
 
-        {/* Radial gradient overlay - dark edges, lighter center */}
         <div
           className="absolute inset-0"
           style={{
-            background: "radial-gradient(ellipse 60% 50% at center, transparent 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.85) 100%)",
+            background: "radial-gradient(ellipse 60% 50% at center, transparent 0%, hsla(147,45%,21%,0.4) 50%, hsla(147,45%,21%,0.85) 100%)",
           }}
         />
 
-        {/* Bottom gradient for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/90" />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, hsla(147,45%,21%,0.3), transparent, hsla(147,45%,21%,0.9))" }} />
       </motion.div>
 
-      {/* Radial blur edges - speed effect */}
       <div
         className="absolute inset-0 z-[2] pointer-events-none"
         style={{
@@ -101,7 +95,6 @@ const HeroSection = () => {
         <div className="w-full h-full" style={{ backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }} />
       </div>
 
-      {/* Phase 3: Handlebar foreground (desktop only) */}
       {!isMobile && (
         <motion.div
           className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none flex justify-center"
@@ -122,20 +115,17 @@ const HeroSection = () => {
         </motion.div>
       )}
 
-      {/* Speed Lines Left */}
       <div className="absolute left-0 top-0 w-16 md:w-24 h-full z-[15] pointer-events-none overflow-hidden">
         <div className="absolute inset-0 speed-line-left opacity-20" />
       </div>
 
-      {/* Speed Lines Right */}
       <div className="absolute right-0 top-0 w-16 md:w-24 h-full z-[15] pointer-events-none overflow-hidden">
         <div className="absolute inset-0 speed-line-right opacity-20" />
       </div>
 
-      {/* Content - appears after dive stabilizes */}
       <div className="relative z-30 container mx-auto px-4 pt-20 text-center">
         <motion.h1
-          className="text-4xl md:text-5xl lg:text-6xl font-poppins font-bold text-white mb-2"
+          className="text-4xl md:text-5xl lg:text-6xl font-montserrat font-bold text-white mb-2"
           initial={{ scale: 0.85, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.8, delay: 3.5, ease: "easeOut" }}
@@ -144,7 +134,7 @@ const HeroSection = () => {
         </motion.h1>
 
         <motion.h1
-          className="text-4xl md:text-5xl lg:text-6xl font-poppins font-bold text-[hsl(var(--tdf-yellow))] mb-6"
+          className="text-4xl md:text-5xl lg:text-6xl font-montserrat font-bold text-bordure-gold mb-6"
           initial={{ scale: 0.85, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.8, delay: 3.8, ease: "easeOut" }}
@@ -153,7 +143,7 @@ const HeroSection = () => {
         </motion.h1>
 
         <motion.p
-          className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-10"
+          className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto mb-10 font-inter"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 4.1 }}
@@ -175,7 +165,7 @@ const HeroSection = () => {
           <Button
             variant="outline"
             size="lg"
-            className="w-full sm:w-auto text-lg px-8 py-6 border-white text-white hover:bg-white hover:text-black"
+            className="w-full sm:w-auto text-lg px-8 py-6 border-white text-white hover:bg-white hover:text-secondary"
             onClick={scrollToNextSection}
           >
             {t("hero.cta.discover")}
@@ -183,10 +173,8 @@ const HeroSection = () => {
         </motion.div>
       </div>
 
-      {/* Bottom gradient mask for seamless transition */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black to-transparent z-[25] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 z-[25] pointer-events-none" style={{ background: "linear-gradient(to top, hsl(147 45% 21%), transparent)" }} />
 
-      {/* Scroll indicator */}
       <motion.button
         onClick={scrollToNextSection}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/60 hover:text-white transition-colors animate-bounce z-30"
