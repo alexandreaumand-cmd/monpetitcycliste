@@ -8,7 +8,7 @@ self.addEventListener('push', function(event) {
     console.log('[SW Push] No data in push event');
     // Show a fallback notification even without data
     event.waitUntil(
-      self.registration.showNotification('Mon Petit Cycliste', {
+      self.registration.showNotification('La Bordure', {
         body: 'Nouvelle notification reçue',
         icon: '/pwa-192x192.png'
       })
@@ -27,7 +27,7 @@ self.addEventListener('push', function(event) {
     console.error('[SW Push] Failed to parse push data:', e, 'Raw:', rawText);
     // Show fallback notification on parse error
     event.waitUntil(
-      self.registration.showNotification('Mon Petit Cycliste', {
+      self.registration.showNotification('La Bordure', {
         body: rawText || 'Notification reçue (format inconnu)',
         icon: '/pwa-192x192.png'
       })
@@ -64,7 +64,7 @@ self.addEventListener('push', function(event) {
   };
 
   event.waitUntil(
-    self.registration.showNotification(title || 'Mon Petit Cycliste', options)
+    self.registration.showNotification(title || 'La Bordure', options)
   );
 });
 
