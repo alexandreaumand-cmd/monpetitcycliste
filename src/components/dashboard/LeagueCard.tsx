@@ -390,10 +390,10 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
 
                   {/* Countdown - seulement pour open et scheduled */}
                   {!auctionStatus.isAnnouncementsPending && (
-                    <div className={`${auctionStatus.isScheduled ? 'bg-blue-50/80' : 'bg-white/80'} rounded-lg p-3 border ${auctionStatus.isScheduled ? 'border-blue-200' : 'border-black/10'} mt-3`}>
+                    <div className={`${auctionStatus.isScheduled ? 'bg-blue-50/80 dark:bg-blue-950/40' : 'bg-white/80 dark:bg-background/80'} rounded-lg p-3 border ${auctionStatus.isScheduled ? 'border-blue-200 dark:border-blue-800' : 'border-border'} mt-3`}>
                       <div className="flex items-center gap-2 mb-2">
-                        <Clock className={`h-4 w-4 ${auctionStatus.isScheduled ? 'text-blue-600' : 'text-foreground'}`} />
-                        <span className={`text-xs font-inter font-medium ${auctionStatus.isScheduled ? 'text-blue-800' : 'text-gray-900'}`}>
+                        <Clock className={`h-4 w-4 ${auctionStatus.isScheduled ? 'text-blue-600 dark:text-blue-400' : 'text-foreground'}`} />
+                        <span className={`text-xs font-inter font-medium ${auctionStatus.isScheduled ? 'text-blue-800 dark:text-blue-300' : 'text-foreground'}`}>
                           {auctionStatus.isScheduled ? t('leagueCard.auction.openingIn') : t('leagueCard.auction.timeRemaining')}
                         </span>
                       </div>
@@ -405,33 +405,33 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                       ) : (
                         <div className="flex items-center justify-center gap-2">
                           <div className="text-center">
-                            <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-foreground'}`}>
+                            <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
                               {String(countdown.days).padStart(2, '0')}
                             </div>
-                            <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>
+                            <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}`}>
                               {countdown.days > 1 ? t('leagueCard.auction.days') : t('leagueCard.auction.day')}
                             </div>
                           </div>
-                          <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-foreground'}`}>:</div>
+                          <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>:</div>
                           <div className="text-center">
-                            <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-foreground'}`}>
+                            <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
                               {String(countdown.hours).padStart(2, '0')}
                             </div>
-                            <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>h</div>
+                            <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}`}>h</div>
                           </div>
-                          <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-foreground'}`}>:</div>
+                          <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>:</div>
                           <div className="text-center">
-                            <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-foreground'}`}>
+                            <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
                               {String(countdown.minutes).padStart(2, '0')}
                             </div>
-                            <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>min</div>
+                            <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}`}>min</div>
                           </div>
-                          <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-foreground'}`}>:</div>
+                          <div className={`text-xl font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>:</div>
                           <div className="text-center">
-                            <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900' : 'text-foreground'}`}>
+                            <div className={`text-2xl font-montserrat font-bold ${auctionStatus.isScheduled ? 'text-blue-900 dark:text-blue-200' : 'text-foreground'}`}>
                               {String(countdown.seconds).padStart(2, '0')}
                             </div>
-                            <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700' : 'text-gray-600'}`}>sec</div>
+                            <div className={`text-xs ${auctionStatus.isScheduled ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}`}>sec</div>
                           </div>
                         </div>
                       )}
