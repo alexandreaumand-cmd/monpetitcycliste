@@ -16,6 +16,7 @@ interface AuctionValidationConfirmationProps {
   onBack: () => void;
   onViewMyBids: () => void;
   onViewHistory: () => void;
+  onViewAnnouncements?: () => void;
 }
 
 export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, leagueId, onBack, onViewMyBids, onViewHistory }: AuctionValidationConfirmationProps) {
