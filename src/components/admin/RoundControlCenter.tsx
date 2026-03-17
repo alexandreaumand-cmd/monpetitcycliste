@@ -33,25 +33,42 @@ export const RoundControlCenter = () => {
     }
   });
 
-  // Auto-select active phase from most recent season
+  // Auto-select phase: prefer phase with an open round, fallback to active phase
   useEffect(() => {
-    if (phases && phases.length > 0 && !selectedPhaseId) {
-      // Find active phase from most recent season
+    if (!phases || phases.length === 0 || !leagueId) return;
+    // Don't override if user already selected
+    if (selectedPhaseId) return;
+
+    // Check if there's an open auction on any phase for this league
+    const findPhaseWithOpenRound = async () => {
+      const { data: openAuction } = await supabase
+        .from('auctions')
+        .select('phase_id')
+        .eq('league_id', leagueId)
+        .eq('statut', 'open')
+        .limit(1)
+        .maybeSingle();
+
+      if (openAuction?.phase_id) {
+        setSelectedPhaseId(openAuction.phase_id);
+        return;
+      }
+
+      // Fallback: active phase from most recent season
       const activePhase = phases
         .filter(p => p.statut === 'active')
         .sort((a, b) => {
-          // Sort by season year descending
           const yearA = a.saisons?.annee || 0;
           const yearB = b.saisons?.annee || 0;
           if (yearB !== yearA) return yearB - yearA;
-          // If same year, sort by phase index descending
           return b.index_dans_saison - a.index_dans_saison;
         })[0];
-      
-      // Use active phase if found, otherwise fallback to first phase
+
       setSelectedPhaseId(activePhase?.id || phases[0].id);
-    }
-  }, [phases, selectedPhaseId]);
+    };
+
+    findPhaseWithOpenRound();
+  }, [phases, selectedPhaseId, leagueId]);
 
   // Fetch current auction for selected phase
   const { data: currentAuction, isLoading: loadingAuction } = useQuery({

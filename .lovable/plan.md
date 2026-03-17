@@ -1,29 +1,38 @@
 
 
-## Problème identifié
+## Diagnostic
 
-Le Round 1 de la Phase 2 est bien **ouvert** en base de données (deadline 19 mars). Mais l'UI ne le montre pas car :
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-1. **`useLeagueAuctionStatus`** (hook joueur) détermine la phase active par les dates du calendrier. Aujourd'hui (17 mars) tombe dans Phase 1 (1 jan - 21 mars). Il filtre les enchères ouvertes par `phase_id = Phase 1`, ignorant le round ouvert de Phase 2.
+## Cause racine
 
-2. **`RoundControlCenter`** (admin) auto-sélectionne la phase avec `statut === 'active'`, qui est Phase 1. L'admin doit manuellement changer vers Phase 2 pour voir le round.
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-## Corrections
+## Plan de correction
 
-### 1. `src/hooks/useLeagueAuctionStatus.tsx` — Chercher d'abord TOUT round ouvert
-
-Modifier la logique pour chercher en priorité une enchère ouverte **toutes phases confondues** avant de filtrer par phase calendaire. Si un round est ouvert sur n'importe quelle phase, c'est celui-là qui doit être affiché.
-
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
 ```
-Logique actuelle : déterminer phase active → chercher open auction sur cette phase
-Logique corrigée : chercher open auction toutes phases → si trouvée, l'utiliser ; sinon, fallback sur la phase calendaire pour scheduled/closed
-```
 
-### 2. `src/components/admin/RoundControlCenter.tsx` — Auto-sélection intelligente
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
 
-Modifier l'auto-sélection pour détecter s'il existe un round ouvert sur une autre phase et la pré-sélectionner automatiquement, plutôt que de toujours sélectionner la phase "active" par statut.
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
 
-**Fichiers modifiés :**
-- `src/hooks/useLeagueAuctionStatus.tsx`
-- `src/components/admin/RoundControlCenter.tsx`
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
+
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 
