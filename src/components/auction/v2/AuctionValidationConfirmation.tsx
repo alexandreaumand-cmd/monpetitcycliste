@@ -19,7 +19,7 @@ interface AuctionValidationConfirmationProps {
   onViewAnnouncements?: () => void;
 }
 
-export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, leagueId, onBack, onViewMyBids, onViewHistory }: AuctionValidationConfirmationProps) {
+export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, leagueId, onBack, onViewMyBids, onViewHistory, onViewAnnouncements }: AuctionValidationConfirmationProps) {
   const { t } = useTranslation("auction");
   const [timeRemaining, setTimeRemaining] = useState("");
 
