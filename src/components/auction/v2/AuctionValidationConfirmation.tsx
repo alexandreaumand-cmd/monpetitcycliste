@@ -81,8 +81,12 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
 
   const progress = status.total_managers > 0 ? (status.validated_count / status.total_managers) * 100 : 0;
   const allValidated = status.total_managers > 0 && status.validated_count === status.total_managers;
+  const isAutoClosing = allValidated && status.waiting_managers?.length === 0;
 
   const getEncouragingMessage = () => {
+    if (isAutoClosing) {
+      return `🤖 ${t('validation.autoClosing', 'Tous les managers ont validé ! Fermeture automatique en cours...')}`;
+    }
     if (allValidated) {
       return `🎊 ${t('validation.allValidated')}`;
     }

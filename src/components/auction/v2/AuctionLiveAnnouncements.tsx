@@ -148,6 +148,14 @@ export function AuctionLiveAnnouncements({
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   ✅ {t('live.allResultsAnnounced')}
                 </p>
+              ) : publishedCount > 0 ? (
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  🎬 {t('live.adminRevealing')}
+                </p>
+              ) : unpublishedCount > 0 ? (
+                <p className="text-xs sm:text-sm text-muted-foreground animate-pulse">
+                  ⏳ {t('live.preparingAnnouncements', 'Préparation des annonces en cours...')}
+                </p>
               ) : (
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   🎬 {t('live.adminRevealing')}
