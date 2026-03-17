@@ -287,17 +287,17 @@ export function AuctionLiveAnnouncements({
             <CardContent className="px-2 sm:px-6">
               <ScrollArea className="h-[50vh] sm:h-[600px] pr-2 sm:pr-4" ref={scrollRef}>
                 <div className="space-y-4">
-                  {liveAnnonces.length === 0 ? (
+                  {visibleAnnonces.length === 0 ? (
                     <p className="text-center text-muted-foreground py-6 sm:py-8 text-sm">
                       {t('live.waitingAnnouncements')}
                     </p>
                   ) : (
                     (() => {
       // Afficher le message quand il reste exactement 10 annonces à publier
-      const unpublishedCount = totalAnnonces - liveAnnonces.length;
-      const shouldShowTop10Message = totalAnnonces > 10 && unpublishedCount === 10;
+      const remainingCount = totalAnnonces - visibleAnnonces.length;
+      const shouldShowTop10Message = totalAnnonces > 10 && remainingCount === 10;
 
-      return liveAnnonces.map((annonce, idx) => {
+      return visibleAnnonces.map((annonce, idx) => {
         // Le message apparaît en haut de la liste (avant la dernière annonce publiée)
         const showTop10Before = shouldShowTop10Message && idx === 0;
 
