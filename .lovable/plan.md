@@ -1,58 +1,38 @@
 
 
-## Diagnostic : Pourquoi le 1er round n'a pas été lancé
+## Diagnostic
 
-### Ce qui existe
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-1. **A la création de la ligue** (`leagues-create`), une auction est créée en statut `scheduled` avec `opens_at` = la date choisie par l'admin (13h45 le 17/03)
+## Cause racine
 
-2. **Un trigger DB `update_league_player_count`** incrémente `current_player_count` sur la table `leagues` à chaque INSERT dans `league_members`
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-3. **Un trigger DB `auto_start_league`** se déclenche quand `current_player_count = max_players` et `status = 'pending'` → passe la ligue en `status = 'active'` et envoie un `pg_notify('league_auto_start', league_id)`
+## Plan de correction
 
-4. **`auto-open-scheduled-auctions`** — la fonction qui devait écouter et ouvrir les auctions schedulées — est **DESACTIVEE** (elle retourne immédiatement "Function disabled")
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
+```
 
-### Problemes identifies
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
 
-**Probleme 1 : `auto-open-scheduled-auctions` est desactivee.** Personne n'ouvre les auctions `scheduled` quand leur `opens_at` arrive. C'est la raison principale.
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
 
-**Probleme 2 : Aucun listener sur `pg_notify`.** Le `pg_notify('league_auto_start')` dans le trigger n'est écouté par rien. `pg_notify` nécessite un client connecté en permanence pour recevoir les events — ce n'est pas le cas avec des edge functions.
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
 
-**Probleme 3 : Pas de logique "dernier manager rejoint après la deadline".** Ni `leagues-join`, ni `leagues-join-by-token` ne vérifient si `opens_at` de l'auction schedulée est déjà passée pour la lancer immédiatement. Le trigger `auto_start_league` passe juste le status de la ligue à `active`, mais ne touche pas aux auctions.
-
-### Scénario souhaité (rappel)
-
-- Si tous les managers rejoignent **avant** `opens_at` → le round s'ouvre à la date prévue
-- Si le dernier manager rejoint **après** `opens_at` → le round s'ouvre immédiatement
-
-### Plan de correction
-
-**Etape 1 — Reactiver et corriger `auto-open-scheduled-auctions`**
-
-Réécrire cette edge function pour :
-- Trouver toutes les auctions `scheduled` dont `opens_at <= NOW()`
-- Vérifier que la ligue est `active` (tous les joueurs ont rejoint)
-- Les passer en `open`
-- Configurer un cron job (`pg_cron`) pour l'appeler toutes les minutes
-
-**Etape 2 — Ajouter la logique "dernier joueur rejoint" dans les fonctions join**
-
-Dans `leagues-join-by-token` et `leagues-join`, après l'ajout du membre :
-- Vérifier si `current_player_count` vient d'atteindre `max_players`
-- Si oui, vérifier s'il existe une auction `scheduled` dont `opens_at` est déjà passée
-- Si c'est le cas, ouvrir cette auction immédiatement (statut → `open`, deadline = now + 24h)
-- Sinon, ne rien faire (le cron se chargera de l'ouvrir à la date prévue)
-
-**Etape 3 — Remplacer `pg_notify` par un appel direct**
-
-Le trigger `auto_start_league` utilise `pg_notify` qui n'est écouté par personne. Remplacer par un appel HTTP (`net.http_post`) vers `auto-open-scheduled-auctions` ou simplement laisser la logique dans les fonctions join (etape 2).
-
-### Fichiers a modifier
-
-| Fichier | Action |
-|---------|--------|
-| `supabase/functions/auto-open-scheduled-auctions/index.ts` | Réécrire : scanner et ouvrir les auctions schedulées pour les ligues actives |
-| `supabase/functions/leagues-join-by-token/index.ts` | Ajouter : vérifier si le dernier joueur rejoint et lancer l'auction si deadline passée |
-| `supabase/functions/leagues-join/index.ts` | Idem |
-| Migration SQL | Créer un cron job pour appeler `auto-open-scheduled-auctions` toutes les minutes |
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 
