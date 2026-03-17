@@ -293,6 +293,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId, leagueId] });
       setShowSubmitDialog(false);
+      setValidatedAuctionId(context?.auction_id || null);
       setShowValidationScreen(true);
     },
     onError: (error: any) => {
