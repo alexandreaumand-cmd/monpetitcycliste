@@ -88,23 +88,55 @@ export function AuctionLiveAnnouncements({
     refetchInterval: 3000,
   });
 
-  // Update local state when new data arrives
+  // Cleanup replay timer on unmount
+  useEffect(() => {
+    return () => {
+      if (replayTimerRef.current) clearInterval(replayTimerRef.current);
+    };
+  }, []);
+
+  // Start replay when data arrives for a closed round
   useEffect(() => {
     if (liveStatus?.annonces) {
-      setLiveAnnonces(liveStatus.annonces);
+      const allAnnonces = liveStatus.annonces;
+      setLiveAnnonces(allAnnonces);
+
+      const isClosedRound = liveStatus?.unpublished_count === 0 && allAnnonces.length > 0;
+
+      if (isClosedRound) {
+        // Start progressive replay
+        if (replayTimerRef.current) clearInterval(replayTimerRef.current);
+        setReplayVisibleCount(1);
+        setIsReplaying(true);
+
+        let count = 1;
+        replayTimerRef.current = setInterval(() => {
+          count++;
+          setReplayVisibleCount(count);
+          if (count >= allAnnonces.length) {
+            if (replayTimerRef.current) clearInterval(replayTimerRef.current);
+            replayTimerRef.current = null;
+            setIsReplaying(false);
+          }
+        }, 5000);
+      } else {
+        // Live mode: show all as they come
+        setReplayVisibleCount(allAnnonces.length);
+        setIsReplaying(false);
+      }
     }
   }, [liveStatus]);
 
   // Handle new announcements - scroll to top for reversed order
   useEffect(() => {
-    if (liveAnnonces.length > prevCountRef.current) {
-      // Scroll to top to show latest announcement
+    const currentVisible = Math.min(replayVisibleCount, liveAnnonces.length);
+    if (currentVisible > prevCountRef.current) {
       if (scrollRef.current) {
         scrollRef.current.scrollTop = 0;
       }
     }
-    prevCountRef.current = liveAnnonces.length;
-  }, [liveAnnonces]);
+    prevCountRef.current = currentVisible;
+  }, [replayVisibleCount, liveAnnonces]);
 
   // Subscribe to realtime updates
   useEffect(() => {
