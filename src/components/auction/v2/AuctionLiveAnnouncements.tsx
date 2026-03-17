@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Trophy, Users, TrendingUp, PartyPopper, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { useLeague } from "@/contexts/LeagueContext";
@@ -41,6 +41,7 @@ export function AuctionLiveAnnouncements({
   onBack,
 }: AuctionLiveAnnouncementsProps) {
   const { t } = useTranslation('auction');
+  const [selectedAuctionId, setSelectedAuctionId] = useState(auctionId);
   const [liveAnnonces, setLiveAnnonces] = useState<any[]>([]);
   const [myRecruitsOpen, setMyRecruitsOpen] = useState(true);
   const [openManagers, setOpenManagers] = useState<Set<string>>(new Set());
@@ -49,12 +50,34 @@ export function AuctionLiveAnnouncements({
   const queryClient = useQueryClient();
   const { leagueId } = useLeague();
 
-  // Fetch live status
+  // Fetch available rounds for round selector
+  const { data: availableRounds = [] } = useQuery({
+    queryKey: ['auction-rounds-selector', phaseId, leagueId],
+    queryFn: async () => {
+      let query = supabase
+        .from("auctions")
+        .select("id, round_number, statut")
+        .eq("phase_id", phaseId);
+
+      if (leagueId) {
+        query = query.eq("league_id", leagueId);
+      }
+
+      // Include closed rounds + the current round
+      query = query.in("statut", ["closed", "open", "scheduled"]);
+
+      const { data, error } = await query.order("round_number", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch live status using selectedAuctionId
   const { data: liveStatus, refetch } = useQuery({
-    queryKey: ['auction-live-status', auctionId, managerId, leagueId],
+    queryKey: ['auction-live-status', selectedAuctionId, managerId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('auction-get-live-status', {
-        body: { auction_id: auctionId, phase_id: phaseId, league_id: leagueId },
+        body: { auction_id: selectedAuctionId, phase_id: phaseId, league_id: leagueId },
       });
       if (error) throw error;
       return data;
@@ -90,7 +113,7 @@ export function AuctionLiveAnnouncements({
           event: 'UPDATE',
           schema: 'public',
           table: 'annonces',
-          filter: `auction_id=eq.${auctionId}`,
+          filter: `auction_id=eq.${selectedAuctionId}`,
         },
         (payload) => {
           console.log('New annonce published!', payload);
@@ -102,7 +125,7 @@ export function AuctionLiveAnnouncements({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [auctionId, refetch]);
+  }, [selectedAuctionId, refetch]);
 
   const toggleManager = (managerId: string) => {
     setOpenManagers(prev => {
@@ -142,6 +165,30 @@ export function AuctionLiveAnnouncements({
                   {publishedCount}/{totalAnnonces}
                 </Badge>
               </div>
+
+              {/* Round selector */}
+              {availableRounds.length > 1 && (
+                <ScrollArea className="w-full mt-3">
+                  <div className="flex gap-1.5 pb-1">
+                    {availableRounds.map((round) => (
+                      <Button
+                        key={round.id}
+                        variant={selectedAuctionId === round.id ? "default" : "outline"}
+                        size="sm"
+                        className="shrink-0 text-xs"
+                        onClick={() => {
+                          setSelectedAuctionId(round.id);
+                          setLiveAnnonces([]);
+                          prevCountRef.current = 0;
+                        }}
+                      >
+                        Round {round.round_number}
+                      </Button>
+                    ))}
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              )}
             </CardHeader>
             <CardContent className="py-2 sm:py-4 px-3 sm:px-6">
               {isComplete ? (
