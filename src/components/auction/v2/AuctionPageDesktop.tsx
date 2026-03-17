@@ -52,6 +52,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
   const [sortOrder, setSortOrder] = useState<'nom' | 'cote'>('cote');
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);
+  const [validatedAuctionId, setValidatedAuctionId] = useState<string | null>(null);
   const [showMyValidatedBids, setShowMyValidatedBids] = useState(false);
   const [showAuctionHistory, setShowAuctionHistory] = useState(false);
   const [hideLiveAnnouncements, setHideLiveAnnouncements] = useState(false);
@@ -126,6 +127,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
   // Auto-show validation screen if manager has already validated and has no active drafts
   useEffect(() => {
     if (context?.validation_status?.has_validated && context?.auction_id && (context?.my_bids?.length ?? 0) === 0) {
+      setValidatedAuctionId(context.auction_id);
       setShowValidationScreen(true);
     }
   }, [context?.validation_status?.has_validated, context?.auction_id, context?.my_bids?.length]);
@@ -290,6 +292,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId] });
       setShowSubmitDialog(false);
+      setValidatedAuctionId(context?.auction_id || null);
       setShowValidationScreen(true);
     },
     onError: (error: any) => {
@@ -508,7 +511,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     return (
       <AuctionValidationConfirmation
         phaseId={phaseId}
-        auctionId={context?.auction_id}
+        auctionId={validatedAuctionId || undefined}
         managerId={managerId}
         leagueId={leagueId}
         onBack={() => setShowValidationScreen(false)}

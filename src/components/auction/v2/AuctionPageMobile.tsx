@@ -50,6 +50,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   const [selectedRider, setSelectedRider] = useState<any>(null);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);
+  const [validatedAuctionId, setValidatedAuctionId] = useState<string | null>(null);
   const [showMyValidatedBids, setShowMyValidatedBids] = useState(false);
   const [showAuctionHistory, setShowAuctionHistory] = useState(false);
   const [hideLiveAnnouncements, setHideLiveAnnouncements] = useState(false);
@@ -125,6 +126,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   // Auto-show validation screen if manager has already validated and has no active drafts
   useEffect(() => {
     if (context?.validation_status?.has_validated && context?.auction_id && (context?.my_bids?.length ?? 0) === 0) {
+      setValidatedAuctionId(context.auction_id);
       setShowValidationScreen(true);
     }
   }, [context?.validation_status?.has_validated, context?.auction_id, context?.my_bids?.length]);
@@ -291,6 +293,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["auction-context", phaseId, managerId, leagueId] });
       setShowSubmitDialog(false);
+      setValidatedAuctionId(context?.auction_id || null);
       setShowValidationScreen(true);
     },
     onError: (error: any) => {
@@ -511,6 +514,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     return (
       <AuctionValidationConfirmation
         phaseId={phaseId}
+        auctionId={validatedAuctionId || undefined}
         managerId={managerId}
         leagueId={leagueId}
         onBack={() => setShowValidationScreen(false)}
