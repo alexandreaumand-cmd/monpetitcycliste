@@ -262,6 +262,36 @@ export function AuctionCompletedView({
         </CardContent>
       </Card>
 
+      {/* Replay announcements */}
+      {closedRounds && closedRounds.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+              <Megaphone className="h-5 w-5" />
+              {t('completed.replayAnnouncements', 'Revoir les annonces')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {closedRounds.map((round) => (
+                <Button
+                  key={round.id}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedAuctionId(round.id);
+                    setShowAnnouncements(true);
+                  }}
+                >
+                  <Megaphone className="h-4 w-4 mr-1.5" />
+                  Round {round.round_number}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Opponent teams */}
       <Card>
         <CardHeader className="pb-3">
