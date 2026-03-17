@@ -53,6 +53,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   const [validatedAuctionId, setValidatedAuctionId] = useState<string | null>(null);
   const [showMyValidatedBids, setShowMyValidatedBids] = useState(false);
   const [showAuctionHistory, setShowAuctionHistory] = useState(false);
+  const [showPastAnnouncements, setShowPastAnnouncements] = useState(false);
   const [hideLiveAnnouncements, setHideLiveAnnouncements] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [debouncedSearch] = useDebounce(searchQuery, 250);
@@ -510,6 +511,17 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     );
   }
 
+  if (showValidationScreen && showPastAnnouncements && validatedAuctionId) {
+    return (
+      <AuctionLiveAnnouncements
+        auctionId={validatedAuctionId}
+        managerId={managerId}
+        phaseId={phaseId}
+        onBack={() => setShowPastAnnouncements(false)}
+      />
+    );
+  }
+
   if (showValidationScreen) {
     return (
       <AuctionValidationConfirmation
@@ -520,6 +532,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         onBack={() => setShowValidationScreen(false)}
         onViewMyBids={() => setShowMyValidatedBids(true)}
         onViewHistory={() => setShowAuctionHistory(true)}
+        onViewAnnouncements={() => setShowPastAnnouncements(true)}
       />
     );
   }

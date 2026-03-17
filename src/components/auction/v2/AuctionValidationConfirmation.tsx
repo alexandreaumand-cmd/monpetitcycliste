@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, Users, RefreshCw, Loader2, History } from "lucide-react";
+import { CheckCircle2, Clock, Users, RefreshCw, Loader2, History, Megaphone } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -16,9 +16,10 @@ interface AuctionValidationConfirmationProps {
   onBack: () => void;
   onViewMyBids: () => void;
   onViewHistory: () => void;
+  onViewAnnouncements?: () => void;
 }
 
-export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, leagueId, onBack, onViewMyBids, onViewHistory }: AuctionValidationConfirmationProps) {
+export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, leagueId, onBack, onViewMyBids, onViewHistory, onViewAnnouncements }: AuctionValidationConfirmationProps) {
   const { t } = useTranslation("auction");
   const [timeRemaining, setTimeRemaining] = useState("");
 
@@ -202,6 +203,16 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
               <History className="h-4 w-4 mr-2" />
               {t('validation.history')}
             </Button>
+            {onViewAnnouncements && (
+              <Button
+                onClick={onViewAnnouncements}
+                variant="secondary"
+                className="flex-1"
+              >
+                <Megaphone className="h-4 w-4 mr-2" />
+                {t('validation.viewAnnouncements', 'Annonces')}
+              </Button>
+            )}
           </div>
 
           {/* Info */}
