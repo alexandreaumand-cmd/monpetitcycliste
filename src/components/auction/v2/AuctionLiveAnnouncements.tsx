@@ -165,6 +165,30 @@ export function AuctionLiveAnnouncements({
                   {publishedCount}/{totalAnnonces}
                 </Badge>
               </div>
+
+              {/* Round selector */}
+              {availableRounds.length > 1 && (
+                <ScrollArea className="w-full mt-3">
+                  <div className="flex gap-1.5 pb-1">
+                    {availableRounds.map((round) => (
+                      <Button
+                        key={round.id}
+                        variant={selectedAuctionId === round.id ? "default" : "outline"}
+                        size="sm"
+                        className="shrink-0 text-xs"
+                        onClick={() => {
+                          setSelectedAuctionId(round.id);
+                          setLiveAnnonces([]);
+                          prevCountRef.current = 0;
+                        }}
+                      >
+                        Round {round.round_number}
+                      </Button>
+                    ))}
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              )}
             </CardHeader>
             <CardContent className="py-2 sm:py-4 px-3 sm:px-6">
               {isComplete ? (
