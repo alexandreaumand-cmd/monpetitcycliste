@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Trophy, Users, TrendingUp, PartyPopper, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { useLeague } from "@/contexts/LeagueContext";
