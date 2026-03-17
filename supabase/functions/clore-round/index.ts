@@ -12,89 +12,72 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Create client with user's auth token to preserve auth.uid()
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Non authentifié' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const isServiceRoleCall = authHeader === `Bearer ${serviceRoleKey}`;
+
+    let supabase;
+
+    const { auction_id, league_id, auto_mode } = await req.json();
+
+    if (auto_mode && isServiceRoleCall) {
+      // Auto mode: called from auction-submit-all-bids with service role
+      console.log('🤖 Auto-mode: bypassing admin check (service role call)');
+      supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        serviceRoleKey
       );
-    }
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: {
-            Authorization: authHeader
-          }
-        }
-      }
-    );
-
-    const { auction_id, league_id } = await req.json();
-    
-    if (!league_id) {
-      throw new Error('league_id est requis');
-    }
-    
-    console.log('Closing round for auction:', auction_id, 'league:', league_id);
-
-    // Verify user authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      console.error('Auth error:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Non authentifié' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('User authenticated:', user.id);
-
-    // Check if user is league admin
-    const { data: isLeagueAdmin, error: rpcError } = await supabase.rpc('is_league_admin', {
-      l_id: league_id
-    });
-
-    console.log('League admin check result:', { isLeagueAdmin, rpcError, userId: user.id, leagueId: league_id });
-
-    if (rpcError) {
-      console.error('RPC error:', rpcError);
-      throw new Error('Erreur lors de la vérification des permissions');
-    }
-
-    if (!isLeagueAdmin) {
-      // Fallback: direct check on league_members in case RPC fails or returns false unexpectedly
-      const { data: membership, error: membershipError } = await supabase
-        .from('league_members')
-        .select('role_in_league')
-        .eq('league_id', league_id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      console.log('Direct role check result:', {
-        role: membership?.role_in_league,
-        membershipError,
-        userId: user.id,
-        leagueId: league_id,
-      });
-
-      if (membershipError) {
-        console.error('Membership check error:', membershipError);
-      }
-
-      const role = membership?.role_in_league as string | undefined;
-      if (!role || !['owner', 'admin'].includes(role)) {
+    } else {
+      // Manual mode: require user auth and admin check
+      if (!authHeader) {
         return new Response(
-          JSON.stringify({ error: 'Accès refusé: réservé aux administrateurs de la ligue' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Non authentifié' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      console.log('Fallback admin check passed via league_members for user:', user.id);
+      supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        {
+          global: {
+            headers: {
+              Authorization: authHeader
+            }
+          }
+        }
+      );
+
+      // Verify user authentication and admin permissions
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: 'Non authentifié' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: isLeagueAdmin } = await supabase.rpc('is_league_admin', { l_id: league_id });
+
+      if (!isLeagueAdmin) {
+        const { data: membership } = await supabase
+          .from('league_members')
+          .select('role_in_league')
+          .eq('league_id', league_id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const role = membership?.role_in_league as string | undefined;
+        if (!role || !['owner', 'admin'].includes(role)) {
+          return new Response(
+            JSON.stringify({ error: 'Accès refusé: réservé aux administrateurs de la ligue' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
     }
+
+    console.log('Closing round for auction:', auction_id, 'league:', league_id, 'auto_mode:', auto_mode || false);
 
     // Get auction details and verify it belongs to the league
     const { data: auction, error: auctionError } = await supabase
@@ -296,8 +279,33 @@ Deno.serve(async (req) => {
       }
     });
 
+    // In auto mode, automatically publish all annonces with 10s intervals
+    if (auto_mode && annonces.length > 0) {
+      console.log('🤖 Auto-mode: triggering automatic annonce publication...');
+      
+      // Use service role client to call publier-annonce
+      const serviceSupabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      
+      const { error: publishError } = await serviceSupabase.functions.invoke('publier-annonce', {
+        body: {
+          auction_id: auction_id,
+          publish_all: true,
+          auto_mode: true,
+        }
+      });
+      
+      if (publishError) {
+        console.error('❌ Error auto-publishing annonces:', publishError);
+      } else {
+        console.log('✅ Auto-publish triggered successfully');
+      }
+    }
+
     return new Response(
-      JSON.stringify({ success: true, annonces_count: annonces.length }),
+      JSON.stringify({ success: true, annonces_count: annonces.length, auto_mode: auto_mode || false }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

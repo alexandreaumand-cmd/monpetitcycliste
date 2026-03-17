@@ -81,8 +81,12 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
 
   const progress = status.total_managers > 0 ? (status.validated_count / status.total_managers) * 100 : 0;
   const allValidated = status.total_managers > 0 && status.validated_count === status.total_managers;
+  const isAutoClosing = allValidated && status.waiting_managers?.length === 0;
 
   const getEncouragingMessage = () => {
+    if (isAutoClosing) {
+      return `🤖 ${t('validation.autoClosing', 'Tous les managers ont validé ! Fermeture automatique en cours...')}`;
+    }
     if (allValidated) {
       return `🎊 ${t('validation.allValidated')}`;
     }
@@ -137,8 +141,13 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
           </div>
 
           {/* Encouraging message */}
-          <div className="bg-muted rounded-lg p-4 text-center">
+          <div className={`rounded-lg p-4 text-center ${isAutoClosing ? 'bg-primary/10 border border-primary/30' : 'bg-muted'}`}>
             <p className="text-sm md:text-base">{getEncouragingMessage()}</p>
+            {isAutoClosing && (
+              <p className="text-xs text-muted-foreground mt-2 animate-pulse">
+                {t('validation.autoClosingHint', 'Les résultats seront annoncés automatiquement dans quelques instants.')}
+              </p>
+            )}
           </div>
 
           {/* Time remaining */}

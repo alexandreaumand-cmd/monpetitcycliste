@@ -16,8 +16,11 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { auction_id, publish_all, lang = 'fr' } = await req.json();
-    console.log('Publishing annonce for auction:', auction_id, 'publish_all:', publish_all, 'lang:', lang);
+    const { auction_id, publish_all, lang = 'fr', auto_mode } = await req.json();
+    console.log('Publishing annonce for auction:', auction_id, 'publish_all:', publish_all, 'auto_mode:', auto_mode, 'lang:', lang);
+    
+    // Use 10s intervals in auto mode, 1s in manual mode
+    const intervalMs = auto_mode ? 10000 : 1000;
 
     // Translations for announcement text
     const translations = {
@@ -66,7 +69,7 @@ Deno.serve(async (req) => {
       
       for (let i = 0; i < unpublishedAnnonces.length; i++) {
         const annonce = unpublishedAnnonces[i];
-        const publishedAt = new Date(baseTimestamp.getTime() + (i * 1000)); // +1 second each
+        const publishedAt = new Date(baseTimestamp.getTime() + (i * intervalMs));
         
         const { error: updateError } = await supabase
           .from('annonces')
@@ -110,7 +113,7 @@ Deno.serve(async (req) => {
           console.error('Error fetching auction:', auctionError);
         } else {
           const deadlineAt = new Date();
-          deadlineAt.setHours(deadlineAt.getHours() + 48);
+          deadlineAt.setHours(deadlineAt.getHours() + 24); // 24h deadline for auto rounds
           
           const { error: openError } = await supabase.functions.invoke('ouvrir-nouveau-round', {
             body: {
@@ -183,7 +186,7 @@ Deno.serve(async (req) => {
         } else {
           // Calculate deadline: +48h
           const deadlineAt = new Date();
-          deadlineAt.setHours(deadlineAt.getHours() + 48);
+          deadlineAt.setHours(deadlineAt.getHours() + 24); // 24h deadline for auto rounds
           
           const { error: openError } = await supabase.functions.invoke('ouvrir-nouveau-round', {
             body: {

@@ -12,94 +12,80 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Create client with user's auth token to preserve auth.uid()
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Non authentifié' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const isServiceRoleCall = authHeader === `Bearer ${serviceRoleKey}`;
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: {
-            Authorization: authHeader
-          }
-        }
-      }
-    );
+    let supabase;
 
     const { phase_id, deadline_at, league_id, auto_launched } = await req.json();
-    console.log('Opening new round for phase:', phase_id, 'league:', league_id);
+    console.log('Opening new round for phase:', phase_id, 'league:', league_id, 'auto_launched:', auto_launched);
 
     // Validation stricte du phase_id
     if (!phase_id) {
       console.error('❌ Missing phase_id in ouvrir-nouveau-round');
       return new Response(
-        JSON.stringify({ 
-          error: 'Le phase_id est obligatoire pour créer une enchère' 
-        }),
+        JSON.stringify({ error: 'Le phase_id est obligatoire pour créer une enchère' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Verify user authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      console.error('Auth error:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Non authentifié' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    if (auto_launched && isServiceRoleCall) {
+      // Auto mode: called from publier-annonce with service role
+      console.log('🤖 Auto-launched: bypassing admin check (service role call)');
+      supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        serviceRoleKey
       );
-    }
-
-    console.log('User authenticated:', user.id);
-
-    // Check if user is league admin
-    const { data: isLeagueAdmin, error: rpcError } = await supabase.rpc('is_league_admin', {
-      l_id: league_id
-    });
-
-    console.log('League admin check result:', { isLeagueAdmin, rpcError, userId: user.id, leagueId: league_id });
-
-    if (rpcError) {
-      console.error('RPC error:', rpcError);
-      throw new Error('Erreur lors de la vérification des permissions');
-    }
-
-    if (!isLeagueAdmin) {
-      // Fallback: direct check on league_members in case RPC fails or returns false unexpectedly
-      const { data: membership, error: membershipError } = await supabase
-        .from('league_members')
-        .select('role_in_league')
-        .eq('league_id', league_id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      console.log('Direct role check result:', {
-        role: membership?.role_in_league,
-        membershipError,
-        userId: user.id,
-        leagueId: league_id,
-      });
-
-      if (membershipError) {
-        console.error('Membership check error:', membershipError);
-      }
-
-      const role = membership?.role_in_league as string | undefined;
-      if (!role || !['owner', 'admin'].includes(role)) {
+    } else {
+      // Manual mode: require user auth and admin check
+      if (!authHeader) {
         return new Response(
-          JSON.stringify({ error: 'Accès refusé: réservé aux administrateurs de la ligue' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Non authentifié' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      console.log('Fallback admin check passed via league_members for user:', user.id);
+      supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        {
+          global: {
+            headers: {
+              Authorization: authHeader
+            }
+          }
+        }
+      );
+
+      // Verify user authentication
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: 'Non authentifié' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check if user is league admin
+      const { data: isLeagueAdmin } = await supabase.rpc('is_league_admin', { l_id: league_id });
+
+      if (!isLeagueAdmin) {
+        const { data: membership } = await supabase
+          .from('league_members')
+          .select('role_in_league')
+          .eq('league_id', league_id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const role = membership?.role_in_league as string | undefined;
+        if (!role || !['owner', 'admin'].includes(role)) {
+          return new Response(
+            JSON.stringify({ error: 'Accès refusé: réservé aux administrateurs de la ligue' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
     }
 
     // STEP 1: Check if there's an existing scheduled auction to reuse
