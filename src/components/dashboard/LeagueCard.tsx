@@ -225,14 +225,6 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
         {/* EN COURS */}
         {isActive && (
           <>
-            <div className="flex items-center justify-end">
-              <LeagueParticipantsHover
-                ownerName={owner?.nom || null}
-                members={members}
-                currentPlayerCount={league.current_player_count}
-                isLoading={loadingMembersList || loadingOwner}
-              />
-            </div>
 
             {loadingStats ? (
               <div className="space-y-2">
