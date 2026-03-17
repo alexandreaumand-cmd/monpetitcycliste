@@ -1,22 +1,38 @@
 
 
-## Ajouter un bouton "Revoir les annonces" dans AuctionCompletedView
+## Diagnostic
 
-### Contexte
-L'écran `AuctionCompletedView` s'affiche quand le manager a complété son équipe mais que la phase n'est pas encore terminée (d'autres rounds sont en cours). L'utilisateur souhaite pouvoir revoir les annonces de n'importe quel round fermé depuis cet écran.
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-### Approche
-Ajouter une section dans `AuctionCompletedView` avec un bouton par round fermé pour ouvrir les annonces. Au clic, afficher le composant `AuctionLiveAnnouncements` (qui intègre déjà un sélecteur de rounds) en remplacement de la vue actuelle, avec un bouton retour.
+## Cause racine
 
-### Changements
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-**`src/components/auction/v2/AuctionCompletedView.tsx`** :
-- Ajouter un state `showAnnouncements` et `selectedAuctionId`
-- Ajouter une query pour récupérer les rounds fermés de la phase/league (table `auctions`, `statut = 'closed'`, ordonnés par `round_number`)
-- Ajouter une Card avec une Accordion contenant un bouton par round fermé (style : icône Megaphone + "Annonces Round X")
-- Au clic sur un round, passer `showAnnouncements = true` avec l'`auctionId` correspondant
-- Quand `showAnnouncements` est true, rendre `AuctionLiveAnnouncements` avec un `onBack` pour revenir à la vue complétée
-- Le composant `AuctionLiveAnnouncements` possède déjà le sélecteur de rounds intégré, donc l'utilisateur pourra naviguer entre les rounds une fois dedans
+## Plan de correction
 
-**Pas de changements** nécessaires dans les composants parents (`AuctionPageDesktop`, `AuctionPageMobile`) ni dans l'edge function.
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
+```
+
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
+
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
+
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
+
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 
