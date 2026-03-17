@@ -273,7 +273,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">{t('leagueCard.points')}</p>
-                      <p className="font-semibold">{stats.myPhasePoints}</p>
+                      <p className="font-semibold">{stats.myPhasePoints != null ? Math.round(stats.myPhasePoints).toLocaleString('fr-FR') : '-'}</p>
                     </div>
                   </div>
                 )}
