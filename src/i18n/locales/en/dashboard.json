@@ -77,7 +77,9 @@
       "validatedManagers": "Validated managers",
       "timeRemaining": "Time remaining",
       "day": "d",
-      "startsIn": "Starts in"
+      "startsIn": "Starts in",
+      "openingIn": "Opening in",
+      "days": "days"
     },
     "status": {
       "waiting": "Waiting",

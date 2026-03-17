@@ -1,40 +1,38 @@
 
 
-## Problème
+## Diagnostic
 
-La base de données contient des enchères **scheduled** pré-créées pour les phases 2 à 5 de la ligue Early Adopters (opens_at: avril, juillet, octobre 2026, janvier 2027). La logique de fallback introduite dans le dernier fix cherche des enchères scheduled sur **toutes les phases** si aucune n'est trouvée sur la phase active. Elle trouve donc le round scheduled de Phase 2 (ouverture 19 avril) et affiche un countdown de 32 jours.
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-Ce fallback "toutes phases" est trop agressif pour les enchères **scheduled** — il ne devrait s'appliquer qu'aux enchères **open** (qui nécessitent une action immédiate).
+## Cause racine
 
-## Correction
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-**Fichier : `src/hooks/useLeagueCardsData.ts`** (lignes 308-317)
+## Plan de correction
 
-Supprimer le fallback "any phase" pour les enchères scheduled. Ne montrer un countdown scheduled que si l'enchère est sur la phase active calendaire :
-
-```typescript
-// Avant (buggy) :
-const scheduled = leagueAuctions.find(
-  a => ... && a.phase_id === activePhaseId
-) || leagueAuctions.find(   // ← ce fallback attrape Phase 2
-  a => ... 
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
 );
-
-// Après (corrigé) :
-const scheduled = leagueAuctions.find(
-  a => a.statut === 'scheduled' && 
-       a.opens_at && a.opens_at > now &&
-       a.phase_id === activePhaseId
-);
-// Pas de fallback toutes phases pour scheduled
 ```
 
-Même correction dans **`src/hooks/useLeagueAuctionStatus.tsx`** (la recherche scheduled) — vérifier que le fallback n'attrape pas des phases lointaines.
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
 
-**Bonus** : Les clés de traduction `leagueCard.auction.openingIn` et `leagueCard.auction.days` ne sont pas résolues (visible sur le screenshot). Je corrigerai aussi ces traductions manquantes.
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
 
-**Fichiers modifiés :**
-- `src/hooks/useLeagueCardsData.ts`
-- `src/hooks/useLeagueAuctionStatus.tsx`
-- Fichier(s) de traduction i18n concernés
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
+
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 
