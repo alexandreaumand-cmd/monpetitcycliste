@@ -113,7 +113,7 @@ export function AuctionLiveAnnouncements({
           event: 'UPDATE',
           schema: 'public',
           table: 'annonces',
-          filter: `auction_id=eq.${auctionId}`,
+          filter: `auction_id=eq.${selectedAuctionId}`,
         },
         (payload) => {
           console.log('New annonce published!', payload);
@@ -125,7 +125,7 @@ export function AuctionLiveAnnouncements({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [auctionId, refetch]);
+  }, [selectedAuctionId, refetch]);
 
   const toggleManager = (managerId: string) => {
     setOpenManagers(prev => {
