@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 
 import { Menu } from "lucide-react";
 import logoBordure from "@/assets/logo-bordure.png";
+import faviconCap from "@/assets/favicon-cap.jpeg";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { useLeague } from "@/contexts/LeagueContext";
@@ -55,10 +56,10 @@ export const MobileLayout = ({
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <Link to="/dashboard/home" className="shrink-0">
                 <img 
-                  src={logoBordure} 
+                  src={faviconCap} 
                   alt="La Bordure" 
                   loading="eager"
-                  className="h-7 w-auto"
+                  className="h-8 w-8 rounded-sm object-contain"
                 />
               </Link>
               
