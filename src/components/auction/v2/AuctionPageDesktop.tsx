@@ -127,6 +127,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
   // Auto-show validation screen if manager has already validated and has no active drafts
   useEffect(() => {
     if (context?.validation_status?.has_validated && context?.auction_id && (context?.my_bids?.length ?? 0) === 0) {
+      setValidatedAuctionId(context.auction_id);
       setShowValidationScreen(true);
     }
   }, [context?.validation_status?.has_validated, context?.auction_id, context?.my_bids?.length]);
