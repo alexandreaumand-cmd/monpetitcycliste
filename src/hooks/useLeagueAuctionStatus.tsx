@@ -59,19 +59,13 @@ export function useLeagueAuctionStatus(leagueId: string | null, enabled: boolean
         }
       }
 
-      // 1. Chercher une enchère OUVERTE (sur la phase active si définie)
-      let openAuctionQuery = supabase
+      // 1. Chercher une enchère OUVERTE toutes phases confondues (priorité absolue)
+      const { data: openAuction } = await supabase
         .from('auctions')
         .select('id, round_number, deadline_at, phase_id')
         .eq('league_id', leagueId)
         .eq('statut', 'open')
-        .not('phase_id', 'is', null);
-
-      if (activePhaseId) {
-        openAuctionQuery = openAuctionQuery.eq('phase_id', activePhaseId);
-      }
-
-      const { data: openAuction } = await openAuctionQuery
+        .not('phase_id', 'is', null)
         .order('round_number', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(1)
