@@ -215,8 +215,12 @@ export function AuctionLiveAnnouncements({
                         size="sm"
                         className="shrink-0 text-xs"
                         onClick={() => {
+                          if (replayTimerRef.current) clearInterval(replayTimerRef.current);
+                          replayTimerRef.current = null;
                           setSelectedAuctionId(round.id);
                           setLiveAnnonces([]);
+                          setReplayVisibleCount(0);
+                          setIsReplaying(false);
                           prevCountRef.current = 0;
                         }}
                       >
