@@ -86,7 +86,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
           </div>
         </div>
 
-        {/* Ligne 2 : Type de ligue + Saison */}
+        {/* Ligne 2 : Type de ligue + Saison + Joueurs */}
         <div className="flex items-center gap-2 flex-wrap">
           {gameMode && (
             <Badge 
@@ -114,6 +114,14 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
               {leagueSeason.season.annee}
             </Badge>
           ) : null}
+          <div className="ml-auto">
+            <LeagueParticipantsHover
+              ownerName={owner?.nom || null}
+              members={members}
+              currentPlayerCount={league.current_player_count}
+              isLoading={loadingMembersList || loadingOwner}
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -225,14 +233,6 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
         {/* EN COURS */}
         {isActive && (
           <>
-            <div className="flex items-center justify-end">
-              <LeagueParticipantsHover
-                ownerName={owner?.nom || null}
-                members={members}
-                currentPlayerCount={league.current_player_count}
-                isLoading={loadingMembersList || loadingOwner}
-              />
-            </div>
 
             {loadingStats ? (
               <div className="space-y-2">
@@ -257,7 +257,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">{t('leagueCard.points')}</p>
-                      <p className="font-semibold">{Math.round(stats.mySeasonPoints)}</p>
+                      <p className="font-semibold">{Math.round(stats.mySeasonPoints).toLocaleString('fr-FR')}</p>
                     </div>
                   </div>
                 )}
@@ -273,7 +273,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">{t('leagueCard.points')}</p>
-                      <p className="font-semibold">{stats.myPhasePoints}</p>
+                      <p className="font-semibold">{stats.myPhasePoints != null ? Math.round(stats.myPhasePoints).toLocaleString('fr-FR') : '-'}</p>
                     </div>
                   </div>
                 )}
@@ -285,7 +285,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                       <p className="text-xs text-muted-foreground">{t('leagueCard.leader')}</p>
                       <p className="font-semibold text-sm">{stats.seasonLeader.name}</p>
                     </div>
-                    <p className="text-sm font-semibold">{Math.round(stats.seasonLeader.points)} pts</p>
+                    <p className="text-sm font-semibold">{Math.round(stats.seasonLeader.points).toLocaleString('fr-FR')} pts</p>
                   </div>
                 )}
               </div>
