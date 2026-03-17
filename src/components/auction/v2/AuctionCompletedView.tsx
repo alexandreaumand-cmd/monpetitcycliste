@@ -39,6 +39,26 @@ export function AuctionCompletedView({
   leagueId
 }: AuctionCompletedViewProps) {
   const { t } = useTranslation('auction');
+  const [showAnnouncements, setShowAnnouncements] = useState(false);
+  const [selectedAuctionId, setSelectedAuctionId] = useState<string | null>(null);
+
+  // Fetch closed rounds for announcements replay
+  const { data: closedRounds } = useQuery({
+    queryKey: ['auction-closed-rounds', phaseId, leagueId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('auctions')
+        .select('id, round_number')
+        .eq('phase_id', phaseId)
+        .eq('league_id', leagueId!)
+        .eq('statut', 'closed')
+        .order('round_number', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!phaseId && !!leagueId,
+  });
+
   // Fetch validation status
   const { data: validationStatus, isLoading: validationLoading } = useQuery({
     queryKey: ['auction-validation-status', phaseId, leagueId],
@@ -57,7 +77,7 @@ export function AuctionCompletedView({
       };
     },
     enabled: !!phaseId && !!leagueId,
-    refetchInterval: 10000, // Refresh every 10s
+    refetchInterval: 10000,
   });
 
   // Fetch current round info
@@ -68,7 +88,7 @@ export function AuctionCompletedView({
         .from('auctions')
         .select('round_number')
         .eq('phase_id', phaseId)
-        .eq('league_id', leagueId)
+        .eq('league_id', leagueId!)
         .eq('statut', 'open')
         .order('round_number', { ascending: false })
         .limit(1)
@@ -78,6 +98,7 @@ export function AuctionCompletedView({
     },
     enabled: !!phaseId && !!leagueId,
   });
+
   // Sort by round_number then by amount descending
   const sortedRoster = [...roster].sort((a, b) => {
     if (a.round_number !== b.round_number) {
@@ -87,8 +108,22 @@ export function AuctionCompletedView({
   });
 
   const remainingBudget = starting_budget - budget_spent;
-
   const currentRound = auctionInfo?.round_number || 0;
+
+  // Show announcements view
+  if (showAnnouncements && selectedAuctionId) {
+    return (
+      <AuctionLiveAnnouncements
+        auctionId={selectedAuctionId}
+        managerId={managerId}
+        phaseId={phaseId}
+        onBack={() => {
+          setShowAnnouncements(false);
+          setSelectedAuctionId(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="container max-w-full mx-auto p-4 md:p-6 space-y-6">
