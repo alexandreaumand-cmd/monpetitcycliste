@@ -87,34 +87,36 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
         </div>
 
         {/* Ligne 2 : Type de ligue + Saison + Joueurs */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {gameMode && (
-            <Badge 
-              variant="outline" 
-              className="gap-1 text-xs text-muted-foreground border-muted-foreground/30 font-inter"
-            >
-              <Zap className="h-3 w-3" />
-              {t(`leagueCard.gameMode.${gameMode.id}`)}
-            </Badge>
-          )}
-          {loadingSeason ? (
-            <Badge 
-              variant="outline" 
-              className="gap-1 bg-muted/50"
-            >
-              <Calendar className="h-3 w-3 animate-pulse" />
-              {t('leagueCard.loading')}
-            </Badge>
-          ) : leagueSeason?.season?.annee ? (
-            <Badge 
-              variant="outline" 
-              className="gap-1 text-xs text-muted-foreground border-muted-foreground/30 font-inter"
-            >
-              <Calendar className="h-3 w-3" />
-              {leagueSeason.season.annee}
-            </Badge>
-          ) : null}
-          <div className="ml-auto">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            {gameMode && (
+              <Badge 
+                variant="outline" 
+                className="gap-1 text-xs text-muted-foreground border-muted-foreground/30 font-inter shrink-0"
+              >
+                <Zap className="h-3 w-3" />
+                {t(`leagueCard.gameMode.${gameMode.id}`)}
+              </Badge>
+            )}
+            {loadingSeason ? (
+              <Badge 
+                variant="outline" 
+                className="gap-1 bg-muted/50 shrink-0"
+              >
+                <Calendar className="h-3 w-3 animate-pulse" />
+                {t('leagueCard.loading')}
+              </Badge>
+            ) : leagueSeason?.season?.annee ? (
+              <Badge 
+                variant="outline" 
+                className="gap-1 text-xs text-muted-foreground border-muted-foreground/30 font-inter shrink-0"
+              >
+                <Calendar className="h-3 w-3" />
+                {leagueSeason.season.annee}
+              </Badge>
+            ) : null}
+          </div>
+          <div className="ml-auto shrink-0">
             <LeagueParticipantsHover
               ownerName={owner?.nom || null}
               members={members}
