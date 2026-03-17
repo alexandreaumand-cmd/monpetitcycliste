@@ -141,8 +141,13 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
           </div>
 
           {/* Encouraging message */}
-          <div className="bg-muted rounded-lg p-4 text-center">
+          <div className={`rounded-lg p-4 text-center ${isAutoClosing ? 'bg-primary/10 border border-primary/30' : 'bg-muted'}`}>
             <p className="text-sm md:text-base">{getEncouragingMessage()}</p>
+            {isAutoClosing && (
+              <p className="text-xs text-muted-foreground mt-2 animate-pulse">
+                {t('validation.autoClosingHint', 'Les résultats seront annoncés automatiquement dans quelques instants.')}
+              </p>
+            )}
           </div>
 
           {/* Time remaining */}
