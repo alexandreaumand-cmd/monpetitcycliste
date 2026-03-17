@@ -276,12 +276,13 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
           );
 
           if (openAuction) {
+            const validation = validationStatusMap.get(openAuction.id);
             auctionStatus = {
               auctionId: openAuction.id,
               phaseId: openAuction.phase_id,
               roundNumber: openAuction.round_number,
-              validatedCount: 0, // Will be fetched on demand in LeagueCard if needed
-              totalManagers: leagueMembers.length,
+              validatedCount: validation?.validated_count ?? 0,
+              totalManagers: validation?.total_managers ?? leagueMembers.length,
               deadlineAt: openAuction.deadline_at,
             };
           } else {
