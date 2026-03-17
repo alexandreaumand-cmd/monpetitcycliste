@@ -74,14 +74,14 @@ export function DashboardHomeHeader({
 
   return (
     <header className="sticky top-0 z-50 bg-secondary/95 backdrop-blur-sm border-b border-bordure-gold/30 safe-top">
-      <div className="container mx-auto px-4 py-2 flex items-center justify-between">
+      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img
             src={logoBordureLight}
             alt="La Bordure"
             loading="eager"
             fetchPriority="high"
-            className="h-10 w-auto"
+            className="h-14 w-auto"
           />
         </div>
 
