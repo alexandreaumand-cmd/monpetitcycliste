@@ -197,6 +197,21 @@ Deno.serve(async (req) => {
 
           if (!openError) {
             console.log(`[JOIN] ✅ Opened auction ${auction.id} immediately (deadline had passed)`);
+            // Send notification to all league members
+            try {
+              await notifyLeagueMembers(serviceClient, leagueId, {
+                type: 'auction_opened',
+                title: '🔔 Enchères ouvertes !',
+                message: `Le Round ${auction.round_number} des enchères est ouvert dans ${league.name} ! Vous avez 24h pour placer vos mises.`,
+                metadata: {
+                  league_id: leagueId,
+                  auction_id: auction.id,
+                  round_number: auction.round_number,
+                },
+              });
+            } catch (notifErr) {
+              console.error('[JOIN] Notification error (non-fatal):', notifErr);
+            }
           } else {
             console.error('[JOIN] Error opening auction:', openError);
           }
