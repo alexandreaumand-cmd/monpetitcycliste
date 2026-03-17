@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,10 +43,13 @@ export function AuctionLiveAnnouncements({
   const { t } = useTranslation('auction');
   const [selectedAuctionId, setSelectedAuctionId] = useState(auctionId);
   const [liveAnnonces, setLiveAnnonces] = useState<any[]>([]);
+  const [replayVisibleCount, setReplayVisibleCount] = useState(0);
+  const [isReplaying, setIsReplaying] = useState(false);
   const [myRecruitsOpen, setMyRecruitsOpen] = useState(true);
   const [openManagers, setOpenManagers] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
+  const replayTimerRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
   const { leagueId } = useLeague();
 
@@ -85,23 +88,55 @@ export function AuctionLiveAnnouncements({
     refetchInterval: 3000,
   });
 
-  // Update local state when new data arrives
+  // Cleanup replay timer on unmount
+  useEffect(() => {
+    return () => {
+      if (replayTimerRef.current) clearInterval(replayTimerRef.current);
+    };
+  }, []);
+
+  // Start replay when data arrives for a closed round
   useEffect(() => {
     if (liveStatus?.annonces) {
-      setLiveAnnonces(liveStatus.annonces);
+      const allAnnonces = liveStatus.annonces;
+      setLiveAnnonces(allAnnonces);
+
+      const isClosedRound = liveStatus?.unpublished_count === 0 && allAnnonces.length > 0;
+
+      if (isClosedRound) {
+        // Start progressive replay
+        if (replayTimerRef.current) clearInterval(replayTimerRef.current);
+        setReplayVisibleCount(1);
+        setIsReplaying(true);
+
+        let count = 1;
+        replayTimerRef.current = setInterval(() => {
+          count++;
+          setReplayVisibleCount(count);
+          if (count >= allAnnonces.length) {
+            if (replayTimerRef.current) clearInterval(replayTimerRef.current);
+            replayTimerRef.current = null;
+            setIsReplaying(false);
+          }
+        }, 5000);
+      } else {
+        // Live mode: show all as they come
+        setReplayVisibleCount(allAnnonces.length);
+        setIsReplaying(false);
+      }
     }
   }, [liveStatus]);
 
   // Handle new announcements - scroll to top for reversed order
   useEffect(() => {
-    if (liveAnnonces.length > prevCountRef.current) {
-      // Scroll to top to show latest announcement
+    const currentVisible = Math.min(replayVisibleCount, liveAnnonces.length);
+    if (currentVisible > prevCountRef.current) {
       if (scrollRef.current) {
         scrollRef.current.scrollTop = 0;
       }
     }
-    prevCountRef.current = liveAnnonces.length;
-  }, [liveAnnonces]);
+    prevCountRef.current = currentVisible;
+  }, [replayVisibleCount, liveAnnonces]);
 
   // Subscribe to realtime updates
   useEffect(() => {
@@ -139,13 +174,16 @@ export function AuctionLiveAnnouncements({
     });
   };
 
+  // Compute visible announcements for replay
+  const visibleAnnonces = liveAnnonces.slice(0, replayVisibleCount);
+
   const totalAnnonces = liveStatus?.total_annonces || 0;
   const publishedCount = liveStatus?.published_count || 0;
   const unpublishedCount = liveStatus?.unpublished_count || 0;
-  const isComplete = unpublishedCount === 0;
-  const myWinsCount = liveAnnonces.filter(a => a.is_my_win).length;
-  const myNewRiders = liveStatus?.my_new_riders || [];
-  const allManagersRecruits: ManagerRecruits[] = liveStatus?.all_managers_recruits || [];
+  const isComplete = unpublishedCount === 0 && !isReplaying;
+  const myWinsCount = visibleAnnonces.filter(a => a.is_my_win).length;
+  const myNewRiders = isReplaying ? [] : (liveStatus?.my_new_riders || []);
+  const allManagersRecruits: ManagerRecruits[] = isReplaying ? [] : (liveStatus?.all_managers_recruits || []);
   const recentlyAnnouncedManagerId = liveStatus?.recently_announced_manager_id;
 
   return (
@@ -161,8 +199,8 @@ export function AuctionLiveAnnouncements({
                   <PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   <span className="truncate">{t('live.resultsRound', { round: liveStatus?.auction?.round_number || '' })}</span>
                 </CardTitle>
-                <Badge variant={isComplete ? "default" : "secondary"} className="text-xs sm:text-sm shrink-0">
-                  {publishedCount}/{totalAnnonces}
+                <Badge variant={isComplete ? "default" : "secondary"} className={`text-xs sm:text-sm shrink-0 ${isReplaying ? 'animate-pulse' : ''}`}>
+                  {isReplaying ? `${replayVisibleCount}/${liveAnnonces.length}` : `${publishedCount}/${totalAnnonces}`}
                 </Badge>
               </div>
 
@@ -177,8 +215,12 @@ export function AuctionLiveAnnouncements({
                         size="sm"
                         className="shrink-0 text-xs"
                         onClick={() => {
+                          if (replayTimerRef.current) clearInterval(replayTimerRef.current);
+                          replayTimerRef.current = null;
                           setSelectedAuctionId(round.id);
                           setLiveAnnonces([]);
+                          setReplayVisibleCount(0);
+                          setIsReplaying(false);
                           prevCountRef.current = 0;
                         }}
                       >
@@ -191,7 +233,11 @@ export function AuctionLiveAnnouncements({
               )}
             </CardHeader>
             <CardContent className="py-2 sm:py-4 px-3 sm:px-6">
-              {isComplete ? (
+              {isReplaying ? (
+                <p className="text-xs sm:text-sm text-muted-foreground animate-pulse">
+                  🎬 Replay en cours... prochaine annonce dans 5s
+                </p>
+              ) : isComplete ? (
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   ✅ {t('live.allResultsAnnounced')}
                 </p>
@@ -241,17 +287,17 @@ export function AuctionLiveAnnouncements({
             <CardContent className="px-2 sm:px-6">
               <ScrollArea className="h-[50vh] sm:h-[600px] pr-2 sm:pr-4" ref={scrollRef}>
                 <div className="space-y-4">
-                  {liveAnnonces.length === 0 ? (
+                  {visibleAnnonces.length === 0 ? (
                     <p className="text-center text-muted-foreground py-6 sm:py-8 text-sm">
                       {t('live.waitingAnnouncements')}
                     </p>
                   ) : (
                     (() => {
       // Afficher le message quand il reste exactement 10 annonces à publier
-      const unpublishedCount = totalAnnonces - liveAnnonces.length;
-      const shouldShowTop10Message = totalAnnonces > 10 && unpublishedCount === 10;
+      const remainingCount = totalAnnonces - visibleAnnonces.length;
+      const shouldShowTop10Message = totalAnnonces > 10 && remainingCount === 10;
 
-      return liveAnnonces.map((annonce, idx) => {
+      return visibleAnnonces.map((annonce, idx) => {
         // Le message apparaît en haut de la liste (avant la dernière annonce publiée)
         const showTop10Before = shouldShowTop10Message && idx === 0;
 
