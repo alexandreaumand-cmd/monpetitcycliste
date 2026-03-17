@@ -23,8 +23,8 @@
       "auction_opened": {
         "title": "🎯 Round {{round}} lancé !",
         "titleAuto": "🤖 Round {{round}} lancé automatiquement",
-        "message": "Le round {{round}} est maintenant ouvert. Placez vos enchères avant la deadline !",
-        "messageAuto": "Le round {{round}} a été lancé automatiquement. Placez vos enchères !"
+        "message": "Le round {{round}} est ouvert dans {{leagueName}}. Placez vos enchères !",
+        "messageAuto": "Le round {{round}} a été lancé automatiquement dans {{leagueName}}. Placez vos enchères !"
       },
       "auction_closed": {
         "title": "⏰ Round d'enchères clôturé",

@@ -133,6 +133,7 @@ Deno.serve(async (req) => {
           round_number: scheduledAuction.round_number,
           phase_id: phase_id,
           league_id: league_id,
+          league_name: (await supabase.from('leagues').select('name').eq('id', league_id).single()).data?.name || '',
           deadline_at: deadline_at,
           auto_launched: auto_launched || false
         }
@@ -192,6 +193,7 @@ Deno.serve(async (req) => {
         round_number: newRoundNumber,
         phase_id: phase_id,
         league_id: league_id,
+        league_name: (await supabase.from('leagues').select('name').eq('id', league_id).single()).data?.name || '',
         deadline_at: deadline_at,
         auto_launched: auto_launched || false
       }

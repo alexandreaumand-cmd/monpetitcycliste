@@ -23,8 +23,8 @@
       "auction_opened": {
         "title": "🎯 Round {{round}} launched!",
         "titleAuto": "🤖 Round {{round}} launched automatically",
-        "message": "Round {{round}} is now open. Place your bids before the deadline!",
-        "messageAuto": "Round {{round}} was launched automatically. Place your bids!"
+        "message": "Round {{round}} is now open in {{leagueName}}. Place your bids!",
+        "messageAuto": "Round {{round}} was launched automatically in {{leagueName}}. Place your bids!"
       },
       "auction_closed": {
         "title": "⏰ Auction round closed",

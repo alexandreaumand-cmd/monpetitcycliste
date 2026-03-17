@@ -99,6 +99,7 @@ Deno.serve(async (req) => {
           message: `Le tour ${auction.round_number} des enchères est ouvert dans ${leagueNames[auction.league_id] || 'votre ligue'} !`,
           metadata: {
             league_id: auction.league_id,
+            league_name: leagueNames[auction.league_id] || 'votre ligue',
             auction_id: auction.id,
             round_number: auction.round_number,
           },

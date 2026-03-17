@@ -205,6 +205,7 @@ Deno.serve(async (req) => {
                 message: `Le Round ${auction.round_number} des enchères est ouvert dans ${league.name} ! Vous avez 24h pour placer vos mises.`,
                 metadata: {
                   league_id: leagueId,
+                  league_name: league.name,
                   auction_id: auction.id,
                   round_number: auction.round_number,
                 },

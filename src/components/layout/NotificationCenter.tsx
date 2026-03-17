@@ -75,13 +75,14 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
       // For other types (auction_*), translate with metadata
       const round = notification.metadata?.round_number;
       const isAuto = notification.metadata?.auto_launched;
+      const leagueName = notification.metadata?.league_name;
       
       const typeKey = `notifications.types.${type}`;
       const titleKey = isAuto ? `${typeKey}.titleAuto` : `${typeKey}.title`;
       const messageKey = isAuto ? `${typeKey}.messageAuto` : `${typeKey}.message`;
       
-      const translatedTitle = t(titleKey, { round, defaultValue: '' });
-      const translatedMessage = t(messageKey, { round, defaultValue: '' });
+      const translatedTitle = t(titleKey, { round, leagueName, defaultValue: '' });
+      const translatedMessage = t(messageKey, { round, leagueName, defaultValue: '' });
       
       return {
         title: translatedTitle || notification.title,
