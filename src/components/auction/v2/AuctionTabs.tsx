@@ -388,6 +388,18 @@ export const AuctionTabs = ({
           <AuctionTeamsGrid phaseId={phaseId} managerId={managerId} />
         </div>
       </TabsContent>
+
+      {closedRounds.length > 0 && (
+        <TabsContent value="announcements" className="mt-0">
+          <div className="container mx-auto px-4 py-6 max-w-7xl">
+            <AuctionLiveAnnouncements
+              auctionId={closedRounds[0].id}
+              managerId={managerId}
+              phaseId={phaseId}
+            />
+          </div>
+        </TabsContent>
+      )}
     </Tabs>
   );
 };
