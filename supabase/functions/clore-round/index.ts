@@ -77,6 +77,8 @@ Deno.serve(async (req) => {
       }
     }
 
+    console.log('Closing round for auction:', auction_id, 'league:', league_id, 'auto_mode:', auto_mode || false);
+
     // Get auction details and verify it belongs to the league
     const { data: auction, error: auctionError } = await supabase
       .from('auctions')

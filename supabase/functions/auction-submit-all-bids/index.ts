@@ -314,39 +314,45 @@ Deno.serve(async (req) => {
 
     console.log(`✅ Manager ${manager_id} validated ${draftBids.length} bids for auction ${auction.id}`);
 
-    // Check if all managers now have complete rosters
+    // Check if all eligible managers have validated their bids (pending status)
     try {
-      console.log('🔍 Checking if all managers have complete rosters...');
+      console.log('🔍 Checking if all eligible managers have validated...');
       
-      // Get all league members
+      // Use the same logic as auction-get-validation-status
+      // Step 1: Get league config
+      const { data: leagueConfig } = await supabase
+        .from('leagues')
+        .select('settings')
+        .eq('id', league_id)
+        .single();
+      
+      let maxRiders = leagueConfig?.settings?.max_riders ? Number(leagueConfig.settings.max_riders) : 0;
+      if (!maxRiders) {
+        maxRiders = max_coureurs;
+      }
+      
+      // Step 2: Get all league members' manager IDs
       const { data: leagueMembers } = await supabase
         .from('league_members')
         .select('user_id')
         .eq('league_id', league_id);
       
       if (!leagueMembers || leagueMembers.length === 0) {
-        console.log('⚠️ No league members found');
         throw new Error('No league members');
       }
       
-      // Get manager IDs for these users
-      const { data: managers } = await supabase
+      const { data: allManagers } = await supabase
         .from('managers')
         .select('id, nom')
         .in('user_id', leagueMembers.map(m => m.user_id));
       
-      if (!managers || managers.length === 0) {
-        console.log('⚠️ No managers found');
+      if (!allManagers || allManagers.length === 0) {
         throw new Error('No managers');
       }
       
-      console.log(`📊 Checking ${managers.length} managers for complete rosters (target: ${max_coureurs} riders each)`);
-      
-      // Check roster count for each manager
-      let allManagersComplete = true;
-      const incompleteManagers = [];
-      
-      for (const mgr of managers) {
+      // Step 3: Find eligible managers (those with slots remaining)
+      const eligibleManagerIds: string[] = [];
+      for (const mgr of allManagers) {
         const { count } = await supabase
           .from('rosters')
           .select('*', { count: 'exact', head: true })
@@ -354,48 +360,69 @@ Deno.serve(async (req) => {
           .eq('phase_id', phase_id)
           .eq('league_id', league_id);
         
-        const rosterCount = count || 0;
-        console.log(`  - ${mgr.nom}: ${rosterCount}/${max_coureurs} riders`);
-        
-        if (rosterCount < max_coureurs) {
-          allManagersComplete = false;
-          incompleteManagers.push({ nom: mgr.nom, count: rosterCount });
+        if ((count || 0) < maxRiders) {
+          eligibleManagerIds.push(mgr.id);
         }
       }
       
-      if (allManagersComplete && managers.length > 0) {
-        console.log('🎉 All managers have complete rosters! Auto-closing round...');
+      console.log(`📊 Eligible managers (slots remaining): ${eligibleManagerIds.length}/${allManagers.length}`);
+      
+      if (eligibleManagerIds.length === 0) {
+        console.log('⚠️ No eligible managers (all rosters full)');
+        throw new Error('No eligible managers');
+      }
+      
+      // Step 4: Count how many eligible managers have pending bids
+      const { data: validatedBids } = await supabase
+        .from('bids')
+        .select('manager_id')
+        .eq('auction_id', auction.id)
+        .eq('league_id', league_id)
+        .eq('statut', 'pending')
+        .in('manager_id', eligibleManagerIds);
+      
+      const validatedManagerIds = [...new Set((validatedBids || []).map(b => b.manager_id))];
+      const waitingManagers = eligibleManagerIds.filter(id => !validatedManagerIds.includes(id));
+      
+      console.log(`📊 Validated: ${validatedManagerIds.length}/${eligibleManagerIds.length}, Waiting: ${waitingManagers.length}`);
+      
+      if (validatedManagerIds.length === eligibleManagerIds.length && eligibleManagerIds.length > 0) {
+        console.log('🎉 All eligible managers have validated! Auto-closing round...');
         
-        // Auto-close the auction round
+        // Auto-close: call clore-round with auto_mode (service role, bypasses admin check)
         const { error: closeError } = await supabase.functions.invoke('clore-round', {
           body: {
             auction_id: auction.id,
             league_id: league_id,
+            auto_mode: true,
           }
         });
         
         if (closeError) {
           console.error('❌ Error auto-closing round:', closeError);
         } else {
-          console.log('✅ Round automatically closed successfully');
+          console.log('✅ Round automatically closed and annonces publishing triggered');
         }
       } else {
-        console.log(`⏳ Not all managers ready yet. Incomplete: ${incompleteManagers.map(m => `${m.nom} (${m.count}/${max_coureurs})`).join(', ')}`);
+        const waitingNames = allManagers
+          .filter(m => waitingManagers.includes(m.id))
+          .map(m => m.nom);
+        console.log(`⏳ Waiting for: ${waitingNames.join(', ')}`);
         
-        // Send notification that someone validated but round not ready yet
+        // Send notification that someone validated
         const { notifyLeagueMembers } = await import('../_shared/notifications.ts');
         
         await notifyLeagueMembers(supabase, league_id, {
           type: 'auction_validation',
           title: '✅ Enchères validées',
-          message: `Un manager a validé ses enchères. En attente des autres managers...`,
+          message: `Un manager a validé ses enchères. En attente de ${waitingManagers.length} manager(s)...`,
           metadata: {
             auction_id: auction.id,
             round_number: auction.round_number,
             phase_id,
             league_id,
-            complete_managers: managers.length - incompleteManagers.length,
-            total_managers: managers.length
+            complete_managers: validatedManagerIds.length,
+            total_managers: eligibleManagerIds.length
           }
         });
       }
