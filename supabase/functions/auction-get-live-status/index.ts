@@ -74,8 +74,15 @@ Deno.serve(async (req) => {
       .lte('published_at', now)
       .order('published_at', { ascending: false });
 
-    const total_annonces = allAnnonces?.length || 0;
-    const published_annonces = allAnnonces?.filter(a => a.published) || [];
+    // Get total annonces count (including not yet visible ones)
+    const { count: totalAnnonceCount } = await supabase
+      .from('annonces')
+      .select('id', { count: 'exact', head: true })
+      .eq('auction_id', auction_id)
+      .eq('published', true);
+
+    const total_annonces = totalAnnonceCount || 0;
+    const published_annonces = allAnnonces || [];
     const published_count = published_annonces.length;
     const unpublished_count = total_annonces - published_count;
 
