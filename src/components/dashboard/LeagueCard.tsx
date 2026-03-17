@@ -324,8 +324,8 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                     </>
                   ) : (
                     <>
-                      <Gavel className="h-5 w-5 text-foreground" />
-                      <h3 className="font-montserrat font-bold text-foreground">
+                      <Gavel className="h-5 w-5 text-amber-900" />
+                      <h3 className="font-montserrat font-bold text-amber-900">
                         {t('leagueCard.auction.inProgress')}
                       </h3>
                     </>
