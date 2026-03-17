@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { auction_id, publish_all, lang = 'fr' } = await req.json();
+    const { auction_id, publish_all, lang = 'fr', auto_mode } = await req.json();
     console.log('Publishing annonce for auction:', auction_id, 'publish_all:', publish_all, 'lang:', lang);
 
     // Translations for announcement text
