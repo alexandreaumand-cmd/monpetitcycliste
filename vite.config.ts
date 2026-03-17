@@ -94,6 +94,7 @@ export default defineConfig(({ mode }) => ({
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10 MB limit
         importScripts: ['sw-push.js'],
         navigateFallback: null,
+        navigateFallbackDenylist: [/^\/~oauth/],
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.mode === 'navigate',
