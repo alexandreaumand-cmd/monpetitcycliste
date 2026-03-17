@@ -338,7 +338,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                     <span className={`text-sm font-inter ${
                       auctionStatus.isAnnouncementsPending ? 'text-orange-800' 
                         : auctionStatus.isScheduled ? 'text-blue-800' 
-                        : 'text-gray-900'
+                        : 'text-amber-900'
                     }`}>
                       {t('leagueCard.auction.round')}
                     </span>
