@@ -50,6 +50,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   const [selectedRider, setSelectedRider] = useState<any>(null);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [showValidationScreen, setShowValidationScreen] = useState(false);
+  const [validatedAuctionId, setValidatedAuctionId] = useState<string | null>(null);
   const [showMyValidatedBids, setShowMyValidatedBids] = useState(false);
   const [showAuctionHistory, setShowAuctionHistory] = useState(false);
   const [hideLiveAnnouncements, setHideLiveAnnouncements] = useState(false);
