@@ -270,10 +270,8 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
           // Find relevant auction
           const leagueAuctions = (allAuctions || []).filter(a => a.league_id === league.id);
           
-          // Priority: open > closed with pending > scheduled
-          const openAuction = leagueAuctions.find(
-            a => a.statut === 'open' && (!activePhaseId || a.phase_id === activePhaseId)
-          );
+          // Priority 1: Any open auction across all phases
+          const openAuction = leagueAuctions.find(a => a.statut === 'open');
 
           if (openAuction) {
             const validation = validationStatusMap.get(openAuction.id);
@@ -286,10 +284,14 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
               deadlineAt: openAuction.deadline_at,
             };
           } else {
+            // Priority 2: Closed with pending (prefer active phase, fallback any)
             const closedWithPending = leagueAuctions.find(
               a => a.statut === 'closed' && 
                    auctionsWithPendingAnnonces.has(a.id) &&
-                   (!activePhaseId || a.phase_id === activePhaseId)
+                   a.phase_id === activePhaseId
+            ) || leagueAuctions.find(
+              a => a.statut === 'closed' && 
+                   auctionsWithPendingAnnonces.has(a.id)
             );
 
             if (closedWithPending) {
@@ -303,11 +305,15 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
                 isAnnouncementsPending: true,
               };
             } else {
+              // Priority 3: Scheduled (prefer active phase, fallback any)
+              const now = new Date().toISOString();
               const scheduled = leagueAuctions.find(
                 a => a.statut === 'scheduled' && 
-                     a.opens_at && 
-                     a.opens_at > new Date().toISOString() &&
-                     (!activePhaseId || a.phase_id === activePhaseId)
+                     a.opens_at && a.opens_at > now &&
+                     a.phase_id === activePhaseId
+              ) || leagueAuctions.find(
+                a => a.statut === 'scheduled' && 
+                     a.opens_at && a.opens_at > now
               );
 
               if (scheduled) {
