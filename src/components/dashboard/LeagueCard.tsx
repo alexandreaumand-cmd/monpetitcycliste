@@ -367,11 +367,11 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                   {!auctionStatus.isScheduled && !auctionStatus.isAnnouncementsPending && (
                     <>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-inter text-gray-900 flex items-center gap-1">
+                        <span className="text-sm font-inter text-amber-900 flex items-center gap-1">
                           <CheckCircle2 className="h-4 w-4" />
                           {t('leagueCard.auction.validatedManagers')}
                         </span>
-                        <span className="text-lg font-montserrat font-bold text-foreground">
+                        <span className="text-lg font-montserrat font-bold text-amber-900">
                           {auctionStatus.validatedCount}/{auctionStatus.totalManagers}
                         </span>
                       </div>
