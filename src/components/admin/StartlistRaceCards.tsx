@@ -158,18 +158,18 @@ export const StartlistRaceCards = ({ onRaceClick, isSuperAdmin }: StartlistRaceC
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Tabs value={tabMode} onValueChange={(v) => setTabMode(v as '30days' | '90days' | 'history' | 'upcoming-year')}>
-        <TabsList className="grid w-full max-w-2xl grid-cols-4">
-          <TabsTrigger value="history">Historique</TabsTrigger>
-          <TabsTrigger value="30days">30 jours</TabsTrigger>
-          <TabsTrigger value="90days">90 jours</TabsTrigger>
-          <TabsTrigger value="upcoming-year">Année à venir</TabsTrigger>
+        <TabsList className="w-full max-w-2xl overflow-x-auto scrollbar-hide flex">
+          <TabsTrigger value="history" className="shrink-0 text-xs sm:text-sm whitespace-nowrap">Historique</TabsTrigger>
+          <TabsTrigger value="30days" className="shrink-0 text-xs sm:text-sm whitespace-nowrap">30 jours</TabsTrigger>
+          <TabsTrigger value="90days" className="shrink-0 text-xs sm:text-sm whitespace-nowrap">90 jours</TabsTrigger>
+          <TabsTrigger value="upcoming-year" className="shrink-0 text-xs sm:text-sm whitespace-nowrap">Année à venir</TabsTrigger>
         </TabsList>
       </Tabs>
 
       {isLoadingCourses ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {[...Array(6)].map((_, i) => (
             <Card key={i}>
               <CardHeader>
@@ -183,7 +183,7 @@ export const StartlistRaceCards = ({ onRaceClick, isSuperAdmin }: StartlistRaceC
           ))}
         </div>
       ) : upcomingCourses && upcomingCourses.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {upcomingCourses
             .filter((course: any) => {
               if (tabMode === 'history') {
@@ -212,70 +212,59 @@ export const StartlistRaceCards = ({ onRaceClick, isSuperAdmin }: StartlistRaceC
                       onRaceClick(course, startlistId);
                     }}
                   >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between mb-2">
-                        <CardTitle className="text-base font-semibold leading-tight pr-2">
+                    <CardContent className="p-3 sm:p-4 space-y-2">
+                      {/* Row 1: Race name — full width, wraps naturally */}
+                      <div className="flex items-start gap-2">
+                        <h3 className="text-sm sm:text-base font-semibold leading-snug flex-1 min-w-0">
                           {course.nom}
-                        </CardTitle>
-                        <Trophy className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        </h3>
+                        {daysUntil >= 0 && tabMode !== 'history' && (
+                          <span className="text-[11px] text-muted-foreground whitespace-nowrap shrink-0 mt-0.5">
+                            J-{daysUntil}
+                          </span>
+                        )}
                       </div>
-                      
-                      <div className="flex flex-wrap gap-1.5 mb-2">
+
+                      {/* Row 2: Status badges — compact, wrap allowed */}
+                      <div className="flex flex-wrap items-center gap-1">
                         {isOngoing && (
-                          <Badge className="bg-primary text-primary-foreground border-primary">
-                            EN COURS
+                          <Badge className="bg-primary text-primary-foreground border-primary text-[10px] px-1.5 py-0">
+                            En cours
+                          </Badge>
+                        )}
+                        {course.categorie && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            {course.categorie}
                           </Badge>
                         )}
                         {startlistExists && (
-                          <Badge variant="outline" className="border-primary text-primary">
-                            Startlist{startlistInfo ? ` (${startlistInfo.riderCount})` : ''}
+                          <Badge variant="outline" className="border-primary text-primary text-[10px] px-1.5 py-0">
+                            {startlistInfo ? `${startlistInfo.riderCount}` : 'SL'}
                           </Badge>
                         )}
                         {pcsValidated && (
-                          <Badge className="bg-green-600 text-white border-green-600">
-                            SL officielle
+                          <Badge className="bg-green-600 text-white border-green-600 text-[10px] px-1.5 py-0">
+                            ✓ SL officielle
                           </Badge>
                         )}
                       </div>
 
-                      <div className="flex flex-wrap gap-2 text-xs">
-                        <Badge variant="secondary">
-                          Phase {course.phase_index}
-                        </Badge>
-                        {course.categorie && (
-                          <Badge variant="outline">{course.categorie}</Badge>
-                        )}
-                        {course.type_course && (
-                          <Badge variant="outline">{course.type_course}</Badge>
-                        )}
-                      </div>
-                    </CardHeader>
-
-                    <CardContent className="pt-0 space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4 flex-shrink-0" />
-                        <span className="text-xs">
-                          {format(dateDebut, 'd MMM', { locale: fr })} - {format(dateFin, 'd MMM yyyy', { locale: fr })}
+                      {/* Row 3: Date + meta — single compact line */}
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3 shrink-0" />
+                          {format(dateDebut, 'd MMM', { locale: fr })} – {format(dateFin, 'd MMM yyyy', { locale: fr })}
                         </span>
+                        {course.nb_etapes_estimees && course.nb_etapes_estimees > 1 && (
+                          <span>{course.nb_etapes_estimees} ét.</span>
+                        )}
                       </div>
-                      
+
                       {startlistInfo && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Clock className="h-3.5 w-3.5 flex-shrink-0" />
-                          <span>Modifié: {format(new Date(startlistInfo.lastModified), 'd MMM yyyy HH:mm', { locale: fr })}</span>
+                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Clock className="h-3 w-3 shrink-0" />
+                          <span>Modifié {format(new Date(startlistInfo.lastModified), 'd MMM yyyy HH:mm', { locale: fr })}</span>
                         </div>
-                      )}
-                      
-                      {daysUntil >= 0 && tabMode !== 'history' && (
-                        <Badge variant="outline" className="text-xs">
-                          J-{daysUntil}
-                        </Badge>
-                      )}
-                      
-                      {course.nb_etapes_estimees && course.nb_etapes_estimees > 1 && (
-                        <p className="text-xs text-muted-foreground">
-                          {course.nb_etapes_estimees} étapes
-                        </p>
                       )}
                     </CardContent>
                   </Card>
