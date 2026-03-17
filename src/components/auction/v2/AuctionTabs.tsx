@@ -205,6 +205,40 @@ export const AuctionTabs = ({
             >
               {t('tabs.teams')}
             </TabsTrigger>
+
+            {closedRounds.length > 0 && (
+              <TabsTrigger 
+                value="announcements" 
+                className="
+                  data-[state=active]:bg-bordure-gold 
+                  data-[state=active]:text-foreground 
+                  data-[state=active]:font-bold
+                  data-[state=active]:shadow-md
+                  data-[state=active]:border-2
+                  data-[state=active]:border-foreground
+                  data-[state=inactive]:bg-background 
+                  data-[state=inactive]:text-muted-foreground
+                  data-[state=inactive]:border-2
+                  data-[state=inactive]:border-border
+                  data-[state=inactive]:shadow-sm
+                  hover:bg-accent
+                  hover:border-bordure-gold
+                  dark:data-[state=inactive]:bg-card
+                  dark:data-[state=inactive]:text-muted-foreground
+                  rounded-lg 
+                  px-5 
+                  py-2.5
+                  text-base
+                  font-semibold
+                  transition-all
+                  duration-200
+                  cursor-pointer
+                "
+              >
+                <Megaphone className="h-4 w-4 mr-2" />
+                Annonces
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
       </div>
