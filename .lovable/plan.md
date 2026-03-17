@@ -1,31 +1,38 @@
 
 
-## Ajouter le nom de la ligue dans toutes les notifications
+## Diagnostic
 
-### Problème
-Le screenshot montre que les notifications d'enchères n'affichent pas la ligue concernée. Le `league_name` est déjà présent dans les metadata des notifications `auction_opened`, mais il manque dans `auction_closed` et `auction_validation`. De plus, les traductions i18n et l'UI n'exploitent pas ce champ pour tous les types.
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-### Changements
+## Cause racine
 
-#### 1. Backend — Ajouter `league_name` aux metadata manquantes
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-**`supabase/functions/clore-round/index.ts`** (~ligne 273-279) :
-- Fetcher le nom de la ligue et l'ajouter dans metadata : `league_name`
+## Plan de correction
 
-**`supabase/functions/auction-submit-all-bids/index.ts`** (~ligne 419-426) :
-- Fetcher le nom de la ligue et l'ajouter dans metadata : `league_name`
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
+```
 
-#### 2. Frontend — Afficher le nom de la ligue comme sous-titre
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
 
-**`src/components/layout/NotificationCenter.tsx`** (~ligne 175-179) :
-- En plus de `race_name`, afficher `league_name` depuis metadata pour les notifications d'enchères (quand `race_name` n'est pas défini)
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
 
-#### 3. Traductions — Ajouter `{{leagueName}}` dans les messages
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
 
-**`src/i18n/locales/fr/navigation.json`** :
-- `auction_closed.message` : `"Le round {{round}} est terminé dans {{leagueName}}."`
-- `auction_validation.message` : `"Un manager a validé dans {{leagueName}}. En attente des autres..."`
-- `auction_ready_to_close.message` : `"Tous les managers ont validé dans {{leagueName}}."`
-
-**`src/i18n/locales/en/navigation.json`** : mêmes ajouts en anglais
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 

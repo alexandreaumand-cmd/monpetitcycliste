@@ -172,9 +172,9 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
                         )}>
                           {translated.title}
                         </p>
-                        {notif.metadata?.race_name && (
+                        {(notif.metadata?.race_name || notif.metadata?.league_name) && (
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            {notif.metadata.race_name}
+                            {notif.metadata.race_name || notif.metadata.league_name}
                           </p>
                         )}
                         <p className="text-xs text-muted-foreground mt-1">

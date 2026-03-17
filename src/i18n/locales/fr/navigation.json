@@ -28,15 +28,15 @@
       },
       "auction_closed": {
         "title": "⏰ Round d'enchères clôturé",
-        "message": "Le round {{round}} est maintenant terminé. Consultez les résultats !"
+        "message": "Le round {{round}} est terminé dans {{leagueName}}. Consultez les résultats !"
       },
       "auction_validation": {
         "title": "✅ Enchères validées",
-        "message": "Un manager a validé ses enchères. En attente des autres managers..."
+        "message": "Un manager a validé dans {{leagueName}}. En attente des autres managers..."
       },
       "auction_ready_to_close": {
         "title": "🔔 Prêt à clôturer",
-        "message": "Tous les managers ont validé. Le round peut être clôturé."
+        "message": "Tous les managers ont validé dans {{leagueName}}. Le round peut être clôturé."
       },
       "results_added": {
         "title": "🏁 Nouveaux résultats",

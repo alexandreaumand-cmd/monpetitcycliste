@@ -409,6 +409,14 @@ Deno.serve(async (req) => {
           .map(m => m.nom);
         console.log(`⏳ Waiting for: ${waitingNames.join(', ')}`);
         
+        // Fetch league name for notification context
+        const { data: leagueInfo } = await supabase
+          .from('leagues')
+          .select('name')
+          .eq('id', league_id)
+          .single();
+        const leagueName = leagueInfo?.name || 'Ligue';
+
         // Send notification that someone validated
         const { notifyLeagueMembers } = await import('../_shared/notifications.ts');
         
@@ -421,6 +429,7 @@ Deno.serve(async (req) => {
             round_number: auction.round_number,
             phase_id,
             league_id,
+            league_name: leagueName,
             complete_managers: validatedManagerIds.length,
             total_managers: eligibleManagerIds.length
           }
