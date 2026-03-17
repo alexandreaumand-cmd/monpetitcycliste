@@ -64,7 +64,7 @@ export function AuctionLiveAnnouncements({
       }
 
       // Include closed rounds + the current round
-      query = query.in("statut", ["closed", "open", "pending"]);
+      query = query.in("statut", ["closed", "open", "scheduled"]);
 
       const { data, error } = await query.order("round_number", { ascending: true });
       if (error) throw error;
