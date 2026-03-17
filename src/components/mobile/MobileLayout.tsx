@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 
 import { Menu } from "lucide-react";
 import logoBordure from "@/assets/logo-bordure.png";
+import faviconCap from "@/assets/favicon-cap.jpeg";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { useLeague } from "@/contexts/LeagueContext";
