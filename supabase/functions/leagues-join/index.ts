@@ -96,8 +96,52 @@ Deno.serve(async (req) => {
 
     console.log('User', user.id, 'joined league:', league_id);
 
+    // Re-fetch league to get updated current_player_count
+    const { data: updatedLeague } = await supabase
+      .from('leagues')
+      .select('name, visibility, settings, max_players, current_player_count, status')
+      .eq('id', league_id)
+      .single();
+
+    // Check if this was the last player → open auction if deadline passed
+    if (updatedLeague && updatedLeague.current_player_count >= updatedLeague.max_players) {
+      console.log('[JOIN] League is now full! Checking for scheduled auctions...');
+      
+      const { data: scheduledAuctions } = await supabase
+        .from('auctions')
+        .select('id, opens_at, deadline_at, round_number')
+        .eq('league_id', league_id)
+        .eq('statut', 'scheduled')
+        .order('round_number', { ascending: true })
+        .limit(1);
+
+      if (scheduledAuctions && scheduledAuctions.length > 0) {
+        const auction = scheduledAuctions[0];
+        const opensAt = new Date(auction.opens_at);
+        const now = new Date();
+
+        if (opensAt <= now) {
+          const newDeadline = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+          
+          const { error: openError } = await supabase
+            .from('auctions')
+            .update({ statut: 'open', deadline_at: newDeadline })
+            .eq('id', auction.id)
+            .eq('statut', 'scheduled');
+
+          if (!openError) {
+            console.log(`[JOIN] ✅ Opened auction ${auction.id} immediately (deadline had passed)`);
+          } else {
+            console.error('[JOIN] Error opening auction:', openError);
+          }
+        } else {
+          console.log(`[JOIN] Auction scheduled for ${auction.opens_at}, cron will handle it`);
+        }
+      }
+    }
+
     return new Response(
-      JSON.stringify({ ok: true, league }),
+      JSON.stringify({ ok: true, league: updatedLeague || league }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

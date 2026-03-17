@@ -160,12 +160,50 @@ Deno.serve(async (req) => {
 
     console.log('[JOIN] User successfully added to league');
 
-    // Get league info
+    // Get league info (re-fetch to get updated current_player_count)
     const { data: league } = await serviceClient
       .from('leagues')
-      .select('name, visibility, settings')
+      .select('name, visibility, settings, max_players, current_player_count, status')
       .eq('id', leagueId)
       .single();
+
+    // Check if this was the last player joining → open auction if deadline passed
+    if (league && league.current_player_count >= league.max_players) {
+      console.log('[JOIN] League is now full! Checking for scheduled auctions...');
+      
+      const { data: scheduledAuctions } = await serviceClient
+        .from('auctions')
+        .select('id, opens_at, deadline_at, round_number')
+        .eq('league_id', leagueId)
+        .eq('statut', 'scheduled')
+        .order('round_number', { ascending: true })
+        .limit(1);
+
+      if (scheduledAuctions && scheduledAuctions.length > 0) {
+        const auction = scheduledAuctions[0];
+        const opensAt = new Date(auction.opens_at);
+        const now = new Date();
+
+        if (opensAt <= now) {
+          // Deadline already passed → open immediately with fresh 24h deadline
+          const newDeadline = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+          
+          const { error: openError } = await serviceClient
+            .from('auctions')
+            .update({ statut: 'open', deadline_at: newDeadline })
+            .eq('id', auction.id)
+            .eq('statut', 'scheduled');
+
+          if (!openError) {
+            console.log(`[JOIN] ✅ Opened auction ${auction.id} immediately (deadline had passed)`);
+          } else {
+            console.error('[JOIN] Error opening auction:', openError);
+          }
+        } else {
+          console.log(`[JOIN] Auction scheduled for ${auction.opens_at}, cron will handle it`);
+        }
+      }
+    }
 
     return new Response(JSON.stringify({ 
       ok: true, 
