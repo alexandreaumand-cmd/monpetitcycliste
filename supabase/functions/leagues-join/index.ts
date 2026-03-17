@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { notifyLeagueMembers } from '../_shared/notifications.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -131,6 +132,21 @@ Deno.serve(async (req) => {
 
           if (!openError) {
             console.log(`[JOIN] ✅ Opened auction ${auction.id} immediately (deadline had passed)`);
+            // Send notification to all league members
+            try {
+              await notifyLeagueMembers(supabase, league_id, {
+                type: 'auction_opened',
+                title: '🔔 Enchères ouvertes !',
+                message: `Le Round ${auction.round_number} des enchères est ouvert dans ${updatedLeague?.name || 'votre ligue'} ! Vous avez 24h pour placer vos mises.`,
+                metadata: {
+                  league_id: league_id,
+                  auction_id: auction.id,
+                  round_number: auction.round_number,
+                },
+              });
+            } catch (notifErr) {
+              console.error('[JOIN] Notification error (non-fatal):', notifErr);
+            }
           } else {
             console.error('[JOIN] Error opening auction:', openError);
           }
