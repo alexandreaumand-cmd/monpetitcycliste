@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
       }
       
       if (unpublishedCount === 0) {
-        console.log('🎯 All annonces published, auto-launching next round...');
+        console.log('🎯 All annonces published, checking if next round is needed...');
         
         const { data: currentAuction, error: auctionError } = await supabase
           .from('auctions')
@@ -112,22 +112,35 @@ Deno.serve(async (req) => {
         if (auctionError || !currentAuction) {
           console.error('Error fetching auction:', auctionError);
         } else {
-          const deadlineAt = new Date();
-          deadlineAt.setHours(deadlineAt.getHours() + 24); // 24h deadline for auto rounds
-          
-          const { error: openError } = await supabase.functions.invoke('ouvrir-nouveau-round', {
-            body: {
-              phase_id: currentAuction.phase_id,
-              deadline_at: deadlineAt.toISOString(),
-              league_id: currentAuction.league_id,
-              auto_launched: true
-            }
-          });
-          
-          if (openError) {
-            console.error('❌ Error auto-launching next round:', openError);
+          // Check if all rosters are complete before opening next round
+          const { data: rosterStatuses } = await supabase
+            .from('managers_rosters_status')
+            .select('manager_id, slots_restants')
+            .eq('phase_id', currentAuction.phase_id)
+            .eq('league_id', currentAuction.league_id);
+
+          const allComplete = rosterStatuses && rosterStatuses.length > 0 && rosterStatuses.every(m => (m.slots_restants ?? 0) === 0);
+
+          if (allComplete) {
+            console.log('✅ All rosters complete — no next round needed. Auction phase finished.');
           } else {
-            console.log('✅ Next round auto-launched successfully');
+            const deadlineAt = new Date();
+            deadlineAt.setHours(deadlineAt.getHours() + 24);
+            
+            const { error: openError } = await supabase.functions.invoke('ouvrir-nouveau-round', {
+              body: {
+                phase_id: currentAuction.phase_id,
+                deadline_at: deadlineAt.toISOString(),
+                league_id: currentAuction.league_id,
+                auto_launched: true
+              }
+            });
+            
+            if (openError) {
+              console.error('❌ Error auto-launching next round:', openError);
+            } else {
+              console.log('✅ Next round auto-launched successfully');
+            }
           }
         }
       }
@@ -173,34 +186,46 @@ Deno.serve(async (req) => {
 
       // Auto-launch next round if all annonces are published
       if (unpublishedCount === 0) {
-        console.log('🎯 All annonces published, auto-launching next round...');
+        console.log('🎯 All annonces published, checking if next round is needed...');
         
         const { data: currentAuction, error: auctionError } = await supabase
           .from('auctions')
           .select('phase_id, round_number, league_id')
-          .eq('auction_id', auction_id)
+          .eq('id', auction_id)
           .single();
         
         if (auctionError || !currentAuction) {
           console.error('Error fetching auction:', auctionError);
         } else {
-          // Calculate deadline: +48h
-          const deadlineAt = new Date();
-          deadlineAt.setHours(deadlineAt.getHours() + 24); // 24h deadline for auto rounds
-          
-          const { error: openError } = await supabase.functions.invoke('ouvrir-nouveau-round', {
-            body: {
-              phase_id: currentAuction.phase_id,
-              deadline_at: deadlineAt.toISOString(),
-              league_id: currentAuction.league_id,
-              auto_launched: true
-            }
-          });
-          
-          if (openError) {
-            console.error('❌ Error auto-launching next round:', openError);
+          // Check if all rosters are complete before opening next round
+          const { data: rosterStatuses } = await supabase
+            .from('managers_rosters_status')
+            .select('manager_id, slots_restants')
+            .eq('phase_id', currentAuction.phase_id)
+            .eq('league_id', currentAuction.league_id);
+
+          const allComplete = rosterStatuses && rosterStatuses.length > 0 && rosterStatuses.every(m => (m.slots_restants ?? 0) === 0);
+
+          if (allComplete) {
+            console.log('✅ All rosters complete — no next round needed. Auction phase finished.');
           } else {
-            console.log('✅ Next round auto-launched successfully with deadline:', deadlineAt.toISOString());
+            const deadlineAt = new Date();
+            deadlineAt.setHours(deadlineAt.getHours() + 24);
+            
+            const { error: openError } = await supabase.functions.invoke('ouvrir-nouveau-round', {
+              body: {
+                phase_id: currentAuction.phase_id,
+                deadline_at: deadlineAt.toISOString(),
+                league_id: currentAuction.league_id,
+                auto_launched: true
+              }
+            });
+            
+            if (openError) {
+              console.error('❌ Error auto-launching next round:', openError);
+            } else {
+              console.log('✅ Next round auto-launched successfully with deadline:', deadlineAt.toISOString());
+            }
           }
         }
       }

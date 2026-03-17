@@ -1,41 +1,38 @@
 
 
-## Bug : Round 5 ouvert alors que tous les rosters sont complets
+## Diagnostic
 
-### Cause racine
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-La chaîne automatique est : `clore-round` → `publier-annonce` → `ouvrir-nouveau-round`.
+## Cause racine
 
-Quand toutes les annonces d'un round sont publiées, `publier-annonce` appelle systématiquement `ouvrir-nouveau-round` **sans jamais vérifier si tous les managers ont déjà rempli leurs équipes**. Ni `publier-annonce` ni `ouvrir-nouveau-round` ne consultent `managers_rosters_status` pour voir si `slots_restants = 0` pour tous les managers.
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-### Correction
+## Plan de correction
 
-**`supabase/functions/publier-annonce/index.ts`** — Aux deux endroits où le code auto-lance le round suivant (lignes ~104 et ~175), ajouter une vérification **avant** d'appeler `ouvrir-nouveau-round` :
-
-1. Requêter `managers_rosters_status` pour la `phase_id` et `league_id` du round actuel
-2. Vérifier que **tous** les managers ont `slots_restants > 0` (au moins un manager a encore besoin de coureurs)
-3. Si tous les rosters sont complets (`slots_restants = 0` pour tous), **ne pas** ouvrir de nouveau round et logger un message explicatif
-
-```
-// Pseudo-code de la vérification à ajouter
-const { data: rosterStatuses } = await supabase
-  .from('managers_rosters_status')
-  .select('manager_id, slots_restants')
-  .eq('phase_id', currentAuction.phase_id)
-  .eq('league_id', currentAuction.league_id);
-
-const allComplete = rosterStatuses?.every(m => m.slots_restants === 0);
-
-if (allComplete) {
-  console.log('✅ All rosters complete — no next round needed');
-  // Skip ouvrir-nouveau-round call
-} else {
-  // Proceed with ouvrir-nouveau-round
-}
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
 ```
 
-Aucun changement nécessaire dans `ouvrir-nouveau-round` lui-même (la garde est mieux placée dans `publier-annonce` qui décide de l'appeler).
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
 
-### Fichier modifié
-- `supabase/functions/publier-annonce/index.ts` (2 blocs de code identiques à modifier, lignes ~103-132 et ~174-205)
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
+
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
+
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 
