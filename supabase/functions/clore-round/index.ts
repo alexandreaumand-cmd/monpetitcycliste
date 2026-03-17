@@ -265,6 +265,14 @@ Deno.serve(async (req) => {
 
     console.log(`Round closed, ${annonces.length} annonces created`);
 
+    // Fetch league name for notification context
+    const { data: leagueData } = await supabase
+      .from('leagues')
+      .select('name')
+      .eq('id', league_id)
+      .single();
+    const leagueName = leagueData?.name || 'Ligue';
+
     // Notify all league members
     await notifyLeagueMembers(supabase, league_id, {
       type: 'auction_closed',
@@ -275,6 +283,7 @@ Deno.serve(async (req) => {
         round_number: auction.round_number,
         phase_id: auction.phase_id,
         league_id: league_id,
+        league_name: leagueName,
         annonces_count: annonces.length
       }
     });
