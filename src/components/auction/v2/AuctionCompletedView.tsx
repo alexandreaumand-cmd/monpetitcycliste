@@ -1,12 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, Users, Megaphone } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AuctionTeamsGrid } from "../AuctionTeamsGrid";
+import { AuctionLiveAnnouncements } from "./AuctionLiveAnnouncements";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useState } from "react";
 interface AuctionCompletedViewProps {
   roster: Array<{
     coureur_id: string;
