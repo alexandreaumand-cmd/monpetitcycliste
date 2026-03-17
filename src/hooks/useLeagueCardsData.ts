@@ -164,6 +164,29 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
         (unpublishedAnnonces || []).map(a => a.auction_id)
       );
 
+      // BATCH 9: Fetch validation status for open auctions
+      const openAuctions = (allAuctions || []).filter(a => a.statut === 'open');
+      const validationStatusMap = new Map<string, { validated_count: number; total_managers: number }>();
+      
+      if (openAuctions.length > 0) {
+        const validationPromises = openAuctions.map(async (auction) => {
+          try {
+            const { data } = await supabase.functions.invoke('auction-get-validation-status', {
+              body: { auction_id: auction.id, league_id: auction.league_id }
+            });
+            if (data) {
+              validationStatusMap.set(auction.id, {
+                validated_count: data.validated_count ?? 0,
+                total_managers: data.total_managers ?? 0,
+              });
+            }
+          } catch (e) {
+            console.warn(`Failed to fetch validation status for auction ${auction.id}`, e);
+          }
+        });
+        await Promise.all(validationPromises);
+      }
+
       // Build helper maps
       const scopesByLeague = new Map<string, typeof allScopes[0]>();
       (allScopes || []).forEach(s => scopesByLeague.set(s.league_id, s));
