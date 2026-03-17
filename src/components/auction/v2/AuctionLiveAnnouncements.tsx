@@ -233,7 +233,11 @@ export function AuctionLiveAnnouncements({
               )}
             </CardHeader>
             <CardContent className="py-2 sm:py-4 px-3 sm:px-6">
-              {isComplete ? (
+              {isReplaying ? (
+                <p className="text-xs sm:text-sm text-muted-foreground animate-pulse">
+                  🎬 Replay en cours... prochaine annonce dans 5s
+                </p>
+              ) : isComplete ? (
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   ✅ {t('live.allResultsAnnounced')}
                 </p>
