@@ -305,16 +305,13 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
                 isAnnouncementsPending: true,
               };
             } else {
-              // Priority 3: Scheduled (prefer active phase, fallback any)
+              // Priority 3: Scheduled (active phase only — no cross-phase fallback)
               const now = new Date().toISOString();
-              const scheduled = leagueAuctions.find(
+              const scheduled = activePhaseId ? leagueAuctions.find(
                 a => a.statut === 'scheduled' && 
                      a.opens_at && a.opens_at > now &&
                      a.phase_id === activePhaseId
-              ) || leagueAuctions.find(
-                a => a.statut === 'scheduled' && 
-                     a.opens_at && a.opens_at > now
-              );
+              ) : null;
 
               if (scheduled) {
                 auctionStatus = {
