@@ -64,11 +64,15 @@ Deno.serve(async (req) => {
     const saison_id = (auction.phases as any)?.saison_id;
 
     // Get all annonces for this auction - sorted by published_at (most recent first)
+    const now = new Date().toISOString();
+
     const { data: allAnnonces } = await supabase
       .from('annonces')
       .select('coureur_id, winning_manager_id, id, type, winning_amount, losers_json, published, published_at, managers:winning_manager_id(id, nom)')
       .eq('auction_id', auction_id)
-      .order('published_at', { ascending: false, nullsFirst: true });
+      .eq('published', true)
+      .lte('published_at', now)
+      .order('published_at', { ascending: false });
 
     const total_annonces = allAnnonces?.length || 0;
     const published_annonces = allAnnonces?.filter(a => a.published) || [];
