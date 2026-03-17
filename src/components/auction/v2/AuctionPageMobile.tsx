@@ -511,6 +511,17 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     );
   }
 
+  if (showValidationScreen && showPastAnnouncements && validatedAuctionId) {
+    return (
+      <AuctionLiveAnnouncements
+        auctionId={validatedAuctionId}
+        managerId={managerId}
+        phaseId={phaseId}
+        onBack={() => setShowPastAnnouncements(false)}
+      />
+    );
+  }
+
   if (showValidationScreen) {
     return (
       <AuctionValidationConfirmation
@@ -521,6 +532,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         onBack={() => setShowValidationScreen(false)}
         onViewMyBids={() => setShowMyValidatedBids(true)}
         onViewHistory={() => setShowAuctionHistory(true)}
+        onViewAnnouncements={() => setShowPastAnnouncements(true)}
       />
     );
   }

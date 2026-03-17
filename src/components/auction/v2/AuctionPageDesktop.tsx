@@ -508,6 +508,19 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
     );
   }
 
+  if (showValidationScreen && showPastAnnouncements && validatedAuctionId) {
+    return (
+      <div className="container max-w-6xl mx-auto p-6">
+        <AuctionLiveAnnouncements
+          auctionId={validatedAuctionId}
+          managerId={managerId}
+          phaseId={phaseId}
+          onBack={() => setShowPastAnnouncements(false)}
+        />
+      </div>
+    );
+  }
+
   if (showValidationScreen) {
     return (
       <AuctionValidationConfirmation
@@ -518,6 +531,7 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
         onBack={() => setShowValidationScreen(false)}
         onViewMyBids={() => setShowMyValidatedBids(true)}
         onViewHistory={() => setShowAuctionHistory(true)}
+        onViewAnnouncements={() => setShowPastAnnouncements(true)}
       />
     );
   }
