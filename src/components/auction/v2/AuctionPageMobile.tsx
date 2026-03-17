@@ -514,6 +514,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     return (
       <AuctionValidationConfirmation
         phaseId={phaseId}
+        auctionId={validatedAuctionId || undefined}
         managerId={managerId}
         leagueId={leagueId}
         onBack={() => setShowValidationScreen(false)}
