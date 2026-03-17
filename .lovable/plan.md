@@ -1,38 +1,50 @@
 
 
-## Diagnostic
+## Diagnostic : Lancer les enchères Phase 2 en tant qu'admin de la ligue
 
-L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
+### Analyse du problème
 
-## Cause racine
+Après investigation, j'ai identifié un problème principal : **la page Admin > Enchères ne réagit pas lorsqu'un admin de ligue tente de changer de phase ou lancer un round**.
 
-La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
+La session replay montre que vous étiez sur `/dashboard/encheres` (la page joueur), pas `/dashboard/admin/encheres` (la page admin). Mais même en supposant que vous accédiez à la bonne page, plusieurs problèmes existent :
 
-## Plan de correction
+1. **Le PhaseSelector auto-sélectionne la Phase 1** (la seule phase "active" pour 2026). Quand vous changez pour Phase 2, le sélecteur peut ne pas réagir visuellement sur mobile.
 
-### 1. Action immédiate — Nettoyer les doublons en production
-Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
-```sql
-DELETE FROM race_result_sets
-WHERE id NOT IN (
-  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
-    id
-  FROM race_result_sets
-  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
-);
+2. **Un round est déjà ouvert pour Phase 2** dans la ligue MPC 2026 (round 1, deadline 19 mars). Quand un round est ouvert, le bouton "Lancer nouveau round" est masqué — seul "Clôturer" apparaît. Cela peut expliquer le "rien ne se passe".
+
+3. **Le `onLaunch` callback passe la deadline comme un string ISO**, mais le paramètre du composant s'appelle `hours` dans l'appel `onLaunch={(hours) => openRoundMutation.mutate(hours)}` alors que la mutation attend `deadline_at`. Il y a un mismatch de type qui fait que la mutation est appelée avec un string au lieu d'un objet `{ phase_id, deadline_at }`.
+
+### Cause racine du bug
+
+Dans `RoundControlCenter.tsx` ligne 290 :
+```typescript
+onLaunch={(hours) => openRoundMutation.mutate(hours)}
 ```
 
-### 2. Migration — Ajouter une contrainte d'unicité
-Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
+Mais la mutation attend :
+```typescript
+mutationFn: async (deadlineAt: string) => {
+  supabase.functions.invoke('ouvrir-nouveau-round', {
+    body: { phase_id: selectedPhaseId, deadline_at: deadlineAt, league_id: leagueId }
+  });
+}
+```
 
-### 3. Corriger `admin_compute_points_for_course`
-Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
+Le `RoundActions` appelle `onLaunch(deadline.toISOString())` — c'est un string ISO. Le code passe ce string directement comme `deadlineAt` dans la mutation. Ça devrait fonctionner... sauf si `leagueId` est `null`.
 
-### 4. Corriger le flux de saisie des résultats
-Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
+**Vrai problème identifié** : Si `leagueId` est `null` dans le contexte, la mutation envoie `league_id: null` à l'edge function. L'edge function exige un `league_id` pour la vérification des droits admin. Avec `null`, le check `is_league_admin(null)` retourne `false`, puis la requête `league_members` avec `league_id = null` ne trouve rien, et le serveur retourne 403. Mais l'erreur est peut-être avalée silencieusement.
 
-### Fichiers impactés
-- Migration SQL (nettoyage + contrainte unique)
-- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
-- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
+### Corrections proposées
+
+#### 1. Ajouter une garde explicite quand `leagueId` est absent
+**`src/components/admin/RoundControlCenter.tsx`** : Avant de permettre le lancement, vérifier que `leagueId` est défini et afficher un toast d'erreur sinon.
+
+#### 2. Améliorer le feedback visuel en cas d'erreur
+**`src/components/admin/RoundControlCenter.tsx`** : S'assurer que les erreurs de la mutation affichent toujours un toast visible (vérifier que `supabase.functions.invoke` parse bien le body d'erreur).
+
+#### 3. Corriger la gestion d'erreur de `supabase.functions.invoke`
+`supabase.functions.invoke` ne throw PAS quand le serveur retourne un 4xx avec un body JSON. Il faut vérifier `data.error` manuellement en plus de `error`.
+
+**Fichier modifié** :
+- `src/components/admin/RoundControlCenter.tsx` (mutations openRound et closeRound)
 
