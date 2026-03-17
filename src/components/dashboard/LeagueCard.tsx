@@ -324,8 +324,8 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                     </>
                   ) : (
                     <>
-                      <Gavel className="h-5 w-5 text-foreground" />
-                      <h3 className="font-montserrat font-bold text-foreground">
+                      <Gavel className="h-5 w-5 text-amber-900" />
+                      <h3 className="font-montserrat font-bold text-amber-900">
                         {t('leagueCard.auction.inProgress')}
                       </h3>
                     </>
@@ -338,14 +338,14 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                     <span className={`text-sm font-inter ${
                       auctionStatus.isAnnouncementsPending ? 'text-orange-800' 
                         : auctionStatus.isScheduled ? 'text-blue-800' 
-                        : 'text-gray-900'
+                        : 'text-amber-900'
                     }`}>
                       {t('leagueCard.auction.round')}
                     </span>
                     <span className={`text-lg font-montserrat font-bold ${
                       auctionStatus.isAnnouncementsPending ? 'text-orange-900' 
                         : auctionStatus.isScheduled ? 'text-blue-900' 
-                        : 'text-foreground'
+                        : 'text-amber-900'
                     }`}>
                       Round {auctionStatus.roundNumber}
                     </span>
@@ -367,11 +367,11 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
                   {!auctionStatus.isScheduled && !auctionStatus.isAnnouncementsPending && (
                     <>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-inter text-gray-900 flex items-center gap-1">
+                        <span className="text-sm font-inter text-amber-900 flex items-center gap-1">
                           <CheckCircle2 className="h-4 w-4" />
                           {t('leagueCard.auction.validatedManagers')}
                         </span>
-                        <span className="text-lg font-montserrat font-bold text-foreground">
+                        <span className="text-lg font-montserrat font-bold text-amber-900">
                           {auctionStatus.validatedCount}/{auctionStatus.totalManagers}
                         </span>
                       </div>
