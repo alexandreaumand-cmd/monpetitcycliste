@@ -86,7 +86,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
           </div>
         </div>
 
-        {/* Ligne 2 : Type de ligue + Saison */}
+        {/* Ligne 2 : Type de ligue + Saison + Joueurs */}
         <div className="flex items-center gap-2 flex-wrap">
           {gameMode && (
             <Badge 
@@ -114,6 +114,14 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
               {leagueSeason.season.annee}
             </Badge>
           ) : null}
+          <div className="ml-auto">
+            <LeagueParticipantsHover
+              ownerName={owner?.nom || null}
+              members={members}
+              currentPlayerCount={league.current_player_count}
+              isLoading={loadingMembersList || loadingOwner}
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
