@@ -157,6 +157,9 @@ export const RoundControlCenter = () => {
   // Mutations
   const openRoundMutation = useMutation({
     mutationFn: async (deadlineAt: string) => {
+      if (!leagueId) {
+        throw new Error("Aucune ligue sélectionnée. Veuillez sélectionner une ligue avant de lancer un round.");
+      }
       const { data, error } = await supabase.functions.invoke('ouvrir-nouveau-round', {
         body: { 
           phase_id: selectedPhaseId, 
@@ -165,6 +168,7 @@ export const RoundControlCenter = () => {
         }
       });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       return data;
     },
     onSuccess: () => {
@@ -173,7 +177,7 @@ export const RoundControlCenter = () => {
     },
     onError: (error: Error) => {
       toast({ 
-        title: "Erreur", 
+        title: "Erreur lors du lancement", 
         description: error.message, 
         variant: "destructive" 
       });
@@ -182,6 +186,9 @@ export const RoundControlCenter = () => {
 
   const closeRoundMutation = useMutation({
     mutationFn: async () => {
+      if (!leagueId) {
+        throw new Error("Aucune ligue sélectionnée.");
+      }
       const { data, error } = await supabase.functions.invoke('clore-round', {
         body: { 
           auction_id: currentAuction?.id,
@@ -189,6 +196,7 @@ export const RoundControlCenter = () => {
         }
       });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       return data;
     },
     onSuccess: () => {
@@ -198,7 +206,7 @@ export const RoundControlCenter = () => {
     },
     onError: (error: Error) => {
       toast({ 
-        title: "Erreur", 
+        title: "Erreur lors de la clôture", 
         description: error.message, 
         variant: "destructive" 
       });
