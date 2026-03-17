@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
       
       for (let i = 0; i < unpublishedAnnonces.length; i++) {
         const annonce = unpublishedAnnonces[i];
-        const publishedAt = new Date(baseTimestamp.getTime() + (i * 1000)); // +1 second each
+        const publishedAt = new Date(baseTimestamp.getTime() + (i * intervalMs));
         
         const { error: updateError } = await supabase
           .from('annonces')
