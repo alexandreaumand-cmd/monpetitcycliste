@@ -186,7 +186,7 @@ Deno.serve(async (req) => {
         } else {
           // Calculate deadline: +48h
           const deadlineAt = new Date();
-          deadlineAt.setHours(deadlineAt.getHours() + 48);
+          deadlineAt.setHours(deadlineAt.getHours() + 24); // 24h deadline for auto rounds
           
           const { error: openError } = await supabase.functions.invoke('ouvrir-nouveau-round', {
             body: {

@@ -279,8 +279,33 @@ Deno.serve(async (req) => {
       }
     });
 
+    // In auto mode, automatically publish all annonces with 10s intervals
+    if (auto_mode && annonces.length > 0) {
+      console.log('🤖 Auto-mode: triggering automatic annonce publication...');
+      
+      // Use service role client to call publier-annonce
+      const serviceSupabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      
+      const { error: publishError } = await serviceSupabase.functions.invoke('publier-annonce', {
+        body: {
+          auction_id: auction_id,
+          publish_all: true,
+          auto_mode: true,
+        }
+      });
+      
+      if (publishError) {
+        console.error('❌ Error auto-publishing annonces:', publishError);
+      } else {
+        console.log('✅ Auto-publish triggered successfully');
+      }
+    }
+
     return new Response(
-      JSON.stringify({ success: true, annonces_count: annonces.length }),
+      JSON.stringify({ success: true, annonces_count: annonces.length, auto_mode: auto_mode || false }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
