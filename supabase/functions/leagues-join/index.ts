@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { notifyLeagueMembers } from '../_shared/notifications.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
