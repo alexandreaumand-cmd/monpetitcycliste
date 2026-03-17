@@ -203,6 +203,16 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
               <History className="h-4 w-4 mr-2" />
               {t('validation.history')}
             </Button>
+            {onViewAnnouncements && (
+              <Button
+                onClick={onViewAnnouncements}
+                variant="secondary"
+                className="flex-1"
+              >
+                <Megaphone className="h-4 w-4 mr-2" />
+                {t('validation.viewAnnouncements', 'Annonces')}
+              </Button>
+            )}
           </div>
 
           {/* Info */}
