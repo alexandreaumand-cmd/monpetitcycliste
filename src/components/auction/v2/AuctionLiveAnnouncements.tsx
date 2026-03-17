@@ -174,13 +174,16 @@ export function AuctionLiveAnnouncements({
     });
   };
 
+  // Compute visible announcements for replay
+  const visibleAnnonces = liveAnnonces.slice(0, replayVisibleCount);
+
   const totalAnnonces = liveStatus?.total_annonces || 0;
   const publishedCount = liveStatus?.published_count || 0;
   const unpublishedCount = liveStatus?.unpublished_count || 0;
-  const isComplete = unpublishedCount === 0;
-  const myWinsCount = liveAnnonces.filter(a => a.is_my_win).length;
-  const myNewRiders = liveStatus?.my_new_riders || [];
-  const allManagersRecruits: ManagerRecruits[] = liveStatus?.all_managers_recruits || [];
+  const isComplete = unpublishedCount === 0 && !isReplaying;
+  const myWinsCount = visibleAnnonces.filter(a => a.is_my_win).length;
+  const myNewRiders = isReplaying ? [] : (liveStatus?.my_new_riders || []);
+  const allManagersRecruits: ManagerRecruits[] = isReplaying ? [] : (liveStatus?.all_managers_recruits || []);
   const recentlyAnnouncedManagerId = liveStatus?.recently_announced_manager_id;
 
   return (
