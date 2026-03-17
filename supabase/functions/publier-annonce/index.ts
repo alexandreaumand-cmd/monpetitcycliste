@@ -17,7 +17,10 @@ Deno.serve(async (req) => {
     );
 
     const { auction_id, publish_all, lang = 'fr', auto_mode } = await req.json();
-    console.log('Publishing annonce for auction:', auction_id, 'publish_all:', publish_all, 'lang:', lang);
+    console.log('Publishing annonce for auction:', auction_id, 'publish_all:', publish_all, 'auto_mode:', auto_mode, 'lang:', lang);
+    
+    // Use 10s intervals in auto mode, 1s in manual mode
+    const intervalMs = auto_mode ? 10000 : 1000;
 
     // Translations for announcement text
     const translations = {
