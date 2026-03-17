@@ -43,10 +43,13 @@ export function AuctionLiveAnnouncements({
   const { t } = useTranslation('auction');
   const [selectedAuctionId, setSelectedAuctionId] = useState(auctionId);
   const [liveAnnonces, setLiveAnnonces] = useState<any[]>([]);
+  const [replayVisibleCount, setReplayVisibleCount] = useState(0);
+  const [isReplaying, setIsReplaying] = useState(false);
   const [myRecruitsOpen, setMyRecruitsOpen] = useState(true);
   const [openManagers, setOpenManagers] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
+  const replayTimerRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
   const { leagueId } = useLeague();
 
