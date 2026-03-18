@@ -51,6 +51,7 @@ const App = () => {
                     <Routes>
                       <Route path="/" element={<Index />} />
                       <Route path="/auth" element={<Auth />} />
+                      <Route path="/complete-profile" element={<CompleteProfile />} />
                       <Route path="/install" element={<InstallPage />} />
                       <Route path="/i/:token" element={<InviteShortPage />} />
                       <Route path="/invite" element={<InvitePage />} />

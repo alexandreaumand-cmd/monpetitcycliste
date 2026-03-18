@@ -40,6 +40,19 @@ const Auth = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
+        // Check if manager profile exists
+        const { data: manager } = await supabase
+          .from('managers')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        // If no manager profile, redirect to complete profile
+        if (!manager && !inviteToken) {
+          navigate(`/complete-profile?next=${encodeURIComponent(nextUrl)}`);
+          return;
+        }
+
         // If coming from invite, handle join process
         if (inviteToken) {
           try {

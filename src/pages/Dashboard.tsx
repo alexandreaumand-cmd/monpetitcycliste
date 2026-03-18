@@ -68,6 +68,12 @@ const Dashboard = () => {
     return <LoadingSpinner />;
   }
 
+  // Redirect to complete profile if no manager exists
+  if (!manager && !managerLoading) {
+    navigate('/complete-profile');
+    return <LoadingSpinner />;
+  }
+
   // SuperAdmin layout (isolé)
   if (isSuperAdminRoute && isSuperAdmin) {
     return (
