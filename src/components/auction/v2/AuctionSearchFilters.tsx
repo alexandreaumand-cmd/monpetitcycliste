@@ -35,6 +35,7 @@ export function AuctionSearchFilters({
   availableTeams,
   onImportFavorites,
   isImportingFavorites = false,
+  leagueId,
 }: AuctionSearchFiltersProps) {
   const { t } = useTranslation("auction");
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
