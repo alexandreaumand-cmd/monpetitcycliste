@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, X, ChevronDown, Star, Loader2 } from "lucide-react";
+import { Search, X, ChevronDown, Star, Loader2, Sparkles } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
 
 interface AuctionSearchFiltersProps {
@@ -19,6 +20,7 @@ interface AuctionSearchFiltersProps {
   availableTeams: Array<{ id: string; name: string; categorie?: string }>;
   onImportFavorites?: () => void;
   isImportingFavorites?: boolean;
+  leagueId?: string | null;
 }
 
 export function AuctionSearchFilters({
@@ -33,9 +35,13 @@ export function AuctionSearchFilters({
   availableTeams,
   onImportFavorites,
   isImportingFavorites = false,
+  leagueId,
 }: AuctionSearchFiltersProps) {
   const { t } = useTranslation("auction");
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
+  const [showPremiumDialog, setShowPremiumDialog] = useState(false);
+
+  const MPC_2026_LEAGUE_ID = "b5b46b5e-7c78-4ad9-a669-b08e8f099800";
 
   const categorieOptions = [
     { value: "WT", label: "WT" },
@@ -118,6 +124,19 @@ export function AuctionSearchFilters({
               <Star className="h-4 w-4 fill-yellow-400 text-bordure-gold" />
             )}
             {t("search.importFavorites")}
+          </Button>
+        )}
+
+        {/* AI Recommendation Button - MPC 2026 only */}
+        {leagueId === MPC_2026_LEAGUE_ID && (
+          <Button
+            variant="outline"
+            size="default"
+            onClick={() => setShowPremiumDialog(true)}
+            className="gap-2 border-purple-400 text-purple-700 hover:bg-purple-50 hover:text-purple-800 dark:border-purple-500 dark:text-purple-400 dark:hover:bg-purple-950"
+          >
+            <Sparkles className="h-4 w-4" />
+            {t("ai.recommend")}
           </Button>
         )}
 
@@ -243,6 +262,26 @@ export function AuctionSearchFilters({
           </Button>
         )}
       </div>
+
+      {/* Premium Dialog */}
+      <Dialog open={showPremiumDialog} onOpenChange={setShowPremiumDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-500" />
+              {t("ai.premiumTitle")}
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              {t("ai.premiumMessage")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setShowPremiumDialog(false)}>
+              {t("ai.understood")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,25 +1,38 @@
 
 
-## Plan : Bouton "IA Premium" sur la page enchères
+## Diagnostic
 
-### Objectif
-Ajouter un bouton avec icône Sparkles (baguette magique) à côté du bouton "Importer favoris" dans les filtres d'enchères. Au clic, afficher un dialog humoristique indiquant que la fonctionnalité est réservée aux membres premium. Le bouton n'est visible que pour la ligue **MPC 2026** (`b5b46b5e-7c78-4ad9-a669-b08e8f099800`).
+L'erreur `ON CONFLICT DO UPDATE command cannot affect row a second time` est causée par **4 entrées dupliquées dans `race_result_sets`** pour `ename_samyn_classic` (type `General`, `etape_numero = NULL`). La jointure LEFT JOIN dans `admin_compute_points_for_course` multiplie chaque coureur par 4, créant des doublons dans l'INSERT qui échoue.
 
-### Fichiers modifiés
+## Cause racine
 
-**1. `src/components/auction/v2/AuctionSearchFilters.tsx`**
-- Ajouter une prop `leagueId?: string` au composant
-- Ajouter un state `showPremiumDialog` (boolean)
-- Ajouter un bouton avec icône `Sparkles` (lucide-react), visible uniquement si `leagueId === 'b5b46b5e-7c78-4ad9-a669-b08e8f099800'`
-- Style : violet/gradient pour se démarquer des autres boutons
-- Ajouter un `Dialog` avec le message "Pour accéder à cette fonctionnalité, vous devez être membre premium. Faire un virement au BOSS" et un bouton "Compris"
+La table `race_result_sets` n'a pas de contrainte d'unicité sur `(course_id, type_classement, etape_numero)`, et le flux de saisie crée un nouveau `race_result_set` à chaque sauvegarde sans supprimer les précédents.
 
-**2. `src/components/auction/v2/AuctionTabs.tsx`** (et `AuctionPageDesktop.tsx` si applicable)
-- Passer `leagueId` comme prop à `AuctionSearchFilters`
+## Plan de correction
 
-**3. Traductions `src/i18n/locales/fr/auction.json` et `en/auction.json`**
-- Ajouter clés : `ai.recommend` ("Recommandation IA"), `ai.premiumTitle` ("Fonctionnalité Premium"), `ai.premiumMessage` ("Pour accéder à cette fonctionnalité..."), `ai.understood` ("Compris")
+### 1. Action immédiate — Nettoyer les doublons en production
+Migration SQL pour supprimer les `race_result_sets` dupliqués (garder le plus récent) :
+```sql
+DELETE FROM race_result_sets
+WHERE id NOT IN (
+  SELECT DISTINCT ON (course_id, type_classement, COALESCE(etape_numero, -1))
+    id
+  FROM race_result_sets
+  ORDER BY course_id, type_classement, COALESCE(etape_numero, -1), created_at DESC
+);
+```
 
-### Pas de changement backend
-Aucune edge function, migration ou modification de table nécessaire.
+### 2. Migration — Ajouter une contrainte d'unicité
+Ajouter un index unique sur `race_result_sets(course_id, type_classement, COALESCE(etape_numero, -1))` pour empêcher les doublons futurs.
+
+### 3. Corriger `admin_compute_points_for_course`
+Ajouter un `DISTINCT` ou `LIMIT 1` dans la sous-requête qui joint `race_result_sets` pour rendre la fonction résistante aux doublons même sans la contrainte.
+
+### 4. Corriger le flux de saisie des résultats
+Dans le code qui insère les `race_result_sets`, utiliser un **UPSERT** (`ON CONFLICT DO UPDATE`) au lieu d'un simple INSERT, pour éviter de créer des doublons.
+
+### Fichiers impactés
+- Migration SQL (nettoyage + contrainte unique)
+- Fonction DB `admin_compute_points_for_course` (ajout DISTINCT sur le LEFT JOIN)
+- `src/components/admin/ResultsEntryStudio.desktop.tsx` ou le hook de sauvegarde des résultats (upsert race_result_sets)
 
