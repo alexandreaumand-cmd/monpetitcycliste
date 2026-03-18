@@ -127,6 +127,19 @@ export function AuctionSearchFilters({
           </Button>
         )}
 
+        {/* AI Recommendation Button - MPC 2026 only */}
+        {leagueId === MPC_2026_LEAGUE_ID && (
+          <Button
+            variant="outline"
+            size="default"
+            onClick={() => setShowPremiumDialog(true)}
+            className="gap-2 border-purple-400 text-purple-700 hover:bg-purple-50 hover:text-purple-800 dark:border-purple-500 dark:text-purple-400 dark:hover:bg-purple-950"
+          >
+            <Sparkles className="h-4 w-4" />
+            {t("ai.recommend")}
+          </Button>
+        )}
+
         {/* Search bar */}
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
