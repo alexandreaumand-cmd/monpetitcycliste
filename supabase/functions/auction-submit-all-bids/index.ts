@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const manager_id = input_manager_id || manager.id;
+    const manager_id = manager.id;
 
     // Get league settings if league_id is provided
     let leagueBudget = null;
