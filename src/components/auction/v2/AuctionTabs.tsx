@@ -259,6 +259,7 @@ export const AuctionTabs = ({
               availableTeams={availableTeams}
               onImportFavorites={handleImportFavorites}
               isImportingFavorites={isImportingFavorites}
+              leagueId={leagueId}
             />
           </div>
 

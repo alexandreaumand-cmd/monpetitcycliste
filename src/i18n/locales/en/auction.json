@@ -274,5 +274,11 @@
     "top10": "Top 10!"
   },
   "warning": "Warning",
-  "error": "Error"
+  "error": "Error",
+  "ai": {
+    "recommend": "AI Recommendation",
+    "premiumTitle": "Premium Feature 💎",
+    "premiumMessage": "To access this feature, you must be a premium member. Send a wire transfer to the BOSS 💸",
+    "understood": "Got it"
+  }
 }

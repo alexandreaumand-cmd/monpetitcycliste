@@ -274,5 +274,11 @@
     "top10": "Top 10 !"
   },
   "warning": "Attention",
-  "error": "Erreur"
+  "error": "Erreur",
+  "ai": {
+    "recommend": "Recommandation IA",
+    "premiumTitle": "Fonctionnalité Premium 💎",
+    "premiumMessage": "Pour accéder à cette fonctionnalité, vous devez être membre premium. Faites un virement au BOSS 💸",
+    "understood": "Compris"
+  }
 }

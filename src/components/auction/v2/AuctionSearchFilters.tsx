@@ -262,6 +262,26 @@ export function AuctionSearchFilters({
           </Button>
         )}
       </div>
+
+      {/* Premium Dialog */}
+      <Dialog open={showPremiumDialog} onOpenChange={setShowPremiumDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-500" />
+              {t("ai.premiumTitle")}
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              {t("ai.premiumMessage")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setShowPremiumDialog(false)}>
+              {t("ai.understood")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
