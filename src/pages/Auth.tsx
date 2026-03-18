@@ -184,15 +184,11 @@ const Auth = () => {
           <div className="flex justify-center">
             <img src={logoCarreTexte} alt="La Bordure Fantasy Cycling" className="h-40 w-auto object-contain" />
           </div>
-          {inviteToken ? (
+          {inviteToken && (
             <CardDescription className="text-primary font-medium">
               🎉 {t('messages.inviteWelcome')}
               <br />
               <span className="text-sm text-muted-foreground">{t('messages.createAccountAndJoin')}</span>
-            </CardDescription>
-          ) : (
-            <CardDescription>
-              {t('messages.loginSuccess')}
             </CardDescription>
           )}
         </CardHeader>
