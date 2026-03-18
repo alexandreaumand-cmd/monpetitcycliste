@@ -39,6 +39,9 @@ export function AuctionSearchFilters({
 }: AuctionSearchFiltersProps) {
   const { t } = useTranslation("auction");
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
+  const [showPremiumDialog, setShowPremiumDialog] = useState(false);
+
+  const MPC_2026_LEAGUE_ID = "b5b46b5e-7c78-4ad9-a669-b08e8f099800";
 
   const categorieOptions = [
     { value: "WT", label: "WT" },
