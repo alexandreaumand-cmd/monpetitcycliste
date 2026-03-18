@@ -1,30 +1,25 @@
 
-Cause probable (et vérifiée) : le lien `monpetitcycliste.lovable.app` semble être rattaché au domaine principal `labordure.app`.  
-Quand ce domaine principal a un problème SSL/DNS, l’accès via le lien `lovable.app` peut échouer aussi.
 
-Ce que j’ai constaté :
-- L’URL publiée répond bien côté infrastructure.
-- Le contenu servi depuis `monpetitcycliste.lovable.app` pointe vers `labordure.app` (indices d’un domaine principal/custom domain actif).
-- Donc le blocage vient très probablement de la config domaine/certificat, pas du code applicatif.
+## Plan : Bouton "IA Premium" sur la page enchères
 
-Plan de correction (sans changement de code) :
-1. Ouvrir **Settings → Domains**.
-2. Vérifier l’état de `labordure.app` et `www.labordure.app` :
-   - objectif : **Active**
-   - si **Verifying / Failed / Offline**, corriger DNS.
-3. Chez le registrar DNS, vérifier strictement :
-   - `A @` → `185.158.133.1`
-   - `A www` → `185.158.133.1`
-   - `TXT _lovable` → valeur de vérification fournie dans l’UI
-4. Supprimer les conflits éventuels :
-   - anciens `A/AAAA/CNAME` sur `@` ou `www`
-   - `CAA` qui bloque Let’s Encrypt
-5. Revenir dans l’UI Domains et cliquer **Retry** si proposé.
-6. Tester ensuite en navigation privée + autre réseau (4G) pour éviter cache DNS/SSL local.
+### Objectif
+Ajouter un bouton avec icône Sparkles (baguette magique) à côté du bouton "Importer favoris" dans les filtres d'enchères. Au clic, afficher un dialog humoristique indiquant que la fonctionnalité est réservée aux membres premium. Le bouton n'est visible que pour la ligue **MPC 2026** (`b5b46b5e-7c78-4ad9-a669-b08e8f099800`).
 
-Détails techniques :
-- Si un custom domain est défini comme domaine principal, le domaine `*.lovable.app` peut dépendre de cette config de publication/routage.
-- Une erreur SSL sur le domaine principal peut donner l’impression que le lien `lovable.app` “ne marche pas”.
-- Tant que le statut domaine n’est pas **Active**, l’accès peut être intermittent ou bloqué selon les navigateurs/réseaux.
+### Fichiers modifiés
 
-Si tu veux, dès que tu m’envoies une capture de l’état exact de la page **Domains** (statuts affichés), je te donne la correction DNS ligne par ligne.
+**1. `src/components/auction/v2/AuctionSearchFilters.tsx`**
+- Ajouter une prop `leagueId?: string` au composant
+- Ajouter un state `showPremiumDialog` (boolean)
+- Ajouter un bouton avec icône `Sparkles` (lucide-react), visible uniquement si `leagueId === 'b5b46b5e-7c78-4ad9-a669-b08e8f099800'`
+- Style : violet/gradient pour se démarquer des autres boutons
+- Ajouter un `Dialog` avec le message "Pour accéder à cette fonctionnalité, vous devez être membre premium. Faire un virement au BOSS" et un bouton "Compris"
+
+**2. `src/components/auction/v2/AuctionTabs.tsx`** (et `AuctionPageDesktop.tsx` si applicable)
+- Passer `leagueId` comme prop à `AuctionSearchFilters`
+
+**3. Traductions `src/i18n/locales/fr/auction.json` et `en/auction.json`**
+- Ajouter clés : `ai.recommend` ("Recommandation IA"), `ai.premiumTitle` ("Fonctionnalité Premium"), `ai.premiumMessage` ("Pour accéder à cette fonctionnalité..."), `ai.understood` ("Compris")
+
+### Pas de changement backend
+Aucune edge function, migration ou modification de table nécessaire.
+
