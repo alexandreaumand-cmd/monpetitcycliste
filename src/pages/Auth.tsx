@@ -182,7 +182,7 @@ const Auth = () => {
       <Card className="w-full max-w-md shadow-elegant">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <img src={mpcLogoVertical} alt="La Bordure Fantasy Cycling" className="h-40 w-auto object-contain" />
+            <img src={logoCarreTexte} alt="La Bordure Fantasy Cycling" className="h-40 w-auto object-contain" />
           </div>
           {inviteToken ? (
             <CardDescription className="text-primary font-medium">
