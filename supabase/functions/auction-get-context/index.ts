@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { phase_id, manager_id: input_manager_id, league_id } = await req.json();
+    const { phase_id, league_id } = await req.json();
 
     // Get manager_id
     const { data: manager } = await supabase
@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const manager_id = input_manager_id || manager.id;
+    const manager_id = manager.id;
 
     // Get league settings if league_id is provided
     let leagueBudget = null;
