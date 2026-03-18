@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { phase_id, manager_id: input_manager_id, league_id } = await req.json();
+    const { phase_id, league_id } = await req.json();
 
     if (!phase_id) {
       return new Response(JSON.stringify({ error: 'phase_id is required' }), {
