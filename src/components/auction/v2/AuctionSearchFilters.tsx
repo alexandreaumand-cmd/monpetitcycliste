@@ -20,6 +20,7 @@ interface AuctionSearchFiltersProps {
   availableTeams: Array<{ id: string; name: string; categorie?: string }>;
   onImportFavorites?: () => void;
   isImportingFavorites?: boolean;
+  leagueId?: string | null;
 }
 
 export function AuctionSearchFilters({
