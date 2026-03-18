@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Service role can insert notifications" ON public.notifications;
