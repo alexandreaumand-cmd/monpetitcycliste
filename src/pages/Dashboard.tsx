@@ -71,13 +71,7 @@ const Dashboard = () => {
     navigate("/");
   };
 
-  if (managerLoading || roleLoading) {
-    return <LoadingSpinner />;
-  }
-
-  // Redirect to complete profile if no manager exists
-  if (!manager && !managerLoading) {
-    navigate('/complete-profile');
+  if (managerLoading || roleLoading || !manager) {
     return <LoadingSpinner />;
   }
 
