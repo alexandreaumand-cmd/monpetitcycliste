@@ -40,6 +40,19 @@ const Auth = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
+        // Check if manager profile exists
+        const { data: manager } = await supabase
+          .from('managers')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        // If no manager profile, redirect to complete profile
+        if (!manager && !inviteToken) {
+          navigate(`/complete-profile?next=${encodeURIComponent(nextUrl)}`);
+          return;
+        }
+
         // If coming from invite, handle join process
         if (inviteToken) {
           try {
@@ -184,15 +197,11 @@ const Auth = () => {
           <div className="flex justify-center">
             <img src={logoCarreTexte} alt="La Bordure Fantasy Cycling" className="h-40 w-auto object-contain" />
           </div>
-          {inviteToken ? (
+          {inviteToken && (
             <CardDescription className="text-primary font-medium">
               🎉 {t('messages.inviteWelcome')}
               <br />
               <span className="text-sm text-muted-foreground">{t('messages.createAccountAndJoin')}</span>
-            </CardDescription>
-          ) : (
-            <CardDescription>
-              {t('messages.loginSuccess')}
             </CardDescription>
           )}
         </CardHeader>

@@ -22,6 +22,7 @@ const InstallPage = React.lazy(() => import("./pages/InstallPage"));
 const JoinLeaguePage = React.lazy(() => import("./pages/JoinLeaguePage").then(m => ({ default: m.JoinLeaguePage })));
 const InvitePage = React.lazy(() => import("./pages/InvitePage").then(m => ({ default: m.InvitePage })));
 const InviteShortPage = React.lazy(() => import("./pages/InviteShortPage").then(m => ({ default: m.InviteShortPage })));
+const CompleteProfile = React.lazy(() => import("./pages/CompleteProfile"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,6 +51,7 @@ const App = () => {
                     <Routes>
                       <Route path="/" element={<Index />} />
                       <Route path="/auth" element={<Auth />} />
+                      <Route path="/complete-profile" element={<CompleteProfile />} />
                       <Route path="/install" element={<InstallPage />} />
                       <Route path="/i/:token" element={<InviteShortPage />} />
                       <Route path="/invite" element={<InvitePage />} />

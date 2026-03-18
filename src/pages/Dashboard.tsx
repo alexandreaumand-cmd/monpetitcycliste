@@ -59,12 +59,19 @@ const Dashboard = () => {
     checkSession();
   }, [navigate]);
 
+  // Redirect to complete profile if no manager exists
+  useEffect(() => {
+    if (!managerLoading && !manager) {
+      navigate('/complete-profile');
+    }
+  }, [manager, managerLoading, navigate]);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/");
   };
 
-  if (managerLoading || roleLoading) {
+  if (managerLoading || roleLoading || !manager) {
     return <LoadingSpinner />;
   }
 
