@@ -442,11 +442,11 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
               </div>
             )}
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 min-w-0">
               <Button 
                 onClick={() => onViewDetails(!!auctionStatus)} 
                 variant="outline" 
-                className="flex-1"
+                className="flex-1 min-w-0 truncate"
               >
                 {auctionStatus ? t('leagueCard.goToAuction') : t('leagueCard.viewMyLeague')}
               </Button>
@@ -454,10 +454,10 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                 <Button
                   onClick={(e) => { e.stopPropagation(); onViewAnnouncements(); }}
                   variant="outline"
-                  className="relative gap-1.5"
+                  className="relative gap-1.5 shrink-0"
                 >
                   <Megaphone className="h-4 w-4" />
-                  Annonces
+                  <span className="hidden sm:inline">Annonces</span>
                   {auctionStatus.isAnnouncementsPending && (
                     <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
