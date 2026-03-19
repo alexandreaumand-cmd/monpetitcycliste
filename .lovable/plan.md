@@ -1,59 +1,49 @@
 
 
-## Plan : Corriger l'enchère gagnante affichée dans l'historique des enchères
+## Plan : Corriger l'affichage des enchères perdues lors d'égalités
 
-### Problème identifié
+### Problème
 
-La vue SQL `bids_outcomes` calcule le `winning_amount` en joignant la table `bids` pour retrouver le montant gagnant. Le problème : cette jointure filtre par `coureur_id + manager_id + statut='won' + league_id` mais **ne filtre PAS par `phase_id`**.
+Quand 2 managers sont à égalité sur un coureur, personne ne gagne → pas d'entrée dans `rosters`. La vue `bids_outcomes` joint sur `rosters` pour trouver `winning_amount` et `winning_manager`, donc les deux retournent `NULL`. L'UI affiche alors "Enchère gagnante : 0" et "Contre : (vide)" pour les managers ayant perdu ce coureur.
 
-Conséquence : si un même manager a gagné le même coureur dans plusieurs phases de la même ligue, la jointure retourne plusieurs lignes et la base choisit un montant arbitraire (souvent celui d'une autre phase).
+Exemple concret (LIVE) : Laurenz REX — Fab et Bubu à 51, Matt B à 21 → Matt B voit "Perdu" avec enchère gagnante à 0.
 
 ### Solution
 
-La table `rosters` contient déjà le champ `prix_signature` qui correspond exactement au montant de l'enchère gagnante, et est déjà correctement filtrée par `phase_id` ET `league_id` dans la jointure existante.
+**1. Migration SQL** — Modifier la vue `bids_outcomes` pour ajouter un fallback quand il n'y a pas de gagnant (égalité) :
 
-**Migration SQL** : modifier la vue `bids_outcomes` pour :
-1. Remplacer `winner_bid.montant AS winning_amount` par `winning_roster.prix_signature AS winning_amount`
-2. Supprimer la jointure `LEFT JOIN bids winner_bid` devenue inutile
+- Ajouter une sous-requête latérale qui récupère le montant max et le manager correspondant parmi les bids `carried_over` du même coureur dans la même enchère
+- Utiliser `COALESCE` :
+  - `winning_amount` = `rosters.prix_signature` (gagnant classique) OU `max bid carried_over` (égalité)  
+  - `winning_manager` = nom du gagnant OU nom du/des managers à égalité
+
+```sql
+-- Fallback: highest carried_over bid on the same rider in the same auction
+LEFT JOIN LATERAL (
+  SELECT MAX(b2.montant) AS top_bid
+  FROM bids b2
+  WHERE b2.auction_id = b.auction_id
+    AND b2.coureur_id = b.coureur_id
+    AND b2.statut = 'carried_over'
+) tie_info ON winning_roster.id IS NULL
+
+-- Then use:
+COALESCE(winning_roster.prix_signature, tie_info.top_bid) AS winning_amount
+```
+
+Pour `winning_manager`, quand c'est une égalité (pas de roster), afficher le nom des managers à égalité n'est pas trivial en SQL. On peut soit :
+- Laisser NULL côté SQL et gérer côté UI → plus simple
+- Ou ajouter une sous-requête `STRING_AGG`
+
+**2. Modification UI** (`RoundHistoryTab.tsx`) — Pour les enchères perdues, quand `winning_manager` est null :
+- Afficher "Égalité" au lieu du nom du manager
+- Afficher le montant de l'égalité au lieu de 0
 
 ### Détails techniques
 
-Fichier impacté : **migration SQL uniquement** (pas de code frontend à modifier, les composants `RoundHistoryTab`, `BidHistory`, etc. utilisent déjà le champ `winning_amount` retourné par la vue).
+Migration SQL : recréer la vue `bids_outcomes` avec le fallback latéral.
 
-```sql
-CREATE OR REPLACE VIEW bids_outcomes AS
-SELECT 
-  b.id AS bid_id,
-  b.manager_id,
-  a.phase_id,
-  b.league_id,
-  b.coureur_id,
-  c.nom AS coureur_nom,
-  COALESCE(es.nom_affiche, c.equipe) AS coureur_equipe,
-  b.montant AS my_bid,
-  CASE
-    WHEN b.statut = 'won' THEN 'won'::bid_outcome
-    WHEN b.statut = 'lost' THEN 'lost'::bid_outcome
-    WHEN b.statut = 'carried_over' THEN 'carried_over'::bid_outcome
-    ELSE NULL::bid_outcome
-  END AS outcome,
-  a.round_number,
-  winner.nom AS winning_manager,
-  winning_roster.prix_signature AS winning_amount  -- was: winner_bid.montant
-FROM bids b
-  LEFT JOIN auctions a ON b.auction_id = a.id
-  LEFT JOIN coureurs c ON b.coureur_id = c.id
-  LEFT JOIN phases p ON p.id = a.phase_id
-  LEFT JOIN coureurs_saisons cs ON cs.coureur_id = b.coureur_id AND cs.saison_id = p.saison_id
-  LEFT JOIN equipes_saisons es ON es.equipe_id = cs.equipe_id AND es.saison_id = cs.saison_id
-  LEFT JOIN rosters winning_roster ON winning_roster.coureur_id = b.coureur_id 
-    AND winning_roster.phase_id = a.phase_id 
-    AND (winning_roster.league_id = b.league_id OR ...)
-  -- REMOVED: LEFT JOIN bids winner_bid (source du bug)
-  LEFT JOIN managers winner ON winner.id = winning_roster.manager_id
-WHERE b.statut = ANY (ARRAY['pending','won','lost','carried_over']::bid_statut[]);
-```
-
-### Risque
-Faible — `prix_signature` est renseigné à l'insertion dans le roster au moment de la résolution des enchères, il correspond toujours au montant gagnant.
+Fichiers UI impactés :
+- `src/components/auction/v2/RoundHistoryTab.tsx` — section "Perdues"  
+- `src/components/auction/BidHistory.tsx` — même logique si elle affiche `winning_manager`
 
