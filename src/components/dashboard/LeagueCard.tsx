@@ -22,7 +22,7 @@ interface LeagueCardProps {
   onViewAnnouncements?: () => void;
 }
 
-export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails }: LeagueCardProps) {
+export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails, onViewAnnouncements }: LeagueCardProps) {
   const { t } = useTranslation('dashboard');
   const [invitesSheetOpen, setInvitesSheetOpen] = useState(false);
   
