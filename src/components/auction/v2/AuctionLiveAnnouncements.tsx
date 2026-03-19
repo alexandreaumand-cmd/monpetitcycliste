@@ -50,6 +50,7 @@ export function AuctionLiveAnnouncements({
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
   const replayTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const replayStartedForRef = useRef<string | null>(null);
   const queryClient = useQueryClient();
   const { leagueId } = useLeague();
 
@@ -104,7 +105,10 @@ export function AuctionLiveAnnouncements({
       const isClosedRound = liveStatus?.unpublished_count === 0 && allAnnonces.length > 0;
 
       if (isClosedRound) {
-        // Start progressive replay
+        // Only start replay once per auction
+        if (replayStartedForRef.current === selectedAuctionId) return;
+        replayStartedForRef.current = selectedAuctionId;
+
         if (replayTimerRef.current) clearInterval(replayTimerRef.current);
         setReplayVisibleCount(1);
         setIsReplaying(true);
@@ -125,7 +129,7 @@ export function AuctionLiveAnnouncements({
         setIsReplaying(false);
       }
     }
-  }, [liveStatus]);
+  }, [liveStatus, selectedAuctionId]);
 
   // Handle new announcements - scroll to top for reversed order
   useEffect(() => {
@@ -217,6 +221,7 @@ export function AuctionLiveAnnouncements({
                         onClick={() => {
                           if (replayTimerRef.current) clearInterval(replayTimerRef.current);
                           replayTimerRef.current = null;
+                          replayStartedForRef.current = null;
                           setSelectedAuctionId(round.id);
                           setLiveAnnonces([]);
                           setReplayVisibleCount(0);
@@ -297,9 +302,12 @@ export function AuctionLiveAnnouncements({
       const remainingCount = totalAnnonces - visibleAnnonces.length;
       const shouldShowTop10Message = totalAnnonces > 10 && remainingCount === 10;
 
-      return visibleAnnonces.map((annonce, idx) => {
+      // Reverse: newest announcement on top
+      const reversedAnnonces = [...visibleAnnonces].reverse();
+
+      return reversedAnnonces.map((annonce, idx) => {
         // Le message apparaît en haut de la liste (avant la dernière annonce publiée)
-        const showTop10Before = shouldShowTop10Message && idx === 0;
+        const showTop10Before = shouldShowTop10Message && idx === reversedAnnonces.length - 1;
 
                         return (
                           <div key={`wrapper-${annonce.id}`}>
