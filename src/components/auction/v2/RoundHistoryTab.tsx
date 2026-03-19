@@ -302,16 +302,27 @@ export function RoundHistoryTab({
                          </span>
                        </div>
                       <div className="pt-2 border-t border-red-500/10 space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Contre</span>
-                          <span className="font-medium">{bid.winning_manager}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Enchère gagnante</span>
-                          <span className="font-bold text-red-700 dark:text-red-400">
-                            {formatAmount(bid.winning_amount)}
-                          </span>
-                        </div>
+                        {bid.winning_manager ? (
+                          <>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">Contre</span>
+                              <span className="font-medium">{bid.winning_manager}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">Enchère gagnante</span>
+                              <span className="font-bold text-red-700 dark:text-red-400">
+                                {formatAmount(bid.winning_amount)}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Égalité entre autres managers</span>
+                            <span className="font-bold text-orange-600 dark:text-orange-400">
+                              {formatAmount(bid.winning_amount)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
