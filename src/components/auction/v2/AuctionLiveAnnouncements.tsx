@@ -50,6 +50,7 @@ export function AuctionLiveAnnouncements({
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
   const replayTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const replayStartedForRef = useRef<string | null>(null);
   const queryClient = useQueryClient();
   const { leagueId } = useLeague();
 
