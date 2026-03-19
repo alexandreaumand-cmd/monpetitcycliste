@@ -19,6 +19,7 @@ interface LeagueCardProps {
   cardData?: LeagueCardData;
   isLoadingCardData?: boolean;
   onViewDetails: (hasActiveAuction?: boolean) => void;
+  onViewAnnouncements?: () => void;
 }
 
 export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails }: LeagueCardProps) {
