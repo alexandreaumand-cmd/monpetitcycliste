@@ -32,7 +32,7 @@
       },
       "auction_validation": {
         "title": "✅ Enchères validées",
-        "message": "Un manager a validé dans {{leagueName}}. En attente des autres managers..."
+        "message": "{{managerName}} a validé dans {{leagueName}}. En attente des autres managers..."
       },
       "auction_ready_to_close": {
         "title": "🔔 Prêt à clôturer",

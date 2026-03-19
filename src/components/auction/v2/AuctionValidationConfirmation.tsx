@@ -179,11 +179,11 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
           )}
 
           {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-2 pt-4">
+          <div className="grid grid-cols-2 gap-2 pt-4">
             <Button
               onClick={() => refetch()}
               variant="outline"
-              className="flex-1"
+              className="w-full"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               {t('validation.refresh')}
@@ -191,14 +191,14 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
             <Button
               onClick={onViewMyBids}
               variant="secondary"
-              className="flex-1"
+              className="w-full"
             >
               {t('validation.viewMyBids')}
             </Button>
             <Button
               onClick={onViewHistory}
               variant="secondary"
-              className="flex-1"
+              className="w-full"
             >
               <History className="h-4 w-4 mr-2" />
               {t('validation.history')}
@@ -207,7 +207,7 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
               <Button
                 onClick={onViewAnnouncements}
                 variant="secondary"
-                className="flex-1"
+                className="w-full"
               >
                 <Megaphone className="h-4 w-4 mr-2" />
                 {t('validation.viewAnnouncements', 'Annonces')}
