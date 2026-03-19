@@ -423,13 +423,14 @@ Deno.serve(async (req) => {
         await notifyLeagueMembers(supabase, league_id, {
           type: 'auction_validation',
           title: '✅ Enchères validées',
-          message: `Un manager a validé ses enchères. En attente de ${waitingManagers.length} manager(s)...`,
+          message: `${manager.nom} a validé dans ${leagueName}. En attente des autres managers...`,
           metadata: {
             auction_id: auction.id,
             round_number: auction.round_number,
             phase_id,
             league_id,
             league_name: leagueName,
+            manager_name: manager.nom,
             complete_managers: validatedManagerIds.length,
             total_managers: eligibleManagerIds.length
           }

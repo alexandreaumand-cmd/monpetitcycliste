@@ -32,7 +32,7 @@
       },
       "auction_validation": {
         "title": "✅ Bids validated",
-        "message": "A manager has validated in {{leagueName}}. Waiting for other managers..."
+        "message": "{{managerName}} has validated in {{leagueName}}. Waiting for other managers..."
       },
       "auction_ready_to_close": {
         "title": "🔔 Ready to close",
