@@ -53,14 +53,19 @@ export function RoundHistoryTab({
     },
   });
 
+  // Deduplicate by bid_id to prevent display duplicates from cache/phase mixing
+  const uniqueOutcomes = outcomes.filter(
+    (o, idx, arr) => arr.findIndex(x => x.bid_id === o.bid_id) === idx
+  );
+
   // Sort by highest bid first (descending order)
-  const won = outcomes
+  const won = uniqueOutcomes
     .filter((o) => o.outcome === "won")
     .sort((a, b) => (b.my_bid || 0) - (a.my_bid || 0));
-  const lost = outcomes
+  const lost = uniqueOutcomes
     .filter((o) => o.outcome === "lost")
     .sort((a, b) => (b.my_bid || 0) - (a.my_bid || 0));
-  const carriedOver = outcomes
+  const carriedOver = uniqueOutcomes
     .filter((o) => o.outcome === "carried_over")
     .sort((a, b) => (b.my_bid || 0) - (a.my_bid || 0));
 
@@ -96,8 +101,13 @@ export function RoundHistoryTab({
     enabled: won.length > 0,
   });
 
+  // Deduplicate losers by coureur_id + manager_id
+  const uniqueLosers = losersData.filter(
+    (l, idx, arr) => arr.findIndex(x => x.coureur_id === l.coureur_id && x.manager_id === l.manager_id) === idx
+  );
+
   // Group losers by coureur_id
-  const losersByRider = losersData.reduce((acc, loser) => {
+  const losersByRider = uniqueLosers.reduce((acc, loser) => {
     if (!acc[loser.coureur_id!]) {
       acc[loser.coureur_id!] = [];
     }

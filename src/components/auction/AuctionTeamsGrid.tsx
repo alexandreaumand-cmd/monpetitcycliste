@@ -225,7 +225,10 @@ export const AuctionTeamsGrid = ({ phaseId, managerId }: AuctionTeamsGridProps) 
     enabled: !leagueLoading && !!leagueId,
   });
 
-  const allManagersRosters = rostersQuery.data || [];
+  // Deduplicate rosters by id to prevent display duplicates
+  const allManagersRosters = (rostersQuery.data || []).filter(
+    (r, idx, arr) => arr.findIndex(x => x.id === r.id) === idx
+  );
   const managersStatus = statusQuery.data || [];
   const isLoading = rostersQuery.isLoading;
 
