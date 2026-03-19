@@ -426,7 +426,7 @@ export function AuctionLiveAnnouncements({
         </div>
 
         {/* Right column: My new riders + Other managers */}
-        <div className="lg:col-span-1 space-y-3 sm:space-y-4">
+        <div className="lg:col-span-1 space-y-3 sm:space-y-4 relative z-0">
           {/* Mes nouvelles recrues - Collapsible */}
           {myNewRiders.length > 0 && (
             <Card className="lg:sticky lg:top-6">
