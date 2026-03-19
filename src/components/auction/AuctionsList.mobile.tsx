@@ -17,6 +17,8 @@ interface AuctionsListProps {
 export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
   const { leagueId } = useLeague();
   const { data: auctionStatus, isLoading } = useLeagueAuctionStatus(leagueId);
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
 
   // Query pour récupérer l'historique des enchères terminées
   const { data: phaseHistory, isLoading: isLoadingHistory } = useQuery({
