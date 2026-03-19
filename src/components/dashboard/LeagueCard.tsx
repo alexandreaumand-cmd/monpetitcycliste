@@ -460,8 +460,8 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                   <span className="hidden sm:inline">Annonces</span>
                   {auctionStatus.isAnnouncementsPending && (
                     <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive"></span>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E8A0B4] opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#E8A0B4]"></span>
                     </span>
                   )}
                 </Button>
