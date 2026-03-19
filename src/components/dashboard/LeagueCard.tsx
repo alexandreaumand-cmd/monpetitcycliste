@@ -442,13 +442,31 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
               </div>
             )}
 
-            <Button 
-              onClick={() => onViewDetails(!!auctionStatus)} 
-              variant="outline" 
-              className="w-full"
-            >
-              {auctionStatus ? t('leagueCard.goToAuction') : t('leagueCard.viewMyLeague')}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => onViewDetails(!!auctionStatus)} 
+                variant="outline" 
+                className="flex-1"
+              >
+                {auctionStatus ? t('leagueCard.goToAuction') : t('leagueCard.viewMyLeague')}
+              </Button>
+              {auctionStatus && onViewAnnouncements && (
+                <Button
+                  onClick={(e) => { e.stopPropagation(); onViewAnnouncements(); }}
+                  variant="outline"
+                  className="relative gap-1.5"
+                >
+                  <Megaphone className="h-4 w-4" />
+                  Annonces
+                  {auctionStatus.isAnnouncementsPending && (
+                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive"></span>
+                    </span>
+                  )}
+                </Button>
+              )}
+            </div>
           </>
         )}
 

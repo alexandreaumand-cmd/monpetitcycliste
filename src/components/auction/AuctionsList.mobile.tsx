@@ -81,6 +81,19 @@ export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
     );
   }
 
+  // 0. Tab "announcements" demandé explicitement → afficher les annonces si possible
+  if (tabParam === 'announcements' && auctionStatus?.phaseId && auctionStatus?.auctionId) {
+    return (
+      <div className="p-4">
+        <AuctionLiveAnnouncements
+          auctionId={auctionStatus.auctionId}
+          phaseId={auctionStatus.phaseId}
+          managerId={managerId}
+        />
+      </div>
+    );
+  }
+
   // 1. Enchère ouverte → afficher l'interface d'enchères
   if (auctionStatus && !auctionStatus.isScheduled && !auctionStatus.isAnnouncementsPending) {
     return <AuctionPageV2 phaseId={auctionStatus.phaseId!} managerId={managerId} leagueId={leagueId} />;
