@@ -613,16 +613,31 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         isSubmitting={submitAllMutation.isPending}
       />
 
-      {/* Tabs: Mes Enchères / Recherche */}
+      {/* Tabs: Mes Enchères / Recherche / Équipes / Historique / Annonces */}
       <Tabs defaultValue="search" className="flex-1 flex flex-col">
-        <TabsList className="mx-3 mt-2 grid grid-cols-2 h-9" style={{ width: "calc(100% - 1.5rem)" }}>
-          <TabsTrigger value="my-bids" className="text-xs">
-            📝 Enchères ({context.totals.draft_count})
-          </TabsTrigger>
-          <TabsTrigger value="search" className="text-xs">
-            🔎 Chercher
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto scrollbar-hide mx-3 mt-2">
+          <TabsList className="inline-flex w-auto min-w-full h-9 gap-1">
+            <TabsTrigger value="my-bids" className="text-xs shrink-0 whitespace-nowrap">
+              📝 {t('tabs.myBids', 'Enchères')} ({context.totals.draft_count})
+            </TabsTrigger>
+            <TabsTrigger value="search" className="text-xs shrink-0 whitespace-nowrap">
+              🔎 {t('tabs.search', 'Chercher')}
+            </TabsTrigger>
+            <TabsTrigger value="teams" className="text-xs shrink-0 whitespace-nowrap">
+              👥 {t('tabs.teams', 'Équipes')}
+            </TabsTrigger>
+            {closedRounds.length > 0 && (
+              <TabsTrigger value="history" className="text-xs shrink-0 whitespace-nowrap">
+                📜 {t('tabs.history', 'Historique')}
+              </TabsTrigger>
+            )}
+            {closedRounds.length > 0 && (
+              <TabsTrigger value="announcements" className="text-xs shrink-0 whitespace-nowrap">
+                📢 {t('tabs.announcements', 'Annonces')}
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </div>
 
         <TabsContent value="my-bids" className="flex-1 mt-0 pt-2 flex flex-col">
           <div className="flex-1 overflow-y-auto pb-4">
@@ -644,7 +659,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
               <div className="relative flex-1">
                 <input
                   type="text"
-                  placeholder="Rechercher un coureur…"
+                  placeholder={t('searchPlaceholder', 'Rechercher un coureur…')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full h-9 pl-9 pr-10 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -654,14 +669,14 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
               <button
                 onClick={handleImportFavorites}
                 disabled={importFavoritesMutation.isPending}
-                className="h-9 px-3 rounded-md border border-bordure-gold text-yellow-700 hover:bg-yellow-50 dark:border-bordure-gold dark:text-bordure-gold dark:hover:bg-yellow-950 flex items-center gap-1 text-sm font-medium disabled:opacity-50"
+                className="h-9 px-3 rounded-md border border-bordure-gold text-bordure-gold hover:bg-accent flex items-center gap-1 text-sm font-medium disabled:opacity-50"
               >
                 {importFavoritesMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <svg className="h-4 w-4 fill-yellow-400 text-bordure-gold" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" /></svg>
+                  <svg className="h-4 w-4 fill-bordure-gold" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" /></svg>
                 )}
-                <span className="hidden sm:inline">Favoris</span>
+                <span className="hidden sm:inline">{t('favorites.label', 'Favoris')}</span>
               </button>
             </div>
           </div>
@@ -680,6 +695,43 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
             />
           </div>
         </TabsContent>
+
+        <TabsContent value="teams" className="flex-1 mt-0 pt-2">
+          <div className="px-3 pb-4">
+            <AuctionTeamsGrid phaseId={phaseId} managerId={managerId} />
+          </div>
+        </TabsContent>
+
+        {closedRounds.length > 0 && (
+          <TabsContent value="history" className="flex-1 mt-0 pt-2">
+            <div className="px-3 pb-4 space-y-4">
+              {closedRounds.map((round) => (
+                <div key={round.round_number}>
+                  <h3 className="text-sm font-semibold mb-2">Round {round.round_number}</h3>
+                  <RoundHistoryTab
+                    phaseId={phaseId}
+                    managerId={managerId}
+                    leagueId={leagueId}
+                    roundNumber={round.round_number}
+                    closedAt={round.closed_at}
+                  />
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+        )}
+
+        {closedRounds.length > 0 && (
+          <TabsContent value="announcements" className="flex-1 mt-0 pt-2">
+            <div className="px-3 pb-4">
+              <AuctionLiveAnnouncements
+                auctionId={closedRounds[0].id}
+                managerId={managerId}
+                phaseId={phaseId}
+              />
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Filters FAB */}
