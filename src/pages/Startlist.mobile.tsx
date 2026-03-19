@@ -328,21 +328,21 @@ export const StartlistMobile = () => {
             if (tabMode === "history" && !hasStartlist) return null;
             const today = new Date().toISOString().split('T')[0];
             const isOngoing = race.date_debut <= today && race.date_fin >= today;
-            return <MobileCard key={race.id} title={race.nom} subtitle={format(new Date(race.date_debut), "dd MMMM yyyy", {
+            return <MobileCard key={race.id} title={race.nom} subtitle={<div className="flex flex-wrap items-center gap-1 mt-0.5">
+                          {isOngoing && <Badge className="bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0 animate-pulse">
+                              {t('badges.inProgress')}
+                            </Badge>}
+                          {race.categorie && <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              {race.categorie}
+                            </Badge>}
+                          {isPcsValidated && <Badge className="bg-green-600 text-white text-[10px] px-1.5 py-0">
+                              <CheckCircle2 className="h-3 w-3 mr-0.5" />
+                              SL officielle
+                            </Badge>}
+                        </div>} meta={format(new Date(race.date_debut), "dd MMMM yyyy", {
               locale: dateLocale
             })} avatar={<div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                           <Calendar className="h-5 w-5 text-primary" />
-                        </div>} badge={<div className="flex gap-1">
-                          {isOngoing && <Badge className="bg-destructive text-destructive-foreground text-xs animate-pulse">
-                              {t('badges.inProgress')}
-                            </Badge>}
-                          {race.categorie && <Badge variant="outline" className="text-xs">
-                              {race.categorie}
-                            </Badge>}
-                          {isPcsValidated && <Badge className="bg-green-600 text-white text-xs">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              SL officielle
-                            </Badge>}
                         </div>} onClick={() => {
               if (hasStartlist && startlistInfo?.id) {
                 handleSelectRace(race.id, startlistInfo.id);
