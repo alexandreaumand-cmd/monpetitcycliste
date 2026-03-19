@@ -1,39 +1,59 @@
 
 
-## Plan : Bouton "Annonces" sur la carte de ligue + comportement live/replay
+## Plan : Corriger l'enchère gagnante affichée dans l'historique des enchères
 
-### Résumé
+### Problème identifié
 
-Ajouter un bouton "Annonces" à côté de "Accéder aux enchères" dans la carte de ligue. Ce bouton navigue vers la page enchères (qui affiche déjà les annonces quand `isAnnouncementsPending` est true). Un point rouge apparaît quand les annonces sont en cours de publication (1ère fois, juste après clôture du round). Les annonces en cours sont vues en direct (pas depuis le début), et les annonces terminées se rejouent à l'ouverture.
+La vue SQL `bids_outcomes` calcule le `winning_amount` en joignant la table `bids` pour retrouver le montant gagnant. Le problème : cette jointure filtre par `coureur_id + manager_id + statut='won' + league_id` mais **ne filtre PAS par `phase_id`**.
 
-### Modifications
+Conséquence : si un même manager a gagné le même coureur dans plusieurs phases de la même ligue, la jointure retourne plusieurs lignes et la base choisit un montant arbitraire (souvent celui d'une autre phase).
 
-#### 1. `src/components/dashboard/LeagueCard.tsx`
-- Ajouter un bouton "Annonces" avec icône `Megaphone` à côté du bouton "Accéder aux enchères"
-- Le bouton apparaît uniquement quand `auctionStatus` existe (enchères actives)
-- Ajouter un point rouge (pastille CSS `w-2 h-2 bg-red-500 rounded-full animate-pulse`) quand `auctionStatus.isAnnouncementsPending === true`
-- Le bouton appelle un nouveau callback `onViewAnnouncements`
-- Layout : les 2 boutons côte à côte avec `flex gap-2`
+### Solution
 
-#### 2. `src/components/dashboard/LeagueCard.tsx` (props)
-- Ajouter la prop `onViewAnnouncements: () => void` à l'interface `LeagueCardProps`
+La table `rosters` contient déjà le champ `prix_signature` qui correspond exactement au montant de l'enchère gagnante, et est déjà correctement filtrée par `phase_id` ET `league_id` dans la jointure existante.
 
-#### 3. `src/pages/DashboardHome.tsx`
-- Passer le callback `onViewAnnouncements` qui navigue vers `/dashboard/encheres?leagueId=X&tab=announcements`
+**Migration SQL** : modifier la vue `bids_outcomes` pour :
+1. Remplacer `winner_bid.montant AS winning_amount` par `winning_roster.prix_signature AS winning_amount`
+2. Supprimer la jointure `LEFT JOIN bids winner_bid` devenue inutile
 
-#### 4. `src/components/auction/AuctionsList.desktop.tsx` et `AuctionsList.mobile.tsx`
-- Lire le query param `tab=announcements` depuis l'URL
-- Quand `tab=announcements` et qu'il y a un round fermé, afficher directement `AuctionLiveAnnouncements` au lieu de l'interface d'enchères normale
+### Détails techniques
 
-#### 5. `src/components/auction/v2/AuctionLiveAnnouncements.tsx` — Comportement live vs replay
-- **Live (annonces en cours, `unpublished_count > 0`)** : afficher toutes les annonces publiées immédiatement sans replay progressif. Le manager voit l'état actuel en temps réel. Le realtime subscription fait apparaître les nouvelles annonces au fur et à mesure.
-- **Replay (annonces terminées, `unpublished_count === 0`)** : comportement actuel conservé — replay progressif toutes les 5s avec `replayStartedForRef` pour éviter les redémarrages.
+Fichier impacté : **migration SQL uniquement** (pas de code frontend à modifier, les composants `RoundHistoryTab`, `BidHistory`, etc. utilisent déjà le champ `winning_amount` retourné par la vue).
 
-Le changement principal dans le `useEffect` (lignes 100-132) : dans le cas live (`unpublished_count > 0`), on montre déjà toutes les annonces publiées (`setReplayVisibleCount(allAnnonces.length)`) — ce comportement est déjà correct. Pas de changement nécessaire ici.
+```sql
+CREATE OR REPLACE VIEW bids_outcomes AS
+SELECT 
+  b.id AS bid_id,
+  b.manager_id,
+  a.phase_id,
+  b.league_id,
+  b.coureur_id,
+  c.nom AS coureur_nom,
+  COALESCE(es.nom_affiche, c.equipe) AS coureur_equipe,
+  b.montant AS my_bid,
+  CASE
+    WHEN b.statut = 'won' THEN 'won'::bid_outcome
+    WHEN b.statut = 'lost' THEN 'lost'::bid_outcome
+    WHEN b.statut = 'carried_over' THEN 'carried_over'::bid_outcome
+    ELSE NULL::bid_outcome
+  END AS outcome,
+  a.round_number,
+  winner.nom AS winning_manager,
+  winning_roster.prix_signature AS winning_amount  -- was: winner_bid.montant
+FROM bids b
+  LEFT JOIN auctions a ON b.auction_id = a.id
+  LEFT JOIN coureurs c ON b.coureur_id = c.id
+  LEFT JOIN phases p ON p.id = a.phase_id
+  LEFT JOIN coureurs_saisons cs ON cs.coureur_id = b.coureur_id AND cs.saison_id = p.saison_id
+  LEFT JOIN equipes_saisons es ON es.equipe_id = cs.equipe_id AND es.saison_id = cs.saison_id
+  LEFT JOIN rosters winning_roster ON winning_roster.coureur_id = b.coureur_id 
+    AND winning_roster.phase_id = a.phase_id 
+    AND (winning_roster.league_id = b.league_id OR ...)
+  -- REMOVED: LEFT JOIN bids winner_bid (source du bug)
+  LEFT JOIN managers winner ON winner.id = winning_roster.manager_id
+WHERE b.statut = ANY (ARRAY['pending','won','lost','carried_over']::bid_statut[]);
+```
 
-### Fichiers impactés
-- `src/components/dashboard/LeagueCard.tsx` — bouton Annonces + point rouge
-- `src/pages/DashboardHome.tsx` — callback navigation avec `tab=announcements`
-- `src/components/auction/AuctionsList.desktop.tsx` — lecture du query param `tab`
-- `src/components/auction/AuctionsList.mobile.tsx` — idem mobile
+### Risque
+Faible — `prix_signature` est renseigné à l'insertion dans le roster au moment de la résolution des enchères, il correspond toujours au montant gagnant.
 
