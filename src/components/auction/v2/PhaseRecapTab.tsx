@@ -52,7 +52,11 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      // Deduplicate by bid_id to prevent display duplicates from cache/phase mixing
+      const raw = data || [];
+      return raw.filter(
+        (b: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.bid_id === b.bid_id) === idx
+      );
     },
   });
 

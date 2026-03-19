@@ -642,7 +642,9 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
         <TabsContent value="my-bids" className="flex-1 mt-0 pt-2 flex flex-col">
           <div className="flex-1 overflow-y-auto pb-4">
             <MyBidsList
-              bids={[...(context.roster || []), ...(context.my_bids || [])]}
+              bids={[...(context.roster || []), ...(context.my_bids || [])].filter(
+                (b: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.coureur_id === b.coureur_id) === idx
+              )}
               onUpdateAmount={handleUpdateAmount}
               onRemove={handleRemoveBid}
               currency={context.currency}

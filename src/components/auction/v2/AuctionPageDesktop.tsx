@@ -604,7 +604,9 @@ export function AuctionPageDesktop({ phaseId, managerId, leagueId }: AuctionPage
           availableTeams={Array.isArray(availableTeams) ? availableTeams : []}
           riders={ridersData?.items || []}
           isSearching={ridersLoading}
-          myBids={[...(context.roster || []), ...(context.my_bids || [])]}
+          myBids={[...(context.roster || []), ...(context.my_bids || [])].filter(
+            (b: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.coureur_id === b.coureur_id) === idx
+          )}
           handleSubmitBid={handleSubmitBid}
           handleUpdateAmount={handleUpdateAmount}
           handleRemoveBid={handleRemoveBid}

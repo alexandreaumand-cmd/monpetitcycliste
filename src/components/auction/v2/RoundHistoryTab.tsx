@@ -101,8 +101,13 @@ export function RoundHistoryTab({
     enabled: won.length > 0,
   });
 
+  // Deduplicate losers by coureur_id + manager_id
+  const uniqueLosers = losersData.filter(
+    (l, idx, arr) => arr.findIndex(x => x.coureur_id === l.coureur_id && x.manager_id === l.manager_id) === idx
+  );
+
   // Group losers by coureur_id
-  const losersByRider = losersData.reduce((acc, loser) => {
+  const losersByRider = uniqueLosers.reduce((acc, loser) => {
     if (!acc[loser.coureur_id!]) {
       acc[loser.coureur_id!] = [];
     }
