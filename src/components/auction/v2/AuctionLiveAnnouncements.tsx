@@ -194,7 +194,7 @@ export function AuctionLiveAnnouncements({
     <div className="animate-fade-in px-2 sm:px-0">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Left column: Announcements feed */}
-        <div className="lg:col-span-2 space-y-3 sm:space-y-6">
+        <div className="lg:col-span-2 space-y-3 sm:space-y-6 relative z-10">
           {/* Header */}
           <Card>
             <CardHeader className="py-3 sm:py-6 px-3 sm:px-6">
@@ -426,10 +426,10 @@ export function AuctionLiveAnnouncements({
         </div>
 
         {/* Right column: My new riders + Other managers */}
-        <div className="lg:col-span-1 space-y-3 sm:space-y-4">
+        <div className="lg:col-span-1 space-y-3 sm:space-y-4 relative z-0">
           {/* Mes nouvelles recrues - Collapsible */}
           {myNewRiders.length > 0 && (
-            <Card className="lg:sticky lg:top-6">
+            <Card className="lg:sticky lg:top-6 overflow-hidden">
               <Collapsible open={myRecruitsOpen} onOpenChange={setMyRecruitsOpen}>
                 <CardHeader className="py-2.5 sm:pb-2 px-3 sm:px-6">
                   <CollapsibleTrigger asChild>
