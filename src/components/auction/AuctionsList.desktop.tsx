@@ -7,6 +7,7 @@ import { AuctionLiveAnnouncements } from "./v2/AuctionLiveAnnouncements";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useLeagueAuctionStatus } from "@/hooks/useLeagueAuctionStatus";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuctionsListProps {
