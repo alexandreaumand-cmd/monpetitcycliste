@@ -443,13 +443,15 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
             )}
 
             <div className="flex gap-2 min-w-0">
-              <Button 
-                onClick={() => onViewDetails(!!auctionStatus)} 
-                variant="outline" 
-                className="flex-1 min-w-0 truncate"
-              >
-                {auctionStatus ? t('leagueCard.goToAuction') : t('leagueCard.viewMyLeague')}
-              </Button>
+              {auctionStatus && (
+                <Button 
+                  onClick={() => onViewDetails(true)} 
+                  variant="outline" 
+                  className="flex-1 min-w-0 truncate"
+                >
+                  {t('leagueCard.goToAuction')}
+                </Button>
+              )}
               {auctionStatus && onViewAnnouncements && (
                 <Button
                   onClick={(e) => { e.stopPropagation(); onViewAnnouncements(); }}
@@ -467,6 +469,13 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                 </Button>
               )}
             </div>
+            <Button 
+              onClick={() => onViewDetails(false)} 
+              variant="outline" 
+              className="w-full"
+            >
+              {t('leagueCard.viewMyLeague')}
+            </Button>
           </>
         )}
 
