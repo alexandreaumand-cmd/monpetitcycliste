@@ -105,7 +105,10 @@ export function AuctionLiveAnnouncements({
       const isClosedRound = liveStatus?.unpublished_count === 0 && allAnnonces.length > 0;
 
       if (isClosedRound) {
-        // Start progressive replay
+        // Only start replay once per auction
+        if (replayStartedForRef.current === selectedAuctionId) return;
+        replayStartedForRef.current = selectedAuctionId;
+
         if (replayTimerRef.current) clearInterval(replayTimerRef.current);
         setReplayVisibleCount(1);
         setIsReplaying(true);
@@ -126,7 +129,7 @@ export function AuctionLiveAnnouncements({
         setIsReplaying(false);
       }
     }
-  }, [liveStatus]);
+  }, [liveStatus, selectedAuctionId]);
 
   // Handle new announcements - scroll to top for reversed order
   useEffect(() => {
