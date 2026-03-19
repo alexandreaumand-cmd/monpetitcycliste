@@ -429,7 +429,7 @@ export function AuctionLiveAnnouncements({
         <div className="lg:col-span-1 space-y-3 sm:space-y-4 relative z-0">
           {/* Mes nouvelles recrues - Collapsible */}
           {myNewRiders.length > 0 && (
-            <Card className="lg:sticky lg:top-6">
+            <Card className="lg:sticky lg:top-6 overflow-hidden">
               <Collapsible open={myRecruitsOpen} onOpenChange={setMyRecruitsOpen}>
                 <CardHeader className="py-2.5 sm:pb-2 px-3 sm:px-6">
                   <CollapsibleTrigger asChild>
