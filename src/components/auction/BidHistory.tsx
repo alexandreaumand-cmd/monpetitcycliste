@@ -170,7 +170,10 @@ export const BidHistory = ({ managerId, phaseId }: BidHistoryProps) => {
                         {bid.coureur_equipe}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Perdu contre <strong>{bid.winning_manager}</strong> à {formatAmount(bid.winning_amount)}
+                        {bid.winning_manager 
+                          ? <>Perdu contre <strong>{bid.winning_manager}</strong> à {formatAmount(bid.winning_amount)}</>
+                          : <>Égalité entre autres managers à {formatAmount(bid.winning_amount)}</>
+                        }
                       </p>
                     </div>
                   ))
