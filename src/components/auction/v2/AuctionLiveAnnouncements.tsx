@@ -302,9 +302,12 @@ export function AuctionLiveAnnouncements({
       const remainingCount = totalAnnonces - visibleAnnonces.length;
       const shouldShowTop10Message = totalAnnonces > 10 && remainingCount === 10;
 
-      return visibleAnnonces.map((annonce, idx) => {
+      // Reverse: newest announcement on top
+      const reversedAnnonces = [...visibleAnnonces].reverse();
+
+      return reversedAnnonces.map((annonce, idx) => {
         // Le message apparaît en haut de la liste (avant la dernière annonce publiée)
-        const showTop10Before = shouldShowTop10Message && idx === 0;
+        const showTop10Before = shouldShowTop10Message && idx === reversedAnnonces.length - 1;
 
                         return (
                           <div key={`wrapper-${annonce.id}`}>
