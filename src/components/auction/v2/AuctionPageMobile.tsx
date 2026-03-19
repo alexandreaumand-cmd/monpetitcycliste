@@ -14,6 +14,8 @@ import { AuctionCompletedView } from "./AuctionCompletedView";
 import { AuctionPhaseHistoryView } from "./AuctionPhaseHistoryView";
 import { AuctionScheduledView } from "./AuctionScheduledView";
 import { AuctionRoundsHistory } from "./AuctionRoundsHistory";
+import { RoundHistoryTab } from "./RoundHistoryTab";
+import { AuctionTeamsGrid } from "../AuctionTeamsGrid";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
