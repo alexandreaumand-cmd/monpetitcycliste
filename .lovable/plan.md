@@ -1,23 +1,33 @@
 
 
-## Plan : Fix bouton "Annonces" qui dépasse + nom du manager dans la notification de validation
+## Plan : Corriger les doublons d'affichage entre phases
 
-### 1. Bouton "Annonces" qui dépasse du cadre
-**Fichier** : `src/components/auction/v2/AuctionValidationConfirmation.tsx`
+### Diagnostic
 
-Le bloc d'actions (ligne 182) utilise `flex flex-col sm:flex-row` avec 4 boutons qui débordent sur petit écran. Corrections :
-- Changer en grille 2×2 : `grid grid-cols-2 gap-2 pt-4` pour que les 4 boutons tiennent toujours dans le cadre
-- Retirer `flex-1` des boutons, utiliser `w-full` à la place
+L'analyse des données en base ne montre aucun doublon au niveau SQL (la vue `bids_outcomes` et les tables `rosters`, `coureurs_saisons` ne contiennent pas de doublons pour la ligue MPC 2026). Le problème est probablement lié au cache React Query qui conserve des données d'une phase précédente lorsque le `phaseId` change, ou à un doublon de rendu côté frontend.
 
-### 2. Ajouter le nom du manager dans la notification "Enchères validées"
-**Fichier** : `supabase/functions/auction-submit-all-bids/index.ts`
-- À la ligne 45-49, le manager est récupéré avec `select('id')` → changer en `select('id, nom')` pour récupérer le nom
-- Ligne 426 : remplacer `"Un manager a validé ses enchères"` par utiliser `manager.nom` dans le message
-- Ajouter `manager_name: manager.nom` dans le metadata (ligne 427+)
+### Correctifs
 
-**Fichier** : `src/i18n/locales/fr/navigation.json`
-- Ligne 35 : `"message": "{{managerName}} a validé dans {{leagueName}}. En attente des autres managers..."`
+#### 1. Dédoublonnage défensif dans `RoundHistoryTab.tsx`
+Après le fetch des `outcomes` (ligne 35-54), ajouter un dédoublonnage par `bid_id` avant le split won/lost/carried_over :
+```typescript
+const uniqueOutcomes = outcomes.filter(
+  (o, idx, arr) => arr.findIndex(x => x.bid_id === o.bid_id) === idx
+);
+```
+Même chose pour `losersData` (ligne 68-97) : dédoublonner par `coureur_id + manager_id`.
 
-**Fichier** : `src/i18n/locales/en/navigation.json`
-- Ligne 35 : `"message": "{{managerName}} has validated in {{leagueName}}. Waiting for other managers..."`
+#### 2. Dédoublonnage défensif dans `PhaseRecapTab.tsx`
+Après le fetch de `allBids` (ligne 43-57), dédoublonner par `bid_id` pour que les KPIs soient corrects.
+
+#### 3. Dédoublonnage défensif dans `MyBidsList` (via le parent)
+Dans `AuctionPageDesktop.tsx` et `AuctionPageMobile.tsx`, la prop `myBids` combine `context.roster` et `context.my_bids`. Ajouter un dédoublonnage par `coureur_id` pour éviter qu'un coureur n'apparaisse en double si le cache retourne des données mixtes entre phases.
+
+#### 4. Dédoublonnage dans `AuctionTeamsGrid.tsx`
+Dédoublonner les `allManagersRosters` par `roster.id` après le fetch pour se prémunir contre les doublons liés aux JOINs multiples (losing_bids).
+
+### Impact
+- 4 fichiers frontend modifiés
+- Aucun changement de base de données
+- Fix purement défensif qui n'altère pas le comportement normal
 
