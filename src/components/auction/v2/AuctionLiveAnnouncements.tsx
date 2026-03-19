@@ -221,6 +221,7 @@ export function AuctionLiveAnnouncements({
                         onClick={() => {
                           if (replayTimerRef.current) clearInterval(replayTimerRef.current);
                           replayTimerRef.current = null;
+                          replayStartedForRef.current = null;
                           setSelectedAuctionId(round.id);
                           setLiveAnnonces([]);
                           setReplayVisibleCount(0);
