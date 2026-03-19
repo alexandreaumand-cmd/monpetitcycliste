@@ -144,6 +144,26 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   // Check if we should show live announcements screen
   const shouldShowLiveScreen = context?.auction?.statut === 'closed' && context?.auction_id && !hideLiveAnnouncements;
 
+  // Fetch closed rounds for this phase (for history/announcements tabs)
+  const { data: closedRounds = [] } = useQuery({
+    queryKey: ["closed-rounds-mobile", phaseId, leagueId],
+    queryFn: async () => {
+      let query = supabase
+        .from("auctions")
+        .select("round_number, closed_at, id")
+        .eq("phase_id", phaseId)
+        .eq("statut", "closed");
+
+      if (leagueId) {
+        query = query.eq("league_id", leagueId);
+      }
+
+      const { data, error } = await query.order("round_number", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   // Fetch available teams from database
   const { data: availableTeams = [] } = useQuery({
     queryKey: ["auction-teams", phaseId],
