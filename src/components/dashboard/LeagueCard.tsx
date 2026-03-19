@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus, CheckCircle, Lock, Globe, Gavel, CheckCircle2, Clock, PartyPopper } from "lucide-react";
+import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus, CheckCircle, Lock, Globe, Gavel, CheckCircle2, Clock, PartyPopper, Megaphone } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,9 +19,10 @@ interface LeagueCardProps {
   cardData?: LeagueCardData;
   isLoadingCardData?: boolean;
   onViewDetails: (hasActiveAuction?: boolean) => void;
+  onViewAnnouncements?: () => void;
 }
 
-export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails }: LeagueCardProps) {
+export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails, onViewAnnouncements }: LeagueCardProps) {
   const { t } = useTranslation('dashboard');
   const [invitesSheetOpen, setInvitesSheetOpen] = useState(false);
   
@@ -441,13 +442,31 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails 
               </div>
             )}
 
-            <Button 
-              onClick={() => onViewDetails(!!auctionStatus)} 
-              variant="outline" 
-              className="w-full"
-            >
-              {auctionStatus ? t('leagueCard.goToAuction') : t('leagueCard.viewMyLeague')}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => onViewDetails(!!auctionStatus)} 
+                variant="outline" 
+                className="flex-1"
+              >
+                {auctionStatus ? t('leagueCard.goToAuction') : t('leagueCard.viewMyLeague')}
+              </Button>
+              {auctionStatus && onViewAnnouncements && (
+                <Button
+                  onClick={(e) => { e.stopPropagation(); onViewAnnouncements(); }}
+                  variant="outline"
+                  className="relative gap-1.5"
+                >
+                  <Megaphone className="h-4 w-4" />
+                  Annonces
+                  {auctionStatus.isAnnouncementsPending && (
+                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive"></span>
+                    </span>
+                  )}
+                </Button>
+              )}
+            </div>
           </>
         )}
 

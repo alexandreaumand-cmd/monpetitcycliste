@@ -7,6 +7,7 @@ import { AuctionLiveAnnouncements } from "./v2/AuctionLiveAnnouncements";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useLeagueAuctionStatus } from "@/hooks/useLeagueAuctionStatus";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuctionsListProps {
@@ -16,6 +17,8 @@ interface AuctionsListProps {
 export const AuctionsList = ({ managerId }: AuctionsListProps) => {
   const { leagueId } = useLeague();
   const { data: auctionStatus, isLoading } = useLeagueAuctionStatus(leagueId);
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
 
   // Query pour récupérer l'historique des enchères terminées
   const { data: phaseHistory, isLoading: isLoadingHistory } = useQuery({
@@ -74,6 +77,19 @@ export const AuctionsList = ({ managerId }: AuctionsListProps) => {
     return (
       <div className="flex justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // 0. Tab "announcements" demandé explicitement → afficher les annonces si possible
+  if (tabParam === 'announcements' && auctionStatus?.phaseId && auctionStatus?.auctionId) {
+    return (
+      <div className="container max-w-6xl mx-auto p-6">
+        <AuctionLiveAnnouncements
+          auctionId={auctionStatus.auctionId}
+          phaseId={auctionStatus.phaseId}
+          managerId={managerId}
+        />
       </div>
     );
   }

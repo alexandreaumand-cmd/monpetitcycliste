@@ -96,13 +96,17 @@ export default function DashboardHome({ onSignOut, manager }: DashboardHomeProps
           ) : (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {activeLeagues.map((league) => (
+              {activeLeagues.map((league) => (
                   <LeagueCard
                     key={league.id}
                     league={league}
                     cardData={leagueCardsData?.[league.id]}
                     isLoadingCardData={isLoadingCardsData}
                     onViewDetails={(hasActiveAuction) => handleViewLeagueDetails(league.id, hasActiveAuction)}
+                    onViewAnnouncements={() => {
+                      setLeagueId(league.id);
+                      navigate(`/dashboard/encheres?leagueId=${league.id}&tab=announcements`);
+                    }}
                   />
                 ))}
               </div>
