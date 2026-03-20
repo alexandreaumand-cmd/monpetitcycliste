@@ -1,46 +1,21 @@
 
 
-## Créer la page "L'Équipe" avec les 10 fondateurs
+## Corriger l'affichage du Hero sur écrans ~1000px de large
 
-### Nouvelle page `/team`
+### Problème
 
-Créer `src/pages/TeamPage.tsx` avec le layout `StaticPageLayout`. La page affiche les 10 membres fondateurs dans une grille responsive (2 colonnes mobile, 3-4 desktop).
+À 1001×688px (viewport actuel), l'écran est juste en dessous du breakpoint `lg` (1024px), donc les titres utilisent `sm:text-4xl` (36px). Combiné avec la hauteur limitée (688px) et `min-h-[100svh]`, le bloc texte déborde et les mots sont coupés.
 
-Chaque membre est une carte avec :
-- Un **placeholder circulaire** stylisé (icône générique colorée, en attendant les vraies photos transformées en illustrations)
-- Son **surnom** en gros (ex: "L'Ayatollah")
-- Sa **description** courte et humoristique
+### Solution
 
-Les surnoms et descriptions sont en dur (pas d'i18n, contenu identitaire français).
+Rendre la typographie du Hero responsive à la **hauteur** du viewport en plus de la largeur :
 
-### Les 10 membres
+1. **`src/components/landing/HeroSection.tsx`** :
+   - Remplacer les tailles fixes par des `clamp()` via des classes Tailwind arbitraires, pour que le texte s'adapte fluidement entre mobile et desktop
+   - Utiliser `text-[clamp(1.75rem,4vw,4.5rem)]` sur les titres pour qu'ils se redimensionnent proportionnellement à la largeur du viewport
+   - Réduire les marges/paddings du conteneur texte sur les écrans de hauteur limitée avec `md:py-6` au lieu de `md:py-8`
+   - Réduire `mb-5` à `mb-3` sur le second titre, `mb-6` à `mb-4` sur les stripes
+   - Boutons : passer à `py-5` au lieu de `py-6` pour gagner de l'espace vertical
 
-| Surnom | Description |
-|--------|-------------|
-| L'Ayatollah | Celui qui a créé un fichier de 100Mo pour gérer le jeu et qui en a créé les règles |
-| Le Pape de la Data | Il a compilé toutes les données du cyclisme depuis 50 ans |
-| Le Criminel Écologique | Il arpente l'Europe pour aller repérer les coureurs en devenir |
-| Le Sachant | Il connaît tout sur tout, imbattable au quizz |
-| Le Rappeur | Le plus créatif de la bande, fan de baies vitrées |
-| Le Doc | On sait toujours pas trop ce qu'il farfouille, mais il gagne 5 phases d'affilé. Louche. |
-| La Pépite | Il s'est essayé au football. Barré par Mvila, il suit maintenant le vélo |
-| Le BOSS | Il a renversé la table et a pris le pouvoir |
-| Le Codeur | Il débug, fait évoluer, c'est lui qui tient la barre |
-| Le Fantôme | Plus occupé à bouffer des frites à la cantine qu'à suivre le vélo |
-
-### Style visuel
-
-- Fond cream, cartes avec bordure subtle et hover gold
-- Placeholder avatar : cercle coloré avec une icône Lucide correspondant au personnage (Gavel pour l'Ayatollah, Database pour le Pape, Globe pour le Criminel, etc.)
-- Alternance subtile gold/pink sur les icônes (cohérent avec la charte)
-- Titre de page : "L'Équipe" avec un sous-titre type "Les 10 passionnés derrière La Bordure"
-
-### Fichiers impactés
-
-1. **`src/pages/TeamPage.tsx`** (nouveau) — La page complète avec grille de membres
-2. **`src/App.tsx`** — Ajout route `/team` (lazy loaded)
-3. **`src/components/landing/LandingFooter.tsx`** — Ajout lien "L'Équipe" dans le groupe "Le jeu"
-4. **`src/i18n/locales/fr/home.json`** et **`en/home.json`** — Ajout clé `footer.game.team`
-
-Les placeholders d'avatar seront ensuite remplaçables par les photos stylisées une fois fournies.
+Le résultat : un bloc texte qui reste lisible et contenu dans le viewport quelle que soit la combinaison largeur/hauteur.
 
