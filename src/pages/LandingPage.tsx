@@ -1,6 +1,7 @@
 import {
   LandingHeader,
   HeroSection,
+  GameOverviewSection,
   HowItWorksSection,
   AuctionShowcase,
   SocialProofSection,
