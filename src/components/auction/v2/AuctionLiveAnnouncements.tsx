@@ -203,6 +203,31 @@ export function AuctionLiveAnnouncements({
   const myNewRiders = isReplaying ? [] : (liveStatus?.my_new_riders || []);
   const allManagersRecruits: ManagerRecruits[] = isReplaying ? [] : (liveStatus?.all_managers_recruits || []);
   const recentlyAnnouncedManagerId = liveStatus?.recently_announced_manager_id;
+  const isPaused = liveStatus?.announcements_paused || false;
+  const pausedByName = liveStatus?.announcements_paused_by_name || null;
+
+  // Toggle pause mutation
+  const togglePause = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('auction-toggle-pause', {
+        body: { auction_id: effectiveAuctionId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      refetch();
+      if (data.announcements_paused) {
+        toast.info('⏸ Annonces mises en pause');
+      } else {
+        toast.success('▶ Annonces relancées !');
+      }
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+    },
+  });
 
   return (
     <div className="animate-fade-in px-2 sm:px-0">
