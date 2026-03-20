@@ -1,49 +1,45 @@
 
 
-## Plan : Corriger l'affichage des enchères perdues lors d'égalités
+## Plan : Rediriger vers les annonces quand le round se clôture
 
 ### Problème
 
-Quand 2 managers sont à égalité sur un coureur, personne ne gagne → pas d'entrée dans `rosters`. La vue `bids_outcomes` joint sur `rosters` pour trouver `winning_amount` et `winning_manager`, donc les deux retournent `NULL`. L'UI affiche alors "Enchère gagnante : 0" et "Contre : (vide)" pour les managers ayant perdu ce coureur.
-
-Exemple concret (LIVE) : Laurenz REX — Fab et Bubu à 51, Matt B à 21 → Matt B voit "Perdu" avec enchère gagnante à 0.
+Quand le manager est sur la page d'attente (validation confirmation) et que le round se clôture :
+1. `auction-get-context` ne trouve plus d'enchère `open` → retourne `{ error: 'No active auction', ... }` 
+2. Ce résultat est **truthy**, donc le check `!context` (ligne 466) est faux
+3. Le state `showValidationScreen` reste `true` (jamais remis à false)
+4. Le composant continue d'afficher `AuctionValidationConfirmation` — la page d'attente figée
 
 ### Solution
 
-**1. Migration SQL** — Modifier la vue `bids_outcomes` pour ajouter un fallback quand il n'y a pas de gagnant (égalité) :
+Modifier `AuctionPageMobile.tsx` pour détecter quand le context indique "No active auction" alors que le manager était en attente, et basculer automatiquement vers l'écran d'annonces.
 
-- Ajouter une sous-requête latérale qui récupère le montant max et le manager correspondant parmi les bids `carried_over` du même coureur dans la même enchère
-- Utiliser `COALESCE` :
-  - `winning_amount` = `rosters.prix_signature` (gagnant classique) OU `max bid carried_over` (égalité)  
-  - `winning_manager` = nom du gagnant OU nom du/des managers à égalité
+**Fichier impacté** : `src/components/auction/v2/AuctionPageMobile.tsx`
 
-```sql
--- Fallback: highest carried_over bid on the same rider in the same auction
-LEFT JOIN LATERAL (
-  SELECT MAX(b2.montant) AS top_bid
-  FROM bids b2
-  WHERE b2.auction_id = b.auction_id
-    AND b2.coureur_id = b.coureur_id
-    AND b2.statut = 'carried_over'
-) tie_info ON winning_roster.id IS NULL
+Ajouter un `useEffect` qui détecte la transition :
+- Si `context` est chargé mais `context.auction_id` est absent (pas d'enchère ouverte)
+- ET que `showValidationScreen` est true (le manager attendait)
+- ET qu'il y a un `lastClosedAuction` (round venant de se fermer)
+- → Désactiver `showValidationScreen` et laisser le check `shouldShowLiveScreen` ou le fallback `lastClosedAuction` prendre le relais
 
--- Then use:
-COALESCE(winning_roster.prix_signature, tie_info.top_bid) AS winning_amount
-```
-
-Pour `winning_manager`, quand c'est une égalité (pas de roster), afficher le nom des managers à égalité n'est pas trivial en SQL. On peut soit :
-- Laisser NULL côté SQL et gérer côté UI → plus simple
-- Ou ajouter une sous-requête `STRING_AGG`
-
-**2. Modification UI** (`RoundHistoryTab.tsx`) — Pour les enchères perdues, quand `winning_manager` est null :
-- Afficher "Égalité" au lieu du nom du manager
-- Afficher le montant de l'égalité au lieu de 0
+Concrètement :
+1. Traiter le contexte "No active auction" comme `null` (contexte invalide) en ajoutant un check sur `context?.error`
+2. Ajouter un `useEffect` qui réagit au changement : quand `context` devient null/erreur et `showValidationScreen` est true → reset le state et s'assurer que les annonces s'affichent
 
 ### Détails techniques
 
-Migration SQL : recréer la vue `bids_outcomes` avec le fallback latéral.
+```tsx
+// Normaliser le context: si "No active auction", traiter comme null
+const effectiveContext = context?.auction_id ? context : null;
 
-Fichiers UI impactés :
-- `src/components/auction/v2/RoundHistoryTab.tsx` — section "Perdues"  
-- `src/components/auction/BidHistory.tsx` — même logique si elle affiche `winning_manager`
+// useEffect: quand le round se ferme pendant l'attente
+useEffect(() => {
+  if (!effectiveContext && showValidationScreen) {
+    setShowValidationScreen(false);
+    setHideLiveAnnouncements(false); // S'assurer que les annonces s'affichent
+  }
+}, [effectiveContext, showValidationScreen]);
+```
+
+Puis remplacer toutes les utilisations de `context` par `effectiveContext` dans les conditions d'affichage, ce qui permettra au check existant `!context && lastClosedAuction && !hideLiveAnnouncements` de fonctionner et d'afficher `AuctionLiveAnnouncements`.
 
