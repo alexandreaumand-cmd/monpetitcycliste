@@ -4,48 +4,36 @@
     "login": "Connexion"
   },
   "hero": {
-    "title1": "Les cols c'est pour eux,",
-    "title2": "les points, c'est pour toi.",
-    "subtitle": "Le jeu de fantasy cycling entre amis. Recrute aux enchères, suis les vraies courses UCI et deviens le meilleur manager.",
+    "title1": "Le cyclisme comme",
+    "title2": "tu ne l'as jamais vécu.",
+    "subtitle": "Fantasy cycling entre amis. Enchères en direct, vraies courses UCI, stratégie pure.",
     "cta": {
       "createLeague": "Créer ma ligue",
       "myLeagues": "Mes Ligues",
-      "discover": "Découvrir le jeu"
-    },
-    "badges": {
-      "uci": "Vraies courses UCI",
-      "auctions": "Enchères entre amis",
-      "free": "Gratuit"
+      "discover": "Découvrir"
     }
   },
-  "howItWorks": {
-    "title": "Comment ça marche ?",
-    "subtitle": "Du départ à l'arrivée, vis l'aventure du manager cycliste",
-    "steps": {
-      "step1": {
-        "title": "Crée ta ligue",
-        "description": "Invite tes amis en 2 minutes"
-      },
-      "step2": {
+  "discover": {
+    "surtitle": "Découvre le jeu",
+    "blocks": {
+      "auction": {
         "title": "Recrute aux enchères",
-        "description": "Défie tes potes pour les meilleurs coureurs"
+        "text": "Défie tes amis en temps réel pour recruter les meilleurs coureurs du peloton. Chaque mise compte."
       },
-      "step3": {
-        "title": "Suis en direct",
-        "description": "Tes coureurs marquent en temps réel"
+      "team": {
+        "title": "Compose ton équipe",
+        "text": "Grimpeurs, sprinteurs, rouleurs — construis l'effectif parfait pour chaque course."
       },
-      "step4": {
-        "title": "Remporte le maillot",
-        "description": "Grimpe au classement et gagne"
+      "ranking": {
+        "title": "Domine le classement",
+        "text": "Tes coureurs marquent des points sur les vraies courses UCI. Le meilleur manager gagne."
       }
-    },
-    "start": "DÉPART",
-    "finish": "ARRIVÉE",
-    "cta": "Créer ma ligue"
+    }
   },
   "auction": {
-    "title": "Les enchères entre amis",
-    "subtitle": "Qui paiera le plus pour Pogačar ? Défie tes amis aux enchères pour recruter les meilleurs coureurs du peloton.",
+    "title": "Qui recrutera",
+    "titleAccent": "Pogačar ?",
+    "subtitle": "L'enchère entre amis, c'est le cœur du jeu. Stratégie, bluff et adrénaline.",
     "rider": "Tadej POGAČAR",
     "riderTeam": "UAE Team Emirates",
     "managers": {
@@ -58,15 +46,15 @@
     "cta": "Créer ma ligue"
   },
   "socialProof": {
-    "title": "Rejoins la communauté",
+    "title": "Une communauté de passionnés",
     "stats": {
       "courses": { "value": "350+", "label": "Courses UCI" },
-      "riders": { "value": "1000+", "label": "Coureurs pro" },
+      "riders": { "value": "1 000+", "label": "Coureurs pro" },
       "leagues": { "value": "50+", "label": "Ligues actives" }
     },
     "quotes": {
       "quote1": {
-        "text": "Les enchères, c'est le meilleur moment ! On se challenge entre potes pour récupérer Pogacar.",
+        "text": "Les enchères, c'est le meilleur moment ! On se challenge entre potes pour récupérer Pogačar.",
         "author": "Marie L.",
         "location": "Paris"
       },
@@ -78,7 +66,8 @@
     }
   },
   "cta": {
-    "title": "Prêt à lancer ta ligue ?",
+    "title": "Prêt à lancer",
+    "titleAccent": "ta ligue ?",
     "subtitle": "Invite tes amis et commencez à jouer dès aujourd'hui.",
     "createLeague": "Créer ma ligue",
     "share": "Partager avec un ami"

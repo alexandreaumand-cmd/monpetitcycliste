@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Share2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import cyclistClimbing from "@/assets/cyclist-climbing.jpg";
 
 const CTASection = () => {
   const { t } = useTranslation("home");
@@ -22,37 +21,46 @@ const CTASection = () => {
   };
 
   return (
-    <section className="relative py-24 md:py-32 overflow-hidden">
+    <section className="relative py-28 md:py-40 overflow-hidden">
+      {/* Background — mountain col */}
       <div className="absolute inset-0">
         <img
-          src={cyclistClimbing}
-          alt="Cyclist climbing"
+          src="https://images.unsplash.com/photo-1471506480208-91b3a4cc78be?w=1920&q=80&auto=format&fit=crop"
+          alt="Col de montagne"
           className="w-full h-full object-cover"
           loading="lazy"
         />
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(to right, hsla(147,45%,21%,0.92), hsla(147,45%,21%,0.85), hsla(147,45%,21%,0.75))" }}
+          style={{ background: "linear-gradient(to top, hsla(0,0%,0%,0.7) 0%, hsla(0,0%,0%,0.35) 50%, hsla(0,0%,0%,0.2) 100%)" }}
         />
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 text-center">
+      <div className="relative z-10 container mx-auto px-5 text-center">
         <motion.h2
-          className="text-3xl md:text-4xl font-montserrat font-bold text-white mb-3"
+          className="text-4xl sm:text-5xl lg:text-7xl font-montserrat font-bold text-white leading-[0.95] mb-2"
           initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
           whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          style={{ textWrap: "balance" } as React.CSSProperties}
         >
           {t("cta.title")}
         </motion.h2>
+        <motion.h2
+          className="text-4xl sm:text-5xl lg:text-7xl font-montserrat italic text-bordure-gold leading-[0.95] mb-8"
+          initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
+          whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {t("cta.titleAccent")}
+        </motion.h2>
         <motion.p
-          className="text-white/60 mb-8 max-w-md mx-auto font-inter"
+          className="text-white/60 mb-10 max-w-md mx-auto font-inter text-base sm:text-lg"
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
         >
           {t("cta.subtitle")}
         </motion.p>
@@ -62,17 +70,20 @@ const CTASection = () => {
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
         >
           <Link to="/auth">
-            <Button size="lg" className="w-full sm:w-auto text-lg px-8 py-6 shadow-lg shadow-bordure-gold/20">
+            <Button
+              size="lg"
+              className="w-full sm:w-auto text-base sm:text-lg px-10 py-7 bg-bordure-gold hover:bg-bordure-gold/90 text-secondary font-montserrat font-bold shadow-xl shadow-bordure-gold/20 active:scale-[0.97] transition-transform"
+            >
               {t("cta.createLeague")}
             </Button>
           </Link>
           <Button
             variant="outline"
             size="lg"
-            className="w-full sm:w-auto text-lg px-8 py-6 border-white/30 text-white hover:bg-white/10"
+            className="w-full sm:w-auto text-base sm:text-lg px-8 py-7 border-white/25 text-white hover:bg-white/10 font-inter active:scale-[0.97] transition-transform"
             onClick={handleShare}
           >
             <Share2 className="w-5 h-5 mr-2" />

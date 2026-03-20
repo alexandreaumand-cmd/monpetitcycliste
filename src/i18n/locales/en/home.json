@@ -4,48 +4,36 @@
     "login": "Login"
   },
   "hero": {
-    "title1": "They climb the cols,",
-    "title2": "you score the points.",
-    "subtitle": "The fantasy cycling game with friends. Draft at auctions, follow real UCI races and become the best manager.",
+    "title1": "Cycling like",
+    "title2": "you've never lived it.",
+    "subtitle": "Fantasy cycling with friends. Live auctions, real UCI races, pure strategy.",
     "cta": {
       "createLeague": "Create my league",
       "myLeagues": "My Leagues",
-      "discover": "Discover the game"
-    },
-    "badges": {
-      "uci": "Real UCI races",
-      "auctions": "Auctions with friends",
-      "free": "Free to play"
+      "discover": "Discover"
     }
   },
-  "howItWorks": {
-    "title": "How does it work?",
-    "subtitle": "From start to finish, live the cycling manager adventure",
-    "steps": {
-      "step1": {
-        "title": "Create your league",
-        "description": "Invite your friends in 2 minutes"
-      },
-      "step2": {
+  "discover": {
+    "surtitle": "Discover the game",
+    "blocks": {
+      "auction": {
         "title": "Draft at auctions",
-        "description": "Challenge your mates for the best riders"
+        "text": "Challenge your friends in real time to recruit the best riders in the peloton. Every bid counts."
       },
-      "step3": {
-        "title": "Follow live",
-        "description": "Your riders score in real time"
+      "team": {
+        "title": "Build your team",
+        "text": "Climbers, sprinters, rouleurs — build the perfect squad for every race."
       },
-      "step4": {
-        "title": "Win the jersey",
-        "description": "Climb the rankings and win"
+      "ranking": {
+        "title": "Dominate the rankings",
+        "text": "Your riders score points in real UCI races. The best manager wins."
       }
-    },
-    "start": "START",
-    "finish": "FINISH",
-    "cta": "Create my league"
+    }
   },
   "auction": {
-    "title": "Auctions with friends",
-    "subtitle": "Who will pay the most for Pogačar? Challenge your friends at auctions to recruit the best riders in the peloton.",
+    "title": "Who will recruit",
+    "titleAccent": "Pogačar?",
+    "subtitle": "The auction between friends is the heart of the game. Strategy, bluff and adrenaline.",
     "rider": "Tadej POGAČAR",
     "riderTeam": "UAE Team Emirates",
     "managers": {
@@ -58,15 +46,15 @@
     "cta": "Create my league"
   },
   "socialProof": {
-    "title": "Join the community",
+    "title": "A community of enthusiasts",
     "stats": {
       "courses": { "value": "350+", "label": "UCI Races" },
-      "riders": { "value": "1000+", "label": "Pro Riders" },
+      "riders": { "value": "1,000+", "label": "Pro Riders" },
       "leagues": { "value": "50+", "label": "Active Leagues" }
     },
     "quotes": {
       "quote1": {
-        "text": "The auctions are the best part! We challenge each other to get Pogacar.",
+        "text": "The auctions are the best part! We challenge each other to get Pogačar.",
         "author": "Marie L.",
         "location": "Paris"
       },
@@ -78,7 +66,8 @@
     }
   },
   "cta": {
-    "title": "Ready to start your league?",
+    "title": "Ready to start",
+    "titleAccent": "your league?",
     "subtitle": "Invite your friends and start playing today.",
     "createLeague": "Create my league",
     "share": "Share with a friend"

@@ -14,30 +14,50 @@ const AuctionShowcase = () => {
   ];
 
   return (
-    <section className="py-20 md:py-28 bg-secondary overflow-hidden">
-      <div className="container mx-auto px-4">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center max-w-6xl mx-auto">
-          {/* Text */}
+    <section className="relative py-24 md:py-36 overflow-hidden">
+      {/* Background — cyclist close-up from Unsplash */}
+      <div className="absolute inset-0">
+        <img
+          src="https://images.unsplash.com/photo-1517649763962-0c623066013b?w=1920&q=80&auto=format&fit=crop"
+          alt="Cycliste en effort"
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(135deg, hsla(0,0%,0%,0.85) 0%, hsla(0,0%,0%,0.6) 100%)" }}
+        />
+      </div>
+
+      <div className="relative z-10 container mx-auto px-5">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center max-w-6xl mx-auto">
+          {/* Text — editorial style */}
           <motion.div
             initial={{ opacity: 0, x: -20, filter: "blur(4px)" }}
             whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           >
-            <h2 className="text-3xl md:text-4xl font-montserrat font-bold text-white mb-4" style={{ textWrap: "balance" } as React.CSSProperties}>
+            <h2 className="text-4xl sm:text-5xl lg:text-7xl font-montserrat font-bold text-white leading-[0.95] mb-2">
               {t("auction.title")}
             </h2>
-            <p className="text-white/60 font-inter leading-relaxed mb-8 max-w-md">
+            <h2 className="text-4xl sm:text-5xl lg:text-7xl font-montserrat italic text-bordure-gold leading-[0.95] mb-6">
+              {t("auction.titleAccent")}
+            </h2>
+            <p className="text-white/60 font-inter text-base sm:text-lg leading-relaxed mb-10 max-w-md">
               {t("auction.subtitle")}
             </p>
             <Link to="/auth">
-              <Button size="lg" className="text-base px-8 py-6">
+              <Button
+                size="lg"
+                className="text-base px-8 py-6 bg-bordure-gold hover:bg-bordure-gold/90 text-secondary font-montserrat font-bold shadow-lg shadow-bordure-gold/20 active:scale-[0.97] transition-transform"
+              >
                 {t("auction.cta")}
               </Button>
             </Link>
           </motion.div>
 
-          {/* Auction card simulation */}
+          {/* Auction card — glass morphism */}
           <motion.div
             className="relative"
             initial={{ opacity: 0, x: 20, filter: "blur(4px)" }}
@@ -45,7 +65,7 @@ const AuctionShowcase = () => {
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 sm:p-8">
+            <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-6 sm:p-8 shadow-2xl">
               {/* Rider header */}
               <div className="flex items-center gap-4 mb-6 pb-5 border-b border-white/10">
                 <div className="w-12 h-12 rounded-full bg-bordure-gold/20 flex items-center justify-center flex-shrink-0">
@@ -66,7 +86,7 @@ const AuctionShowcase = () => {
                 {managers.map((manager, i) => (
                   <motion.div
                     key={i}
-                    className={`flex items-center justify-between p-3.5 rounded-xl transition-colors ${
+                    className={`flex items-center justify-between p-3.5 rounded-xl ${
                       manager.isHighest
                         ? "bg-bordure-pink/15 border border-bordure-pink/30"
                         : "bg-white/5 border border-transparent"
@@ -91,7 +111,7 @@ const AuctionShowcase = () => {
                       {manager.isHighest && (
                         <TrendingUp className="w-4 h-4 text-bordure-pink" />
                       )}
-                      <span className={`font-montserrat font-bold text-lg ${manager.isHighest ? "text-bordure-pink" : "text-white/70"}`}>
+                      <span className={`font-montserrat font-bold text-lg tabular-nums ${manager.isHighest ? "text-bordure-pink" : "text-white/70"}`}>
                         {manager.bid}
                       </span>
                       <span className="text-white/40 text-xs font-inter">
@@ -102,10 +122,10 @@ const AuctionShowcase = () => {
                 ))}
               </div>
 
-              {/* Highest bid label */}
+              {/* Highest bid */}
               <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between">
                 <span className="text-white/40 text-sm font-inter">{t("auction.highestBid")}</span>
-                <span className="text-bordure-pink font-montserrat font-bold text-xl">
+                <span className="text-bordure-pink font-montserrat font-bold text-xl tabular-nums">
                   52 {t("auction.currency")}
                 </span>
               </div>
