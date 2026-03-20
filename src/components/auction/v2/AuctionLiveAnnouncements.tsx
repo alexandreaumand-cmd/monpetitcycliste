@@ -228,7 +228,7 @@ export function AuctionLiveAnnouncements({
                     {availableRounds.map((round) => (
                       <Button
                         key={round.id}
-                        variant={selectedAuctionId === round.id ? "default" : "outline"}
+                        variant={effectiveAuctionId === round.id ? "default" : "outline"}
                         size="sm"
                         className="shrink-0 text-xs"
                         onClick={() => {
