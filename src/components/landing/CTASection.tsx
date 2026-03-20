@@ -83,7 +83,7 @@ const CTASection = () => {
           <Button
             variant="outline"
             size="lg"
-            className="w-full sm:w-auto text-base sm:text-lg px-8 py-7 border-white/25 text-white hover:bg-white/10 font-inter active:scale-[0.97] transition-transform"
+            className="w-full sm:w-auto text-base sm:text-lg px-8 py-7 border-white text-white bg-white/15 hover:bg-white/25 font-inter active:scale-[0.97] transition-transform"
             onClick={handleShare}
           >
             <Share2 className="w-5 h-5 mr-2" />
