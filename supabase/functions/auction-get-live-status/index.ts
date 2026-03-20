@@ -47,10 +47,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get auction details with saison_id
+    // Get auction details with saison_id + pause state
     const { data: auction } = await supabase
       .from('auctions')
-      .select('*, phases!inner(saison_id)')
+      .select('*, phases!inner(saison_id), paused_manager:announcements_paused_by(id, nom)')
       .eq('id', auction_id)
       .single();
 
@@ -239,6 +239,8 @@ Deno.serve(async (req) => {
         my_new_riders,
         all_managers_recruits,
         recently_announced_manager_id,
+        announcements_paused: auction.announcements_paused || false,
+        announcements_paused_by_name: (auction.paused_manager as any)?.nom || null,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

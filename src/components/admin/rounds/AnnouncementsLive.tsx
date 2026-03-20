@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Megaphone, Copy, CheckCircle2, Zap } from "lucide-react";
+import { Megaphone, Copy, CheckCircle2, Zap, Pause } from "lucide-react";
 import { formatAmount } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -23,6 +23,8 @@ interface AnnouncementsLiveProps {
   onPublishAll: () => void;
   onCopy: () => void;
   isLoading?: boolean;
+  isPaused?: boolean;
+  pausedByName?: string | null;
 }
 
 export const AnnouncementsLive = ({
@@ -31,7 +33,9 @@ export const AnnouncementsLive = ({
   onPublishNext,
   onPublishAll,
   onCopy,
-  isLoading
+  isLoading,
+  isPaused,
+  pausedByName
 }: AnnouncementsLiveProps) => {
   const { t } = useTranslation('auction');
   const unpublished = announcements.filter(a => !a.published);
@@ -65,6 +69,17 @@ export const AnnouncementsLive = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {isPaused && (
+          <Alert className="bg-orange-500/10 border-orange-500/30">
+            <AlertDescription className="flex items-center gap-2">
+              <Pause className="h-4 w-4 text-orange-500 shrink-0" />
+              <span className="text-sm font-medium text-orange-700 dark:text-orange-400">
+                ⏸ Annonces en pause{pausedByName ? ` par ${pausedByName}` : ''}
+              </span>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {nextAnnouncement ? (
           <>
             <Alert className="bg-primary/5 border-primary/20">
@@ -89,7 +104,7 @@ export const AnnouncementsLive = ({
             <div className="flex gap-2">
               <Button 
                 onClick={onPublishNext}
-                disabled={isLoading}
+                disabled={isLoading || isPaused}
                 className="flex-1 gap-2"
               >
                 <Megaphone className="h-4 w-4" />
@@ -98,7 +113,7 @@ export const AnnouncementsLive = ({
               {unpublished.length > 1 && (
                 <Button 
                   onClick={onPublishAll}
-                  disabled={isLoading}
+                  disabled={isLoading || isPaused}
                   variant="outline"
                   className="gap-2"
                 >

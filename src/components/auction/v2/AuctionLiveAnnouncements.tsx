@@ -1,13 +1,14 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Trophy, Users, TrendingUp, PartyPopper, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
+import { Trophy, Users, TrendingUp, PartyPopper, ArrowLeft, ChevronDown, ChevronUp, Pause, Play } from "lucide-react";
 import { useLeague } from "@/contexts/LeagueContext";
+import { toast } from "sonner";
 import {
   Collapsible,
   CollapsibleContent,
@@ -202,6 +203,31 @@ export function AuctionLiveAnnouncements({
   const myNewRiders = isReplaying ? [] : (liveStatus?.my_new_riders || []);
   const allManagersRecruits: ManagerRecruits[] = isReplaying ? [] : (liveStatus?.all_managers_recruits || []);
   const recentlyAnnouncedManagerId = liveStatus?.recently_announced_manager_id;
+  const isPaused = liveStatus?.announcements_paused || false;
+  const pausedByName = liveStatus?.announcements_paused_by_name || null;
+
+  // Toggle pause mutation
+  const togglePause = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('auction-toggle-pause', {
+        body: { auction_id: effectiveAuctionId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      refetch();
+      if (data.announcements_paused) {
+        toast.info('⏸ Annonces mises en pause');
+      } else {
+        toast.success('▶ Annonces relancées !');
+      }
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+    },
+  });
 
   return (
     <div className="animate-fade-in px-2 sm:px-0">
@@ -216,9 +242,24 @@ export function AuctionLiveAnnouncements({
                   <PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   <span className="truncate">{t('live.resultsRound', { round: liveStatus?.auction?.round_number || '' })}</span>
                 </CardTitle>
-                <Badge variant={isComplete ? "default" : "secondary"} className={`text-xs sm:text-sm shrink-0 ${isReplaying ? 'animate-pulse' : ''}`}>
-                  {isReplaying ? `${replayVisibleCount}/${liveAnnonces.length}` : `${publishedCount}/${totalAnnonces}`}
-                </Badge>
+                <div className="flex items-center gap-1.5">
+                  {/* Pause/Resume button - visible when live (not replay, not complete) */}
+                  {!isReplaying && !isComplete && unpublishedCount > 0 && (
+                    <Button
+                      size="sm"
+                      variant={isPaused ? "default" : "outline"}
+                      className={`gap-1 text-xs ${isPaused ? 'bg-orange-500 hover:bg-orange-600 text-white' : ''}`}
+                      onClick={() => togglePause.mutate()}
+                      disabled={togglePause.isPending}
+                    >
+                      {isPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+                      <span className="hidden sm:inline">{isPaused ? 'Reprendre' : 'Pause'}</span>
+                    </Button>
+                  )}
+                  <Badge variant={isComplete ? "default" : "secondary"} className={`text-xs sm:text-sm shrink-0 ${isReplaying ? 'animate-pulse' : ''}`}>
+                    {isReplaying ? `${replayVisibleCount}/${liveAnnonces.length}` : `${publishedCount}/${totalAnnonces}`}
+                  </Badge>
+                </div>
               </div>
 
               {/* Round selector */}
@@ -251,6 +292,34 @@ export function AuctionLiveAnnouncements({
               )}
             </CardHeader>
             <CardContent className="py-2 sm:py-4 px-3 sm:px-6">
+              {/* Pause banner */}
+              {isPaused && !isReplaying && (
+                <div className="mb-3 p-3 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-between gap-3 animate-pulse">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Pause className="h-5 w-5 text-orange-500 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-orange-700 dark:text-orange-400">
+                        ⏸ Annonces en pause
+                      </p>
+                      {pausedByName && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          Mis en pause par {pausedByName}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="bg-orange-500 hover:bg-orange-600 text-white gap-1 shrink-0"
+                    onClick={() => togglePause.mutate()}
+                    disabled={togglePause.isPending}
+                  >
+                    <Play className="h-3.5 w-3.5" />
+                    Reprendre
+                  </Button>
+                </div>
+              )}
+
               {isReplaying ? (
                 <p className="text-xs sm:text-sm text-muted-foreground animate-pulse">
                   🎬 Replay en cours... prochaine annonce dans 5s

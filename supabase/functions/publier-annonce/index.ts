@@ -18,6 +18,20 @@ Deno.serve(async (req) => {
 
     const { auction_id, publish_all, lang = 'fr', auto_mode } = await req.json();
     console.log('Publishing annonce for auction:', auction_id, 'publish_all:', publish_all, 'auto_mode:', auto_mode, 'lang:', lang);
+
+    // Check if announcements are paused
+    const { data: auctionCheck } = await supabase
+      .from('auctions')
+      .select('announcements_paused')
+      .eq('id', auction_id)
+      .single();
+
+    if (auctionCheck?.announcements_paused) {
+      return new Response(
+        JSON.stringify({ error: 'Les annonces sont en pause. Un manager a demandé une pause.' }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     // Use 10s intervals in auto mode, 1s in manual mode
     const intervalMs = auto_mode ? 10000 : 1000;
