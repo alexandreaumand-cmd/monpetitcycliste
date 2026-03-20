@@ -75,7 +75,7 @@ export const BonusPointsDetailDialog = ({
       // Enrichir avec l'équipe de la saison
       const enrichedData = await Promise.all(
         (data || []).map(async (bonus) => {
-          if (!bonus.coureur_id) return { ...bonus, coureur_equipe: null, course_display: null };
+          if (!bonus.coureur_id) return { ...bonus, coureur_equipe: null, course_display: null, classement_type: null, etape_numero: null, base_points: 0 };
 
           // Récupérer l'équipe de la saison via coureurs_saisons -> equipes_saisons
           const { data: coureurSaison } = await supabase
@@ -97,18 +97,36 @@ export const BonusPointsDetailDialog = ({
             equipeName = equipeSaison?.nom_affiche || equipeSaison?.trigramme || 'N/A';
           }
 
-          // Parser le commentaire pour extraire la course et l'étape
-          // Format: "Bonus coureur automatique (25%) - course_id - TypeClassement"
-          // ou "Bonus +25% (cote X) - course_nom"
+          // Parser le commentaire pour extraire course_id, type classement et étape
+          // Formats possibles:
+          // "Bonus coureur automatique (25%) - course_id - Etape Etape 3"
+          // "Bonus coureur automatique (25%) - course_id - Etape"
+          // "Bonus coureur automatique (25%) - course_id - General"
+          // "Bonus +25% (cote X) - course_nom"
           let courseDisplay = bonus.commentaire || '';
           let courseId: string | null = null;
           let classementType: string | null = null;
+          let etapeNumero: string | null = null;
           
           if (courseDisplay.includes(' - ')) {
             const parts = courseDisplay.split(' - ');
             if (parts.length >= 2) {
-              courseId = parts[1];
-              classementType = parts[2] || null;
+              courseId = parts[1]?.trim() || null;
+              const classementRaw = parts[2]?.trim() || null;
+              if (classementRaw) {
+                // Extract stage number: "Etape Etape 3" or "Etape 3" or "General"
+                const etapeMatch = classementRaw.match(/Etape\s+(\d+)/);
+                if (etapeMatch) {
+                  etapeNumero = etapeMatch[1];
+                  classementType = 'Etape';
+                } else if (classementRaw.toLowerCase().includes('general')) {
+                  classementType = 'Général';
+                } else if (classementRaw.toLowerCase().includes('etape')) {
+                  classementType = 'Etape';
+                } else {
+                  classementType = classementRaw;
+                }
+              }
             }
           }
 
@@ -126,13 +144,16 @@ export const BonusPointsDetailDialog = ({
             }
           }
           
-          // Construire l'affichage final: "Nom Course - TypeClassement"
-          courseDisplay = courseName + (classementType ? ` - ${classementType}` : '');
+          // Calculer les points barème (bonus = base * 0.25, donc base = bonus * 4)
+          const basePoints = Math.round(bonus.points * 4 * 100) / 100;
 
           return {
             ...bonus,
             coureur_equipe: equipeName,
-            course_display: courseDisplay
+            course_display: courseName,
+            classement_type: classementType,
+            etape_numero: etapeNumero,
+            base_points: basePoints,
           };
         })
       );
@@ -317,9 +338,12 @@ export const BonusPointsDetailDialog = ({
                           <TableRow>
                             {!phaseId && <TableHead>Phase</TableHead>}
                             <TableHead>Coureur</TableHead>
-                            <TableHead>Équipe</TableHead>
-                            <TableHead>Détail</TableHead>
-                            <TableHead className="text-right">Points</TableHead>
+                            <TableHead className="hidden md:table-cell">Équipe</TableHead>
+                            <TableHead>Course</TableHead>
+                            <TableHead>Class.</TableHead>
+                            <TableHead>Ét.</TableHead>
+                            <TableHead className="text-right hidden md:table-cell">Barème</TableHead>
+                            <TableHead className="text-right">Bonus</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -330,14 +354,23 @@ export const BonusPointsDetailDialog = ({
                                   P{bonus.phases?.index_dans_saison}
                                 </TableCell>
                               )}
-                              <TableCell className="font-medium">
+                              <TableCell className="font-medium text-sm">
                                 {bonus.coureurs?.nom}
                               </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
+                              <TableCell className="text-sm text-muted-foreground hidden md:table-cell">
                                 {bonus.coureur_equipe}
                               </TableCell>
-                              <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                                {bonus.course_display || bonus.commentaire}
+                              <TableCell className="text-sm">
+                                {bonus.course_display || '—'}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {bonus.classement_type || '—'}
+                              </TableCell>
+                              <TableCell className="text-sm font-medium">
+                                {bonus.etape_numero ? `E${bonus.etape_numero}` : (bonus.classement_type === 'Général' ? 'GC' : '—')}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm text-muted-foreground hidden md:table-cell">
+                                {bonus.base_points}
                               </TableCell>
                               <TableCell className="text-right font-mono font-medium text-green-600">
                                 +{bonus.points}
