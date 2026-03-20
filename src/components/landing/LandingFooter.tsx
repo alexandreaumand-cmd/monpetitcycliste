@@ -31,6 +31,7 @@ const LandingFooter = () => {
               <li><Link to="/about" className="text-white/50 hover:text-bordure-gold text-sm transition-colors font-inter">{t("footer.game.about")}</Link></li>
               <li><Link to="/rules" className="text-white/50 hover:text-bordure-gold text-sm transition-colors font-inter">{t("footer.game.rules")}</Link></li>
               <li><Link to="/how-to-play" className="text-white/50 hover:text-bordure-gold text-sm transition-colors font-inter">{t("footer.game.howToPlay")}</Link></li>
+              <li><Link to="/team" className="text-white/50 hover:text-bordure-gold text-sm transition-colors font-inter">{t("footer.game.team")}</Link></li>
             </ul>
           </div>
 
