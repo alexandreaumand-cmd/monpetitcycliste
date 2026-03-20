@@ -18,7 +18,25 @@
     "blocks": {
       "auction": {
         "title": "Draft at auctions",
-        "text": "Browse the peloton, filter by price or UCI category, and bid on the riders you want. Limited budget, strategic choices — every bid counts against your opponents."
+        "text": "Browse the peloton, filter by price or UCI category, and bid on the riders you want.",
+        "steps": {
+          "bid": {
+            "title": "Place your bids",
+            "desc": "Pick a rider and bid what you want. But watch out — your budget is limited!"
+          },
+          "win": {
+            "title": "Highest bidder wins",
+            "desc": "When the round closes, the highest bid wins the rider for their team."
+          },
+          "rounds": {
+            "title": "Multiple rounds",
+            "desc": "Auctions run over several successive rounds. Adapt your strategy each time."
+          },
+          "team": {
+            "title": "Build your full squad",
+            "desc": "Round after round, assemble a complete team of 30 riders ready to score."
+          }
+        }
       },
       "team": {
         "title": "Build your team",
