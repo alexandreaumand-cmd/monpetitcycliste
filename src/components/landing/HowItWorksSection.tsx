@@ -9,7 +9,7 @@ const HowItWorksSection = () => {
   const { t } = useTranslation("home");
 
   return (
-    <section className="py-20 md:py-32 bg-bordure-cream">
+    <section className="pt-10 pb-20 md:pt-16 md:pb-32 bg-bordure-cream">
       <div className="container mx-auto px-5">
         <motion.p
           className="text-bordure-gold font-inter text-sm tracking-[0.2em] uppercase mb-16 md:mb-24 flex items-center gap-3"
