@@ -113,7 +113,7 @@ export const AnnouncementsLive = ({
               {unpublished.length > 1 && (
                 <Button 
                   onClick={onPublishAll}
-                  disabled={isLoading}
+                  disabled={isLoading || isPaused}
                   variant="outline"
                   className="gap-2"
                 >
