@@ -18,7 +18,25 @@
     "blocks": {
       "auction": {
         "title": "Recrute aux enchères",
-        "text": "Parcours le peloton, filtre par prix ou catégorie UCI, et place tes enchères sur les coureurs que tu veux recruter. Budget limité, choix stratégiques — chaque mise compte face à tes adversaires."
+        "text": "Parcours le peloton, filtre par prix ou catégorie UCI, et place tes enchères sur les coureurs que tu veux recruter.",
+        "steps": {
+          "bid": {
+            "title": "Place tes enchères",
+            "desc": "Choisis un coureur et mise le montant que tu veux. Attention, ton budget est limité !"
+          },
+          "win": {
+            "title": "Le plus offrant gagne",
+            "desc": "À la clôture du tour, celui qui a misé le plus remporte le coureur dans son équipe."
+          },
+          "rounds": {
+            "title": "Plusieurs tours",
+            "desc": "Les enchères se déroulent en plusieurs tours successifs. Adapte ta stratégie à chaque round."
+          },
+          "team": {
+            "title": "Constitue ton effectif",
+            "desc": "Tour après tour, construis une équipe complète de 30 coureurs prête à scorer."
+          }
+        }
       },
       "team": {
         "title": "Compose ton équipe",
