@@ -12,13 +12,14 @@ const HowItWorksSection = () => {
     <section className="py-20 md:py-32 bg-bordure-cream">
       <div className="container mx-auto px-5">
         <motion.p
-          className="text-bordure-gold font-inter text-sm tracking-[0.2em] uppercase mb-16 md:mb-24"
+          className="text-bordure-gold font-inter text-sm tracking-[0.2em] uppercase mb-16 md:mb-24 flex items-center gap-3"
           initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
           whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
           {t("discover.surtitle")}
+          <span className="inline-block w-6 h-0.5 bg-bordure-pink rounded-full" />
         </motion.p>
 
         <div className="space-y-24 md:space-y-40">
@@ -36,28 +37,31 @@ const HowItWorksSection = () => {
 /** Shared step list component */
 const StepList = ({ steps, className = "" }: { steps: { icon: any; title: string; desc: string }[]; className?: string }) => (
   <div className={`space-y-5 ${className}`}>
-    {steps.map((step, i) => (
-      <motion.div
-        key={i}
-        className="flex items-start gap-4"
-        initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
-        whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.5, delay: 0.1 * i, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <div className="w-10 h-10 rounded-xl bg-bordure-gold/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <step.icon className="w-5 h-5 text-bordure-gold" />
-        </div>
-        <div>
-          <p className="font-montserrat font-bold text-secondary text-sm mb-0.5">
-            {step.title}
-          </p>
-          <p className="text-secondary/50 font-inter text-sm leading-relaxed">
-            {step.desc}
-          </p>
-        </div>
-      </motion.div>
-    ))}
+    {steps.map((step, i) => {
+      const isPink = i === 1 || i === 3;
+      return (
+        <motion.div
+          key={i}
+          className="flex items-start gap-4"
+          initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
+          whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.5, delay: 0.1 * i, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${isPink ? "bg-bordure-pink/10" : "bg-bordure-gold/10"}`}>
+            <step.icon className={`w-5 h-5 ${isPink ? "text-bordure-pink" : "text-bordure-gold"}`} />
+          </div>
+          <div>
+            <p className="font-montserrat font-bold text-secondary text-sm mb-0.5">
+              {step.title}
+            </p>
+            <p className="text-secondary/50 font-inter text-sm leading-relaxed">
+              {step.desc}
+            </p>
+          </div>
+        </motion.div>
+      );
+    })}
   </div>
 );
 

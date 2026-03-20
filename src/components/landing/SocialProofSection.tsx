@@ -82,7 +82,7 @@ const SocialProofSection = () => {
               viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
             >
-              <Quote className="w-5 h-5 text-bordure-gold mb-3 opacity-60" />
+              <Quote className="w-5 h-5 text-bordure-pink mb-3 opacity-80" />
               <p className="text-white/80 font-inter text-sm leading-relaxed mb-4">
                 "{quote.text}"
               </p>

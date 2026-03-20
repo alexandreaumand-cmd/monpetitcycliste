@@ -50,9 +50,9 @@ const LandingFooter = () => {
               {t("footer.community.title")}
             </h4>
             <ul className="space-y-2">
-              <li><a href="#" className="text-white/50 hover:text-bordure-gold text-sm transition-colors font-inter">{t("footer.community.contact")}</a></li>
-              <li><a href="#" className="text-white/50 hover:text-bordure-gold text-sm transition-colors font-inter">{t("footer.community.discord")}</a></li>
-              <li><a href="#" className="text-white/50 hover:text-bordure-gold text-sm transition-colors font-inter">{t("footer.community.instagram")}</a></li>
+              <li><a href="#" className="text-white/50 hover:text-bordure-pink text-sm transition-colors font-inter">{t("footer.community.contact")}</a></li>
+              <li><a href="#" className="text-white/50 hover:text-bordure-pink text-sm transition-colors font-inter">{t("footer.community.discord")}</a></li>
+              <li><a href="#" className="text-white/50 hover:text-bordure-pink text-sm transition-colors font-inter">{t("footer.community.instagram")}</a></li>
             </ul>
           </div>
         </div>
