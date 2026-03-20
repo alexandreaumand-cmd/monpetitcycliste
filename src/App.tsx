@@ -23,6 +23,12 @@ const JoinLeaguePage = React.lazy(() => import("./pages/JoinLeaguePage").then(m 
 const InvitePage = React.lazy(() => import("./pages/InvitePage").then(m => ({ default: m.InvitePage })));
 const InviteShortPage = React.lazy(() => import("./pages/InviteShortPage").then(m => ({ default: m.InviteShortPage })));
 const CompleteProfile = React.lazy(() => import("./pages/CompleteProfile"));
+const AboutPage = React.lazy(() => import("./pages/AboutPage"));
+const RulesPage = React.lazy(() => import("./pages/RulesPage"));
+const HowToPlayPage = React.lazy(() => import("./pages/HowToPlayPage"));
+const LegalNoticePage = React.lazy(() => import("./pages/LegalNoticePage"));
+const TermsPage = React.lazy(() => import("./pages/TermsPage"));
+const PrivacyPage = React.lazy(() => import("./pages/PrivacyPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,6 +62,12 @@ const App = () => {
                       <Route path="/i/:token" element={<InviteShortPage />} />
                       <Route path="/invite" element={<InvitePage />} />
                       <Route path="/join" element={<JoinLeaguePage />} />
+                      <Route path="/about" element={<AboutPage />} />
+                      <Route path="/rules" element={<RulesPage />} />
+                      <Route path="/how-to-play" element={<HowToPlayPage />} />
+                      <Route path="/legal" element={<LegalNoticePage />} />
+                      <Route path="/terms" element={<TermsPage />} />
+                      <Route path="/privacy" element={<PrivacyPage />} />
                       <Route path="/dashboard/*" element={<Dashboard />} />
                       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                       <Route path="*" element={<NotFound />} />
