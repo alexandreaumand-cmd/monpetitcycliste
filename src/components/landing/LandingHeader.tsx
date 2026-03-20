@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import logoLight from "@/assets/logo-bordure-light.png";
+import logoDark from "@/assets/logo-bordure.png";
 
 const LandingHeader = () => {
   const { t } = useTranslation("home");
