@@ -75,7 +75,7 @@ export const BonusPointsDetailDialog = ({
       // Enrichir avec l'équipe de la saison
       const enrichedData = await Promise.all(
         (data || []).map(async (bonus) => {
-          if (!bonus.coureur_id) return { ...bonus, coureur_equipe: null, course_display: null };
+          if (!bonus.coureur_id) return { ...bonus, coureur_equipe: null, course_display: null, classement_type: null, etape_numero: null, base_points: 0 };
 
           // Récupérer l'équipe de la saison via coureurs_saisons -> equipes_saisons
           const { data: coureurSaison } = await supabase
