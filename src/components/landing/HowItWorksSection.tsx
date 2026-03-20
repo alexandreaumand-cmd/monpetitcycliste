@@ -195,7 +195,58 @@ const TeamBlock = () => {
   );
 };
 
-/** iPhone-style device frame */
+/** Ranking/Calendar block: text+steps on the left, phone mockup on the right */
+const RankingBlock = () => {
+  const { t } = useTranslation("home");
+
+  const steps = [
+    { icon: Globe, title: t("discover.blocks.ranking.steps.allRaces.title"), desc: t("discover.blocks.ranking.steps.allRaces.desc") },
+    { icon: ListChecks, title: t("discover.blocks.ranking.steps.startlists.title"), desc: t("discover.blocks.ranking.steps.startlists.desc") },
+    { icon: Target, title: t("discover.blocks.ranking.steps.strategy.title"), desc: t("discover.blocks.ranking.steps.strategy.desc") },
+    { icon: CalendarDays, title: t("discover.blocks.ranking.steps.calendar.title"), desc: t("discover.blocks.ranking.steps.calendar.desc") },
+  ];
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-10 lg:gap-20 items-center">
+      <motion.div
+        className="flex-1"
+        initial={{ opacity: 0, x: -20, filter: "blur(4px)" }}
+        whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-montserrat font-bold text-secondary leading-[1.05] mb-4">
+          {t("discover.blocks.ranking.title")}
+        </h2>
+        <p className="text-secondary/60 font-inter text-base sm:text-lg leading-relaxed mb-8">
+          {t("discover.blocks.ranking.text")}
+        </p>
+        <StepList steps={steps} />
+      </motion.div>
+
+      <motion.div
+        className="lg:w-[280px] lg:flex-shrink-0 flex justify-center"
+        initial={{ opacity: 0, x: 20, filter: "blur(4px)" }}
+        whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div className="w-[260px] sm:w-[280px]">
+          <PhoneMockup>
+            <img
+              src="/screenshots/startlist.png"
+              alt={t("discover.blocks.ranking.title")}
+              className="w-full h-[110%] object-cover object-top"
+              loading="lazy"
+            />
+          </PhoneMockup>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+
 const PhoneMockup = ({ children }: { children: React.ReactNode }) => (
   <div className="relative">
     <div className="bg-secondary rounded-[2.5rem] p-2.5 shadow-2xl shadow-secondary/30">
