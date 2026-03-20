@@ -41,7 +41,7 @@ export function AuctionLiveAnnouncements({
   onBack,
 }: AuctionLiveAnnouncementsProps) {
   const { t } = useTranslation('auction');
-  const [selectedAuctionId, setSelectedAuctionId] = useState(auctionId);
+  const [selectedAuctionId, setSelectedAuctionId] = useState<string | null>(null);
   const [liveAnnonces, setLiveAnnonces] = useState<any[]>([]);
   const [replayVisibleCount, setReplayVisibleCount] = useState(0);
   const [isReplaying, setIsReplaying] = useState(false);
@@ -76,17 +76,30 @@ export function AuctionLiveAnnouncements({
     },
   });
 
-  // Fetch live status using selectedAuctionId
+  // Compute the effective auction ID: user selection > last closed round > passed auctionId
+  const effectiveAuctionId = selectedAuctionId || (() => {
+    if (availableRounds.length > 0) {
+      // Find the last closed round
+      const closedRounds = availableRounds.filter(r => r.statut === 'closed');
+      if (closedRounds.length > 0) {
+        return closedRounds[closedRounds.length - 1].id;
+      }
+    }
+    return auctionId;
+  })();
+
+  // Fetch live status using effectiveAuctionId
   const { data: liveStatus, refetch } = useQuery({
-    queryKey: ['auction-live-status', selectedAuctionId, managerId, leagueId],
+    queryKey: ['auction-live-status', effectiveAuctionId, managerId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('auction-get-live-status', {
-        body: { auction_id: selectedAuctionId, phase_id: phaseId, league_id: leagueId },
+        body: { auction_id: effectiveAuctionId, phase_id: phaseId, league_id: leagueId },
       });
       if (error) throw error;
       return data;
     },
     refetchInterval: 3000,
+    enabled: !!effectiveAuctionId,
   });
 
   // Cleanup replay timer on unmount
@@ -106,8 +119,8 @@ export function AuctionLiveAnnouncements({
 
       if (isClosedRound) {
         // Only start replay once per auction
-        if (replayStartedForRef.current === selectedAuctionId) return;
-        replayStartedForRef.current = selectedAuctionId;
+        if (replayStartedForRef.current === effectiveAuctionId) return;
+        replayStartedForRef.current = effectiveAuctionId;
 
         if (replayTimerRef.current) clearInterval(replayTimerRef.current);
         setReplayVisibleCount(1);
@@ -129,7 +142,7 @@ export function AuctionLiveAnnouncements({
         setIsReplaying(false);
       }
     }
-  }, [liveStatus, selectedAuctionId]);
+  }, [liveStatus, effectiveAuctionId]);
 
   // Handle new announcements - scroll to top for reversed order
   useEffect(() => {
@@ -152,7 +165,7 @@ export function AuctionLiveAnnouncements({
           event: 'UPDATE',
           schema: 'public',
           table: 'annonces',
-          filter: `auction_id=eq.${selectedAuctionId}`,
+          filter: `auction_id=eq.${effectiveAuctionId}`,
         },
         (payload) => {
           console.log('New annonce published!', payload);
@@ -164,7 +177,7 @@ export function AuctionLiveAnnouncements({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedAuctionId, refetch]);
+  }, [effectiveAuctionId, refetch]);
 
   const toggleManager = (managerId: string) => {
     setOpenManagers(prev => {
@@ -215,7 +228,7 @@ export function AuctionLiveAnnouncements({
                     {availableRounds.map((round) => (
                       <Button
                         key={round.id}
-                        variant={selectedAuctionId === round.id ? "default" : "outline"}
+                        variant={effectiveAuctionId === round.id ? "default" : "outline"}
                         size="sm"
                         className="shrink-0 text-xs"
                         onClick={() => {
