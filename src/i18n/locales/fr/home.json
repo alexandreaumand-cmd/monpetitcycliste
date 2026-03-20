@@ -70,11 +70,11 @@
           },
           "startlists": {
             "title": "Startlists complètes",
-            "desc": "Consulte la liste de départ de chaque course pour anticiper les points."
+            "desc": "Consulte les startlists et vois comment tu te situes vis à vis de tes concurrents."
           },
           "strategy": {
-            "title": "Planifie ta stratégie",
-            "desc": "Anticipe les résultats et optimise tes choix course par course."
+            "title": "Regarde les courses en priant pour que tes coureurs marquent des points",
+            "desc": "Chaque arrivée est maintenant stressante pour toi."
           },
           "calendar": {
             "title": "Calendrier visuel",
