@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import mpcLogoVertical from "@/assets/mpc-logo-vertical.png";
-import BordureStripes from "./BordureStripes";
+import logoBordureLight from "@/assets/logo-bordure-light.png";
 
 const LandingFooter = () => {
   const { t } = useTranslation("home");
