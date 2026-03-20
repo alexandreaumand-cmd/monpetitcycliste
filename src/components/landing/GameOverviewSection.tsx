@@ -38,7 +38,7 @@ const GameOverviewSection = () => {
                 whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 viewport={{ once: true, amount: 0.2 }}
                 transition={{ duration: 0.6, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-                className="relative bg-white rounded-2xl p-6 md:p-8 flex flex-col items-center text-center gap-4 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-black/[0.04]"
+                className="relative bg-card rounded-2xl p-6 md:p-8 flex flex-col items-center text-center gap-4 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-border"
               >
                 {/* Step number */}
                 <span className={`absolute top-3 right-4 font-montserrat font-bold text-lg ${style.number}`}>
@@ -56,7 +56,7 @@ const GameOverviewSection = () => {
                 </h3>
 
                 {/* Description */}
-                <p className="text-bordure-text/80 text-sm leading-relaxed">
+                <p className="text-muted-foreground text-sm leading-relaxed">
                   {t(`overview.steps.${key}.desc`)}
                 </p>
               </motion.div>
