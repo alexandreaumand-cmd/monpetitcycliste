@@ -11,7 +11,8 @@
     "cta": {
       "createLeague": "Create my league",
       "myLeagues": "My Leagues",
-      "discover": "Discover"
+      "discover": "Discover",
+      "install": "Install the app"
     }
   },
   "overview": {
@@ -173,5 +174,10 @@
       "privacy": "Privacy"
     },
     "copyright": "© 2025 La Bordure. All rights reserved."
+  },
+  "installBanner": {
+    "title": "Take La Bordure everywhere",
+    "subtitle": "Install the app on your phone to follow races live.",
+    "cta": "Install the app"
   }
 }

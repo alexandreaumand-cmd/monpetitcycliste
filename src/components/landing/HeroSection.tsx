@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
@@ -76,7 +77,7 @@ const HeroSection = () => {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
+            className="flex flex-wrap gap-3"
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.9, ease: [0.16, 1, 0.3, 1] }}
           >
@@ -86,6 +87,16 @@ const HeroSection = () => {
                 className="text-base sm:text-lg px-10 py-7 bg-bordure-gold hover:bg-bordure-gold/90 text-secondary font-montserrat font-bold shadow-xl shadow-bordure-gold/20 active:scale-[0.97] transition-transform"
               >
                 {t("hero.cta.createLeague")}
+              </Button>
+            </Link>
+            <Link to="/install">
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-base sm:text-lg px-8 py-7 border-white/40 bg-white/10 hover:bg-white/20 text-white font-montserrat font-semibold active:scale-[0.97] transition-transform"
+              >
+                <Download className="w-5 h-5 mr-2" />
+                {t("hero.cta.install")}
               </Button>
             </Link>
           </motion.div>

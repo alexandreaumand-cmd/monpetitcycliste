@@ -11,7 +11,8 @@
     "cta": {
       "createLeague": "Créer ma ligue",
       "myLeagues": "Mes Ligues",
-      "discover": "Découvrir"
+      "discover": "Découvrir",
+      "install": "Installer l'app"
     }
   },
   "overview": {
@@ -173,5 +174,10 @@
       "privacy": "Confidentialité"
     },
     "copyright": "© 2025 La Bordure. Tous droits réservés."
+  },
+  "installBanner": {
+    "title": "Emporte La Bordure partout",
+    "subtitle": "Installe l'app sur ton téléphone pour suivre les courses en direct.",
+    "cta": "Installer l'app"
   }
 }

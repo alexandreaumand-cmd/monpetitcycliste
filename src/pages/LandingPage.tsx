@@ -8,6 +8,7 @@ import {
   CTASection,
   LandingFooter,
 } from "@/components/landing";
+import InstallBanner from "@/components/landing/InstallBanner";
 
 const LandingPage = () => {
   return (
@@ -19,6 +20,7 @@ const LandingPage = () => {
         <HowItWorksSection />
         <AuctionShowcase />
         <SocialProofSection />
+        <InstallBanner />
         <CTASection />
       </main>
       <LandingFooter />
