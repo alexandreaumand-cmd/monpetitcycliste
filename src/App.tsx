@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SeasonProvider } from "./contexts/SeasonContext";
 import { LeagueProvider } from "./contexts/LeagueContext";
@@ -79,9 +79,6 @@ const App = () => {
               </SeasonProvider>
             </LeagueProvider>
           </BrowserRouter>
-          {import.meta.env.DEV && (
-            <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
-          )}
         </QueryClientProvider>
       </ThemeProvider>
     </ErrorBoundary>
