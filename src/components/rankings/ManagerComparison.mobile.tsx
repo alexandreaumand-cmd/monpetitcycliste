@@ -11,6 +11,7 @@ import { Trophy, Users, TrendingUp, Target, BarChart3 } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend, ResponsiveContainer } from "recharts";
 import { useLeague } from "@/contexts/LeagueContext";
 import { ManagerSelect } from "@/components/shared/ManagerSelect";
+import { isStageRace } from "@/lib/courseType";
 
 interface ManagerComparisonMobileProps {
   phaseId: string | null;
