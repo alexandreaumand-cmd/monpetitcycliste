@@ -179,7 +179,7 @@ const TeamBlock = () => {
   return (
     <div className="flex flex-col lg:flex-row-reverse gap-10 lg:gap-20 items-center">
       <motion.div
-        className="lg:flex-shrink-0 lg:w-[400px]"
+        className="flex-1"
         initial={{ opacity: 0, x: 20, filter: "blur(4px)" }}
         whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
         viewport={{ once: true, amount: 0.2 }}
