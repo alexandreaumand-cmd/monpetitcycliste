@@ -21,6 +21,7 @@ import leFantomeAvatar from "@/assets/team/le-fantome.png";
 import leBossAvatar from "@/assets/team/le-boss.png";
 import lAyatollahAvatar from "@/assets/team/layatollah.png";
 import leDocAvatar from "@/assets/team/le-doc.png";
+import laPepiteAvatar from "@/assets/team/la-pepite.png";
 
 interface TeamMember {
   nickname: string;
@@ -37,7 +38,7 @@ const members: TeamMember[] = [
   { nickname: "Le Sachant", description: "Il connaît tout sur tout, imbattable au quizz.", icon: GraduationCap, accentColor: "pink", avatar: leSachantAvatar },
   { nickname: "Le Rappeur", description: "Le plus créatif de la bande, fan de baies vitrées.", icon: Palette, accentColor: "gold", avatar: leRappeurAvatar },
   { nickname: "Le Doc", description: "On sait toujours pas trop ce qu'il farfouille, mais il gagne 5 phases d'affilé. Louche.", icon: Stethoscope, accentColor: "pink", avatar: leDocAvatar },
-  { nickname: "La Pépite", description: "Il s'est essayé au football. Barré par Mvila, il suit maintenant le vélo.", icon: Trophy, accentColor: "gold" },
+  { nickname: "La Pépite", description: "Il s'est essayé au football. Barré par Mvila, il suit maintenant le vélo.", icon: Trophy, accentColor: "gold", avatar: laPepiteAvatar },
   { nickname: "Le BOSS", description: "Il a renversé la table et a pris le pouvoir.", icon: Crown, accentColor: "pink", avatar: leBossAvatar },
   { nickname: "Le Codeur", description: "Il débug, fait évoluer, c'est lui qui tient la barre.", icon: Code, accentColor: "gold", avatar: leCodeurAvatar },
   { nickname: "Le Fantôme", description: "Plus occupé à bouffer des frites à la cantine qu'à suivre le vélo.", icon: Ghost, accentColor: "pink", avatar: leFantomeAvatar },
