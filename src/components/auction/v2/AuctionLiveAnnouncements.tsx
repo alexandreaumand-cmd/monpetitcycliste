@@ -193,7 +193,11 @@ export function AuctionLiveAnnouncements({
   };
 
   // Compute visible announcements for replay
-  const visibleAnnonces = liveAnnonces.slice(0, replayVisibleCount);
+  // API returns newest first (DESC). For replay, reveal from oldest (cheapest) by slicing from the end.
+  // This keeps newest-revealed at index 0, so it appears at the top of the feed.
+  const visibleAnnonces = isReplaying
+    ? liveAnnonces.slice(-replayVisibleCount)
+    : liveAnnonces.slice(0, replayVisibleCount);
 
   const totalAnnonces = liveStatus?.total_annonces || 0;
   const publishedCount = liveStatus?.published_count || 0;
