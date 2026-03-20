@@ -84,7 +84,25 @@
       },
       "classement": {
         "title": "Domine le classement",
-        "text": "Classement général, hebdomadaire, par coureur ou chrono — plusieurs façons de briller. Compare-toi à tes amis et grimpe au sommet de ta ligue."
+        "text": "Classement général, hebdomadaire, par coureur ou chrono — plusieurs façons de briller.",
+        "steps": {
+          "general": {
+            "title": "Classement général",
+            "desc": "Cumule les points de tous tes coureurs sur toute la saison et prouve que tu es le meilleur."
+          },
+          "weekly": {
+            "title": "Classement hebdo",
+            "desc": "Chaque semaine, un nouveau duel. Même en retard au général, tu peux briller sur 7 jours."
+          },
+          "trash": {
+            "title": "Chambre tes potes",
+            "desc": "Compare-toi à tes amis en direct et rappelle-leur que tu connais mieux le cyclisme qu'eux."
+          },
+          "climb": {
+            "title": "Grimpe au sommet",
+            "desc": "Suis ta progression au fil des semaines et vise la première place de ta ligue."
+          }
+        }
       }
     }
   },

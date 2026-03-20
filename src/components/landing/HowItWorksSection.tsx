@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { Gavel, Trophy, RotateCcw, Users, MapPin, Award, SlidersHorizontal, Activity, Globe, ListChecks, Target, CalendarDays } from "lucide-react";
+import { Gavel, Trophy, RotateCcw, Users, MapPin, Award, SlidersHorizontal, Activity, Globe, ListChecks, Target, CalendarDays, Crown, Calendar, MessageCircle, TrendingUp } from "lucide-react";
 
 /**
  * "Découvre le jeu" — auction block, team block, ranking block, then classement phone block
@@ -26,42 +26,7 @@ const HowItWorksSection = () => {
           <TeamBlock />
           <RankingBlock />
 
-          {/* Classement block — simple phone mockup */}
-          <div className="flex flex-col lg:flex-row gap-10 lg:gap-20 items-center">
-            <motion.div
-              className="flex-1 max-w-lg"
-              initial={{ opacity: 0, x: -20, filter: "blur(4px)" }}
-              whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-montserrat font-bold text-secondary leading-[1.05] mb-4">
-                {t("discover.blocks.classement.title")}
-              </h2>
-              <p className="text-secondary/60 font-inter text-base sm:text-lg leading-relaxed">
-                {t("discover.blocks.classement.text")}
-              </p>
-            </motion.div>
-
-            <motion.div
-              className="flex-1 flex justify-center"
-              initial={{ opacity: 0, x: 20, filter: "blur(4px)" }}
-              whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <div className="w-[260px] sm:w-[280px]">
-                <PhoneMockup>
-                  <img
-                    src="/screenshots/ranking.png"
-                    alt={t("discover.blocks.classement.title")}
-                    className="w-full h-[110%] object-cover object-top"
-                    loading="lazy"
-                  />
-                </PhoneMockup>
-              </div>
-            </motion.div>
-          </div>
+          <ClassementBlock />
         </div>
       </div>
     </section>
@@ -236,6 +201,57 @@ const RankingBlock = () => {
             <img
               src="/screenshots/startlist.png"
               alt={t("discover.blocks.ranking.title")}
+              className="w-full h-[110%] object-cover object-top"
+              loading="lazy"
+            />
+          </PhoneMockup>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+/** Classement block: text+steps on the left, phone mockup on the right */
+const ClassementBlock = () => {
+  const { t } = useTranslation("home");
+
+  const steps = [
+    { icon: Crown, title: t("discover.blocks.classement.steps.general.title"), desc: t("discover.blocks.classement.steps.general.desc") },
+    { icon: Calendar, title: t("discover.blocks.classement.steps.weekly.title"), desc: t("discover.blocks.classement.steps.weekly.desc") },
+    { icon: MessageCircle, title: t("discover.blocks.classement.steps.trash.title"), desc: t("discover.blocks.classement.steps.trash.desc") },
+    { icon: TrendingUp, title: t("discover.blocks.classement.steps.climb.title"), desc: t("discover.blocks.classement.steps.climb.desc") },
+  ];
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-10 lg:gap-20 items-center">
+      <motion.div
+        className="flex-1"
+        initial={{ opacity: 0, x: -20, filter: "blur(4px)" }}
+        whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-montserrat font-bold text-secondary leading-[1.05] mb-4">
+          {t("discover.blocks.classement.title")}
+        </h2>
+        <p className="text-secondary/60 font-inter text-base sm:text-lg leading-relaxed mb-8">
+          {t("discover.blocks.classement.text")}
+        </p>
+        <StepList steps={steps} />
+      </motion.div>
+
+      <motion.div
+        className="lg:w-[280px] lg:flex-shrink-0 flex justify-center"
+        initial={{ opacity: 0, x: 20, filter: "blur(4px)" }}
+        whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div className="w-[260px] sm:w-[280px]">
+          <PhoneMockup>
+            <img
+              src="/screenshots/ranking.png"
+              alt={t("discover.blocks.classement.title")}
               className="w-full h-[110%] object-cover object-top"
               loading="lazy"
             />
