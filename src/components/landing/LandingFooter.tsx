@@ -42,7 +42,7 @@ const LandingFooter = () => {
           </div>
         </div>
 
-        <BordureStripes orientation="horizontal" className="mb-8" />
+        <div className="border-t border-white/10 mb-8" />
 
         <div className="text-center">
           <p className="text-white/40 text-sm font-inter">
