@@ -18,15 +18,19 @@
     "blocks": {
       "auction": {
         "title": "Draft at auctions",
-        "text": "Challenge your friends in real time to recruit the best riders in the peloton. Every bid counts."
+        "text": "Browse the peloton, filter by price or UCI category, and bid on the riders you want. Limited budget, strategic choices — every bid counts against your opponents."
       },
       "team": {
         "title": "Build your team",
-        "text": "Climbers, sprinters, rouleurs — build the perfect squad for every race."
+        "text": "Climbers, sprinters, rouleurs — up to 30 riders in your squad. Track their points in real time, optimize your roster phase after phase and aim for the perfect team."
       },
       "ranking": {
+        "title": "Follow the pro calendar",
+        "text": "Full UCI calendar with WorldTour, ProSeries and .1 races. Check startlists, anticipate results and plan your strategy race by race."
+      },
+      "classement": {
         "title": "Dominate the rankings",
-        "text": "Your riders score points in real UCI races. The best manager wins."
+        "text": "General, weekly, by rider or chrono rankings — multiple ways to shine. Compare yourself to friends and climb to the top of your league."
       }
     }
   },
