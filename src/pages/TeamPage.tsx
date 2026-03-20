@@ -144,7 +144,7 @@ const TeamPage = () => {
           className="mt-20 mb-4"
         >
           <h2 className="text-2xl md:text-3xl font-montserrat font-bold text-bordure-green text-center mb-10">
-            Ils parlent de nous
+            ILS PARLAIENT DÉJÀ DE NOUS AVANT LA BORDURE
           </h2>
 
           <div className="space-y-6">
