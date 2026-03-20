@@ -33,7 +33,9 @@ export const AnnouncementsLive = ({
   onPublishNext,
   onPublishAll,
   onCopy,
-  isLoading
+  isLoading,
+  isPaused,
+  pausedByName
 }: AnnouncementsLiveProps) => {
   const { t } = useTranslation('auction');
   const unpublished = announcements.filter(a => !a.published);
