@@ -98,7 +98,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       if (error) throw error;
       return data;
     },
-    enabled: context === null, // Only fetch if no active auction
+    enabled: !context, // Only fetch if no active auction
   });
 
   // Get next scheduled auction if no active auction
