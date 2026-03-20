@@ -1,26 +1,25 @@
 
 
-## Rendre la tête du coureur visible sur la photo de fond (mobile)
+## Générer une illustration pour "Le Codeur"
 
-### Problème
+### Approche
 
-Sur mobile (390px), la section AuctionShowcase empile le texte + le screenshot verticalement, ce qui crée une section haute. La photo de fond (`peloton-finish.jpg`) utilise `object-cover` sans position spécifique, donc le point focal (la tête du coureur) est coupé — le navigateur centre par défaut au milieu de l'image.
+Utiliser le modèle d'édition d'image (google/gemini-3.1-flash-image-preview) pour transformer la photo en illustration stylisée, cohérente avec la DA du site La Bordure : tons verts (#1B5E3B), or (#C8963A), crème (#F6F3ED), style épuré et premium.
 
-### Options possibles
+### Étapes
 
-1. **Ajuster `object-position` sur mobile** — Comme pour le hero, utiliser `object-[center_20%]` ou similaire pour remonter le point focal vers le haut de l'image où se trouve le coureur. Simple et rapide.
+1. **Copier le script AI** (`lovable_ai.py`) dans `/tmp/`
+2. **Générer l'illustration** via `--edit-image` avec un prompt décrivant le style souhaité : illustration minimaliste, trait fin, palette La Bordure (vert foncé, or, crème), style portrait éditorial
+3. **QA visuelle** : vérifier le résultat
+4. **Copier l'image** dans `src/assets/team/` du projet
+5. **Mettre à jour `TeamPage.tsx`** : ajouter un champ `avatar` optionnel au type `TeamMember`, afficher l'image à la place de l'icône pour Le Codeur
 
-2. **Réduire le padding vertical sur mobile** — Passer de `py-24` à `py-16` sur mobile pour que la section soit moins haute et que la photo couvre mieux la zone visible.
+### Fichiers impactés
 
-3. **Combiner les deux** — Position + padding ajustés.
+- `src/assets/team/le-codeur.png` — nouvelle illustration générée
+- `src/pages/TeamPage.tsx` — ajout du support avatar image pour les membres qui en ont un
 
-### Recommandation
+### Style de l'illustration
 
-Combiner les deux :
-- `object-position: center 30%` sur mobile pour remonter le focal vers la tête
-- Réduire le padding mobile à `py-16 md:py-36`
-
-### Fichier impacté
-
-- **`src/components/landing/AuctionShowcase.tsx`** — Ligne 17 : ajouter `object-[center_30%] sm:object-center` sur l'image de fond. Ligne 11 : changer `py-24` en `py-16`.
+Portrait stylisé, lignes épurées, fond crème/transparent, palette restreinte (vert bordure + or), aspect éditorial haut de gamme — pas cartoon, pas réaliste non plus. Un entre-deux sophistiqué type illustration magazine.
 
