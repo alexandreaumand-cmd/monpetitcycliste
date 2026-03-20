@@ -1,10 +1,8 @@
 /**
  * Course type normalization utilities
  * 
- * Handles inconsistent naming between database and application:
- * - Database: "One-day race", "Stages race" 
- * - Scoring rules: "one day race", "stage races"
- * - Display: "One day", "Stage race"
+ * Canonical values in database: "one_day", "stage_race"
+ * Legacy values may still appear from imports: "One-day race", "Stages race", "etapes", etc.
  */
 
 export interface NormalizedCourseType {
@@ -15,8 +13,18 @@ export interface NormalizedCourseType {
 }
 
 export function normalizeCourseType(typeValue: string | null | undefined): NormalizedCourseType {
-  const normalized = (typeValue || '').toLowerCase().trim();
-  // Check for various stage race indicators: 'stage', 'stages', 'etapes', 'étape', 'étapes'
+  const raw = (typeValue || '').trim();
+  const normalized = raw.toLowerCase();
+  
+  // Canonical match first
+  if (normalized === 'stage_race') {
+    return { isStage: true, canonicalForRules: 'stage races', display: 'Stage race', dbIlike: '%stage%' };
+  }
+  if (normalized === 'one_day') {
+    return { isStage: false, canonicalForRules: 'one day race', display: 'One day', dbIlike: '%one%' };
+  }
+  
+  // Fallback for legacy/import values
   const isStage = normalized.includes('stage') || 
                   normalized.includes('etape') || 
                   normalized.includes('étape');

@@ -11,6 +11,7 @@ import { Trophy, Users, TrendingUp, Target, BarChart3 } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend, ResponsiveContainer } from "recharts";
 import { useLeague } from "@/contexts/LeagueContext";
 import { ManagerSelect } from "@/components/shared/ManagerSelect";
+import { isStageRace } from "@/lib/courseType";
 
 interface ManagerComparisonMobileProps {
   phaseId: string | null;
@@ -295,7 +296,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
 
   // Points by category - fixed type_classement values
   const categoriesConfig = [
-    { key: "1J", label: "1 Jour", filterCourse: (c: any) => c.type_course === "One-day race" },
+    { key: "1J", label: "1 Jour", filterCourse: (c: any) => !isStageRace(c.type_course) },
     { key: "ETAPES", label: "Étapes", filterType: (t: string) => t === "Etape" },
     { key: "GC", label: "CG", filterType: (t: string) => t === "General" },
     { key: "PTS", label: "Points", filterType: (t: string) => t === "Points" },

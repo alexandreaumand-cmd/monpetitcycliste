@@ -11,6 +11,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Tooltip, ResponsiveContainer } from "recharts";
 import { ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isStageRace } from "@/lib/courseType";
 import { useLeague } from "@/contexts/LeagueContext";
 import { ManagerSelect } from "@/components/shared/ManagerSelect";
 
@@ -599,7 +600,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     if (!pointsA || !pointsB || !courses) return null;
 
     const categories = [
-      { key: "1J", label: "Courses 1 Jour", filterCourse: (c: any) => c.type_course === "One-day race" },
+      { key: "1J", label: "Courses 1 Jour", filterCourse: (c: any) => !isStageRace(c.type_course) },
       { 
         key: "ETAPES", 
         label: "Courses par étapes", 

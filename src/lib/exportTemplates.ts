@@ -31,8 +31,8 @@ export const getJerseyLabel = (typeClassement: string): string => {
  */
 export const generateCoursesTemplate = (): string => {
   return `id;nom;categorie;type_course;date_debut;date_fin;phase_id
-P1R1;Tour Down Under;WT;etapes;2025-01-21;2025-01-26;Phase 1
-P1R2;Tour de Romandie;WT;etapes;2025-04-22;2025-04-27;Phase 1
+P1R1;Tour Down Under;WT;stage_race;2025-01-21;2025-01-26;Phase 1
+P1R2;Tour de Romandie;WT;stage_race;2025-04-22;2025-04-27;Phase 1
 P1R3;Paris-Roubaix;WT;one_day;2025-04-13;2025-04-13;Phase 1`;
 };
 

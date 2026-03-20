@@ -4,6 +4,7 @@ import { Upload, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { isStageRace as checkStageRace } from "@/lib/courseType";
 
 interface RouteImage {
   etape_numero: number | null;
@@ -38,7 +39,7 @@ export function RouteImageUploader({ raceId, currentImageUrl, onUploadComplete, 
         .single();
       
       if (course) {
-        const isStage = course.type_course === 'Stage race' || course.type_course === 'stage_race';
+        const isStage = checkStageRace(course.type_course);
         let stages = 0;
         if (isStage && course.date_debut && course.date_fin) {
           const start = new Date(course.date_debut);
