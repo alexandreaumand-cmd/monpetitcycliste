@@ -79,9 +79,6 @@ const App = () => {
               </SeasonProvider>
             </LeagueProvider>
           </BrowserRouter>
-          {import.meta.env.DEV && (
-            <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
-          )}
         </QueryClientProvider>
       </ThemeProvider>
     </ErrorBoundary>
