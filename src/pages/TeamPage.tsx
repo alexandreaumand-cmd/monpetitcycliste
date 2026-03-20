@@ -20,6 +20,7 @@ interface TeamMember {
   description: string;
   icon: LucideIcon;
   accentColor: "gold" | "pink";
+  avatar?: string;
 }
 
 const members: TeamMember[] = [
