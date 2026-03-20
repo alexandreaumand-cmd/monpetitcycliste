@@ -119,8 +119,8 @@ export function AuctionLiveAnnouncements({
 
       if (isClosedRound) {
         // Only start replay once per auction
-        if (replayStartedForRef.current === selectedAuctionId) return;
-        replayStartedForRef.current = selectedAuctionId;
+        if (replayStartedForRef.current === effectiveAuctionId) return;
+        replayStartedForRef.current = effectiveAuctionId;
 
         if (replayTimerRef.current) clearInterval(replayTimerRef.current);
         setReplayVisibleCount(1);
