@@ -292,6 +292,34 @@ export function AuctionLiveAnnouncements({
               )}
             </CardHeader>
             <CardContent className="py-2 sm:py-4 px-3 sm:px-6">
+              {/* Pause banner */}
+              {isPaused && !isReplaying && (
+                <div className="mb-3 p-3 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-between gap-3 animate-pulse">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Pause className="h-5 w-5 text-orange-500 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-orange-700 dark:text-orange-400">
+                        ⏸ Annonces en pause
+                      </p>
+                      {pausedByName && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          Mis en pause par {pausedByName}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="bg-orange-500 hover:bg-orange-600 text-white gap-1 shrink-0"
+                    onClick={() => togglePause.mutate()}
+                    disabled={togglePause.isPending}
+                  >
+                    <Play className="h-3.5 w-3.5" />
+                    Reprendre
+                  </Button>
+                </div>
+              )}
+
               {isReplaying ? (
                 <p className="text-xs sm:text-sm text-muted-foreground animate-pulse">
                   🎬 Replay en cours... prochaine annonce dans 5s
