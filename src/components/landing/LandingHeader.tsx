@@ -1,16 +1,16 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import logoLight from "@/assets/logo-bordure-light.png";
+import logoDark from "@/assets/logo-bordure.png";
 
 const LandingHeader = () => {
   const { t } = useTranslation("home");
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#1B5E3B]">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#F6F3ED] shadow-sm">
       <div className="container mx-auto px-5 py-3 flex items-center justify-between">
         <Link to="/" className="flex items-center">
-          <img src={logoLight} alt="La Bordure" className="h-8 w-auto" />
+          <img src={logoDark} alt="La Bordure" className="h-8 w-auto" />
         </Link>
 
         <Link to="/auth">
