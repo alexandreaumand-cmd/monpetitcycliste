@@ -41,7 +41,7 @@ export function AuctionLiveAnnouncements({
   onBack,
 }: AuctionLiveAnnouncementsProps) {
   const { t } = useTranslation('auction');
-  const [selectedAuctionId, setSelectedAuctionId] = useState(auctionId);
+  const [selectedAuctionId, setSelectedAuctionId] = useState<string | null>(null);
   const [liveAnnonces, setLiveAnnonces] = useState<any[]>([]);
   const [replayVisibleCount, setReplayVisibleCount] = useState(0);
   const [isReplaying, setIsReplaying] = useState(false);
