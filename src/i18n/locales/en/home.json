@@ -84,7 +84,25 @@
       },
       "classement": {
         "title": "Dominate the rankings",
-        "text": "General, weekly, by rider or chrono rankings — multiple ways to shine. Compare yourself to friends and climb to the top of your league."
+        "text": "General, weekly, by rider or chrono — multiple ways to shine.",
+        "steps": {
+          "general": {
+            "title": "General ranking",
+            "desc": "Accumulate points from all your riders across the season and prove you're the best."
+          },
+          "weekly": {
+            "title": "Weekly ranking",
+            "desc": "Every week, a new showdown. Even if you're behind overall, you can shine over 7 days."
+          },
+          "trash": {
+            "title": "Trash talk your friends",
+            "desc": "Compare yourself to your mates in real-time and remind them you know cycling better."
+          },
+          "climb": {
+            "title": "Climb to the top",
+            "desc": "Track your progress week by week and aim for the top spot in your league."
+          }
+        }
       }
     }
   },
