@@ -76,7 +76,7 @@ const HowItWorksSection = () => {
                       <img
                         src={block.screenshot}
                         alt={block.title}
-                        className="w-full h-full object-cover object-top"
+                        className="w-full h-[110%] object-cover object-top"
                         loading="lazy"
                       />
                     </PhoneMockup>
