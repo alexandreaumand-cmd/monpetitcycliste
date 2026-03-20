@@ -171,6 +171,21 @@ export const RoundControlCenter = () => {
     refetchInterval: 5000
   });
 
+  // Fetch paused-by manager name
+  const { data: pausedByManagerName } = useQuery({
+    queryKey: ['paused-by-manager', currentAuction?.announcements_paused_by],
+    queryFn: async () => {
+      if (!currentAuction?.announcements_paused_by) return null;
+      const { data } = await supabase
+        .from('managers')
+        .select('nom')
+        .eq('id', currentAuction.announcements_paused_by)
+        .single();
+      return data?.nom || null;
+    },
+    enabled: !!currentAuction?.announcements_paused && !!currentAuction?.announcements_paused_by,
+  });
+
   // Mutations
   const openRoundMutation = useMutation({
     mutationFn: async (deadlineAt: string) => {
