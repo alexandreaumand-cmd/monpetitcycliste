@@ -1,47 +1,26 @@
 
 
-## Améliorer l'affichage du détail des bonus coureurs (+25%)
+## Rendre la tête du coureur visible sur la photo de fond (mobile)
 
-### Problèmes identifiés
+### Problème
 
-1. **Numéro d'étape invisible** : Le commentaire est parsé en `"Volta Comunitat Valenciana - Etape"` sans numéro de stage. Les anciens commentaires n'incluent pas le numéro d'étape. De plus, la colonne "Détail" a `max-w-xs truncate` qui tronque le texte.
+Sur mobile (390px), la section AuctionShowcase empile le texte + le screenshot verticalement, ce qui crée une section haute. La photo de fond (`peloton-finish.jpg`) utilise `object-cover` sans position spécifique, donc le point focal (la tête du coureur) est coupé — le navigateur centre par défaut au milieu de l'image.
 
-2. **Points barème absents** : On ne voit que les points bonus (+25%), pas les points de base du barème dont ils sont issus.
+### Options possibles
 
-### Solution
+1. **Ajuster `object-position` sur mobile** — Comme pour le hero, utiliser `object-[center_20%]` ou similaire pour remonter le point focal vers le haut de l'image où se trouve le coureur. Simple et rapide.
 
-**Fichier** : `src/components/rankings/BonusPointsDetailDialog.tsx`
+2. **Réduire le padding vertical sur mobile** — Passer de `py-24` à `py-16` sur mobile pour que la section soit moins haute et que la photo couvre mieux la zone visible.
 
-1. **Enrichir les données** : Pour chaque bonus coureur, cross-référencer avec `points_ledger` pour retrouver les points de base (barème). Puisque bonus = base × 0.25, on peut aussi simplement calculer `base = bonus / 0.25` (= bonus × 4). C'est plus simple et évite une requête supplémentaire.
+3. **Combiner les deux** — Position + padding ajustés.
 
-2. **Améliorer le parsing du commentaire** : Extraire le type de classement et le numéro d'étape séparément. Le format actuel est `"... - course_id - Etape"` ou `"... - course_id - Etape Etape N"`. Parser avec regex pour isoler le type et le numéro.
+### Recommandation
 
-3. **Restructurer les colonnes du tableau** :
-   - **Phase** (si multi-phase)
-   - **Coureur** (nom)
-   - **Équipe** (nom court)
-   - **Course** (nom de la course, sans truncate excessif)
-   - **Classement** (type : Etape, General, etc.)
-   - **Étape** (numéro, affiché séparément — "E3", "GC", etc.)
-   - **Barème** (points de base = bonus × 4, en texte muted)
-   - **Bonus** (points bonus, en vert)
+Combiner les deux :
+- `object-position: center 30%` sur mobile pour remonter le focal vers la tête
+- Réduire le padding mobile à `py-16 md:py-36`
 
-4. **Supprimer le `max-w-xs truncate`** sur la colonne Détail — remplacé par des colonnes séparées plus lisibles.
+### Fichier impacté
 
-5. **Sur mobile** : Les colonnes Équipe et Barème peuvent être masquées (`hidden md:table-cell`) pour éviter le débordement.
-
-### Résultat attendu
-
-Au lieu de :
-```
-Coureur | Équipe | Détail (tronqué)              | Points
-Vlasov  | RB-BH  | Volta Comunitat Valenc... Etap | +15
-```
-
-On aura :
-```
-Coureur | Course                          | Class. | Ét. | Barème | Bonus
-Vlasov  | Volta Comunitat Valenciana      | Etape  | 3   | 60     | +15
-Vlasov  | Volta Comunitat Valenciana      | General|  —  | 70     | +17.5
-```
+- **`src/components/landing/AuctionShowcase.tsx`** — Ligne 17 : ajouter `object-[center_30%] sm:object-center` sur l'image de fond. Ligne 11 : changer `py-24` en `py-16`.
 
