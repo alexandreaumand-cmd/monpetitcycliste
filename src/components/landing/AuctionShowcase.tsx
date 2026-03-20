@@ -8,13 +8,13 @@ const AuctionShowcase = () => {
   const { t } = useTranslation("home");
 
   return (
-    <section className="relative py-16 md:py-36 overflow-hidden">
+    <section className="relative pt-28 pb-16 md:py-36 overflow-hidden">
       {/* Background — cyclist close-up */}
       <div className="absolute inset-0">
         <img
           src="/images/peloton-finish.jpg"
           alt="Cycliste en effort"
-          className="w-full h-full object-cover object-[center_30%] sm:object-center"
+          className="w-full h-full object-cover object-[center_20%] sm:object-center"
           loading="lazy"
         />
         <div
