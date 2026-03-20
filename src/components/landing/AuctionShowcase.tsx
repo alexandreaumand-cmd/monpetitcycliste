@@ -14,7 +14,7 @@ const AuctionShowcase = () => {
         <img
           src="/images/peloton-finish.jpg"
           alt="Cycliste en effort"
-          className="w-full h-full object-cover object-[center_20%] sm:object-center"
+          className="w-full h-full object-cover object-[center_10%] sm:object-center"
           loading="lazy"
         />
         <div
