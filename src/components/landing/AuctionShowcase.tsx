@@ -19,7 +19,7 @@ const AuctionShowcase = () => {
         />
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(135deg, hsla(0,0%,0%,0.85) 0%, hsla(0,0%,0%,0.6) 100%)" }}
+          style={{ background: "linear-gradient(135deg, hsla(0,0%,0%,0.60) 0%, hsla(0,0%,0%,0.42) 100%)" }}
         />
       </div>
 
