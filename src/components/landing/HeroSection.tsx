@@ -44,7 +44,7 @@ const HeroSection = () => {
           </motion.h1>
 
           <motion.h1
-            className="text-4xl sm:text-5xl lg:text-7xl font-montserrat italic text-bordure-gold leading-[0.95] mb-6 max-w-3xl"
+            className="text-3xl sm:text-4xl lg:text-5xl xl:text-7xl font-montserrat italic text-bordure-gold leading-[0.95] mb-5 max-w-3xl"
             style={{ textShadow: "0 2px 16px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.9)" }}
             initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
