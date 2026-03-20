@@ -56,7 +56,7 @@ const GameOverviewSection = () => {
                 </h3>
 
                 {/* Description */}
-                <p className="text-bordure-text/80 text-sm leading-relaxed">
+                <p className="text-muted-foreground text-sm leading-relaxed">
                   {t(`overview.steps.${key}.desc`)}
                 </p>
               </motion.div>
