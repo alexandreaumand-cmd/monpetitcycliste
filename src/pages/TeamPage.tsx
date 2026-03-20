@@ -71,6 +71,7 @@ const pressQuotes: PressQuote[] = [
     magazine: "Pédale!",
     logo: pedaleLogo,
     date: "18 juin 2025",
+    context: "Article sur les Fantasy Leagues",
     quotes: [
       "Parce que la compétition est d'abord interne, tout est bon pour chambrer mais aussi intoxiquer son ami/adversaire avec des méthodes dignes de l'opération Fortitude pré-Débarquement. « Avant les enchères, on fait de faux articles Paint ou Photoshop pour faire croire que des coureurs sont tombés et se sont blessés… »",
     ],
