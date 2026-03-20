@@ -12,13 +12,14 @@ const HowItWorksSection = () => {
     <section className="py-20 md:py-32 bg-bordure-cream">
       <div className="container mx-auto px-5">
         <motion.p
-          className="text-bordure-gold font-inter text-sm tracking-[0.2em] uppercase mb-16 md:mb-24"
+          className="text-bordure-gold font-inter text-sm tracking-[0.2em] uppercase mb-16 md:mb-24 flex items-center gap-3"
           initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
           whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
           {t("discover.surtitle")}
+          <span className="inline-block w-6 h-0.5 bg-bordure-pink rounded-full" />
         </motion.p>
 
         <div className="space-y-24 md:space-y-40">

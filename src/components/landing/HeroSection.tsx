@@ -53,7 +53,7 @@ const HeroSection = () => {
           </motion.h1>
 
           <motion.p
-            className="text-white/80 font-inter text-base sm:text-lg max-w-md mb-8 leading-relaxed"
+            className="text-white/80 font-inter text-base sm:text-lg max-w-md mb-2 leading-relaxed"
             style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -61,6 +61,19 @@ const HeroSection = () => {
           >
             {t("hero.subtitle")}
           </motion.p>
+
+          <motion.div
+            className="flex gap-1 mb-8"
+            initial={{ opacity: 0, scaleX: 0.5 }}
+            animate={{ opacity: 1, scaleX: 1 }}
+            transition={{ duration: 0.5, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            style={{ transformOrigin: "left" }}
+          >
+            <span className="h-0.5 w-8 rounded-full bg-bordure-green" />
+            <span className="h-0.5 w-8 rounded-full bg-bordure-gold" />
+            <span className="h-0.5 w-8 rounded-full bg-bordure-pink" />
+            <span className="h-0.5 w-8 rounded-full bg-white/40" />
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 12 }}
