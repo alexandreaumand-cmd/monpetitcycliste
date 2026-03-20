@@ -269,9 +269,9 @@ const ClassementBlock = () => {
 
 const PhoneMockup = ({ children }: { children: React.ReactNode }) => (
   <div className="relative">
-    <div className="bg-secondary rounded-[2.5rem] p-2.5 shadow-2xl shadow-secondary/30">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-secondary rounded-b-2xl z-10" />
-      <div className="bg-bordure-cream rounded-[2rem] overflow-hidden aspect-[9/19.5] relative">
+    <div className="bg-secondary rounded-[1.5rem] sm:rounded-[2.5rem] p-1.5 sm:p-2.5 shadow-2xl shadow-secondary/30">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 sm:w-28 h-4 sm:h-6 bg-secondary rounded-b-xl sm:rounded-b-2xl z-10" />
+      <div className="bg-bordure-cream rounded-[1.25rem] sm:rounded-[2rem] overflow-hidden aspect-[9/19.5] relative">
         {children}
       </div>
     </div>
