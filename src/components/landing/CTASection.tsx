@@ -25,14 +25,14 @@ const CTASection = () => {
       {/* Background — mountain col */}
       <div className="absolute inset-0">
         <img
-          src="/images/bardet-victoire.webp"
-          alt="Col de montagne"
+          src="https://images.unsplash.com/photo-1517649763962-0c623066013b?w=1920&q=80&auto=format&fit=crop"
+          alt="Contre-la-montre"
           className="w-full h-full object-cover"
           loading="lazy"
         />
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(to top, hsla(0,0%,0%,0.7) 0%, hsla(0,0%,0%,0.35) 50%, hsla(0,0%,0%,0.2) 100%)" }}
+          style={{ background: "linear-gradient(to top, hsla(0,0%,0%,0.85) 0%, hsla(0,0%,0%,0.65) 50%, hsla(0,0%,0%,0.5) 100%)" }}
         />
       </div>
 
