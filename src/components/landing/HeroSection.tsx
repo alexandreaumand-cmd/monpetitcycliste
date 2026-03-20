@@ -22,7 +22,7 @@ const HeroSection = () => {
 
       {/* Localized gradient behind text only */}
       <div className="absolute inset-0 z-[1] flex items-end justify-end">
-        <div className="mb-8 md:mb-12 mr-5 md:mr-12 max-w-xl bg-gradient-to-l from-black/75 via-black/60 to-transparent backdrop-blur-[2px] rounded-l-2xl px-8 py-8 md:px-10 md:py-10">
+        <div className="mb-6 md:mb-10 mr-5 md:mr-12 max-w-xl bg-gradient-to-l from-black/75 via-black/60 to-transparent backdrop-blur-[2px] rounded-l-2xl px-6 py-6 md:px-10 md:py-8">
           <motion.p
             className="text-bordure-gold font-inter text-sm tracking-[0.2em] uppercase mb-3"
             style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
