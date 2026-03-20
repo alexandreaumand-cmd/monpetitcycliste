@@ -144,6 +144,14 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     }
   }, [context?.auction?.statut]);
 
+  // When round closes while on validation screen, redirect to announcements
+  useEffect(() => {
+    if (!context && showValidationScreen) {
+      setShowValidationScreen(false);
+      setHideLiveAnnouncements(false);
+    }
+  }, [context, showValidationScreen]);
+
   // Check if we should show live announcements screen
   const shouldShowLiveScreen = context?.auction?.statut === 'closed' && context?.auction_id && !hideLiveAnnouncements;
 
