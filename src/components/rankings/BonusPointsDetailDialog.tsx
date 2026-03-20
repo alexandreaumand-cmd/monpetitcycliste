@@ -338,9 +338,12 @@ export const BonusPointsDetailDialog = ({
                           <TableRow>
                             {!phaseId && <TableHead>Phase</TableHead>}
                             <TableHead>Coureur</TableHead>
-                            <TableHead>Équipe</TableHead>
-                            <TableHead>Détail</TableHead>
-                            <TableHead className="text-right">Points</TableHead>
+                            <TableHead className="hidden md:table-cell">Équipe</TableHead>
+                            <TableHead>Course</TableHead>
+                            <TableHead>Class.</TableHead>
+                            <TableHead>Ét.</TableHead>
+                            <TableHead className="text-right hidden md:table-cell">Barème</TableHead>
+                            <TableHead className="text-right">Bonus</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -351,14 +354,23 @@ export const BonusPointsDetailDialog = ({
                                   P{bonus.phases?.index_dans_saison}
                                 </TableCell>
                               )}
-                              <TableCell className="font-medium">
+                              <TableCell className="font-medium text-sm">
                                 {bonus.coureurs?.nom}
                               </TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
+                              <TableCell className="text-sm text-muted-foreground hidden md:table-cell">
                                 {bonus.coureur_equipe}
                               </TableCell>
-                              <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                                {bonus.course_display || bonus.commentaire}
+                              <TableCell className="text-sm">
+                                {bonus.course_display || '—'}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {bonus.classement_type || '—'}
+                              </TableCell>
+                              <TableCell className="text-sm font-medium">
+                                {bonus.etape_numero ? `E${bonus.etape_numero}` : (bonus.classement_type === 'Général' ? 'GC' : '—')}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm text-muted-foreground hidden md:table-cell">
+                                {bonus.base_points}
                               </TableCell>
                               <TableCell className="text-right font-mono font-medium text-green-600">
                                 +{bonus.points}
