@@ -18,7 +18,7 @@ const AuctionShowcase = () => {
       {/* Background — cyclist close-up from Unsplash */}
       <div className="absolute inset-0">
         <img
-          src="https://images.unsplash.com/photo-1517649763962-0c623066013b?w=1920&q=80&auto=format&fit=crop"
+          src="/images/peloton-finish.jpg"
           alt="Cycliste en effort"
           className="w-full h-full object-cover"
           loading="lazy"
