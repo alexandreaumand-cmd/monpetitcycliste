@@ -1,34 +1,25 @@
 
 
-## Plan : Gradient localisé uniquement derrière le bloc texte
+## Plan : Déplacer le bloc texte à droite + Header vert avec logo horizontal
 
-### Approche
+### 1. HeroSection.tsx — Bloc texte à droite
 
-Remplacer le bandeau plein écran `bg-black/80` par un conteneur texte avec un gradient localisé — le fond sombre ne couvre que la zone du texte (en bas à gauche), pas toute la largeur.
+Déplacer le conteneur gradient+texte de gauche (`ml-5 md:ml-12`) vers la droite :
+- Changer `flex items-end` → `flex items-end justify-end`
+- Remplacer `ml-5 md:ml-12` par `mr-5 md:mr-12`
+- Changer `rounded-r-2xl` → `rounded-l-2xl`
+- Inverser le gradient : `bg-gradient-to-r from-black/75 via-black/60 to-transparent` → `bg-gradient-to-l from-black/75 via-black/60 to-transparent`
+- **Aucune modification** du contenu interne (textes, animations, bouton, styles de typo)
 
-### Détail technique
+### 2. LandingHeader.tsx — Fond vert + logo horizontal
 
-- Supprimer le `w-full bg-black/80 backdrop-blur-sm` du conteneur
-- Envelopper le bloc texte dans un div avec `inline-block` ou `max-w-fit` + `bg-gradient-to-r from-black/75 via-black/60 to-transparent` + `backdrop-blur-[2px]` + `rounded-r-2xl` + padding généreux
-- Le gradient s'estompe vers la droite, laissant la photo visible sur tout le côté droit
-- Ajouter aussi un léger text-shadow sur les titres pour renforcer la lisibilité
+- Remplacer `bg-transparent` par `bg-[#1B5E3B]` (vert marque)
+- Remplacer le logo carré (`logo-carre-rose.png`) par le logo horizontal `logo-bordure-light.png` (texte rose sur fond sombre, adapté au fond vert)
+- Augmenter légèrement la hauteur du logo (`h-9 w-9` → `h-8 w-auto`) pour un rendu horizontal
+- Supprimer le `<span>` "La Bordure" textuel (le logo horizontal inclut déjà le nom)
+- Garder le bouton connexion, adapter ses couleurs pour le fond vert (blanc/or)
 
-```text
-┌─────────────────────────────────────┐
-│              PHOTO 100% VISIBLE     │
-│                                     │
-│                                     │
-│ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒░░              │
-│ ▓ Fantasy Cycling    ▒░             │
-│ ▓ Le cyclisme comme  ▒░             │
-│ ▓ tu ne l'as jamais  ▒░             │
-│ ▓ vécu               ▒░             │
-│ ▓ [Créer ma ligue]   ▒░             │
-│ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒░░              │
-└─────────────────────────────────────┘
-  ▓ = noir/75%  ▒ = fondu  ░ = transparent
-```
-
-### Fichier impacté
-- `src/components/landing/HeroSection.tsx`
+### Fichiers impactés
+- `src/components/landing/HeroSection.tsx` — positionnement droite
+- `src/components/landing/LandingHeader.tsx` — fond vert + logo horizontal
 
