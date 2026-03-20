@@ -1,28 +1,21 @@
 
 
-## Plan : Corriger l'ordre des annonces en direct
+## Plan : Rendre l'indicateur rose plus visible sur mobile
 
 ### Problème
 
-Le `publish_all` dans `publier-annonce` trie les annonces par `winning_amount DESC` (les plus chères d'abord), alors que le comportement souhaité est **les moins chères d'abord**. Le `published_at` incrémental est ensuite utilisé par le frontend pour l'ordre d'affichage.
-
-- **Publish next** (manuel) : trie `ascending: true` ✅ correct
-- **Publish all** (auto-mode) : trie `ascending: false` ❌ inversé
-
-### Côté frontend
-
-Le frontend (`AuctionLiveAnnouncements.tsx`) récupère les annonces triées par `published_at DESC` (les plus récentes en haut), puis les affiche en faisant un `.reverse()` pour que la dernière annoncée soit en haut. C'est correct **à condition que** les `published_at` soient attribués dans le bon ordre (les moins chères publiées en premier).
+Le pictogramme rose existe déjà sur le bouton "Annonces" (point animé `h-2.5 w-2.5` positionné en haut à droite du bouton). Sur mobile, le bouton n'affiche que l'icône Megaphone (le texte "Annonces" est masqué via `hidden sm:inline`), ce qui rend le point très petit et difficile à repérer.
 
 ### Solution
 
-**1 fichier impacté** : `supabase/functions/publier-annonce/index.ts`
+**Fichier impacté** : `src/components/dashboard/LeagueCard.tsx`
 
-Changer la ligne 55 du `publish_all` :
-```
-.order('winning_amount', { ascending: false })  →  .order('winning_amount', { ascending: true })
-```
+1. **Agrandir le point rose sur mobile** : passer de `h-2.5 w-2.5` à `h-3.5 w-3.5` pour une meilleure visibilité tactile
+2. **Ajouter un léger halo/glow rose** au bouton Annonces quand les annonces sont en cours, pour attirer l'œil même sans lire le point
+3. **Afficher le texte "Annonces" aussi sur mobile** quand `isAnnouncementsPending` est true, pour que le bouton soit plus explicite dans ce cas précis
 
-C'est tout. Le tri `ascending: true` assigne les `published_at` incrémentaux du moins cher au plus cher, ce qui garantit que :
-- Le coureur le moins cher est annoncé en premier
-- Le plus cher est annoncé en dernier et apparaît en haut de la liste (grâce au `.reverse()` du frontend)
+Concrètement :
+- Le bouton reçoit une classe conditionnelle `border-[#E8A0B4] ring-2 ring-[#E8A0B4]/30` quand les annonces sont en attente
+- Le `<span>` du texte "Annonces" perd son `hidden sm:inline` quand `isAnnouncementsPending` est true
+- Le point passe à `h-3.5 w-3.5` pour être plus visible
 
