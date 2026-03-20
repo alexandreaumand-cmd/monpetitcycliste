@@ -177,7 +177,7 @@ export function AuctionLiveAnnouncements({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedAuctionId, refetch]);
+  }, [effectiveAuctionId, refetch]);
 
   const toggleManager = (managerId: string) => {
     setOpenManagers(prev => {
