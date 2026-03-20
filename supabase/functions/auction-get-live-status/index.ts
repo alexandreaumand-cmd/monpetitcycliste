@@ -47,10 +47,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get auction details with saison_id
+    // Get auction details with saison_id + pause state
     const { data: auction } = await supabase
       .from('auctions')
-      .select('*, phases!inner(saison_id)')
+      .select('*, phases!inner(saison_id), paused_manager:announcements_paused_by(id, nom)')
       .eq('id', auction_id)
       .single();
 
