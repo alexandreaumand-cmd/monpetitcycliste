@@ -22,7 +22,7 @@ const HeroSection = () => {
 
       {/* Localized gradient behind text only */}
       <div className="absolute inset-0 z-[1] flex items-end justify-end">
-        <div className="mb-6 md:mb-10 mr-5 md:mr-12 max-w-xl bg-gradient-to-l from-black/75 via-black/60 to-transparent backdrop-blur-[2px] rounded-l-2xl px-6 py-5 md:px-10 md:py-6">
+        <div className="mb-6 md:mb-10 mr-5 md:mr-12 max-w-xl bg-gradient-to-l from-black/75 via-black/60 to-transparent backdrop-blur-[2px] rounded-l-2xl px-4 py-4 md:px-10 md:py-6">
           <motion.p
             className="text-bordure-gold font-inter text-sm tracking-[0.2em] uppercase mb-2"
             style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
@@ -77,14 +77,14 @@ const HeroSection = () => {
           </motion.div>
 
           <motion.div
-            className="flex flex-wrap gap-3"
+            className="flex flex-row gap-2 sm:gap-3"
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.9, ease: [0.16, 1, 0.3, 1] }}
           >
             <Link to="/auth">
               <Button
                 size="lg"
-                className="text-sm sm:text-base px-6 py-5 bg-bordure-gold hover:bg-bordure-gold/90 text-secondary font-montserrat font-bold shadow-xl shadow-bordure-gold/20 active:scale-[0.97] transition-transform"
+                className="text-xs sm:text-base px-4 sm:px-6 py-4 sm:py-5 bg-bordure-gold hover:bg-bordure-gold/90 text-secondary font-montserrat font-bold shadow-xl shadow-bordure-gold/20 active:scale-[0.97] transition-transform"
               >
                 {t("hero.cta.createLeague")}
               </Button>
@@ -93,7 +93,7 @@ const HeroSection = () => {
               <Button
                 size="lg"
                 variant="outline"
-                className="text-sm sm:text-base px-5 py-5 border-white/40 bg-white/10 hover:bg-white/20 text-white font-montserrat font-semibold active:scale-[0.97] transition-transform"
+                className="text-xs sm:text-base px-3 sm:px-5 py-4 sm:py-5 border-white/40 bg-white/10 hover:bg-white/20 text-white font-montserrat font-semibold active:scale-[0.97] transition-transform"
               >
                 <Download className="w-5 h-5 mr-2" />
                 {t("hero.cta.install")}
