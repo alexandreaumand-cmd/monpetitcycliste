@@ -40,7 +40,7 @@
       },
       "team": {
         "title": "Compose ton équipe",
-        "text": "Grimpeurs, sprinteurs, rouleurs — jusqu'à 30 coureurs dans ton effectif.",
+        "text": "Grimpeurs, sprinteurs, rouleurs — tu suis les points de ton effectif au fur et à mesure des courses.",
         "steps": {
           "stages": {
             "title": "Points sur chaque étape",
