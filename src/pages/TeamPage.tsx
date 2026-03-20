@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import leCodeurAvatar from "@/assets/team/le-codeur.png";
+import leSachantAvatar from "@/assets/team/le-sachant.png";
 
 interface TeamMember {
   nickname: string;
