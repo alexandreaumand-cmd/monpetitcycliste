@@ -62,6 +62,12 @@ const App = () => {
                       <Route path="/i/:token" element={<InviteShortPage />} />
                       <Route path="/invite" element={<InvitePage />} />
                       <Route path="/join" element={<JoinLeaguePage />} />
+                      <Route path="/about" element={<AboutPage />} />
+                      <Route path="/rules" element={<RulesPage />} />
+                      <Route path="/how-to-play" element={<HowToPlayPage />} />
+                      <Route path="/legal" element={<LegalNoticePage />} />
+                      <Route path="/terms" element={<TermsPage />} />
+                      <Route path="/privacy" element={<PrivacyPage />} />
                       <Route path="/dashboard/*" element={<Dashboard />} />
                       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                       <Route path="*" element={<NotFound />} />
