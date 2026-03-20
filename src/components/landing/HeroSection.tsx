@@ -8,76 +8,71 @@ const HeroSection = () => {
 
   return (
     <section className="relative min-h-[100svh] flex items-end overflow-hidden">
-      {/* Background — Unsplash peloton in mountains */}
+      {/* Background — Van der Poel Paris-Roubaix */}
       <div className="absolute inset-0">
         <img
-          src="https://images.unsplash.com/photo-1517649763962-0c623066013b?w=1920&q=80&auto=format&fit=crop"
-          alt="Peloton de cyclistes en haute montagne"
-          className="w-full h-full object-cover"
+          src="/images/hero-roubaix.jpg"
+          alt="Mathieu van der Poel célèbre sa victoire sur le vélodrome de Roubaix"
+          className="w-full h-full object-cover object-[center_20%]"
           loading="eager"
           fetchPriority="high"
         />
-        {/* Subtle bottom gradient for text legibility */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: "linear-gradient(to top, hsla(0,0%,0%,0.7) 0%, hsla(0,0%,0%,0.3) 40%, transparent 70%)",
-          }}
-        />
       </div>
 
-      {/* Content — aligned bottom-left, editorial style */}
-      <div className="relative z-10 container mx-auto px-5 pb-16 md:pb-24 pt-32">
-        <motion.p
-          className="text-bordure-gold font-inter text-sm tracking-[0.2em] uppercase mb-4"
-          initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-        >
-          Fantasy Cycling
-        </motion.p>
+      {/* Solid dark bar at the bottom for guaranteed text legibility */}
+      <div className="relative z-10 w-full bg-black/80 backdrop-blur-sm">
+        <div className="container mx-auto px-5 py-10 md:py-16">
+          <motion.p
+            className="text-bordure-gold font-inter text-sm tracking-[0.2em] uppercase mb-3"
+            initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          >
+            Fantasy Cycling
+          </motion.p>
 
-        <motion.h1
-          className="text-5xl sm:text-6xl lg:text-8xl font-montserrat font-bold text-white leading-[0.95] mb-2 max-w-4xl"
-          initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        >
-          {t("hero.title1")}
-        </motion.h1>
+          <motion.h1
+            className="text-4xl sm:text-5xl lg:text-7xl font-montserrat font-bold text-white leading-[0.95] mb-2 max-w-3xl"
+            initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {t("hero.title1")}
+          </motion.h1>
 
-        <motion.h1
-          className="text-5xl sm:text-6xl lg:text-8xl font-montserrat italic text-bordure-gold leading-[0.95] mb-8 max-w-4xl"
-          initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{ duration: 0.7, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        >
-          {t("hero.title2")}
-        </motion.h1>
+          <motion.h1
+            className="text-4xl sm:text-5xl lg:text-7xl font-montserrat italic text-bordure-gold leading-[0.95] mb-6 max-w-3xl"
+            initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ duration: 0.7, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {t("hero.title2")}
+          </motion.h1>
 
-        <motion.p
-          className="text-white/70 font-inter text-base sm:text-lg max-w-md mb-10 leading-relaxed"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        >
-          {t("hero.subtitle")}
-        </motion.p>
+          <motion.p
+            className="text-white/70 font-inter text-base sm:text-lg max-w-md mb-8 leading-relaxed"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {t("hero.subtitle")}
+          </motion.p>
 
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.9, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <Link to="/auth">
-            <Button
-              size="lg"
-              className="text-base sm:text-lg px-10 py-7 bg-bordure-gold hover:bg-bordure-gold/90 text-secondary font-montserrat font-bold shadow-xl shadow-bordure-gold/20 active:scale-[0.97] transition-transform"
-            >
-              {t("hero.cta.createLeague")}
-            </Button>
-          </Link>
-        </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.9, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <Link to="/auth">
+              <Button
+                size="lg"
+                className="text-base sm:text-lg px-10 py-7 bg-bordure-gold hover:bg-bordure-gold/90 text-secondary font-montserrat font-bold shadow-xl shadow-bordure-gold/20 active:scale-[0.97] transition-transform"
+              >
+                {t("hero.cta.createLeague")}
+              </Button>
+            </Link>
+          </motion.div>
+        </div>
       </div>
     </section>
   );
