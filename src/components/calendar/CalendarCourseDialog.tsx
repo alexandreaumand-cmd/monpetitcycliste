@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle, AlertCircle, ChevronDown, ChevronUp, Calendar } from "lucide-react";
-import { isStageRace } from "@/lib/courseType";
+import { isStageRace, normalizeCourseType } from "@/lib/courseType";
 import { PointsBaremeSection } from "@/components/courses/PointsBaremeSection";
 import { useTranslation } from "react-i18next";
 import { format, parseISO } from "date-fns";
