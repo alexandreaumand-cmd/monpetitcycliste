@@ -76,17 +76,30 @@ export function AuctionLiveAnnouncements({
     },
   });
 
-  // Fetch live status using selectedAuctionId
+  // Compute the effective auction ID: user selection > last closed round > passed auctionId
+  const effectiveAuctionId = selectedAuctionId || (() => {
+    if (availableRounds.length > 0) {
+      // Find the last closed round
+      const closedRounds = availableRounds.filter(r => r.statut === 'closed');
+      if (closedRounds.length > 0) {
+        return closedRounds[closedRounds.length - 1].id;
+      }
+    }
+    return auctionId;
+  })();
+
+  // Fetch live status using effectiveAuctionId
   const { data: liveStatus, refetch } = useQuery({
-    queryKey: ['auction-live-status', selectedAuctionId, managerId, leagueId],
+    queryKey: ['auction-live-status', effectiveAuctionId, managerId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('auction-get-live-status', {
-        body: { auction_id: selectedAuctionId, phase_id: phaseId, league_id: leagueId },
+        body: { auction_id: effectiveAuctionId, phase_id: phaseId, league_id: leagueId },
       });
       if (error) throw error;
       return data;
     },
     refetchInterval: 3000,
+    enabled: !!effectiveAuctionId,
   });
 
   // Cleanup replay timer on unmount
