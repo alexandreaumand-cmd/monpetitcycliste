@@ -11,7 +11,7 @@ const HeroSection = () => {
       {/* Background — Unsplash peloton in mountains */}
       <div className="absolute inset-0">
         <img
-          src="https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=1920&q=80&auto=format&fit=crop"
+          src="https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?w=1920&q=80&auto=format&fit=crop"
           alt="Peloton de cyclistes en haute montagne"
           className="w-full h-full object-cover"
           loading="eager"
