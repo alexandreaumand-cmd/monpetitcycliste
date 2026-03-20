@@ -1,21 +1,53 @@
 
 
-## Plan : Rendre l'indicateur rose plus visible sur mobile
+## Plan : Bouton Pause/Reprise pour les annonces en direct
 
-### Problème
+### Contexte
 
-Le pictogramme rose existe déjà sur le bouton "Annonces" (point animé `h-2.5 w-2.5` positionné en haut à droite du bouton). Sur mobile, le bouton n'affiche que l'icône Megaphone (le texte "Annonces" est masqué via `hidden sm:inline`), ce qui rend le point très petit et difficile à repérer.
+Après la clôture d'un round, l'admin publie les annonces une à une. Les managers arrivent en décalé et ratent les premières annonces. Un bouton pause permet à n'importe quel manager de mettre en pause les annonces pour que tout le monde se connecte, puis de relancer.
 
-### Solution
+### Architecture
 
-**Fichier impacté** : `src/components/dashboard/LeagueCard.tsx`
+L'état de pause est stocké en base sur la table `auctions` pour être partagé entre tous les managers en temps réel.
 
-1. **Agrandir le point rose sur mobile** : passer de `h-2.5 w-2.5` à `h-3.5 w-3.5` pour une meilleure visibilité tactile
-2. **Ajouter un léger halo/glow rose** au bouton Annonces quand les annonces sont en cours, pour attirer l'œil même sans lire le point
-3. **Afficher le texte "Annonces" aussi sur mobile** quand `isAnnouncementsPending` est true, pour que le bouton soit plus explicite dans ce cas précis
+### Modifications
 
-Concrètement :
-- Le bouton reçoit une classe conditionnelle `border-[#E8A0B4] ring-2 ring-[#E8A0B4]/30` quand les annonces sont en attente
-- Le `<span>` du texte "Annonces" perd son `hidden sm:inline` quand `isAnnouncementsPending` est true
-- Le point passe à `h-3.5 w-3.5` pour être plus visible
+**1. Migration : ajouter colonnes pause sur `auctions`**
+- `announcements_paused` (boolean, default false)
+- `announcements_paused_by` (uuid, nullable, ref managers)
+
+**2. Edge function `auction-toggle-pause/index.ts`** (nouveau)
+- Reçoit `{ auction_id }`, authentifie le manager
+- Toggle `announcements_paused` (true↔false) et met à jour `announcements_paused_by`
+- Retourne le nouvel état
+
+**3. Edge function `auction-get-live-status/index.ts`** (modifier)
+- Inclure `announcements_paused` et le nom du manager qui a pausé dans la réponse
+
+**4. Edge function `publier-annonce/index.ts`** (modifier)
+- Vérifier `announcements_paused` avant de publier ; si pausé, retourner une erreur explicite pour bloquer l'admin
+
+**5. Frontend `AuctionLiveAnnouncements.tsx`** (modifier)
+- Ajouter un bouton Pause/Play bien visible dans le header
+- Quand pausé : bannière pleine largeur "⏸ Annonces en pause — En attente des managers" avec le nom de qui a pausé + bouton "Reprendre"
+- Quand actif : petit bouton pause discret
+- Utiliser le realtime existant (refetch toutes les 3s) pour propager l'état
+
+**6. Admin `AnnouncementsLive.tsx`** (modifier)
+- Désactiver le bouton "Annoncer" quand pausé
+- Afficher un message indiquant que les annonces sont en pause par un manager
+
+### UX pause/reprise
+
+- **État pausé** : bannière rose/orange animée en haut du feed avec icône ⏸, texte "Annonces en pause", nom du manager qui a pausé, et bouton "▶ Reprendre les annonces"
+- **État actif** : bouton discret "⏸ Pause" à côté du badge de progression
+- Tout manager peut pauser ou reprendre (pas besoin d'être celui qui a pausé)
+
+### Fichiers impactés
+- Migration SQL (2 colonnes sur `auctions`)
+- `supabase/functions/auction-toggle-pause/index.ts` (nouveau)
+- `supabase/functions/auction-get-live-status/index.ts`
+- `supabase/functions/publier-annonce/index.ts`
+- `src/components/auction/v2/AuctionLiveAnnouncements.tsx`
+- `src/components/admin/rounds/AnnouncementsLive.tsx`
 
