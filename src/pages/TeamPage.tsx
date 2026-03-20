@@ -13,12 +13,14 @@ import {
   Ghost,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import leCodeurAvatar from "@/assets/team/le-codeur.png";
 
 interface TeamMember {
   nickname: string;
   description: string;
   icon: LucideIcon;
   accentColor: "gold" | "pink";
+  avatar?: string;
 }
 
 const members: TeamMember[] = [
@@ -30,7 +32,7 @@ const members: TeamMember[] = [
   { nickname: "Le Doc", description: "On sait toujours pas trop ce qu'il farfouille, mais il gagne 5 phases d'affilé. Louche.", icon: Stethoscope, accentColor: "pink" },
   { nickname: "La Pépite", description: "Il s'est essayé au football. Barré par Mvila, il suit maintenant le vélo.", icon: Trophy, accentColor: "gold" },
   { nickname: "Le BOSS", description: "Il a renversé la table et a pris le pouvoir.", icon: Crown, accentColor: "pink" },
-  { nickname: "Le Codeur", description: "Il débug, fait évoluer, c'est lui qui tient la barre.", icon: Code, accentColor: "gold" },
+  { nickname: "Le Codeur", description: "Il débug, fait évoluer, c'est lui qui tient la barre.", icon: Code, accentColor: "gold", avatar: leCodeurAvatar },
   { nickname: "Le Fantôme", description: "Plus occupé à bouffer des frites à la cantine qu'à suivre le vélo.", icon: Ghost, accentColor: "pink" },
 ];
 
@@ -65,15 +67,21 @@ const TeamPage = () => {
                 className="group bg-white rounded-xl border border-bordure-green/10 p-5 text-center
                   hover:border-bordure-gold/40 hover:shadow-md transition-all duration-300"
               >
-                <div
-                  className={`mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center ${
-                    isGold
-                      ? "bg-bordure-gold/10 text-bordure-gold"
-                      : "bg-bordure-pink/10 text-bordure-pink"
-                  } group-hover:scale-105 transition-transform duration-300`}
-                >
-                  <Icon className="w-7 h-7" strokeWidth={1.8} />
-                </div>
+                {member.avatar ? (
+                  <div className="mx-auto mb-4 w-16 h-16 rounded-full overflow-hidden group-hover:scale-105 transition-transform duration-300">
+                    <img src={member.avatar} alt={member.nickname} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div
+                    className={`mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center ${
+                      isGold
+                        ? "bg-bordure-gold/10 text-bordure-gold"
+                        : "bg-bordure-pink/10 text-bordure-pink"
+                    } group-hover:scale-105 transition-transform duration-300`}
+                  >
+                    <Icon className="w-7 h-7" strokeWidth={1.8} />
+                  </div>
+                )}
                 <h3 className="font-montserrat font-bold text-bordure-green text-sm md:text-base mb-2 leading-tight">
                   {member.nickname}
                 </h3>
