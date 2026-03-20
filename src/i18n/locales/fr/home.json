@@ -11,7 +11,8 @@
     "cta": {
       "createLeague": "Créer ma ligue",
       "myLeagues": "Mes Ligues",
-      "discover": "Découvrir"
+      "discover": "Découvrir",
+      "install": "Installer l'app"
     }
   },
   "overview": {
