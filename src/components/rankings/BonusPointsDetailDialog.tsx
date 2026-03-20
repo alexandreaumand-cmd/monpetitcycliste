@@ -97,18 +97,36 @@ export const BonusPointsDetailDialog = ({
             equipeName = equipeSaison?.nom_affiche || equipeSaison?.trigramme || 'N/A';
           }
 
-          // Parser le commentaire pour extraire la course et l'étape
-          // Format: "Bonus coureur automatique (25%) - course_id - TypeClassement"
-          // ou "Bonus +25% (cote X) - course_nom"
+          // Parser le commentaire pour extraire course_id, type classement et étape
+          // Formats possibles:
+          // "Bonus coureur automatique (25%) - course_id - Etape Etape 3"
+          // "Bonus coureur automatique (25%) - course_id - Etape"
+          // "Bonus coureur automatique (25%) - course_id - General"
+          // "Bonus +25% (cote X) - course_nom"
           let courseDisplay = bonus.commentaire || '';
           let courseId: string | null = null;
           let classementType: string | null = null;
+          let etapeNumero: string | null = null;
           
           if (courseDisplay.includes(' - ')) {
             const parts = courseDisplay.split(' - ');
             if (parts.length >= 2) {
-              courseId = parts[1];
-              classementType = parts[2] || null;
+              courseId = parts[1]?.trim() || null;
+              const classementRaw = parts[2]?.trim() || null;
+              if (classementRaw) {
+                // Extract stage number: "Etape Etape 3" or "Etape 3" or "General"
+                const etapeMatch = classementRaw.match(/Etape\s+(\d+)/);
+                if (etapeMatch) {
+                  etapeNumero = etapeMatch[1];
+                  classementType = 'Etape';
+                } else if (classementRaw.toLowerCase().includes('general')) {
+                  classementType = 'Général';
+                } else if (classementRaw.toLowerCase().includes('etape')) {
+                  classementType = 'Etape';
+                } else {
+                  classementType = classementRaw;
+                }
+              }
             }
           }
 
@@ -126,13 +144,16 @@ export const BonusPointsDetailDialog = ({
             }
           }
           
-          // Construire l'affichage final: "Nom Course - TypeClassement"
-          courseDisplay = courseName + (classementType ? ` - ${classementType}` : '');
+          // Calculer les points barème (bonus = base * 0.25, donc base = bonus * 4)
+          const basePoints = Math.round(bonus.points * 4 * 100) / 100;
 
           return {
             ...bonus,
             coureur_equipe: equipeName,
-            course_display: courseDisplay
+            course_display: courseName,
+            classement_type: classementType,
+            etape_numero: etapeNumero,
+            base_points: basePoints,
           };
         })
       );
