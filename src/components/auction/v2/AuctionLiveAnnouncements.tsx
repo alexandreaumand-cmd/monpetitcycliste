@@ -165,7 +165,7 @@ export function AuctionLiveAnnouncements({
           event: 'UPDATE',
           schema: 'public',
           table: 'annonces',
-          filter: `auction_id=eq.${selectedAuctionId}`,
+          filter: `auction_id=eq.${effectiveAuctionId}`,
         },
         (payload) => {
           console.log('New annonce published!', payload);
