@@ -36,7 +36,7 @@ const members: TeamMember[] = [
   { nickname: "Le Rappeur", description: "Le plus créatif de la bande, fan de baies vitrées.", icon: Palette, accentColor: "gold", avatar: leRappeurAvatar },
   { nickname: "Le Doc", description: "On sait toujours pas trop ce qu'il farfouille, mais il gagne 5 phases d'affilé. Louche.", icon: Stethoscope, accentColor: "pink" },
   { nickname: "La Pépite", description: "Il s'est essayé au football. Barré par Mvila, il suit maintenant le vélo.", icon: Trophy, accentColor: "gold" },
-  { nickname: "Le BOSS", description: "Il a renversé la table et a pris le pouvoir.", icon: Crown, accentColor: "pink" },
+  { nickname: "Le BOSS", description: "Il a renversé la table et a pris le pouvoir.", icon: Crown, accentColor: "pink", avatar: leBossAvatar },
   { nickname: "Le Codeur", description: "Il débug, fait évoluer, c'est lui qui tient la barre.", icon: Code, accentColor: "gold", avatar: leCodeurAvatar },
   { nickname: "Le Fantôme", description: "Plus occupé à bouffer des frites à la cantine qu'à suivre le vélo.", icon: Ghost, accentColor: "pink", avatar: leFantomeAvatar },
 ];
