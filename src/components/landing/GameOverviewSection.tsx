@@ -26,7 +26,7 @@ const GameOverviewSection = () => {
   const { t } = useTranslation("home");
 
   return (
-    <section className="py-14 md:py-20 bg-bordure-cream">
+    <section className="pt-14 pb-6 md:pt-20 md:pb-8 bg-bordure-cream">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5 md:gap-8 max-w-5xl mx-auto">
           {steps.map(({ key, Icon, accent }, i) => {
