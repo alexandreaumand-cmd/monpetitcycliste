@@ -1,27 +1,34 @@
 
 
-## Plan : Capturer les screenshots en mode light + desktop pour les enchères
+## Plan : Gradient localisé uniquement derrière le bloc texte
 
-### Modifications par rapport au plan précédent
+### Approche
 
-1. **Passer l'app en mode light** avant de capturer les screenshots (le user est actuellement en dark mode)
-2. **Page enchères** : screenshot en **desktop** (largeur ~1280px) au lieu de mobile — plus percutant pour montrer l'interface complète des enchères
-3. **Pages équipe et classement** : screenshots en **mobile** (390px) comme prévu — adapté au mockup iPhone
+Remplacer le bandeau plein écran `bg-black/80` par un conteneur texte avec un gradient localisé — le fond sombre ne couvre que la zone du texte (en bas à gauche), pas toute la largeur.
 
-### Étapes
+### Détail technique
 
-1. Via le browser tool : basculer l'app en mode light (toggle theme)
-2. Capturer la **page enchères en desktop** (1280px) → `public/screenshots/auction-desktop.png`
-3. Capturer la **page équipe en mobile** (390px, light) → `public/screenshots/team.png`
-4. Capturer le **classement en mobile** (390px, light) → `public/screenshots/ranking.png`
-5. Mettre à jour `HowItWorksSection.tsx` :
-   - Enchères : utiliser l'image desktop dans un **mockup navigateur** (cadre macOS avec coins arrondis + shadow) au lieu du PhoneMockup
-   - Équipe et classement : garder le PhoneMockup avec les vraies images light
-   - Supprimer les composants CSS mockup (`AuctionMockup`, `TeamMockup`, `RankingMockup`)
+- Supprimer le `w-full bg-black/80 backdrop-blur-sm` du conteneur
+- Envelopper le bloc texte dans un div avec `inline-block` ou `max-w-fit` + `bg-gradient-to-r from-black/75 via-black/60 to-transparent` + `backdrop-blur-[2px]` + `rounded-r-2xl` + padding généreux
+- Le gradient s'estompe vers la droite, laissant la photo visible sur tout le côté droit
+- Ajouter aussi un léger text-shadow sur les titres pour renforcer la lisibilité
 
-### Fichiers impactés
-- `public/screenshots/auction-desktop.png` (nouveau)
-- `public/screenshots/team.png` (nouveau)
-- `public/screenshots/ranking.png` (nouveau)
-- `src/components/landing/HowItWorksSection.tsx` — images réelles + mockup navigateur pour enchères
+```text
+┌─────────────────────────────────────┐
+│              PHOTO 100% VISIBLE     │
+│                                     │
+│                                     │
+│ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒░░              │
+│ ▓ Fantasy Cycling    ▒░             │
+│ ▓ Le cyclisme comme  ▒░             │
+│ ▓ tu ne l'as jamais  ▒░             │
+│ ▓ vécu               ▒░             │
+│ ▓ [Créer ma ligue]   ▒░             │
+│ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒░░              │
+└─────────────────────────────────────┘
+  ▓ = noir/75%  ▒ = fondu  ░ = transparent
+```
+
+### Fichier impacté
+- `src/components/landing/HeroSection.tsx`
 
