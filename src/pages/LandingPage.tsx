@@ -20,6 +20,7 @@ const LandingPage = () => {
         <HowItWorksSection />
         <AuctionShowcase />
         <SocialProofSection />
+        <InstallBanner />
         <CTASection />
       </main>
       <LandingFooter />
