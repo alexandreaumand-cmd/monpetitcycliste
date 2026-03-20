@@ -17,6 +17,7 @@ import leCodeurAvatar from "@/assets/team/le-codeur.png";
 import leSachantAvatar from "@/assets/team/le-sachant.png";
 import leCriminelAvatar from "@/assets/team/le-criminel.png";
 import leRappeurAvatar from "@/assets/team/le-rappeur.png";
+import leFantomeAvatar from "@/assets/team/le-fantome.png";
 
 interface TeamMember {
   nickname: string;
