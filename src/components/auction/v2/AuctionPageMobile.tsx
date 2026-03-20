@@ -61,7 +61,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   const [debouncedSearch] = useDebounce(searchQuery, 250);
 
   // Get auction context
-  const { data: context, isLoading: contextLoading } = useQuery({
+  const { data: rawContext, isLoading: contextLoading } = useQuery({
     queryKey: ["auction-context", phaseId, managerId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("auction-get-context", {
@@ -72,6 +72,9 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     },
     refetchInterval: 10000,
   });
+
+  // Normalize: treat "No active auction" error responses as null
+  const context = rawContext?.auction_id ? rawContext : null;
 
   // Get last closed auction if no active auction
   const { data: lastClosedAuction } = useQuery({
@@ -95,7 +98,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       if (error) throw error;
       return data;
     },
-    enabled: context === null, // Only fetch if no active auction
+    enabled: !context, // Only fetch if no active auction
   });
 
   // Get next scheduled auction if no active auction
@@ -123,7 +126,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       if (error) throw error;
       return data;
     },
-    enabled: context === null, // Only fetch if no active auction
+    enabled: !context, // Only fetch if no active auction
   });
 
   // Auto-show validation screen if manager has already validated and has no active drafts
@@ -140,6 +143,14 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
       setHideLiveAnnouncements(false);
     }
   }, [context?.auction?.statut]);
+
+  // When round closes while on validation screen, redirect to announcements
+  useEffect(() => {
+    if (!context && showValidationScreen) {
+      setShowValidationScreen(false);
+      setHideLiveAnnouncements(false);
+    }
+  }, [context, showValidationScreen]);
 
   // Check if we should show live announcements screen
   const shouldShowLiveScreen = context?.auction?.statut === 'closed' && context?.auction_id && !hideLiveAnnouncements;
