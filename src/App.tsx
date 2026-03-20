@@ -23,6 +23,12 @@ const JoinLeaguePage = React.lazy(() => import("./pages/JoinLeaguePage").then(m 
 const InvitePage = React.lazy(() => import("./pages/InvitePage").then(m => ({ default: m.InvitePage })));
 const InviteShortPage = React.lazy(() => import("./pages/InviteShortPage").then(m => ({ default: m.InviteShortPage })));
 const CompleteProfile = React.lazy(() => import("./pages/CompleteProfile"));
+const AboutPage = React.lazy(() => import("./pages/AboutPage"));
+const RulesPage = React.lazy(() => import("./pages/RulesPage"));
+const HowToPlayPage = React.lazy(() => import("./pages/HowToPlayPage"));
+const LegalNoticePage = React.lazy(() => import("./pages/LegalNoticePage"));
+const TermsPage = React.lazy(() => import("./pages/TermsPage"));
+const PrivacyPage = React.lazy(() => import("./pages/PrivacyPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
