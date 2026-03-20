@@ -69,6 +69,17 @@ export const AnnouncementsLive = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {isPaused && (
+          <Alert className="bg-orange-500/10 border-orange-500/30">
+            <AlertDescription className="flex items-center gap-2">
+              <Pause className="h-4 w-4 text-orange-500 shrink-0" />
+              <span className="text-sm font-medium text-orange-700 dark:text-orange-400">
+                ⏸ Annonces en pause{pausedByName ? ` par ${pausedByName}` : ''}
+              </span>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {nextAnnouncement ? (
           <>
             <Alert className="bg-primary/5 border-primary/20">
