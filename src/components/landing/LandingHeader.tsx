@@ -8,7 +8,7 @@ const LandingHeader = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#F6F3ED] shadow-sm">
-      <div className="container mx-auto px-5 py-3 flex items-center justify-between">
+      <div className="container mx-auto px-5 py-1 flex items-center justify-between">
         <Link to="/" className="flex items-center">
           <img src={logoDark} alt="La Bordure" className="h-16 w-auto" />
         </Link>
