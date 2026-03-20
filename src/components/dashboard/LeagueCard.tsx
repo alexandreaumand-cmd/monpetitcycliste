@@ -456,14 +456,14 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                 <Button
                   onClick={(e) => { e.stopPropagation(); onViewAnnouncements(); }}
                   variant="outline"
-                  className="relative gap-1.5 shrink-0"
+                  className={`relative gap-1.5 shrink-0 ${auctionStatus.isAnnouncementsPending ? 'border-[#E8A0B4] ring-2 ring-[#E8A0B4]/30' : ''}`}
                 >
                   <Megaphone className="h-4 w-4" />
-                  <span className="hidden sm:inline">Annonces</span>
+                  <span className={auctionStatus.isAnnouncementsPending ? "inline" : "hidden sm:inline"}>Annonces</span>
                   {auctionStatus.isAnnouncementsPending && (
-                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                    <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E8A0B4] opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#E8A0B4]"></span>
+                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-[#E8A0B4]"></span>
                     </span>
                   )}
                 </Button>
