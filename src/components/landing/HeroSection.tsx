@@ -89,6 +89,16 @@ const HeroSection = () => {
                 {t("hero.cta.createLeague")}
               </Button>
             </Link>
+            <Link to="/install">
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-base sm:text-lg px-8 py-7 border-white/40 bg-white/10 hover:bg-white/20 text-white font-montserrat font-semibold active:scale-[0.97] transition-transform"
+              >
+                <Download className="w-5 h-5 mr-2" />
+                {t("hero.cta.install")}
+              </Button>
+            </Link>
           </motion.div>
         </div>
       </div>
