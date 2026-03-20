@@ -252,12 +252,12 @@ export function AuctionLiveAnnouncements({
                     <Button
                       size="sm"
                       variant={isPaused ? "default" : "outline"}
-                      className={`gap-1 text-xs ${isPaused ? 'bg-orange-500 hover:bg-orange-600 text-white' : ''}`}
+                      className={`gap-1 text-[11px] px-2 py-1 h-7 ${isPaused ? 'bg-orange-500 hover:bg-orange-600 text-white' : ''}`}
                       onClick={() => togglePause.mutate()}
                       disabled={togglePause.isPending}
                     >
-                      {isPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-                      {isPaused ? 'Reprendre' : 'Pause'}
+                      {isPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+                      <span className="hidden sm:inline">{isPaused ? 'Reprendre' : 'Pause'}</span>
                     </Button>
                   )}
                   <Badge variant={isComplete ? "default" : "secondary"} className={`text-xs sm:text-sm shrink-0 ${isReplaying ? 'animate-pulse' : ''}`}>
