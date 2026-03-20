@@ -3,12 +3,15 @@ import { AuctionPageV2 } from "./v2/AuctionPageV2";
 import { AuctionPhaseHistoryView } from "./v2/AuctionPhaseHistoryView";
 import { AuctionScheduledView } from "./v2/AuctionScheduledView";
 import { AuctionLiveAnnouncements } from "./v2/AuctionLiveAnnouncements";
+import { AuctionPhaseSelector } from "./AuctionPhaseSelector";
 import { MobileEmptyState } from "@/components/mobile";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useLeagueAuctionStatus } from "@/hooks/useLeagueAuctionStatus";
+import { useLeagueAuctionPhases } from "@/hooks/useLeagueAuctionPhases";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 
 interface AuctionsListProps {
   managerId: string;
@@ -17,14 +20,15 @@ interface AuctionsListProps {
 export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
   const { leagueId } = useLeague();
   const { data: auctionStatus, isLoading } = useLeagueAuctionStatus(leagueId);
+  const { data: auctionPhases = [], isLoading: isLoadingPhases } = useLeagueAuctionPhases(leagueId);
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
+  const [manualPhaseId, setManualPhaseId] = useState<string | null>(null);
 
   // Query pour récupérer l'historique des enchères terminées
   const { data: phaseHistory, isLoading: isLoadingHistory } = useQuery({
     queryKey: ['phase-history-check', leagueId],
     queryFn: async () => {
-      // Récupérer la phase active de la ligue
       const { data: leagueScope } = await supabase
         .from('league_scopes')
         .select('phases, season_id')
@@ -33,7 +37,6 @@ export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
 
       if (!leagueScope?.phases?.length || !leagueScope.season_id) return null;
 
-      // Récupérer les phases actives
       const { data: phases } = await supabase
         .from('phases')
         .select('id, budget, max_coureurs')
@@ -44,7 +47,6 @@ export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
 
       const phaseId = phases[0].id;
 
-      // Vérifier s'il y a des rounds fermés
       const { data: closedRounds } = await supabase
         .from('auctions')
         .select('id')
@@ -55,7 +57,6 @@ export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
 
       if (!closedRounds?.length) return null;
 
-      // Récupérer les settings de la ligue
       const { data: league } = await supabase
         .from('leagues')
         .select('settings')
@@ -73,7 +74,7 @@ export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
     enabled: !isLoading && auctionStatus === null && !!leagueId,
   });
 
-  if (isLoading || isLoadingHistory) {
+  if (isLoading || isLoadingHistory || isLoadingPhases) {
     return (
       <div className="flex justify-center items-center p-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -81,63 +82,146 @@ export const AuctionsListMobile = ({ managerId }: AuctionsListProps) => {
     );
   }
 
-  // 0. Tab "announcements" demandé explicitement → afficher les annonces si possible
+  const livePhaseId = auctionStatus?.phaseId || phaseHistory?.phaseId || null;
+
+  // If user manually selected a different phase
+  if (manualPhaseId && manualPhaseId !== livePhaseId) {
+    const phaseInfo = auctionPhases.find((p) => p.phaseId === manualPhaseId);
+    if (phaseInfo) {
+      return (
+        <div>
+          <div className="px-4 pt-3">
+            <AuctionPhaseSelector
+              phases={auctionPhases}
+              selectedPhaseId={manualPhaseId}
+              onPhaseChange={setManualPhaseId}
+              compact
+            />
+          </div>
+          <AuctionPhaseHistoryView
+            phaseId={manualPhaseId}
+            managerId={managerId}
+            leagueId={leagueId}
+            budget={phaseInfo.budget}
+            maxRiders={phaseInfo.maxRiders}
+          />
+        </div>
+      );
+    }
+  }
+
+  const renderPhaseSelector = (currentPhaseId: string) => {
+    if (auctionPhases.length <= 1) return null;
+    return (
+      <div className="px-4 pt-3">
+        <AuctionPhaseSelector
+          phases={auctionPhases}
+          selectedPhaseId={manualPhaseId || currentPhaseId}
+          onPhaseChange={setManualPhaseId}
+          compact
+        />
+      </div>
+    );
+  };
+
+  // 0. Tab "announcements"
   if (tabParam === 'announcements' && auctionStatus?.phaseId && auctionStatus?.auctionId) {
     return (
-      <div className="p-4">
-        <AuctionLiveAnnouncements
-          auctionId={auctionStatus.auctionId}
-          phaseId={auctionStatus.phaseId}
-          managerId={managerId}
-        />
+      <div>
+        {renderPhaseSelector(auctionStatus.phaseId)}
+        <div className="p-4">
+          <AuctionLiveAnnouncements
+            auctionId={auctionStatus.auctionId}
+            phaseId={auctionStatus.phaseId}
+            managerId={managerId}
+          />
+        </div>
       </div>
     );
   }
 
-  // 1. Enchère ouverte → afficher l'interface d'enchères
+  // 1. Enchère ouverte
   if (auctionStatus && !auctionStatus.isScheduled && !auctionStatus.isAnnouncementsPending) {
-    return <AuctionPageV2 phaseId={auctionStatus.phaseId!} managerId={managerId} leagueId={leagueId} />;
+    return (
+      <div>
+        {renderPhaseSelector(auctionStatus.phaseId!)}
+        <AuctionPageV2 phaseId={auctionStatus.phaseId!} managerId={managerId} leagueId={leagueId} />
+      </div>
+    );
   }
 
-  // 2. Annonces en attente → afficher les résultats en direct
+  // 2. Annonces en attente
   if (auctionStatus?.isAnnouncementsPending && auctionStatus.phaseId) {
     return (
-      <div className="p-4">
-        <AuctionLiveAnnouncements
-          auctionId={auctionStatus.auctionId}
+      <div>
+        {renderPhaseSelector(auctionStatus.phaseId)}
+        <div className="p-4">
+          <AuctionLiveAnnouncements
+            auctionId={auctionStatus.auctionId}
+            phaseId={auctionStatus.phaseId}
+            managerId={managerId}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Enchère programmée
+  if (auctionStatus?.isScheduled && auctionStatus.phaseId) {
+    return (
+      <div>
+        {renderPhaseSelector(auctionStatus.phaseId)}
+        <AuctionScheduledView
+          opensAt={auctionStatus.deadlineAt}
+          roundNumber={auctionStatus.roundNumber}
           phaseId={auctionStatus.phaseId}
-          managerId={managerId}
+          leagueId={leagueId}
         />
       </div>
     );
   }
 
-  // 3. Enchère programmée → afficher le compte à rebours
-  if (auctionStatus?.isScheduled && auctionStatus.phaseId) {
-    return (
-      <AuctionScheduledView
-        opensAt={auctionStatus.deadlineAt}
-        roundNumber={auctionStatus.roundNumber}
-        phaseId={auctionStatus.phaseId}
-        leagueId={leagueId}
-      />
-    );
-  }
-
-  // 4. Enchères terminées avec historique disponible
+  // 4. Enchères terminées avec historique
   if (phaseHistory) {
     return (
-      <AuctionPhaseHistoryView
-        phaseId={phaseHistory.phaseId}
-        managerId={managerId}
-        leagueId={leagueId}
-        budget={phaseHistory.budget}
-        maxRiders={phaseHistory.maxRiders}
-      />
+      <div>
+        {renderPhaseSelector(phaseHistory.phaseId)}
+        <AuctionPhaseHistoryView
+          phaseId={phaseHistory.phaseId}
+          managerId={managerId}
+          leagueId={leagueId}
+          budget={phaseHistory.budget}
+          maxRiders={phaseHistory.maxRiders}
+        />
+      </div>
     );
   }
 
-  // 5. Aucune enchère active → état vide
+  // 5. Des phases avec enchères existent
+  if (auctionPhases.length > 0) {
+    const firstPhase = auctionPhases[0];
+    return (
+      <div>
+        <div className="px-4 pt-3">
+          <AuctionPhaseSelector
+            phases={auctionPhases}
+            selectedPhaseId={manualPhaseId || firstPhase.phaseId}
+            onPhaseChange={setManualPhaseId}
+            compact
+          />
+        </div>
+        <AuctionPhaseHistoryView
+          phaseId={manualPhaseId || firstPhase.phaseId}
+          managerId={managerId}
+          leagueId={leagueId}
+          budget={firstPhase.budget}
+          maxRiders={firstPhase.maxRiders}
+        />
+      </div>
+    );
+  }
+
+  // 6. Rien
   return (
     <MobileEmptyState
       icon={<Trophy className="h-16 w-16" />}
