@@ -168,9 +168,9 @@ export function AuctionValidationConfirmation({ phaseId, auctionId, managerId, l
               </div>
               <div className="bg-muted rounded-lg p-3">
                 <div className="flex flex-wrap gap-2">
-                  {status.waiting_managers.map((managerName: string, index: number) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {managerName}
+                  {status.waiting_managers.map((mgr: any, index: number) => (
+                    <Badge key={mgr?.manager_id || index} variant="outline" className="text-xs">
+                      {typeof mgr === 'string' ? mgr : mgr?.manager_nom || 'Inconnu'}
                     </Badge>
                   ))}
                 </div>
