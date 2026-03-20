@@ -15,6 +15,7 @@ const LandingPage = () => {
       <LandingHeader />
       <main>
         <HeroSection />
+        <GameOverviewSection />
         <HowItWorksSection />
         <AuctionShowcase />
         <SocialProofSection />

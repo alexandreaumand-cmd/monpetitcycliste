@@ -14,6 +14,14 @@
       "discover": "Découvrir"
     }
   },
+  "overview": {
+    "steps": {
+      "bid": { "title": "Enchéris", "desc": "Recrute tes coureurs aux enchères entre amis." },
+      "follow": { "title": "Suis", "desc": "Suis les courses UCI tout au long de la saison." },
+      "score": { "title": "Marque", "desc": "Tes coureurs marquent des points à chaque course." },
+      "dominate": { "title": "Domine", "desc": "Grimpe au classement et chambre tes potes." }
+    }
+  },
   "discover": {
     "surtitle": "Découvre le jeu",
     "blocks": {

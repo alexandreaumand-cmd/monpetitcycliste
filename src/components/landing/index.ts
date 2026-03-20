@@ -1,5 +1,6 @@
 export { default as LandingHeader } from "./LandingHeader";
 export { default as HeroSection } from "./HeroSection";
+export { default as GameOverviewSection } from "./GameOverviewSection";
 export { default as HowItWorksSection } from "./HowItWorksSection";
 export { default as AuctionShowcase } from "./AuctionShowcase";
 export { default as SocialProofSection } from "./SocialProofSection";
