@@ -93,7 +93,7 @@ const HeroSection = () => {
               <Button
                 size="lg"
                 variant="outline"
-                className="text-base sm:text-lg px-8 py-7 border-white/40 bg-white/10 hover:bg-white/20 text-white font-montserrat font-semibold active:scale-[0.97] transition-transform"
+                className="text-sm sm:text-base lg:text-lg px-6 py-6 border-white/40 bg-white/10 hover:bg-white/20 text-white font-montserrat font-semibold active:scale-[0.97] transition-transform"
               >
                 <Download className="w-5 h-5 mr-2" />
                 {t("hero.cta.install")}
