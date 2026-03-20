@@ -98,7 +98,7 @@ const PhoneMockup = ({ children }: { children: React.ReactNode }) => (
       {/* Notch */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-secondary rounded-b-2xl z-10" />
       {/* Screen */}
-      <div className="bg-bordure-cream rounded-[2rem] overflow-hidden aspect-[9/19.5]">
+      <div className="bg-bordure-cream rounded-[2rem] overflow-hidden aspect-[9/18]">
         {children}
       </div>
     </div>
