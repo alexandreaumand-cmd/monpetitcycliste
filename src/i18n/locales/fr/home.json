@@ -18,15 +18,19 @@
     "blocks": {
       "auction": {
         "title": "Recrute aux enchères",
-        "text": "Défie tes amis en temps réel pour recruter les meilleurs coureurs du peloton. Chaque mise compte."
+        "text": "Parcours le peloton, filtre par prix ou catégorie UCI, et place tes enchères sur les coureurs que tu veux recruter. Budget limité, choix stratégiques — chaque mise compte face à tes adversaires."
       },
       "team": {
         "title": "Compose ton équipe",
-        "text": "Grimpeurs, sprinteurs, rouleurs — construis l'effectif parfait pour chaque course."
+        "text": "Grimpeurs, sprinteurs, rouleurs — jusqu'à 30 coureurs dans ton effectif. Suis leurs points en temps réel, optimise ta composition phase après phase et vise le roster parfait."
       },
       "ranking": {
+        "title": "Suis le calendrier pro",
+        "text": "Calendrier UCI complet avec WorldTour, ProSeries et courses .1. Consulte les startlists, anticipe les résultats et planifie ta stratégie course par course."
+      },
+      "classement": {
         "title": "Domine le classement",
-        "text": "Tes coureurs marquent des points sur les vraies courses UCI. Le meilleur manager gagne."
+        "text": "Classement général, hebdomadaire, par coureur ou chrono — plusieurs façons de briller. Compare-toi à tes amis et grimpe au sommet de ta ligue."
       }
     }
   },
