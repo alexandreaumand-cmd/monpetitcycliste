@@ -29,6 +29,7 @@ const HowToPlayPage = React.lazy(() => import("./pages/HowToPlayPage"));
 const LegalNoticePage = React.lazy(() => import("./pages/LegalNoticePage"));
 const TermsPage = React.lazy(() => import("./pages/TermsPage"));
 const PrivacyPage = React.lazy(() => import("./pages/PrivacyPage"));
+const TeamPage = React.lazy(() => import("./pages/TeamPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
