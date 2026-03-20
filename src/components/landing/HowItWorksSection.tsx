@@ -200,7 +200,7 @@ const RankingBlock = () => {
         viewport={{ once: true, amount: 0.2 }}
         transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
       >
-        <div className="w-[260px] sm:w-[280px]">
+        <div className="w-[156px] sm:w-[280px]">
           <PhoneMockup>
             <img
               src="/screenshots/startlist.png"
