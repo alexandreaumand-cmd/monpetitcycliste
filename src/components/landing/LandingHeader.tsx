@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoDark from "@/assets/logo-bordure.png";
 
@@ -20,9 +21,15 @@ const LandingHeader = () => {
         <Link to="/auth">
           <Button
             size="sm"
-            className="bg-bordure-gold hover:bg-bordure-gold/90 text-[#1B5E3B] font-montserrat font-bold text-sm px-5"
+            className="bg-bordure-gold hover:bg-bordure-gold/90 text-[#1B5E3B] font-montserrat font-bold text-sm px-5 hidden sm:inline-flex"
           >
             {t("header.login")}
+          </Button>
+          <Button
+            size="icon"
+            className="bg-bordure-gold hover:bg-bordure-gold/90 text-[#1B5E3B] sm:hidden h-9 w-9"
+          >
+            <LogIn className="h-4 w-4" />
           </Button>
         </Link>
       </div>
