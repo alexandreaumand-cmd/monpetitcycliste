@@ -242,9 +242,24 @@ export function AuctionLiveAnnouncements({
                   <PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   <span className="truncate">{t('live.resultsRound', { round: liveStatus?.auction?.round_number || '' })}</span>
                 </CardTitle>
-                <Badge variant={isComplete ? "default" : "secondary"} className={`text-xs sm:text-sm shrink-0 ${isReplaying ? 'animate-pulse' : ''}`}>
-                  {isReplaying ? `${replayVisibleCount}/${liveAnnonces.length}` : `${publishedCount}/${totalAnnonces}`}
-                </Badge>
+                <div className="flex items-center gap-1.5">
+                  {/* Pause/Resume button - visible when live (not replay, not complete) */}
+                  {!isReplaying && !isComplete && unpublishedCount > 0 && (
+                    <Button
+                      size="sm"
+                      variant={isPaused ? "default" : "outline"}
+                      className={`gap-1 text-xs ${isPaused ? 'bg-orange-500 hover:bg-orange-600 text-white' : ''}`}
+                      onClick={() => togglePause.mutate()}
+                      disabled={togglePause.isPending}
+                    >
+                      {isPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+                      <span className="hidden sm:inline">{isPaused ? 'Reprendre' : 'Pause'}</span>
+                    </Button>
+                  )}
+                  <Badge variant={isComplete ? "default" : "secondary"} className={`text-xs sm:text-sm shrink-0 ${isReplaying ? 'animate-pulse' : ''}`}>
+                    {isReplaying ? `${replayVisibleCount}/${liveAnnonces.length}` : `${publishedCount}/${totalAnnonces}`}
+                  </Badge>
+                </div>
               </div>
 
               {/* Round selector */}
