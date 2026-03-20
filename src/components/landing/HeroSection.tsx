@@ -84,7 +84,7 @@ const HeroSection = () => {
             <Link to="/auth">
               <Button
                 size="lg"
-                className="text-sm sm:text-base px-6 py-5 bg-bordure-gold hover:bg-bordure-gold/90 text-secondary font-montserrat font-bold shadow-xl shadow-bordure-gold/20 active:scale-[0.97] transition-transform"
+                className="text-xs sm:text-base px-4 sm:px-6 py-4 sm:py-5 bg-bordure-gold hover:bg-bordure-gold/90 text-secondary font-montserrat font-bold shadow-xl shadow-bordure-gold/20 active:scale-[0.97] transition-transform"
               >
                 {t("hero.cta.createLeague")}
               </Button>
