@@ -120,13 +120,18 @@ function getUrlForNotificationType(type, metadata) {
       return `${baseUrl}/startlist`;
     
     case 'auction_opened':
-    case 'auction_closed':
     case 'auction_ready_to_close':
     case 'auction_validation':
       if (metadata?.league_id) {
         return `${baseUrl}/encheres?leagueId=${metadata.league_id}`;
       }
       return `${baseUrl}/encheres`;
+
+    case 'auction_closed':
+      if (metadata?.league_id) {
+        return `${baseUrl}/encheres?leagueId=${metadata.league_id}&tab=announcements`;
+      }
+      return `${baseUrl}/encheres?tab=announcements`;
 
     case 'arena_daily_recap':
     case 'arena_weekly_recap':

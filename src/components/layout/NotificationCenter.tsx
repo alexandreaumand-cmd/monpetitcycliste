@@ -109,7 +109,12 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
       if (leagueId) params.set('leagueId', leagueId);
       if (courseId) params.set('courseId', courseId);
       navigate(`/dashboard/resultats?${params.toString()}`);
-    } else if (notification.type === 'auction_opened' || notification.type === 'auction_closed' || notification.type === 'auction_ready_to_close') {
+    } else if (notification.type === 'auction_closed') {
+      const params = new URLSearchParams();
+      if (notification.metadata?.league_id) params.set('leagueId', notification.metadata.league_id);
+      params.set('tab', 'announcements');
+      navigate(`/dashboard/encheres?${params.toString()}`);
+    } else if (notification.type === 'auction_opened' || notification.type === 'auction_ready_to_close') {
       navigate(`/dashboard/encheres?leagueId=${notification.metadata?.league_id}`);
     }
   };
