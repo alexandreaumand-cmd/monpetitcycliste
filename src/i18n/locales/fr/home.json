@@ -119,7 +119,7 @@
   "auction": {
     "title": "Montre-leur qui est",
     "titleAccent": "le boss.",
-    "subtitle": "Place 3 coureurs sur le podium à chaque course. Stratégie, bluff et adrénaline — l'enchère entre amis, c'est le cœur du jeu.",
+    "subtitle": "Place un max de tes coureurs dans les 10 premiers à chaque course. Encaisse les points et ridiculise tes potes. ",
     "rider": "Tadej POGAČAR",
     "riderTeam": "UAE Team Emirates",
     "managers": {
@@ -129,7 +129,7 @@
     },
     "highestBid": "Meilleure offre",
     "currency": "M€",
-    "cta": "Créer ma ligue"
+    "cta": "C'EST PARTI\n! "
   },
   "socialProof": {
     "title": "Une communauté de passionnés",
