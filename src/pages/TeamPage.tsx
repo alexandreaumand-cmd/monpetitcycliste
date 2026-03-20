@@ -17,6 +17,7 @@ import leCodeurAvatar from "@/assets/team/le-codeur.png";
 import leSachantAvatar from "@/assets/team/le-sachant.png";
 import leCriminelAvatar from "@/assets/team/le-criminel.png";
 import leRappeurAvatar from "@/assets/team/le-rappeur.png";
+import leFantomeAvatar from "@/assets/team/le-fantome.png";
 
 interface TeamMember {
   nickname: string;
@@ -36,7 +37,7 @@ const members: TeamMember[] = [
   { nickname: "La Pépite", description: "Il s'est essayé au football. Barré par Mvila, il suit maintenant le vélo.", icon: Trophy, accentColor: "gold" },
   { nickname: "Le BOSS", description: "Il a renversé la table et a pris le pouvoir.", icon: Crown, accentColor: "pink" },
   { nickname: "Le Codeur", description: "Il débug, fait évoluer, c'est lui qui tient la barre.", icon: Code, accentColor: "gold", avatar: leCodeurAvatar },
-  { nickname: "Le Fantôme", description: "Plus occupé à bouffer des frites à la cantine qu'à suivre le vélo.", icon: Ghost, accentColor: "pink" },
+  { nickname: "Le Fantôme", description: "Plus occupé à bouffer des frites à la cantine qu'à suivre le vélo.", icon: Ghost, accentColor: "pink", avatar: leFantomeAvatar },
 ];
 
 const TeamPage = () => {
