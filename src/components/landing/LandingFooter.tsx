@@ -10,12 +10,9 @@ const LandingFooter = () => {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div className="md:col-span-1">
-            <Link to="/" className="flex items-center gap-3 mb-4">
-              <img src={logoBordureLight} alt="La Bordure Fantasy Cycling" className="h-10 w-auto" loading="lazy" />
+            <Link to="/" className="flex items-center mb-4">
+              <img src={logoBordureLight} alt="La Bordure Fantasy Cycling" className="h-28 w-auto" loading="lazy" />
             </Link>
-            <p className="text-white/40 text-sm font-inter">
-              {t("footer.tagline")}
-            </p>
           </div>
 
           <div>
