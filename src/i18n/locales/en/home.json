@@ -174,5 +174,10 @@
       "privacy": "Privacy"
     },
     "copyright": "© 2025 La Bordure. All rights reserved."
+  },
+  "installBanner": {
+    "title": "Take La Bordure everywhere",
+    "subtitle": "Install the app on your phone to follow races live.",
+    "cta": "Install the app"
   }
 }
