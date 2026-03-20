@@ -14,7 +14,7 @@ const HeroSection = () => {
         <img
           src="/images/hero-roubaix.avif"
           alt="Mathieu van der Poel célèbre sa victoire sur le vélodrome de Roubaix"
-          className="w-full h-full object-cover object-[40%_20%] sm:object-[center_20%]"
+          className="w-full h-full object-cover object-[55%_20%] sm:object-[center_20%]"
           loading="eager"
           fetchPriority="high"
         />
