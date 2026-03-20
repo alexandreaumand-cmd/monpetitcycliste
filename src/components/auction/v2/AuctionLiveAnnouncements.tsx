@@ -142,7 +142,7 @@ export function AuctionLiveAnnouncements({
         setIsReplaying(false);
       }
     }
-  }, [liveStatus, selectedAuctionId]);
+  }, [liveStatus, effectiveAuctionId]);
 
   // Handle new announcements - scroll to top for reversed order
   useEffect(() => {
