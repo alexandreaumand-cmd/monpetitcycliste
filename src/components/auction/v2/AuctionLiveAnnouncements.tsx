@@ -252,12 +252,12 @@ export function AuctionLiveAnnouncements({
                     <Button
                       size="sm"
                       variant={isPaused ? "default" : "outline"}
-                      className={`gap-1 text-xs ${isPaused ? 'bg-orange-500 hover:bg-orange-600 text-white' : ''}`}
+                      className={`gap-1 text-[11px] px-2 py-1 h-7 ${isPaused ? 'bg-orange-500 hover:bg-orange-600 text-white' : ''}`}
                       onClick={() => togglePause.mutate()}
                       disabled={togglePause.isPending}
                     >
-                      {isPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-                      {isPaused ? 'Reprendre' : 'Pause'}
+                      {isPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+                      <span className="hidden sm:inline">{isPaused ? 'Reprendre' : 'Pause'}</span>
                     </Button>
                   )}
                   <Badge variant={isComplete ? "default" : "secondary"} className={`text-xs sm:text-sm shrink-0 ${isReplaying ? 'animate-pulse' : ''}`}>
@@ -298,15 +298,15 @@ export function AuctionLiveAnnouncements({
             <CardContent className="py-2 sm:py-4 px-3 sm:px-6">
               {/* Pause banner */}
               {isPaused && !isReplaying && (
-                <div className="mb-3 p-3 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-between gap-3 animate-pulse">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Pause className="h-5 w-5 text-orange-500 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-orange-700 dark:text-orange-400">
+                <div className="mb-3 p-2.5 sm:p-3 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Pause className="h-4 w-4 text-orange-500 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-semibold text-orange-700 dark:text-orange-400">
                         ⏸ Annonces en pause
                       </p>
                       {pausedByName && (
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="text-[11px] sm:text-xs text-muted-foreground">
                           Mis en pause par {pausedByName}
                         </p>
                       )}
@@ -314,11 +314,11 @@ export function AuctionLiveAnnouncements({
                   </div>
                   <Button
                     size="sm"
-                    className="bg-orange-500 hover:bg-orange-600 text-white gap-1 shrink-0"
+                    className="bg-orange-500 hover:bg-orange-600 text-white gap-1 shrink-0 text-[11px] px-2.5 py-1 h-7 sm:text-xs sm:px-3 sm:h-8"
                     onClick={() => togglePause.mutate()}
                     disabled={togglePause.isPending}
                   >
-                    <Play className="h-3.5 w-3.5" />
+                    <Play className="h-3 w-3" />
                     Reprendre
                   </Button>
                 </div>
