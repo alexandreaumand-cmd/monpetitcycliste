@@ -1,25 +1,22 @@
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { Gavel, Trophy, RotateCcw, Users } from "lucide-react";
+import { Gavel, Trophy, RotateCcw, Users, MapPin, Award, SlidersHorizontal, Activity } from "lucide-react";
 
 /**
- * "Découvre le jeu" — auction block with screenshot + steps, then 3 phone mockup blocks
+ * "Découvre le jeu" — auction block with screenshot + steps, team block with steps, then phone mockup blocks
  */
 const HowItWorksSection = () => {
   const { t } = useTranslation("home");
 
   const phoneBlocks = [
     {
-      title: t("discover.blocks.team.title"),
-      text: t("discover.blocks.team.text"),
-      screenshot: "/screenshots/team.png",
-    },
-    {
+      key: "ranking",
       title: t("discover.blocks.ranking.title"),
       text: t("discover.blocks.ranking.text"),
       screenshot: "/screenshots/startlist.png",
     },
     {
+      key: "classement",
       title: t("discover.blocks.classement.title"),
       text: t("discover.blocks.classement.text"),
       screenshot: "/screenshots/ranking.png",
@@ -40,15 +37,14 @@ const HowItWorksSection = () => {
         </motion.p>
 
         <div className="space-y-24 md:space-y-40">
-          {/* Auction block — special layout */}
           <AuctionBlock />
+          <TeamBlock />
 
-          {/* Phone mockup blocks */}
           {phoneBlocks.map((block, i) => {
-            const isReversed = i % 2 === 0; // first phone block reversed since auction was "normal"
+            const isReversed = i % 2 === 0;
             return (
               <div
-                key={i}
+                key={block.key}
                 className={`flex flex-col ${isReversed ? "lg:flex-row-reverse" : "lg:flex-row"} gap-10 lg:gap-20 items-center`}
               >
                 <motion.div
@@ -92,130 +88,3 @@ const HowItWorksSection = () => {
     </section>
   );
 };
-
-/** Auction block: steps on the left, browser mockup on the right */
-const AuctionBlock = () => {
-  const { t } = useTranslation("home");
-
-  const steps = [
-    {
-      icon: Gavel,
-      title: t("discover.blocks.auction.steps.bid.title"),
-      desc: t("discover.blocks.auction.steps.bid.desc"),
-    },
-    {
-      icon: Trophy,
-      title: t("discover.blocks.auction.steps.win.title"),
-      desc: t("discover.blocks.auction.steps.win.desc"),
-    },
-    {
-      icon: RotateCcw,
-      title: t("discover.blocks.auction.steps.rounds.title"),
-      desc: t("discover.blocks.auction.steps.rounds.desc"),
-    },
-    {
-      icon: Users,
-      title: t("discover.blocks.auction.steps.team.title"),
-      desc: t("discover.blocks.auction.steps.team.desc"),
-    },
-  ];
-
-  return (
-    <div className="flex flex-col lg:flex-row gap-10 lg:gap-16 items-center">
-      {/* Left: title + steps */}
-      <motion.div
-        className="lg:flex-shrink-0 lg:w-[400px]"
-        initial={{ opacity: 0, x: -20, filter: "blur(4px)" }}
-        whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-montserrat font-bold text-secondary leading-[1.05] mb-8">
-          {t("discover.blocks.auction.title")}
-        </h2>
-
-        <div className="space-y-5">
-          {steps.map((step, i) => (
-            <motion.div
-              key={i}
-              className="flex items-start gap-4"
-              initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
-              whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.5, delay: 0.1 * i, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <div className="w-10 h-10 rounded-xl bg-bordure-gold/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <step.icon className="w-5 h-5 text-bordure-gold" />
-              </div>
-              <div>
-                <p className="font-montserrat font-bold text-secondary text-sm mb-0.5">
-                  {step.title}
-                </p>
-                <p className="text-secondary/50 font-inter text-sm leading-relaxed">
-                  {step.desc}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Right: browser mockup */}
-      <motion.div
-        className="flex-1 w-full flex justify-center"
-        initial={{ opacity: 0, x: 20, filter: "blur(4px)" }}
-        whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <div className="w-full max-w-[680px]">
-          <BrowserMockup>
-            <img
-              src="/screenshots/encheres.png"
-              alt={t("discover.blocks.auction.title")}
-              className="w-full h-full object-cover object-top"
-              loading="lazy"
-            />
-          </BrowserMockup>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
-/** iPhone-style device frame */
-const PhoneMockup = ({ children }: { children: React.ReactNode }) => (
-  <div className="relative">
-    <div className="bg-secondary rounded-[2.5rem] p-2.5 shadow-2xl shadow-secondary/30">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-secondary rounded-b-2xl z-10" />
-      <div className="bg-bordure-cream rounded-[2rem] overflow-hidden aspect-[9/19.5] relative">
-        {children}
-      </div>
-    </div>
-  </div>
-);
-
-/** macOS-style browser frame */
-const BrowserMockup = ({ children }: { children: React.ReactNode }) => (
-  <div className="relative">
-    <div className="bg-secondary rounded-xl shadow-2xl shadow-secondary/30 overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-secondary">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
-          <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
-          <div className="w-3 h-3 rounded-full bg-[#28C840]" />
-        </div>
-        <div className="flex-1 mx-8">
-          <div className="bg-white/10 rounded-md px-3 py-1 text-[10px] text-white/40 font-inter text-center truncate">
-            labordure.app
-          </div>
-        </div>
-      </div>
-      <div className="overflow-hidden aspect-[16/10] relative">
-        {children}
-      </div>
-    </div>
-  </div>
-);
-
-export default HowItWorksSection;
