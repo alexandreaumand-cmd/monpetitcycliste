@@ -13,6 +13,7 @@ import {
   Ghost,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import leCodeurAvatar from "@/assets/team/le-codeur.png";
 
 interface TeamMember {
   nickname: string;
