@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { Gavel, Trophy, RotateCcw, Users, MapPin, Award, SlidersHorizontal, Activity, Globe, ListChecks, Target, CalendarDays } from "lucide-react";
+import { Gavel, Trophy, RotateCcw, Users, MapPin, Award, SlidersHorizontal, Activity, Globe, ListChecks, Target, CalendarDays, Crown, Calendar, MessageCircle, TrendingUp } from "lucide-react";
 
 /**
  * "Découvre le jeu" — auction block, team block, ranking block, then classement phone block
