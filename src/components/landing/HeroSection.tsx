@@ -22,7 +22,7 @@ const HeroSection = () => {
 
       {/* Localized gradient behind text only */}
       <div className="absolute inset-0 z-[1] flex items-end justify-end">
-        <div className="mb-8 md:mb-12 mr-5 md:mr-12 max-w-xl bg-gradient-to-l from-black/75 via-black/60 to-transparent backdrop-blur-[2px] rounded-l-2xl px-8 py-8 md:px-10 md:py-10">
+        <div className="mb-6 md:mb-10 mr-5 md:mr-12 max-w-xl bg-gradient-to-l from-black/75 via-black/60 to-transparent backdrop-blur-[2px] rounded-l-2xl px-6 py-6 md:px-10 md:py-8">
           <motion.p
             className="text-bordure-gold font-inter text-sm tracking-[0.2em] uppercase mb-3"
             style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
@@ -34,7 +34,7 @@ const HeroSection = () => {
           </motion.p>
 
           <motion.h1
-            className="text-4xl sm:text-5xl lg:text-7xl font-montserrat font-bold text-white leading-[0.95] mb-2 max-w-3xl"
+            className="text-3xl sm:text-4xl lg:text-5xl xl:text-7xl font-montserrat font-bold text-white leading-[0.95] mb-2 max-w-3xl"
             style={{ textShadow: "0 2px 16px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.9)" }}
             initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -44,7 +44,7 @@ const HeroSection = () => {
           </motion.h1>
 
           <motion.h1
-            className="text-4xl sm:text-5xl lg:text-7xl font-montserrat italic text-bordure-gold leading-[0.95] mb-6 max-w-3xl"
+            className="text-3xl sm:text-4xl lg:text-5xl xl:text-7xl font-montserrat italic text-bordure-gold leading-[0.95] mb-5 max-w-3xl"
             style={{ textShadow: "0 2px 16px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.9)" }}
             initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -54,7 +54,7 @@ const HeroSection = () => {
           </motion.h1>
 
           <motion.p
-            className="text-white/80 font-inter text-base sm:text-lg max-w-md mb-2 leading-relaxed"
+            className="text-white/80 font-inter text-sm sm:text-base lg:text-lg max-w-md mb-2 leading-relaxed"
             style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -64,7 +64,7 @@ const HeroSection = () => {
           </motion.p>
 
           <motion.div
-            className="flex gap-1 mb-8"
+            className="flex gap-1 mb-6"
             initial={{ opacity: 0, scaleX: 0.5 }}
             animate={{ opacity: 1, scaleX: 1 }}
             transition={{ duration: 0.5, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -84,7 +84,7 @@ const HeroSection = () => {
             <Link to="/auth">
               <Button
                 size="lg"
-                className="text-base sm:text-lg px-10 py-7 bg-bordure-gold hover:bg-bordure-gold/90 text-secondary font-montserrat font-bold shadow-xl shadow-bordure-gold/20 active:scale-[0.97] transition-transform"
+                className="text-sm sm:text-base lg:text-lg px-8 py-6 bg-bordure-gold hover:bg-bordure-gold/90 text-secondary font-montserrat font-bold shadow-xl shadow-bordure-gold/20 active:scale-[0.97] transition-transform"
               >
                 {t("hero.cta.createLeague")}
               </Button>
@@ -93,7 +93,7 @@ const HeroSection = () => {
               <Button
                 size="lg"
                 variant="outline"
-                className="text-base sm:text-lg px-8 py-7 border-white/40 bg-white/10 hover:bg-white/20 text-white font-montserrat font-semibold active:scale-[0.97] transition-transform"
+                className="text-sm sm:text-base lg:text-lg px-6 py-6 border-white/40 bg-white/10 hover:bg-white/20 text-white font-montserrat font-semibold active:scale-[0.97] transition-transform"
               >
                 <Download className="w-5 h-5 mr-2" />
                 {t("hero.cta.install")}
