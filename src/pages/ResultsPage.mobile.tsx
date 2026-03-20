@@ -165,16 +165,14 @@ export const ResultsPageMobile = () => {
   };
   return <div className="flex flex-col h-full">
       {/* Admin Maintenance Component */}
-      <div className="p-4 px-0 py-0">
-        <AdminMaintenance />
-      </div>
+      <AdminMaintenance />
       
       {/* Header */}
-      <div className="sticky top-14 z-10 bg-background border-b safe-top">
-        <div className="p-4">
+      <div className="sticky top-14 z-10 bg-background border-b">
+        <div className="px-4 py-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder={t('search.placeholder')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
+            <Input placeholder={t('search.placeholder')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 h-9" />
           </div>
         </div>
       </div>
