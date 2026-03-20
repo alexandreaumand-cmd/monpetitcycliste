@@ -25,10 +25,24 @@ const SocialProofSection = () => {
   ];
 
   return (
-    <section className="py-20 md:py-28 bg-bordure-cream">
-      <div className="container mx-auto px-4">
+    <section className="relative py-24 md:py-36 overflow-hidden">
+      {/* Background — peloton shot */}
+      <div className="absolute inset-0">
+        <img
+          src="https://images.unsplash.com/photo-1534787238916-9ba6764efd4f?w=1920&q=80&auto=format&fit=crop"
+          alt="Peloton cycliste"
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(to bottom, hsla(147,45%,21%,0.88) 0%, hsla(147,45%,21%,0.92) 100%)" }}
+        />
+      </div>
+
+      <div className="relative z-10 container mx-auto px-5">
         <motion.h2
-          className="text-3xl md:text-4xl font-montserrat font-bold text-secondary text-center mb-14"
+          className="text-3xl sm:text-4xl lg:text-5xl font-montserrat font-bold text-white text-center mb-16 md:mb-20 leading-[1.05]"
           initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
           whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           viewport={{ once: true, amount: 0.2 }}
@@ -37,9 +51,9 @@ const SocialProofSection = () => {
           {t("socialProof.title")}
         </motion.h2>
 
-        {/* Stats */}
+        {/* Stats — XXL typography */}
         <motion.div
-          className="flex flex-wrap justify-center gap-8 sm:gap-16 mb-16"
+          className="flex flex-wrap justify-center gap-12 sm:gap-20 mb-16 md:mb-24"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
@@ -47,40 +61,40 @@ const SocialProofSection = () => {
         >
           {stats.map((stat, i) => (
             <div key={i} className="text-center">
-              <p className="text-4xl md:text-5xl font-montserrat font-bold text-bordure-green">
+              <p className="text-5xl sm:text-6xl lg:text-7xl font-montserrat font-bold text-white/90 tabular-nums">
                 {stat.value}
               </p>
-              <p className="text-secondary/50 text-sm font-inter mt-1 uppercase tracking-wider">
+              <p className="text-white/40 text-sm font-inter mt-2 uppercase tracking-[0.15em]">
                 {stat.label}
               </p>
             </div>
           ))}
         </motion.div>
 
-        {/* Quotes */}
+        {/* Quotes — glass cards */}
         <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
           {quotes.map((quote, i) => (
             <motion.div
               key={i}
-              className="bg-white rounded-2xl p-6 border border-secondary/8 shadow-sm"
+              className="bg-white/8 backdrop-blur-sm rounded-2xl p-6 border border-white/10"
               initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
               whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
             >
-              <Quote className="w-5 h-5 text-bordure-gold mb-3" />
-              <p className="text-secondary/80 font-inter text-sm leading-relaxed mb-4">
+              <Quote className="w-5 h-5 text-bordure-gold mb-3 opacity-60" />
+              <p className="text-white/80 font-inter text-sm leading-relaxed mb-4">
                 "{quote.text}"
               </p>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center">
-                  <span className="text-secondary font-montserrat font-bold text-xs">
+                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                  <span className="text-white font-montserrat font-bold text-xs">
                     {quote.author.charAt(0)}
                   </span>
                 </div>
                 <div>
-                  <p className="text-secondary font-inter text-sm font-medium">{quote.author}</p>
-                  <p className="text-secondary/40 text-xs font-inter">{quote.location}</p>
+                  <p className="text-white font-inter text-sm font-medium">{quote.author}</p>
+                  <p className="text-white/40 text-xs font-inter">{quote.location}</p>
                 </div>
               </div>
             </motion.div>
