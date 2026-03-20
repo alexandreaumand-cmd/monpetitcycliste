@@ -1181,6 +1181,8 @@ export type Database = {
       }
       auctions: {
         Row: {
+          announcements_paused: boolean
+          announcements_paused_by: string | null
           closed_at: string | null
           created_at: string | null
           deadline_at: string
@@ -1192,6 +1194,8 @@ export type Database = {
           statut: Database["public"]["Enums"]["auction_statut"] | null
         }
         Insert: {
+          announcements_paused?: boolean
+          announcements_paused_by?: string | null
           closed_at?: string | null
           created_at?: string | null
           deadline_at: string
@@ -1203,6 +1207,8 @@ export type Database = {
           statut?: Database["public"]["Enums"]["auction_statut"] | null
         }
         Update: {
+          announcements_paused?: boolean
+          announcements_paused_by?: string | null
           closed_at?: string | null
           created_at?: string | null
           deadline_at?: string
@@ -1214,6 +1220,48 @@ export type Database = {
           statut?: Database["public"]["Enums"]["auction_statut"] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "auctions_announcements_paused_by_fkey"
+            columns: ["announcements_paused_by"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["taken_by_manager_id"]
+          },
+          {
+            foreignKeyName: "auctions_announcements_paused_by_fkey"
+            columns: ["announcements_paused_by"]
+            isOneToOne: false
+            referencedRelation: "last_round_winners"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "auctions_announcements_paused_by_fkey"
+            columns: ["announcements_paused_by"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "auctions_announcements_paused_by_fkey"
+            columns: ["announcements_paused_by"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auctions_announcements_paused_by_fkey"
+            columns: ["announcements_paused_by"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["manager_id"]
+          },
+          {
+            foreignKeyName: "auctions_announcements_paused_by_fkey"
+            columns: ["announcements_paused_by"]
+            isOneToOne: false
+            referencedRelation: "v_managers_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "auctions_league_id_fkey"
             columns: ["league_id"]
