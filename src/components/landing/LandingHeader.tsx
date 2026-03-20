@@ -13,6 +13,10 @@ const LandingHeader = () => {
           <img src={logoDark} alt="La Bordure" className="h-16 w-auto" />
         </Link>
 
+        <span className="hidden md:block text-xs text-[#1B5E3B] font-inter italic">
+          {t("header.tagline")}
+        </span>
+
         <Link to="/auth">
           <Button
             size="sm"

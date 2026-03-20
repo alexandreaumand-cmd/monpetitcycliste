@@ -1,7 +1,8 @@
 {
   "header": {
     "myLeagues": "Mes Ligues",
-    "login": "Connexion"
+    "login": "Connexion",
+    "tagline": "Le jeu pour les passionnés de vélo"
   },
   "hero": {
     "title1": "Le cyclisme comme",
