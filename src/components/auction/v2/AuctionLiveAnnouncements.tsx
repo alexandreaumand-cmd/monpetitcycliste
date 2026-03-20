@@ -193,7 +193,11 @@ export function AuctionLiveAnnouncements({
   };
 
   // Compute visible announcements for replay
-  const visibleAnnonces = liveAnnonces.slice(0, replayVisibleCount);
+  // API returns newest first (DESC). For replay, reveal from oldest (cheapest) by slicing from the end.
+  // This keeps newest-revealed at index 0, so it appears at the top of the feed.
+  const visibleAnnonces = isReplaying
+    ? liveAnnonces.slice(-replayVisibleCount)
+    : liveAnnonces.slice(0, replayVisibleCount);
 
   const totalAnnonces = liveStatus?.total_annonces || 0;
   const publishedCount = liveStatus?.published_count || 0;
@@ -384,12 +388,10 @@ export function AuctionLiveAnnouncements({
       const remainingCount = totalAnnonces - visibleAnnonces.length;
       const shouldShowTop10Message = totalAnnonces > 10 && remainingCount === 10;
 
-      // Reverse: newest announcement on top
-      const reversedAnnonces = [...visibleAnnonces].reverse();
-
-      return reversedAnnonces.map((annonce, idx) => {
-        // Le message apparaît en haut de la liste (avant la dernière annonce publiée)
-        const showTop10Before = shouldShowTop10Message && idx === reversedAnnonces.length - 1;
+      // visibleAnnonces already has newest first (from API DESC order)
+      return visibleAnnonces.map((annonce, idx) => {
+        // Le message apparaît en bas de la liste (avant la plus ancienne annonce visible)
+        const showTop10Before = shouldShowTop10Message && idx === visibleAnnonces.length - 1;
 
                         return (
                           <div key={`wrapper-${annonce.id}`}>
