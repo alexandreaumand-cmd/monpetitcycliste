@@ -1,6 +1,8 @@
 export { default as LandingHeader } from "./LandingHeader";
 export { default as HeroSection } from "./HeroSection";
 export { default as HowItWorksSection } from "./HowItWorksSection";
+export { default as AuctionShowcase } from "./AuctionShowcase";
+export { default as SocialProofSection } from "./SocialProofSection";
 export { default as LeagueTypesSection } from "./LeagueTypesSection";
 export { default as ScoringSection } from "./ScoringSection";
 export { default as TeamPreviewSection } from "./TeamPreviewSection";
