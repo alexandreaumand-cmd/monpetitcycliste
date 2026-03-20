@@ -61,7 +61,7 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
   const [debouncedSearch] = useDebounce(searchQuery, 250);
 
   // Get auction context
-  const { data: context, isLoading: contextLoading } = useQuery({
+  const { data: rawContext, isLoading: contextLoading } = useQuery({
     queryKey: ["auction-context", phaseId, managerId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("auction-get-context", {
@@ -72,6 +72,9 @@ export function AuctionPageMobile({ phaseId, managerId, leagueId }: AuctionPageM
     },
     refetchInterval: 10000,
   });
+
+  // Normalize: treat "No active auction" error responses as null
+  const context = rawContext?.auction_id ? rawContext : null;
 
   // Get last closed auction if no active auction
   const { data: lastClosedAuction } = useQuery({
