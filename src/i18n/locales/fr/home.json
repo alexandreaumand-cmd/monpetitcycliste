@@ -62,7 +62,25 @@
       },
       "ranking": {
         "title": "Suis le calendrier pro",
-        "text": "Calendrier UCI complet avec WorldTour, ProSeries et courses .1. Consulte les startlists, anticipe les résultats et planifie ta stratégie course par course."
+        "text": "De la 1.1 aux Monuments, toutes les courses comptent pour ton classement.",
+        "steps": {
+          "allRaces": {
+            "title": "Toutes les courses UCI",
+            "desc": "WorldTour, ProSeries, courses .1 — chaque course du calendrier pro est intégrée."
+          },
+          "startlists": {
+            "title": "Startlists complètes",
+            "desc": "Consulte la liste de départ de chaque course pour anticiper les points."
+          },
+          "strategy": {
+            "title": "Planifie ta stratégie",
+            "desc": "Anticipe les résultats et optimise tes choix course par course."
+          },
+          "calendar": {
+            "title": "Calendrier visuel",
+            "desc": "Vue mensuelle avec les courses à venir, couleurs par catégorie et validations de startlists."
+          }
+        }
       },
       "classement": {
         "title": "Domine le classement",
