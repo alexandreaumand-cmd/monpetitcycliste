@@ -40,7 +40,25 @@
       },
       "team": {
         "title": "Build your team",
-        "text": "Climbers, sprinters, rouleurs — up to 30 riders in your squad. Track their points in real time, optimize your roster phase after phase and aim for the perfect team."
+        "text": "Climbers, sprinters, rouleurs — up to 30 riders in your squad.",
+        "steps": {
+          "stages": {
+            "title": "Points on every stage",
+            "desc": "Your riders score points on each stage based on their finish position."
+          },
+          "jerseys": {
+            "title": "Classification bonuses",
+            "desc": "GC, points, mountains, youth — each jersey earns bonus points."
+          },
+          "optimize": {
+            "title": "Optimize your roster",
+            "desc": "Analyze performance and adjust your squad phase after phase."
+          },
+          "realtime": {
+            "title": "Real-time tracking",
+            "desc": "Follow every rider's points across races and weeks."
+          }
+        }
       },
       "ranking": {
         "title": "Follow the pro calendar",

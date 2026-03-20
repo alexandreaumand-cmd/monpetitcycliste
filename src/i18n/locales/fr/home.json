@@ -40,7 +40,25 @@
       },
       "team": {
         "title": "Compose ton équipe",
-        "text": "Grimpeurs, sprinteurs, rouleurs — jusqu'à 30 coureurs dans ton effectif. Suis leurs points en temps réel, optimise ta composition phase après phase et vise le roster parfait."
+        "text": "Grimpeurs, sprinteurs, rouleurs — jusqu'à 30 coureurs dans ton effectif.",
+        "steps": {
+          "stages": {
+            "title": "Points sur chaque étape",
+            "desc": "Tes coureurs marquent des points à chaque étape selon leur classement d'arrivée."
+          },
+          "jerseys": {
+            "title": "Classements annexes",
+            "desc": "Général, points, montagne, jeunes — chaque maillot rapporte des points bonus."
+          },
+          "optimize": {
+            "title": "Optimise ta compo",
+            "desc": "Analyse les performances et ajuste ton effectif phase après phase."
+          },
+          "realtime": {
+            "title": "Suivi en temps réel",
+            "desc": "Suis les points de chaque coureur au fil des courses et des semaines."
+          }
+        }
       },
       "ranking": {
         "title": "Suis le calendrier pro",
