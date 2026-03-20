@@ -2,11 +2,8 @@ import {
   LandingHeader,
   HeroSection,
   HowItWorksSection,
-  LeagueTypesSection,
-  ScoringSection,
-  TeamPreviewSection,
-  WhyPlaySection,
-  TestimonialsSection,
+  AuctionShowcase,
+  SocialProofSection,
   CTASection,
   LandingFooter,
 } from "@/components/landing";
@@ -18,11 +15,8 @@ const LandingPage = () => {
       <main>
         <HeroSection />
         <HowItWorksSection />
-        <LeagueTypesSection />
-        <ScoringSection />
-        <TeamPreviewSection />
-        <WhyPlaySection />
-        <TestimonialsSection />
+        <AuctionShowcase />
+        <SocialProofSection />
         <CTASection />
       </main>
       <LandingFooter />
