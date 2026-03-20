@@ -1,29 +1,39 @@
 
 
-## Bloc synthétique "Comment ça marche" entre le Hero et les blocs détaillés
+## Créer les pages du footer et supprimer la section Communauté
 
-Un bandeau horizontal avec 4 icônes en ligne, résumant le jeu en 4 mots-clés. Fond cream, style épuré, centré.
+Le footer a 3 groupes de liens. L'utilisateur veut supprimer le groupe "Communauté" et créer les pages pour les 2 autres groupes.
 
-### Contenu
+### Pages à créer (6 pages)
 
-```text
-  🔨 Enchéris        🚴 Suis          📊 Marque         👑 Domine
-  Recrute tes        Suis les         Tes coureurs      Grimpe au
-  coureurs aux       courses UCI      marquent à        classement et
-  enchères           en direct        chaque arrivée    chambre tes potes
-```
+**Le jeu :**
+- `/about` — **À propos** : présentation de La Bordure, l'histoire du projet, l'équipe
+- `/rules` — **Règles du jeu** : explication détaillée du scoring, des enchères, du budget, des classements
+- `/how-to-play` — **Comment jouer** : guide pas-à-pas pour démarrer (créer une ligue, inviter des amis, enchérir, etc.)
 
-- **Enchéris** — icône Gavel — "Recrute tes coureurs aux enchères entre amis."
-- **Suis** — icône Radio/Activity — "Suis les courses UCI tout au long de la saison."
-- **Marque** — icône TrendingUp — "Tes coureurs marquent des points à chaque course."
-- **Domine** — icône Crown — "Grimpe au classement et chambre tes potes."
+**Légal :**
+- `/legal` — **Mentions légales** : éditeur, hébergeur, CNIL
+- `/terms` — **CGU** : conditions générales d'utilisation
+- `/privacy` — **Confidentialité** : politique de données personnelles
 
-Grille 2×2 sur mobile, 4 colonnes sur desktop. Chaque item : icône dans un cercle (alternance gold/pink selon la charte 10%/7%), titre bold en vert, description courte. Animation fade-in au scroll.
+### Changements
 
-### Fichiers impactés
+1. **Créer un layout partagé `StaticPageLayout.tsx`** — Header (LandingHeader) + Footer (LandingFooter) + contenu centré, réutilisé par toutes les pages statiques.
 
-- **`src/components/landing/GameOverviewSection.tsx`** (nouveau) — Le composant avec la grille d'icônes
-- **`src/components/landing/index.ts`** — Export ajouté
-- **`src/pages/LandingPage.tsx`** — Inséré entre `<HeroSection />` et `<HowItWorksSection />`
-- **`src/i18n/locales/fr/home.json`** et **`en/home.json`** — Clés `overview.steps` avec titre + description FR/EN
+2. **Créer 6 pages** dans `src/pages/` : `AboutPage.tsx`, `RulesPage.tsx`, `HowToPlayPage.tsx`, `LegalNoticePage.tsx`, `TermsPage.tsx`, `PrivacyPage.tsx`. Contenu en dur (pas d'i18n pour le contenu légal). Style : fond cream, texte structuré avec titres/sections.
+
+3. **`src/App.tsx`** — Ajouter les 6 routes (`/about`, `/rules`, `/how-to-play`, `/legal`, `/terms`, `/privacy`).
+
+4. **`src/components/landing/LandingFooter.tsx`** — Remplacer les `<a href="#">` par des `<Link to="...">`. Supprimer entièrement le bloc "Communauté".
+
+5. **`src/i18n/locales/fr/home.json` et `en/home.json`** — Supprimer les clés `footer.community.*`.
+
+### Contenu des pages
+
+- **À propos** : La Bordure est un jeu de fantasy cycling entre amis. Système d'enchères, courses UCI, classements. Créé par des passionnés.
+- **Règles** : Budget initial, fonctionnement des enchères (tours, plus offrant), scoring par étape/classement, classement général/hebdo.
+- **Comment jouer** : 4 étapes (créer une ligue → inviter → enchérir → suivre les courses).
+- **Mentions légales** : template standard (éditeur La Bordure, hébergeur Lovable).
+- **CGU** : conditions d'inscription, propriété intellectuelle, responsabilité.
+- **Confidentialité** : données collectées, cookies, droits RGPD.
 
