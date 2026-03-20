@@ -23,6 +23,8 @@ interface AnnouncementsLiveProps {
   onPublishAll: () => void;
   onCopy: () => void;
   isLoading?: boolean;
+  isPaused?: boolean;
+  pausedByName?: string | null;
 }
 
 export const AnnouncementsLive = ({
