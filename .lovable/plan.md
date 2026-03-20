@@ -1,40 +1,47 @@
 
 
-## Corriger le trigger de calcul automatique des bonus coureur
+## Améliorer l'affichage du détail des bonus coureurs (+25%)
 
-### Cause racine
+### Problèmes identifiés
 
-Le trigger `trigger_calculate_bonus_rider` utilise un `EXISTS` check basé sur le `commentaire` pour éviter les doublons. Le commentaire ne contient PAS le `etape_numero`. Résultat : quand un coureur marque des points sur 2 étapes différentes d'une même course avec le même type de classement, seule la 1ère étape génère un bonus — les suivantes sont ignorées car le commentaire est identique.
+1. **Numéro d'étape invisible** : Le commentaire est parsé en `"Volta Comunitat Valenciana - Etape"` sans numéro de stage. Les anciens commentaires n'incluent pas le numéro d'étape. De plus, la colonne "Détail" a `max-w-xs truncate` qui tronque le texte.
 
-### Correction
+2. **Points barème absents** : On ne voit que les points bonus (+25%), pas les points de base du barème dont ils sont issus.
 
-**Migration SQL** — Modifier la fonction `trigger_calculate_bonus_rider` :
+### Solution
 
-1. Ajouter `etape_numero` dans le commentaire généré :
-   ```
-   'Bonus coureur automatique (25%) - ' || course_id || ' - ' || type_classement || ' E' || COALESCE(etape_numero, 0)
-   ```
+**Fichier** : `src/components/rankings/BonusPointsDetailDialog.tsx`
 
-2. Alternativement (plus robuste), changer le check `EXISTS` pour comparer sur les champs structurels plutôt que sur le commentaire texte :
-   ```sql
-   SELECT EXISTS(
-     SELECT 1 FROM bonus_points
-     WHERE phase_id = NEW.phase_id
-       AND coureur_id = NEW.coureur_id
-       AND manager_id = v_manager_rec.manager_id
-       AND league_id = v_manager_rec.league_id
-       AND bonus_type = 'coureur_bonuse'
-       AND commentaire LIKE '%- ' || NEW.course_id || ' - ' || NEW.type_classement || ' E' || COALESCE(NEW.etape_numero::text, 'GC') || '%'
-   )
-   ```
+1. **Enrichir les données** : Pour chaque bonus coureur, cross-référencer avec `points_ledger` pour retrouver les points de base (barème). Puisque bonus = base × 0.25, on peut aussi simplement calculer `base = bonus / 0.25` (= bonus × 4). C'est plus simple et évite une requête supplémentaire.
 
-L'approche recommandée : utiliser une clé composite (course_id + type_classement + etape_numero) dans le commentaire ET dans le EXISTS, alignée avec ce que fait déjà `recalculate-rider-bonuses`.
+2. **Améliorer le parsing du commentaire** : Extraire le type de classement et le numéro d'étape séparément. Le format actuel est `"... - course_id - Etape"` ou `"... - course_id - Etape Etape N"`. Parser avec regex pour isoler le type et le numéro.
 
-### Après la migration
+3. **Restructurer les colonnes du tableau** :
+   - **Phase** (si multi-phase)
+   - **Coureur** (nom)
+   - **Équipe** (nom court)
+   - **Course** (nom de la course, sans truncate excessif)
+   - **Classement** (type : Etape, General, etc.)
+   - **Étape** (numéro, affiché séparément — "E3", "GC", etc.)
+   - **Barème** (points de base = bonus × 4, en texte muted)
+   - **Bonus** (points bonus, en vert)
 
-Lancer un recalcul via l'edge function `recalculate-rider-bonuses` pour Vlasov (ou pour toute la phase) afin de corriger les bonus manquants existants. La fonction de recalcul est déjà correcte — elle inclut l'étape dans le commentaire.
+4. **Supprimer le `max-w-xs truncate`** sur la colonne Détail — remplacé par des colonnes séparées plus lisibles.
 
-### Fichier impacté
+5. **Sur mobile** : Les colonnes Équipe et Barème peuvent être masquées (`hidden md:table-cell`) pour éviter le débordement.
 
-- **Migration SQL** : `CREATE OR REPLACE FUNCTION trigger_calculate_bonus_rider()` avec le correctif etape_numero dans commentaire + EXISTS check.
+### Résultat attendu
+
+Au lieu de :
+```
+Coureur | Équipe | Détail (tronqué)              | Points
+Vlasov  | RB-BH  | Volta Comunitat Valenc... Etap | +15
+```
+
+On aura :
+```
+Coureur | Course                          | Class. | Ét. | Barème | Bonus
+Vlasov  | Volta Comunitat Valenciana      | Etape  | 3   | 60     | +15
+Vlasov  | Volta Comunitat Valenciana      | General|  —  | 70     | +17.5
+```
 
