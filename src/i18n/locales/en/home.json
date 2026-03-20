@@ -62,7 +62,25 @@
       },
       "ranking": {
         "title": "Follow the pro calendar",
-        "text": "Full UCI calendar with WorldTour, ProSeries and .1 races. Check startlists, anticipate results and plan your strategy race by race."
+        "text": "From .1 races to Monuments, every race counts for your ranking.",
+        "steps": {
+          "allRaces": {
+            "title": "All UCI races",
+            "desc": "WorldTour, ProSeries, .1 races — every race on the pro calendar is included."
+          },
+          "startlists": {
+            "title": "Full startlists",
+            "desc": "Check the start list for every race to anticipate points."
+          },
+          "strategy": {
+            "title": "Plan your strategy",
+            "desc": "Anticipate results and optimize your picks race by race."
+          },
+          "calendar": {
+            "title": "Visual calendar",
+            "desc": "Monthly view with upcoming races, color-coded categories and startlist validations."
+          }
+        }
       },
       "classement": {
         "title": "Dominate the rankings",
