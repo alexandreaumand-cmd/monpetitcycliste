@@ -1,37 +1,28 @@
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
+import { Gavel, Trophy, RotateCcw, Users } from "lucide-react";
 
 /**
- * "Découvre le jeu" — 4 blocks with real app screenshots
- * Auction uses a browser mockup (desktop), others use iPhone frames (mobile)
+ * "Découvre le jeu" — auction block with screenshot + steps, then 3 phone mockup blocks
  */
 const HowItWorksSection = () => {
   const { t } = useTranslation("home");
 
-  const blocks = [
-    {
-      title: t("discover.blocks.auction.title"),
-      text: t("discover.blocks.auction.text"),
-      screenshot: "/screenshots/encheres.png",
-      type: "desktop" as const,
-    },
+  const phoneBlocks = [
     {
       title: t("discover.blocks.team.title"),
       text: t("discover.blocks.team.text"),
       screenshot: "/screenshots/team.png",
-      type: "phone" as const,
     },
     {
       title: t("discover.blocks.ranking.title"),
       text: t("discover.blocks.ranking.text"),
       screenshot: "/screenshots/startlist.png",
-      type: "phone" as const,
     },
     {
       title: t("discover.blocks.classement.title"),
       text: t("discover.blocks.classement.text"),
       screenshot: "/screenshots/ranking.png",
-      type: "phone" as const,
     },
   ];
 
@@ -49,16 +40,19 @@ const HowItWorksSection = () => {
         </motion.p>
 
         <div className="space-y-24 md:space-y-40">
-          {blocks.map((block, i) => {
-            const isReversed = i % 2 === 1;
+          {/* Auction block — special layout */}
+          <AuctionBlock />
+
+          {/* Phone mockup blocks */}
+          {phoneBlocks.map((block, i) => {
+            const isReversed = i % 2 === 0; // first phone block reversed since auction was "normal"
             return (
               <div
                 key={i}
                 className={`flex flex-col ${isReversed ? "lg:flex-row-reverse" : "lg:flex-row"} gap-10 lg:gap-20 items-center`}
               >
-                {/* Text */}
                 <motion.div
-                  className={`max-w-lg ${block.type === "desktop" ? "lg:flex-shrink-0 lg:w-[340px]" : "flex-1"}`}
+                  className="flex-1 max-w-lg"
                   initial={{ opacity: 0, x: isReversed ? 20 : -20, filter: "blur(4px)" }}
                   whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
                   viewport={{ once: true, amount: 0.2 }}
@@ -72,37 +66,23 @@ const HowItWorksSection = () => {
                   </p>
                 </motion.div>
 
-                {/* Mockup */}
                 <motion.div
-                  className={`flex justify-center ${block.type === "desktop" ? "flex-1 w-full" : "flex-1"}`}
+                  className="flex-1 flex justify-center"
                   initial={{ opacity: 0, x: isReversed ? -20 : 20, filter: "blur(4px)" }}
                   whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
                   viewport={{ once: true, amount: 0.2 }}
                   transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  {block.type === "desktop" ? (
-                    <div className="w-full max-w-[700px]">
-                      <BrowserMockup>
-                        <img
-                          src={block.screenshot}
-                          alt={block.title}
-                          className="w-full h-full object-cover object-top"
-                          loading="lazy"
-                        />
-                      </BrowserMockup>
-                    </div>
-                  ) : (
-                    <div className="w-[260px] sm:w-[280px]">
-                      <PhoneMockup>
-                        <img
-                          src={block.screenshot}
-                          alt={block.title}
-                          className="w-full h-[110%] object-cover object-top"
-                          loading="lazy"
-                        />
-                      </PhoneMockup>
-                    </div>
-                  )}
+                  <div className="w-[260px] sm:w-[280px]">
+                    <PhoneMockup>
+                      <img
+                        src={block.screenshot}
+                        alt={block.title}
+                        className="w-full h-[110%] object-cover object-top"
+                        loading="lazy"
+                      />
+                    </PhoneMockup>
+                  </div>
                 </motion.div>
               </div>
             );
@@ -110,6 +90,96 @@ const HowItWorksSection = () => {
         </div>
       </div>
     </section>
+  );
+};
+
+/** Auction block: steps on the left, browser mockup on the right */
+const AuctionBlock = () => {
+  const { t } = useTranslation("home");
+
+  const steps = [
+    {
+      icon: Gavel,
+      title: t("discover.blocks.auction.steps.bid.title"),
+      desc: t("discover.blocks.auction.steps.bid.desc"),
+    },
+    {
+      icon: Trophy,
+      title: t("discover.blocks.auction.steps.win.title"),
+      desc: t("discover.blocks.auction.steps.win.desc"),
+    },
+    {
+      icon: RotateCcw,
+      title: t("discover.blocks.auction.steps.rounds.title"),
+      desc: t("discover.blocks.auction.steps.rounds.desc"),
+    },
+    {
+      icon: Users,
+      title: t("discover.blocks.auction.steps.team.title"),
+      desc: t("discover.blocks.auction.steps.team.desc"),
+    },
+  ];
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-10 lg:gap-16 items-center">
+      {/* Left: title + steps */}
+      <motion.div
+        className="lg:flex-shrink-0 lg:w-[400px]"
+        initial={{ opacity: 0, x: -20, filter: "blur(4px)" }}
+        whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-montserrat font-bold text-secondary leading-[1.05] mb-8">
+          {t("discover.blocks.auction.title")}
+        </h2>
+
+        <div className="space-y-5">
+          {steps.map((step, i) => (
+            <motion.div
+              key={i}
+              className="flex items-start gap-4"
+              initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
+              whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.5, delay: 0.1 * i, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="w-10 h-10 rounded-xl bg-bordure-gold/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <step.icon className="w-5 h-5 text-bordure-gold" />
+              </div>
+              <div>
+                <p className="font-montserrat font-bold text-secondary text-sm mb-0.5">
+                  {step.title}
+                </p>
+                <p className="text-secondary/50 font-inter text-sm leading-relaxed">
+                  {step.desc}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Right: browser mockup */}
+      <motion.div
+        className="flex-1 w-full flex justify-center"
+        initial={{ opacity: 0, x: 20, filter: "blur(4px)" }}
+        whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div className="w-full max-w-[680px]">
+          <BrowserMockup>
+            <img
+              src="/screenshots/encheres.png"
+              alt={t("discover.blocks.auction.title")}
+              className="w-full h-full object-cover object-top"
+              loading="lazy"
+            />
+          </BrowserMockup>
+        </div>
+      </motion.div>
+    </div>
   );
 };
 
@@ -129,7 +199,6 @@ const PhoneMockup = ({ children }: { children: React.ReactNode }) => (
 const BrowserMockup = ({ children }: { children: React.ReactNode }) => (
   <div className="relative">
     <div className="bg-secondary rounded-xl shadow-2xl shadow-secondary/30 overflow-hidden">
-      {/* Title bar */}
       <div className="flex items-center gap-2 px-4 py-2.5 bg-secondary">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
@@ -142,7 +211,6 @@ const BrowserMockup = ({ children }: { children: React.ReactNode }) => (
           </div>
         </div>
       </div>
-      {/* Content */}
       <div className="overflow-hidden aspect-[16/10] relative">
         {children}
       </div>
