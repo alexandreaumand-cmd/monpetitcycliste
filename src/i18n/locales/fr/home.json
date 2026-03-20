@@ -6,11 +6,16 @@
   "hero": {
     "title1": "Les cols c'est pour eux,",
     "title2": "les points, c'est pour toi.",
-    "subtitle": "La Bordure, le jeu de fantasy cycling basé sur les vraies courses du calendrier UCI.",
+    "subtitle": "Le jeu de fantasy cycling entre amis. Recrute aux enchères, suis les vraies courses UCI et deviens le meilleur manager.",
     "cta": {
       "createLeague": "Créer ma ligue",
       "myLeagues": "Mes Ligues",
       "discover": "Découvrir le jeu"
+    },
+    "badges": {
+      "uci": "Vraies courses UCI",
+      "auctions": "Enchères entre amis",
+      "free": "Gratuit"
     }
   },
   "howItWorks": {
@@ -18,137 +23,46 @@
     "subtitle": "Du départ à l'arrivée, vis l'aventure du manager cycliste",
     "steps": {
       "step1": {
-        "title": "Lance ta compétition",
-        "description": "Crée ta ligue en 2 minutes et invite tes amis"
+        "title": "Crée ta ligue",
+        "description": "Invite tes amis en 2 minutes"
       },
       "step2": {
         "title": "Recrute aux enchères",
-        "description": "Draft tes champions et gère ton budget"
+        "description": "Défie tes potes pour les meilleurs coureurs"
       },
       "step3": {
         "title": "Suis en direct",
         "description": "Tes coureurs marquent en temps réel"
       },
       "step4": {
-        "title": "Vise le maillot jaune",
-        "description": "Grimpe au classement et remporte la victoire"
+        "title": "Remporte le maillot",
+        "description": "Grimpe au classement et gagne"
       }
     },
     "start": "DÉPART",
-    "finish": "ARRIVÉE"
+    "finish": "ARRIVÉE",
+    "cta": "Créer ma ligue"
   },
-  "leagues": {
-    "title": "Choisis ton mode de jeu",
-    "subtitle": "Chaque format a sa propre intensité. À toi de jouer.",
-    "sprint": {
-      "type": "Sprint",
-      "duration": "1 semaine",
-      "description": "Une classique, un week-end de courses. Parfait pour découvrir.",
-      "cta": "Essayer"
+  "auction": {
+    "title": "Les enchères entre amis",
+    "subtitle": "Qui paiera le plus pour Pogačar ? Défie tes amis aux enchères pour recruter les meilleurs coureurs du peloton.",
+    "rider": "Tadej POGAČAR",
+    "riderTeam": "UAE Team Emirates",
+    "managers": {
+      "manager1": { "name": "Guillaume", "bid": "45" },
+      "manager2": { "name": "Marie", "bid": "52" },
+      "manager3": { "name": "Thomas", "bid": "38" }
     },
-    "grandTour": {
-      "type": "Grand Tour",
-      "duration": "3 semaines",
-      "description": "Tour de France, Giro, Vuelta. L'expérience complète.",
-      "cta": "Rejoindre"
-    },
-    "season": {
-      "type": "Saison",
-      "duration": "Toute l'année",
-      "description": "Du Tour Down Under au Giro di Lombardia. Pour les vrais passionnés.",
-      "cta": "S'engager"
-    },
-    "friends": {
-      "type": "Entre amis",
-      "tagline": "Défie tes potes",
-      "description": "Crée ta ligue privée avec 2 à 10 managers",
-      "cta": "Créer ma ligue"
-    },
-    "quick": {
-      "type": "Ligues rapides",
-      "description": "Joue sur un seul Grand Tour",
-      "cta": "Tour de France"
-    },
-    "public": {
-      "type": "Ligues publiques",
-      "description": "Affronte toute la communauté",
-      "cta": "Découvrir"
-    }
+    "highestBid": "Meilleure offre",
+    "currency": "M€",
+    "cta": "Créer ma ligue"
   },
-  "scoring": {
-    "title": "Vis la course en direct",
-    "subtitle": "Chaque étape, chaque sprint, chaque col... Tes coureurs marquent des points en temps réel.",
-    "live": "EN DIRECT",
-    "stageName": "Étape 15 - Col du Galibier",
-    "stageResults": "Classement d'étape",
-    "jerseyBonus": "Bonus maillots",
-    "yourTotal": "Ton total aujourd'hui",
-    "riders": {
-      "pogacar": "POGACAR",
-      "vingegaard": "VINGEGAARD",
-      "evenepoel": "EVENEPOEL",
-      "vanAert": "VAN AERT"
-    },
-    "jerseys": {
-      "yellow": "Maillot Jaune",
-      "green": "Maillot Vert",
-      "polkaDot": "Maillot à Pois",
-      "perDay": "/jour"
-    },
-    "categories": {
-      "stage": "Classements d'étape",
-      "jerseys": "Maillots distinctifs",
-      "gc": "Classements généraux"
-    },
-    "positions": {
-      "first": "1ère place",
-      "second": "2ème place",
-      "third": "3ème place",
-      "top10": "Top 10",
-      "yellowJersey": "Maillot jaune",
-      "greenJersey": "Maillot vert",
-      "polkaDotJersey": "Maillot à pois",
-      "gcTop3": "GC Top 3",
-      "gcTop10": "GC Top 10"
-    },
-    "podium": {
-      "gold": "Or",
-      "silver": "Argent",
-      "bronze": "Bronze"
-    },
-    "points": "pts"
-  },
-  "stats": {
-    "title": "La communauté La Bordure",
-    "courses": "COURSES UCI",
-    "leagues": "LIGUES ACTIVES",
-    "riders": "COUREURS PRO",
-    "stages": "ÉTAPES DU TOUR",
-    "features": {
-      "uci": "Données officielles UCI en temps réel",
-      "auctions": "Système d'enchères stratégique",
-      "private": "Ligues privées jusqu'à 10 amis",
-      "jerseys": "Maillots personnalisables avec sponsor"
-    }
-  },
-  "teamPreview": {
-    "title": "Compose ton équipe de rêve",
-    "subtitle": "Choisis-les aux enchères. Gère ton budget. Adapte ta stratégie à chaque course.",
-    "leaders": "LEADERS",
-    "sprinters": "SPRINTERS",
-    "climbers": "GRIMPEURS",
-    "budgetRemaining": "Budget restant",
-    "cta": "Créer mon équipe"
-  },
-  "testimonials": {
-    "title": "Ils jouent, ils adorent",
-    "subtitle": "Des milliers de managers s'affrontent chaque saison",
-    "featured": {
-      "rank": "1ER",
-      "league": "LIGUE \"LES FORÇATS\"",
-      "text": "Notre ligue existe depuis 3 ans. Chaque Tour, on relance une saison et c'est toujours aussi intense ! L'ambiance pendant les enchères est incroyable.",
-      "author": "Guillaume R.",
-      "stats": "127 pts d'avance"
+  "socialProof": {
+    "title": "Rejoins la communauté",
+    "stats": {
+      "courses": { "value": "350+", "label": "Courses UCI" },
+      "riders": { "value": "1000+", "label": "Coureurs pro" },
+      "leagues": { "value": "50+", "label": "Ligues actives" }
     },
     "quotes": {
       "quote1": {
@@ -157,46 +71,17 @@
         "location": "Paris"
       },
       "quote2": {
-        "text": "Pogacar dans mon équipe = +847 pts cette saison. Best pick ever.",
-        "author": "Thomas B.",
-        "location": "Bordeaux"
-      },
-      "quote3": {
-        "text": "Une ambiance incroyable dans notre ligue entre potes ! On se challenge tous les soirs pendant le Tour.",
-        "author": "Julien M.",
+        "text": "Notre ligue existe depuis 3 ans. Chaque Tour, c'est toujours aussi intense !",
+        "author": "Guillaume R.",
         "location": "Lyon"
       }
     }
   },
-  "whyPlay": {
-    "title": "Pourquoi jouer à",
-    "brandName": "La Bordure",
-    "questionMark": "?",
-    "subtitle": "Le fantasy cycling le plus immersif basé sur les vraies courses UCI",
-    "features": {
-      "realRaces": {
-        "title": "Basé sur les vraies courses",
-        "description": "Tous les résultats sont synchronisés avec le calendrier UCI officiel"
-      },
-      "strategy": {
-        "title": "Stratégie et enchères",
-        "description": "Compose ton équipe lors des mercatos et choisis tes tactiques"
-      },
-      "friends": {
-        "title": "Joue avec tes amis",
-        "description": "Crée ta ligue privée et défie jusqu'à 10 managers"
-      },
-      "rankings": {
-        "title": "Classements et trophées",
-        "description": "Grimpe au sommet et remporte les maillots prestigieux"
-      }
-    }
-  },
   "cta": {
-    "title": "Rejoins la communauté de managers cyclistes",
-    "subtitle": "Lance ta première ligue aujourd'hui.",
+    "title": "Prêt à lancer ta ligue ?",
+    "subtitle": "Invite tes amis et commencez à jouer dès aujourd'hui.",
     "createLeague": "Créer ma ligue",
-    "trySolo": "Essayer en solo"
+    "share": "Partager avec un ami"
   },
   "footer": {
     "tagline": "Le fantasy cycling français",

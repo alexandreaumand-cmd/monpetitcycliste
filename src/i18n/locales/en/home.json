@@ -6,11 +6,16 @@
   "hero": {
     "title1": "They climb the cols,",
     "title2": "you score the points.",
-    "subtitle": "La Bordure, the fantasy cycling game based on real UCI calendar races.",
+    "subtitle": "The fantasy cycling game with friends. Draft at auctions, follow real UCI races and become the best manager.",
     "cta": {
       "createLeague": "Create my league",
       "myLeagues": "My Leagues",
       "discover": "Discover the game"
+    },
+    "badges": {
+      "uci": "Real UCI races",
+      "auctions": "Auctions with friends",
+      "free": "Free to play"
     }
   },
   "howItWorks": {
@@ -18,137 +23,46 @@
     "subtitle": "From start to finish, live the cycling manager adventure",
     "steps": {
       "step1": {
-        "title": "Launch your competition",
-        "description": "Create your league in 2 minutes and invite friends"
+        "title": "Create your league",
+        "description": "Invite your friends in 2 minutes"
       },
       "step2": {
         "title": "Draft at auctions",
-        "description": "Recruit your champions and manage your budget"
+        "description": "Challenge your mates for the best riders"
       },
       "step3": {
         "title": "Follow live",
         "description": "Your riders score in real time"
       },
       "step4": {
-        "title": "Aim for the yellow jersey",
-        "description": "Climb the rankings and claim victory"
+        "title": "Win the jersey",
+        "description": "Climb the rankings and win"
       }
     },
     "start": "START",
-    "finish": "FINISH"
+    "finish": "FINISH",
+    "cta": "Create my league"
   },
-  "leagues": {
-    "title": "Choose your game mode",
-    "subtitle": "Each format has its own intensity. Your move.",
-    "sprint": {
-      "type": "Sprint",
-      "duration": "1 week",
-      "description": "A classic, a weekend of racing. Perfect to discover.",
-      "cta": "Try it"
+  "auction": {
+    "title": "Auctions with friends",
+    "subtitle": "Who will pay the most for Pogačar? Challenge your friends at auctions to recruit the best riders in the peloton.",
+    "rider": "Tadej POGAČAR",
+    "riderTeam": "UAE Team Emirates",
+    "managers": {
+      "manager1": { "name": "Guillaume", "bid": "45" },
+      "manager2": { "name": "Marie", "bid": "52" },
+      "manager3": { "name": "Thomas", "bid": "38" }
     },
-    "grandTour": {
-      "type": "Grand Tour",
-      "duration": "3 weeks",
-      "description": "Tour de France, Giro, Vuelta. The complete experience.",
-      "cta": "Join"
-    },
-    "season": {
-      "type": "Season",
-      "duration": "Full year",
-      "description": "From Tour Down Under to Giro di Lombardia. For true enthusiasts.",
-      "cta": "Commit"
-    },
-    "friends": {
-      "type": "With friends",
-      "tagline": "Challenge your mates",
-      "description": "Create your private league with 2 to 10 managers",
-      "cta": "Create my league"
-    },
-    "quick": {
-      "type": "Quick leagues",
-      "description": "Play on a single Grand Tour",
-      "cta": "Tour de France"
-    },
-    "public": {
-      "type": "Public leagues",
-      "description": "Challenge the entire community",
-      "cta": "Discover"
-    }
+    "highestBid": "Highest bid",
+    "currency": "M€",
+    "cta": "Create my league"
   },
-  "scoring": {
-    "title": "Experience the race live",
-    "subtitle": "Every stage, every sprint, every climb... Your riders score points in real time.",
-    "live": "LIVE",
-    "stageName": "Stage 15 - Col du Galibier",
-    "stageResults": "Stage results",
-    "jerseyBonus": "Jersey bonuses",
-    "yourTotal": "Your total today",
-    "riders": {
-      "pogacar": "POGACAR",
-      "vingegaard": "VINGEGAARD",
-      "evenepoel": "EVENEPOEL",
-      "vanAert": "VAN AERT"
-    },
-    "jerseys": {
-      "yellow": "Yellow Jersey",
-      "green": "Green Jersey",
-      "polkaDot": "Polka Dot Jersey",
-      "perDay": "/day"
-    },
-    "categories": {
-      "stage": "Stage rankings",
-      "jerseys": "Distinctive jerseys",
-      "gc": "General classifications"
-    },
-    "positions": {
-      "first": "1st place",
-      "second": "2nd place",
-      "third": "3rd place",
-      "top10": "Top 10",
-      "yellowJersey": "Yellow jersey",
-      "greenJersey": "Green jersey",
-      "polkaDotJersey": "Polka dot jersey",
-      "gcTop3": "GC Top 3",
-      "gcTop10": "GC Top 10"
-    },
-    "podium": {
-      "gold": "Gold",
-      "silver": "Silver",
-      "bronze": "Bronze"
-    },
-    "points": "pts"
-  },
-  "stats": {
-    "title": "The La Bordure community",
-    "courses": "UCI RACES",
-    "leagues": "ACTIVE LEAGUES",
-    "riders": "PRO RIDERS",
-    "stages": "TOUR STAGES",
-    "features": {
-      "uci": "Official UCI data in real time",
-      "auctions": "Strategic auction system",
-      "private": "Private leagues up to 10 friends",
-      "jerseys": "Customizable jerseys with sponsor"
-    }
-  },
-  "teamPreview": {
-    "title": "Build your dream team",
-    "subtitle": "Pick them at auctions. Manage your budget. Adapt your strategy to each race.",
-    "leaders": "LEADERS",
-    "sprinters": "SPRINTERS",
-    "climbers": "CLIMBERS",
-    "budgetRemaining": "Budget remaining",
-    "cta": "Create my team"
-  },
-  "testimonials": {
-    "title": "They play, they love it",
-    "subtitle": "Thousands of managers compete every season",
-    "featured": {
-      "rank": "1ST",
-      "league": "LEAGUE \"LES FORÇATS\"",
-      "text": "Our league has been running for 3 years. Every Tour, we restart a season and it's always as intense! The atmosphere during auctions is incredible.",
-      "author": "Guillaume R.",
-      "stats": "127 pts ahead"
+  "socialProof": {
+    "title": "Join the community",
+    "stats": {
+      "courses": { "value": "350+", "label": "UCI Races" },
+      "riders": { "value": "1000+", "label": "Pro Riders" },
+      "leagues": { "value": "50+", "label": "Active Leagues" }
     },
     "quotes": {
       "quote1": {
@@ -157,46 +71,17 @@
         "location": "Paris"
       },
       "quote2": {
-        "text": "Pogacar on my team = +847 pts this season. Best pick ever.",
-        "author": "Thomas B.",
-        "location": "Bordeaux"
-      },
-      "quote3": {
-        "text": "An incredible atmosphere in our friends league! We challenge each other every night during the Tour.",
-        "author": "Julien M.",
+        "text": "Our league has been running for 3 years. Every Tour, it's always as intense!",
+        "author": "Guillaume R.",
         "location": "Lyon"
       }
     }
   },
-  "whyPlay": {
-    "title": "Why play",
-    "brandName": "La Bordure",
-    "questionMark": "?",
-    "subtitle": "The most immersive fantasy cycling based on real UCI races",
-    "features": {
-      "realRaces": {
-        "title": "Based on real races",
-        "description": "All results are synchronized with the official UCI calendar"
-      },
-      "strategy": {
-        "title": "Strategy and auctions",
-        "description": "Build your team during transfer windows and choose your tactics"
-      },
-      "friends": {
-        "title": "Play with friends",
-        "description": "Create your private league and challenge up to 10 managers"
-      },
-      "rankings": {
-        "title": "Rankings and trophies",
-        "description": "Climb to the top and win prestigious jerseys"
-      }
-    }
-  },
   "cta": {
-    "title": "Join the cycling managers community",
-    "subtitle": "Launch your first league today.",
+    "title": "Ready to start your league?",
+    "subtitle": "Invite your friends and start playing today.",
     "createLeague": "Create my league",
-    "trySolo": "Try solo"
+    "share": "Share with a friend"
   },
   "footer": {
     "tagline": "The French fantasy cycling",
