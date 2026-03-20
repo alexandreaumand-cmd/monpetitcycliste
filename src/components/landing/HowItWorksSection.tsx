@@ -1,5 +1,8 @@
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { Flag, Gavel, Radio, Trophy } from "lucide-react";
+import { motion } from "framer-motion";
 
 const HowItWorksSection = () => {
   const { t } = useTranslation("home");
@@ -12,63 +15,66 @@ const HowItWorksSection = () => {
   ];
 
   return (
-    <section id="how-it-works" className="py-20 bg-secondary overflow-hidden">
+    <section id="how-it-works" className="py-20 md:py-28 bg-bordure-cream">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-montserrat font-bold text-white mb-4">
+        <motion.div
+          className="text-center mb-14"
+          initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
+          whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <h2 className="text-3xl md:text-4xl font-montserrat font-bold text-secondary mb-3" style={{ textWrap: "balance" } as React.CSSProperties}>
             {t("howItWorks.title")}
           </h2>
-          <p className="text-white/60 max-w-xl mx-auto font-inter">
+          <p className="text-secondary/60 max-w-md mx-auto font-inter">
             {t("howItWorks.subtitle")}
           </p>
-        </div>
+        </motion.div>
 
-        <div className="relative max-w-5xl mx-auto">
-          <div className="hidden md:flex justify-between items-center mb-4 px-8">
-            <span className="text-bordure-gold font-montserrat font-bold text-sm tracking-wider">
-              {t("howItWorks.start")}
-            </span>
-            <span className="text-bordure-gold font-montserrat font-bold text-sm tracking-wider">
-              {t("howItWorks.finish")}
-            </span>
-          </div>
-
-          <div className="hidden md:block absolute top-[140px] left-0 right-0 h-1 bg-white/10">
-            <div className="absolute inset-0 bg-gradient-to-r from-bordure-gold via-bordure-pink to-bordure-gold opacity-60" />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-bordure-gold to-transparent animate-pulse" />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-4">
-            {steps.map((step, index) => (
-              <div key={index} className="relative flex flex-col items-center text-center group">
-                <div className="hidden md:block absolute top-[68px] left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-bordure-gold shadow-lg shadow-bordure-gold/50 z-10" />
-
-                <div className="relative w-full p-6 rounded-xl bg-white/5 border border-white/10 hover:border-bordure-gold/50 transition-all duration-300 group-hover:-translate-y-1">
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-montserrat font-bold shadow-lg shadow-bordure-gold/30">
-                    {step.number}
-                  </div>
-
-                  <div className="mt-4 mb-4 mx-auto w-16 h-16 bg-bordure-gold/10 rounded-full flex items-center justify-center group-hover:bg-bordure-gold/20 transition-colors">
-                    <step.icon className="w-8 h-8 text-bordure-gold" />
-                  </div>
-
-                  <h3 className="text-lg font-montserrat font-semibold text-white mb-2">
-                    {step.title}
-                  </h3>
-                  <p className="text-white/50 text-sm font-inter">
-                    {step.description}
-                  </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          {steps.map((step, index) => (
+            <motion.div
+              key={index}
+              className="relative flex flex-col items-center text-center"
+              initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
+              whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.5, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="relative w-full p-6 rounded-2xl bg-white border border-secondary/8 shadow-sm hover:shadow-md transition-shadow duration-300">
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 w-7 h-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-montserrat font-bold text-sm shadow-md">
+                  {step.number}
                 </div>
 
-                {index < steps.length - 1 && (
-                  <div className="md:hidden flex justify-center my-4">
-                    <div className="w-0.5 h-8 bg-gradient-to-b from-bordure-gold to-bordure-pink" />
-                  </div>
-                )}
+                <div className="mt-3 mb-4 mx-auto w-14 h-14 bg-secondary/5 rounded-xl flex items-center justify-center">
+                  <step.icon className="w-7 h-7 text-secondary" />
+                </div>
+
+                <h3 className="text-base font-montserrat font-semibold text-secondary mb-1.5">
+                  {step.title}
+                </h3>
+                <p className="text-secondary/50 text-sm font-inter leading-relaxed">
+                  {step.description}
+                </p>
               </div>
-            ))}
-          </div>
+            </motion.div>
+          ))}
         </div>
+
+        <motion.div
+          className="text-center mt-10"
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          <Link to="/auth">
+            <Button size="lg" className="text-base px-8 py-6">
+              {t("howItWorks.cta")}
+            </Button>
+          </Link>
+        </motion.div>
       </div>
     </section>
   );
