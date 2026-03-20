@@ -36,7 +36,7 @@ const members: TeamMember[] = [
   { nickname: "Le Criminel Écologique", description: "Il arpente l'Europe pour aller repérer les coureurs en devenir.", icon: Globe, accentColor: "gold", avatar: leCriminelAvatar },
   { nickname: "Le Sachant", description: "Il connaît tout sur tout, imbattable au quizz.", icon: GraduationCap, accentColor: "pink", avatar: leSachantAvatar },
   { nickname: "Le Rappeur", description: "Le plus créatif de la bande, fan de baies vitrées.", icon: Palette, accentColor: "gold", avatar: leRappeurAvatar },
-  { nickname: "Le Doc", description: "On sait toujours pas trop ce qu'il farfouille, mais il gagne 5 phases d'affilé. Louche.", icon: Stethoscope, accentColor: "pink" },
+  { nickname: "Le Doc", description: "On sait toujours pas trop ce qu'il farfouille, mais il gagne 5 phases d'affilé. Louche.", icon: Stethoscope, accentColor: "pink", avatar: leDocAvatar },
   { nickname: "La Pépite", description: "Il s'est essayé au football. Barré par Mvila, il suit maintenant le vélo.", icon: Trophy, accentColor: "gold" },
   { nickname: "Le BOSS", description: "Il a renversé la table et a pris le pouvoir.", icon: Crown, accentColor: "pink", avatar: leBossAvatar },
   { nickname: "Le Codeur", description: "Il débug, fait évoluer, c'est lui qui tient la barre.", icon: Code, accentColor: "gold", avatar: leCodeurAvatar },
