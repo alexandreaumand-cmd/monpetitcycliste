@@ -195,7 +195,7 @@ const TeamBlock = () => {
       </motion.div>
 
       <motion.div
-        className="flex-1 flex justify-center"
+        className="lg:w-[280px] lg:flex-shrink-0 flex justify-center"
         initial={{ opacity: 0, x: -20, filter: "blur(4px)" }}
         whileInView={{ opacity: 1, x: 0, filter: "blur(0px)" }}
         viewport={{ once: true, amount: 0.2 }}
