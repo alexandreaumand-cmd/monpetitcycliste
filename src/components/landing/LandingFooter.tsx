@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import mpcLogoVertical from "@/assets/mpc-logo-vertical.png";
-import BordureStripes from "./BordureStripes";
+import logoBordureLight from "@/assets/logo-bordure-light.png";
 
 const LandingFooter = () => {
   const { t } = useTranslation("home");
@@ -12,11 +11,7 @@ const LandingFooter = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center gap-3 mb-4">
-              <BordureStripes className="h-8" />
-              <img src={mpcLogoVertical} alt="La Bordure Fantasy Cycling" className="h-14 w-auto" loading="lazy" />
-              <span className="text-white font-montserrat font-bold">
-                La Bordure
-              </span>
+              <img src={logoBordureLight} alt="La Bordure Fantasy Cycling" className="h-10 w-auto" loading="lazy" />
             </Link>
             <p className="text-white/40 text-sm font-inter">
               {t("footer.tagline")}
@@ -47,7 +42,7 @@ const LandingFooter = () => {
           </div>
         </div>
 
-        <BordureStripes orientation="horizontal" className="mb-8" />
+        <div className="border-t border-white/10 mb-8" />
 
         <div className="text-center">
           <p className="text-white/40 text-sm font-inter">
