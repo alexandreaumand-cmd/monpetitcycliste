@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
         .select('id, winning_amount')
         .eq('auction_id', auction_id)
         .eq('published', false)
-        .order('winning_amount', { ascending: false }); // Highest first
+        .order('winning_amount', { ascending: true }); // Cheapest first
       
       if (fetchError) throw fetchError;
       
