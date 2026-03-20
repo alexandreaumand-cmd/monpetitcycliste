@@ -101,7 +101,7 @@ const AuctionBlock = () => {
         <div className="w-full max-w-[680px]">
           <BrowserMockup>
             <img
-              src="/screenshots/encheres.png"
+              src="/screenshots/resultats.png"
               alt={t("discover.blocks.auction.title")}
               className="w-full h-full object-cover object-top"
               loading="lazy"
