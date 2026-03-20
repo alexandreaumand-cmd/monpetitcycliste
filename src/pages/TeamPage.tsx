@@ -11,6 +11,7 @@ import {
   Crown,
   Code,
   Ghost,
+  Quote,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import leCodeurAvatar from "@/assets/team/le-codeur.png";
@@ -23,6 +24,8 @@ import leBossAvatar from "@/assets/team/le-boss.png";
 import lAyatollahAvatar from "@/assets/team/layatollah.png";
 import leDocAvatar from "@/assets/team/le-doc.png";
 import laPepiteAvatar from "@/assets/team/la-pepite.png";
+import societyLogo from "@/assets/press/society-logo.webp";
+import pedaleLogo from "@/assets/press/pedale-logo.webp";
 
 interface TeamMember {
   nickname: string;
@@ -30,6 +33,14 @@ interface TeamMember {
   icon: LucideIcon;
   accentColor: "gold" | "pink";
   avatar?: string;
+}
+
+interface PressQuote {
+  magazine: string;
+  logo: string;
+  date: string;
+  context?: string;
+  quotes: string[];
 }
 
 const members: TeamMember[] = [
@@ -43,6 +54,27 @@ const members: TeamMember[] = [
   { nickname: "Le BOSS", description: "Il a renversé la table et a pris le pouvoir.", icon: Crown, accentColor: "pink", avatar: leBossAvatar },
   { nickname: "Le Codeur", description: "Il débug, fait évoluer, c'est lui qui tient la barre.", icon: Code, accentColor: "gold", avatar: leCodeurAvatar },
   { nickname: "Le Fantôme", description: "Plus occupé à bouffer des frites à la cantine qu'à suivre le vélo.", icon: Ghost, accentColor: "pink", avatar: leFantomeAvatar },
+];
+
+const pressQuotes: PressQuote[] = [
+  {
+    magazine: "Society",
+    logo: societyLogo,
+    date: "12 octobre 2023",
+    context: "Veille de l'adieu à Thibaut Pinot en Lombardie",
+    quotes: [
+      "Un groupe d'amis rendus fous par le vélo théorisent sur d'obscures courses en Asie",
+      "Régis patte de lapin discute avec les fous furieux",
+    ],
+  },
+  {
+    magazine: "Pédale!",
+    logo: pedaleLogo,
+    date: "18 juin 2025",
+    quotes: [
+      "Parce que la compétition est d'abord interne, tout est bon pour chambrer mais aussi intoxiquer son ami/adversaire avec des méthodes dignes de l'opération Fortitude pré-Débarquement. « Avant les enchères, on fait de faux articles Paint ou Photoshop pour faire croire que des coureurs sont tombés et se sont blessés… »",
+    ],
+  },
 ];
 
 const TeamPage = () => {
@@ -101,6 +133,60 @@ const TeamPage = () => {
             );
           })}
         </div>
+
+        {/* Press Citations */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.6 }}
+          className="mt-20 mb-4"
+        >
+          <h2 className="text-2xl md:text-3xl font-montserrat font-bold text-bordure-green text-center mb-10">
+            Ils parlent de nous
+          </h2>
+
+          <div className="space-y-6">
+            {pressQuotes.map((press, i) => (
+              <motion.div
+                key={press.magazine}
+                initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
+                whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.5, delay: 0.1 * i }}
+                className="bg-white rounded-xl border-[0.5px] border-bordure-green/10 p-6 md:p-8"
+              >
+                <div className="flex items-center gap-4 mb-5">
+                  <img
+                    src={press.logo}
+                    alt={press.magazine}
+                    className="h-8 md:h-10 w-auto object-contain"
+                  />
+                  <span className="text-bordure-green/40 font-inter text-sm">
+                    {press.date}
+                  </span>
+                </div>
+
+                {press.context && (
+                  <p className="text-bordure-green/50 font-inter text-xs uppercase tracking-widest mb-4">
+                    {press.context}
+                  </p>
+                )}
+
+                <div className="space-y-4">
+                  {press.quotes.map((quote, j) => (
+                    <div key={j} className="flex gap-3">
+                      <Quote className="w-4 h-4 text-bordure-gold/60 mt-1 flex-shrink-0" />
+                      <p className="text-bordure-green/80 font-inter text-sm md:text-base leading-relaxed italic">
+                        « {quote} »
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
       </div>
     </StaticPageLayout>
   );
