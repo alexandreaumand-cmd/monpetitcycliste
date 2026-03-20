@@ -1,25 +1,38 @@
 
+## Ajouter une section "Citations Presse" en bas de la page Équipe
 
-## Générer une illustration pour "Le Codeur"
+### Contenu
 
-### Approche
+**Society** — 12 octobre 2023
+- "Un groupe d'amis rendus fous par le vélo théorisent sur d'obscures courses en Asie"
+- "Régis patte de lapin discute avec les fous furieux"
+- Sous-titre : Veille de l'adieu à Thibaut Pinot en Lombardie
 
-Utiliser le modèle d'édition d'image (google/gemini-3.1-flash-image-preview) pour transformer la photo en illustration stylisée, cohérente avec la DA du site La Bordure : tons verts (#1B5E3B), or (#C8963A), crème (#F6F3ED), style épuré et premium.
+**Pédale** — 18 juin 2025
+- "Parce que la compétition est d'abord interne, tout est bon pour chambrer mais aussi intoxiquer son ami/adversaire avec des méthodes dignes de l'opération Fortitude pré-Débarquement. « Avant les enchères, on fait de faux articles Paint ou Photoshop pour faire croire que des coureurs sont tombés et se sont blessés… »"
+
+### Design
+
+Section séparée sous la grille des membres, avec un titre "Ils parlent de nous". Chaque citation presse dans une carte blanche avec :
+- Logo du magazine (à fournir comme assets : `src/assets/press/society-logo.png` et `src/assets/press/pedale-logo.png`)
+- Nom du magazine + date
+- Les citations en italique avec guillemets français
+- Contexte en texte plus discret
+
+Style cohérent avec le reste : fond crème, cartes blanches, bordures fines, typo Montserrat/Inter, couleurs bordure-green/gold.
 
 ### Étapes
 
-1. **Copier le script AI** (`lovable_ai.py`) dans `/tmp/`
-2. **Générer l'illustration** via `--edit-image` avec un prompt décrivant le style souhaité : illustration minimaliste, trait fin, palette La Bordure (vert foncé, or, crème), style portrait éditorial
-3. **QA visuelle** : vérifier le résultat
-4. **Copier l'image** dans `src/assets/team/` du projet
-5. **Mettre à jour `TeamPage.tsx`** : ajouter un champ `avatar` optionnel au type `TeamMember`, afficher l'image à la place de l'icône pour Le Codeur
+1. **Demander les logos** — Il faudra uploader les logos de Society et Pédale
+2. **Ajouter la section presse** dans `TeamPage.tsx` après la grille des membres, avec les données en dur
+3. **Animations** — Même pattern framer-motion que les cartes existantes
 
 ### Fichiers impactés
 
-- `src/assets/team/le-codeur.png` — nouvelle illustration générée
-- `src/pages/TeamPage.tsx` — ajout du support avatar image pour les membres qui en ont un
+- `src/pages/TeamPage.tsx` — Ajout de la section citations presse
+- `src/assets/press/society-logo.png` — Logo Society (à uploader)
+- `src/assets/press/pedale-logo.png` — Logo Pédale (à uploader)
 
-### Style de l'illustration
+### Question préalable
 
-Portrait stylisé, lignes épurées, fond crème/transparent, palette restreinte (vert bordure + or), aspect éditorial haut de gamme — pas cartoon, pas réaliste non plus. Un entre-deux sophistiqué type illustration magazine.
-
+J'aurai besoin que tu uploades les logos des magazines **Society** et **Pédale** pour les intégrer dans les cartes.
