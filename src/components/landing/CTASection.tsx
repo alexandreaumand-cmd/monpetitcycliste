@@ -25,7 +25,7 @@ const CTASection = () => {
       {/* Background — mountain col */}
       <div className="absolute inset-0">
         <img
-          src="https://images.unsplash.com/photo-1471506480208-91b3a4cc78be?w=1920&q=80&auto=format&fit=crop"
+          src="/images/bardet-victoire.webp"
           alt="Col de montagne"
           className="w-full h-full object-cover"
           loading="lazy"
