@@ -1,55 +1,30 @@
 
 
-## Plan : Uniformiser les valeurs `type_course` dans la base et le code
+## Plan : Créer 3 visuels publicitaires pour X — Lancement de La Bordure
 
-### État actuel
+### Format cible
+- **Dimensions** : 1200×675px (ratio 16:9, optimal pour les posts X)
+- **Format** : PNG haute qualité
+- **Sortie** : `/mnt/documents/`
 
-6 variantes coexistent dans la table `courses` :
+### Palette de la marque (identité La Bordure)
+- Cream #F6F3ED, Green #1B5E3B, Gold #C8963A, Rose #E8A0B4, Text Green #2D3D32
 
-```text
-type_course       | count
-------------------+------
-etapes            |    60
-one day race      |    50
-one_day           |   153
-One-day race      |   122
-stage_race        |    14
-Stages race       |    69
-```
+### Les 3 visuels
 
-Cela vient d'imports successifs (CSV, scraping PCS, formulaire admin) qui utilisaient chacun leur propre convention.
+**Visuel 1 — "L'annonce"** : Le logo La Bordure centré sur fond vert profond (#1B5E3B), avec le texte "La Bordure est enfin là" en typographie élégante crème/gold, et des accents roses. Sobre, solennel, impactant. Utilise `logo-bordure-light.png` (texte rose sur fond sombre).
 
-### Solution
+**Visuel 2 — "Le concept"** : Split-screen avec l'image peloton aérien à gauche et une description à droite sur fond crème — "Fantasy cycling. Enchères en direct. Stratégie." avec le logo en bas. Met en avant le gameplay.
 
-**Valeurs canoniques** : `one_day` et `stage_race` (déjà utilisées par le formulaire admin dans `CoursesManager.tsx`).
+**Visuel 3 — "L'appel"** : Image hero handlebar en arrière-plan avec overlay vert semi-transparent, texte "Rejoins la course" en grand + URL du site + logo. Call-to-action fort.
 
-**1. Migration SQL — normaliser les données existantes**
-
-```sql
-UPDATE courses SET type_course = 'stage_race' 
-WHERE type_course IN ('etapes', 'Stages race');
-
-UPDATE courses SET type_course = 'one_day' 
-WHERE type_course IN ('one day race', 'One-day race');
-```
-
-Résultat : toutes les courses auront `one_day` (325) ou `stage_race` (143).
-
-**2. Mettre à jour `courseType.ts`** — adapter `normalizeCourseType` pour reconnaître les valeurs canoniques en priorité et rester rétrocompatible avec d'éventuelles nouvelles entrées mal formatées.
-
-**3. Mettre à jour `RouteImageUploader.tsx`** — utiliser `isStageRace()` (déjà prévu, correction précédente non encore appliquée).
-
-**4. Mettre à jour le template CSV** (`exportTemplates.ts`) — utiliser `stage_race` au lieu de `etapes`.
-
-**5. Mettre à jour les vues SQL** — les vues utilisent déjà `ILIKE '%stage%'` et `ILIKE '%one%'`, donc elles fonctionneront toujours. Pas de modification nécessaire, mais la normalisation rend ces patterns plus simples et fiables.
-
-**6. Vérifier `ManagerComparison.tsx`** — remplacer le hardcoded `c.type_course === "One-day race"` par un check via `isStageRace`.
+### Approche technique
+1. Copier le script AI image generation vers `/tmp/`
+2. Utiliser les assets existants du projet (logo, images hero) comme base
+3. Générer les 3 visuels via un script Python utilisant Pillow pour le compositing (logos, textes, overlays sur les photos existantes)
+4. Sortie dans `/mnt/documents/`
 
 ### Fichiers impactés
-- Migration SQL (UPDATE des données)
-- `src/lib/courseType.ts` — léger ajustement
-- `src/components/startlist/RouteImageUploader.tsx` — utiliser `isStageRace()`
-- `src/lib/exportTemplates.ts` — template CSV
-- `src/components/rankings/ManagerComparison.tsx` — filtre hardcodé
-- `src/components/calendar/CalendarCourseDialog.tsx` — affichage badge `type_course` brut → utiliser `normalizeCourseType().display`
+- Aucun fichier du projet modifié
+- 3 fichiers PNG générés dans `/mnt/documents/`
 
