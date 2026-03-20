@@ -1,22 +1,40 @@
 
 
-## Corriger le débordement horizontal des cartes Pronostics sur mobile
+## Corriger le trigger de calcul automatique des bonus coureur
 
-### Problème
+### Cause racine
 
-Sur un écran 393px, la ligne 1 de chaque `PronosticRaceCard` empile horizontalement : nom de course + badge type + badge catégorie + horloge deadline + icône statut. Tout ne rentre pas, ce qui provoque un débordement à droite.
+Le trigger `trigger_calculate_bonus_rider` utilise un `EXISTS` check basé sur le `commentaire` pour éviter les doublons. Le commentaire ne contient PAS le `etape_numero`. Résultat : quand un coureur marque des points sur 2 étapes différentes d'une même course avec le même type de classement, seule la 1ère étape génère un bonus — les suivantes sont ignorées car le commentaire est identique.
 
-### Solution
+### Correction
 
-Restructurer le layout de la carte sur 2 lignes distinctes au lieu d'une seule ligne surchargée :
+**Migration SQL** — Modifier la fonction `trigger_calculate_bonus_rider` :
 
-**Ligne 1** : Nom de la course (truncate, `flex-1`) + icône statut (shrink-0)
+1. Ajouter `etape_numero` dans le commentaire généré :
+   ```
+   'Bonus coureur automatique (25%) - ' || course_id || ' - ' || type_classement || ' E' || COALESCE(etape_numero, 0)
+   ```
 
-**Ligne 2** : Badge type + badge catégorie (optionnel, truncate) + horloge deadline — le tout en `flex-wrap` pour que ça retourne à la ligne si nécessaire
+2. Alternativement (plus robuste), changer le check `EXISTS` pour comparer sur les champs structurels plutôt que sur le commentaire texte :
+   ```sql
+   SELECT EXISTS(
+     SELECT 1 FROM bonus_points
+     WHERE phase_id = NEW.phase_id
+       AND coureur_id = NEW.coureur_id
+       AND manager_id = v_manager_rec.manager_id
+       AND league_id = v_manager_rec.league_id
+       AND bonus_type = 'coureur_bonuse'
+       AND commentaire LIKE '%- ' || NEW.course_id || ' - ' || NEW.type_classement || ' E' || COALESCE(NEW.etape_numero::text, 'GC') || '%'
+   )
+   ```
 
-Le sélecteur/résultat (ligne 3) reste inchangé.
+L'approche recommandée : utiliser une clé composite (course_id + type_classement + etape_numero) dans le commentaire ET dans le EXISTS, alignée avec ce que fait déjà `recalculate-rider-bonuses`.
+
+### Après la migration
+
+Lancer un recalcul via l'edge function `recalculate-rider-bonuses` pour Vlasov (ou pour toute la phase) afin de corriger les bonus manquants existants. La fonction de recalcul est déjà correcte — elle inclut l'étape dans le commentaire.
 
 ### Fichier impacté
 
-- **`src/components/arena/PronosticRaceCard.tsx`** — Restructurer le bloc lignes 128-149 : séparer le titre + statut sur une ligne, et les badges + deadline sur une seconde ligne avec `flex-wrap gap-1`.
+- **Migration SQL** : `CREATE OR REPLACE FUNCTION trigger_calculate_bonus_rider()` avec le correctif etape_numero dans commentaire + EXISTS check.
 
