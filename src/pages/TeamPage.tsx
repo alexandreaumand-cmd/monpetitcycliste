@@ -28,7 +28,7 @@ const members: TeamMember[] = [
   { nickname: "L'Ayatollah", description: "Celui qui a créé un fichier de 100Mo pour gérer le jeu et qui en a créé les règles.", icon: Gavel, accentColor: "gold" },
   { nickname: "Le Pape de la Data", description: "Il a compilé toutes les données du cyclisme depuis 50 ans.", icon: Database, accentColor: "pink" },
   { nickname: "Le Criminel Écologique", description: "Il arpente l'Europe pour aller repérer les coureurs en devenir.", icon: Globe, accentColor: "gold" },
-  { nickname: "Le Sachant", description: "Il connaît tout sur tout, imbattable au quizz.", icon: GraduationCap, accentColor: "pink" },
+  { nickname: "Le Sachant", description: "Il connaît tout sur tout, imbattable au quizz.", icon: GraduationCap, accentColor: "pink", avatar: leSachantAvatar },
   { nickname: "Le Rappeur", description: "Le plus créatif de la bande, fan de baies vitrées.", icon: Palette, accentColor: "gold" },
   { nickname: "Le Doc", description: "On sait toujours pas trop ce qu'il farfouille, mais il gagne 5 phases d'affilé. Louche.", icon: Stethoscope, accentColor: "pink" },
   { nickname: "La Pépite", description: "Il s'est essayé au football. Barré par Mvila, il suit maintenant le vélo.", icon: Trophy, accentColor: "gold" },
