@@ -1,6 +1,7 @@
 import {
   LandingHeader,
   HeroSection,
+  GameOverviewSection,
   HowItWorksSection,
   AuctionShowcase,
   SocialProofSection,
@@ -14,6 +15,7 @@ const LandingPage = () => {
       <LandingHeader />
       <main>
         <HeroSection />
+        <GameOverviewSection />
         <HowItWorksSection />
         <AuctionShowcase />
         <SocialProofSection />
