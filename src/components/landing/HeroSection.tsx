@@ -64,7 +64,7 @@ const HeroSection = () => {
           </motion.p>
 
           <motion.div
-            className="flex gap-1 mb-8"
+            className="flex gap-1 mb-6"
             initial={{ opacity: 0, scaleX: 0.5 }}
             animate={{ opacity: 1, scaleX: 1 }}
             transition={{ duration: 0.5, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
