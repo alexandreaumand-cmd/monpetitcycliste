@@ -104,7 +104,7 @@ export const AnnouncementsLive = ({
             <div className="flex gap-2">
               <Button 
                 onClick={onPublishNext}
-                disabled={isLoading}
+                disabled={isLoading || isPaused}
                 className="flex-1 gap-2"
               >
                 <Megaphone className="h-4 w-4" />
