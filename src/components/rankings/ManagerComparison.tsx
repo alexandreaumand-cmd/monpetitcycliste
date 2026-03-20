@@ -599,7 +599,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     if (!pointsA || !pointsB || !courses) return null;
 
     const categories = [
-      { key: "1J", label: "Courses 1 Jour", filterCourse: (c: any) => c.type_course === "One-day race" },
+      { key: "1J", label: "Courses 1 Jour", filterCourse: (c: any) => !isStageRace(c.type_course) },
       { 
         key: "ETAPES", 
         label: "Courses par étapes", 

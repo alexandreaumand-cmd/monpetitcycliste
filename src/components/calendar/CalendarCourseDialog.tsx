@@ -225,7 +225,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
               <Badge variant="outline">{course.categorie}</Badge>
             )}
             {courseDetails?.type_course && (
-              <Badge variant="secondary">{courseDetails.type_course}</Badge>
+              <Badge variant="secondary">{normalizeCourseType(courseDetails.type_course).display}</Badge>
             )}
             {(course.date_debut || course.date_fin) && (
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground ml-2">
