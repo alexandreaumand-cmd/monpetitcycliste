@@ -1,39 +1,46 @@
 
 
-## Créer les pages du footer et supprimer la section Communauté
+## Créer la page "L'Équipe" avec les 10 fondateurs
 
-Le footer a 3 groupes de liens. L'utilisateur veut supprimer le groupe "Communauté" et créer les pages pour les 2 autres groupes.
+### Nouvelle page `/team`
 
-### Pages à créer (6 pages)
+Créer `src/pages/TeamPage.tsx` avec le layout `StaticPageLayout`. La page affiche les 10 membres fondateurs dans une grille responsive (2 colonnes mobile, 3-4 desktop).
 
-**Le jeu :**
-- `/about` — **À propos** : présentation de La Bordure, l'histoire du projet, l'équipe
-- `/rules` — **Règles du jeu** : explication détaillée du scoring, des enchères, du budget, des classements
-- `/how-to-play` — **Comment jouer** : guide pas-à-pas pour démarrer (créer une ligue, inviter des amis, enchérir, etc.)
+Chaque membre est une carte avec :
+- Un **placeholder circulaire** stylisé (icône générique colorée, en attendant les vraies photos transformées en illustrations)
+- Son **surnom** en gros (ex: "L'Ayatollah")
+- Sa **description** courte et humoristique
 
-**Légal :**
-- `/legal` — **Mentions légales** : éditeur, hébergeur, CNIL
-- `/terms` — **CGU** : conditions générales d'utilisation
-- `/privacy` — **Confidentialité** : politique de données personnelles
+Les surnoms et descriptions sont en dur (pas d'i18n, contenu identitaire français).
 
-### Changements
+### Les 10 membres
 
-1. **Créer un layout partagé `StaticPageLayout.tsx`** — Header (LandingHeader) + Footer (LandingFooter) + contenu centré, réutilisé par toutes les pages statiques.
+| Surnom | Description |
+|--------|-------------|
+| L'Ayatollah | Celui qui a créé un fichier de 100Mo pour gérer le jeu et qui en a créé les règles |
+| Le Pape de la Data | Il a compilé toutes les données du cyclisme depuis 50 ans |
+| Le Criminel Écologique | Il arpente l'Europe pour aller repérer les coureurs en devenir |
+| Le Sachant | Il connaît tout sur tout, imbattable au quizz |
+| Le Rappeur | Le plus créatif de la bande, fan de baies vitrées |
+| Le Doc | On sait toujours pas trop ce qu'il farfouille, mais il gagne 5 phases d'affilé. Louche. |
+| La Pépite | Il s'est essayé au football. Barré par Mvila, il suit maintenant le vélo |
+| Le BOSS | Il a renversé la table et a pris le pouvoir |
+| Le Codeur | Il débug, fait évoluer, c'est lui qui tient la barre |
+| Le Fantôme | Plus occupé à bouffer des frites à la cantine qu'à suivre le vélo |
 
-2. **Créer 6 pages** dans `src/pages/` : `AboutPage.tsx`, `RulesPage.tsx`, `HowToPlayPage.tsx`, `LegalNoticePage.tsx`, `TermsPage.tsx`, `PrivacyPage.tsx`. Contenu en dur (pas d'i18n pour le contenu légal). Style : fond cream, texte structuré avec titres/sections.
+### Style visuel
 
-3. **`src/App.tsx`** — Ajouter les 6 routes (`/about`, `/rules`, `/how-to-play`, `/legal`, `/terms`, `/privacy`).
+- Fond cream, cartes avec bordure subtle et hover gold
+- Placeholder avatar : cercle coloré avec une icône Lucide correspondant au personnage (Gavel pour l'Ayatollah, Database pour le Pape, Globe pour le Criminel, etc.)
+- Alternance subtile gold/pink sur les icônes (cohérent avec la charte)
+- Titre de page : "L'Équipe" avec un sous-titre type "Les 10 passionnés derrière La Bordure"
 
-4. **`src/components/landing/LandingFooter.tsx`** — Remplacer les `<a href="#">` par des `<Link to="...">`. Supprimer entièrement le bloc "Communauté".
+### Fichiers impactés
 
-5. **`src/i18n/locales/fr/home.json` et `en/home.json`** — Supprimer les clés `footer.community.*`.
+1. **`src/pages/TeamPage.tsx`** (nouveau) — La page complète avec grille de membres
+2. **`src/App.tsx`** — Ajout route `/team` (lazy loaded)
+3. **`src/components/landing/LandingFooter.tsx`** — Ajout lien "L'Équipe" dans le groupe "Le jeu"
+4. **`src/i18n/locales/fr/home.json`** et **`en/home.json`** — Ajout clé `footer.game.team`
 
-### Contenu des pages
-
-- **À propos** : La Bordure est un jeu de fantasy cycling entre amis. Système d'enchères, courses UCI, classements. Créé par des passionnés.
-- **Règles** : Budget initial, fonctionnement des enchères (tours, plus offrant), scoring par étape/classement, classement général/hebdo.
-- **Comment jouer** : 4 étapes (créer une ligue → inviter → enchérir → suivre les courses).
-- **Mentions légales** : template standard (éditeur La Bordure, hébergeur Lovable).
-- **CGU** : conditions d'inscription, propriété intellectuelle, responsabilité.
-- **Confidentialité** : données collectées, cookies, droits RGPD.
+Les placeholders d'avatar seront ensuite remplaçables par les photos stylisées une fois fournies.
 
