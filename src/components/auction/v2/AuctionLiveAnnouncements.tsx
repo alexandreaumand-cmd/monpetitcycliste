@@ -1,13 +1,14 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Trophy, Users, TrendingUp, PartyPopper, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
+import { Trophy, Users, TrendingUp, PartyPopper, ArrowLeft, ChevronDown, ChevronUp, Pause, Play } from "lucide-react";
 import { useLeague } from "@/contexts/LeagueContext";
+import { toast } from "sonner";
 import {
   Collapsible,
   CollapsibleContent,
