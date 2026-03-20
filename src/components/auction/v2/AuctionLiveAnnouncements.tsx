@@ -253,7 +253,7 @@ export function AuctionLiveAnnouncements({
                       disabled={togglePause.isPending}
                     >
                       {isPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-                      <span className="hidden sm:inline">{isPaused ? 'Reprendre' : 'Pause'}</span>
+                      {isPaused ? 'Reprendre' : 'Pause'}
                     </Button>
                   )}
                   <Badge variant={isComplete ? "default" : "secondary"} className={`text-xs sm:text-sm shrink-0 ${isReplaying ? 'animate-pulse' : ''}`}>
