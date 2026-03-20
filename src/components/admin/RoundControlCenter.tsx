@@ -377,6 +377,8 @@ export const RoundControlCenter = () => {
                   onPublishAll={() => publishAllMutation.mutate()}
                   onCopy={copyToClipboard}
                   isLoading={publishNextMutation.isPending || publishAllMutation.isPending}
+                  isPaused={currentAuction?.announcements_paused || false}
+                  pausedByName={pausedByManagerName}
                 />
               </div>
             )}
