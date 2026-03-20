@@ -239,6 +239,8 @@ Deno.serve(async (req) => {
         my_new_riders,
         all_managers_recruits,
         recently_announced_manager_id,
+        announcements_paused: auction.announcements_paused || false,
+        announcements_paused_by_name: (auction.paused_manager as any)?.nom || null,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
