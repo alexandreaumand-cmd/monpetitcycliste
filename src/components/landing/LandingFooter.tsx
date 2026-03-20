@@ -11,11 +11,7 @@ const LandingFooter = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center gap-3 mb-4">
-              <BordureStripes className="h-8" />
-              <img src={mpcLogoVertical} alt="La Bordure Fantasy Cycling" className="h-14 w-auto" loading="lazy" />
-              <span className="text-white font-montserrat font-bold">
-                La Bordure
-              </span>
+              <img src={logoBordureLight} alt="La Bordure Fantasy Cycling" className="h-10 w-auto" loading="lazy" />
             </Link>
             <p className="text-white/40 text-sm font-inter">
               {t("footer.tagline")}
