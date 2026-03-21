@@ -43,7 +43,8 @@
     "logout": "Déconnexion",
     "login": "Connexion",
     "signup": "Inscription",
-    "arena": "Arène"
+    "arena": "Arène",
+    "live": "Live"
   },
   "auth": {
     "email": "Email",
