@@ -192,12 +192,32 @@ export const SuperAdminLiveBroadcastPage = () => {
       });
 
       // Auto-broadcast all timeline events (reversed so oldest first)
+      // Build a lookup: lowercase rider name → manager name
+      const riderToManager: Record<string, string> = {};
+      for (const [, info] of Object.entries(matched)) {
+        const m = info as any;
+        if (m.manager_name) {
+          if (m.scraped_name) riderToManager[m.scraped_name.toLowerCase()] = m.manager_name;
+          if (m.rider_nom) riderToManager[m.rider_nom.toLowerCase()] = m.manager_name;
+        }
+      }
+
+      // Replace rider names in text with "rider (manager)"
+      const enrichText = (text: string): string => {
+        let result = text;
+        for (const [name, mgr] of Object.entries(riderToManager)) {
+          const regex = new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+          result = result.replace(regex, (match) => `${match} (${mgr})`);
+        }
+        return result;
+      };
+
       if (events.length > 0 && managerId) {
         const reversedEvents = [...events].reverse();
         let sent = 0;
         for (const evt of reversedEvents) {
           const typeEmoji = evt.type === "crash" ? "💥" : evt.type === "breakaway" ? "🚴" : evt.type === "gap" ? "⏱️" : evt.type === "dropped" ? "📉" : evt.type === "intermediate" ? "🏁" : evt.type === "abandon" ? "🚑" : "📢";
-          const content = `${typeEmoji} **${evt.time}** — ${evt.text}`;
+          const content = `${typeEmoji} **${evt.time}** — ${enrichText(evt.text)}`;
           try {
             await new Promise<void>((resolve, reject) => {
               broadcastMessage.mutate(
