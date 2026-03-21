@@ -230,18 +230,31 @@ export function LeagueSettingsForm({
       </div>
 
       {/* Bonuses */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-0.5">
-          <Label htmlFor="bonuses">{t('settings.bonuses')}</Label>
-          <p className="text-sm text-muted-foreground">
-            {t('settings.bonusesDesc')}
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="bonuses">{t('settings.bonuses')}</Label>
+            <p className="text-sm text-muted-foreground">
+              {t('settings.bonusesDesc')}
+            </p>
+          </div>
+          <Switch
+            id="bonuses"
+            checked={bonusesEnabled}
+            onCheckedChange={onBonusesChange}
+          />
         </div>
-        <Switch
-          id="bonuses"
-          checked={bonusesEnabled}
-          onCheckedChange={onBonusesChange}
-        />
+        {bonusesEnabled && (
+          <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+            <p className="text-sm font-medium text-foreground">{t('settings.bonusExplainTitle')}</p>
+            <div className="space-y-1.5 text-xs text-muted-foreground">
+              <p>🏅 <strong>{t('settings.bonusFirstWin')}</strong> — {t('settings.bonusFirstWinDesc')}</p>
+              <p>⏱️ <strong>{t('settings.bonusITT')}</strong> — {t('settings.bonusITTDesc')}</p>
+              <p>👥 <strong>{t('settings.bonusTTT')}</strong> — {t('settings.bonusTTTDesc')}</p>
+              <p>📊 <strong>{t('settings.bonusScorers')}</strong> — {t('settings.bonusScorersDesc')}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* First Auction Date */}
