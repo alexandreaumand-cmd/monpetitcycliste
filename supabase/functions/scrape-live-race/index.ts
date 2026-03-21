@@ -66,8 +66,8 @@ function parsePCSResults(doc: any): { riders: ScrapedRider[]; events: ScrapedEve
     const name = firstName ? `${firstName} ${lastName}` : fullText;
     if (!name) continue;
 
-    // Team: find link to /team/ anywhere in the row
-    const teamLink = row.querySelector("a[href*='/team/']");
+    // Team: find link to team
+    const teamLink = row.querySelector("a[href*='team/']");
     const team = teamLink?.textContent?.trim() || "";
 
     // Time/gap: last td or td with time class
