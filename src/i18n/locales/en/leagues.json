@@ -24,7 +24,31 @@
     "success": "League created successfully!",
     "selectDateError": "Please select a date and time for the first auction round",
     "futureDateError": "The first round date must be in the future",
-    "error": "Error creating league"
+    "error": "Error creating league",
+    "selectCoursesError": "Please select at least one race"
+  },
+  "wizard": {
+    "stepName": "Name and season",
+    "stepVariant": "Game variant",
+    "stepCourses": "Race selection",
+    "stepPlayers": "Number of players",
+    "stepVisibility": "Visibility",
+    "stepBonuses": "Bonuses",
+    "stepAuction": "Auction date",
+    "stepRecap": "Summary",
+    "playersDesc": "How many managers will participate in this league?",
+    "visibilityDesc": "Who can see and join your league?",
+    "recapMode": "Game mode",
+    "recapName": "League name",
+    "recapVariant": "Variant",
+    "recapCourses": "Races",
+    "recapPlayers": "Players",
+    "recapVisibility": "Visibility",
+    "recapBonuses": "Bonuses",
+    "recapRiders": "Max roster",
+    "recapAuction": "Auction start",
+    "yes": "Yes",
+    "no": "No"
   },
   "join": {
     "title": "Join a League",
