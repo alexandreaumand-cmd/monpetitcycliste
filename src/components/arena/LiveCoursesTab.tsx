@@ -164,19 +164,6 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
 
         {/* Messages */}
         <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
-          {hasNextPage && (
-            <div className="flex justify-center py-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-              >
-                {isFetchingNextPage && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                {t("trashTalk.loadMore")}
-              </Button>
-            </div>
-          )}
 
           {!activeCourseId ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
