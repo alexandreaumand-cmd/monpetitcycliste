@@ -185,5 +185,25 @@
     "title": "Emporte La Bordure partout",
     "subtitle": "Installe l'app sur ton téléphone pour suivre tes coureurs en direct.",
     "cta": "Installer l'app"
+  },
+  "contact": {
+    "title": "Contactez-nous",
+    "subtitle": "Une question, une suggestion ou un bug à signaler ? Écrivez-nous !",
+    "nameLabel": "Nom",
+    "namePlaceholder": "Votre nom",
+    "emailLabel": "Email",
+    "emailPlaceholder": "votre@email.com",
+    "subjectLabel": "Sujet",
+    "subjectPlaceholder": "De quoi souhaitez-vous parler ?",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Votre message...",
+    "submit": "Envoyer",
+    "sending": "Envoi en cours...",
+    "successTitle": "Message envoyé !",
+    "successMessage": "Merci pour votre message, nous vous répondrons dès que possible.",
+    "errorTitle": "Erreur",
+    "errorMessage": "Une erreur est survenue. Veuillez réessayer.",
+    "thankYouTitle": "Merci !",
+    "thankYouMessage": "Votre message a bien été envoyé. Nous reviendrons vers vous rapidement."
   }
 }
