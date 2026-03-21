@@ -205,8 +205,12 @@ function parseLEquipeLive(doc: any, html: string): {
 
     for (let i = 0; i < uniqueHeaders.length; i++) {
       const start = uniqueHeaders[i].index;
-      const end = i + 1 < uniqueHeaders.length ? uniqueHeaders[i + 1].index : situationZone.length;
-      const section = situationZone.substring(start, end);
+      let end = i + 1 < uniqueHeaders.length ? uniqueHeaders[i + 1].index : situationZone.length;
+      let section = situationZone.substring(start, end);
+
+      // Cut at "masquer/afficher le détail" which marks end of the rider list
+      const detailCut = section.search(/masquer le d[ée]tail|afficher le d[ée]tail/i);
+      if (detailCut > 0) section = section.substring(0, detailCut);
 
       // Extract rider names: "X. LastName (Team)" pattern
       const riderPattern = /([A-ZÀ-Ü][a-zà-ü]*\.?\s+[A-Za-zÀ-ü\- ']+?)\s*\(([^)]+)\)/g;
@@ -218,6 +222,9 @@ function parseLEquipeLive(doc: any, html: string): {
         if (riderName.toLowerCase().includes("groupe") || riderName.toLowerCase().includes("peloton")) continue;
         if (riderName.length < 4) continue;
         if (riderName.toLowerCase().startsWith("photo")) continue;
+        // Filter out sentence-like matches (contain common words)
+        const lc = riderName.toLowerCase();
+        if (lc.includes(" sur ") || lc.includes(" la ") || lc.includes(" le ") || lc.includes(" les ") || lc.includes(" un ") || lc.includes(" des ") || lc.includes(" est ") || lc.includes(" qui ") || lc.includes(" point ")) continue;
         
         groupRiders.push(riderName);
         riders.push({ name: riderName, team, position: undefined, gap: uniqueHeaders[i].gap });
