@@ -20,6 +20,7 @@ import { SuperAdminBonusPage } from "@/pages/admin/SuperAdminBonusPage";
 import { PronosticDeadlinesManager } from "@/components/admin/arena/PronosticDeadlinesManager";
 import { SuperAdminLiveBroadcastPage } from "@/pages/admin/SuperAdminLiveBroadcastPage";
 import { StartlistHub } from "@/components/admin/StartlistHub";
+import { PhaseAuctionSchedule } from "@/components/admin/PhaseAuctionSchedule";
 import mpcLogo from "@/assets/mpc-logo-horizontal.png";
 import { useTranslation } from "react-i18next";
 
