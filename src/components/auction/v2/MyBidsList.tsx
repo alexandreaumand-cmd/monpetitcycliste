@@ -117,9 +117,19 @@ export function MyBidsList({
 
   return (
     <div className="space-y-0.5 px-3">
-      <h3 className="text-sm font-semibold mb-2">
-        {t("myBids.count", { count: bids.length })}
-      </h3>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-semibold">
+          {t("myBids.count", { count: bids.length })}
+        </h3>
+        <button
+          onClick={cycleSortBy}
+          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded hover:bg-muted"
+          title={sortBy === 'none' ? 'Trier par côte' : sortBy === 'cote' ? 'Trier par montant' : 'Ordre d\'ajout'}
+        >
+          <ArrowUpDown className="h-3 w-3" />
+          {sortBy === 'cote' ? 'Côte' : sortBy === 'amount' ? 'Montant' : '—'}
+        </button>
+      </div>
 
       {sortedBids.map((bid) => (
         <div
