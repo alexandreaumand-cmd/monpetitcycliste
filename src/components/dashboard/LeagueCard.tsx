@@ -53,7 +53,7 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
 
   const { data: templates } = useQuery({
     queryKey: ['league-templates'],
-    queryFn: getLeagueTemplates,
+    queryFn: () => getTemplates(),
     staleTime: 60000,
   });
 

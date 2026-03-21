@@ -34,7 +34,7 @@ export function LeagueSwitcher() {
 
   const { data: templates } = useQuery({
     queryKey: ['league-templates'],
-    queryFn: getLeagueTemplates,
+    queryFn: () => getTemplates(),
   });
 
   const currentLeague = leagues.find(l => l.id === leagueId);
