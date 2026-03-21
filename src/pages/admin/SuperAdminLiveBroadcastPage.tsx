@@ -431,7 +431,7 @@ export const SuperAdminLiveBroadcastPage = () => {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={handleScrape}
+                  onClick={() => handleScrape()}
                   disabled={isScraping || !scrapeUrl}
                   className="h-8 gap-1.5 shrink-0"
                 >
