@@ -52,9 +52,11 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
   });
 
   // Fetch course names for all selected_course_ids across public leagues
-  const allCourseIds = (publicLeagues || []).flatMap((l: any) =>
-    l.league_scopes?.[0]?.selected_course_ids || []
-  );
+  const allCourseIds = (publicLeagues || []).flatMap((l: any) => {
+    const scope = l.league_scopes;
+    const ids = Array.isArray(scope) ? scope[0]?.selected_course_ids : scope?.selected_course_ids;
+    return ids || [];
+  });
 
   const { data: coursesMap } = useQuery({
     queryKey: ['join-courses', allCourseIds.join(',')],
@@ -133,7 +135,8 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
   };
 
   const renderLeagueCard = (league: any) => {
-    const scope = league.league_scopes?.[0];
+    const scopeRaw = league.league_scopes;
+    const scope = Array.isArray(scopeRaw) ? scopeRaw[0] : scopeRaw;
     const settings = league.settings as any;
     const selectedCourseIds: string[] = scope?.selected_course_ids || [];
     const budget = settings?.budget;
