@@ -19,6 +19,7 @@ import {
   LogOut,
   User,
   Swords,
+  Radio,
 } from "lucide-react";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useSeasonContext } from "@/contexts/SeasonContext";
