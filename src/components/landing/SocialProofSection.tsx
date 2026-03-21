@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { Quote, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState, useCallback } from "react";
+import { Quote } from "lucide-react";
+import { useRef, useState } from "react";
 
 const SocialProofSection = () => {
   const { t } = useTranslation("home");
