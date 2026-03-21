@@ -459,10 +459,49 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: startlistEntries } = await supabase
-      .from("startlist_entries")
-      .select("coureur_id, rider_nom")
-      .eq("course_id", course_id);
+    // startlist_entries links via startlist_imports (startlist_id → startlist_imports.id, race_id = course_id)
+    const { data: startlistImport } = await supabase
+      .from("startlist_imports")
+      .select("id")
+      .eq("race_id", course_id)
+      .limit(1)
+      .single();
+
+    let startlistEntries: { coureur_id: string; rider_nom: string }[] = [];
+    if (startlistImport) {
+      const { data: entries } = await supabase
+        .from("startlist_entries")
+        .select("coureur_id, source_name")
+        .eq("startlist_id", startlistImport.id)
+        .not("coureur_id", "is", null);
+      
+      if (entries) {
+        startlistEntries = entries.map(e => ({ coureur_id: e.coureur_id!, rider_nom: e.source_name || "" }));
+      }
+      console.log(`[scrape-live-race] Found ${startlistEntries.length} startlist entries for course ${course_id}`);
+    } else {
+      console.log(`[scrape-live-race] No startlist import found for course ${course_id}, trying coureurs_saisons fallback`);
+      // Fallback: use coureurs_saisons for the season
+      if (courseData?.phase_id) {
+        const { data: phaseData } = await supabase
+          .from("phases")
+          .select("saison_id")
+          .eq("id", courseData.phase_id)
+          .single();
+        if (phaseData) {
+          const { data: cs } = await supabase
+            .from("coureurs_saisons")
+            .select("coureur_id, coureurs!inner(nom)")
+            .eq("saison_id", phaseData.saison_id)
+            .eq("actif", true)
+            .limit(2000);
+          if (cs) {
+            startlistEntries = cs.map((c: any) => ({ coureur_id: c.coureur_id, rider_nom: c.coureurs?.nom || "" }));
+          }
+          console.log(`[scrape-live-race] Fallback: ${startlistEntries.length} coureurs for season`);
+        }
+      }
+    }
 
     const { data: courseData } = await supabase
       .from("courses")
