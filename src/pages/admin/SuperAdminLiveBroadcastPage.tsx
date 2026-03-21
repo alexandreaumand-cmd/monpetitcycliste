@@ -61,6 +61,42 @@ export const SuperAdminLiveBroadcastPage = () => {
     setSelectedEtape(isMultiStage ? 1 : null);
   }, [activeCourseId, isMultiStage]);
 
+  // Load persisted scrape URL from DB when course changes
+  useEffect(() => {
+    if (!activeCourseId) return;
+    setAutoScrapeEnabled(false);
+    supabase
+      .from("arena_live_courses")
+      .select("live_scrape_url")
+      .eq("course_id", activeCourseId)
+      .eq("is_active", true)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.live_scrape_url) {
+          setScrapeUrl(data.live_scrape_url);
+        }
+      });
+  }, [activeCourseId]);
+
+  // Auto-scrape every 60s when enabled
+  useEffect(() => {
+    if (autoScrapeRef.current) {
+      clearInterval(autoScrapeRef.current);
+      autoScrapeRef.current = null;
+    }
+    if (!autoScrapeEnabled || !scrapeUrl || !activeCourseId) return;
+
+    const doAutoScrape = () => {
+      if (isScraping) return;
+      handleScrape(true);
+    };
+
+    autoScrapeRef.current = setInterval(doAutoScrape, 60_000);
+    return () => {
+      if (autoScrapeRef.current) clearInterval(autoScrapeRef.current);
+    };
+  }, [autoScrapeEnabled, scrapeUrl, activeCourseId]);
+
   // Build roster owners map from matched riders
   const rosterOwners = useMemo(() => {
     const map: Record<string, string> = {};
