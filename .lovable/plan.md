@@ -1,27 +1,21 @@
 
 
-## Correction des bonus coureur 25% manquants (Vlasov + potentiellement d'autres)
+## Coller la barre de recherche au header (Résultats mobile)
 
-### Diagnostic
+### Problème
 
-Le trigger `trigger_calculate_bonus_rider` a été corrigé le 20 mars pour inclure le numéro d'étape dans le commentaire de déduplication (ex: "Etape 3", "Etape 6"). Avant cette date, tous les bonus d'étape avaient le même commentaire "...Etape", ce qui causait une collision de déduplication quand un coureur marquait des points sur **plusieurs étapes** de la même course.
+Sur la page Résultats mobile, la barre de recherche `sticky top-14` ne colle pas directement sous le header. Un espace de fond crème est visible entre les deux.
 
-**Vlasov** : 30 pts sur l'étape 6 de Paris-Nice → bonus de 7.50 manquant. Seul le bonus de l'étape 3 (3.57) a été créé.
+### Cause probable
 
-**Autres coureurs potentiellement touchés** : des entrées "rétroactif" plus anciennes ont aussi le même problème, mais les données montrent que seul Vlasov a actuellement 2 étapes avec points sur Paris-Nice sans bonus séparés.
+Le composant `AdminMaintenance` est rendu avant la barre de recherche dans le flux. Même s'il retourne `null` pour les non-admins, la structure flex peut créer un décalage. De plus, le `py-2` sur le conteneur de recherche ajoute du padding superflu en haut.
 
 ### Solution
 
-**Lancer un recalcul global des bonus coureurs** via l'edge function `recalculate-rider-bonuses` existante. Cette fonction :
-1. Supprime tous les `bonus_points` de type `coureur_bonuse` pour chaque coureur/manager/league/phase
-2. Recrée les bonus à partir des entrées `points_ledger`, **avec le numéro d'étape** dans le commentaire (le code est déjà correct, ligne 164-172)
+1. **Déplacer `AdminMaintenance`** après la barre de recherche sticky (ou à l'intérieur de la zone scrollable)
+2. **Réduire le padding** du conteneur de recherche : remplacer `py-2` par `py-2 pt-0` ou `pb-2` pour que la barre soit collée au bord supérieur
 
-### Étapes
+### Fichier impacté
 
-1. **Appeler `recalculate-rider-bonuses`** depuis le frontend ou via curl pour la phase en cours — cela corrigera Vlasov et tous les cas similaires
-2. **Vérifier** que le bonus de 7.50 pour l'étape 6 de Paris-Nice apparaît dans les données de Vlasov
-
-### Détail technique
-
-Aucun changement de code nécessaire — le trigger et la fonction de recalcul sont déjà corrigés. Il suffit de déclencher le recalcul pour regénérer les données avec la bonne logique de déduplication.
+- `src/pages/ResultsPage.mobile.tsx` — Réorganiser l'ordre des éléments et ajuster le padding
 
