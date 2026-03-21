@@ -235,6 +235,11 @@ export const RaceSituationEditor = ({
                         className="text-xs gap-1 pr-1"
                       >
                         {name}
+                        {rosterOwners[group.riderIds[ri]] && (
+                          <span className="text-[10px] text-muted-foreground ml-0.5">
+                            ({rosterOwners[group.riderIds[ri]]})
+                          </span>
+                        )}
                         <button
                           type="button"
                           onClick={() => removeRiderFromGroup(index, ri)}
