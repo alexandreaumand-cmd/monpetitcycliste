@@ -74,6 +74,7 @@ export const MobileDrawer = ({
     {
       title: "Social",
       items: [
+        { label: "Live", path: "/dashboard/live", icon: Radio },
         { label: "Arène", path: "/dashboard/arene", icon: Swords },
       ],
     },
