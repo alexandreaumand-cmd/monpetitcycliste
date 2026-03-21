@@ -455,9 +455,20 @@ serve(async (req) => {
       }
     }
 
+    // Use L'Équipe situation if available (it has structured groups already), otherwise use gap-based groups
+    const finalSituation = lequipeSituation && lequipeSituation.groups.length > 0
+      ? {
+          groups: lequipeSituation.groups,
+          kmRemaining: lequipeSituation.kmRemaining,
+          kmCovered: lequipeSituation.kmCovered,
+          totalKm: lequipeSituation.totalKm,
+          speed: lequipeSituation.speed,
+        }
+      : { groups, kmRemaining: 0 };
+
     const result = {
       timeline: scrapedEvents,
-      situation: { groups, kmRemaining: 0 },
+      situation: finalSituation,
       matched_riders: matchedRiders,
       unmatched_names: unmatchedNames,
       total_scraped: scrapedRiders.length,
