@@ -24,6 +24,8 @@ interface RaceSituationEditorProps {
   onBroadcast: (situation: RaceSituation) => void;
   disabled?: boolean;
   startlistRiders?: { nom: string; coureur_id: string }[];
+  importedSituation?: RaceSituation | null;
+  rosterOwners?: Record<string, string>;
 }
 
 const DEFAULT_GROUP: RaceGroup = {
