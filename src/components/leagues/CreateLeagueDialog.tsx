@@ -42,7 +42,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
   
   // Five phases specific
   const [variant, setVariant] = useState<FivePhasesVariant>('full_season');
-  const [startingPhaseIndex, setStartingPhaseIndex] = useState(1);
+  
   
   // Per course specific
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
