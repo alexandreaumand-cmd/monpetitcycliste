@@ -67,20 +67,6 @@ export function LeagueSettingsForm({
   const { t, i18n } = useTranslation('leagues');
   const dateLocale = i18n.language === 'fr' ? fr : enUS;
 
-  // Fetch phases for phase selector (five_phases mode)
-  const { data: phases = [] } = useQuery({
-    queryKey: ['phases-for-league', seasonId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('phases')
-        .select('id, index_dans_saison, date_debut, date_fin, statut')
-        .eq('saison_id', seasonId)
-        .order('index_dans_saison');
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!seasonId && gameMode === 'five_phases',
-  });
 
   // Compute settings display
   const settings = useMemo(() => {
