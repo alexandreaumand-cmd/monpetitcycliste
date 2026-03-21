@@ -122,6 +122,19 @@ function parseFirstCyclingResults(doc: any): { riders: ScrapedRider[]; events: S
 // L'ÉQUIPE PARSER — parses lequipe.fr live text pages
 // ============================================================
 
+/** Decode common HTML entities */
+function decodeEntities(str: string): string {
+  return str
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ");
+}
+
 function parseLEquipeLive(doc: any, html: string): {
   riders: ScrapedRider[];
   events: ScrapedEvent[];
@@ -130,7 +143,7 @@ function parseLEquipeLive(doc: any, html: string): {
   const events: ScrapedEvent[] = [];
   const riders: ScrapedRider[] = [];
 
-  const textContent = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  const textContent = decodeEntities(html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '));
 
   // ── Extract km and speed ──
   let kmCovered = 0, totalKm = 0, kmRemaining = 0, speed = "";
