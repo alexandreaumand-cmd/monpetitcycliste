@@ -20,6 +20,7 @@ import { SuperAdminBonusPage } from "@/pages/admin/SuperAdminBonusPage";
 import { PronosticDeadlinesManager } from "@/components/admin/arena/PronosticDeadlinesManager";
 import { SuperAdminLiveBroadcastPage } from "@/pages/admin/SuperAdminLiveBroadcastPage";
 import { StartlistHub } from "@/components/admin/StartlistHub";
+import { PhaseAuctionSchedule } from "@/components/admin/PhaseAuctionSchedule";
 import mpcLogo from "@/assets/mpc-logo-horizontal.png";
 import { useTranslation } from "react-i18next";
 
@@ -55,6 +56,7 @@ const navSections: NavSection[] = [
     items: [
       { label: "Ligues", path: "leagues", icon: Users },
       { label: "Utilisateurs", path: "users", icon: Shield },
+      { label: "Planning Enchères", path: "phase-schedule", icon: Calendar },
       { label: "Arène", path: "arena", icon: Swords },
       { label: "Live Broadcast", path: "live-broadcast", icon: Radio },
     ],
@@ -232,7 +234,8 @@ export const SuperAdminPageMobile = ({ manager, onSignOut }: SuperAdminPageMobil
             <Route path="startlists" element={<StartlistHub />} />
             <Route path="leagues" element={<SuperAdminLeaguesPage />} />
             <Route path="leagues/:id" element={<LeagueDetailPage />} />
-            <Route path="users" element={<UsersManagementPage />} />
+              <Route path="users" element={<UsersManagementPage />} />
+              <Route path="phase-schedule" element={<PhaseAuctionSchedule />} />
             <Route path="arena" element={<PronosticDeadlinesManager />} />
             <Route path="live-broadcast" element={<SuperAdminLiveBroadcastPage />} />
             <Route path="data" element={<DataManagementTabs />} />

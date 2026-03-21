@@ -1,6 +1,8 @@
-export type GameMode = 'full_season' | 'short_gt' | 'short_wt' | 'short_classics';
+export type GameMode = 'five_phases' | 'per_course' | 'full_season' | 'short_gt' | 'short_wt' | 'short_classics';
 export type LeagueStatus = 'pending' | 'active' | 'completed' | 'cancelled';
 export type AuctionStrategy = 'single' | 'per_phase' | 'grouped';
+
+export type FivePhasesVariant = 'full_season' | 'wt_only';
 
 export type CourseFilters = {
   wt_tier?: string[];
@@ -23,6 +25,8 @@ export type League = {
   status: LeagueStatus;
   started_at: string | null;
   archived_at: string | null;
+  started_at_effective: string | null;
+  starting_phase_index: number | null;
 };
 
 export type LeagueMember = {
@@ -43,6 +47,7 @@ export type LeagueScope = {
   phases: string[];
   competitions: string[];
   course_filters?: CourseFilters;
+  selected_course_ids?: string[];
 };
 
 export type LeagueWithRole = League & {

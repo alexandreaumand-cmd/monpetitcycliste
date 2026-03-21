@@ -17,6 +17,7 @@ import { SuperAdminBonusPage } from "@/pages/admin/SuperAdminBonusPage";
 import { StartlistHub } from "@/components/admin/StartlistHub";
 import { PronosticDeadlinesManager } from "@/components/admin/arena/PronosticDeadlinesManager";
 import { SuperAdminLiveBroadcastPage } from "@/pages/admin/SuperAdminLiveBroadcastPage";
+import { PhaseAuctionSchedule } from "@/components/admin/PhaseAuctionSchedule";
 
 interface NavGroup {
   label: string;
@@ -50,6 +51,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Ligues", path: "leagues", icon: Users },
       { label: "Utilisateurs", path: "users", icon: Shield },
+      { label: "Planning Enchères", path: "phase-schedule", icon: Calendar },
       { label: "Arène", path: "arena", icon: Swords },
       { label: "Live Broadcast", path: "live-broadcast", icon: Radio },
     ],
@@ -143,6 +145,7 @@ export const SuperAdminPageDesktop = ({ manager, onSignOut }: SuperAdminPageDesk
               <Route path="leagues" element={<SuperAdminLeaguesPage />} />
               <Route path="leagues/:id" element={<LeagueDetailPage />} />
               <Route path="users" element={<UsersManagementPage />} />
+              <Route path="phase-schedule" element={<PhaseAuctionSchedule />} />
               <Route path="arena" element={<PronosticDeadlinesManager />} />
               <Route path="live-broadcast" element={<SuperAdminLiveBroadcastPage />} />
               <Route path="data" element={<DataManagementTabs />} />

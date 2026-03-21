@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getLeagueTemplates, type GameMode, calculateLeagueSettings } from "@/lib/leagues/templates";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -15,6 +15,9 @@ import { format } from "date-fns";
 import { fr, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { type GameMode, type FivePhasesVariant } from "@/lib/leagues/types";
+import { computeFivePhasesSettings, computePerCourseSettings } from "@/lib/leagues/templates";
+import { CourseSelector } from "./CourseSelector";
 
 type LeagueSettingsFormProps = {
   name: string;
@@ -31,6 +34,14 @@ type LeagueSettingsFormProps = {
   firstAuctionDate: Date | null;
   onFirstAuctionDateChange: (date: Date | null) => void;
   seasons: Array<{ id: string; annee: number }>;
+  // Five phases specific
+  variant?: FivePhasesVariant;
+  onVariantChange?: (v: FivePhasesVariant) => void;
+  startingPhaseIndex?: number;
+  onStartingPhaseIndexChange?: (idx: number) => void;
+  // Per course specific
+  selectedCourseIds?: string[];
+  onSelectedCourseIdsChange?: (ids: string[]) => void;
 };
 
 export function LeagueSettingsForm({
@@ -48,22 +59,40 @@ export function LeagueSettingsForm({
   firstAuctionDate,
   onFirstAuctionDateChange,
   seasons,
+  variant = 'full_season',
+  onVariantChange,
+  startingPhaseIndex = 1,
+  onStartingPhaseIndexChange,
+  selectedCourseIds = [],
+  onSelectedCourseIdsChange,
 }: LeagueSettingsFormProps) {
   const { t, i18n } = useTranslation('leagues');
   const dateLocale = i18n.language === 'fr' ? fr : enUS;
-  
-  const { data: templates } = useQuery({
-    queryKey: ['league-templates'],
-    queryFn: getLeagueTemplates,
+
+  // Fetch phases for phase selector (five_phases mode)
+  const { data: phases = [] } = useQuery({
+    queryKey: ['phases-for-league', seasonId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('phases')
+        .select('id, index_dans_saison, date_debut, date_fin, statut')
+        .eq('saison_id', seasonId)
+        .order('index_dans_saison');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!seasonId && gameMode === 'five_phases',
   });
 
-  const [settings, setSettings] = useState({ budget: 0, maxRiders: 0 });
+  // Compute settings display
+  const settings = useMemo(() => {
+    if (gameMode === 'five_phases') {
+      return computeFivePhasesSettings();
+    }
+    return { budget: 0, maxRiders: 0 }; // per_course is computed in CourseSelector
+  }, [gameMode]);
 
-  useEffect(() => {
-    calculateLeagueSettings(gameMode, playerCount).then(setSettings);
-  }, [gameMode, playerCount]);
-
-  const template = templates?.find((t) => t.id === gameMode);
+  const playerCounts = [3, 4, 5, 6, 7, 8, 9, 10];
 
   return (
     <div className="space-y-6">
@@ -95,6 +124,79 @@ export function LeagueSettingsForm({
         </Select>
       </div>
 
+      {/* Five Phases: variant + starting phase */}
+      {gameMode === 'five_phases' && (
+        <>
+          <div className="space-y-2">
+            <Label>{t('settings.variant', 'Variante')}</Label>
+            <RadioGroup
+              value={variant}
+              onValueChange={(v) => onVariantChange?.(v as FivePhasesVariant)}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="full_season" id="variant-full" />
+                <Label htmlFor="variant-full" className="font-normal cursor-pointer">
+                  {t('settings.variantFull', 'Saison entière')}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="wt_only" id="variant-wt" />
+                <Label htmlFor="variant-wt" className="font-normal cursor-pointer">
+                  {t('settings.variantWT', 'World Tour uniquement')}
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {phases.length > 0 && (
+            <div className="space-y-2">
+              <Label>{t('settings.startingPhase', 'Phase de départ')}</Label>
+              <Select
+                value={startingPhaseIndex.toString()}
+                onValueChange={(v) => onStartingPhaseIndexChange?.(parseInt(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {phases.map((phase) => {
+                    const isPast = phase.statut === 'completed';
+                    return (
+                      <SelectItem
+                        key={phase.id}
+                        value={phase.index_dans_saison.toString()}
+                        disabled={isPast}
+                      >
+                        Phase {phase.index_dans_saison}
+                        {isPast && ` (${t('settings.phasePast', 'terminée')})`}
+                        {phase.statut === 'active' && ` (${t('settings.phaseActive', 'en cours')})`}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Badge variant="secondary">{t('settings.budget')}: {settings.budget}</Badge>
+            <Badge variant="secondary">{t('settings.maxRiders')}: {settings.maxRiders}</Badge>
+          </div>
+        </>
+      )}
+
+      {/* Per Course: course selector */}
+      {gameMode === 'per_course' && seasonId && (
+        <div className="space-y-2">
+          <Label>{t('settings.selectCourses', 'Sélectionner les courses')}</Label>
+          <CourseSelector
+            seasonId={seasonId}
+            selectedCourseIds={selectedCourseIds}
+            onSelectionChange={(ids) => onSelectedCourseIdsChange?.(ids)}
+          />
+        </div>
+      )}
+
       {/* Player Count */}
       <div className="space-y-2">
         <Label>{t('settings.playerCount')}</Label>
@@ -103,7 +205,7 @@ export function LeagueSettingsForm({
           onValueChange={(value) => onPlayerCountChange(parseInt(value))}
           className="grid grid-cols-4 gap-2"
         >
-          {template?.playerCounts.map((count) => (
+          {playerCounts.map((count) => (
             <div key={count}>
               <RadioGroupItem
                 value={count.toString()}
@@ -119,10 +221,6 @@ export function LeagueSettingsForm({
             </div>
           ))}
         </RadioGroup>
-        <div className="flex gap-2 mt-2">
-          <Badge variant="secondary">{t('settings.budget')}: {settings.budget}</Badge>
-          <Badge variant="secondary">{t('settings.maxRiders')}: {settings.maxRiders}</Badge>
-        </div>
       </div>
 
       {/* Visibility */}
@@ -211,7 +309,7 @@ export function LeagueSettingsForm({
                     min="0"
                     max="23"
                     placeholder="HH"
-                    value={firstAuctionDate?.getHours() || ''}
+                    value={firstAuctionDate?.getHours() ?? ''}
                     onChange={(e) => {
                       const hours = parseInt(e.target.value);
                       if (!isNaN(hours) && hours >= 0 && hours <= 23) {
@@ -228,7 +326,7 @@ export function LeagueSettingsForm({
                     min="0"
                     max="59"
                     placeholder="MM"
-                    value={firstAuctionDate?.getMinutes() || ''}
+                    value={firstAuctionDate?.getMinutes() ?? ''}
                     onChange={(e) => {
                       const minutes = parseInt(e.target.value);
                       if (!isNaN(minutes) && minutes >= 0 && minutes <= 59) {
