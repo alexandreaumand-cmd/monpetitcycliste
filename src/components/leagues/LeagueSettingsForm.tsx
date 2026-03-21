@@ -61,8 +61,6 @@ export function LeagueSettingsForm({
   seasons,
   variant = 'full_season',
   onVariantChange,
-  startingPhaseIndex = 1,
-  onStartingPhaseIndexChange,
   selectedCourseIds = [],
   onSelectedCourseIdsChange,
 }: LeagueSettingsFormProps) {
