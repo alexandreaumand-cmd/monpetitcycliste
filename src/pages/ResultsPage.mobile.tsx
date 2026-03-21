@@ -174,8 +174,6 @@ export const ResultsPageMobile = () => {
         </div>
       </div>
 
-      {/* Admin Maintenance Component */}
-      <AdminMaintenance />
 
       {/* Liste des courses */}
       <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-3">

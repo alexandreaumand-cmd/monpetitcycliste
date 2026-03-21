@@ -171,8 +171,6 @@ export const ResultsPage = () => {
 
   return (
     <div className="space-y-4">
-      {/* Admin Maintenance Component */}
-      <AdminMaintenance />
       
       {/* Header with search */}
       <div className="sticky top-0 z-10 bg-background pb-3 border-b">
