@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCountdown } from "@/hooks/useCountdown";
 import { LeagueStatusBadge } from "@/components/leagues/LeagueStatusBadge";
 import type { LeagueWithRole } from "@/lib/leagues/types";
-import { getLeagueTemplates } from "@/lib/leagues/templates";
+import { getTemplates, type LeagueTemplate } from "@/lib/leagues/templates";
 import { LeagueInvitesBottomSheet } from "@/components/leagues/LeagueInvitesBottomSheet";
 import { LeagueParticipantsHover } from "./LeagueParticipantsHover";
 import type { LeagueCardData } from "@/hooks/useLeagueCardsData";
