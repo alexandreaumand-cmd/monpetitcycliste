@@ -170,7 +170,8 @@
       "about": "About",
       "rules": "Game rules",
       "howToPlay": "How to play",
-      "team": "The Team"
+      "team": "The Team",
+      "contact": "Contact"
     },
     "legal": {
       "title": "Legal",
@@ -184,5 +185,25 @@
     "title": "Take La Bordure everywhere",
     "subtitle": "Install the app on your phone to follow races live.",
     "cta": "Install the app"
+  },
+  "contact": {
+    "title": "Contact Us",
+    "subtitle": "A question, a suggestion or a bug to report? Write to us!",
+    "nameLabel": "Name",
+    "namePlaceholder": "Your name",
+    "emailLabel": "Email",
+    "emailPlaceholder": "your@email.com",
+    "subjectLabel": "Subject",
+    "subjectPlaceholder": "What would you like to talk about?",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Your message...",
+    "submit": "Send",
+    "sending": "Sending...",
+    "successTitle": "Message sent!",
+    "successMessage": "Thank you for your message, we'll get back to you as soon as possible.",
+    "errorTitle": "Error",
+    "errorMessage": "An error occurred. Please try again.",
+    "thankYouTitle": "Thank you!",
+    "thankYouMessage": "Your message has been sent. We'll get back to you shortly."
   }
 }
