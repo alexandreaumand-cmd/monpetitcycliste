@@ -273,15 +273,23 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
                         <div className="space-y-0.5 pl-2 border-l-2 border-primary/30">
                           {group.riders.map((riderName: string, ri: number) => {
                             const riderId = group.riderIds?.[ri];
-                            const managerName = riderId && rosterOwners?.[riderId];
+                            const normalizedName = riderName
+                              .normalize("NFD")
+                              .replace(/[\u0300-\u036f]/g, "")
+                              .replace(/\./g, "")
+                              .replace(/\s+/g, " ")
+                              .trim()
+                              .toLowerCase();
+                            const managerName =
+                              (riderId && rosterOwners?.[riderId]) ||
+                              rosterOwners?.[`name:${normalizedName}`];
+
                             return (
-                              <div key={ri} className="flex items-center justify-between text-xs py-0.5">
-                                <span className="font-medium text-foreground">{riderName}</span>
-                                {managerName && (
-                                  <span className="text-[10px] text-primary/70 truncate ml-2">
-                                    {managerName}
-                                  </span>
-                                )}
+                              <div key={ri} className="text-xs py-0.5">
+                                <span className="font-medium text-foreground">
+                                  {riderName}
+                                  {managerName ? ` (${managerName})` : ""}
+                                </span>
                               </div>
                             );
                           })}

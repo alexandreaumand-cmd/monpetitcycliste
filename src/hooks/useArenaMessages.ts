@@ -294,6 +294,15 @@ export function useLeagueRosterOwners(leagueId: string) {
   return useQuery({
     queryKey: ["arena-league-roster-owners", leagueId],
     queryFn: async () => {
+      const normalizeName = (v: string) =>
+        v
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/\./g, "")
+          .replace(/\s+/g, " ")
+          .trim()
+          .toLowerCase();
+
       const { data, error } = await supabase
         .from("rosters")
         .select("coureur_id, managers!rosters_manager_id_fkey(nom)")
@@ -302,11 +311,54 @@ export function useLeagueRosterOwners(leagueId: string) {
       if (error) throw error;
 
       const ownersMap: Record<string, string> = {};
+      const riderIds = Array.from(
+        new Set((data || []).map((r) => r.coureur_id).filter(Boolean))
+      ) as string[];
+
+      // Base map: coureur_id -> manager
       for (const r of data || []) {
         if (r.coureur_id && (r.managers as any)?.nom) {
           ownersMap[r.coureur_id] = (r.managers as any).nom;
         }
       }
+
+      if (!riderIds.length) return ownersMap;
+
+      // Name variants map (for old race_situation messages missing riderIds)
+      const { data: riders, error: ridersError } = await supabase
+        .from("coureurs")
+        .select("id, nom")
+        .in("id", riderIds);
+
+      if (ridersError) throw ridersError;
+
+      for (const rider of riders || []) {
+        const manager = ownersMap[rider.id];
+        if (!manager || !rider.nom) continue;
+
+        const addVariant = (name: string) => {
+          const normalized = normalizeName(name);
+          if (!normalized) return;
+          ownersMap[`name:${normalized}`] = manager;
+        };
+
+        addVariant(rider.nom);
+
+        const parts = rider.nom.split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) {
+          const firstTokenIsLikelyLastName = /^[A-ZÀ-ÖØ-Þ'\-]+$/.test(parts[0]);
+          const firstName = firstTokenIsLikelyLastName ? parts[parts.length - 1] : parts[0];
+          const lastName = firstTokenIsLikelyLastName
+            ? parts.slice(0, -1).join(" ")
+            : parts.slice(1).join(" ");
+
+          if (firstName && lastName) {
+            addVariant(`${firstName} ${lastName}`);
+            addVariant(`${firstName[0]}. ${lastName}`);
+          }
+        }
+      }
+
       return ownersMap;
     },
     enabled: !!leagueId,
