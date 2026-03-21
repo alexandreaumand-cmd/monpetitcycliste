@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDebounce } from "use-debounce";
 import { CourseResultsDrawer } from "@/components/courses/CourseResultsDrawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AdminMaintenance } from "@/components/admin/AdminMaintenance";
+
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerJerseys } from "@/hooks/useManagerJerseys";
 import { useLeague } from "@/contexts/LeagueContext";
