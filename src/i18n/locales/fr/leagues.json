@@ -24,7 +24,31 @@
     "success": "Ligue créée avec succès !",
     "selectDateError": "Veuillez sélectionner une date et heure pour le premier tour d'enchères",
     "futureDateError": "La date du premier tour doit être dans le futur",
-    "error": "Erreur lors de la création de la ligue"
+    "error": "Erreur lors de la création de la ligue",
+    "selectCoursesError": "Veuillez sélectionner au moins une course"
+  },
+  "wizard": {
+    "stepName": "Nom et saison",
+    "stepVariant": "Variante de jeu",
+    "stepCourses": "Sélection des courses",
+    "stepPlayers": "Nombre de joueurs",
+    "stepVisibility": "Visibilité",
+    "stepBonuses": "Bonus",
+    "stepAuction": "Date des enchères",
+    "stepRecap": "Récapitulatif",
+    "playersDesc": "Combien de managers participeront à cette ligue ?",
+    "visibilityDesc": "Qui pourra voir et rejoindre votre ligue ?",
+    "recapMode": "Mode de jeu",
+    "recapName": "Nom de la ligue",
+    "recapVariant": "Variante",
+    "recapCourses": "Courses",
+    "recapPlayers": "Joueurs",
+    "recapVisibility": "Visibilité",
+    "recapBonuses": "Bonus",
+    "recapRiders": "Effectif max",
+    "recapAuction": "Début des enchères",
+    "yes": "Oui",
+    "no": "Non"
   },
   "join": {
     "title": "Rejoindre une ligue",
