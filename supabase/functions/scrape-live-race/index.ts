@@ -52,8 +52,10 @@ function parsePCSResults(doc: any): { riders: ScrapedRider[]; events: ScrapedEve
     // Skip DNF/DNS rows
     if (posText === "DNF" || posText === "DNS" || posText === "OTL") continue;
 
-    // Rider name: find link to /rider/ anywhere in the row
-    const riderLink = row.querySelector("a[href*='/rider/']");
+    // Rider name: find link to rider (PCS uses relative URLs like "rider/name")
+    const riderLink = row.querySelector("a[href*='rider/']");
+    // Skip team links
+    if (!riderLink || riderLink.getAttribute("href")?.includes("team/")) continue;
     if (!riderLink) continue;
 
     // Extract last name from span.uppercase, rest is first name
