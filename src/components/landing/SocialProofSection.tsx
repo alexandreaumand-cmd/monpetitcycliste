@@ -32,9 +32,13 @@ const SocialProofSection = () => {
     },
   ];
 
-  const goTo = useCallback((index: number) => {
-    setCurrentSlide((index + quotes.length) % quotes.length);
-  }, [quotes.length]);
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const scrollLeft = el.scrollLeft;
+    const cardWidth = el.scrollWidth / quotes.length;
+    setActiveIndex(Math.round(scrollLeft / cardWidth));
+  };
 
   const QuoteCard = ({ quote, i, className = "" }: { quote: typeof quotes[0]; i: number; className?: string }) => (
     <motion.div
