@@ -159,68 +159,92 @@ function parseLEquipeLive(doc: any, html: string): {
   if (speedMatch) speed = speedMatch[1] + " km/h";
 
   // ── Extract race situation (groups + riders) ──
-  // The situation section contains groups like "Groupe de tête" followed by riders,
-  // then "Peloton | +02'41"" etc.
-  // We parse the HTML to find the structured group/rider data
+  // Restrict to the situation zone: between "km/h" and the first "il y a" (timeline start)
+  // This avoids picking up groups from article text
 
   const situationGroups: { name: string; gap: string; riders: string[]; riderCount: number; isPeloton: boolean }[] = [];
 
-  // Strategy: find all group headers and their riders from the text
-  // Pattern: group name possibly followed by gap, then list of rider names with teams
-  
-  // First, try to find the situation section in HTML - look for patterns like rider lists with flags
-  // L'Équipe format: "Groupe de tête" then riders like "D. Lozano (Novo Nordisk)"
-  // Then "Peloton | +02'41""
+  const kmhIdx = textContent.indexOf("km/h");
+  const firstEventIdx = textContent.indexOf("il y a ");
+  // Situation zone is between km/h and the first timeline event
+  const situationZone = kmhIdx >= 0 && firstEventIdx > kmhIdx
+    ? textContent.substring(kmhIdx, firstEventIdx)
+    : kmhIdx >= 0
+      ? textContent.substring(kmhIdx, kmhIdx + 3000)
+      : "";
 
-  // Build a cleaned text focusing on the situation area
-  // Look for the pattern between km info and the end of groups
-  const situationText = textContent;
+  console.log(`[L'Équipe] Situation zone length: ${situationZone.length}, starts at ${kmhIdx}, events at ${firstEventIdx}`);
 
-  // Find all group markers: "Groupe de tête", "Groupe X", "Peloton"
-  // Each group may have a gap like "+02'41""
-  const groupHeaderPattern = /(Groupe de t[êe]te|Groupe\s+\w+|Peloton)\s*(?:\|?\s*\+?\s*([\d]+[''′][\d]+[""″]?))?/gi;
-  const groupHeaders: { name: string; gap: string; index: number }[] = [];
-  let gMatch;
-  while ((gMatch = groupHeaderPattern.exec(situationText)) !== null) {
-    groupHeaders.push({
-      name: gMatch[1],
-      gap: gMatch[2] ? `+${gMatch[2]}` : "0:00",
-      index: gMatch.index,
-    });
-  }
-
-  // For each group, extract riders between this header and the next
-  for (let i = 0; i < groupHeaders.length; i++) {
-    const start = groupHeaders[i].index;
-    const end = i + 1 < groupHeaders.length ? groupHeaders[i + 1].index : start + 2000;
-    const section = situationText.substring(start, end);
-
-    // Extract rider names: pattern like "X. LastName (Team)" or "X. First LastName (Team)"
-    const riderPattern = /([A-ZÀ-Ü]\.?\s+[A-Za-zÀ-ü\-']+(?:\s+[A-Za-zÀ-ü\-']+)?)\s*\(([^)]+)\)/g;
-    const groupRiders: string[] = [];
-    let rMatch;
-    while ((rMatch = riderPattern.exec(section)) !== null) {
-      const riderName = rMatch[1].trim();
-      const team = rMatch[2].trim();
-      // Skip false positives (very short names or group-header-like text)
-      if (riderName.length > 3) {
-        groupRiders.push(riderName);
-        riders.push({ name: riderName, team, position: undefined, gap: groupHeaders[i].gap });
+  if (situationZone) {
+    // Match group headers: "Groupe de tête", "Peloton |+02'41''"
+    const groupHeaderPattern = /(Groupe\s+de\s+t[êe]te|Peloton)\s*(?:\|?\s*\+?\s*([\d]+['′'']\s*[\d]+['′''"″]*)?)?/gi;
+    const groupHeaders: { name: string; gap: string; index: number }[] = [];
+    let gMatch;
+    while ((gMatch = groupHeaderPattern.exec(situationZone)) !== null) {
+      const rawGap = gMatch[2] || "";
+      let gap = "0:00";
+      if (rawGap) {
+        const gapNums = rawGap.match(/(\d+)/g);
+        if (gapNums && gapNums.length >= 2) {
+          gap = `+${parseInt(gapNums[0])}:${gapNums[1].padStart(2, '0')}`;
+        }
       }
+      groupHeaders.push({ name: gMatch[1], gap, index: gMatch.index });
     }
 
-    const isPeloton = groupHeaders[i].name.toLowerCase().includes("peloton");
-    situationGroups.push({
-      name: groupHeaders[i].name,
-      gap: groupHeaders[i].gap,
-      riders: groupRiders,
-      riderCount: groupRiders.length,
-      isPeloton,
+    // Deduplicate (L'Équipe shows expanded + collapsed)
+    const seenGroups = new Set<string>();
+    const uniqueHeaders = groupHeaders.filter(h => {
+      const key = h.name.toLowerCase();
+      if (seenGroups.has(key)) return false;
+      seenGroups.add(key);
+      return true;
     });
+
+    console.log(`[L'Équipe] Found ${uniqueHeaders.length} group headers: ${uniqueHeaders.map(h => `${h.name} (${h.gap})`).join(', ')}`);
+
+    for (let i = 0; i < uniqueHeaders.length; i++) {
+      const start = uniqueHeaders[i].index;
+      let end = i + 1 < uniqueHeaders.length ? uniqueHeaders[i + 1].index : situationZone.length;
+      let section = situationZone.substring(start, end);
+
+      // Cut at "masquer/afficher le détail" which marks end of the rider list
+      const detailCut = section.search(/masquer le d[ée]tail|afficher le d[ée]tail/i);
+      if (detailCut > 0) section = section.substring(0, detailCut);
+
+      // Extract rider names: "X. LastName (Team)" pattern
+      const riderPattern = /([A-ZÀ-Ü][a-zà-ü]*\.?\s+[A-Za-zÀ-ü\- ']+?)\s*\(([^)]+)\)/g;
+      const groupRiders: string[] = [];
+      let rMatch;
+      while ((rMatch = riderPattern.exec(section)) !== null) {
+        const riderName = rMatch[1].trim();
+        const team = rMatch[2].trim();
+        if (riderName.toLowerCase().includes("groupe") || riderName.toLowerCase().includes("peloton")) continue;
+        if (riderName.length < 4) continue;
+        if (riderName.toLowerCase().startsWith("photo")) continue;
+        // Filter out sentence-like matches (contain common words)
+        const lc = riderName.toLowerCase();
+        if (lc.includes(" sur ") || lc.includes(" la ") || lc.includes(" le ") || lc.includes(" les ") || lc.includes(" un ") || lc.includes(" des ") || lc.includes(" est ") || lc.includes(" qui ") || lc.includes(" point ")) continue;
+        
+        groupRiders.push(riderName);
+        riders.push({ name: riderName, team, position: undefined, gap: uniqueHeaders[i].gap });
+      }
+
+      const isPeloton = uniqueHeaders[i].name.toLowerCase().includes("peloton");
+      situationGroups.push({
+        name: uniqueHeaders[i].name,
+        gap: uniqueHeaders[i].gap,
+        riders: groupRiders,
+        riderCount: groupRiders.length,
+        isPeloton,
+      });
+      console.log(`[L'Équipe] Group "${uniqueHeaders[i].name}": ${groupRiders.length} riders, gap=${uniqueHeaders[i].gap}`);
+    }
   }
 
   // ── Extract timeline events ──
-  const eventPattern = /il y a (\d+)\s*min\s*,?\s*(\d+)\s*km\s+(.*?)(?=il y a \d+\s*min|L'ÉQUIPE|publicité|$)/gi;
+  // Format: "il y a Xmin, Y km <text>" — note the comma and space variations
+  const eventPattern = /il y a (\d+)\s*min\s*,?\s*(\d+)\s*km\s+(.*?)(?=il y a \d+\s*min|L['']ÉQUIPE|publicité|$)/gi;
   let eventMatch;
 
   while ((eventMatch = eventPattern.exec(textContent)) !== null) {
@@ -229,9 +253,8 @@ function parseLEquipeLive(doc: any, html: string): {
     let text = eventMatch[3].trim();
 
     // Clean up scraped text
-    text = text.replace(/\s*lire l'article.*$/i, '').trim();
-    text = text.replace(/\s*photo de .*$/i, '').trim();
-    text = text.replace(/\s*Primavera[.,]?\s*/g, ' ').trim();
+    text = text.replace(/\s*lire l['']article.*$/i, '').trim();
+    text = text.replace(/\s*photo de\s+\w+,?\s*\w*\s+[\w\s-]+$/i, '').trim();
     text = text.replace(/\s{2,}/g, ' ');
 
     if (text.length > 500) text = text.substring(0, 500) + "...";
@@ -243,7 +266,7 @@ function parseLEquipeLive(doc: any, html: string): {
     else if (textLower.includes("échapp") || textLower.includes("en tête") || textLower.includes("attaque")) type = "breakaway";
     else if (textLower.includes("écart") || textLower.includes("avance")) type = "gap";
     else if (textLower.includes("sprint") || textLower.includes("intermédiaire")) type = "intermediate";
-    else if (textLower.includes("lâché") || textLower.includes("distancé")) type = "dropped";
+    else if (textLower.includes("lâché") || textLower.includes("distancé") || textLower.includes("arrière")) type = "dropped";
     else if (textLower.includes("abandon")) type = "abandon";
 
     const riderNames: string[] = [];
