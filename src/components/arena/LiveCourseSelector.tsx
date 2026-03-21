@@ -76,7 +76,14 @@ export const LiveCourseSelector = ({
   onSelect,
 }: LiveCourseSelectorProps) => {
   const { t } = useTranslation("arena");
-  const { data: liveCourses, isLoading } = useLiveCourses();
+  // Auto-select if only one course
+  useEffect(() => {
+    if (liveCourses?.length === 1 && !activeCourseId) {
+      onSelect(liveCourses[0].course_id);
+    }
+  }, [liveCourses, activeCourseId, onSelect]);
+
+  const { data: liveCourses_unused, isLoading: isLoading_unused } = { data: undefined, isLoading: false };
 
   if (isLoading) {
     return (
