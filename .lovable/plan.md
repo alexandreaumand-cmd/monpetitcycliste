@@ -1,37 +1,44 @@
 
-## Emails de réinitialisation brandés "La Bordure" en français
 
-### Contexte
-- Le domaine `notify.labordure.app` est configuré mais DNS en attente de vérification
-- Aucun template d'email personnalisé n'existe encore — les emails par défaut (en anglais, non brandés) sont envoyés
-- Le DNS n'a pas besoin d'être vérifié pour créer les templates
+## Visuels réseaux sociaux — La Bordure
 
-### Plan
+### Ce que je vais créer
 
-1. **Scaffolder les templates d'emails d'authentification** via l'outil dédié — cela crée la edge function `auth-email-hook` et 6 templates (signup, recovery, magic-link, invite, email-change, reauthentication)
+Un set de **5 visuels** adaptés aux 3 plateformes, avec l'identité visuelle La Bordure (Crème #F6F3ED, Vert #1B5E3B, Or #C8963A, Rose #E8A0B4) :
 
-2. **Appliquer l'identité visuelle La Bordure** sur chaque template :
-   - Fond crème `#F6F3ED`
-   - Boutons en or `#C8963A` avec texte blanc
-   - Titres en vert forêt `#1B5E3B`
-   - Texte en vert texte `#2D3D32`
-   - Accents rose `#E8A0B4` si pertinent
-   - Coins arrondis `0.75rem`
-   - Logo La Bordure en haut de chaque email (upload dans un bucket storage)
-   - Fond du body email en blanc `#FFFFFF` (standard email)
+| Visuel | Format | Usage |
+|--------|--------|-------|
+| **Bannière X** | 1500×500 px | Header de profil X |
+| **Post X** | 1200×675 px | Post/annonce |
+| **Bannière LinkedIn** | 1584×396 px | Header de page LinkedIn |
+| **Post LinkedIn** | 1200×627 px | Post/annonce |
+| **Post Instagram** | 1080×1080 px | Post carré feed |
 
-3. **Traduire tout le contenu en français** :
-   - "Réinitialiser votre mot de passe" au lieu de "Reset your password"
-   - "Vous avez demandé une réinitialisation..." au lieu du texte anglais
-   - Bouton "Réinitialiser le mot de passe"
-   - Adapter le ton à l'identité La Bordure (chaleureux, sport)
+### Direction artistique
 
-4. **Déployer la edge function** `auth-email-hook`
+Chaque visuel reprend :
+- Le **logo La Bordure** (variante adaptée au fond)
+- La palette brand : fond crème ou vert forêt, accents or et rose
+- Typographie Montserrat bold uppercase pour les titres
+- Un screenshot de l'app ou photo cyclisme en élément visuel
+- Accroche courte type "Fantasy Cycling — Compose ton équipe. Ridiculise tes potes."
+- Les bandes décoratives tricolores (vert/or/rose) comme signature visuelle
 
-### Fichiers créés/modifiés
-- `supabase/functions/auth-email-hook/index.ts` — nouveau
-- `supabase/functions/auth-email-hook/deno.json` — nouveau
-- `supabase/functions/_shared/email-templates/*.tsx` — 6 templates brandés FR
+### Approche technique
 
-### Note
-Les emails personnalisés s'activeront automatiquement une fois le DNS vérifié. En attendant, les emails par défaut continuent d'être envoyés. Le statut est visible dans Cloud → Emails.
+- Génération via script Python (Pillow) avec les assets existants du projet (logos, screenshots, photos)
+- Polices Montserrat + Inter chargées localement
+- Export PNG haute qualité dans `/mnt/documents/`
+- QA visuel de chaque fichier avant livraison
+
+### Fichiers générés
+
+```
+/mnt/documents/
+├── x-banner-1500x500.png
+├── x-post-1200x675.png
+├── linkedin-banner-1584x396.png
+├── linkedin-post-1200x627.png
+└── instagram-post-1080x1080.png
+```
+
