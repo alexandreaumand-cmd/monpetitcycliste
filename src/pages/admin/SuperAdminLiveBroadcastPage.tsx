@@ -202,9 +202,13 @@ export const SuperAdminLiveBroadcastPage = () => {
         }
       }
 
-      // Replace rider names in text with "rider (manager)"
+      // Replace rider names in text with "rider (manager)" and clean formatting
       const enrichText = (text: string): string => {
-        let result = text;
+        let result = text
+          .replace(/;/g, ', ')
+          .replace(/\s{2,}/g, ' ')
+          .replace(/,\s*,/g, ',')
+          .trim();
         for (const [name, mgr] of Object.entries(riderToManager)) {
           const regex = new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
           result = result.replace(regex, (match) => `${match} (${mgr})`);
