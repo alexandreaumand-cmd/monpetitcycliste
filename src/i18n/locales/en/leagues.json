@@ -79,7 +79,16 @@
     "title": "Choose your game mode",
     "players": "players",
     "budget": "Budget",
-    "maxRiders": "Max"
+    "maxRiders": "Max",
+    "five_phases": {
+      "name": "5 Phases Mode",
+      "description": "Full season or World Tour, with auctions per phase. Budget 2200, 30 riders roster."
+    },
+    "perCourse": {
+      "name": "Per Race Mode",
+      "description": "Choose your races. Budget and roster size calculated automatically based on your selection.",
+      "budgetAuto": "Auto budget based on races"
+    }
   },
   "invite": {
     "title": "Invitation to Join",
