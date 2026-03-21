@@ -84,7 +84,8 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   const latestSituation = useMemo(() => {
     for (const msg of filteredMessages) {
       const sit = (msg.metadata as any)?.race_situation;
-      if (sit?.groups?.length > 0) return sit;
+      const km = Number(sit?.kmRemaining);
+      if ((sit?.groups?.length ?? 0) > 0 || Number.isFinite(km)) return sit;
     }
     return null;
   }, [filteredMessages]);

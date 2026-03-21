@@ -148,11 +148,28 @@ function parseLEquipeLive(doc: any, html: string): {
   // ── Extract km and speed ──
   let kmCovered = 0, totalKm = 0, kmRemaining = 0, speed = "";
 
-  const kmMatch = textContent.match(/(\d+)\s*\/\s*(\d+)\s*km/);
-  if (kmMatch) {
-    kmCovered = parseInt(kmMatch[1], 10);
-    totalKm = parseInt(kmMatch[2], 10);
-    kmRemaining = totalKm - kmCovered;
+  // L'Équipe can expose several "X/Y" ratios in the page; keep the most relevant live one
+  // by preferring the ratio closest to the speed anchor (km/h), then highest covered distance.
+  const kmAnchorIdx = textContent.indexOf("km/h");
+  const kmCandidates = [...textContent.matchAll(/(\d{1,3})\s*\/\s*(\d{1,3})(?:\s*km)?/gi)]
+    .map((m) => ({
+      covered: parseInt(m[1], 10),
+      total: parseInt(m[2], 10),
+      index: m.index ?? -1,
+    }))
+    .filter((v) => Number.isFinite(v.covered) && Number.isFinite(v.total) && v.total >= v.covered && v.total <= 400);
+
+  if (kmCandidates.length > 0) {
+    kmCandidates.sort((a, b) => {
+      const aDist = kmAnchorIdx >= 0 ? Math.abs(a.index - kmAnchorIdx) : Number.MAX_SAFE_INTEGER;
+      const bDist = kmAnchorIdx >= 0 ? Math.abs(b.index - kmAnchorIdx) : Number.MAX_SAFE_INTEGER;
+      if (aDist !== bDist) return aDist - bDist;
+      return b.covered - a.covered;
+    });
+
+    kmCovered = kmCandidates[0].covered;
+    totalKm = kmCandidates[0].total;
+    kmRemaining = Math.max(totalKm - kmCovered, 0);
   }
 
   const speedMatch = textContent.match(/([\d.]+)\s*km\/h/);
