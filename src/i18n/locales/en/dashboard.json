@@ -40,9 +40,10 @@
   },
   "quickActions": {
     "title": "New competition",
-    "subtitle": "Create your league or join one",
+    "subtitle": "Create your own league or join a public / private league (with invite code)",
     "createLeague": "Create a league",
-    "join": "Join"
+    "join": "Join a league",
+    "joinHint": "Browse public leagues or enter an invite code"
   },
   "leagueCard": {
     "generalRanking": "General ranking",

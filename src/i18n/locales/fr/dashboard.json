@@ -40,9 +40,10 @@
   },
   "quickActions": {
     "title": "Nouvelle compétition",
-    "subtitle": "Créez votre ligue ou rejoignez-en une",
+    "subtitle": "Créez votre propre ligue ou rejoignez une ligue publique / privée (avec code d'invitation)",
     "createLeague": "Créer une ligue",
-    "join": "Rejoindre"
+    "join": "Rejoindre une ligue",
+    "joinHint": "Parcourez les ligues publiques ou entrez un code d'invitation"
   },
   "leagueCard": {
     "generalRanking": "Classement général",
