@@ -2518,6 +2518,7 @@ export type Database = {
           league_id: string
           phases: string[] | null
           season_id: string
+          selected_course_ids: string[] | null
           wt_only: boolean
         }
         Insert: {
@@ -2529,6 +2530,7 @@ export type Database = {
           league_id: string
           phases?: string[] | null
           season_id: string
+          selected_course_ids?: string[] | null
           wt_only?: boolean
         }
         Update: {
@@ -2540,6 +2542,7 @@ export type Database = {
           league_id?: string
           phases?: string[] | null
           season_id?: string
+          selected_course_ids?: string[] | null
           wt_only?: boolean
         }
         Relationships: [
@@ -2767,6 +2770,8 @@ export type Database = {
           owner_manager_id: string
           settings: Json
           started_at: string | null
+          started_at_effective: string | null
+          starting_phase_index: number | null
           status: string
           visibility: string
         }
@@ -2783,6 +2788,8 @@ export type Database = {
           owner_manager_id: string
           settings?: Json
           started_at?: string | null
+          started_at_effective?: string | null
+          starting_phase_index?: number | null
           status?: string
           visibility?: string
         }
@@ -2799,6 +2806,8 @@ export type Database = {
           owner_manager_id?: string
           settings?: Json
           started_at?: string | null
+          started_at_effective?: string | null
+          starting_phase_index?: number | null
           status?: string
           visibility?: string
         }
@@ -3459,6 +3468,59 @@ export type Database = {
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "v_managers_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      phase_auction_schedule: {
+        Row: {
+          auction_opens_at: string
+          created_at: string
+          id: string
+          phase_id: string
+          updated_at: string
+        }
+        Insert: {
+          auction_opens_at: string
+          created_at?: string
+          id?: string
+          phase_id: string
+          updated_at?: string
+        }
+        Update: {
+          auction_opens_at?: string
+          created_at?: string
+          id?: string
+          phase_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phase_auction_schedule_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: true
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "phase_auction_schedule_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: true
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "phase_auction_schedule_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: true
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "phase_auction_schedule_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: true
+            referencedRelation: "phases"
             referencedColumns: ["id"]
           },
         ]
