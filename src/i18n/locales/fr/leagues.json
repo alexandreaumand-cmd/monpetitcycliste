@@ -67,7 +67,19 @@
     "selectDateTime": "Sélectionner une date et heure",
     "hour": "Heure",
     "budget": "Budget",
-    "maxRiders": "Max coureurs"
+    "maxRiders": "Max coureurs",
+    "variant": "Variante",
+    "variantFull": "Saison entière",
+    "variantWT": "World Tour uniquement",
+    "startingPhase": "Phase de départ",
+    "phasePast": "terminée",
+    "phaseActive": "en cours",
+    "selectCourses": "Sélectionner les courses",
+    "searchCourses": "Rechercher une course...",
+    "noCourses": "Aucune course trouvée",
+    "all": "Tous",
+    "stageRace": "Étapes",
+    "oneDay": "1 jour"
   },
   "visibility": {
     "public": "Publique",

@@ -67,7 +67,19 @@
     "selectDateTime": "Select a date and time",
     "hour": "Hour",
     "budget": "Budget",
-    "maxRiders": "Max riders"
+    "maxRiders": "Max riders",
+    "variant": "Variant",
+    "variantFull": "Full season",
+    "variantWT": "World Tour only",
+    "startingPhase": "Starting phase",
+    "phasePast": "completed",
+    "phaseActive": "active",
+    "selectCourses": "Select races",
+    "searchCourses": "Search a race...",
+    "noCourses": "No races found",
+    "all": "All",
+    "stageRace": "Stage races",
+    "oneDay": "One-day"
   },
   "visibility": {
     "public": "Public",
