@@ -443,14 +443,43 @@ export const SuperAdminLiveBroadcastPage = () => {
                   )}
                   Importer
                 </Button>
+                <Button
+                  size="sm"
+                  variant={autoScrapeEnabled ? "default" : "outline"}
+                  onClick={() => {
+                    if (!scrapeUrl) {
+                      toast.error("Entrez une URL d'abord");
+                      return;
+                    }
+                    setAutoScrapeEnabled(!autoScrapeEnabled);
+                    if (!autoScrapeEnabled) {
+                      toast.success("Auto-refresh activé (toutes les 60s)");
+                    }
+                  }}
+                  className="h-8 gap-1.5 shrink-0"
+                >
+                  {autoScrapeEnabled ? (
+                    <Timer className="h-3.5 w-3.5 animate-pulse" />
+                  ) : (
+                    <TimerOff className="h-3.5 w-3.5" />
+                  )}
+                  {autoScrapeEnabled ? "Auto ON" : "Auto"}
+                </Button>
               </div>
-              {scrapeStats && (
+              {(scrapeStats || autoScrapeEnabled) && (
                 <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                  <span>{scrapeStats.matched}/{scrapeStats.total} coureurs matchés</span>
-                  {scrapeStats.unmatched.length > 0 && (
+                  {scrapeStats && (
+                    <span>{scrapeStats.matched}/{scrapeStats.total} coureurs matchés</span>
+                  )}
+                  {scrapeStats && scrapeStats.unmatched.length > 0 && (
                     <span className="text-destructive">
                       Non matchés : {scrapeStats.unmatched.slice(0, 3).join(", ")}
                       {scrapeStats.unmatched.length > 3 && ` +${scrapeStats.unmatched.length - 3}`}
+                    </span>
+                  )}
+                  {autoScrapeEnabled && lastAutoScrapeAt && (
+                    <span className="ml-auto text-primary">
+                      ⏱ Dernier refresh : {format(lastAutoScrapeAt, "HH:mm:ss")}
                     </span>
                   )}
                 </div>
