@@ -322,6 +322,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
             </div>
           </CollapsibleContent>
         </Collapsible>
+        </>
       )}
     </div>
   );
