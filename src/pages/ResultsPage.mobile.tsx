@@ -9,7 +9,7 @@ import { Loader2, Trophy, Search } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { CourseResultsDrawer } from "@/components/courses/CourseResultsDrawer";
 import { MobileCard, MobileEmptyState } from "@/components/mobile";
-import { AdminMaintenance } from "@/components/admin/AdminMaintenance";
+
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerJerseys } from "@/hooks/useManagerJerseys";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
