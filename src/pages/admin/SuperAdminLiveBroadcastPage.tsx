@@ -289,14 +289,29 @@ export const SuperAdminLiveBroadcastPage = () => {
           .replace(/\s{2,}/g, ' ')
           .replace(/,\s*,/g, ',')
           .trim();
+        // Also try matching on accent-stripped version of the text
+        const resultStripped = stripAccents(result.toLowerCase());
         const alreadyAnnotated = new Set<string>();
         for (const [name, mgr] of sortedEntries) {
           if (alreadyAnnotated.has(mgr + name)) continue;
           const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          // Try direct match first
           const regex = new RegExp(`(?<!\\()\\b${escaped}\\b(?!\\s*\\()`, 'gi');
           if (regex.test(result)) {
             result = result.replace(regex, (match) => `${match} (${mgr})`);
             alreadyAnnotated.add(mgr + name);
+          } else {
+            // Try accent-stripped match: find position in stripped text, replace in original
+            const strippedEscaped = stripAccents(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const strippedRegex = new RegExp(`(?<!\\()\\b${strippedEscaped}\\b(?!\\s*\\()`, 'gi');
+            const strippedMatch = strippedRegex.exec(resultStripped);
+            if (strippedMatch) {
+              const idx = strippedMatch.index;
+              const len = strippedMatch[0].length;
+              const originalSlice = result.substring(idx, idx + len);
+              result = result.substring(0, idx + len) + ` (${mgr})` + result.substring(idx + len);
+              alreadyAnnotated.add(mgr + name);
+            }
           }
         }
         return result;
