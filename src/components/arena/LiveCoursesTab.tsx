@@ -231,6 +231,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
 
       {/* Right: Race situation panel (desktop only) */}
       {activeCourseId && (
+        <>
         {/* Desktop: always visible side panel */}
         <div className="hidden lg:flex flex-col w-[340px] shrink-0 border rounded-xl overflow-hidden bg-background">
           <div className="px-4 py-3 border-b bg-muted/20">
