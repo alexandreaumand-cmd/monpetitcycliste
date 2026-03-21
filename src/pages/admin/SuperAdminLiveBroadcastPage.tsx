@@ -242,22 +242,36 @@ export const SuperAdminLiveBroadcastPage = () => {
 
       // Auto-broadcast all timeline events (reversed so oldest first)
       // Build a lookup: various name forms → manager name
+      // Normalize accents for matching: é→e, č→c, etc.
+      const stripAccents = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
       const riderToManager: Record<string, string> = {};
       for (const [, info] of Object.entries(matched)) {
         const m = info as any;
         if (m.manager_name) {
-          if (m.scraped_name) riderToManager[m.scraped_name.toLowerCase()] = m.manager_name;
+          const addVariants = (name: string) => {
+            const lc = name.toLowerCase();
+            riderToManager[lc] = m.manager_name;
+            // Also add accent-stripped version
+            const stripped = stripAccents(lc);
+            if (stripped !== lc) riderToManager[stripped] = m.manager_name;
+          };
+          if (m.scraped_name) addVariants(m.scraped_name);
           if (m.rider_nom) {
-            riderToManager[m.rider_nom.toLowerCase()] = m.manager_name;
-            // Also index "Firstname Lastname" from "LASTNAME Firstname"
+            addVariants(m.rider_nom);
             const parts = m.rider_nom.split(/\s+/);
             if (parts.length >= 2) {
-              // Try reversed order: "Tadej Pogacar" from "POGACAR Tadej"
-              const reversed = [...parts].reverse().join(" ").toLowerCase();
-              riderToManager[reversed] = m.manager_name;
-              // Also index last name only (longest part) for "van der Poel" style
+              // Reversed order: "Tadej Pogacar" from "POGACAR Tadej"
+              addVariants([...parts].reverse().join(" "));
+              // All permutations for 2-part names
+              addVariants(parts.join(" "));
+              // Last name only (first token, usually uppercase)
               const lastName = parts[0].toLowerCase();
-              if (lastName.length >= 4) riderToManager[lastName] = m.manager_name;
+              if (lastName.length >= 4) {
+                riderToManager[lastName] = m.manager_name;
+                const strippedLast = stripAccents(lastName);
+                if (strippedLast !== lastName) riderToManager[strippedLast] = m.manager_name;
+              }
             }
           }
         }
