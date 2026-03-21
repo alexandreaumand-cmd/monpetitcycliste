@@ -1,41 +1,37 @@
 
+## Emails de réinitialisation brandés "La Bordure" en français
 
-## Fonctionnalité "Mot de passe oublié"
+### Contexte
+- Le domaine `notify.labordure.app` est configuré mais DNS en attente de vérification
+- Aucun template d'email personnalisé n'existe encore — les emails par défaut (en anglais, non brandés) sont envoyés
+- Le DNS n'a pas besoin d'être vérifié pour créer les templates
 
-### Ce qui existe déjà
-- Un reset admin via l'edge function `admin-user-reset-password` (réservé aux super-admins)
-- Aucune page `/reset-password` pour l'utilisateur final
-- Aucun lien "Mot de passe oublié" sur la page Auth
+### Plan
 
-### Ce qu'il faut créer
+1. **Scaffolder les templates d'emails d'authentification** via l'outil dédié — cela crée la edge function `auth-email-hook` et 6 templates (signup, recovery, magic-link, invite, email-change, reauthentication)
 
-#### 1. Lien "Mot de passe oublié" sur la page Auth
-- Ajouter un lien cliquable sous le formulaire de connexion (onglet "Sign In") dans `src/pages/Auth.tsx`
-- Au clic, afficher un petit formulaire demandant l'email, puis appeler `supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset-password' })`
-- Afficher un message de confirmation ("Un email de réinitialisation a été envoyé")
+2. **Appliquer l'identité visuelle La Bordure** sur chaque template :
+   - Fond crème `#F6F3ED`
+   - Boutons en or `#C8963A` avec texte blanc
+   - Titres en vert forêt `#1B5E3B`
+   - Texte en vert texte `#2D3D32`
+   - Accents rose `#E8A0B4` si pertinent
+   - Coins arrondis `0.75rem`
+   - Logo La Bordure en haut de chaque email (upload dans un bucket storage)
+   - Fond du body email en blanc `#FFFFFF` (standard email)
 
-#### 2. Page `/reset-password`
-- Créer `src/pages/ResetPassword.tsx` — page publique avec un formulaire "Nouveau mot de passe"
-- Détecter le token de récupération dans l'URL (hash `type=recovery`)
-- Appeler `supabase.auth.updateUser({ password })` pour enregistrer le nouveau mot de passe
-- Rediriger vers `/dashboard/home` après succès
+3. **Traduire tout le contenu en français** :
+   - "Réinitialiser votre mot de passe" au lieu de "Reset your password"
+   - "Vous avez demandé une réinitialisation..." au lieu du texte anglais
+   - Bouton "Réinitialiser le mot de passe"
+   - Adapter le ton à l'identité La Bordure (chaleureux, sport)
 
-#### 3. Route dans App.tsx
-- Ajouter `<Route path="/reset-password" element={<ResetPassword />} />`
+4. **Déployer la edge function** `auth-email-hook`
 
-#### 4. Traductions i18n
-- Ajouter dans `fr/auth.json` et `en/auth.json` les clés :
-  - `buttons.forgotPassword` → "Mot de passe oublié ?" / "Forgot password?"
-  - `messages.resetEmailSent` → "Email de réinitialisation envoyé" / "Reset email sent"
-  - `resetPassword.title`, `resetPassword.newPassword`, `resetPassword.confirm`, `resetPassword.success`
+### Fichiers créés/modifiés
+- `supabase/functions/auth-email-hook/index.ts` — nouveau
+- `supabase/functions/auth-email-hook/deno.json` — nouveau
+- `supabase/functions/_shared/email-templates/*.tsx` — 6 templates brandés FR
 
-#### 5. Emails de réinitialisation
-Le domaine email `notify.labordure.app` est configuré mais le DNS n'est pas encore vérifié. Les emails de réinitialisation seront envoyés par le système par défaut en attendant. Une fois le DNS vérifié, on pourra personnaliser les templates email si souhaité.
-
-### Fichiers impactés
-- `src/pages/Auth.tsx` — ajout lien + mini-formulaire "mot de passe oublié"
-- `src/pages/ResetPassword.tsx` — **nouveau fichier**
-- `src/App.tsx` — ajout route `/reset-password`
-- `src/i18n/locales/fr/auth.json` — nouvelles clés
-- `src/i18n/locales/en/auth.json` — nouvelles clés
-
+### Note
+Les emails personnalisés s'activeront automatiquement une fois le DNS vérifié. En attendant, les emails par défaut continuent d'être envoyés. Le statut est visible dans Cloud → Emails.
