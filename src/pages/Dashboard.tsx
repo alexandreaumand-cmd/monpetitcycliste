@@ -122,6 +122,7 @@ const Dashboard = () => {
             <Route path="statistiques" element={<Statistics />} />
             <Route path="startlist" element={<Startlist />} />
             <Route path="arene" element={<ArenaPage />} />
+            <Route path="live" element={<LivePage />} />
             <Route path="compte" element={<AccountPage />} />
             <Route path="leagues/:id/admin" element={<LeagueDetailPage />} />
             {isSuperAdmin && (
