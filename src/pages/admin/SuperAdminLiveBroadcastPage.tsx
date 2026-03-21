@@ -358,19 +358,12 @@ export const SuperAdminLiveBroadcastPage = () => {
 
       // Auto-broadcast situation de course if available
       if (data.situation?.groups?.length > 0 && managerId) {
-        const sitGroups = data.situation.groups.map((g: any) => ({
+        // Use the already-enriched groups from the edge function (with riderIds)
+        const enrichedSitGroups = data.situation.groups.map((g: any) => ({
           ...g,
-          riderIds: (g.riderIds || g.riders || []).map((name: string) => {
-            const lc = name.toLowerCase();
-            // Try to find coureur_id from matched riders
-            for (const [cId, info] of Object.entries(matched)) {
-              const m = info as any;
-              if (m.scraped_name?.toLowerCase() === lc || m.rider_nom?.toLowerCase() === lc) return cId;
-            }
-            return "";
-          }),
+          riderIds: g.riderIds || [],
         }));
-        const situation = { groups: sitGroups, kmRemaining: data.situation.kmRemaining || 0 };
+        const situation = { groups: enrichedSitGroups, kmRemaining: data.situation.kmRemaining || 0 };
         const riderMentions: { rider_nom: string; coureur_id: string }[] = [];
         for (const g of situation.groups) {
           (g.riders || []).forEach((name: string, ri: number) => {
