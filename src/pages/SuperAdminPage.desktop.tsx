@@ -51,6 +51,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Ligues", path: "leagues", icon: Users },
       { label: "Utilisateurs", path: "users", icon: Shield },
+      { label: "Planning Enchères", path: "phase-schedule", icon: Calendar },
       { label: "Arène", path: "arena", icon: Swords },
       { label: "Live Broadcast", path: "live-broadcast", icon: Radio },
     ],
