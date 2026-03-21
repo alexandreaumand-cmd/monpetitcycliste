@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.recalculate-rider-bonuses]
 verify_jwt = false
+
+[functions.process-email-queue]
+verify_jwt = true
