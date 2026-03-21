@@ -28,6 +28,7 @@ import { LeagueDetailPage } from "./admin/LeagueDetailPage";
 import { SuperAdminPage } from "./SuperAdminPage";
 import { SuperAdminGuard } from "@/components/guards/SuperAdminGuard";
 import ArenaPage from "./ArenaPage";
+import LivePage from "./LivePage";
 import TeamStartlistMovements from "./TeamStartlistMovements";
 
 const Dashboard = () => {
