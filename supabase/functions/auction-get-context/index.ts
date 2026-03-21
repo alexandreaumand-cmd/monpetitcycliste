@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
       bidsQuery = bidsQuery.eq('league_id', league_id);
     }
     
-    const { data: allBids } = await bidsQuery;
+    const { data: allBids } = await bidsQuery.order('created_at', { ascending: true });
 
     const my_bids = (allBids || [])
       .filter(b => b.statut === 'draft')
