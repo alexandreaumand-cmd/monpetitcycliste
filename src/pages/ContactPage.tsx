@@ -34,7 +34,7 @@ const ContactPage = () => {
         body: {
           name: form.name,
           email: form.email,
-          subject: form.subject || undefined,
+          subject: form.subject ? t(`contact.subjects.${form.subject}`) : undefined,
           message: form.message,
         },
       });
