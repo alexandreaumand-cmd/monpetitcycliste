@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, MessageCircle, Radio } from "lucide-react";
+import { Loader2, MessageCircle, Radio, MapPin, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LiveCourseSelector } from "./LiveCourseSelector";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
+import { RaceSituationDisplay } from "./RaceSituationDisplay";
 import {
   useArenaChannels,
   useArenaMessages,
@@ -77,6 +78,15 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
     );
   }, [allMessages, selectedEtape]);
 
+  // Extract latest race situation from messages
+  const latestSituation = useMemo(() => {
+    for (const msg of filteredMessages) {
+      const sit = (msg.metadata as any)?.race_situation;
+      if (sit?.groups?.length > 0) return sit;
+    }
+    return null;
+  }, [filteredMessages]);
+
   const messageIds = useMemo(() => filteredMessages.map((m) => m.id), [filteredMessages]);
   const { data: reactionsMap = {} } = useMessageReactions(messageIds, managerId || null);
 
@@ -109,110 +119,194 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-280px)] min-h-[400px] border rounded-lg overflow-hidden bg-background">
-      {/* Course selector */}
-      <div className="p-3 border-b">
-        <LiveCourseSelector
-          activeCourseId={activeCourseId}
-          onSelect={setActiveCourseId}
+    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-260px)] min-h-[400px]">
+      {/* Left: Messages feed */}
+      <div className="flex-1 flex flex-col border rounded-xl overflow-hidden bg-background min-w-0">
+        {/* Course selector */}
+        <div className="px-4 py-3 border-b bg-muted/20">
+          <LiveCourseSelector
+            activeCourseId={activeCourseId}
+            onSelect={setActiveCourseId}
+          />
+        </div>
+
+        {/* Stage filter chips */}
+        {activeCourseId && availableStages.length > 1 && (
+          <div className="px-4 py-2.5 border-b flex items-center gap-2 overflow-x-auto bg-muted/10">
+            <span className="text-xs font-medium text-muted-foreground shrink-0">Étape :</span>
+            <Badge
+              variant={selectedEtape == null ? "default" : "outline"}
+              className={cn(
+                "cursor-pointer min-h-[28px] px-2.5 py-0.5 text-xs whitespace-nowrap",
+                "active:scale-95 transition-all"
+              )}
+              onClick={() => setSelectedEtape(null)}
+            >
+              Toutes
+            </Badge>
+            {availableStages.map((stage) => (
+              <Badge
+                key={stage}
+                variant={selectedEtape === stage ? "default" : "outline"}
+                className={cn(
+                  "cursor-pointer min-h-[28px] px-2.5 py-0.5 text-xs whitespace-nowrap",
+                  "active:scale-95 transition-all"
+                )}
+                onClick={() => setSelectedEtape(stage)}
+              >
+                É{stage}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Messages */}
+        <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
+          {hasNextPage && (
+            <div className="flex justify-center py-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                {t("trashTalk.loadMore")}
+              </Button>
+            </div>
+          )}
+
+          {!activeCourseId ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <Radio className="h-10 w-10 mb-3 opacity-20" />
+              <p className="font-medium text-sm">{t("trashTalk.liveCourses.selectPrompt")}</p>
+            </div>
+          ) : messagesLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredMessages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <MessageCircle className="h-10 w-10 mb-3 opacity-20" />
+              <p className="font-medium text-sm">{t("trashTalk.empty")}</p>
+              <p className="text-xs mt-1">{t("trashTalk.emptyDesc")}</p>
+            </div>
+          ) : (
+            <div className="py-3 space-y-0.5">
+              {filteredMessages.map((msg, idx) => {
+                const prevMsg = idx > 0 ? filteredMessages[idx - 1] : null;
+                const showAuthor =
+                  !prevMsg ||
+                  prevMsg.author_manager_id !== msg.author_manager_id ||
+                  msg.message_type !== prevMsg.message_type ||
+                  new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() > 5 * 60 * 1000;
+
+                return (
+                  <MessageBubble
+                    key={msg.id}
+                    message={msg}
+                    reactions={reactionsMap[msg.id] || []}
+                    onToggleReaction={(emoji) => handleToggleReaction(msg.id, emoji)}
+                    isOwnMessage={msg.author_manager_id === managerId}
+                    showAuthor={showAuthor}
+                    disabled={!managerId}
+                    rosterOwners={rosterOwners}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Read-only indicator */}
+        <MessageInput
+          onSend={() => {}}
+          managers={managers}
+          disabled
+          readOnly
         />
       </div>
 
-      {/* Stage filter chips */}
-      {activeCourseId && availableStages.length > 1 && (
-        <div className="px-3 py-2 border-b flex items-center gap-2 overflow-x-auto">
-          <span className="text-xs font-medium text-muted-foreground shrink-0">Étape :</span>
-          <Badge
-            variant={selectedEtape == null ? "default" : "outline"}
-            className={cn(
-              "cursor-pointer min-h-[32px] px-2.5 py-1 text-xs whitespace-nowrap",
-              "active:scale-95 transition-all"
-            )}
-            onClick={() => setSelectedEtape(null)}
-          >
-            Toutes
-          </Badge>
-          {availableStages.map((stage) => (
-            <Badge
-              key={stage}
-              variant={selectedEtape === stage ? "default" : "outline"}
-              className={cn(
-                "cursor-pointer min-h-[32px] px-2.5 py-1 text-xs whitespace-nowrap",
-                "active:scale-95 transition-all"
-              )}
-              onClick={() => setSelectedEtape(stage)}
-            >
-              É{stage}
-            </Badge>
-          ))}
-        </div>
-      )}
+      {/* Right: Race situation panel (desktop only) */}
+      {activeCourseId && (
+        <div className="hidden lg:flex flex-col w-[340px] shrink-0 border rounded-xl overflow-hidden bg-background">
+          <div className="px-4 py-3 border-b bg-muted/20">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold">Situation de course</h3>
+            </div>
+          </div>
 
-      {/* Messages */}
-      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
-        {hasNextPage && (
-          <div className="flex justify-center py-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => fetchNextPage()}
-              disabled={isFetchingNextPage}
-            >
-              {isFetchingNextPage && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              {t("trashTalk.loadMore")}
-            </Button>
-          </div>
-        )}
-
-        {!activeCourseId ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-            <MessageCircle className="h-12 w-12 mb-4 opacity-30" />
-            <p className="font-medium">{t("trashTalk.liveCourses.selectPrompt")}</p>
-          </div>
-        ) : messagesLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : filteredMessages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-            <MessageCircle className="h-12 w-12 mb-4 opacity-30" />
-            <p className="font-medium">{t("trashTalk.empty")}</p>
-            <p className="text-sm">{t("trashTalk.emptyDesc")}</p>
-          </div>
-        ) : (
-          <div className="py-2">
-            {filteredMessages.map((msg, idx) => {
-              const prevMsg = idx > 0 ? filteredMessages[idx - 1] : null;
-              const showAuthor =
-                !prevMsg ||
-                prevMsg.author_manager_id !== msg.author_manager_id ||
-                msg.message_type !== prevMsg.message_type ||
-                new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() > 5 * 60 * 1000;
-
-              return (
-                <MessageBubble
-                  key={msg.id}
-                  message={msg}
-                  reactions={reactionsMap[msg.id] || []}
-                  onToggleReaction={(emoji) => handleToggleReaction(msg.id, emoji)}
-                  isOwnMessage={msg.author_manager_id === managerId}
-                  showAuthor={showAuthor}
-                  disabled={!managerId}
+          <div className="flex-1 overflow-y-auto p-4">
+            {latestSituation ? (
+              <div className="space-y-4">
+                <RaceSituationDisplay
+                  groups={latestSituation.groups}
+                  kmRemaining={latestSituation.kmRemaining}
                   rosterOwners={rosterOwners}
                 />
-              );
-            })}
-          </div>
-        )}
-      </div>
 
-      {/* Read-only indicator */}
-      <MessageInput
-        onSend={() => {}}
-        managers={managers}
-        disabled
-        readOnly
-      />
+                {/* Detailed group list below the road viz */}
+                <div className="space-y-3 pt-2">
+                  {latestSituation.groups.map((group: any, gi: number) => (
+                    <div key={gi} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className={cn(
+                          "text-xs font-semibold",
+                          group.isPeloton ? "text-primary" : "text-foreground"
+                        )}>
+                          {group.name}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {group.gap !== "0:00" && (
+                            <span className="text-[11px] text-muted-foreground">
+                              {group.gap.startsWith("+") ? group.gap : `+${group.gap}`}
+                            </span>
+                          )}
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            <Users className="h-2.5 w-2.5 mr-0.5" />
+                            {group.riderCount}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Rider list with managers */}
+                      {group.riders?.length > 0 && (
+                        <div className="space-y-0.5 pl-2 border-l-2 border-muted">
+                          {group.riders.map((riderName: string, ri: number) => {
+                            const riderId = group.riderIds?.[ri];
+                            const managerName = riderId && rosterOwners?.[riderId];
+                            return (
+                              <div key={ri} className="flex items-center gap-1.5 text-xs">
+                                <span className="font-medium text-foreground">{riderName}</span>
+                                {managerName && (
+                                  <span className="text-[10px] text-muted-foreground">
+                                    ({managerName})
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <MapPin className="h-8 w-8 mb-2 opacity-20" />
+                <p className="text-xs text-center">
+                  Aucune situation de course disponible
+                </p>
+                <p className="text-[11px] mt-1 text-center opacity-70">
+                  La situation apparaîtra quand l'admin diffusera les données de course
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
