@@ -34,8 +34,15 @@ function parsePCSResults(doc: any): { riders: ScrapedRider[]; events: ScrapedEve
   const rows = doc.querySelectorAll("table.results tbody tr");
   console.log(`[PCS] Found ${rows.length} result rows`);
 
+  let debugCount = 0;
   for (const row of rows) {
     const cells = row.querySelectorAll("td");
+    if (debugCount < 3) {
+      const riderLink = row.querySelector("a[href*='/rider/']");
+      const anyLink = row.querySelector("a");
+      console.log(`[PCS] Row ${debugCount}: cells=${cells.length}, riderLink=${!!riderLink}, anyLink href=${anyLink?.getAttribute("href")?.substring(0, 60)}, firstTd="${cells[0]?.textContent?.trim()}", html=${row.innerHTML?.substring(0, 200)}`);
+      debugCount++;
+    }
     if (cells.length < 3) continue;
 
     // Position: first td
