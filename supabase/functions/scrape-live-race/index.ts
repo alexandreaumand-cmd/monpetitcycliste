@@ -90,7 +90,6 @@ function parseFirstCyclingResults(doc: any): { riders: ScrapedRider[]; events: S
   const riders: ScrapedRider[] = [];
   const events: ScrapedEvent[] = [];
 
-  // FirstCycling: tr.rider rows inside .sortTabell or .tablesorter
   const rows = doc.querySelectorAll("tr.rider");
   console.log(`[FC] Found ${rows.length} rider rows`);
 
@@ -98,21 +97,17 @@ function parseFirstCyclingResults(doc: any): { riders: ScrapedRider[]; events: S
     const cells = row.querySelectorAll("td");
     if (cells.length < 4) continue;
 
-    // Position: first td
     const posText = cells[0]?.textContent?.trim();
     const position = posText && /^\d+$/.test(posText) ? parseInt(posText, 10) : undefined;
     if (posText === "DNF" || posText === "DNS") continue;
 
-    // Rider: a[href*='rider.php'] — name from title attribute
     const riderLink = row.querySelector("a[href*='rider.php']");
     const name = riderLink?.getAttribute("title") || riderLink?.textContent?.trim() || "";
     if (!name) continue;
 
-    // Team: a[href*='team.php'] — name from title attribute
     const teamLink = row.querySelector("a[href*='team.php']");
     const team = teamLink?.getAttribute("title") || teamLink?.textContent?.trim() || "";
 
-    // Time/gap: last td (right-aligned)
     const lastCell = cells[cells.length - 1];
     const gap = lastCell?.textContent?.trim() || "";
 
@@ -120,6 +115,118 @@ function parseFirstCyclingResults(doc: any): { riders: ScrapedRider[]; events: S
   }
 
   console.log(`[FC] Parsed ${riders.length} riders`);
+  return { riders, events };
+}
+
+// ============================================================
+// L'ÉQUIPE PARSER — parses lequipe.fr live text pages
+// ============================================================
+
+function parseLEquipeLive(doc: any, html: string): { riders: ScrapedRider[]; events: ScrapedEvent[] } {
+  const events: ScrapedEvent[] = [];
+  const riders: ScrapedRider[] = [];
+
+  // Parse timeline events from the live text
+  // L'Équipe uses <div> blocks with time info, km, and content
+  // We'll parse from the raw HTML using regex patterns since the DOM structure 
+  // may vary, but the text patterns are consistent
+
+  // Extract race situation (groups) from the track section
+  // Look for group labels like "Groupe de tête" and "Peloton |+XX'XX''"
+  const groupRegex = /(Groupe de tête|Peloton|Groupe \d+)\s*(?:\|?\s*\+?([\d''"]+))?/g;
+  let groupMatch;
+  const groups: { name: string; gap: string; riderNames: string[] }[] = [];
+  
+  while ((groupMatch = groupRegex.exec(html)) !== null) {
+    const groupName = groupMatch[1];
+    const gap = groupMatch[2] || "0:00";
+    // We'll fill rider names from the surrounding context
+    groups.push({ name: groupName, gap, riderNames: [] });
+  }
+
+  // Extract rider names from links to CyclismeFicheCoureur pages
+  const riderLinkRegex = /CyclismeFicheCoureur\d+\.html[^>]*>(?:[^<]*<[^>]*>)*\s*([A-ZÀ-Ü][a-zà-ü.'-]+(?:\s+[A-ZÀ-Ü]\.)?(?:\s+[A-ZÀ-Ü][a-zà-ü.'-]+)*)\s*(?:\\n|\s)*\s*([^<]*?)\s*(?:\\n|\s)*(?:<|$)/gi;
+
+  // Better approach: parse all timeline entries using the text content
+  // L'Équipe live events have pattern: "il y a Xmin, XXX km, [icon], title, text"
+  
+  // Use regex on full HTML to find live comment blocks
+  // Each block typically contains: time ago, km marker, event text
+  const liveBlockRegex = /il y a (\d+)min[\s\S]*?(\d+)\s*km[\s\S]*?<\/[^>]+>\s*([\s\S]*?)(?=il y a \d+min|$)/gi;
+  
+  // Simpler approach: parse from text content
+  const textContent = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  
+  // Pattern: "il y a Xmin, Y km" followed by event text
+  const eventPattern = /il y a (\d+)\s*min\s*,?\s*(\d+)\s*km\s+(.*?)(?=il y a \d+\s*min|L'ÉQUIPE|publicité|$)/gi;
+  let eventMatch;
+  
+  while ((eventMatch = eventPattern.exec(textContent)) !== null) {
+    const minutesAgo = parseInt(eventMatch[1], 10);
+    const km = parseInt(eventMatch[2], 10);
+    let text = eventMatch[3].trim();
+    
+    // Clean up the text - take first meaningful sentence/paragraph
+    // Remove article promos, image refs, etc.
+    text = text.replace(/\s*lire l'article.*$/i, '').trim();
+    text = text.replace(/\s*photo de .*$/i, '').trim();
+    
+    // Limit text length
+    if (text.length > 500) text = text.substring(0, 500) + "...";
+    if (!text || text.length < 10) continue;
+
+    // Detect event type from keywords
+    let type = "info";
+    const textLower = text.toLowerCase();
+    if (textLower.includes("chute") || textLower.includes("tombé")) type = "crash";
+    else if (textLower.includes("échapp") || textLower.includes("en tête") || textLower.includes("attaque")) type = "breakaway";
+    else if (textLower.includes("écart") || textLower.includes("avance")) type = "gap";
+    else if (textLower.includes("sprint") || textLower.includes("intermédiaire")) type = "intermediate";
+    else if (textLower.includes("lâché") || textLower.includes("distancé")) type = "dropped";
+    else if (textLower.includes("abandon")) type = "abandon";
+
+    // Extract rider names mentioned
+    const riderNames: string[] = [];
+    const namePattern = /([A-ZÀ-Ü][a-zà-ü'-]+(?:\s+[A-ZÀ-Ü][a-zà-ü'-]+)*)\s+\(([^)]+)\)/g;
+    let nameMatch;
+    while ((nameMatch = namePattern.exec(text)) !== null) {
+      riderNames.push(nameMatch[1]);
+    }
+
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - minutesAgo);
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+    events.push({
+      time: timeStr,
+      type,
+      text: text.substring(0, 300),
+      riders: riderNames,
+    });
+  }
+
+  // Extract km remaining from "XXX / YYY km" pattern
+  const kmPattern = /(\d+)\s*\/\s*(\d+)\s*km/;
+  const kmMatch = kmPattern.exec(textContent);
+  let kmRemaining = 0;
+  if (kmMatch) {
+    const covered = parseInt(kmMatch[1], 10);
+    const total = parseInt(kmMatch[2], 10);
+    kmRemaining = total - covered;
+  }
+
+  // Extract riders from the situation (group sections in the HTML)
+  // Look for rider names in the track/situation section
+  const situationRiderRegex = /CyclismeFicheCoureur\d+\.html[^>]*>[^<]*?([A-ZÀ-Ü]\.\s+[A-Za-zÀ-ü'-]+(?:\s+[A-Za-zÀ-ü'-]+)*)/g;
+  let srMatch;
+  while ((srMatch = situationRiderRegex.exec(html)) !== null) {
+    const name = srMatch[1].trim();
+    if (name && name.length > 2) {
+      riders.push({ name, team: "", position: undefined, gap: "" });
+    }
+  }
+
+  console.log(`[L'Équipe] Parsed ${events.length} events, ${riders.length} riders from situation`);
   return { riders, events };
 }
 
@@ -220,11 +327,16 @@ serve(async (req) => {
     // 2. Detect source and parse
     const isFirstCycling = url.includes("firstcycling.com");
     const isPCS = url.includes("procyclingstats.com");
+    const isLEquipe = url.includes("lequipe.fr");
 
     let scrapedRiders: ScrapedRider[] = [];
     let scrapedEvents: ScrapedEvent[] = [];
 
-    if (isFirstCycling) {
+    if (isLEquipe) {
+      const result = parseLEquipeLive(doc, html);
+      scrapedRiders = result.riders;
+      scrapedEvents = result.events;
+    } else if (isFirstCycling) {
       const result = parseFirstCyclingResults(doc);
       scrapedRiders = result.riders;
       scrapedEvents = result.events;
