@@ -36,6 +36,7 @@ export function MyBidsList({
   const { t } = useTranslation("auction");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [sortBy, setSortBy] = useState<'none' | 'cote' | 'amount'>('none');
 
   const handleStartEdit = (bid: MyBid) => {
     setEditingId(bid.bid_id ?? null);
