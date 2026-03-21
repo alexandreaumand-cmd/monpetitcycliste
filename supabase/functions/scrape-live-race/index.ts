@@ -228,8 +228,11 @@ function parseLEquipeLive(doc: any, html: string): {
     const km = parseInt(eventMatch[2], 10);
     let text = eventMatch[3].trim();
 
+    // Clean up scraped text
     text = text.replace(/\s*lire l'article.*$/i, '').trim();
     text = text.replace(/\s*photo de .*$/i, '').trim();
+    text = text.replace(/\s*Primavera[.,]?\s*/g, ' ').trim();
+    text = text.replace(/\s{2,}/g, ' ');
 
     if (text.length > 500) text = text.substring(0, 500) + "...";
     if (!text || text.length < 10) continue;
