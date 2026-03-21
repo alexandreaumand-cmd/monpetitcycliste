@@ -241,26 +241,49 @@ export const SuperAdminLiveBroadcastPage = () => {
       });
 
       // Auto-broadcast all timeline events (reversed so oldest first)
-      // Build a lookup: lowercase rider name → manager name
+      // Build a lookup: various name forms → manager name
       const riderToManager: Record<string, string> = {};
       for (const [, info] of Object.entries(matched)) {
         const m = info as any;
         if (m.manager_name) {
           if (m.scraped_name) riderToManager[m.scraped_name.toLowerCase()] = m.manager_name;
-          if (m.rider_nom) riderToManager[m.rider_nom.toLowerCase()] = m.manager_name;
+          if (m.rider_nom) {
+            riderToManager[m.rider_nom.toLowerCase()] = m.manager_name;
+            // Also index "Firstname Lastname" from "LASTNAME Firstname"
+            const parts = m.rider_nom.split(/\s+/);
+            if (parts.length >= 2) {
+              // Try reversed order: "Tadej Pogacar" from "POGACAR Tadej"
+              const reversed = [...parts].reverse().join(" ").toLowerCase();
+              riderToManager[reversed] = m.manager_name;
+              // Also index last name only (longest part) for "van der Poel" style
+              const lastName = parts[0].toLowerCase();
+              if (lastName.length >= 4) riderToManager[lastName] = m.manager_name;
+            }
+          }
         }
       }
 
       // Replace rider names in text with "rider (manager)" and clean formatting
+      // Sort entries by name length DESC so longer names match first (avoids partial matches)
+      const sortedEntries = Object.entries(riderToManager)
+        .filter(([name]) => name.length >= 4)
+        .sort((a, b) => b[0].length - a[0].length);
+
       const enrichText = (text: string): string => {
         let result = text
           .replace(/;/g, ', ')
           .replace(/\s{2,}/g, ' ')
           .replace(/,\s*,/g, ',')
           .trim();
-        for (const [name, mgr] of Object.entries(riderToManager)) {
-          const regex = new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-          result = result.replace(regex, (match) => `${match} (${mgr})`);
+        const alreadyAnnotated = new Set<string>();
+        for (const [name, mgr] of sortedEntries) {
+          if (alreadyAnnotated.has(mgr + name)) continue;
+          const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`(?<!\\()\\b${escaped}\\b(?!\\s*\\()`, 'gi');
+          if (regex.test(result)) {
+            result = result.replace(regex, (match) => `${match} (${mgr})`);
+            alreadyAnnotated.add(mgr + name);
+          }
         }
         return result;
       };
