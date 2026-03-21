@@ -263,14 +263,30 @@ export const SuperAdminLiveBroadcastPage = () => {
             if (parts.length >= 2) {
               // Reversed order: "Tadej Pogacar" from "POGACAR Tadej"
               addVariants([...parts].reverse().join(" "));
-              // All permutations for 2-part names
               addVariants(parts.join(" "));
-              // Last name only (first token, usually uppercase)
+              // Last name only
               const lastName = parts[0].toLowerCase();
               if (lastName.length >= 4) {
                 riderToManager[lastName] = m.manager_name;
                 const strippedLast = stripAccents(lastName);
                 if (strippedLast !== lastName) riderToManager[strippedLast] = m.manager_name;
+              }
+              // Initial + lastname variants: "J. Alaphilippe", "T. Pogacar"
+              // rider_nom is typically "LASTNAME Firstname"
+              const lastNamePart = parts.slice(0, -1).join(" ");
+              const firstName = parts[parts.length - 1];
+              if (firstName) {
+                const initial = firstName[0];
+                const variant = `${initial}. ${lastNamePart}`.toLowerCase();
+                riderToManager[variant] = m.manager_name;
+                riderToManager[stripAccents(variant)] = m.manager_name;
+                // Also reversed: "FIRSTNAME LASTNAME" → initial from first
+                const reversedParts = [...parts].reverse();
+                const revInitial = reversedParts[0][0];
+                const revLast = reversedParts.slice(1).join(" ");
+                const revVariant = `${revInitial}. ${revLast}`.toLowerCase();
+                riderToManager[revVariant] = m.manager_name;
+                riderToManager[stripAccents(revVariant)] = m.manager_name;
               }
             }
           }
