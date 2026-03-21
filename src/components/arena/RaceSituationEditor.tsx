@@ -49,6 +49,8 @@ export const RaceSituationEditor = ({
   onBroadcast,
   disabled,
   startlistRiders = [],
+  importedSituation,
+  rosterOwners = {},
 }: RaceSituationEditorProps) => {
   const [groups, setGroups] = useState<RaceGroup[]>([
     { name: "Échappée", riders: [], riderIds: [], riderCount: 3, gap: "0:00", isPeloton: false },
@@ -57,6 +59,18 @@ export const RaceSituationEditor = ({
   const [kmRemaining, setKmRemaining] = useState(100);
   const [searchTerms, setSearchTerms] = useState<Record<number, string>>({});
   const [focusedGroup, setFocusedGroup] = useState<number | null>(null);
+  const [hasImported, setHasImported] = useState(false);
+
+  // Apply imported situation when it changes
+  const prevImportRef = useRef(importedSituation);
+  if (importedSituation && importedSituation !== prevImportRef.current && !hasImported) {
+    prevImportRef.current = importedSituation;
+    if (importedSituation.groups.length > 0) {
+      setGroups(importedSituation.groups);
+      if (importedSituation.kmRemaining > 0) setKmRemaining(importedSituation.kmRemaining);
+      setHasImported(true);
+    }
+  }
 
   // Already-assigned rider IDs across all groups
   const usedRiderIds = useMemo(() => {
