@@ -255,6 +255,17 @@ function parseLEquipeLive(doc: any, html: string): {
     // Clean up scraped text
     text = text.replace(/\s*lire l['']article.*$/i, '').trim();
     text = text.replace(/\s*photo de\s+\w+,?\s*\w*\s+[\w\s-]+$/i, '').trim();
+    // Remove trailing tag-like names that L'Équipe appends (e.g., "Lozano, David Novo Nordisk")
+    // These are comma-separated name fragments after the last sentence-ending period
+    const lastDotIdx = text.lastIndexOf('.');
+    if (lastDotIdx > 0 && lastDotIdx < text.length - 2) {
+      const trailing = text.substring(lastDotIdx + 1).trim();
+      // If trailing part has no verb-like structure (short, comma-separated words), remove it
+      const hasVerb = /\b(est|sont|a|ont|va|fait|prend|vient|roule|reste|passe|lance|attaque|tente|rejoint)\b/i.test(trailing);
+      if (!hasVerb && trailing.length < 150) {
+        text = text.substring(0, lastDotIdx + 1).trim();
+      }
+    }
     text = text.replace(/\s{2,}/g, ' ');
 
     if (text.length > 500) text = text.substring(0, 500) + "...";

@@ -242,22 +242,36 @@ export const SuperAdminLiveBroadcastPage = () => {
 
       // Auto-broadcast all timeline events (reversed so oldest first)
       // Build a lookup: various name forms → manager name
+      // Normalize accents for matching: é→e, č→c, etc.
+      const stripAccents = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
       const riderToManager: Record<string, string> = {};
       for (const [, info] of Object.entries(matched)) {
         const m = info as any;
         if (m.manager_name) {
-          if (m.scraped_name) riderToManager[m.scraped_name.toLowerCase()] = m.manager_name;
+          const addVariants = (name: string) => {
+            const lc = name.toLowerCase();
+            riderToManager[lc] = m.manager_name;
+            // Also add accent-stripped version
+            const stripped = stripAccents(lc);
+            if (stripped !== lc) riderToManager[stripped] = m.manager_name;
+          };
+          if (m.scraped_name) addVariants(m.scraped_name);
           if (m.rider_nom) {
-            riderToManager[m.rider_nom.toLowerCase()] = m.manager_name;
-            // Also index "Firstname Lastname" from "LASTNAME Firstname"
+            addVariants(m.rider_nom);
             const parts = m.rider_nom.split(/\s+/);
             if (parts.length >= 2) {
-              // Try reversed order: "Tadej Pogacar" from "POGACAR Tadej"
-              const reversed = [...parts].reverse().join(" ").toLowerCase();
-              riderToManager[reversed] = m.manager_name;
-              // Also index last name only (longest part) for "van der Poel" style
+              // Reversed order: "Tadej Pogacar" from "POGACAR Tadej"
+              addVariants([...parts].reverse().join(" "));
+              // All permutations for 2-part names
+              addVariants(parts.join(" "));
+              // Last name only (first token, usually uppercase)
               const lastName = parts[0].toLowerCase();
-              if (lastName.length >= 4) riderToManager[lastName] = m.manager_name;
+              if (lastName.length >= 4) {
+                riderToManager[lastName] = m.manager_name;
+                const strippedLast = stripAccents(lastName);
+                if (strippedLast !== lastName) riderToManager[strippedLast] = m.manager_name;
+              }
             }
           }
         }
@@ -275,14 +289,29 @@ export const SuperAdminLiveBroadcastPage = () => {
           .replace(/\s{2,}/g, ' ')
           .replace(/,\s*,/g, ',')
           .trim();
+        // Also try matching on accent-stripped version of the text
+        const resultStripped = stripAccents(result.toLowerCase());
         const alreadyAnnotated = new Set<string>();
         for (const [name, mgr] of sortedEntries) {
           if (alreadyAnnotated.has(mgr + name)) continue;
           const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          // Try direct match first
           const regex = new RegExp(`(?<!\\()\\b${escaped}\\b(?!\\s*\\()`, 'gi');
           if (regex.test(result)) {
             result = result.replace(regex, (match) => `${match} (${mgr})`);
             alreadyAnnotated.add(mgr + name);
+          } else {
+            // Try accent-stripped match: find position in stripped text, replace in original
+            const strippedEscaped = stripAccents(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const strippedRegex = new RegExp(`(?<!\\()\\b${strippedEscaped}\\b(?!\\s*\\()`, 'gi');
+            const strippedMatch = strippedRegex.exec(resultStripped);
+            if (strippedMatch) {
+              const idx = strippedMatch.index;
+              const len = strippedMatch[0].length;
+              const originalSlice = result.substring(idx, idx + len);
+              result = result.substring(0, idx + len) + ` (${mgr})` + result.substring(idx + len);
+              alreadyAnnotated.add(mgr + name);
+            }
           }
         }
         return result;
