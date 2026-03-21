@@ -1,18 +1,19 @@
 
-
-## Supprimer le composant AdminMaintenance
-
-Le composant `AdminMaintenance` lance automatiquement une tâche de maintenance (correction des points Porteur + recalcul) toutes les 24h quand un super-admin visite la page Résultats. Il provoque des flashs "Maintenance en cours" et des rechargements de page intempestifs.
-
-La page d'administration dédiée (`MaintenanceStatus`) permet déjà de lancer manuellement cette maintenance quand nécessaire.
+## Remplacer le champ Sujet par un select avec options prédéfinies
 
 ### Modifications
 
-1. **Supprimer le fichier** `src/components/admin/AdminMaintenance.tsx`
+**`src/pages/ContactPage.tsx`** — Remplacer l'`Input` du sujet par un composant `Select` (shadcn) avec 5 options :
+- Question sur le jeu
+- Bug technique
+- Suggestion
+- Demande de partenariat
+- Autre
 
-2. **`src/pages/ResultsPage.mobile.tsx`** — Retirer l'import et l'utilisation de `<AdminMaintenance />`
+**`src/i18n/locales/fr/home.json`** et **`en/home.json`** — Ajouter les traductions des 5 sujets et du placeholder du select dans la section `contact`.
 
-3. **`src/pages/ResultsPage.desktop.tsx`** — Retirer l'import et l'utilisation de `<AdminMaintenance />`
-
-Aucun autre fichier n'utilise ce composant. La maintenance reste accessible manuellement via la page admin (`MaintenanceStatus`).
-
+### Détail technique
+- Utiliser `Select` / `SelectTrigger` / `SelectContent` / `SelectItem` de `@/components/ui/select`
+- La valeur sélectionnée alimente `form.subject` comme avant
+- Le placeholder devient "Choisissez un sujet"
+- Le champ reste optionnel (pas de `required`)
