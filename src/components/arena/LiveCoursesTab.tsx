@@ -240,14 +240,13 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
           <div className="flex-1 overflow-y-auto p-4">
             {latestSituation ? (
               <div className="space-y-4">
-                <RaceSituationDisplay
-                  groups={latestSituation.groups}
-                  kmRemaining={latestSituation.kmRemaining}
-                  rosterOwners={rosterOwners}
-                />
+                {/* Km remaining header */}
+                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                  <span>🏁 {latestSituation.kmRemaining} km restants</span>
+                </div>
 
-                {/* Detailed group list below the road viz */}
-                <div className="space-y-3 pt-2">
+                {/* Group list */}
+                <div className="space-y-4">
                   {latestSituation.groups.map((group: any, gi: number) => (
                     <div key={gi} className="space-y-1.5">
                       <div className="flex items-center justify-between">
@@ -270,18 +269,17 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
                         </div>
                       </div>
 
-                      {/* Rider list with managers */}
                       {group.riders?.length > 0 && (
-                        <div className="space-y-0.5 pl-2 border-l-2 border-muted">
+                        <div className="space-y-0.5 pl-2 border-l-2 border-primary/30">
                           {group.riders.map((riderName: string, ri: number) => {
                             const riderId = group.riderIds?.[ri];
                             const managerName = riderId && rosterOwners?.[riderId];
                             return (
-                              <div key={ri} className="flex items-center gap-1.5 text-xs">
+                              <div key={ri} className="flex items-center justify-between text-xs py-0.5">
                                 <span className="font-medium text-foreground">{riderName}</span>
                                 {managerName && (
-                                  <span className="text-[10px] text-muted-foreground">
-                                    ({managerName})
+                                  <span className="text-[10px] text-primary/70 truncate ml-2">
+                                    {managerName}
                                   </span>
                                 )}
                               </div>
