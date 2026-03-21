@@ -34,6 +34,7 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
     { label: t('navigation.teams'), path: "/dashboard/mon-equipe", icon: Users },
     { label: t('navigation.startlist'), path: "/dashboard/startlist", icon: ListChecks },
     { label: t('navigation.results'), path: "/dashboard/resultats", icon: Medal },
+    { label: t('navigation.live'), path: "/dashboard/live", icon: Radio },
     { label: t('navigation.arena'), path: "/dashboard/arene", icon: Swords },
   ];
 

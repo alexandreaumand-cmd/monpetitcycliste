@@ -34,6 +34,7 @@ const navItemsConfig = [
   { key: 'startlist', href: '/dashboard/startlist', icon: ListChecks },
   { key: 'statistics', href: '/dashboard/statistiques', icon: LineChart },
   { key: 'auctions', href: '/dashboard/encheres', icon: Trophy },
+  { key: 'live', href: '/dashboard/live', icon: Radio },
   { key: 'arena', href: '/dashboard/arene', icon: Swords },
 ];
 
