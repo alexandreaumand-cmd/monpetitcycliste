@@ -327,11 +327,16 @@ serve(async (req) => {
     // 2. Detect source and parse
     const isFirstCycling = url.includes("firstcycling.com");
     const isPCS = url.includes("procyclingstats.com");
+    const isLEquipe = url.includes("lequipe.fr");
 
     let scrapedRiders: ScrapedRider[] = [];
     let scrapedEvents: ScrapedEvent[] = [];
 
-    if (isFirstCycling) {
+    if (isLEquipe) {
+      const result = parseLEquipeLive(doc, html);
+      scrapedRiders = result.riders;
+      scrapedEvents = result.events;
+    } else if (isFirstCycling) {
       const result = parseFirstCyclingResults(doc);
       scrapedRiders = result.riders;
       scrapedEvents = result.events;
