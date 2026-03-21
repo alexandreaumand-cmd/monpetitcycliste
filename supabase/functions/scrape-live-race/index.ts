@@ -459,6 +459,12 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    const { data: courseData } = await supabase
+      .from("courses")
+      .select("phase_id")
+      .eq("id", course_id)
+      .single();
+
     // startlist_entries links via startlist_imports (startlist_id → startlist_imports.id, race_id = course_id)
     const { data: startlistImport } = await supabase
       .from("startlist_imports")
@@ -481,7 +487,6 @@ serve(async (req) => {
       console.log(`[scrape-live-race] Found ${startlistEntries.length} startlist entries for course ${course_id}`);
     } else {
       console.log(`[scrape-live-race] No startlist import found for course ${course_id}, trying coureurs_saisons fallback`);
-      // Fallback: use coureurs_saisons for the season
       if (courseData?.phase_id) {
         const { data: phaseData } = await supabase
           .from("phases")
@@ -502,12 +507,6 @@ serve(async (req) => {
         }
       }
     }
-
-    const { data: courseData } = await supabase
-      .from("courses")
-      .select("phase_id")
-      .eq("id", course_id)
-      .single();
 
     let rosterMap: Record<string, string> = {};
     if (courseData?.phase_id) {
