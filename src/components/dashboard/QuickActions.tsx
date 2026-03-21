@@ -20,13 +20,13 @@ export function QuickActions() {
               <h2 className="text-lg sm:text-xl font-montserrat font-semibold text-foreground">{t('quickActions.title')}</h2>
               <p className="text-xs sm:text-sm text-muted-foreground font-inter mt-0.5">{t('quickActions.subtitle')}</p>
             </div>
-            <div className="flex gap-2 sm:gap-3 justify-center sm:justify-end shrink-0">
-              <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 text-sm">
-                <Plus className="h-4 w-4" />
+            <div className="flex gap-2 justify-center sm:justify-end shrink-0">
+              <Button onClick={() => setCreateDialogOpen(true)} size="sm" className="gap-1.5 text-xs sm:text-sm sm:gap-2">
+                <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 {t('quickActions.createLeague')}
               </Button>
-              <Button onClick={() => setJoinDialogOpen(true)} variant="outline" className="gap-2 text-sm">
-                <Globe className="h-4 w-4" />
+              <Button onClick={() => setJoinDialogOpen(true)} variant="outline" size="sm" className="gap-1.5 text-xs sm:text-sm sm:gap-2">
+                <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 {t('quickActions.join')}
               </Button>
             </div>
