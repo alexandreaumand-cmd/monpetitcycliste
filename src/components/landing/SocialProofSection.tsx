@@ -113,11 +113,30 @@ const SocialProofSection = () => {
           ))}
         </motion.div>
 
-        {/* Mobile vertical stack */}
-        <div className="md:hidden flex flex-col gap-4">
-          {quotes.map((quote, i) => (
-            <QuoteCard key={i} quote={quote} i={i} />
-          ))}
+        {/* Mobile swipeable carousel */}
+        <div className="md:hidden">
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-5 px-5"
+          >
+            {quotes.map((quote, i) => (
+              <div key={i} className="w-[85%] flex-shrink-0 snap-center">
+                <QuoteCard quote={quote} i={0} />
+              </div>
+            ))}
+          </div>
+          {/* Dots */}
+          <div className="flex justify-center gap-2 mt-4">
+            {quotes.map((_, i) => (
+              <div
+                key={i}
+                className={`h-2 rounded-full transition-all duration-200 ${
+                  i === activeIndex ? "bg-bordure-gold w-5" : "bg-white/30 w-2"
+                }`}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Desktop grid */}
