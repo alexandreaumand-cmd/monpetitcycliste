@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
       firstAuctionStartsAt,
       // five_phases specific
       variant,        // 'full_season' | 'wt_only'
-      startingPhaseIndex, // number 1-5
+      
       // per_course specific
       selectedCourseIds, // string[]
     } = body;
@@ -91,14 +91,13 @@ Deno.serve(async (req) => {
       byPhase = true;
       wtOnly = variant === 'wt_only';
       gtOnly = false;
-      leagueStartingPhaseIndex = startingPhaseIndex || 1;
+      leagueStartingPhaseIndex = null;
 
-      // Get phases from starting index
+      // Get all phases (starting phase determined after auctions)
       const { data: phases } = await supabase
         .from('phases')
         .select('id, index_dans_saison')
         .eq('saison_id', season.id)
-        .gte('index_dans_saison', leagueStartingPhaseIndex)
         .order('index_dans_saison');
 
       if (!phases?.length) {

@@ -72,6 +72,7 @@
     "variantFull": "Full season",
     "variantWT": "World Tour only",
     "startingPhase": "Starting phase",
+    "startingPhaseAuto": "The starting phase will be determined automatically after the first auction ends.",
     "phasePast": "completed",
     "phaseActive": "active",
     "selectCourses": "Select races",

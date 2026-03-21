@@ -72,6 +72,7 @@
     "variantFull": "Saison entière",
     "variantWT": "World Tour uniquement",
     "startingPhase": "Phase de départ",
+    "startingPhaseAuto": "La phase de départ sera déterminée automatiquement à la fin des premières enchères.",
     "phasePast": "terminée",
     "phaseActive": "en cours",
     "selectCourses": "Sélectionner les courses",

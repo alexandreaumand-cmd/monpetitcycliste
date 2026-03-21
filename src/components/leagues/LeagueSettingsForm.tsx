@@ -37,8 +37,6 @@ type LeagueSettingsFormProps = {
   // Five phases specific
   variant?: FivePhasesVariant;
   onVariantChange?: (v: FivePhasesVariant) => void;
-  startingPhaseIndex?: number;
-  onStartingPhaseIndexChange?: (idx: number) => void;
   // Per course specific
   selectedCourseIds?: string[];
   onSelectedCourseIdsChange?: (ids: string[]) => void;
@@ -61,28 +59,12 @@ export function LeagueSettingsForm({
   seasons,
   variant = 'full_season',
   onVariantChange,
-  startingPhaseIndex = 1,
-  onStartingPhaseIndexChange,
   selectedCourseIds = [],
   onSelectedCourseIdsChange,
 }: LeagueSettingsFormProps) {
   const { t, i18n } = useTranslation('leagues');
   const dateLocale = i18n.language === 'fr' ? fr : enUS;
 
-  // Fetch phases for phase selector (five_phases mode)
-  const { data: phases = [] } = useQuery({
-    queryKey: ['phases-for-league', seasonId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('phases')
-        .select('id, index_dans_saison, date_debut, date_fin, statut')
-        .eq('saison_id', seasonId)
-        .order('index_dans_saison');
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!seasonId && gameMode === 'five_phases',
-  });
 
   // Compute settings display
   const settings = useMemo(() => {
@@ -148,35 +130,9 @@ export function LeagueSettingsForm({
             </RadioGroup>
           </div>
 
-          {phases.length > 0 && (
-            <div className="space-y-2">
-              <Label>{t('settings.startingPhase', 'Phase de départ')}</Label>
-              <Select
-                value={startingPhaseIndex.toString()}
-                onValueChange={(v) => onStartingPhaseIndexChange?.(parseInt(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {phases.map((phase) => {
-                    const isPast = phase.statut === 'completed';
-                    return (
-                      <SelectItem
-                        key={phase.id}
-                        value={phase.index_dans_saison.toString()}
-                        disabled={isPast}
-                      >
-                        Phase {phase.index_dans_saison}
-                        {isPast && ` (${t('settings.phasePast', 'terminée')})`}
-                        {phase.statut === 'active' && ` (${t('settings.phaseActive', 'en cours')})`}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <p className="text-sm text-muted-foreground italic">
+            {t('settings.startingPhaseAuto')}
+          </p>
 
           <div className="flex gap-2">
             <Badge variant="secondary">{t('settings.budget')}: {settings.budget}</Badge>

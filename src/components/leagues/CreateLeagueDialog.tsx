@@ -42,7 +42,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
   
   // Five phases specific
   const [variant, setVariant] = useState<FivePhasesVariant>('full_season');
-  const [startingPhaseIndex, setStartingPhaseIndex] = useState(1);
+  
   
   // Per course specific
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
@@ -76,7 +76,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     setBonusesEnabled(true);
     setFirstAuctionDate(null);
     setVariant('full_season');
-    setStartingPhaseIndex(1);
+    
     setSelectedCourseIds([]);
     onOpenChange(false);
   };
@@ -123,7 +123,6 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
           // Five phases specific
           ...(selectedMode === 'five_phases' && {
             variant,
-            startingPhaseIndex,
           }),
           // Per course specific
           ...(selectedMode === 'per_course' && {
@@ -194,8 +193,6 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
               seasons={seasons}
               variant={variant}
               onVariantChange={setVariant}
-              startingPhaseIndex={startingPhaseIndex}
-              onStartingPhaseIndexChange={setStartingPhaseIndex}
               selectedCourseIds={selectedCourseIds}
               onSelectedCourseIdsChange={setSelectedCourseIds}
             />
