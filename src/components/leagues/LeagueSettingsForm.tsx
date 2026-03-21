@@ -37,8 +37,6 @@ type LeagueSettingsFormProps = {
   // Five phases specific
   variant?: FivePhasesVariant;
   onVariantChange?: (v: FivePhasesVariant) => void;
-  startingPhaseIndex?: number;
-  onStartingPhaseIndexChange?: (idx: number) => void;
   // Per course specific
   selectedCourseIds?: string[];
   onSelectedCourseIdsChange?: (ids: string[]) => void;
