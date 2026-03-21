@@ -6794,6 +6794,7 @@ export type Database = {
         Returns: number
       }
       normalize_text: { Args: { txt: string }; Returns: string }
+      purge_old_notifications: { Args: never; Returns: number }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
