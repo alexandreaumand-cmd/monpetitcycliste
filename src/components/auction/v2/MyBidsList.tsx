@@ -86,15 +86,11 @@ export function MyBidsList({
     }
   };
 
-  // Sort bids: new bids first, then existing roster, then by amount descending
+  // Separate new bids first, then existing roster — preserve insertion order within each group
   const sortedBids = useMemo(() => {
-    return [...bids].sort((a, b) => {
-      // New bids (is_existing = false) come first
-      if (!a.is_existing && b.is_existing) return -1;
-      if (a.is_existing && !b.is_existing) return 1;
-      // Within same type, sort by amount descending
-      return b.amount - a.amount;
-    });
+    const newBids = bids.filter(b => !b.is_existing);
+    const existingBids = bids.filter(b => b.is_existing);
+    return [...newBids, ...existingBids];
   }, [bids]);
 
   if (bids.length === 0) {
