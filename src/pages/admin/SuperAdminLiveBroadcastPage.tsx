@@ -187,9 +187,19 @@ export const SuperAdminLiveBroadcastPage = () => {
     [managerId, activeCourseId, broadcastMessage, selectedEtape]
   );
 
-  const handleScrape = async () => {
+  const handleScrape = async (isAuto = false) => {
     if (!scrapeUrl || !activeCourseId) return;
     setIsScraping(true);
+
+    // Persist URL to DB
+    if (!isAuto) {
+      supabase
+        .from("arena_live_courses")
+        .update({ live_scrape_url: scrapeUrl } as any)
+        .eq("course_id", activeCourseId)
+        .eq("is_active", true)
+        .then(() => {});
+    }
     try {
       const { data, error } = await supabase.functions.invoke("scrape-live-race", {
         body: { url: scrapeUrl, course_id: activeCourseId },
