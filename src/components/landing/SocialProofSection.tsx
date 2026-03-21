@@ -108,49 +108,11 @@ const SocialProofSection = () => {
           ))}
         </motion.div>
 
-        {/* Mobile carousel */}
-        <div className="md:hidden relative">
-          <div className="overflow-hidden">
-            <div
-              className="flex transition-transform duration-300 ease-out"
-              style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-            >
-              {quotes.map((quote, i) => (
-                <div key={i} className="w-full flex-shrink-0 px-1">
-                  <QuoteCard quote={quote} i={0} />
-                </div>
-              ))}
-            </div>
-          </div>
-          {/* Dots + arrows */}
-          <div className="flex items-center justify-center gap-4 mt-5">
-            <button
-              onClick={() => goTo(currentSlide - 1)}
-              className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center active:scale-95 transition-transform"
-              aria-label="Previous"
-            >
-              <ChevronLeft className="w-4 h-4 text-white/70" />
-            </button>
-            <div className="flex gap-2">
-              {quotes.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentSlide(i)}
-                  className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                    i === currentSlide ? "bg-bordure-gold w-5" : "bg-white/30"
-                  }`}
-                  aria-label={`Slide ${i + 1}`}
-                />
-              ))}
-            </div>
-            <button
-              onClick={() => goTo(currentSlide + 1)}
-              className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center active:scale-95 transition-transform"
-              aria-label="Next"
-            >
-              <ChevronRight className="w-4 h-4 text-white/70" />
-            </button>
-          </div>
+        {/* Mobile vertical stack */}
+        <div className="md:hidden flex flex-col gap-4">
+          {quotes.map((quote, i) => (
+            <QuoteCard key={i} quote={quote} i={i} />
+          ))}
         </div>
 
         {/* Desktop grid */}
