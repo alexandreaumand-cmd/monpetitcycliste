@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
       byPhase = true;
       wtOnly = variant === 'wt_only';
       gtOnly = false;
-      leagueStartingPhaseIndex = startingPhaseIndex || 1;
+      leagueStartingPhaseIndex = null;
 
       // Get phases from starting index
       const { data: phases } = await supabase
