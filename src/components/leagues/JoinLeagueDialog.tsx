@@ -135,7 +135,8 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
   };
 
   const renderLeagueCard = (league: any) => {
-    const scope = league.league_scopes?.[0];
+    const scopeRaw = league.league_scopes;
+    const scope = Array.isArray(scopeRaw) ? scopeRaw[0] : scopeRaw;
     const settings = league.settings as any;
     const selectedCourseIds: string[] = scope?.selected_course_ids || [];
     const budget = settings?.budget;
