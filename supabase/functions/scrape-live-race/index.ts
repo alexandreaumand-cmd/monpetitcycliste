@@ -34,7 +34,6 @@ function parsePCSResults(doc: any): { riders: ScrapedRider[]; events: ScrapedEve
   const rows = doc.querySelectorAll("table.results tbody tr");
   console.log(`[PCS] Found ${rows.length} result rows`);
 
-  let debugCount = 0;
   for (const row of rows) {
     const cells = row.querySelectorAll("td");
     if (cells.length < 3) continue;
