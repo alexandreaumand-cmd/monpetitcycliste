@@ -248,7 +248,10 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
   };
 
   const handleRecalculate = async () => {
-    if (!phaseId) return;
+    if (!phaseId) {
+      toast.error("Sélectionne une phase précise (pas « Toutes les phases ») pour lancer le recalcul.");
+      return;
+    }
 
     setIsRecalculating(true);
     try {
@@ -257,6 +260,7 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       if (data?.success) {
         const variation = data.variation >= 0 ? `+${data.variation.toFixed(2)}` : data.variation.toFixed(2);
@@ -299,16 +303,21 @@ export const RiderBonusTab = ({ phaseId, saisonId }: RiderBonusTabProps) => {
             Les anciens bonus sont supprimés et régénérés avec les montants corrects (25% des points).
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <Button
             variant="outline"
             onClick={() => setRecalculateDialogOpen(true)}
-            disabled={isRecalculating}
+            disabled={isRecalculating || !phaseId}
           >
             {isRecalculating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             <RefreshCw className="h-4 w-4 mr-2" />
             Recalculer tous les bonus coureur
           </Button>
+          {!phaseId && (
+            <p className="text-sm text-muted-foreground">
+              Choisis d’abord une phase spécifique pour activer le recalcul.
+            </p>
+          )}
         </CardContent>
       </Card>
 
