@@ -42,38 +42,36 @@ function parsePCSResults(doc: any): { riders: ScrapedRider[]; events: ScrapedEve
     const posText = cells[0]?.textContent?.trim();
     const position = posText && /^\d+$/.test(posText) ? parseInt(posText, 10) : undefined;
 
-    // Skip DNF/DNS rows for live situation
+    // Skip DNF/DNS rows
     if (posText === "DNF" || posText === "DNS" || posText === "OTL") continue;
 
-    // Rider name: td.ridername a with span.uppercase for last name
-    const riderCell = row.querySelector("td.ridername");
-    const riderLink = riderCell?.querySelector("a[href*='/rider/']");
+    // Rider name: find link to /rider/ anywhere in the row
+    const riderLink = row.querySelector("a[href*='/rider/']");
     if (!riderLink) continue;
 
-    const uppercaseSpan = riderLink.querySelector("span.uppercase");
+    // Extract last name from span.uppercase, rest is first name
+    const uppercaseSpan = riderLink.querySelector("span");
     const lastName = uppercaseSpan?.textContent?.trim() || "";
     const fullText = riderLink.textContent?.trim() || "";
-    // Name format: "LastName FirstName" → extract first name after uppercase span
     const firstName = fullText.replace(lastName, "").trim();
-    const name = firstName ? `${firstName} ${lastName}` : lastName;
+    const name = firstName ? `${firstName} ${lastName}` : fullText;
     if (!name) continue;
 
-    // Team: td.cu600 a
-    const teamCell = row.querySelector("td.cu600");
-    const teamLink = teamCell?.querySelector("a");
+    // Team: find link to /team/ anywhere in the row
+    const teamLink = row.querySelector("a[href*='/team/']");
     const team = teamLink?.textContent?.trim() || "";
 
-    // Time/gap: td.time
-    const timeCell = row.querySelector("td.time");
+    // Time/gap: last td or td with time class
+    const lastCell = cells[cells.length - 1];
     let gap = "";
-    if (timeCell) {
-      // Hidden span has the raw seconds value, font has display value
-      const font = timeCell.querySelector("font");
-      const hiddenSpan = timeCell.querySelector("span.hide");
-      gap = font?.textContent?.trim() || hiddenSpan?.textContent?.trim() || "";
-      // Clean up ",," which PCS uses for "same time"
-      if (gap === ",," || gap === ",,") gap = "s.t.";
+    const font = lastCell?.querySelector("font");
+    if (font) {
+      gap = font.textContent?.trim() || "";
+    } else {
+      gap = lastCell?.textContent?.trim() || "";
     }
+    // Clean up ",," which PCS uses for "same time"
+    if (gap === ",," || gap === ",,") gap = "s.t.";
 
     riders.push({ name, team, position, gap });
   }
