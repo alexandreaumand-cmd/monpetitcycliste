@@ -155,8 +155,15 @@ export function MyBidsList({
                     pattern="[0-9]*"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value.replace(/[^0-9]/g, ''))}
-                    onBlur={() => handleSaveEdit(bid)}
+                    onBlur={() => {
+                      // Don't save on blur if Tab triggered handleSaveAndEditNext
+                      if (editingId === bid.bid_id) handleSaveEdit(bid);
+                    }}
                     onKeyDown={(e) => {
+                      if (e.key === "Tab") {
+                        e.preventDefault();
+                        handleSaveAndEditNext(bid);
+                      }
                       if (e.key === "Enter") handleSaveEdit(bid);
                       if (e.key === "Escape") handleCancelEdit();
                     }}
