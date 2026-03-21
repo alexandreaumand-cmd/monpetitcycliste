@@ -1,37 +1,26 @@
 
 
-## Suppression du sélecteur "Phase de départ" — détermination automatique
+## Fix: Contrainte `valid_game_mode` bloque les nouveaux modes
 
-### Logique métier
+### Problème
+La contrainte `valid_game_mode` sur la table `leagues` n'accepte que les anciens modes (`full_season`, `short_gt`, `short_wt`, `short_classics`). Les nouveaux modes `five_phases` et `per_course` n'ont jamais été ajoutés — la migration précédente a oublié de mettre à jour cette contrainte.
 
-La phase de départ ne doit plus être choisie manuellement. Elle sera déterminée automatiquement côté serveur **après la fin des enchères** (quand tous les managers ont leurs effectifs complets). À la création de la ligue, `starting_phase_index` reste `null` et sera calculé plus tard.
+### Correction
 
-### Modifications
+**Migration SQL unique** :
+```sql
+ALTER TABLE public.leagues DROP CONSTRAINT valid_game_mode;
+ALTER TABLE public.leagues ADD CONSTRAINT valid_game_mode 
+  CHECK (game_mode = ANY (ARRAY[
+    'full_season', 'short_gt', 'short_wt', 'short_classics',
+    'five_phases', 'per_course'
+  ]));
+```
 
-**1. Frontend — `LeagueSettingsForm.tsx`**
-- Supprimer le bloc "Phase de départ" (lignes 151-185 : le `Select` des phases et la query `phases-for-league`)
-- Supprimer les props `startingPhaseIndex` et `onStartingPhaseIndexChange`
-- Ajouter un texte informatif sous la variante : "La phase de départ sera déterminée automatiquement à la fin des premières enchères."
+Cela conserve les anciens modes pour la rétrocompatibilité et ajoute les deux nouveaux.
 
-**2. Frontend — `CreateLeagueDialog.tsx`**
-- Supprimer le state `startingPhaseIndex` et son passage en props
-- Ne plus envoyer `startingPhaseIndex` dans le body de l'appel à `leagues-create`
-
-**3. Edge function — `leagues-create/index.ts`**
-- Ne plus lire `startingPhaseIndex` du body
-- Stocker `starting_phase_index = null` à la création
-- La détermination automatique se fera dans un process séparé (fin des enchères)
-
-**4. Traductions**
-- Ajouter clé `settings.startingPhaseAuto` dans `fr/leagues.json` : "La phase de départ sera déterminée automatiquement à la fin des premières enchères."
-- Idem en anglais
-
-### Fichiers impactés
+### Fichier impacté
 | Fichier | Action |
 |---------|--------|
-| `src/components/leagues/LeagueSettingsForm.tsx` | Supprimer sélecteur phase + query phases |
-| `src/components/leagues/CreateLeagueDialog.tsx` | Supprimer state startingPhaseIndex |
-| `supabase/functions/leagues-create/index.ts` | Ne plus lire startingPhaseIndex |
-| `src/i18n/locales/fr/leagues.json` | Nouvelle clé |
-| `src/i18n/locales/en/leagues.json` | Nouvelle clé |
+| Migration SQL | Drop + recreate constraint |
 
