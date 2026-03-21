@@ -231,69 +231,37 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
 
       {/* Right: Race situation panel (desktop only) */}
       {activeCourseId && (
-        <div className="flex flex-col w-full lg:w-[340px] shrink-0 border rounded-xl overflow-hidden bg-background max-h-[400px] lg:max-h-none">
+        {/* Desktop: always visible side panel */}
+        <div className="hidden lg:flex flex-col w-[340px] shrink-0 border rounded-xl overflow-hidden bg-background">
           <div className="px-4 py-3 border-b bg-muted/20">
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-semibold">Situation de course</h3>
             </div>
           </div>
-
           <div className="flex-1 overflow-y-auto p-4">
             {latestSituation ? (
               <div className="space-y-4">
-                {/* Km remaining header */}
                 <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                   <span>🏁 {latestSituation.kmRemaining} km restants</span>
                 </div>
-
-                {/* Group list */}
                 <div className="space-y-4">
                   {latestSituation.groups.map((group: any, gi: number) => (
                     <div key={gi} className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className={cn(
-                          "text-xs font-semibold",
-                          group.isPeloton ? "text-primary" : "text-foreground"
-                        )}>
-                          {group.name}
-                        </span>
+                        <span className={cn("text-xs font-semibold", group.isPeloton ? "text-primary" : "text-foreground")}>{group.name}</span>
                         <div className="flex items-center gap-2">
-                          {group.gap !== "0:00" && (
-                            <span className="text-[11px] text-muted-foreground">
-                              {group.gap.startsWith("+") ? group.gap : `+${group.gap}`}
-                            </span>
-                          )}
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                            <Users className="h-2.5 w-2.5 mr-0.5" />
-                            {group.riderCount}
-                          </Badge>
+                          {group.gap !== "0:00" && <span className="text-[11px] text-muted-foreground">{group.gap.startsWith("+") ? group.gap : `+${group.gap}`}</span>}
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0"><Users className="h-2.5 w-2.5 mr-0.5" />{group.riderCount}</Badge>
                         </div>
                       </div>
-
                       {group.riders?.length > 0 && (
                         <div className="space-y-0.5 pl-2 border-l-2 border-primary/30">
                           {group.riders.map((riderName: string, ri: number) => {
                             const riderId = group.riderIds?.[ri];
-                            const normalizedName = riderName
-                              .normalize("NFD")
-                              .replace(/[\u0300-\u036f]/g, "")
-                              .replace(/\./g, "")
-                              .replace(/\s+/g, " ")
-                              .trim()
-                              .toLowerCase();
-                            const managerName =
-                              (riderId && rosterOwners?.[riderId]) ||
-                              rosterOwners?.[`name:${normalizedName}`];
-
-                            return (
-                              <div key={ri} className="text-xs py-0.5">
-                                <span className="font-medium text-foreground">
-                                  {riderName}
-                                  {managerName ? ` (${managerName})` : ""}
-                                </span>
-                              </div>
-                            );
+                            const normalizedName = riderName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\./g, "").replace(/\s+/g, " ").trim().toLowerCase();
+                            const managerName = (riderId && rosterOwners?.[riderId]) || rosterOwners?.[`name:${normalizedName}`];
+                            return (<div key={ri} className="text-xs py-0.5"><span className="font-medium text-foreground">{riderName}{managerName ? ` (${managerName})` : ""}</span></div>);
                           })}
                         </div>
                       )}
@@ -304,16 +272,55 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <MapPin className="h-8 w-8 mb-2 opacity-20" />
-                <p className="text-xs text-center">
-                  Aucune situation de course disponible
-                </p>
-                <p className="text-[11px] mt-1 text-center opacity-70">
-                  La situation apparaîtra quand l'admin diffusera les données de course
-                </p>
+                <p className="text-xs text-center">Aucune situation de course disponible</p>
+                <p className="text-[11px] mt-1 text-center opacity-70">La situation apparaîtra quand l'admin diffusera les données de course</p>
               </div>
             )}
           </div>
         </div>
+
+        {/* Mobile: collapsible accordion */}
+        <Collapsible className="lg:hidden border rounded-xl overflow-hidden bg-background">
+          <CollapsibleTrigger className="w-full px-4 py-3 flex items-center justify-between bg-muted/20 border-b">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold">Situation de course</h3>
+              {latestSituation && <span className="text-[11px] text-muted-foreground">🏁 {latestSituation.kmRemaining} km</span>}
+            </div>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="p-4 max-h-[50vh] overflow-y-auto">
+              {latestSituation ? (
+                <div className="space-y-3">
+                  {latestSituation.groups.map((group: any, gi: number) => (
+                    <div key={gi} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className={cn("text-xs font-semibold", group.isPeloton ? "text-primary" : "text-foreground")}>{group.name}</span>
+                        <div className="flex items-center gap-2">
+                          {group.gap !== "0:00" && <span className="text-[11px] text-muted-foreground">{group.gap.startsWith("+") ? group.gap : `+${group.gap}`}</span>}
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0"><Users className="h-2.5 w-2.5 mr-0.5" />{group.riderCount}</Badge>
+                        </div>
+                      </div>
+                      {group.riders?.length > 0 && (
+                        <div className="space-y-0.5 pl-2 border-l-2 border-primary/30">
+                          {group.riders.map((riderName: string, ri: number) => {
+                            const riderId = group.riderIds?.[ri];
+                            const normalizedName = riderName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\./g, "").replace(/\s+/g, " ").trim().toLowerCase();
+                            const managerName = (riderId && rosterOwners?.[riderId]) || rosterOwners?.[`name:${normalizedName}`];
+                            return (<div key={ri} className="text-xs py-0.5"><span className="font-medium text-foreground">{riderName}{managerName ? ` (${managerName})` : ""}</span></div>);
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-center text-muted-foreground py-4">Aucune situation de course disponible</p>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </div>
   );
