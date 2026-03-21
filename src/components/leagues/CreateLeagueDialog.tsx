@@ -123,7 +123,6 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
           // Five phases specific
           ...(selectedMode === 'five_phases' && {
             variant,
-            startingPhaseIndex,
           }),
           // Per course specific
           ...(selectedMode === 'per_course' && {
