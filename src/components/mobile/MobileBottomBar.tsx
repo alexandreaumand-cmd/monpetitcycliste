@@ -59,7 +59,7 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
               onMouseEnter={() => prefetchPageData(route.path)}
               onClick={() => navigate(buildNavUrl(route.path))}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl touch-target transition-all",
+                "flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl touch-target transition-all",
                 "active:scale-95",
                 active
                   ? "bg-primary text-primary-foreground shadow-lg shadow-bordure-gold/40"
