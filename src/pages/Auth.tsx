@@ -305,7 +305,48 @@ const Auth = () => {
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {loading ? t('buttons.loggingIn') : t('buttons.login')}
                 </Button>
+                <button
+                  type="button"
+                  className="w-full text-sm text-muted-foreground hover:text-primary transition-colors"
+                  onClick={() => setShowForgotPassword(true)}
+                >
+                  {t('buttons.forgotPassword')}
+                </button>
               </form>
+
+              {showForgotPassword && (
+                <div className="mt-4 p-4 border rounded-md space-y-3">
+                  <p className="text-sm text-muted-foreground">{t('resetPassword.title')}</p>
+                  <Input
+                    type="email"
+                    placeholder={t('placeholders.email')}
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                  />
+                  <Button
+                    className="w-full"
+                    disabled={loading || !resetEmail}
+                    onClick={async () => {
+                      setLoading(true);
+                      try {
+                        const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+                          redirectTo: `${window.location.origin}/reset-password`,
+                        });
+                        if (error) throw error;
+                        toast({ title: t('messages.resetEmailSent') });
+                        setShowForgotPassword(false);
+                      } catch (error: any) {
+                        toast({ title: t('errors.generic'), description: error.message, variant: "destructive" });
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                  >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {t('resetPassword.confirm')}
+                  </Button>
+                </div>
+              )}
             </TabsContent>
             
             <TabsContent value="signup">
