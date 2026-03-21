@@ -25,11 +25,15 @@ export function QuickActions() {
               {t('quickActions.createLeague')}
             </Button>
             <Button onClick={() => setJoinDialogOpen(true)} variant="outline" className="gap-2">
-              <Users className="h-4 w-4" />
+              <Globe className="h-4 w-4" />
               {t('quickActions.join')}
             </Button>
           </div>
         </div>
+        <p className="text-xs text-muted-foreground text-center mt-3 font-inter">
+          <Globe className="h-3 w-3 inline mr-1" />
+          {t('quickActions.joinHint')}
+        </p>
       </Card>
 
       <CreateLeagueDialog
