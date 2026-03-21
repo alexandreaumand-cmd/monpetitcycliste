@@ -43,7 +43,8 @@
     "logout": "Logout",
     "login": "Login",
     "signup": "Sign up",
-    "arena": "Arena"
+    "arena": "Arena",
+    "live": "Live"
   },
   "auth": {
     "email": "Email",

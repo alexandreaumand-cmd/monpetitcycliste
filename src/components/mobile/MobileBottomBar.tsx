@@ -2,7 +2,7 @@ import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { Users, BarChart3, ListChecks, Medal, Swords } from "lucide-react";
+import { Users, BarChart3, ListChecks, Medal, Swords, Radio } from "lucide-react";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 
 interface MobileBottomBarProps {
@@ -34,6 +34,7 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
     { label: t('navigation.teams'), path: "/dashboard/mon-equipe", icon: Users },
     { label: t('navigation.startlist'), path: "/dashboard/startlist", icon: ListChecks },
     { label: t('navigation.results'), path: "/dashboard/resultats", icon: Medal },
+    { label: t('navigation.live'), path: "/dashboard/live", icon: Radio },
     { label: t('navigation.arena'), path: "/dashboard/arene", icon: Swords },
   ];
 
@@ -46,7 +47,7 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
       role="navigation"
       aria-label={t('navigation.dashboard')}
     >
-      <div className="flex items-center justify-around px-2 py-3">
+      <div className="flex items-center justify-around px-1 py-3">
         {mainRoutes.map((route) => {
           const Icon = route.icon;
           const active = isActive(route.path);
@@ -58,7 +59,7 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
               onMouseEnter={() => prefetchPageData(route.path)}
               onClick={() => navigate(buildNavUrl(route.path))}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl touch-target transition-all",
+                "flex flex-col items-center justify-center gap-1 px-2 py-2 rounded-xl touch-target transition-all",
                 "active:scale-95",
                 active
                   ? "bg-primary text-primary-foreground shadow-lg shadow-bordure-gold/40"

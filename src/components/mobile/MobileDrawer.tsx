@@ -19,6 +19,7 @@ import {
   LogOut,
   User,
   Swords,
+  Radio,
 } from "lucide-react";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useSeasonContext } from "@/contexts/SeasonContext";
@@ -74,6 +75,7 @@ export const MobileDrawer = ({
     {
       title: "Social",
       items: [
+        { label: "Live", path: "/dashboard/live", icon: Radio },
         { label: "Arène", path: "/dashboard/arene", icon: Swords },
       ],
     },

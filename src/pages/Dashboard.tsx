@@ -28,6 +28,7 @@ import { LeagueDetailPage } from "./admin/LeagueDetailPage";
 import { SuperAdminPage } from "./SuperAdminPage";
 import { SuperAdminGuard } from "@/components/guards/SuperAdminGuard";
 import ArenaPage from "./ArenaPage";
+import LivePage from "./LivePage";
 import TeamStartlistMovements from "./TeamStartlistMovements";
 
 const Dashboard = () => {
@@ -121,6 +122,7 @@ const Dashboard = () => {
             <Route path="statistiques" element={<Statistics />} />
             <Route path="startlist" element={<Startlist />} />
             <Route path="arene" element={<ArenaPage />} />
+            <Route path="live" element={<LivePage />} />
             <Route path="compte" element={<AccountPage />} />
             <Route path="leagues/:id/admin" element={<LeagueDetailPage />} />
             {isSuperAdmin && (
@@ -178,6 +180,7 @@ const Dashboard = () => {
               <Route path="statistiques" element={<Statistics />} />
             <Route path="startlist" element={<Startlist />} />
             <Route path="arene" element={<ArenaPage />} />
+            <Route path="live" element={<LivePage />} />
             <Route path="compte" element={<AccountPage />} />
             <Route path="leagues/:id/admin" element={<LeagueDetailPage />} />
             {isSuperAdmin && (
