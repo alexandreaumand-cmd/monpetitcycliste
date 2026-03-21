@@ -79,7 +79,16 @@
     "title": "Choisissez votre mode de jeu",
     "players": "joueurs",
     "budget": "Budget",
-    "maxRiders": "Max"
+    "maxRiders": "Max",
+    "five_phases": {
+      "name": "Mode 5 Phases",
+      "description": "Saison complète ou World Tour, avec enchères par phase. Budget 2200, effectif 30 coureurs."
+    },
+    "perCourse": {
+      "name": "Mode À la course",
+      "description": "Choisissez vos courses. Budget et effectif calculés automatiquement selon votre sélection.",
+      "budgetAuto": "Budget auto selon courses"
+    }
   },
   "invite": {
     "title": "Invitation à rejoindre",
