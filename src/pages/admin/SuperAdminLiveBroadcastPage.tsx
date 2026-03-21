@@ -292,6 +292,7 @@ export const SuperAdminLiveBroadcastPage = () => {
       toast.error(err.message || "Erreur lors de l'import");
     } finally {
       setIsScraping(false);
+      setLastAutoScrapeAt(new Date());
     }
   };
 
