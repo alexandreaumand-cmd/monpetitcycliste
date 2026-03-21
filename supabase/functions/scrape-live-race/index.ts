@@ -176,21 +176,33 @@ function parseLEquipeLive(doc: any, html: string): {
   console.log(`[L'Équipe] Situation zone length: ${situationZone.length}, starts at ${kmhIdx}, events at ${firstEventIdx}`);
 
   if (situationZone) {
-    // Match group headers: "Groupe de tête", "Peloton |+02'41''"
-    const groupHeaderPattern = /(Groupe\s+de\s+t[êe]te|Peloton)\s*(?:\|?\s*\+?\s*([\d]+['′'']\s*[\d]+['′''"″]*)?)?/gi;
+    // Match group headers: "Groupe de tête", "Peloton" followed by optional gap in various formats
+    // Gaps can be: +02'41'', à 2'41, |+2:41, +2min41s, etc.
+    const groupHeaderPattern = /(Groupe\s+de\s+t[êe]te|Peloton)\s*(?:[|·\s]*(?:[àa]\s*)?(?:\+?\s*)(\d{1,3})\s*[':′''min]\s*(\d{1,2})\s*[":″''s]?\s*[":″''s]?)?/gi;
     const groupHeaders: { name: string; gap: string; index: number }[] = [];
     let gMatch;
     while ((gMatch = groupHeaderPattern.exec(situationZone)) !== null) {
-      const rawGap = gMatch[2] || "";
       let gap = "0:00";
-      if (rawGap) {
-        const gapNums = rawGap.match(/(\d+)/g);
-        if (gapNums && gapNums.length >= 2) {
-          gap = `+${parseInt(gapNums[0])}:${gapNums[1].padStart(2, '0')}`;
-        }
+      if (gMatch[2] && gMatch[3]) {
+        gap = `+${parseInt(gMatch[2])}:${gMatch[3].padStart(2, '0')}`;
       }
       groupHeaders.push({ name: gMatch[1], gap, index: gMatch.index });
     }
+
+    // Also try a second pass: look for gap patterns near group names if not captured
+    // e.g. "Peloton à 2'41''" or "Peloton+02'41"
+    if (groupHeaders.length > 0 && groupHeaders.every(h => h.gap === "0:00")) {
+      // Try broader gap search near each header
+      for (const header of groupHeaders) {
+        const afterHeader = situationZone.substring(header.index, Math.min(header.index + 200, situationZone.length));
+        const broadGap = afterHeader.match(/[+àa]\s*(\d{1,3})\s*['′''min:]\s*(\d{1,2})\s*['″''s":]*(?:\s*['″''s":])*/);
+        if (broadGap) {
+          header.gap = `+${parseInt(broadGap[1])}:${broadGap[2].padStart(2, '0')}`;
+        }
+      }
+    }
+
+    console.log(`[L'Équipe] Situation zone preview: ${situationZone.substring(0, 500)}`);
 
     // Deduplicate (L'Équipe shows expanded + collapsed)
     const seenGroups = new Set<string>();
