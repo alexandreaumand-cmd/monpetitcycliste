@@ -122,60 +122,105 @@ function parseFirstCyclingResults(doc: any): { riders: ScrapedRider[]; events: S
 // L'ÉQUIPE PARSER — parses lequipe.fr live text pages
 // ============================================================
 
-function parseLEquipeLive(doc: any, html: string): { riders: ScrapedRider[]; events: ScrapedEvent[] } {
+function parseLEquipeLive(doc: any, html: string): {
+  riders: ScrapedRider[];
+  events: ScrapedEvent[];
+  situation: { groups: { name: string; gap: string; riders: string[]; riderCount: number; isPeloton: boolean }[]; kmRemaining: number; kmCovered: number; totalKm: number; speed: string };
+} {
   const events: ScrapedEvent[] = [];
   const riders: ScrapedRider[] = [];
 
-  // Parse timeline events from the live text
-  // L'Équipe uses <div> blocks with time info, km, and content
-  // We'll parse from the raw HTML using regex patterns since the DOM structure 
-  // may vary, but the text patterns are consistent
+  const textContent = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
-  // Extract race situation (groups) from the track section
-  // Look for group labels like "Groupe de tête" and "Peloton |+XX'XX''"
-  const groupRegex = /(Groupe de tête|Peloton|Groupe \d+)\s*(?:\|?\s*\+?([\d''"]+))?/g;
-  let groupMatch;
-  const groups: { name: string; gap: string; riderNames: string[] }[] = [];
-  
-  while ((groupMatch = groupRegex.exec(html)) !== null) {
-    const groupName = groupMatch[1];
-    const gap = groupMatch[2] || "0:00";
-    // We'll fill rider names from the surrounding context
-    groups.push({ name: groupName, gap, riderNames: [] });
+  // ── Extract km and speed ──
+  let kmCovered = 0, totalKm = 0, kmRemaining = 0, speed = "";
+
+  const kmMatch = textContent.match(/(\d+)\s*\/\s*(\d+)\s*km/);
+  if (kmMatch) {
+    kmCovered = parseInt(kmMatch[1], 10);
+    totalKm = parseInt(kmMatch[2], 10);
+    kmRemaining = totalKm - kmCovered;
   }
 
-  // Extract rider names from links to CyclismeFicheCoureur pages
-  const riderLinkRegex = /CyclismeFicheCoureur\d+\.html[^>]*>(?:[^<]*<[^>]*>)*\s*([A-ZÀ-Ü][a-zà-ü.'-]+(?:\s+[A-ZÀ-Ü]\.)?(?:\s+[A-ZÀ-Ü][a-zà-ü.'-]+)*)\s*(?:\\n|\s)*\s*([^<]*?)\s*(?:\\n|\s)*(?:<|$)/gi;
+  const speedMatch = textContent.match(/([\d.]+)\s*km\/h/);
+  if (speedMatch) speed = speedMatch[1] + " km/h";
 
-  // Better approach: parse all timeline entries using the text content
-  // L'Équipe live events have pattern: "il y a Xmin, XXX km, [icon], title, text"
+  // ── Extract race situation (groups + riders) ──
+  // The situation section contains groups like "Groupe de tête" followed by riders,
+  // then "Peloton | +02'41"" etc.
+  // We parse the HTML to find the structured group/rider data
+
+  const situationGroups: { name: string; gap: string; riders: string[]; riderCount: number; isPeloton: boolean }[] = [];
+
+  // Strategy: find all group headers and their riders from the text
+  // Pattern: group name possibly followed by gap, then list of rider names with teams
   
-  // Use regex on full HTML to find live comment blocks
-  // Each block typically contains: time ago, km marker, event text
-  const liveBlockRegex = /il y a (\d+)min[\s\S]*?(\d+)\s*km[\s\S]*?<\/[^>]+>\s*([\s\S]*?)(?=il y a \d+min|$)/gi;
-  
-  // Simpler approach: parse from text content
-  const textContent = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-  
-  // Pattern: "il y a Xmin, Y km" followed by event text
+  // First, try to find the situation section in HTML - look for patterns like rider lists with flags
+  // L'Équipe format: "Groupe de tête" then riders like "D. Lozano (Novo Nordisk)"
+  // Then "Peloton | +02'41""
+
+  // Build a cleaned text focusing on the situation area
+  // Look for the pattern between km info and the end of groups
+  const situationText = textContent;
+
+  // Find all group markers: "Groupe de tête", "Groupe X", "Peloton"
+  // Each group may have a gap like "+02'41""
+  const groupHeaderPattern = /(Groupe de t[êe]te|Groupe\s+\w+|Peloton)\s*(?:\|?\s*\+?\s*([\d]+[''′][\d]+[""″]?))?/gi;
+  const groupHeaders: { name: string; gap: string; index: number }[] = [];
+  let gMatch;
+  while ((gMatch = groupHeaderPattern.exec(situationText)) !== null) {
+    groupHeaders.push({
+      name: gMatch[1],
+      gap: gMatch[2] ? `+${gMatch[2]}` : "0:00",
+      index: gMatch.index,
+    });
+  }
+
+  // For each group, extract riders between this header and the next
+  for (let i = 0; i < groupHeaders.length; i++) {
+    const start = groupHeaders[i].index;
+    const end = i + 1 < groupHeaders.length ? groupHeaders[i + 1].index : start + 2000;
+    const section = situationText.substring(start, end);
+
+    // Extract rider names: pattern like "X. LastName (Team)" or "X. First LastName (Team)"
+    const riderPattern = /([A-ZÀ-Ü]\.?\s+[A-Za-zÀ-ü\-']+(?:\s+[A-Za-zÀ-ü\-']+)?)\s*\(([^)]+)\)/g;
+    const groupRiders: string[] = [];
+    let rMatch;
+    while ((rMatch = riderPattern.exec(section)) !== null) {
+      const riderName = rMatch[1].trim();
+      const team = rMatch[2].trim();
+      // Skip false positives (very short names or group-header-like text)
+      if (riderName.length > 3) {
+        groupRiders.push(riderName);
+        riders.push({ name: riderName, team, position: undefined, gap: groupHeaders[i].gap });
+      }
+    }
+
+    const isPeloton = groupHeaders[i].name.toLowerCase().includes("peloton");
+    situationGroups.push({
+      name: groupHeaders[i].name,
+      gap: groupHeaders[i].gap,
+      riders: groupRiders,
+      riderCount: groupRiders.length,
+      isPeloton,
+    });
+  }
+
+  // ── Extract timeline events ──
   const eventPattern = /il y a (\d+)\s*min\s*,?\s*(\d+)\s*km\s+(.*?)(?=il y a \d+\s*min|L'ÉQUIPE|publicité|$)/gi;
   let eventMatch;
-  
+
   while ((eventMatch = eventPattern.exec(textContent)) !== null) {
     const minutesAgo = parseInt(eventMatch[1], 10);
     const km = parseInt(eventMatch[2], 10);
     let text = eventMatch[3].trim();
-    
-    // Clean up the text - take first meaningful sentence/paragraph
-    // Remove article promos, image refs, etc.
+
     text = text.replace(/\s*lire l'article.*$/i, '').trim();
     text = text.replace(/\s*photo de .*$/i, '').trim();
-    
-    // Limit text length
+
     if (text.length > 500) text = text.substring(0, 500) + "...";
     if (!text || text.length < 10) continue;
 
-    // Detect event type from keywords
     let type = "info";
     const textLower = text.toLowerCase();
     if (textLower.includes("chute") || textLower.includes("tombé")) type = "crash";
@@ -185,7 +230,6 @@ function parseLEquipeLive(doc: any, html: string): { riders: ScrapedRider[]; eve
     else if (textLower.includes("lâché") || textLower.includes("distancé")) type = "dropped";
     else if (textLower.includes("abandon")) type = "abandon";
 
-    // Extract rider names mentioned
     const riderNames: string[] = [];
     const namePattern = /([A-ZÀ-Ü][a-zà-ü'-]+(?:\s+[A-ZÀ-Ü][a-zà-ü'-]+)*)\s+\(([^)]+)\)/g;
     let nameMatch;
@@ -197,37 +241,15 @@ function parseLEquipeLive(doc: any, html: string): { riders: ScrapedRider[]; eve
     now.setMinutes(now.getMinutes() - minutesAgo);
     const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-    events.push({
-      time: timeStr,
-      type,
-      text: text.substring(0, 300),
-      riders: riderNames,
-    });
+    events.push({ time: timeStr, type, text: text.substring(0, 300), riders: riderNames });
   }
 
-  // Extract km remaining from "XXX / YYY km" pattern
-  const kmPattern = /(\d+)\s*\/\s*(\d+)\s*km/;
-  const kmMatch = kmPattern.exec(textContent);
-  let kmRemaining = 0;
-  if (kmMatch) {
-    const covered = parseInt(kmMatch[1], 10);
-    const total = parseInt(kmMatch[2], 10);
-    kmRemaining = total - covered;
-  }
-
-  // Extract riders from the situation (group sections in the HTML)
-  // Look for rider names in the track/situation section
-  const situationRiderRegex = /CyclismeFicheCoureur\d+\.html[^>]*>[^<]*?([A-ZÀ-Ü]\.\s+[A-Za-zÀ-ü'-]+(?:\s+[A-Za-zÀ-ü'-]+)*)/g;
-  let srMatch;
-  while ((srMatch = situationRiderRegex.exec(html)) !== null) {
-    const name = srMatch[1].trim();
-    if (name && name.length > 2) {
-      riders.push({ name, team: "", position: undefined, gap: "" });
-    }
-  }
-
-  console.log(`[L'Équipe] Parsed ${events.length} events, ${riders.length} riders from situation`);
-  return { riders, events };
+  console.log(`[L'Équipe] Parsed ${events.length} events, ${riders.length} riders, ${situationGroups.length} groups, km: ${kmCovered}/${totalKm}, speed: ${speed}`);
+  return {
+    riders,
+    events,
+    situation: { groups: situationGroups, kmRemaining, kmCovered, totalKm, speed },
+  };
 }
 
 // ============================================================
