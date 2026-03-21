@@ -132,35 +132,9 @@ export function LeagueSettingsForm({
             </RadioGroup>
           </div>
 
-          {phases.length > 0 && (
-            <div className="space-y-2">
-              <Label>{t('settings.startingPhase', 'Phase de départ')}</Label>
-              <Select
-                value={startingPhaseIndex.toString()}
-                onValueChange={(v) => onStartingPhaseIndexChange?.(parseInt(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {phases.map((phase) => {
-                    const isPast = phase.statut === 'completed';
-                    return (
-                      <SelectItem
-                        key={phase.id}
-                        value={phase.index_dans_saison.toString()}
-                        disabled={isPast}
-                      >
-                        Phase {phase.index_dans_saison}
-                        {isPast && ` (${t('settings.phasePast', 'terminée')})`}
-                        {phase.statut === 'active' && ` (${t('settings.phaseActive', 'en cours')})`}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <p className="text-sm text-muted-foreground italic">
+            {t('settings.startingPhaseAuto')}
+          </p>
 
           <div className="flex gap-2">
             <Badge variant="secondary">{t('settings.budget')}: {settings.budget}</Badge>

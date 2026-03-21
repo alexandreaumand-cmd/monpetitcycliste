@@ -93,12 +93,11 @@ Deno.serve(async (req) => {
       gtOnly = false;
       leagueStartingPhaseIndex = null;
 
-      // Get phases from starting index
+      // Get all phases (starting phase determined after auctions)
       const { data: phases } = await supabase
         .from('phases')
         .select('id, index_dans_saison')
         .eq('saison_id', season.id)
-        .gte('index_dans_saison', leagueStartingPhaseIndex)
         .order('index_dans_saison');
 
       if (!phases?.length) {

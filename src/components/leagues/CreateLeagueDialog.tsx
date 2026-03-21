@@ -193,8 +193,6 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
               seasons={seasons}
               variant={variant}
               onVariantChange={setVariant}
-              startingPhaseIndex={startingPhaseIndex}
-              onStartingPhaseIndexChange={setStartingPhaseIndex}
               selectedCourseIds={selectedCourseIds}
               onSelectedCourseIdsChange={setSelectedCourseIds}
             />
