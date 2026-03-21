@@ -21,6 +21,8 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [nom, setNom] = useState("");
   const [sponsor, setSponsor] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
   
   const searchParams = new URLSearchParams(window.location.search);
   const nextUrl = searchParams.get('next') || '/dashboard/home';
