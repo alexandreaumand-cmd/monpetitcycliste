@@ -70,7 +70,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
       setLeagueId(leagueId);
       
       // Redirect to auctions page
-      navigate(`/dashboard/encheres?leagueId=${leagueId}`);
+      navigate(`/dashboard/home?leagueId=${leagueId}`);
       
       // Close dialog
       onOpenChange(false);
@@ -106,7 +106,7 @@ export function JoinLeagueDialog({ open, onOpenChange }: JoinLeagueDialogProps) 
       setLeagueId(data.league_id);
       
       // Redirect to auctions page
-      navigate(`/dashboard/encheres?leagueId=${data.league_id}`);
+      navigate(`/dashboard/home?leagueId=${data.league_id}`);
       
       // Reset form and close dialog
       setInviteCode('');
