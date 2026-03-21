@@ -145,6 +145,7 @@ export const SuperAdminPageDesktop = ({ manager, onSignOut }: SuperAdminPageDesk
               <Route path="leagues" element={<SuperAdminLeaguesPage />} />
               <Route path="leagues/:id" element={<LeagueDetailPage />} />
               <Route path="users" element={<UsersManagementPage />} />
+              <Route path="phase-schedule" element={<PhaseAuctionSchedule />} />
               <Route path="arena" element={<PronosticDeadlinesManager />} />
               <Route path="live-broadcast" element={<SuperAdminLiveBroadcastPage />} />
               <Route path="data" element={<DataManagementTabs />} />
