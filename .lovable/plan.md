@@ -1,21 +1,18 @@
 
 
-## Coller la barre de recherche au header (Résultats mobile)
+## Supprimer le composant AdminMaintenance
 
-### Problème
+Le composant `AdminMaintenance` lance automatiquement une tâche de maintenance (correction des points Porteur + recalcul) toutes les 24h quand un super-admin visite la page Résultats. Il provoque des flashs "Maintenance en cours" et des rechargements de page intempestifs.
 
-Sur la page Résultats mobile, la barre de recherche `sticky top-14` ne colle pas directement sous le header. Un espace de fond crème est visible entre les deux.
+La page d'administration dédiée (`MaintenanceStatus`) permet déjà de lancer manuellement cette maintenance quand nécessaire.
 
-### Cause probable
+### Modifications
 
-Le composant `AdminMaintenance` est rendu avant la barre de recherche dans le flux. Même s'il retourne `null` pour les non-admins, la structure flex peut créer un décalage. De plus, le `py-2` sur le conteneur de recherche ajoute du padding superflu en haut.
+1. **Supprimer le fichier** `src/components/admin/AdminMaintenance.tsx`
 
-### Solution
+2. **`src/pages/ResultsPage.mobile.tsx`** — Retirer l'import et l'utilisation de `<AdminMaintenance />`
 
-1. **Déplacer `AdminMaintenance`** après la barre de recherche sticky (ou à l'intérieur de la zone scrollable)
-2. **Réduire le padding** du conteneur de recherche : remplacer `py-2` par `py-2 pt-0` ou `pb-2` pour que la barre soit collée au bord supérieur
+3. **`src/pages/ResultsPage.desktop.tsx`** — Retirer l'import et l'utilisation de `<AdminMaintenance />`
 
-### Fichier impacté
-
-- `src/pages/ResultsPage.mobile.tsx` — Réorganiser l'ordre des éléments et ajuster le padding
+Aucun autre fichier n'utilise ce composant. La maintenance reste accessible manuellement via la page admin (`MaintenanceStatus`).
 
