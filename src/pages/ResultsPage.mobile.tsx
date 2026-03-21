@@ -164,18 +164,18 @@ export const ResultsPageMobile = () => {
     setDrawerOpen(true);
   };
   return <div className="flex flex-col h-full">
-      {/* Admin Maintenance Component */}
-      <AdminMaintenance />
-      
       {/* Header */}
       <div className="sticky top-14 z-10 bg-background border-b">
-        <div className="px-4 py-2">
+        <div className="px-4 pb-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder={t('search.placeholder')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 h-9" />
           </div>
         </div>
       </div>
+
+      {/* Admin Maintenance Component */}
+      <AdminMaintenance />
 
       {/* Liste des courses */}
       <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-3">
