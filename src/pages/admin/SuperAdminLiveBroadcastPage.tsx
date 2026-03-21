@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, MessageCircle, Radio, Plus, Archive, Send } from "lucide-react";
+import { Loader2, MessageCircle, Radio, Plus, Archive, Send, Link2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -24,6 +25,7 @@ import { useCurrentManagerId, useStartlistRiders } from "@/hooks/useArenaPronost
 import { MessageInput } from "@/components/arena/MessageInput";
 import { RaceSituationEditor, type RaceSituation } from "@/components/arena/RaceSituationEditor";
 import { RaceSituationDisplay } from "@/components/arena/RaceSituationDisplay";
+import { RaceTimeline, type TimelineEvent } from "@/components/arena/RaceTimeline";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -33,6 +35,12 @@ export const SuperAdminLiveBroadcastPage = () => {
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [selectedNewCourseId, setSelectedNewCourseId] = useState("");
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
+  const [scrapeUrl, setScrapeUrl] = useState("");
+  const [isScraping, setIsScraping] = useState(false);
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
+  const [importedSituation, setImportedSituation] = useState<RaceSituation | null>(null);
+  const [matchedRiders, setMatchedRiders] = useState<Record<string, { manager_name: string; rider_nom: string }>>({});
+  const [scrapeStats, setScrapeStats] = useState<{ total: number; matched: number; unmatched: string[] } | null>(null);
 
   const { data: managerId } = useCurrentManagerId();
   const { data: liveCourses, isLoading: liveCoursesLoading } = useLiveCourses();
@@ -41,18 +49,24 @@ export const SuperAdminLiveBroadcastPage = () => {
   const broadcastMessage = useBroadcastLiveMessage();
   const { data: startlistRiders = [] } = useStartlistRiders(activeCourseId);
 
-  // Selected course info
   const selectedCourse = liveCourses?.find((lc) => lc.course_id === activeCourseId);
   const isMultiStage = selectedCourse?.courses?.type_course === "stage_race" ||
     (selectedCourse?.courses?.date_debut && selectedCourse?.courses?.date_fin &&
      selectedCourse.courses.date_debut !== selectedCourse.courses.date_fin);
 
-  // Reset etape when course changes
   useEffect(() => {
     setSelectedEtape(isMultiStage ? 1 : null);
   }, [activeCourseId, isMultiStage]);
 
-  // Upcoming courses for the "add" selector
+  // Build roster owners map from matched riders
+  const rosterOwners = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const [id, info] of Object.entries(matchedRiders)) {
+      if (info.manager_name) map[id] = info.manager_name;
+    }
+    return map;
+  }, [matchedRiders]);
+
   const { data: upcomingCourses } = useQuery({
     queryKey: ["admin-upcoming-courses-live"],
     queryFn: async () => {
@@ -68,7 +82,6 @@ export const SuperAdminLiveBroadcastPage = () => {
     },
   });
 
-  // Broadcast history: fetch messages from any one league for the active course
   const { data: broadcastHistory = [], isLoading: historyLoading } = useQuery({
     queryKey: ["admin-broadcast-history", activeCourseId],
     queryFn: async () => {
@@ -81,7 +94,6 @@ export const SuperAdminLiveBroadcastPage = () => {
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
-      // Deduplicate by source_message_id or content+time (take unique messages)
       const seen = new Set<string>();
       return (data || []).filter((m) => {
         const key = `${m.content}|${m.created_at}`;
@@ -136,6 +148,44 @@ export const SuperAdminLiveBroadcastPage = () => {
     [managerId, activeCourseId, broadcastMessage, selectedEtape]
   );
 
+  const handleScrape = async () => {
+    if (!scrapeUrl || !activeCourseId) return;
+    setIsScraping(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("scrape-live-race", {
+        body: { url: scrapeUrl, course_id: activeCourseId },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      // Set timeline events
+      setTimelineEvents(data.timeline || []);
+
+      // Set imported situation
+      if (data.situation?.groups?.length > 0) {
+        setImportedSituation(data.situation);
+      }
+
+      // Set matched riders
+      setMatchedRiders(data.matched_riders || {});
+
+      // Stats
+      setScrapeStats({
+        total: data.total_scraped || 0,
+        matched: data.total_matched || 0,
+        unmatched: data.unmatched_names || [],
+      });
+
+      toast.success(`Import: ${data.total_matched}/${data.total_scraped} coureurs matchés`);
+    } catch (err: any) {
+      console.error("Scrape error:", err);
+      toast.error(err.message || "Erreur lors de l'import");
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
   const availableCourses = upcomingCourses?.filter(
     (c) => !liveCourses?.some((lc) => lc.course_id === c.id)
   );
@@ -162,7 +212,6 @@ export const SuperAdminLiveBroadcastPage = () => {
           <CardTitle className="text-base">Courses en direct</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Current live courses */}
           {liveCoursesLoading ? (
             <div className="flex items-center gap-2 py-2">
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -209,7 +258,7 @@ export const SuperAdminLiveBroadcastPage = () => {
                     className="text-xs gap-1.5"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm(`Archiver "${lc.courses?.nom || lc.course_id}" ? Elle ne sera plus visible dans l'arène.`)) {
+                      if (confirm(`Archiver "${lc.courses?.nom || lc.course_id}" ?`)) {
                         handleDeactivate(lc.course_id);
                       }
                     }}
@@ -227,7 +276,6 @@ export const SuperAdminLiveBroadcastPage = () => {
             </p>
           )}
 
-          {/* Add new course */}
           <div className="flex gap-2">
             <Select value={selectedNewCourseId} onValueChange={setSelectedNewCourseId}>
               <SelectTrigger className="flex-1">
@@ -256,134 +304,199 @@ export const SuperAdminLiveBroadcastPage = () => {
         </CardContent>
       </Card>
 
-      {/* Section 2: Stage selector + Broadcast composer */}
+      {/* Active course content: 2-column layout */}
       {activeCourseId && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <CardTitle className="text-base">Composer un message</CardTitle>
-              {isMultiStage && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Étape</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={21}
-                    value={selectedEtape ?? 1}
-                    onChange={(e) => setSelectedEtape(parseInt(e.target.value) || 1)}
-                    className="w-16 h-8 rounded-md border border-input bg-background px-2 text-sm text-center"
-                  />
+        <>
+          {/* URL Import bar */}
+          <Card>
+            <CardContent className="pt-4 pb-3">
+              <div className="flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Input
+                  value={scrapeUrl}
+                  onChange={(e) => setScrapeUrl(e.target.value)}
+                  placeholder="URL FirstCycling ou PCS (ex: firstcycling.com/race.php?r=13&y=2025&e=01)"
+                  className="h-8 text-sm flex-1"
+                  onKeyDown={(e) => e.key === "Enter" && handleScrape()}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleScrape}
+                  disabled={isScraping || !scrapeUrl}
+                  className="h-8 gap-1.5 shrink-0"
+                >
+                  {isScraping ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  )}
+                  Importer
+                </Button>
+              </div>
+              {scrapeStats && (
+                <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                  <span>{scrapeStats.matched}/{scrapeStats.total} coureurs matchés</span>
+                  {scrapeStats.unmatched.length > 0 && (
+                    <span className="text-destructive">
+                      Non matchés : {scrapeStats.unmatched.slice(0, 3).join(", ")}
+                      {scrapeStats.unmatched.length > 3 && ` +${scrapeStats.unmatched.length - 3}`}
+                    </span>
+                  )}
                 </div>
               )}
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 border border-primary/20">
-                <Radio className="h-3 w-3 text-primary animate-pulse" />
-                <span className="text-[11px] font-medium text-primary">
-                  Broadcast global
-                </span>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="border rounded-lg overflow-hidden">
-              <MessageInput
-                onSend={handleSend}
-                managers={[]}
-                riders={startlistRiders}
-                disabled={broadcastMessage.isPending}
-                readOnly={false}
-              />
-            </div>
-            {startlistRiders.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-2">
-                💡 Tapez <code className="bg-muted px-1 rounded">#</code> pour mentionner un coureur de la startlist
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
 
-      {/* Section 3: Race Situation */}
-      {activeCourseId && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Situation de course</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RaceSituationEditor
-              onBroadcast={(situation: RaceSituation) => {
-                // Build rider_mentions from all groups for dynamic resolution
-                const riderMentions: { rider_nom: string; coureur_id: string }[] = [];
-                for (const g of situation.groups) {
-                  g.riders.forEach((name, ri) => {
-                    const id = g.riderIds?.[ri];
-                    if (id) riderMentions.push({ rider_nom: name, coureur_id: id });
-                  });
-                }
-                const content = `🏁 Situation à ${situation.kmRemaining} km de l'arrivée`;
-                handleSend(content, { race_situation: situation, rider_mentions: riderMentions });
-              }}
-              disabled={broadcastMessage.isPending || !managerId}
-              startlistRiders={startlistRiders}
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Section 4: Broadcast history */}
-      {activeCourseId && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">
-              Historique des messages
-              {isMultiStage && selectedEtape && (
-                <span className="text-sm font-normal text-muted-foreground ml-2">
-                  — Étape {selectedEtape}
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {historyLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : filteredHistory.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Aucun message diffusé pour cette course</p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {filteredHistory.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border"
-                  >
-                    <Radio className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm whitespace-pre-wrap break-words">
-                        {msg.content}
-                      </p>
-                      {(msg.metadata as any)?.race_situation && (
-                        <div className="mt-2">
-                          <RaceSituationDisplay
-                            groups={(msg.metadata as any).race_situation.groups}
-                            kmRemaining={(msg.metadata as any).race_situation.kmRemaining}
-                          />
-                        </div>
-                      )}
-                      <p className="text-[11px] text-muted-foreground mt-1">
-                        {format(new Date(msg.created_at), "d MMM HH:mm", {
-                          locale: fr,
-                        })}
-                      </p>
+          {/* 2-column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Left column: Composer + Timeline + History */}
+            <div className="space-y-4">
+              {/* Composer */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <CardTitle className="text-base">Composer</CardTitle>
+                    {isMultiStage && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Étape</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={21}
+                          value={selectedEtape ?? 1}
+                          onChange={(e) => setSelectedEtape(parseInt(e.target.value) || 1)}
+                          className="w-16 h-8 rounded-md border border-input bg-background px-2 text-sm text-center"
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/10 border border-primary/20">
+                      <Radio className="h-3 w-3 text-primary animate-pulse" />
+                      <span className="text-[11px] font-medium text-primary">
+                        Broadcast global
+                      </span>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                </CardHeader>
+                <CardContent>
+                  <div className="border rounded-lg overflow-hidden">
+                    <MessageInput
+                      onSend={handleSend}
+                      managers={[]}
+                      riders={startlistRiders}
+                      disabled={broadcastMessage.isPending}
+                      readOnly={false}
+                    />
+                  </div>
+                  {startlistRiders.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      💡 Tapez <code className="bg-muted px-1 rounded">#</code> pour mentionner un coureur
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Timeline */}
+              {timelineEvents.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Timeline</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <RaceTimeline
+                      events={timelineEvents}
+                      onBroadcast={(text) => handleSend(text)}
+                      disabled={broadcastMessage.isPending || !managerId}
+                      matchedRiders={matchedRiders}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* History */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">
+                    Historique
+                    {isMultiStage && selectedEtape && (
+                      <span className="text-sm font-normal text-muted-foreground ml-2">
+                        — Étape {selectedEtape}
+                      </span>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {historyLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : filteredHistory.length === 0 ? (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <MessageCircle className="h-6 w-6 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">Aucun message diffusé</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                      {filteredHistory.map((msg) => (
+                        <div
+                          key={msg.id}
+                          className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 border"
+                        >
+                          <Radio className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm whitespace-pre-wrap break-words">
+                              {msg.content}
+                            </p>
+                            {(msg.metadata as any)?.race_situation && (
+                              <div className="mt-2">
+                                <RaceSituationDisplay
+                                  groups={(msg.metadata as any).race_situation.groups}
+                                  kmRemaining={(msg.metadata as any).race_situation.kmRemaining}
+                                  rosterOwners={rosterOwners}
+                                />
+                              </div>
+                            )}
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                              {format(new Date(msg.created_at), "d MMM HH:mm", { locale: fr })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right column: Situation de course */}
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Situation de course</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RaceSituationEditor
+                    onBroadcast={(situation: RaceSituation) => {
+                      const riderMentions: { rider_nom: string; coureur_id: string }[] = [];
+                      for (const g of situation.groups) {
+                        g.riders.forEach((name, ri) => {
+                          const id = g.riderIds?.[ri];
+                          if (id) riderMentions.push({ rider_nom: name, coureur_id: id });
+                        });
+                      }
+                      const content = `🏁 Situation à ${situation.kmRemaining} km de l'arrivée`;
+                      handleSend(content, { race_situation: situation, rider_mentions: riderMentions });
+                    }}
+                    disabled={broadcastMessage.isPending || !managerId}
+                    startlistRiders={startlistRiders}
+                    importedSituation={importedSituation}
+                    rosterOwners={rosterOwners}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
