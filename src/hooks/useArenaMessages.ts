@@ -290,9 +290,9 @@ export function useLeagueManagers(leagueId: string) {
 
 // ── Rider owners (for rider mention decorations) ──────
 
-export function useLeagueRosterOwners(leagueId: string) {
+export function useLeagueRosterOwners(leagueId: string, courseId?: string | null) {
   return useQuery({
-    queryKey: ["arena-league-roster-owners", leagueId],
+    queryKey: ["arena-league-roster-owners", leagueId, courseId || "all"],
     queryFn: async () => {
       const normalizeName = (v: string) =>
         v
@@ -303,10 +303,27 @@ export function useLeagueRosterOwners(leagueId: string) {
           .trim()
           .toLowerCase();
 
-      const { data, error } = await supabase
+      // Resolve phase_id from the course
+      let phaseId: string | null = null;
+      if (courseId) {
+        const { data: courseData } = await supabase
+          .from("courses")
+          .select("phase_id")
+          .eq("id", courseId)
+          .single();
+        phaseId = courseData?.phase_id || null;
+      }
+
+      let query = supabase
         .from("rosters")
         .select("coureur_id, managers!rosters_manager_id_fkey(nom)")
         .eq("league_id", leagueId);
+
+      if (phaseId) {
+        query = query.eq("phase_id", phaseId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
