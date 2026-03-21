@@ -294,6 +294,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          live_scrape_url: string | null
         }
         Insert: {
           activated_by: string
@@ -301,6 +302,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          live_scrape_url?: string | null
         }
         Update: {
           activated_by?: string
@@ -308,6 +310,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          live_scrape_url?: string | null
         }
         Relationships: [
           {

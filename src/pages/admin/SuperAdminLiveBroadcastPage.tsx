@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, MessageCircle, Radio, Plus, Archive, Send, Link2, RefreshCw } from "lucide-react";
+import { Loader2, MessageCircle, Radio, Plus, Archive, Send, Link2, RefreshCw, Timer, TimerOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +37,9 @@ export const SuperAdminLiveBroadcastPage = () => {
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
   const [scrapeUrl, setScrapeUrl] = useState("");
   const [isScraping, setIsScraping] = useState(false);
+  const [autoScrapeEnabled, setAutoScrapeEnabled] = useState(false);
+  const autoScrapeRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [lastAutoScrapeAt, setLastAutoScrapeAt] = useState<Date | null>(null);
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [importedSituation, setImportedSituation] = useState<RaceSituation | null>(null);
   const [matchedRiders, setMatchedRiders] = useState<Record<string, { manager_name: string; rider_nom: string }>>({});
@@ -57,6 +60,42 @@ export const SuperAdminLiveBroadcastPage = () => {
   useEffect(() => {
     setSelectedEtape(isMultiStage ? 1 : null);
   }, [activeCourseId, isMultiStage]);
+
+  // Load persisted scrape URL from DB when course changes
+  useEffect(() => {
+    if (!activeCourseId) return;
+    setAutoScrapeEnabled(false);
+    supabase
+      .from("arena_live_courses")
+      .select("live_scrape_url")
+      .eq("course_id", activeCourseId)
+      .eq("is_active", true)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.live_scrape_url) {
+          setScrapeUrl(data.live_scrape_url);
+        }
+      });
+  }, [activeCourseId]);
+
+  // Auto-scrape every 60s when enabled
+  useEffect(() => {
+    if (autoScrapeRef.current) {
+      clearInterval(autoScrapeRef.current);
+      autoScrapeRef.current = null;
+    }
+    if (!autoScrapeEnabled || !scrapeUrl || !activeCourseId) return;
+
+    const doAutoScrape = () => {
+      if (isScraping) return;
+      handleScrape(true);
+    };
+
+    autoScrapeRef.current = setInterval(doAutoScrape, 60_000);
+    return () => {
+      if (autoScrapeRef.current) clearInterval(autoScrapeRef.current);
+    };
+  }, [autoScrapeEnabled, scrapeUrl, activeCourseId]);
 
   // Build roster owners map from matched riders
   const rosterOwners = useMemo(() => {
@@ -148,9 +187,19 @@ export const SuperAdminLiveBroadcastPage = () => {
     [managerId, activeCourseId, broadcastMessage, selectedEtape]
   );
 
-  const handleScrape = async () => {
+  const handleScrape = async (isAuto = false) => {
     if (!scrapeUrl || !activeCourseId) return;
     setIsScraping(true);
+
+    // Persist URL to DB
+    if (!isAuto) {
+      supabase
+        .from("arena_live_courses")
+        .update({ live_scrape_url: scrapeUrl } as any)
+        .eq("course_id", activeCourseId)
+        .eq("is_active", true)
+        .then(() => {});
+    }
     try {
       const { data, error } = await supabase.functions.invoke("scrape-live-race", {
         body: { url: scrapeUrl, course_id: activeCourseId },
@@ -243,6 +292,7 @@ export const SuperAdminLiveBroadcastPage = () => {
       toast.error(err.message || "Erreur lors de l'import");
     } finally {
       setIsScraping(false);
+      setLastAutoScrapeAt(new Date());
     }
   };
 
@@ -382,7 +432,7 @@ export const SuperAdminLiveBroadcastPage = () => {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={handleScrape}
+                  onClick={() => handleScrape()}
                   disabled={isScraping || !scrapeUrl}
                   className="h-8 gap-1.5 shrink-0"
                 >
@@ -393,14 +443,43 @@ export const SuperAdminLiveBroadcastPage = () => {
                   )}
                   Importer
                 </Button>
+                <Button
+                  size="sm"
+                  variant={autoScrapeEnabled ? "default" : "outline"}
+                  onClick={() => {
+                    if (!scrapeUrl) {
+                      toast.error("Entrez une URL d'abord");
+                      return;
+                    }
+                    setAutoScrapeEnabled(!autoScrapeEnabled);
+                    if (!autoScrapeEnabled) {
+                      toast.success("Auto-refresh activé (toutes les 60s)");
+                    }
+                  }}
+                  className="h-8 gap-1.5 shrink-0"
+                >
+                  {autoScrapeEnabled ? (
+                    <Timer className="h-3.5 w-3.5 animate-pulse" />
+                  ) : (
+                    <TimerOff className="h-3.5 w-3.5" />
+                  )}
+                  {autoScrapeEnabled ? "Auto ON" : "Auto"}
+                </Button>
               </div>
-              {scrapeStats && (
+              {(scrapeStats || autoScrapeEnabled) && (
                 <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                  <span>{scrapeStats.matched}/{scrapeStats.total} coureurs matchés</span>
-                  {scrapeStats.unmatched.length > 0 && (
+                  {scrapeStats && (
+                    <span>{scrapeStats.matched}/{scrapeStats.total} coureurs matchés</span>
+                  )}
+                  {scrapeStats && scrapeStats.unmatched.length > 0 && (
                     <span className="text-destructive">
                       Non matchés : {scrapeStats.unmatched.slice(0, 3).join(", ")}
                       {scrapeStats.unmatched.length > 3 && ` +${scrapeStats.unmatched.length - 3}`}
+                    </span>
+                  )}
+                  {autoScrapeEnabled && lastAutoScrapeAt && (
+                    <span className="ml-auto text-primary">
+                      ⏱ Dernier refresh : {format(lastAutoScrapeAt, "HH:mm:ss")}
                     </span>
                   )}
                 </div>

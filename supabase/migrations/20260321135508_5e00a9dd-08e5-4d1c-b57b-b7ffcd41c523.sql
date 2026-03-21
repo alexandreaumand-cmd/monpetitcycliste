@@ -1,0 +1,1 @@
+ALTER TABLE public.arena_live_courses ADD COLUMN live_scrape_url text DEFAULT NULL;
