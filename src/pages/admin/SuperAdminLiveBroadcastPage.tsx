@@ -160,7 +160,8 @@ export const SuperAdminLiveBroadcastPage = () => {
       if (data?.error) throw new Error(data.error);
 
       // Set timeline events
-      setTimelineEvents(data.timeline || []);
+      const events = data.timeline || [];
+      setTimelineEvents(events);
 
       // Set imported situation
       if (data.situation?.groups?.length > 0) {
@@ -177,7 +178,29 @@ export const SuperAdminLiveBroadcastPage = () => {
         unmatched: data.unmatched_names || [],
       });
 
-      toast.success(`Import: ${data.total_matched}/${data.total_scraped} coureurs matchés`);
+      // Auto-broadcast all timeline events (reversed so oldest first)
+      if (events.length > 0 && managerId) {
+        const reversedEvents = [...events].reverse();
+        let sent = 0;
+        for (const evt of reversedEvents) {
+          const typeEmoji = evt.type === "crash" ? "💥" : evt.type === "breakaway" ? "🚴" : evt.type === "gap" ? "⏱️" : evt.type === "dropped" ? "📉" : evt.type === "intermediate" ? "🏁" : evt.type === "abandon" ? "🚑" : "📢";
+          const content = `${typeEmoji} **${evt.time}** — ${evt.text}`;
+          try {
+            await new Promise<void>((resolve, reject) => {
+              broadcastMessage.mutate(
+                { content, courseId: activeCourseId, managerId, metadata: selectedEtape != null ? { etape_numero: selectedEtape } : {} },
+                { onSuccess: () => resolve(), onError: (e) => reject(e) }
+              );
+            });
+            sent++;
+          } catch (e) {
+            console.error("Failed to broadcast event:", e);
+          }
+        }
+        toast.success(`${sent}/${events.length} événements diffusés automatiquement`);
+      } else {
+        toast.success(`Import: ${data.total_matched}/${data.total_scraped} coureurs matchés`);
+      }
     } catch (err: any) {
       console.error("Scrape error:", err);
       toast.error(err.message || "Erreur lors de l'import");
