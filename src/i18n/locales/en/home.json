@@ -194,7 +194,14 @@
     "emailLabel": "Email",
     "emailPlaceholder": "your@email.com",
     "subjectLabel": "Subject",
-    "subjectPlaceholder": "What would you like to talk about?",
+    "subjectPlaceholder": "Choose a subject",
+    "subjects": {
+      "question": "Question about the game",
+      "bug": "Technical bug",
+      "suggestion": "Suggestion",
+      "partnership": "Partnership request",
+      "other": "Other"
+    },
     "messageLabel": "Message",
     "messagePlaceholder": "Your message...",
     "submit": "Send",

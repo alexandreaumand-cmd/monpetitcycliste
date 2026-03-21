@@ -194,7 +194,14 @@
     "emailLabel": "Email",
     "emailPlaceholder": "votre@email.com",
     "subjectLabel": "Sujet",
-    "subjectPlaceholder": "De quoi souhaitez-vous parler ?",
+    "subjectPlaceholder": "Choisissez un sujet",
+    "subjects": {
+      "question": "Question sur le jeu",
+      "bug": "Bug technique",
+      "suggestion": "Suggestion",
+      "partnership": "Demande de partenariat",
+      "other": "Autre"
+    },
     "messageLabel": "Message",
     "messagePlaceholder": "Votre message...",
     "submit": "Envoyer",

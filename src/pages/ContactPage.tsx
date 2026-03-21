@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Send, CheckCircle2 } from "lucide-react";
@@ -33,7 +34,7 @@ const ContactPage = () => {
         body: {
           name: form.name,
           email: form.email,
-          subject: form.subject || undefined,
+          subject: form.subject ? t(`contact.subjects.${form.subject}`) : undefined,
           message: form.message,
         },
       });
@@ -120,15 +121,18 @@ const ContactPage = () => {
           <Label htmlFor="subject" className="text-bordure-green font-inter">
             {t("contact.subjectLabel")}
           </Label>
-          <Input
-            id="subject"
-            name="subject"
-            maxLength={200}
-            value={form.subject}
-            onChange={handleChange}
-            placeholder={t("contact.subjectPlaceholder")}
-            className="border-bordure-green/20 focus:border-bordure-green"
-          />
+          <Select value={form.subject} onValueChange={(value) => setForm(prev => ({ ...prev, subject: value }))}>
+            <SelectTrigger className="border-bordure-green/20 focus:border-bordure-green">
+              <SelectValue placeholder={t("contact.subjectPlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="question">{t("contact.subjects.question")}</SelectItem>
+              <SelectItem value="bug">{t("contact.subjects.bug")}</SelectItem>
+              <SelectItem value="suggestion">{t("contact.subjects.suggestion")}</SelectItem>
+              <SelectItem value="partnership">{t("contact.subjects.partnership")}</SelectItem>
+              <SelectItem value="other">{t("contact.subjects.other")}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
