@@ -1,9 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { getLeagueTemplates, type GameMode } from "@/lib/leagues/templates";
-import { Check } from "lucide-react";
+import { getTemplates, type GameMode } from "@/lib/leagues/templates";
+import { Check, Calendar, MapPin } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 type LeagueTemplateSelectorProps = {
@@ -11,61 +9,72 @@ type LeagueTemplateSelectorProps = {
   onSelect: (mode: GameMode) => void;
 };
 
+const MODE_ICONS: Record<string, React.ElementType> = {
+  five_phases: Calendar,
+  per_course: MapPin,
+};
+
 export function LeagueTemplateSelector({ selectedMode, onSelect }: LeagueTemplateSelectorProps) {
   const { t } = useTranslation('leagues');
-  const { data: templates, isLoading } = useQuery({
-    queryKey: ['league-templates'],
-    queryFn: getLeagueTemplates,
-  });
-
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-32" />
-        ))}
-      </div>
-    );
-  }
+  const templates = getTemplates();
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {templates?.map((template) => (
-        <Card
-          key={template.id}
-          className={`p-4 cursor-pointer transition-all hover:border-primary ${
-            selectedMode === template.id ? 'border-primary bg-primary/5' : ''
-          }`}
-          onClick={() => onSelect(template.id)}
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h3 className="font-semibold mb-1">{template.name}</h3>
-              <p className="text-sm text-muted-foreground mb-3">
-                {template.description}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary" className="text-xs">
-                  {template.playerCounts.join(', ')} {t('templates.players')}
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {t('templates.budget')}: {template.defaultBudget}
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {t('templates.maxRiders')}: {template.defaultMaxRiders}
-                </Badge>
+    <div className="grid grid-cols-1 gap-4">
+      {templates.map((template) => {
+        const Icon = MODE_ICONS[template.id] || Calendar;
+        const isSelected = selectedMode === template.id;
+
+        return (
+          <Card
+            key={template.id}
+            className={`p-5 cursor-pointer transition-all hover:border-primary ${
+              isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary' : ''
+            }`}
+            onClick={() => onSelect(template.id)}
+          >
+            <div className="flex items-start gap-4">
+              <div className={`p-3 rounded-xl ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                <Icon className="h-6 w-6" />
               </div>
-            </div>
-            {selectedMode === template.id && (
-              <div className="ml-2 flex-shrink-0">
-                <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                  <Check className="h-4 w-4 text-primary-foreground" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg mb-1">
+                  {t(`templates.${template.id}.name`, template.name)}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  {t(`templates.${template.id}.description`, template.description)}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    3-10 {t('templates.players')}
+                  </Badge>
+                  {template.id === 'five_phases' && (
+                    <>
+                      <Badge variant="outline" className="text-xs">
+                        {t('settings.budget')}: 2200
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {t('settings.maxRiders')}: 30
+                      </Badge>
+                    </>
+                  )}
+                  {template.id === 'per_course' && (
+                    <Badge variant="outline" className="text-xs">
+                      {t('templates.perCourse.budgetAuto', 'Budget auto selon courses')}
+                    </Badge>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
-        </Card>
-      ))}
+              {isSelected && (
+                <div className="flex-shrink-0">
+                  <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                    <Check className="h-4 w-4 text-primary-foreground" />
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+        );
+      })}
     </div>
   );
 }

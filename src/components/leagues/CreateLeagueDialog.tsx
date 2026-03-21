@@ -14,7 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { LeagueTemplateSelector } from "./LeagueTemplateSelector";
 import { LeagueSettingsForm } from "./LeagueSettingsForm";
-import { type GameMode, calculateLeagueSettings, getLeagueScopeConfig } from "@/lib/leagues/templates";
+import { type GameMode, type FivePhasesVariant } from "@/lib/leagues/types";
+import { computeFivePhasesSettings, computePerCourseSettings } from "@/lib/leagues/templates";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -38,6 +39,13 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
   const [seasonId, setSeasonId] = useState("");
   const [bonusesEnabled, setBonusesEnabled] = useState(true);
   const [firstAuctionDate, setFirstAuctionDate] = useState<Date | null>(null);
+  
+  // Five phases specific
+  const [variant, setVariant] = useState<FivePhasesVariant>('full_season');
+  const [startingPhaseIndex, setStartingPhaseIndex] = useState(1);
+  
+  // Per course specific
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
 
   // Fetch available seasons
   const { data: seasons = [] } = useQuery({
@@ -67,6 +75,9 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     setSeasonId("");
     setBonusesEnabled(true);
     setFirstAuctionDate(null);
+    setVariant('full_season');
+    setStartingPhaseIndex(1);
+    setSelectedCourseIds([]);
     onOpenChange(false);
   };
 
@@ -94,11 +105,13 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
       return;
     }
 
+    if (selectedMode === 'per_course' && selectedCourseIds.length === 0) {
+      toast.error(t('create.selectCoursesError', 'Veuillez sélectionner au moins une course'));
+      return;
+    }
+
     setIsCreating(true);
     try {
-      const settings = await calculateLeagueSettings(selectedMode, playerCount);
-      const scopeConfig = await getLeagueScopeConfig(selectedMode, seasonId);
-
       const { data, error } = await supabase.functions.invoke("leagues-create", {
         body: {
           name,
@@ -106,10 +119,16 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
           gameMode: selectedMode,
           maxPlayers: playerCount,
           bonusesEnabled,
-          budget: settings.budget,
-          maxRiders: settings.maxRiders,
-          scopeConfig,
           firstAuctionStartsAt: firstAuctionDate.toISOString(),
+          // Five phases specific
+          ...(selectedMode === 'five_phases' && {
+            variant,
+            startingPhaseIndex,
+          }),
+          // Per course specific
+          ...(selectedMode === 'per_course' && {
+            selectedCourseIds,
+          }),
         },
       });
 
@@ -131,11 +150,14 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     }
   };
 
-  const canProceed = step === 1 ? selectedMode !== null : name.trim() !== "" && seasonId !== "" && firstAuctionDate !== null;
+  const canProceed = step === 1 
+    ? selectedMode !== null 
+    : name.trim() !== "" && seasonId !== "" && firstAuctionDate !== null && 
+      (selectedMode !== 'per_course' || selectedCourseIds.length > 0);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {step === 1 ? t('create.selectMode') : t('create.configure')}
@@ -170,6 +192,12 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
               firstAuctionDate={firstAuctionDate}
               onFirstAuctionDateChange={setFirstAuctionDate}
               seasons={seasons}
+              variant={variant}
+              onVariantChange={setVariant}
+              startingPhaseIndex={startingPhaseIndex}
+              onStartingPhaseIndexChange={setStartingPhaseIndex}
+              selectedCourseIds={selectedCourseIds}
+              onSelectedCourseIdsChange={setSelectedCourseIds}
             />
           )}
         </div>
