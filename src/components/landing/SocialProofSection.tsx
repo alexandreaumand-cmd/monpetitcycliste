@@ -1,11 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { Quote, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState, useCallback } from "react";
+import { Quote } from "lucide-react";
+import { useRef, useState } from "react";
 
 const SocialProofSection = () => {
   const { t } = useTranslation("home");
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const stats = [
     t("socialProof.stats.courses", { returnObjects: true }) as { value: string; label: string },
@@ -31,9 +32,13 @@ const SocialProofSection = () => {
     },
   ];
 
-  const goTo = useCallback((index: number) => {
-    setCurrentSlide((index + quotes.length) % quotes.length);
-  }, [quotes.length]);
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const scrollLeft = el.scrollLeft;
+    const cardWidth = el.scrollWidth / quotes.length;
+    setActiveIndex(Math.round(scrollLeft / cardWidth));
+  };
 
   const QuoteCard = ({ quote, i, className = "" }: { quote: typeof quotes[0]; i: number; className?: string }) => (
     <motion.div
@@ -108,11 +113,30 @@ const SocialProofSection = () => {
           ))}
         </motion.div>
 
-        {/* Mobile vertical stack */}
-        <div className="md:hidden flex flex-col gap-4">
-          {quotes.map((quote, i) => (
-            <QuoteCard key={i} quote={quote} i={i} />
-          ))}
+        {/* Mobile swipeable carousel */}
+        <div className="md:hidden">
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-5 px-5"
+          >
+            {quotes.map((quote, i) => (
+              <div key={i} className="w-[85%] flex-shrink-0 snap-center">
+                <QuoteCard quote={quote} i={0} />
+              </div>
+            ))}
+          </div>
+          {/* Dots */}
+          <div className="flex justify-center gap-2 mt-4">
+            {quotes.map((_, i) => (
+              <div
+                key={i}
+                className={`h-2 rounded-full transition-all duration-200 ${
+                  i === activeIndex ? "bg-bordure-gold w-5" : "bg-white/30 w-2"
+                }`}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Desktop grid */}
