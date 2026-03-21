@@ -354,10 +354,13 @@ serve(async (req) => {
     let scrapedRiders: ScrapedRider[] = [];
     let scrapedEvents: ScrapedEvent[] = [];
 
+    let lequipeSituation: any = null;
+
     if (isLEquipe) {
       const result = parseLEquipeLive(doc, html);
       scrapedRiders = result.riders;
       scrapedEvents = result.events;
+      lequipeSituation = result.situation;
     } else if (isFirstCycling) {
       const result = parseFirstCyclingResults(doc);
       scrapedRiders = result.riders;
@@ -367,7 +370,6 @@ serve(async (req) => {
       scrapedRiders = result.riders;
       scrapedEvents = result.events;
     } else {
-      // Try both parsers, use whichever gets more results
       const fc = parseFirstCyclingResults(doc);
       const pcs = parsePCSResults(doc);
       if (fc.riders.length >= pcs.riders.length) {
