@@ -23,105 +23,104 @@ interface ScrapedEvent {
   riders: string[];
 }
 
-interface ScrapedGroup {
-  name: string;
-  riders: string[];
-  riderCount: number;
-  gap: string;
-  isPeloton: boolean;
-}
-
 // ============================================================
-// FIRSTCYCLING PARSER
-// ============================================================
-
-function parseFirstCyclingResults(doc: any, url: string): { riders: ScrapedRider[]; events: ScrapedEvent[] } {
-  const riders: ScrapedRider[] = [];
-  const events: ScrapedEvent[] = [];
-
-  // Parse result table rows
-  const rows = doc.querySelectorAll("tr.rider");
-  for (const row of rows) {
-    const cells = row.querySelectorAll("td");
-    if (cells.length < 4) continue;
-
-    const posText = cells[0]?.textContent?.trim();
-    const position = posText ? parseInt(posText, 10) : undefined;
-
-    // Rider name from link title attribute
-    const riderLink = row.querySelector("td a[href*='rider.php']");
-    const name = riderLink?.getAttribute("title") || riderLink?.textContent?.trim() || "";
-    if (!name) continue;
-
-    // Team
-    const teamLink = row.querySelector("td a[href*='team.php']");
-    const team = teamLink?.getAttribute("title") || teamLink?.textContent?.trim() || "";
-
-    // Time/gap (last cell)
-    const timeCell = cells[cells.length - 1];
-    const gap = timeCell?.textContent?.trim() || "";
-
-    riders.push({ name, team, position, gap });
-  }
-
-  // Try to parse intermediate results or live events from tabs
-  const tabContents = doc.querySelectorAll(".tab-content");
-  for (const tab of tabContents) {
-    const heading = tab.querySelector("h3, h4, .headline");
-    if (!heading) continue;
-    const headingText = heading.textContent?.trim() || "";
-    
-    // Check for intermediate sprint or climb results
-    if (/sprint|intermediate|climb|col|gpm/i.test(headingText)) {
-      const tabRows = tab.querySelectorAll("tr.rider");
-      const riderNames: string[] = [];
-      for (const r of tabRows) {
-        const link = r.querySelector("a[href*='rider.php']");
-        if (link) riderNames.push(link.getAttribute("title") || link.textContent?.trim() || "");
-      }
-      if (riderNames.length > 0) {
-        events.push({
-          time: "",
-          type: /sprint/i.test(headingText) ? "sprint" : "climb",
-          text: headingText,
-          riders: riderNames.slice(0, 10),
-        });
-      }
-    }
-  }
-
-  return { riders, events };
-}
-
-// ============================================================
-// PCS PARSER (basic)
+// PCS PARSER — matches actual procyclingstats.com HTML
 // ============================================================
 
 function parsePCSResults(doc: any): { riders: ScrapedRider[]; events: ScrapedEvent[] } {
   const riders: ScrapedRider[] = [];
-  const rows = doc.querySelectorAll("table.results tbody tr, table.basic tbody tr");
-  
+
+  // PCS result table: table.results tbody tr
+  const rows = doc.querySelectorAll("table.results tbody tr");
+  console.log(`[PCS] Found ${rows.length} result rows`);
+
   for (const row of rows) {
     const cells = row.querySelectorAll("td");
     if (cells.length < 3) continue;
 
+    // Position: first td
     const posText = cells[0]?.textContent?.trim();
-    const position = posText ? parseInt(posText, 10) : undefined;
+    const position = posText && /^\d+$/.test(posText) ? parseInt(posText, 10) : undefined;
 
-    const riderLink = row.querySelector("a[href*='/rider/']");
-    const name = riderLink?.textContent?.trim() || "";
+    // Skip DNF/DNS rows for live situation
+    if (posText === "DNF" || posText === "DNS" || posText === "OTL") continue;
+
+    // Rider name: td.ridername a with span.uppercase for last name
+    const riderCell = row.querySelector("td.ridername");
+    const riderLink = riderCell?.querySelector("a[href*='/rider/']");
+    if (!riderLink) continue;
+
+    const uppercaseSpan = riderLink.querySelector("span.uppercase");
+    const lastName = uppercaseSpan?.textContent?.trim() || "";
+    const fullText = riderLink.textContent?.trim() || "";
+    // Name format: "LastName FirstName" → extract first name after uppercase span
+    const firstName = fullText.replace(lastName, "").trim();
+    const name = firstName ? `${firstName} ${lastName}` : lastName;
     if (!name) continue;
 
-    const teamSpan = row.querySelector(".team, td:nth-child(4)");
-    const team = teamSpan?.textContent?.trim() || "";
+    // Team: td.cu600 a
+    const teamCell = row.querySelector("td.cu600");
+    const teamLink = teamCell?.querySelector("a");
+    const team = teamLink?.textContent?.trim() || "";
 
-    const timeCell = cells[cells.length - 1];
-    const gap = timeCell?.textContent?.trim() || "";
+    // Time/gap: td.time
+    const timeCell = row.querySelector("td.time");
+    let gap = "";
+    if (timeCell) {
+      // Hidden span has the raw seconds value, font has display value
+      const font = timeCell.querySelector("font");
+      const hiddenSpan = timeCell.querySelector("span.hide");
+      gap = font?.textContent?.trim() || hiddenSpan?.textContent?.trim() || "";
+      // Clean up ",," which PCS uses for "same time"
+      if (gap === ",," || gap === ",,") gap = "s.t.";
+    }
 
     riders.push({ name, team, position, gap });
   }
 
+  console.log(`[PCS] Parsed ${riders.length} riders`);
   return { riders, events: [] };
+}
+
+// ============================================================
+// FIRSTCYCLING PARSER — matches actual firstcycling.com HTML
+// ============================================================
+
+function parseFirstCyclingResults(doc: any): { riders: ScrapedRider[]; events: ScrapedEvent[] } {
+  const riders: ScrapedRider[] = [];
+  const events: ScrapedEvent[] = [];
+
+  // FirstCycling: tr.rider rows inside .sortTabell or .tablesorter
+  const rows = doc.querySelectorAll("tr.rider");
+  console.log(`[FC] Found ${rows.length} rider rows`);
+
+  for (const row of rows) {
+    const cells = row.querySelectorAll("td");
+    if (cells.length < 4) continue;
+
+    // Position: first td
+    const posText = cells[0]?.textContent?.trim();
+    const position = posText && /^\d+$/.test(posText) ? parseInt(posText, 10) : undefined;
+    if (posText === "DNF" || posText === "DNS") continue;
+
+    // Rider: a[href*='rider.php'] — name from title attribute
+    const riderLink = row.querySelector("a[href*='rider.php']");
+    const name = riderLink?.getAttribute("title") || riderLink?.textContent?.trim() || "";
+    if (!name) continue;
+
+    // Team: a[href*='team.php'] — name from title attribute
+    const teamLink = row.querySelector("a[href*='team.php']");
+    const team = teamLink?.getAttribute("title") || teamLink?.textContent?.trim() || "";
+
+    // Time/gap: last td (right-aligned)
+    const lastCell = cells[cells.length - 1];
+    const gap = lastCell?.textContent?.trim() || "";
+
+    riders.push({ name, team, position, gap });
+  }
+
+  console.log(`[FC] Parsed ${riders.length} riders`);
+  return { riders, events };
 }
 
 // ============================================================
@@ -131,7 +130,7 @@ function parsePCSResults(doc: any): { riders: ScrapedRider[]; events: ScrapedEve
 function matchRiders(
   scrapedRiders: ScrapedRider[],
   startlistEntries: { coureur_id: string; rider_nom: string }[],
-  rosterMap: Record<string, string> // coureur_id -> manager_nom
+  rosterMap: Record<string, string>
 ): {
   matchedRiders: Record<string, { manager_name: string; rider_nom: string; scraped_name: string }>;
   unmatchedNames: string[];
@@ -139,10 +138,9 @@ function matchRiders(
   const matched: Record<string, { manager_name: string; rider_nom: string; scraped_name: string }> = {};
   const unmatched: string[] = [];
 
-  // Build lookup maps
   const sigToEntry = new Map<string, { coureur_id: string; rider_nom: string }>();
   const normToEntry = new Map<string, { coureur_id: string; rider_nom: string }>();
-  
+
   for (const e of startlistEntries) {
     sigToEntry.set(tokenSig(e.rider_nom), e);
     normToEntry.set(normalize(e.rider_nom), e);
@@ -154,21 +152,15 @@ function matchRiders(
 
     let entry = sigToEntry.get(sig) || normToEntry.get(norm);
 
-    // Fallback: try last name match
+    // Fallback: token overlap matching
     if (!entry) {
       const scrapedTokens = norm.split(/\s+/);
       for (const e of startlistEntries) {
-        const entryNorm = normalize(e.rider_nom);
-        const entryTokens = entryNorm.split(/\s+/);
-        // Check if last name tokens overlap
-        const scrapedLast = scrapedTokens[scrapedTokens.length - 1];
-        if (entryTokens.includes(scrapedLast) || entryTokens.some(t => t === scrapedTokens[0])) {
-          // Additional check: at least 2 token overlap
-          const overlap = scrapedTokens.filter(t => entryTokens.includes(t));
-          if (overlap.length >= Math.min(2, scrapedTokens.length)) {
-            entry = e;
-            break;
-          }
+        const entryTokens = normalize(e.rider_nom).split(/\s+/);
+        const overlap = scrapedTokens.filter(t => entryTokens.includes(t));
+        if (overlap.length >= Math.min(2, scrapedTokens.length)) {
+          entry = e;
+          break;
         }
       }
     }
@@ -233,7 +225,7 @@ serve(async (req) => {
     let scrapedEvents: ScrapedEvent[] = [];
 
     if (isFirstCycling) {
-      const result = parseFirstCyclingResults(doc, url);
+      const result = parseFirstCyclingResults(doc);
       scrapedRiders = result.riders;
       scrapedEvents = result.events;
     } else if (isPCS) {
@@ -241,10 +233,16 @@ serve(async (req) => {
       scrapedRiders = result.riders;
       scrapedEvents = result.events;
     } else {
-      // Generic: try FirstCycling-style parsing
-      const result = parseFirstCyclingResults(doc, url);
-      scrapedRiders = result.riders;
-      scrapedEvents = result.events;
+      // Try both parsers, use whichever gets more results
+      const fc = parseFirstCyclingResults(doc);
+      const pcs = parsePCSResults(doc);
+      if (fc.riders.length >= pcs.riders.length) {
+        scrapedRiders = fc.riders;
+        scrapedEvents = fc.events;
+      } else {
+        scrapedRiders = pcs.riders;
+        scrapedEvents = pcs.events;
+      }
     }
 
     console.log(`[scrape-live-race] Parsed ${scrapedRiders.length} riders, ${scrapedEvents.length} events`);
@@ -254,20 +252,17 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get startlist entries for this course
     const { data: startlistEntries } = await supabase
       .from("startlist_entries")
       .select("coureur_id, rider_nom")
       .eq("course_id", course_id);
 
-    // Get active phase for course
     const { data: courseData } = await supabase
       .from("courses")
       .select("phase_id")
       .eq("id", course_id)
       .single();
 
-    // Get roster owners for matching
     let rosterMap: Record<string, string> = {};
     if (courseData?.phase_id) {
       const { data: rosters } = await supabase
@@ -290,12 +285,10 @@ serve(async (req) => {
       rosterMap
     );
 
-    // 5. Build situation (basic: all riders in one group for now)
-    // The admin can reorganize into groups manually
-    const groups: ScrapedGroup[] = [];
-    
+    // 5. Build groups by gap
+    const groups: { name: string; riders: string[]; riderCount: number; gap: string; isPeloton: boolean }[] = [];
+
     if (scrapedRiders.length > 0) {
-      // Group by gap time
       const gapGroups = new Map<string, ScrapedRider[]>();
       for (const r of scrapedRiders) {
         const gapKey = r.gap || "0:00";
@@ -304,29 +297,21 @@ serve(async (req) => {
       }
 
       let idx = 0;
-      for (const [gap, riders] of gapGroups) {
-        const isPeloton = riders.length > 20;
+      for (const [gap, groupRiders] of gapGroups) {
+        const isPeloton = groupRiders.length > 20;
         const riderNames: string[] = [];
-        const riderIds: string[] = [];
 
-        for (const r of riders) {
-          // Try to find matched coureur_id
+        for (const r of groupRiders) {
           const matchedEntry = Object.entries(matchedRiders).find(
             ([_, v]) => v.scraped_name === r.name
           );
-          if (matchedEntry) {
-            riderNames.push(matchedEntry[1].rider_nom);
-            riderIds.push(matchedEntry[0]);
-          } else {
-            riderNames.push(r.name);
-            riderIds.push("");
-          }
+          riderNames.push(matchedEntry ? matchedEntry[1].rider_nom : r.name);
         }
 
         groups.push({
           name: isPeloton ? "Peloton" : idx === 0 ? "Tête de course" : `Groupe ${idx + 1}`,
           riders: isPeloton ? riderNames.slice(0, 5) : riderNames.slice(0, 10),
-          riderCount: riders.length,
+          riderCount: groupRiders.length,
           gap: gap.replace(/^\+\s*/, "+").trim() || "0:00",
           isPeloton,
         });
