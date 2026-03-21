@@ -344,6 +344,27 @@ function matchRiders(
       }
     }
 
+    // Fallback: initial + lastname matching (e.g., "J. Alaphilippe" → "ALAPHILIPPE Julian")
+    if (!entry) {
+      const initialMatch = sr.name.match(/^([A-ZÀ-Ü])\.\s+(.+)$/i);
+      if (initialMatch) {
+        const initial = initialMatch[1].toLowerCase();
+        const lastNamePart = normalize(initialMatch[2]).toLowerCase();
+        for (const e of startlistEntries) {
+          const entryNorm = normalize(e.rider_nom).toLowerCase();
+          const entryTokens = entryNorm.split(/\s+/);
+          // Check if any token starts with the initial AND the lastname tokens are all present
+          const lastNameTokens = lastNamePart.split(/\s+/);
+          const allLastNameMatch = lastNameTokens.every(t => entryTokens.some(et => et === t || et.startsWith(t)));
+          const initialMatches = entryTokens.some(t => t.startsWith(initial) && !lastNameTokens.includes(t));
+          if (allLastNameMatch && initialMatches) {
+            entry = e;
+            break;
+          }
+        }
+      }
+    }
+
     if (entry) {
       matched[entry.coureur_id] = {
         manager_name: rosterMap[entry.coureur_id] || "",
