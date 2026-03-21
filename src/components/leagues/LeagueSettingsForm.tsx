@@ -106,9 +106,37 @@ export function LeagueSettingsForm({
         </Select>
       </div>
 
-      {/* Five Phases: variant + starting phase */}
+      {/* Five Phases: explanation + variant + info */}
       {gameMode === 'five_phases' && (
         <>
+          <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+            <p className="text-sm text-foreground font-medium">
+              {t('settings.fivePhasesExplainTitle')}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {t('settings.fivePhasesExplainDesc')}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              {[
+                { phase: 1, date: '20 jan.' },
+                { phase: 2, date: '23 mars' },
+                { phase: 3, date: '8 mai' },
+                { phase: 4, date: '5 juil.' },
+                { phase: 5, date: '22 août' },
+              ].map(({ phase, date }) => (
+                <div key={phase} className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Badge variant="outline" className="text-xs px-1.5 py-0">
+                    {t('settings.fivePhasesPhaseLabel', { num: phase })}
+                  </Badge>
+                  <span>→ {date}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground italic">
+              {t('settings.fivePhasesMidSeasonHint')}
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label>{t('settings.variant', 'Variante')}</Label>
             <RadioGroup
