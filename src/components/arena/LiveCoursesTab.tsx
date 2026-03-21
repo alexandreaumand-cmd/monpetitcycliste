@@ -51,7 +51,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
 
   const allMessages = useMemo(() => {
     if (!messagesData?.pages) return [];
-    return messagesData.pages.flatMap((p) => p.messages).reverse();
+    return messagesData.pages.flatMap((p) => p.messages);
   }, [messagesData]);
 
   // Extract available stages from messages metadata
