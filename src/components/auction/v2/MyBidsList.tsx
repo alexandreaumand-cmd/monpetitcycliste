@@ -88,12 +88,21 @@ export function MyBidsList({
     }
   };
 
-  // Existing roster first, then new bids in insertion order (last added at bottom)
+  // Existing roster first, then new bids — optionally sorted
   const sortedBids = useMemo(() => {
     const existingBids = bids.filter(b => b.is_existing);
     const newBids = bids.filter(b => !b.is_existing);
+    if (sortBy === 'cote') {
+      newBids.sort((a, b) => (b.cote || 0) - (a.cote || 0));
+    } else if (sortBy === 'amount') {
+      newBids.sort((a, b) => b.amount - a.amount);
+    }
     return [...existingBids, ...newBids];
-  }, [bids]);
+  }, [bids, sortBy]);
+
+  const cycleSortBy = () => {
+    setSortBy(prev => prev === 'none' ? 'cote' : prev === 'cote' ? 'amount' : 'none');
+  };
 
   if (bids.length === 0) {
     return (
