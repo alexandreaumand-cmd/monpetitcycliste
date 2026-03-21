@@ -1,26 +1,15 @@
 
 
-## Fix: Contrainte `valid_game_mode` bloque les nouveaux modes
+## Sauvegarde automatique du montant au blur (perte de focus)
 
 ### Problème
-La contrainte `valid_game_mode` sur la table `leagues` n'accepte que les anciens modes (`full_season`, `short_gt`, `short_wt`, `short_classics`). Les nouveaux modes `five_phases` et `per_course` n'ont jamais été ajoutés — la migration précédente a oublié de mettre à jour cette contrainte.
+Actuellement, quand on clique sur le montant pour l'éditer, il faut appuyer sur Entrée ou cliquer sur le bouton ✓ pour valider. L'utilisateur veut qu'un simple clic ailleurs suffise.
 
-### Correction
-
-**Migration SQL unique** :
-```sql
-ALTER TABLE public.leagues DROP CONSTRAINT valid_game_mode;
-ALTER TABLE public.leagues ADD CONSTRAINT valid_game_mode 
-  CHECK (game_mode = ANY (ARRAY[
-    'full_season', 'short_gt', 'short_wt', 'short_classics',
-    'five_phases', 'per_course'
-  ]));
-```
-
-Cela conserve les anciens modes pour la rétrocompatibilité et ajoute les deux nouveaux.
+### Solution
+Ajouter un handler `onBlur` sur l'`Input` d'édition qui appelle `handleSaveEdit`. Cela permet de sauvegarder automatiquement dès que l'utilisateur clique ailleurs (sur +, -, un autre coureur, etc.).
 
 ### Fichier impacté
 | Fichier | Action |
 |---------|--------|
-| Migration SQL | Drop + recreate constraint |
+| `src/components/auction/v2/MyBidsList.tsx` | Ajouter `onBlur={() => handleSaveEdit(bid)}` sur l'Input (ligne 135-147) |
 
