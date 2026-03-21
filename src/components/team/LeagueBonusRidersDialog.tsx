@@ -217,7 +217,7 @@ export function LeagueBonusRidersDialog({
                 <div className="shrink-0 text-right space-y-0.5">
                   <div className="flex items-center justify-end gap-1">
                     <Trophy className="h-3 w-3 text-primary" />
-                    <span className="font-bold text-sm">{rider.points_total}</span>
+                    <span className="font-bold text-sm">{Number(rider.points_total.toFixed(2))}</span>
                   </div>
                   {rider.bonus_points > 0 && (
                     <div className="text-[11px] text-green-500 font-medium">
