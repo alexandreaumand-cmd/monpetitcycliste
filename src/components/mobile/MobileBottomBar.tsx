@@ -47,7 +47,7 @@ export const MobileBottomBar = ({ isAdmin }: MobileBottomBarProps) => {
       role="navigation"
       aria-label={t('navigation.dashboard')}
     >
-      <div className="flex items-center justify-around px-2 py-3">
+      <div className="flex items-center justify-around px-1 py-3">
         {mainRoutes.map((route) => {
           const Icon = route.icon;
           const active = isActive(route.path);
