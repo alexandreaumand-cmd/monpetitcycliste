@@ -1,10 +1,13 @@
 project_id = "khahpetvqjoyrwambaqn"
 
-[functions.arena-recaps]
-verify_jwt = false
-
-[functions.scrape-pcs-results]
-verify_jwt = false
-
-[functions.recalculate-rider-bonuses]
-verify_jwt = false
+[functions]
+  [functions.arena-recaps]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
+  [functions.recalculate-rider-bonuses]
+    verify_jwt = false
+  [functions.scrape-pcs-results]
+    verify_jwt = false
