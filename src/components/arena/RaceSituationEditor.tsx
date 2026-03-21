@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { Plus, Minus, Bike, Flag, Users, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,8 @@ interface RaceSituationEditorProps {
   onBroadcast: (situation: RaceSituation) => void;
   disabled?: boolean;
   startlistRiders?: { nom: string; coureur_id: string }[];
+  importedSituation?: RaceSituation | null;
+  rosterOwners?: Record<string, string>;
 }
 
 const DEFAULT_GROUP: RaceGroup = {
@@ -47,6 +49,8 @@ export const RaceSituationEditor = ({
   onBroadcast,
   disabled,
   startlistRiders = [],
+  importedSituation,
+  rosterOwners = {},
 }: RaceSituationEditorProps) => {
   const [groups, setGroups] = useState<RaceGroup[]>([
     { name: "Échappée", riders: [], riderIds: [], riderCount: 3, gap: "0:00", isPeloton: false },
@@ -55,6 +59,18 @@ export const RaceSituationEditor = ({
   const [kmRemaining, setKmRemaining] = useState(100);
   const [searchTerms, setSearchTerms] = useState<Record<number, string>>({});
   const [focusedGroup, setFocusedGroup] = useState<number | null>(null);
+  const [hasImported, setHasImported] = useState(false);
+
+  // Apply imported situation when it changes
+  const prevImportRef = useRef(importedSituation);
+  if (importedSituation && importedSituation !== prevImportRef.current && !hasImported) {
+    prevImportRef.current = importedSituation;
+    if (importedSituation.groups.length > 0) {
+      setGroups(importedSituation.groups);
+      if (importedSituation.kmRemaining > 0) setKmRemaining(importedSituation.kmRemaining);
+      setHasImported(true);
+    }
+  }
 
   // Already-assigned rider IDs across all groups
   const usedRiderIds = useMemo(() => {
@@ -219,6 +235,11 @@ export const RaceSituationEditor = ({
                         className="text-xs gap-1 pr-1"
                       >
                         {name}
+                        {rosterOwners[group.riderIds[ri]] && (
+                          <span className="text-[10px] text-muted-foreground ml-0.5">
+                            ({rosterOwners[group.riderIds[ri]]})
+                          </span>
+                        )}
                         <button
                           type="button"
                           onClick={() => removeRiderFromGroup(index, ri)}
