@@ -355,6 +355,42 @@ export const SuperAdminLiveBroadcastPage = () => {
       } else {
         toast.success(`Import: ${data.total_matched}/${data.total_scraped} coureurs matchés`);
       }
+
+      // Auto-broadcast situation de course if available
+      if (data.situation?.groups?.length > 0 && managerId) {
+        const sitGroups = data.situation.groups.map((g: any) => ({
+          ...g,
+          riderIds: (g.riderIds || g.riders || []).map((name: string) => {
+            const lc = name.toLowerCase();
+            // Try to find coureur_id from matched riders
+            for (const [cId, info] of Object.entries(matched)) {
+              const m = info as any;
+              if (m.scraped_name?.toLowerCase() === lc || m.rider_nom?.toLowerCase() === lc) return cId;
+            }
+            return "";
+          }),
+        }));
+        const situation = { groups: sitGroups, kmRemaining: data.situation.kmRemaining || 0 };
+        const riderMentions: { rider_nom: string; coureur_id: string }[] = [];
+        for (const g of situation.groups) {
+          (g.riders || []).forEach((name: string, ri: number) => {
+            const id = g.riderIds?.[ri];
+            if (id) riderMentions.push({ rider_nom: name, coureur_id: id });
+          });
+        }
+        const sitContent = `🏁 Situation à ${situation.kmRemaining} km de l'arrivée`;
+        try {
+          await new Promise<void>((resolve, reject) => {
+            broadcastMessage.mutate(
+              { content: sitContent, courseId: activeCourseId, managerId, metadata: { race_situation: situation, rider_mentions: riderMentions, ...(selectedEtape != null ? { etape_numero: selectedEtape } : {}) } },
+              { onSuccess: () => resolve(), onError: (e) => reject(e) }
+            );
+          });
+          console.log("[auto-scrape] Situation de course diffusée");
+        } catch (e) {
+          console.error("Failed to broadcast situation:", e);
+        }
+      }
     } catch (err: any) {
       console.error("Scrape error:", err);
       toast.error(err.message || "Erreur lors de l'import");
