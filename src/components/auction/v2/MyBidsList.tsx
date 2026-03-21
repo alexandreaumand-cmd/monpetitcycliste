@@ -131,29 +131,20 @@ export function MyBidsList({
               // New bid: editable
               <>
                 {editingId === bid.bid_id ? (
-                  <>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value.replace(/[^0-9]/g, ''))}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSaveEdit(bid);
-                        if (e.key === "Escape") handleCancelEdit();
-                      }}
-                      className="w-16 h-7 text-center text-xs"
-                      autoFocus
-                    />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleSaveEdit(bid)}
-                      className="h-7 w-7 p-0 text-xs"
-                    >
-                      ✓
-                    </Button>
-                  </>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value.replace(/[^0-9]/g, ''))}
+                    onBlur={() => handleSaveEdit(bid)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveEdit(bid);
+                      if (e.key === "Escape") handleCancelEdit();
+                    }}
+                    className="w-16 h-7 text-center text-xs"
+                    autoFocus
+                  />
                 ) : (
                   <div className="flex items-center gap-0.5">
                     {/* Bouton - */}
