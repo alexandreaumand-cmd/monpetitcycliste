@@ -1,108 +1,65 @@
 
 
-## Amélioration du Live Broadcast — Scraping de course en direct
+# Mise à jour de la page Règles du Jeu
 
-### Contexte
-Tu scrapes déjà PCS avec `fetch` + `DOMParser` (regex fallback) dans `scrape-pcs-results` et `startlist-tracker`. On réutilise exactement cette approche pour scraper les pages live de FirstCycling (ou PCS) et alimenter le Live Broadcast.
+## Objectif
+1. Ajouter une section décrivant les **types de ligues** (5 Phases, A la course)
+2. Harmoniser l'affichage des barèmes pour **toutes les catégories de courses** en utilisant le format condensé des Grands Tours (tableaux GC + Etape + Maillots/Porteurs dans un même accordion)
+3. Ajouter les données manquantes : points porteurs (Porteur Leader, Vert, Montagne, Jeune, Combattif), championnats nationaux
 
-### Architecture
+## Changements prévus
 
-```text
-Admin colle une URL (ex: firstcycling.com/race.php?r=13&y=2025&e=3)
-        │
-        ▼
-Edge Function: scrape-live-race
-  ├─ fetch HTML + DOMParser (même pattern que startlist-tracker)
-  ├─ Parse la situation de course (groupes, écarts, coureurs)
-  ├─ Parse la timeline d'événements (intermédiaires, chutes, attaques)
-  ├─ Match coureurs avec startlist_entries (tokenSig, fuzzy)
-  └─ Retourne { timeline: [...], situation: { groups, kmRemaining } }
-        │
-        ▼
-Frontend: SuperAdminLiveBroadcastPage enrichi
-  ├─ Champ URL + bouton "Importer"
-  ├─ Timeline d'événements (clic → broadcast)
-  ├─ Situation pré-remplie dans RaceSituationEditor
-  └─ Affichage manager pour chaque coureur
-```
+### 1. Nouvelle section "Types de ligues" (entre section 1 et section 2)
 
-### Plan d'implémentation
+Ajout d'une section **"2. Les types de ligues"** (les sections suivantes seront renumérotées) avec deux cartes :
 
-**1. Edge Function `scrape-live-race`**
+- **5 Phases** : Budget 2200, effectif 30 coureurs, saison complète divisée en 5 phases d'enchères. Variante "WT only" disponible.
+- **A la course** : Sélection libre de courses, budgets dynamiques selon le nombre/type de courses (1 classique : 650/8, plusieurs classiques : 800/10, course par étapes : 1100/15).
 
-| Fichier | Action |
-|---------|--------|
-| `supabase/functions/scrape-live-race/index.ts` | Créer |
+### 2. Harmonisation des barèmes — Format condensé unifié
 
-- Accepte `{ url: string, course_id: string }`
-- `fetch(url)` avec User-Agent (même pattern que `scrapeRaceStartlist`)
-- Parse HTML avec `DOMParser` (deno_dom) :
-  - Détecte le site source (FirstCycling, PCS) via l'URL
-  - Extrait les données structurées selon le format du site
-  - FirstCycling : timeline dans les tableaux de résultats intermédiaires, situation dans les classements en cours
-- Match les noms de coureurs extraits avec les `startlist_entries` de la course (via `tokenSig` + `normalize` réutilisés depuis `_shared/normalization.ts`)
-- Lookup `rosters` pour associer chaque coureur à son manager
-- Retourne :
-  ```json
-  {
-    "timeline": [{ "time": "14:32", "type": "intermediate", "text": "Sprint intermédiaire km 85", "riders": [...] }],
-    "situation": { "groups": [...], "kmRemaining": 120 },
-    "matched_riders": { "coureur_id": { "manager_name": "...", "rider_nom": "..." } }
-  }
-  ```
+Chaque catégorie de course par étapes affichera dans son accordion :
+- **Tableau GC** (top 15) en grille compacte
+- **Tableau Etape** (top 10) en grille compacte  
+- **Tableau Maillots finals** : Vert, Montagne, Jeune, Combatif avec tous les places
+- **Tableau Porteurs** : Porteur Leader, Porteur Vert, Porteur Montagne, Porteur Jeune, Porteur Combattif (points par jour)
 
-**2. Refonte `SuperAdminLiveBroadcastPage`**
+Le tout dans un layout **condensé** avec des grilles horizontales (comme le composant `PointsBaremeSection` dans le calendrier) plutôt que de longues listes textuelles.
 
-| Fichier | Action |
-|---------|--------|
-| `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` | Modifier |
+**Catégories concernées :**
+- Grands Tours (WT GT) — déjà bien mais à compléter avec Porteurs
+- Tours WT Cat 1, 2, 3 — passer du format texte au format tableaux
+- Tours .Pro (2.pro) et .1 (2.1) — idem
+- Courses d'un jour — garder le format actuel (simple GC)
 
-- Ajouter un champ URL + bouton "Importer depuis le live" au-dessus de la section Situation
-- Appel `supabase.functions.invoke("scrape-live-race", ...)` 
-- Les données importées pré-remplissent :
-  - Le `RaceSituationEditor` (groupes, coureurs, écarts, km)
-  - Une nouvelle section Timeline
-- Layout 2 colonnes en desktop : Composer + Timeline à gauche, Situation à droite
+### 3. Données complètes depuis la base
 
-**3. Composant `RaceTimeline`**
+Toutes les valeurs seront alignées sur la base de données (saison 2026). Points notables à ajouter :
 
-| Fichier | Action |
-|---------|--------|
-| `src/components/arena/RaceTimeline.tsx` | Créer |
+**Grands Tours — données manquantes actuellement :**
+- Porteur Leader : 20 pts/jour
+- Porteur Vert : 12 pts/jour
+- Porteur Montagne : 12 pts/jour
+- Porteur Jeune : 6 pts/jour
+- Porteur Combattif : 12 pts/jour
+- Combatif final : 150 pts
 
-- Liste chronologique des événements importés
-- Chaque événement affiche : heure, type (badge), texte, coureurs mentionnés (avec manager)
-- Bouton "Diffuser" par événement → appelle `handleSend` avec le texte pré-formaté
-- Édition inline optionnelle du texte avant envoi
+**Championnats Nationaux** (nouvelle sous-section) :
+- CN Route Cat 1-4 et CN CLM Cat 1-4
 
-**4. Enrichir `RaceSituationEditor` avec import**
+### 4. Composant `CompactBareme`
 
-| Fichier | Action |
-|---------|--------|
-| `src/components/arena/RaceSituationEditor.tsx` | Modifier |
+Nouveau composant interne pour afficher un barème en **grille compacte** (comme dans `PointsBaremeSection`) : chaque place est une petite carte avec le rang en haut et les points en dessous. Beaucoup plus lisible et condensé que les tableaux verticaux actuels.
 
-- Ajouter une prop `importedSituation?: RaceSituation` qui pré-remplit les groupes
-- Quand les données arrivent du scraper, les groupes/km sont automatiquement injectés
-- Affichage du nom du manager à côté de chaque coureur sélectionné (lookup via prop `rosterOwners`)
+### Fichier modifié
+- `src/pages/RulesPage.tsx` — refonte complète de la structure
 
-**5. Affichage managers dans `RaceSituationDisplay`**
-
-| Fichier | Action |
-|---------|--------|
-| `src/components/arena/RaceSituationDisplay.tsx` | Mineur |
-
-- Déjà supporté via `rosterOwners` — s'assurer que la prop est passée depuis la page broadcast
-
-### Aucune dépendance externe
-Pas besoin de Firecrawl : on utilise `fetch` natif + `DOMParser` comme dans les scrapers existants. Zéro API key supplémentaire.
-
-### Résumé des fichiers
-
-| Fichier | Action |
-|---------|--------|
-| `supabase/functions/scrape-live-race/index.ts` | Créer |
-| `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` | Refonte layout + import URL |
-| `src/components/arena/RaceTimeline.tsx` | Créer |
-| `src/components/arena/RaceSituationEditor.tsx` | Ajouter prop import + managers |
-| `src/components/arena/RaceSituationDisplay.tsx` | Mineur — passer rosterOwners |
+### Structure finale des sections
+1. Principe général
+2. **Les types de ligues** (NOUVEAU)
+3. Les enchères
+4. Le scoring (barèmes harmonisés)
+5. Les bonus
+6. Le classement
+7. Courses prises en compte
 
