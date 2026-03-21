@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Minus, Plus } from "lucide-react";
 import { useState, useMemo } from "react";
+import { ArrowUpDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface MyBid {
@@ -35,6 +36,7 @@ export function MyBidsList({
   const { t } = useTranslation("auction");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [sortBy, setSortBy] = useState<'none' | 'cote' | 'amount'>('none');
 
   const handleStartEdit = (bid: MyBid) => {
     setEditingId(bid.bid_id ?? null);
@@ -86,12 +88,21 @@ export function MyBidsList({
     }
   };
 
-  // Existing roster first, then new bids in insertion order (last added at bottom)
+  // Existing roster first, then new bids — optionally sorted
   const sortedBids = useMemo(() => {
     const existingBids = bids.filter(b => b.is_existing);
     const newBids = bids.filter(b => !b.is_existing);
+    if (sortBy === 'cote') {
+      newBids.sort((a, b) => (b.cote || 0) - (a.cote || 0));
+    } else if (sortBy === 'amount') {
+      newBids.sort((a, b) => b.amount - a.amount);
+    }
     return [...existingBids, ...newBids];
-  }, [bids]);
+  }, [bids, sortBy]);
+
+  const cycleSortBy = () => {
+    setSortBy(prev => prev === 'none' ? 'cote' : prev === 'cote' ? 'amount' : 'none');
+  };
 
   if (bids.length === 0) {
     return (
@@ -106,9 +117,19 @@ export function MyBidsList({
 
   return (
     <div className="space-y-0.5 px-3">
-      <h3 className="text-sm font-semibold mb-2">
-        {t("myBids.count", { count: bids.length })}
-      </h3>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-semibold">
+          {t("myBids.count", { count: bids.length })}
+        </h3>
+        <button
+          onClick={cycleSortBy}
+          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded hover:bg-muted"
+          title={sortBy === 'none' ? 'Trier par côte' : sortBy === 'cote' ? 'Trier par montant' : 'Ordre d\'ajout'}
+        >
+          <ArrowUpDown className="h-3 w-3" />
+          {sortBy === 'cote' ? 'Côte' : sortBy === 'amount' ? 'Montant' : '—'}
+        </button>
+      </div>
 
       {sortedBids.map((bid) => (
         <div
