@@ -494,16 +494,47 @@ serve(async (req) => {
       }
     }
 
+    // Build a reverse map: normalized rider name → coureur_id
+    const nameToIdMap: Record<string, string> = {};
+    for (const [coureurId, info] of Object.entries(matchedRiders)) {
+      const v = info as any;
+      // Index by scraped_name and rider_nom (both normalized to lowercase)
+      if (v.scraped_name) nameToIdMap[v.scraped_name.toLowerCase()] = coureurId;
+      if (v.rider_nom) nameToIdMap[v.rider_nom.toLowerCase()] = coureurId;
+      // Also index by last name only for "J. Alaphilippe" style matching
+      const lastNameMatch = v.rider_nom?.match(/\S+$/);
+      if (lastNameMatch) nameToIdMap[lastNameMatch[0].toLowerCase()] = coureurId;
+      const scrapedLastName = v.scraped_name?.match(/\S+$/);
+      if (scrapedLastName) nameToIdMap[scrapedLastName[0].toLowerCase()] = coureurId;
+    }
+
+    // Enrich groups with riderIds
+    function enrichGroupsWithIds(grps: any[]) {
+      return grps.map((g: any) => {
+        const riderIds = (g.riders || []).map((name: string) => {
+          const lc = name.toLowerCase().trim();
+          // Try exact match first, then last name
+          let id = nameToIdMap[lc];
+          if (!id) {
+            const lastN = lc.match(/\S+$/);
+            if (lastN) id = nameToIdMap[lastN[0]];
+          }
+          return id || "";
+        });
+        return { ...g, riderIds };
+      });
+    }
+
     // Use L'Équipe situation if available (it has structured groups already), otherwise use gap-based groups
     const finalSituation = lequipeSituation && lequipeSituation.groups.length > 0
       ? {
-          groups: lequipeSituation.groups,
+          groups: enrichGroupsWithIds(lequipeSituation.groups),
           kmRemaining: lequipeSituation.kmRemaining,
           kmCovered: lequipeSituation.kmCovered,
           totalKm: lequipeSituation.totalKm,
           speed: lequipeSituation.speed,
         }
-      : { groups, kmRemaining: 0 };
+      : { groups: enrichGroupsWithIds(groups), kmRemaining: 0 };
 
     const result = {
       timeline: scrapedEvents,
