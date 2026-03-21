@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -76,6 +77,13 @@ export const LiveCourseSelector = ({
 }: LiveCourseSelectorProps) => {
   const { t } = useTranslation("arena");
   const { data: liveCourses, isLoading } = useLiveCourses();
+
+  // Auto-select if only one course
+  useEffect(() => {
+    if (liveCourses?.length === 1 && !activeCourseId) {
+      onSelect(liveCourses[0].course_id);
+    }
+  }, [liveCourses, activeCourseId, onSelect]);
 
   if (isLoading) {
     return (
