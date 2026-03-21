@@ -1,26 +1,33 @@
 
 
-# Corriger les cron jobs arena-recaps (mauvaise URL)
+# Fix MountainRoadStandings — Animation ne fonctionne pas pour les classiques
 
-## Diagnostic
+## Problème
 
-Les cron jobs `arena-daily-recap` (20h UTC) et `arena-weekly-recap` (dimanche 20h15 UTC) existent dans la base LIVE mais appellent l'URL d'un **ancien projet Supabase** (`oisfvryhpovwxaxqbmow`) au lieu du projet actuel (`khahpetvqjoyrwambaqn`).
+Ligne 58-67 de `MountainRoadStandings.tsx` :
 
-C'est pourquoi les récaps ne s'affichent plus depuis un moment — ils sont envoyés dans le vide.
+```typescript
+// Line 58: nulls are filtered OUT
+const etapeNums = [...new Set(todayResults.map(r => r.etape_numero).filter((e): e is number => e !== null))];
+
+// Line 67: query uses .in() which cannot match NULL
+.in("etape_numero", etapeNums);
+```
+
+Pour les classiques (courses d'un jour), `etape_numero` est `null`. Le filtre exclut les nulls, donc `etapeNums` est vide → la requête retourne 0 résultat → `todayPointsMap` est vide → aucune animation.
 
 ## Solution
 
-Mettre à jour les deux cron jobs via SQL (outil d'insertion) pour pointer vers la bonne URL et la bonne clé :
+Modifier la requête `today-points` (lignes 56-68) pour gérer deux cas :
+1. **Résultats avec `etape_numero` non-null** → `.in("etape_numero", etapeNums)` comme avant
+2. **Résultats avec `etape_numero` null** (classiques) → `.is("etape_numero", null)`
 
-### 1. Supprimer les anciens jobs
+Fusionner les deux jeux de résultats avant de construire le `todayPointsMap`.
 
-```sql
-SELECT cron.unschedule('arena-daily-recap');
-SELECT cron.unschedule('arena-weekly-recap');
-```
+## Fichier modifié
 
-### 2. Recréer avec la bonne URL
+**`src/components/rankings/MountainRoadStandings.tsx`** — Remplacer les lignes 56-68 par une logique qui :
+- Sépare les `courseIds` en deux groupes : ceux avec étape et ceux sans
+- Fait deux requêtes `points_ledger` si nécessaire (avec étape / sans étape)
+- Combine les résultats
 
-**Daily (20h UTC)** :
-```sql
-SELECT cron.schedule('arena-daily-recap', '0
