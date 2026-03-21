@@ -45,12 +45,17 @@
     "successWithName": "Vous avez rejoint la ligue \"{{name}}\" !",
     "button": "Rejoindre",
     "processing": "Traitement en cours...",
-    "redirecting": "Redirection vers les enchères...",
+    "redirecting": "Redirection...",
     "loadingLeagues": "Chargement des ligues...",
     "createdOn": "Créée le",
     "or": "ou",
     "public": "Publique",
-    "registering": "Inscription..."
+    "registering": "Inscription...",
+    "modeFivePhases": "5 Phases",
+    "modePerCourse": "À la course",
+    "riders": "coureurs",
+    "bonusesOn": "Bonus activés",
+    "bonusesOff": "Sans bonus"
   },
   "settings": {
     "name": "Nom de la ligue",
