@@ -37,7 +37,7 @@ export function MyBidsList({
   const [editValue, setEditValue] = useState("");
 
   const handleStartEdit = (bid: MyBid) => {
-    setEditingId(bid.bid_id);
+    setEditingId(bid.bid_id ?? null);
     setEditValue(bid.amount.toString());
   };
 
@@ -48,6 +48,24 @@ export function MyBidsList({
       onUpdateAmount(bid.bid_id, bid.coureur_id, newAmount);
     }
     setEditingId(null);
+  };
+
+  const handleSaveAndEditNext = (bid: MyBid) => {
+    const sanitized = editValue.replace(/[^0-9]/g, '');
+    const newAmount = parseInt(sanitized) || 0;
+    if (newAmount >= (bid.cote || 1)) {
+      onUpdateAmount(bid.bid_id, bid.coureur_id, newAmount);
+    }
+    // Find the next new bid in the sorted list
+    const newBids = sortedBids.filter(b => !b.is_existing);
+    const currentIndex = newBids.findIndex(b => b.bid_id === bid.bid_id || b.coureur_id === bid.coureur_id);
+    const nextBid = newBids[currentIndex + 1];
+    if (nextBid) {
+      setEditingId(nextBid.bid_id ?? null);
+      setEditValue(nextBid.amount.toString());
+    } else {
+      setEditingId(null);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -137,8 +155,15 @@ export function MyBidsList({
                     pattern="[0-9]*"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value.replace(/[^0-9]/g, ''))}
-                    onBlur={() => handleSaveEdit(bid)}
+                    onBlur={() => {
+                      // Don't save on blur if Tab triggered handleSaveAndEditNext
+                      if (editingId === bid.bid_id) handleSaveEdit(bid);
+                    }}
                     onKeyDown={(e) => {
+                      if (e.key === "Tab") {
+                        e.preventDefault();
+                        handleSaveAndEditNext(bid);
+                      }
                       if (e.key === "Enter") handleSaveEdit(bid);
                       if (e.key === "Escape") handleCancelEdit();
                     }}
