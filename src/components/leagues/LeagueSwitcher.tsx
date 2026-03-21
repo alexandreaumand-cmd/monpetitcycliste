@@ -22,7 +22,7 @@ import { CreateLeagueDialog } from "./CreateLeagueDialog";
 import { JoinLeagueDialog } from "./JoinLeagueDialog";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import { getLeagueTemplates } from "@/lib/leagues/templates";
+import { getTemplates } from "@/lib/leagues/templates";
 
 export function LeagueSwitcher() {
   const { t } = useTranslation('leagues');
