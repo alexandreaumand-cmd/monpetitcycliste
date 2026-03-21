@@ -45,12 +45,17 @@
     "successWithName": "You have joined the league \"{{name}}\"!",
     "button": "Join",
     "processing": "Processing...",
-    "redirecting": "Redirecting to auctions...",
+    "redirecting": "Redirecting...",
     "loadingLeagues": "Loading leagues...",
     "createdOn": "Created on",
     "or": "or",
     "public": "Public",
-    "registering": "Registering..."
+    "registering": "Registering...",
+    "modeFivePhases": "5 Phases",
+    "modePerCourse": "Per Race",
+    "riders": "riders",
+    "bonusesOn": "Bonuses on",
+    "bonusesOff": "No bonuses"
   },
   "settings": {
     "name": "League Name",
