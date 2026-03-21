@@ -56,15 +56,36 @@ export function MountainRoadStandings() {
       const courseIds = [...new Set(todayResults.map((r) => r.course_id))];
       const coureurIds = [...new Set(todayResults.map((r) => r.coureur_id))];
       const etapeNums = [...new Set(todayResults.map((r) => r.etape_numero).filter((e): e is number => e !== null))];
+      const hasNullEtape = todayResults.some((r) => r.etape_numero === null);
 
       // 3. Get points matching today's stage results, scoped to league phases
-      const { data: pointsData } = await (supabase as any)
-        .from("points_ledger")
-        .select("coureur_id, points, phase_id, etape_numero")
-        .in("phase_id", leaguePhaseIds)
-        .in("course_id", courseIds)
-        .in("coureur_id", coureurIds)
-        .in("etape_numero", etapeNums);
+      // Handle both staged races (etape_numero != null) and one-day races (etape_numero = null)
+      let allPointsData: any[] = [];
+
+      if (etapeNums.length > 0) {
+        const { data } = await (supabase as any)
+          .from("points_ledger")
+          .select("coureur_id, points, phase_id, etape_numero")
+          .in("phase_id", leaguePhaseIds)
+          .in("course_id", courseIds)
+          .in("coureur_id", coureurIds)
+          .in("etape_numero", etapeNums);
+        if (data?.length) allPointsData.push(...data);
+      }
+
+      if (hasNullEtape) {
+        const nullEtapeCourseIds = [...new Set(todayResults.filter((r) => r.etape_numero === null).map((r) => r.course_id))];
+        const { data } = await (supabase as any)
+          .from("points_ledger")
+          .select("coureur_id, points, phase_id, etape_numero")
+          .in("phase_id", leaguePhaseIds)
+          .in("course_id", nullEtapeCourseIds)
+          .in("coureur_id", coureurIds)
+          .is("etape_numero", null);
+        if (data?.length) allPointsData.push(...data);
+      }
+
+      const pointsData = allPointsData;
 
       if (!pointsData?.length) return {};
 
