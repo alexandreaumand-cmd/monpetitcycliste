@@ -248,9 +248,9 @@ export function LeagueSettingsForm({
           <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
             <p className="text-sm font-medium text-foreground">{t('settings.bonusExplainTitle')}</p>
             <div className="space-y-1.5 text-xs text-muted-foreground">
+              <p>⭐ <strong>{t('settings.bonusRider')}</strong> — {t('settings.bonusRiderDesc')}</p>
               <p>🏅 <strong>{t('settings.bonusFirstWin')}</strong> — {t('settings.bonusFirstWinDesc')}</p>
               <p>⏱️ <strong>{t('settings.bonusITT')}</strong> — {t('settings.bonusITTDesc')}</p>
-              <p>👥 <strong>{t('settings.bonusTTT')}</strong> — {t('settings.bonusTTTDesc')}</p>
               <p>📊 <strong>{t('settings.bonusScorers')}</strong> — {t('settings.bonusScorersDesc')}</p>
             </div>
           </div>
