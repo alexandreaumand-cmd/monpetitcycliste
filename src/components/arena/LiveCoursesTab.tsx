@@ -229,7 +229,7 @@ export const LiveCoursesTab = ({ leagueId }: LiveCoursesTabProps) => {
 
       {/* Right: Race situation panel (desktop only) */}
       {activeCourseId && (
-        <div className="hidden lg:flex flex-col w-[340px] shrink-0 border rounded-xl overflow-hidden bg-background">
+        <div className="flex flex-col w-full lg:w-[340px] shrink-0 border rounded-xl overflow-hidden bg-background max-h-[400px] lg:max-h-none">
           <div className="px-4 py-3 border-b bg-muted/20">
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-primary" />
