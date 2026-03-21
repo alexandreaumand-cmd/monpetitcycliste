@@ -5,7 +5,8 @@ import { useRef, useState } from "react";
 
 const SocialProofSection = () => {
   const { t } = useTranslation("home");
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const stats = [
     t("socialProof.stats.courses", { returnObjects: true }) as { value: string; label: string },
