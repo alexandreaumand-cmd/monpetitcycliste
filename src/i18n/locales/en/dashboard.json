@@ -92,7 +92,9 @@
       "full_season": "Full Season",
       "short_gt": "Grand Tours",
       "short_wt": "World Tour",
-      "short_classics": "Classics"
+      "short_classics": "Classics",
+      "five_phases": "5 Phases",
+      "per_course": "Per Course"
     },
     "participantsHover": {
       "title": "League participants",
