@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Globe } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreateLeagueDialog } from "@/components/leagues/CreateLeagueDialog";
