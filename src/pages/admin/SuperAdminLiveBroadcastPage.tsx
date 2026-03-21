@@ -163,9 +163,22 @@ export const SuperAdminLiveBroadcastPage = () => {
       const events = data.timeline || [];
       setTimelineEvents(events);
 
-      // Set imported situation
+      // Set imported situation — enrich with riderIds from matched_riders
+      const matched = data.matched_riders || {};
       if (data.situation?.groups?.length > 0) {
-        setImportedSituation(data.situation);
+        // Build reverse lookup: scraped name → coureur_id
+        const nameToId: Record<string, string> = {};
+        for (const [coueurId, info] of Object.entries(matched)) {
+          const m = info as any;
+          if (m.scraped_name) nameToId[m.scraped_name.toLowerCase()] = coueurId;
+          if (m.rider_nom) nameToId[m.rider_nom.toLowerCase()] = coueurId;
+        }
+
+        const enrichedGroups = data.situation.groups.map((g: any) => ({
+          ...g,
+          riderIds: (g.riders || []).map((name: string) => nameToId[name.toLowerCase()] || ""),
+        }));
+        setImportedSituation({ groups: enrichedGroups, kmRemaining: data.situation.kmRemaining || 0 });
       }
 
       // Set matched riders
