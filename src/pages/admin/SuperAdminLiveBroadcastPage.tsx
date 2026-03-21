@@ -37,6 +37,9 @@ export const SuperAdminLiveBroadcastPage = () => {
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
   const [scrapeUrl, setScrapeUrl] = useState("");
   const [isScraping, setIsScraping] = useState(false);
+  const [autoScrapeEnabled, setAutoScrapeEnabled] = useState(false);
+  const autoScrapeRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [lastAutoScrapeAt, setLastAutoScrapeAt] = useState<Date | null>(null);
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [importedSituation, setImportedSituation] = useState<RaceSituation | null>(null);
   const [matchedRiders, setMatchedRiders] = useState<Record<string, { manager_name: string; rider_nom: string }>>({});
