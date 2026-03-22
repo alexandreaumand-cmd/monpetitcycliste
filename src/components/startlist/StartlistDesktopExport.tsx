@@ -171,8 +171,11 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
           <Card className="p-4">
             <h3 className="text-lg font-semibold mb-4">Liste des partants ({startlistData.starters.length})</h3>
             <div className="grid grid-cols-3 gap-2">
-              {startlistData.starters.map((starter: any) => (
+               {startlistData.starters.map((starter: any) => (
                 <div key={starter.coureur_id} className="flex items-center gap-2 text-sm py-1 px-2 bg-muted/30 rounded">
+                  {starter.team_confirmed && (
+                    <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
+                  )}
                   <span className="font-medium truncate flex-1">{starter.nom}</span>
                   {starter.equipe && (
                     <span className="text-xs text-muted-foreground truncate">{starter.equipe}</span>
