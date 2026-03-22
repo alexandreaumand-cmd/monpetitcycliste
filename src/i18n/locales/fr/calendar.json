@@ -63,6 +63,11 @@
     "matched": "matchés",
     "unmatched": "non matchés",
     "noStartlist": "Aucune startlist disponible pour cette course.",
+    "confirmedTeams": "{{count}}/{{total}} équipes confirmées",
+    "matchedRiders": "{{count}} matchés",
+    "unmatchedRiders": "{{count}} non matchés",
+    "legendOfficial": "Composition officielle confirmée",
+    "legendUnmatched": "Coureur non identifié dans la base",
     "classifications": {
       "stages": "Étapes",
       "gc": "Classement Général",
