@@ -158,7 +158,8 @@ Deno.serve(async (req) => {
         nom: e.coureurs?.nom || e.coureur_id,
         equipe: e.coureurs?.equipe || '',
         cote: e.coureurs?.prix_initial || 10,
-        bib_no: e.bib_no
+        bib_no: e.bib_no,
+        team_confirmed: e.team_confirmed || false
       })).sort((a, b) => a.nom.localeCompare(b.nom));
 
     // Fetch multi-stage route images
