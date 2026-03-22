@@ -537,7 +537,7 @@ async function handleGlobalSync(supabase: any): Promise<{
 async function syncCourseStartlist(
   supabase: any,
   course: any,
-  scrapedRiders: { rider_name: string; team_name: string }[]
+  scrapedRiders: { rider_name: string; team_name: string; team_confirmed: boolean }[]
 ): Promise<{ added: number; removed: number }> {
   const courseId = course.id;
   const courseName = course.nom;
