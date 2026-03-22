@@ -6684,6 +6684,14 @@ export type Database = {
           nom: string
         }[]
       }
+      get_startlist_team_stats: {
+        Args: { p_startlist_ids: string[] }
+        Returns: {
+          confirmed_teams: number
+          startlist_id: string
+          total_teams: number
+        }[]
+      }
       get_team_options_for_phase: {
         Args: { p_phase_id: string }
         Returns: {
