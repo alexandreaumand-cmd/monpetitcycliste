@@ -150,6 +150,19 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
           <div className="flex gap-4 text-xs">
             <div><span className="font-medium">Managers:</span> {startlistData.totals.managers}</div>
             <div><span className="font-medium">Partants:</span> {startlistData.totals.starters_all}</div>
+            {(() => {
+              const allStarters = startlistData.managers?.length > 0
+                ? startlistData.managers.flatMap((m: any) => m.starters || [])
+                : startlistData.starters || [];
+              const confirmedTeams = new Set(allStarters.filter((s: any) => s.team_confirmed).map((s: any) => s.equipe)).size;
+              const totalTeams = new Set(allStarters.map((s: any) => s.equipe).filter(Boolean)).size;
+              return totalTeams > 0 ? (
+                <div className="flex items-center gap-1">
+                  <Check className="h-3 w-3 text-green-600" />
+                  <span className="font-medium">{confirmedTeams}/{totalTeams} équipes confirmées</span>
+                </div>
+              ) : null;
+            })()}
           </div>
         </Card>
 
