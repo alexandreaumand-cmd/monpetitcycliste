@@ -552,7 +552,10 @@ export const StartlistMobile = () => {
                     
                     <AccordionContent>
                       <div className="pt-1">
-                        {sortedStarters.map((starter: any) => <p key={starter.coureur_id} className="text-sm mx-[60px] text-muted-foreground">
+                        {sortedStarters.map((starter: any) => <p key={starter.coureur_id} className="text-sm mx-[60px] text-muted-foreground flex items-center gap-1">
+                            {starter.team_confirmed && (
+                              <CheckCircle2 className="h-3 w-3 text-green-600 flex-shrink-0" />
+                            )}
                             {starter.nom}
                           </p>)}
                       </div>
