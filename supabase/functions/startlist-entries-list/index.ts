@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     // Get all entries without coureur details
     const { data: entries, error: entriesError } = await supabase
       .from('startlist_entries')
-      .select('id, line_no, bib_no, status, source_name, source_team, coureur_id')
+      .select('id, line_no, bib_no, status, source_name, source_team, coureur_id, team_confirmed')
       .eq('startlist_id', startlist_id)
       .order('line_no', { ascending: true });
 
