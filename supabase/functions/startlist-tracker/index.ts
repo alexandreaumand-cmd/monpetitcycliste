@@ -856,8 +856,34 @@ async function syncCourseStartlist(
     }
   }
 
+  // Update team_confirmed on existing entries that weren't added or removed
+  await updateTeamConfirmedStatus(supabase, existing, existingSigMap, teamConfirmedBySig);
+
   console.log(`[SYNC] ${courseName} done: ${addedCount} added, ${removedCount} removed`);
   return { added: addedCount, removed: removedCount };
+}
+
+/** Update team_confirmed status on existing entries based on latest scrape data */
+async function updateTeamConfirmedStatus(
+  supabase: any,
+  existing: any[],
+  existingSigMap: Map<string, { id: string; source_name: string; coureur_id: string | null }>,
+  teamConfirmedBySig: Map<string, boolean>
+) {
+  let updated = 0;
+  for (const [sig, entry] of existingSigMap) {
+    const confirmed = teamConfirmedBySig.get(sig);
+    if (confirmed !== undefined) {
+      const { error } = await supabase
+        .from("startlist_entries")
+        .update({ team_confirmed: confirmed })
+        .eq("id", entry.id);
+      if (!error) updated++;
+    }
+  }
+  if (updated > 0) {
+    console.log(`[SYNC] Updated team_confirmed on ${updated} existing entries`);
+  }
 }
 
 // ============================================================
