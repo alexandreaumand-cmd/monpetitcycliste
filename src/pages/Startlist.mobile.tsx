@@ -571,7 +571,10 @@ export const StartlistMobile = () => {
                 {t('startlist.withoutOwner')} ({startlistViewData.without_owner.length})
               </h4>
               <div className="flex flex-wrap gap-1.5">
-                {startlistViewData.without_owner.map((coureur: any) => <Badge key={coureur.coureur_id} variant="outline" className="text-xs">
+                {startlistViewData.without_owner.map((coureur: any) => <Badge key={coureur.coureur_id} variant="outline" className="text-xs flex items-center gap-1">
+                    {coureur.team_confirmed && (
+                      <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
+                    )}
                     {coureur.nom}
                   </Badge>)}
               </div>
