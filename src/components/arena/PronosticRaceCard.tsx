@@ -123,8 +123,8 @@ export const PronosticRaceCard = ({
 
   return (
     <Card className={`transition-all ${statusInfo.bg}`}>
-      <CardContent className="p-3 space-y-1.5">
-        {/* Line 1: Course name + status icon */}
+      <CardContent className="p-2.5 space-y-1">
+        {/* Line 1: Course name */}
         <div className="flex items-center gap-1.5 min-w-0">
           <h4 className="font-semibold text-sm truncate flex-1 min-w-0">
             {deadline.courses?.nom || deadline.course_id}
@@ -151,7 +151,7 @@ export const PronosticRaceCard = ({
           )}
         </div>
 
-        {/* Line 2: Full-width selector or result */}
+        {/* Line 3: Compact selector or result */}
         <div>
           {!isExpired ? (
             <div className="flex items-center gap-1">
