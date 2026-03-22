@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trash2, UserPlus, X } from "lucide-react";
+import { CheckCircle2, Trash2, UserPlus, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +21,7 @@ interface Starter {
   nom: string;
   equipe?: string;
   entry_id?: string;
+  team_confirmed?: boolean;
 }
 
 interface StartlistRidersManagementProps {
