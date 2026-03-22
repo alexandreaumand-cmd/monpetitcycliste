@@ -28,7 +28,7 @@ export const ChipGroup = ({
             key={item.value}
             variant={isSelected ? "default" : "outline"}
             className={cn(
-              "cursor-pointer min-h-[44px] px-3 py-1.5 text-sm font-medium whitespace-nowrap",
+              "cursor-pointer min-h-[32px] px-2.5 py-1 text-xs font-medium whitespace-nowrap",
               "active:scale-95 transition-all",
               isSelected && "shadow-sm"
             )}
