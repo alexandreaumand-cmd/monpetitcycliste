@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Trash2, UserPlus, X } from "lucide-react";
+import { CheckCircle2, Trash2, UserPlus, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +21,7 @@ interface Starter {
   nom: string;
   equipe?: string;
   entry_id?: string;
+  team_confirmed?: boolean;
 }
 
 interface StartlistRidersManagementProps {
@@ -85,13 +86,25 @@ export const StartlistRidersManagement = ({
     }
   };
 
+  const confirmedCount = starters.filter(s => s.team_confirmed).length;
+  const uniqueTeams = [...new Set(starters.map(s => s.equipe).filter(Boolean))];
+  const confirmedTeams = [...new Set(starters.filter(s => s.team_confirmed).map(s => s.equipe).filter(Boolean))];
+
   return (
     <>
       <Card className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">
-            Liste des partants ({starters.length})
-          </h3>
+          <div>
+            <h3 className="text-lg font-semibold">
+              Liste des partants ({starters.length})
+            </h3>
+            {uniqueTeams.length > 0 && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                {confirmedTeams.length}/{uniqueTeams.length} équipes confirmées
+              </p>
+            )}
+          </div>
           <Button
             variant="outline"
             size="sm"
@@ -109,7 +122,10 @@ export const StartlistRidersManagement = ({
               key={starter.coureur_id}
               className="flex items-center gap-2 text-sm py-2 px-3 bg-muted/30 rounded group hover:bg-muted/50 transition-colors"
             >
-              <span className="font-medium truncate flex-1">{starter.nom}</span>
+              <span className="font-medium truncate flex-1 flex items-center gap-1">
+                {starter.team_confirmed && <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />}
+                {starter.nom}
+              </span>
               {starter.equipe && (
                 <span className="text-xs text-muted-foreground truncate max-w-[100px]">
                   {starter.equipe}
