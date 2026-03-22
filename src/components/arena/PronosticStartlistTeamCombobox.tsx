@@ -52,15 +52,15 @@ export const PronosticStartlistTeamCombobox = ({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between font-normal"
+          className="w-full justify-between font-normal h-8 text-xs px-2"
           disabled={disabled}
         >
-          <span className={cn(!value && "text-muted-foreground")}>
+          <span className={cn("truncate", !value && "text-muted-foreground")}>
             {selectedTeam
               ? selectedTeam.nom_affiche
               : t("pronostics.selectTeam")}
           </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[350px] p-0" align="start">
