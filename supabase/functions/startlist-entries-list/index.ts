@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     // Get all entries without coureur details
     const { data: entries, error: entriesError } = await supabase
       .from('startlist_entries')
-      .select('id, line_no, bib_no, status, source_name, source_team, coureur_id')
+      .select('id, line_no, bib_no, status, source_name, source_team, coureur_id, team_confirmed')
       .eq('startlist_id', startlist_id)
       .order('line_no', { ascending: true });
 
@@ -93,13 +93,28 @@ Deno.serve(async (req) => {
     const total = enrichedEntries.length;
     const matched = enrichedEntries.filter(e => e.coureur_id !== null).length;
     const unmatched = total - matched;
+    const confirmedRiders = enrichedEntries.filter(e => e.team_confirmed === true).length;
+
+    // Count confirmed/total teams
+    const teamConfirmationMap = new Map<string, boolean>();
+    for (const entry of enrichedEntries) {
+      const teamKey = entry.coureurs?.equipe || entry.source_team || 'unknown';
+      if (!teamConfirmationMap.has(teamKey)) {
+        teamConfirmationMap.set(teamKey, entry.team_confirmed === true);
+      }
+    }
+    const totalTeams = teamConfirmationMap.size;
+    const confirmedTeams = [...teamConfirmationMap.values()].filter(v => v).length;
 
     const result = {
       entries: enrichedEntries,
       stats: {
         total,
         matched,
-        unmatched
+        unmatched,
+        confirmed_riders: confirmedRiders,
+        confirmed_teams: confirmedTeams,
+        total_teams: totalTeams
       }
     };
 

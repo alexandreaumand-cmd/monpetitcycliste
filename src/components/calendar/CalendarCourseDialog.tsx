@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle, AlertCircle, ChevronDown, ChevronUp, Calendar } from "lucide-react";
+import { Trophy, TrendingUp, Mountain, Award, Star, Users, Image, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Calendar, ShieldCheck } from "lucide-react";
 import { isStageRace, normalizeCourseType } from "@/lib/courseType";
 import { PointsBaremeSection } from "@/components/courses/PointsBaremeSection";
 import { useTranslation } from "react-i18next";
@@ -36,8 +36,17 @@ interface StartlistEntry {
   source_name: string;
   source_team: string | null;
   coureur_id: string | null;
-  coureur?: { nom: string } | null;
-  equipe?: { nom_affiche: string } | null;
+  team_confirmed?: boolean;
+  coureurs?: { nom: string; equipe: string } | null;
+}
+
+interface StartlistStats {
+  total: number;
+  matched: number;
+  unmatched: number;
+  confirmed_riders?: number;
+  confirmed_teams?: number;
+  total_teams?: number;
 }
 
 const RiderRow = ({ entry }: { entry: StartlistEntry }) => (
@@ -45,13 +54,14 @@ const RiderRow = ({ entry }: { entry: StartlistEntry }) => (
     <span className="text-muted-foreground w-6 text-right font-mono text-xs">
       #{entry.line_no}
     </span>
+    {entry.team_confirmed && (
+      <ShieldCheck className="h-3 w-3 text-green-500 flex-shrink-0" />
+    )}
     <span className="flex-1 truncate font-medium text-sm">
-      {entry.coureur?.nom || entry.source_name}
+      {entry.coureurs?.nom || entry.source_name}
     </span>
-    {entry.coureur_id ? (
-      <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
-    ) : (
-      <AlertCircle className="h-3 w-3 text-bordure-gold flex-shrink-0" />
+    {!entry.coureur_id && (
+      <AlertTriangle className="h-3 w-3 text-amber-500 flex-shrink-0" />
     )}
   </div>
 );
@@ -124,7 +134,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
       if (response.error) throw response.error;
       return response.data as {
         entries: StartlistEntry[];
-        stats: { total: number; matched: number; unmatched: number };
+        stats: StartlistStats;
       };
     },
     enabled: open && !!startlistImport?.id,
@@ -133,17 +143,19 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
   // Group startlist entries by team
   const groupedStartlistEntries = useMemo(() => {
     if (!startlistData?.entries) return [];
-    const groups: Record<string, StartlistEntry[]> = {};
+    const groups: Record<string, { entries: StartlistEntry[]; confirmed: boolean }> = {};
     for (const entry of startlistData.entries) {
-      const team = entry.equipe?.nom_affiche || entry.source_team || "Sans équipe";
-      if (!groups[team]) groups[team] = [];
-      groups[team].push(entry);
+      const team = entry.coureurs?.equipe || entry.source_team || "Sans équipe";
+      if (!groups[team]) groups[team] = { entries: [], confirmed: false };
+      groups[team].entries.push(entry);
+      if (entry.team_confirmed) groups[team].confirmed = true;
     }
     return Object.entries(groups)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([team, entries]) => ({
+      .map(([team, data]) => ({
         team,
-        entries: entries.sort((a, b) => a.line_no - b.line_no),
+        entries: data.entries.sort((a, b) => a.line_no - b.line_no),
+        confirmed: data.confirmed,
       }));
   }, [startlistData?.entries]);
 
@@ -213,6 +225,7 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
   ] : [];
 
   const maxPoints = Math.max(...pointsData.map(d => d.points), 1);
+  const stats = startlistData?.stats;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -338,33 +351,60 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
               )}
             </div>
 
-            {/* Right Column - Startlist (More prominent) */}
+            {/* Right Column - Startlist */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Users className="h-4 w-4" />
                   {t('drawer.registeredRiders')}
-                  {startlistData?.stats && (
+                  {stats && (
                     <Badge variant="secondary" className="ml-1">
-                      {startlistData.stats.total}
+                      {stats.total}
                     </Badge>
                   )}
                 </h3>
-                {startlistData?.stats && (
-                  <div className="flex gap-3 text-xs">
-                    <div className="flex items-center gap-1 text-green-600">
-                      <CheckCircle className="h-3 w-3" />
-                      <span>{startlistData.stats.matched}</span>
-                    </div>
-                    {startlistData.stats.unmatched > 0 && (
-                      <div className="flex items-center gap-1 text-bordure-gold">
-                        <AlertCircle className="h-3 w-3" />
-                        <span>{startlistData.stats.unmatched}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
+
+              {/* Stats badges */}
+              {stats && (
+                <div className="flex flex-wrap gap-2">
+                  {/* Confirmed teams */}
+                  {stats.confirmed_teams != null && stats.total_teams != null && stats.total_teams > 0 && (
+                    <Badge variant="outline" className="gap-1 text-green-700 border-green-300 bg-green-50">
+                      <ShieldCheck className="h-3 w-3" />
+                      {t('drawer.confirmedTeams', { count: stats.confirmed_teams, total: stats.total_teams })}
+                    </Badge>
+                  )}
+                  {/* Matched */}
+                  <Badge variant="outline" className="gap-1 text-blue-700 border-blue-300 bg-blue-50">
+                    <CheckCircle2 className="h-3 w-3" />
+                    {t('drawer.matchedRiders', { count: stats.matched })}
+                  </Badge>
+                  {/* Unmatched */}
+                  {stats.unmatched > 0 && (
+                    <Badge variant="outline" className="gap-1 text-amber-700 border-amber-300 bg-amber-50">
+                      <AlertTriangle className="h-3 w-3" />
+                      {t('drawer.unmatchedRiders', { count: stats.unmatched })}
+                    </Badge>
+                  )}
+                </div>
+              )}
+
+              {/* Legend */}
+              {stats && (stats.confirmed_teams ?? 0) > 0 && (
+                <div className="text-xs text-muted-foreground space-y-0.5 px-1">
+                  <div className="flex items-center gap-1.5">
+                    <ShieldCheck className="h-3 w-3 text-green-500" />
+                    <span>{t('drawer.legendOfficial')}</span>
+                  </div>
+                  {stats.unmatched > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <AlertTriangle className="h-3 w-3 text-amber-500" />
+                      <span>{t('drawer.legendUnmatched')}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {loadingStartlist ? (
                 <div className="space-y-2">
@@ -375,14 +415,16 @@ export const CalendarCourseDialog = ({ course, open, onOpenChange }: CalendarCou
               ) : groupedStartlistEntries.length > 0 ? (
                 <div className="border rounded-lg overflow-hidden">
                   <div className="max-h-[550px] overflow-y-auto p-3 space-y-4">
-                    {groupedStartlistEntries.map(({ team, entries }) => {
+                    {groupedStartlistEntries.map(({ team, entries, confirmed }) => {
                       const half = Math.ceil(entries.length / 2);
                       const col1 = entries.slice(0, half);
                       const col2 = entries.slice(half);
                       return (
                         <div key={team}>
-                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 px-1 border-b pb-1">
-                            {team} <span className="text-muted-foreground/60">({entries.length})</span>
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 px-1 border-b pb-1">
+                            {confirmed && <ShieldCheck className="h-3 w-3 text-green-500" />}
+                            <span>{team}</span>
+                            <span className="text-muted-foreground/60">({entries.length})</span>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
                             <div>
