@@ -414,6 +414,7 @@ Deno.serve(async (req) => {
             equipe: coureurData.equipe,
             cote: coureurData.prix_initial,
             bib_no: entry.bib_no,
+            team_confirmed: entry.team_confirmed || false,
             recent_results: resultsMap.get(entry.coureur_id) || []
           });
           manager.starters_count++;
