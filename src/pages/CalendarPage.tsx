@@ -159,38 +159,25 @@ export default function CalendarPage() {
             }
           });
 
-          // Fetch confirmed teams data for courses that have startlist imports
+          // Fetch confirmed teams data via server-side aggregation (avoids 1000-row limit)
           const importIds = Array.from(latestImportMap.values()).map(v => v.id);
           if (importIds.length > 0) {
-            const { data: entries } = await supabase
-              .from("startlist_entries")
-              .select("startlist_id, source_team, team_confirmed")
-              .in("startlist_id", importIds);
+            const { data: teamStats } = await supabase.rpc('get_startlist_team_stats', {
+              p_startlist_ids: importIds
+            });
 
-            if (entries) {
+            if (teamStats) {
               // Build importId -> raceId map
               const importToRace = new Map<string, string>();
               latestImportMap.forEach((val, raceId) => {
                 importToRace.set(val.id, raceId);
               });
 
-              // Group by race, then by team
-              const raceTeams = new Map<string, Map<string, boolean>>();
-              (entries as { startlist_id: string; source_team: string | null; team_confirmed: boolean }[]).forEach(e => {
-                const raceId = importToRace.get(e.startlist_id);
-                if (!raceId || !e.source_team) return;
-                if (!raceTeams.has(raceId)) raceTeams.set(raceId, new Map());
-                const teams = raceTeams.get(raceId)!;
-                if (!teams.has(e.source_team) || e.team_confirmed) {
-                  teams.set(e.source_team, e.team_confirmed || teams.get(e.source_team) || false);
+              (teamStats as { startlist_id: string; total_teams: number; confirmed_teams: number }[]).forEach(stat => {
+                const raceId = importToRace.get(stat.startlist_id);
+                if (raceId) {
+                  confirmedTeamsMap.set(raceId, { confirmed: stat.confirmed_teams, total: stat.total_teams });
                 }
-              });
-
-              raceTeams.forEach((teams, raceId) => {
-                const total = teams.size;
-                let confirmed = 0;
-                teams.forEach(v => { if (v) confirmed++; });
-                confirmedTeamsMap.set(raceId, { confirmed, total });
               });
             }
           }
