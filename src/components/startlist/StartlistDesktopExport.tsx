@@ -243,6 +243,9 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
                       .sort((a: any, b: any) => (b.cote || 0) - (a.cote || 0))
                       .map((starter: any) => (
                       <div key={starter.coureur_id} className="text-xs flex justify-between items-center gap-2">
+                          {starter.team_confirmed && (
+                            <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" />
+                          )}
                           <span className="font-medium truncate flex-1 min-w-0">{starter.nom}</span>
                         </div>
                       ))}
