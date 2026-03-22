@@ -1,0 +1,1 @@
+ALTER TABLE public.startlist_entries ADD COLUMN IF NOT EXISTS team_confirmed BOOLEAN NOT NULL DEFAULT false;

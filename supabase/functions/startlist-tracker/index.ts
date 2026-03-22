@@ -537,7 +537,7 @@ async function handleGlobalSync(supabase: any): Promise<{
 async function syncCourseStartlist(
   supabase: any,
   course: any,
-  scrapedRiders: { rider_name: string; team_name: string }[]
+  scrapedRiders: { rider_name: string; team_name: string; team_confirmed: boolean }[]
 ): Promise<{ added: number; removed: number }> {
   const courseId = course.id;
   const courseName = course.nom;
@@ -599,7 +599,7 @@ async function syncCourseStartlist(
   // 3. Build tokenSig sets for comparison
   // For scraped riders: tokenSig of their PCS name
   const scrapedSigSet = new Set<string>();
-  const scrapedByKey = new Map<string, { rider_name: string; team_name: string }>();
+  const scrapedByKey = new Map<string, { rider_name: string; team_name: string; team_confirmed: boolean }>();
   for (const r of scrapedRiders) {
     const sig = tokenSig(r.rider_name);
     scrapedSigSet.add(sig);
@@ -630,8 +630,14 @@ async function syncCourseStartlist(
   }
 
   // 4. Determine additions and removals
-  const toAdd: { rider_name: string; team_name: string }[] = [];
+  const toAdd: { rider_name: string; team_name: string; team_confirmed: boolean }[] = [];
   const toRemoveEntryIds: { id: string; source_name: string; coureur_id: string | null }[] = [];
+  
+  // Build map of team_confirmed status for updating existing entries
+  const teamConfirmedBySig = new Map<string, boolean>();
+  for (const [sig, rider] of scrapedByKey) {
+    teamConfirmedBySig.set(sig, rider.team_confirmed);
+  }
 
   // Additions: scraped riders whose tokenSig is NOT in existing map
   for (const [sig, rider] of scrapedByKey) {
@@ -669,7 +675,9 @@ async function syncCourseStartlist(
   console.log(`[SYNC] ${toAdd.length} additions, ${toRemoveEntryIds.length} removals`);
 
   if (toAdd.length === 0 && toRemoveEntryIds.length === 0) {
-    console.log(`[SYNC] No changes for ${courseName}`);
+    // Even with no adds/removes, update team_confirmed on existing entries
+    await updateTeamConfirmedStatus(supabase, existing, existingSigMap, teamConfirmedBySig);
+    console.log(`[SYNC] No structural changes for ${courseName} (team_confirmed updated)`);
     return { added: 0, removed: 0 };
   }
 
@@ -817,6 +825,7 @@ async function syncCourseStartlist(
         coureur_id: match.coureur_id,
         confidence: match.confidence || null,
         status: match.status,
+        team_confirmed: rider.team_confirmed || false,
       })
       .select("id")
       .single();
@@ -847,8 +856,34 @@ async function syncCourseStartlist(
     }
   }
 
+  // Update team_confirmed on existing entries that weren't added or removed
+  await updateTeamConfirmedStatus(supabase, existing, existingSigMap, teamConfirmedBySig);
+
   console.log(`[SYNC] ${courseName} done: ${addedCount} added, ${removedCount} removed`);
   return { added: addedCount, removed: removedCount };
+}
+
+/** Update team_confirmed status on existing entries based on latest scrape data */
+async function updateTeamConfirmedStatus(
+  supabase: any,
+  existing: any[],
+  existingSigMap: Map<string, { id: string; source_name: string; coureur_id: string | null }>,
+  teamConfirmedBySig: Map<string, boolean>
+) {
+  let updated = 0;
+  for (const [sig, entry] of existingSigMap) {
+    const confirmed = teamConfirmedBySig.get(sig);
+    if (confirmed !== undefined) {
+      const { error } = await supabase
+        .from("startlist_entries")
+        .update({ team_confirmed: confirmed })
+        .eq("id", entry.id);
+      if (!error) updated++;
+    }
+  }
+  if (updated > 0) {
+    console.log(`[SYNC] Updated team_confirmed on ${updated} existing entries`);
+  }
 }
 
 // ============================================================
@@ -924,7 +959,7 @@ async function markCourseChecked(supabase: any, courseId: string): Promise<void>
 // HTML PARSING & SCRAPING
 // ============================================================
 
-function parseStartlistHtml(html: string): { rider_name: string; team_name: string }[] {
+function parseStartlistHtml(html: string): { rider_name: string; team_name: string; team_confirmed: boolean }[] {
   const doc = new DOMParser().parseFromString(html, "text/html");
   if (!doc) {
     console.error("parseStartlistHtml: Failed to parse HTML");
@@ -939,41 +974,69 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
     console.warn("parseStartlistHtml: No .startlist_v4 found");
     console.log(`HTML preview: ${html.substring(0, 500)}`);
     const allPageLinks = doc.querySelectorAll("a");
-    const riders: { rider_name: string; team_name: string }[] = [];
+    const riders: { rider_name: string; team_name: string; team_confirmed: boolean }[] = [];
     for (const link of allPageLinks) {
       const href = link.getAttribute("href") || "";
       if (!href.includes("rider/")) continue;
       const name = link.textContent?.trim() || "";
       if (name.length > 2) {
-        riders.push({ rider_name: name, team_name: "Unknown" });
+        riders.push({ rider_name: name, team_name: "Unknown", team_confirmed: false });
       }
     }
     console.log(`parseStartlistHtml fallback: extracted ${riders.length} riders`);
     return riders;
   }
 
-  const riders: { rider_name: string; team_name: string }[] = [];
-  const allLinks = startlist.querySelectorAll("a");
-  let currentTeam = "Unknown Team";
+  const riders: { rider_name: string; team_name: string; team_confirmed: boolean }[] = [];
+  
+  // Iterate over team blocks (li children of startlist_v4)
+  const teamBlocks = startlist.querySelectorAll(":scope > li");
   let teamCount = 0;
 
-  for (const link of allLinks) {
-    const href = link.getAttribute("href") || "";
-    const className = link.getAttribute("class") || "";
-    if (className.includes("team") && !className.includes("team-in-race")) {
-      currentTeam = link.textContent?.trim() || "Unknown Team";
-      teamCount++;
-    } else if (href.includes("rider/") && !href.includes("team-in-race")) {
-      const riderName = link.textContent?.trim() || "";
+  for (const teamBlock of teamBlocks) {
+    // Detect team confirmation: <span class="confirmed ok"> means confirmed
+    const confirmedSpan = teamBlock.querySelector("span.confirmed");
+    const isConfirmed = confirmedSpan ? confirmedSpan.getAttribute("class")?.includes("ok") === true : false;
+
+    // Get team name from team link
+    const teamLink = teamBlock.querySelector("a.team");
+    const teamName = teamLink?.textContent?.trim() || "Unknown Team";
+    teamCount++;
+
+    // Get riders from this team block
+    const riderLinks = teamBlock.querySelectorAll("ul li a[href*='rider/']");
+    for (const riderLink of riderLinks) {
+      const riderName = riderLink.textContent?.trim() || "";
       if (riderName.length > 2) {
-        riders.push({ rider_name: riderName, team_name: currentTeam });
+        riders.push({ rider_name: riderName, team_name: teamName, team_confirmed: isConfirmed });
       }
     }
   }
 
-  console.log(`parseStartlistHtml: extracted ${riders.length} riders from ${teamCount} teams`);
+  // Fallback: if no team blocks found, try the old link-based approach
+  if (riders.length === 0) {
+    const allLinks = startlist.querySelectorAll("a");
+    let currentTeam = "Unknown Team";
+
+    for (const link of allLinks) {
+      const href = link.getAttribute("href") || "";
+      const className = link.getAttribute("class") || "";
+      if (className.includes("team") && !className.includes("team-in-race")) {
+        currentTeam = link.textContent?.trim() || "Unknown Team";
+        teamCount++;
+      } else if (href.includes("rider/") && !href.includes("team-in-race")) {
+        const riderName = link.textContent?.trim() || "";
+        if (riderName.length > 2) {
+          riders.push({ rider_name: riderName, team_name: currentTeam, team_confirmed: false });
+        }
+      }
+    }
+  }
+
+  const confirmedCount = new Set(riders.filter(r => r.team_confirmed).map(r => r.team_name)).size;
+  console.log(`parseStartlistHtml: extracted ${riders.length} riders from ${teamCount} teams (${confirmedCount} confirmed)`);
   if (riders.length > 0) {
-    console.log(`Sample: ${riders.slice(0, 3).map(r => `${r.rider_name} (${r.team_name})`).join(", ")}`);
+    console.log(`Sample: ${riders.slice(0, 3).map(r => `${r.rider_name} (${r.team_name}) ${r.team_confirmed ? '✓' : ''}`).join(", ")}`);
   }
   return riders;
 }
@@ -990,7 +1053,7 @@ function extractPcsRaceSlug(raceUrl: string): string | null {
   }
 }
 
-async function scrapeRaceStartlist(raceUrl: string): Promise<{ rider_name: string; team_name: string }[]> {
+async function scrapeRaceStartlist(raceUrl: string): Promise<{ rider_name: string; team_name: string; team_confirmed: boolean }[]> {
   const response = await fetch(raceUrl, {
     headers: {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",

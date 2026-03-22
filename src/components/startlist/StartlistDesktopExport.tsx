@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { MessageSquare, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, CheckCircle2, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ManagerStars } from '@/components/startlist/ManagerStars';
@@ -150,6 +150,19 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
           <div className="flex gap-4 text-xs">
             <div><span className="font-medium">Managers:</span> {startlistData.totals.managers}</div>
             <div><span className="font-medium">Partants:</span> {startlistData.totals.starters_all}</div>
+            {(() => {
+              const allStarters = startlistData.managers?.length > 0
+                ? startlistData.managers.flatMap((m: any) => m.starters || [])
+                : startlistData.starters || [];
+              const confirmedTeams = new Set(allStarters.filter((s: any) => s.team_confirmed).map((s: any) => s.equipe)).size;
+              const totalTeams = new Set(allStarters.map((s: any) => s.equipe).filter(Boolean)).size;
+              return totalTeams > 0 ? (
+                <div className="flex items-center gap-1">
+                  <Check className="h-3 w-3 text-green-600" />
+                  <span className="font-medium">{confirmedTeams}/{totalTeams} équipes confirmées</span>
+                </div>
+              ) : null;
+            })()}
           </div>
         </Card>
 
@@ -158,8 +171,11 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
           <Card className="p-4">
             <h3 className="text-lg font-semibold mb-4">Liste des partants ({startlistData.starters.length})</h3>
             <div className="grid grid-cols-3 gap-2">
-              {startlistData.starters.map((starter: any) => (
+               {startlistData.starters.map((starter: any) => (
                 <div key={starter.coureur_id} className="flex items-center gap-2 text-sm py-1 px-2 bg-muted/30 rounded">
+                  {starter.team_confirmed && (
+                    <Check className="h-3 w-3 text-green-600 flex-shrink-0" />
+                  )}
                   <span className="font-medium truncate flex-1">{starter.nom}</span>
                   {starter.equipe && (
                     <span className="text-xs text-muted-foreground truncate">{starter.equipe}</span>
@@ -227,6 +243,9 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
                       .sort((a: any, b: any) => (b.cote || 0) - (a.cote || 0))
                       .map((starter: any) => (
                       <div key={starter.coureur_id} className="text-xs flex justify-between items-center gap-2">
+                          {starter.team_confirmed && (
+                            <Check className="h-2.5 w-2.5 text-green-600 flex-shrink-0" />
+                          )}
                           <span className="font-medium truncate flex-1 min-w-0">{starter.nom}</span>
                         </div>
                       ))}

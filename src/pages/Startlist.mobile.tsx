@@ -552,7 +552,10 @@ export const StartlistMobile = () => {
                     
                     <AccordionContent>
                       <div className="pt-1">
-                        {sortedStarters.map((starter: any) => <p key={starter.coureur_id} className="text-sm mx-[60px] text-muted-foreground">
+                        {sortedStarters.map((starter: any) => <p key={starter.coureur_id} className="text-sm mx-[60px] text-muted-foreground flex items-center gap-1">
+                            {starter.team_confirmed && (
+                              <CheckCircle2 className="h-3 w-3 text-green-600 flex-shrink-0" />
+                            )}
                             {starter.nom}
                           </p>)}
                       </div>
@@ -568,7 +571,10 @@ export const StartlistMobile = () => {
                 {t('startlist.withoutOwner')} ({startlistViewData.without_owner.length})
               </h4>
               <div className="flex flex-wrap gap-1.5">
-                {startlistViewData.without_owner.map((coureur: any) => <Badge key={coureur.coureur_id} variant="outline" className="text-xs">
+                {startlistViewData.without_owner.map((coureur: any) => <Badge key={coureur.coureur_id} variant="outline" className="text-xs flex items-center gap-1">
+                    {coureur.team_confirmed && (
+                      <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
+                    )}
                     {coureur.nom}
                   </Badge>)}
               </div>

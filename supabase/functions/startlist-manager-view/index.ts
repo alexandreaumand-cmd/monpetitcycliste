@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
     // Get all matched entries (any status as long as coureur_id is set)
     const { data: entries, error: entriesError } = await supabase
       .from('startlist_entries')
-      .select('coureur_id, bib_no')
+      .select('coureur_id, bib_no, team_confirmed')
       .eq('startlist_id', startlist_id)
       .not('coureur_id', 'is', null);
 
@@ -158,7 +158,8 @@ Deno.serve(async (req) => {
         nom: e.coureurs?.nom || e.coureur_id,
         equipe: e.coureurs?.equipe || '',
         cote: e.coureurs?.prix_initial || 10,
-        bib_no: e.bib_no
+        bib_no: e.bib_no,
+        team_confirmed: e.team_confirmed || false
       })).sort((a, b) => a.nom.localeCompare(b.nom));
 
     // Fetch multi-stage route images
@@ -413,6 +414,7 @@ Deno.serve(async (req) => {
             equipe: coureurData.equipe,
             cote: coureurData.prix_initial,
             bib_no: entry.bib_no,
+            team_confirmed: entry.team_confirmed || false,
             recent_results: resultsMap.get(entry.coureur_id) || []
           });
           manager.starters_count++;
