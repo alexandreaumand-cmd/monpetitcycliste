@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ArrowLeft, LogOut, ArrowUpDown, ArrowUp, ArrowDown, Download, CheckCircle2, Users } from "lucide-react";
+import { Search, ArrowLeft, LogOut, ArrowUpDown, ArrowUp, ArrowDown, Download, CheckCircle2, Users, SlidersHorizontal, EyeOff } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
