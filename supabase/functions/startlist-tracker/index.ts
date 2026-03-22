@@ -675,7 +675,9 @@ async function syncCourseStartlist(
   console.log(`[SYNC] ${toAdd.length} additions, ${toRemoveEntryIds.length} removals`);
 
   if (toAdd.length === 0 && toRemoveEntryIds.length === 0) {
-    console.log(`[SYNC] No changes for ${courseName}`);
+    // Even with no adds/removes, update team_confirmed on existing entries
+    await updateTeamConfirmedStatus(supabase, existing, existingSigMap, teamConfirmedBySig);
+    console.log(`[SYNC] No structural changes for ${courseName} (team_confirmed updated)`);
     return { added: 0, removed: 0 };
   }
 
