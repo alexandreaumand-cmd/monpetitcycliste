@@ -4522,6 +4522,7 @@ export type Database = {
           source_team: string | null
           startlist_id: string
           status: Database["public"]["Enums"]["startlist_entry_status"] | null
+          team_confirmed: boolean
         }
         Insert: {
           bib_no?: string | null
@@ -4534,6 +4535,7 @@ export type Database = {
           source_team?: string | null
           startlist_id: string
           status?: Database["public"]["Enums"]["startlist_entry_status"] | null
+          team_confirmed?: boolean
         }
         Update: {
           bib_no?: string | null
@@ -4546,6 +4548,7 @@ export type Database = {
           source_team?: string | null
           startlist_id?: string
           status?: Database["public"]["Enums"]["startlist_entry_status"] | null
+          team_confirmed?: boolean
         }
         Relationships: [
           {
