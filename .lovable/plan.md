@@ -1,59 +1,34 @@
 
 
-# Détection et affichage des équipes confirmées (tick vert PCS)
+# Fix: team_confirmed non visible — deux problèmes identifiés
 
-## Concept
+## Diagnostic
 
-Sur ProCyclingStats, les équipes dont la composition est officiellement confirmée ont un **tick vert** (✓) à côté du nom. Le scraper actuel ignore cette information. L'objectif est de :
-1. Scraper cette info depuis PCS
-2. La stocker en base
-3. L'afficher dans les différents écrans de l'app
+### Problème 1 : Les données ne sont pas encore remplies
+La colonne `team_confirmed` vient d'être ajoutée avec `default false`. Le scraper n'a pas encore re-scrapé les courses pour détecter le statut réel. Il faut **forcer un re-scrape** des courses concernées.
 
-## Changements techniques
+**Action** : Mettre à jour `last_tracker_check` à `null` sur les courses proches (< 14 jours) pour que le tracker les re-scrape au prochain cycle (toutes les 5 min).
 
-### 1. Scraper — `supabase/functions/startlist-tracker/index.ts`
+```sql
+UPDATE courses 
+SET last_tracker_check = NULL 
+WHERE date_debut >= CURRENT_DATE - INTERVAL '7 days' 
+AND date_debut <= CURRENT_DATE + INTERVAL '14 days'
+AND pcs_slug IS NOT NULL;
+```
 
-Modifier `parseStartlistHtml` pour retourner un champ `team_confirmed: boolean` par coureur. Sur PCS, le tick vert est un élément HTML dans le bloc équipe (class contenant `icon` ou `tick` ou un `✓`). Le parser itèrera sur les blocs équipe, détectera la présence de cet indicateur, et propagera `team_confirmed` à tous les coureurs de l'équipe.
+### Problème 2 : La vue admin `StartlistDetailView` n'affiche pas le statut
 
-Nouveau type de retour : `{ rider_name: string; team_name: string; team_confirmed: boolean }`
+La section "coureurs inscrits" dans la vue admin SuperAdmin (`StartlistDetailView.tsx` → `StartlistRidersManagement`) n'utilise pas `team_confirmed`.
 
-### 2. Base de données — Migration SQL
+**Fichier modifié** : `src/components/admin/startlist/StartlistRidersManagement.tsx`  
+- Ajouter un indicateur ✓ vert à côté des coureurs dont `team_confirmed = true`
+- Ajouter un compteur "X/Y équipes confirmées" en haut de la section
 
-Ajouter une colonne `team_confirmed` (boolean, default `false`) à la table `startlist_entries`. Cette colonne sera mise à jour à chaque scrape.
+### Vérification du parsing PCS
+J'ai vérifié le HTML réel de PCS. La structure est :
+- Confirmé : `<span class="confirmed ok">`
+- Non confirmé : `<span class="confirmed ">`
 
-### 3. Sync — `syncCourseStartlist`
-
-- Lors de l'insertion de nouveaux riders, stocker `team_confirmed`
-- Lors des re-scrapes, **mettre à jour** `team_confirmed` sur les entrées existantes (un team peut passer de non-confirmé à confirmé entre deux scrapes)
-
-### 4. Edge function `startlist-manager-view`
-
-Inclure `team_confirmed` dans le select des entries, et le propager dans les données retournées (starters et managers.starters).
-
-### 5. Affichage UI — Tous les écrans
-
-**Indicateur visuel** : Un petit ✓ vert discret à côté du nom de l'équipe ou du coureur, indiquant que sa composition d'équipe est officiellement confirmée.
-
-**Écrans impactés :**
-
-| Écran | Emplacement | Affichage |
-|-------|-------------|-----------|
-| **Startlist Mobile** (user view) | Liste des coureurs dans l'accordion manager | Petit badge ✓ vert à côté du nom du coureur si `team_confirmed` |
-| **Startlist Desktop** (user view) | Grille des managers, liste coureurs | Idem |
-| **StartlistDesktopExport** (image export) | Liste des coureurs par manager | ✓ vert à côté du nom |
-| **Admin StartlistDetailView** | Vue SuperAdmin des partants | ✓ vert + compteur "X/Y équipes confirmées" dans les stats |
-| **Calendrier Startlist** (cards) | Badge sur la carte de la course | Indicateur "X/Y équipes ✓" si disponible |
-| **Sans propriétaire** | Liste des coureurs sans manager | ✓ vert à côté du badge nom |
-
-**Légende** : Un petit texte explicatif "✓ = composition d'équipe confirmée officiellement" sera affiché en bas de la section partants.
-
-### Fichiers modifiés
-
-- `supabase/functions/startlist-tracker/index.ts` — Parser + sync
-- `supabase/functions/startlist-manager-view/index.ts` — Inclure `team_confirmed`
-- `src/components/startlist/StartlistDesktopExport.tsx` — Affichage ✓
-- `src/pages/Startlist.mobile.tsx` — Affichage ✓
-- `src/pages/Startlist.desktop.tsx` — Affichage ✓
-- `src/components/admin/StartlistDetailView.tsx` — Stats + affichage
-- Migration SQL — Nouvelle colonne
+Le code actuel (`span.confirmed` + `includes("ok")`) est **correct**. Le problème est uniquement que le scraper n'a pas encore tourné avec le nouveau code.
 
