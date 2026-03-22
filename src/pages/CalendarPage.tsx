@@ -66,6 +66,7 @@ export default function CalendarPage() {
   const [sortColumn, setSortColumn] = useState<SortColumn | null>('date_debut');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedCourse, setSelectedCourse] = useState<CourseWithPoints | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   const { data: allSeasons } = useQuery({
     queryKey: ["all-seasons-calendar"],
