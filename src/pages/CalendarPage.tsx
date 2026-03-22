@@ -435,31 +435,37 @@ export default function CalendarPage() {
       <div className="container mx-auto px-4 py-4 md:py-8">
         {/* Filters */}
         {isMobile ? (
-          <div className="space-y-3 mb-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t('filters.searchPlaceholder')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 h-10"
-              />
+          <div className="space-y-2.5 mb-3">
+            {/* Search + hide passed on same row */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('filters.searchPlaceholder')}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-8 h-9 text-sm"
+                />
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Switch
+                  id="hidePassed-mobile"
+                  checked={hidePassed}
+                  onCheckedChange={setHidePassed}
+                  className="scale-90"
+                />
+                <Label htmlFor="hidePassed-mobile" className="text-[11px] text-muted-foreground leading-tight max-w-[60px]">
+                  {t('filters.hidePassed')}
+                </Label>
+              </div>
             </div>
             {/* Phase chips */}
-            <ChipGroup items={phaseChips} selected={selectedPhase} onSelect={setSelectedPhase} />
+            <div className="overflow-x-auto -mx-4 px-4">
+              <ChipGroup items={phaseChips} selected={selectedPhase} onSelect={setSelectedPhase} />
+            </div>
             {/* Category chips */}
-            <ChipGroup items={categoryChips} selected={selectedCategorie} onSelect={setSelectedCategorie} />
-            {/* Hide passed toggle */}
-            <div className="flex items-center justify-between">
-              <Label htmlFor="hidePassed-mobile" className="text-sm">
-                {t('filters.hidePassed')}
-              </Label>
-              <Switch
-                id="hidePassed-mobile"
-                checked={hidePassed}
-                onCheckedChange={setHidePassed}
-              />
+            <div className="overflow-x-auto -mx-4 px-4">
+              <ChipGroup items={categoryChips} selected={selectedCategorie} onSelect={setSelectedCategorie} />
             </div>
           </div>
         ) : (
