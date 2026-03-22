@@ -86,13 +86,25 @@ export const StartlistRidersManagement = ({
     }
   };
 
+  const confirmedCount = starters.filter(s => s.team_confirmed).length;
+  const uniqueTeams = [...new Set(starters.map(s => s.equipe).filter(Boolean))];
+  const confirmedTeams = [...new Set(starters.filter(s => s.team_confirmed).map(s => s.equipe).filter(Boolean))];
+
   return (
     <>
       <Card className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">
-            Liste des partants ({starters.length})
-          </h3>
+          <div>
+            <h3 className="text-lg font-semibold">
+              Liste des partants ({starters.length})
+            </h3>
+            {uniqueTeams.length > 0 && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                {confirmedTeams.length}/{uniqueTeams.length} équipes confirmées
+              </p>
+            )}
+          </div>
           <Button
             variant="outline"
             size="sm"
