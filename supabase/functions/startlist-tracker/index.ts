@@ -825,6 +825,7 @@ async function syncCourseStartlist(
         coureur_id: match.coureur_id,
         confidence: match.confidence || null,
         status: match.status,
+        team_confirmed: rider.team_confirmed || false,
       })
       .select("id")
       .single();
