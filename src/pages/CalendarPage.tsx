@@ -423,9 +423,9 @@ export default function CalendarPage() {
       <div className="container mx-auto px-4 py-4 md:py-8">
         {/* Filters */}
         {isMobile ? (
-          <div className="space-y-2.5 mb-3">
-            {/* Search + hide passed on same row */}
-            <div className="flex items-center gap-2">
+          <div className="space-y-2 mb-3">
+            {/* Search + filter toggle + hide passed */}
+            <div className="flex items-center gap-1.5">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -435,26 +435,35 @@ export default function CalendarPage() {
                   className="pl-8 h-9 text-sm"
                 />
               </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <Switch
-                  id="hidePassed-mobile"
-                  checked={hidePassed}
-                  onCheckedChange={setHidePassed}
-                  className="scale-90"
-                />
-                <Label htmlFor="hidePassed-mobile" className="text-[11px] text-muted-foreground leading-tight max-w-[60px]">
-                  {t('filters.hidePassed')}
-                </Label>
+              <Button
+                variant={showFilters ? "default" : "outline"}
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={hidePassed ? "default" : "outline"}
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                onClick={() => setHidePassed(!hidePassed)}
+                title={t('filters.hidePassed')}
+              >
+                <EyeOff className="h-4 w-4" />
+              </Button>
+            </div>
+            {/* Collapsible filters */}
+            {showFilters && (
+              <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
+                <div className="overflow-x-auto -mx-4 px-4">
+                  <ChipGroup items={phaseChips} selected={selectedPhase} onSelect={setSelectedPhase} />
+                </div>
+                <div className="overflow-x-auto -mx-4 px-4">
+                  <ChipGroup items={categoryChips} selected={selectedCategorie} onSelect={setSelectedCategorie} />
+                </div>
               </div>
-            </div>
-            {/* Phase chips */}
-            <div className="overflow-x-auto -mx-4 px-4">
-              <ChipGroup items={phaseChips} selected={selectedPhase} onSelect={setSelectedPhase} />
-            </div>
-            {/* Category chips */}
-            <div className="overflow-x-auto -mx-4 px-4">
-              <ChipGroup items={categoryChips} selected={selectedCategorie} onSelect={setSelectedCategorie} />
-            </div>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
