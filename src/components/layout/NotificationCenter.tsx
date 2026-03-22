@@ -120,7 +120,7 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
   };
 
   return (
-    <Popover>
+    <Popover onOpenChange={(open) => { if (open && unreadCount > 0) markAllAsRead(); }}>
       <PopoverTrigger asChild>
         <Button 
           variant="ghost" 
@@ -142,13 +142,8 @@ export const NotificationCenter = ({ variant = 'default' }: NotificationCenterPr
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-96 p-0" align="end">
-        <div className="flex items-center justify-between p-4 border-b">
+        <div className="p-4 border-b">
           <h4 className="font-semibold">{t('notifications.title')}</h4>
-          {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={markAllAsRead}>
-              {t('notifications.markAllRead')}
-            </Button>
-          )}
         </div>
         <ScrollArea className="h-[400px]">
           {notifications.length === 0 ? (
