@@ -1,46 +1,55 @@
 
 
-# Optimiser CalendarPage pour mobile + ajouter équipes confirmées
+# Fix: Équipes confirmées non affichées — limite 1000 lignes
 
-## Problème
+## Diagnostic
 
-`CalendarPage.tsx` utilise un tableau HTML (`<Table>`) sur toutes les tailles d'écran. Sur mobile (393px), les colonnes sont compressées et illisibles (screenshot). De plus, aucune information sur les équipes confirmées n'est affichée.
+La requête ligne 165-168 de `CalendarPage.tsx` charge **toutes les `startlist_entries`** pour tous les imports de la saison en une seule requête :
+
+```typescript
+const { data: entries } = await supabase
+  .from("startlist_entries")
+  .select("startlist_id, source_team, team_confirmed")
+  .in("startlist_id", importIds);  // ← pas de limite explicite
+```
+
+Avec ~165 courses × ~160 coureurs/course = **~26 000 lignes**, la limite par défaut de 1000 lignes tronque silencieusement les résultats. La plupart des courses n'ont donc aucune donnée d'équipe confirmée → `total_teams = 0` → le badge ne s'affiche pas.
 
 ## Solution
 
-### 1. Layout responsive — remplacer le tableau par des cards sur mobile
+Remplacer l'agrégation client-side par une **fonction SQL** côté base qui fait le `GROUP BY` et retourne directement `{ startlist_id, total_teams, confirmed_teams }`. Cela élimine le problème de limite et améliore les performances.
 
-Dans `CalendarPage.tsx`, détecter `isMobile` et afficher :
-- **Mobile** : liste de cards compactes (nom, catégorie badge, countdown badge, points, nb équipes confirmées)
-- **Desktop** : garder le tableau existant, ajouter une colonne "Équipes ✓"
-
-Les filtres sur mobile seront simplifiés : search + chips horizontaux pour catégorie/phase + toggle "masquer passées", au lieu des selects empilés verticalement.
-
-### 2. Récupérer le nombre d'équipes confirmées par course
-
-Dans la query `queryFn` existante (lignes 111-190), après avoir récupéré les `startlist_imports`, faire une requête groupée sur `startlist_entries` pour compter les équipes confirmées par course :
+### 1. Migration SQL — Créer la fonction d'agrégation
 
 ```sql
--- Pour chaque course ayant un startlist_import, compter les équipes distinctes
--- et les équipes distinctes avec team_confirmed = true
+CREATE OR REPLACE FUNCTION public.get_startlist_team_stats(p_startlist_ids uuid[])
+RETURNS TABLE(startlist_id uuid, total_teams bigint, confirmed_teams bigint)
+LANGUAGE sql STABLE
+AS $$
+  SELECT 
+    se.startlist_id,
+    COUNT(DISTINCT se.source_team) as total_teams,
+    COUNT(DISTINCT CASE WHEN se.team_confirmed THEN se.source_team END) as confirmed_teams
+  FROM startlist_entries se
+  WHERE se.startlist_id = ANY(p_startlist_ids)
+    AND se.source_team IS NOT NULL
+  GROUP BY se.startlist_id
+$$;
 ```
 
-Stocker dans `CourseWithPoints` deux nouveaux champs : `confirmed_teams` et `total_teams`.
+### 2. CalendarPage.tsx — Utiliser la fonction RPC
 
-### 3. Affichage des équipes confirmées
+Remplacer les lignes 162-196 (la requête `startlist_entries` + agrégation JS) par un appel RPC :
 
-- **Mobile card** : petit badge vert "X/Y ✓" si des données existent
-- **Desktop table** : nouvelle colonne avec badge "X/Y" équipes confirmées
-- Si aucune startlist → pas de badge affiché
+```typescript
+const { data: teamStats } = await supabase.rpc('get_startlist_team_stats', {
+  p_startlist_ids: importIds
+});
+```
 
-### 4. Traductions
-
-Ajouter dans `fr/calendar.json` et `en/calendar.json` :
-- `table.confirmedTeams`: "Équipes ✓" / "Teams ✓"
+Puis mapper les résultats dans `confirmedTeamsMap` via `importToRace`.
 
 ### Fichiers modifiés
-
-- `src/pages/CalendarPage.tsx` — layout responsive + fetch confirmed teams + affichage
-- `src/i18n/locales/fr/calendar.json` — nouvelles clés
-- `src/i18n/locales/en/calendar.json` — nouvelles clés
+- Migration SQL — nouvelle fonction `get_startlist_team_stats`
+- `src/pages/CalendarPage.tsx` — remplacer l'agrégation client par l'appel RPC
 
