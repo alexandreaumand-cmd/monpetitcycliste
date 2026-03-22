@@ -23,7 +23,8 @@
     "phase": "Phase",
     "season": "Saison",
     "points": "Points",
-    "startlist": "Startlist"
+    "startlist": "Startlist",
+    "confirmedTeams": "Équipes ✓"
   },
   "badges": {
     "today": "Aujourd'hui",
