@@ -924,7 +924,7 @@ async function markCourseChecked(supabase: any, courseId: string): Promise<void>
 // HTML PARSING & SCRAPING
 // ============================================================
 
-function parseStartlistHtml(html: string): { rider_name: string; team_name: string }[] {
+function parseStartlistHtml(html: string): { rider_name: string; team_name: string; team_confirmed: boolean }[] {
   const doc = new DOMParser().parseFromString(html, "text/html");
   if (!doc) {
     console.error("parseStartlistHtml: Failed to parse HTML");
@@ -939,41 +939,69 @@ function parseStartlistHtml(html: string): { rider_name: string; team_name: stri
     console.warn("parseStartlistHtml: No .startlist_v4 found");
     console.log(`HTML preview: ${html.substring(0, 500)}`);
     const allPageLinks = doc.querySelectorAll("a");
-    const riders: { rider_name: string; team_name: string }[] = [];
+    const riders: { rider_name: string; team_name: string; team_confirmed: boolean }[] = [];
     for (const link of allPageLinks) {
       const href = link.getAttribute("href") || "";
       if (!href.includes("rider/")) continue;
       const name = link.textContent?.trim() || "";
       if (name.length > 2) {
-        riders.push({ rider_name: name, team_name: "Unknown" });
+        riders.push({ rider_name: name, team_name: "Unknown", team_confirmed: false });
       }
     }
     console.log(`parseStartlistHtml fallback: extracted ${riders.length} riders`);
     return riders;
   }
 
-  const riders: { rider_name: string; team_name: string }[] = [];
-  const allLinks = startlist.querySelectorAll("a");
-  let currentTeam = "Unknown Team";
+  const riders: { rider_name: string; team_name: string; team_confirmed: boolean }[] = [];
+  
+  // Iterate over team blocks (li children of startlist_v4)
+  const teamBlocks = startlist.querySelectorAll(":scope > li");
   let teamCount = 0;
 
-  for (const link of allLinks) {
-    const href = link.getAttribute("href") || "";
-    const className = link.getAttribute("class") || "";
-    if (className.includes("team") && !className.includes("team-in-race")) {
-      currentTeam = link.textContent?.trim() || "Unknown Team";
-      teamCount++;
-    } else if (href.includes("rider/") && !href.includes("team-in-race")) {
-      const riderName = link.textContent?.trim() || "";
+  for (const teamBlock of teamBlocks) {
+    // Detect team confirmation: <span class="confirmed ok"> means confirmed
+    const confirmedSpan = teamBlock.querySelector("span.confirmed");
+    const isConfirmed = confirmedSpan ? confirmedSpan.getAttribute("class")?.includes("ok") === true : false;
+
+    // Get team name from team link
+    const teamLink = teamBlock.querySelector("a.team");
+    const teamName = teamLink?.textContent?.trim() || "Unknown Team";
+    teamCount++;
+
+    // Get riders from this team block
+    const riderLinks = teamBlock.querySelectorAll("ul li a[href*='rider/']");
+    for (const riderLink of riderLinks) {
+      const riderName = riderLink.textContent?.trim() || "";
       if (riderName.length > 2) {
-        riders.push({ rider_name: riderName, team_name: currentTeam });
+        riders.push({ rider_name: riderName, team_name: teamName, team_confirmed: isConfirmed });
       }
     }
   }
 
-  console.log(`parseStartlistHtml: extracted ${riders.length} riders from ${teamCount} teams`);
+  // Fallback: if no team blocks found, try the old link-based approach
+  if (riders.length === 0) {
+    const allLinks = startlist.querySelectorAll("a");
+    let currentTeam = "Unknown Team";
+
+    for (const link of allLinks) {
+      const href = link.getAttribute("href") || "";
+      const className = link.getAttribute("class") || "";
+      if (className.includes("team") && !className.includes("team-in-race")) {
+        currentTeam = link.textContent?.trim() || "Unknown Team";
+        teamCount++;
+      } else if (href.includes("rider/") && !href.includes("team-in-race")) {
+        const riderName = link.textContent?.trim() || "";
+        if (riderName.length > 2) {
+          riders.push({ rider_name: riderName, team_name: currentTeam, team_confirmed: false });
+        }
+      }
+    }
+  }
+
+  const confirmedCount = new Set(riders.filter(r => r.team_confirmed).map(r => r.team_name)).size;
+  console.log(`parseStartlistHtml: extracted ${riders.length} riders from ${teamCount} teams (${confirmedCount} confirmed)`);
   if (riders.length > 0) {
-    console.log(`Sample: ${riders.slice(0, 3).map(r => `${r.rider_name} (${r.team_name})`).join(", ")}`);
+    console.log(`Sample: ${riders.slice(0, 3).map(r => `${r.rider_name} (${r.team_name}) ${r.team_confirmed ? '✓' : ''}`).join(", ")}`);
   }
   return riders;
 }
