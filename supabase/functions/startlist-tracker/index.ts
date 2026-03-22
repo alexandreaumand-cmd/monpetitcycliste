@@ -630,8 +630,14 @@ async function syncCourseStartlist(
   }
 
   // 4. Determine additions and removals
-  const toAdd: { rider_name: string; team_name: string }[] = [];
+  const toAdd: { rider_name: string; team_name: string; team_confirmed: boolean }[] = [];
   const toRemoveEntryIds: { id: string; source_name: string; coureur_id: string | null }[] = [];
+  
+  // Build map of team_confirmed status for updating existing entries
+  const teamConfirmedBySig = new Map<string, boolean>();
+  for (const [sig, rider] of scrapedByKey) {
+    teamConfirmedBySig.set(sig, rider.team_confirmed);
+  }
 
   // Additions: scraped riders whose tokenSig is NOT in existing map
   for (const [sig, rider] of scrapedByKey) {
