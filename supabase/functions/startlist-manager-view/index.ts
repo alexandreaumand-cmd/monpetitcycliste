@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
     // Get all matched entries (any status as long as coureur_id is set)
     const { data: entries, error: entriesError } = await supabase
       .from('startlist_entries')
-      .select('coureur_id, bib_no')
+      .select('coureur_id, bib_no, team_confirmed')
       .eq('startlist_id', startlist_id)
       .not('coureur_id', 'is', null);
 
