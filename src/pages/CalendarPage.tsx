@@ -164,8 +164,8 @@ export default function CalendarPage() {
           if (importIds.length > 0) {
             const { data: entries } = await supabase
               .from("startlist_entries")
-              .select("import_id, equipe_pcs, team_confirmed")
-              .in("import_id", importIds);
+              .select("startlist_id, source_team, team_confirmed")
+              .in("startlist_id", importIds);
 
             if (entries) {
               // Build importId -> raceId map
@@ -176,14 +176,13 @@ export default function CalendarPage() {
 
               // Group by race, then by team
               const raceTeams = new Map<string, Map<string, boolean>>();
-              entries.forEach(e => {
-                const raceId = importToRace.get(e.import_id);
-                if (!raceId || !e.equipe_pcs) return;
+              (entries as { startlist_id: string; source_team: string | null; team_confirmed: boolean }[]).forEach(e => {
+                const raceId = importToRace.get(e.startlist_id);
+                if (!raceId || !e.source_team) return;
                 if (!raceTeams.has(raceId)) raceTeams.set(raceId, new Map());
                 const teams = raceTeams.get(raceId)!;
-                // A team is confirmed if any rider has team_confirmed = true
-                if (!teams.has(e.equipe_pcs) || e.team_confirmed) {
-                  teams.set(e.equipe_pcs, e.team_confirmed || teams.get(e.equipe_pcs) || false);
+                if (!teams.has(e.source_team) || e.team_confirmed) {
+                  teams.set(e.source_team, e.team_confirmed || teams.get(e.source_team) || false);
                 }
               });
 
