@@ -599,7 +599,7 @@ async function syncCourseStartlist(
   // 3. Build tokenSig sets for comparison
   // For scraped riders: tokenSig of their PCS name
   const scrapedSigSet = new Set<string>();
-  const scrapedByKey = new Map<string, { rider_name: string; team_name: string }>();
+  const scrapedByKey = new Map<string, { rider_name: string; team_name: string; team_confirmed: boolean }>();
   for (const r of scrapedRiders) {
     const sig = tokenSig(r.rider_name);
     scrapedSigSet.add(sig);
