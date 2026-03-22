@@ -122,7 +122,10 @@ export const StartlistRidersManagement = ({
               key={starter.coureur_id}
               className="flex items-center gap-2 text-sm py-2 px-3 bg-muted/30 rounded group hover:bg-muted/50 transition-colors"
             >
-              <span className="font-medium truncate flex-1">{starter.nom}</span>
+              <span className="font-medium truncate flex-1 flex items-center gap-1">
+                {starter.team_confirmed && <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />}
+                {starter.nom}
+              </span>
               {starter.equipe && (
                 <span className="text-xs text-muted-foreground truncate max-w-[100px]">
                   {starter.equipe}
