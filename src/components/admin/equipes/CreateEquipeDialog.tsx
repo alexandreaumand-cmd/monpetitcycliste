@@ -41,27 +41,60 @@ export const CreateEquipeDialog = ({ open, onOpenChange, defaultSaisonId }: Crea
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      // Step 1: Create team in equipes table
-      const { data: newEquipe, error: equipeError } = await supabase
+      const codeCourt = formData.trigramme.toUpperCase().trim();
+
+      // Step 1: Check if team already exists by code_court
+      const { data: existing } = await supabase
         .from('equipes')
-        .insert({
-          code_court: formData.trigramme.toUpperCase().trim(),
-          nom_complet: formData.nom_complet.trim(),
-          pays: formData.pays.trim() || null,
-        })
-        .select()
-        .single();
+        .select('id')
+        .eq('code_court', codeCourt)
+        .maybeSingle();
 
-      if (equipeError) throw equipeError;
+      let equipeId: string;
 
-      // Step 2: Create entry in equipes_saisons
+      if (existing) {
+        equipeId = existing.id;
+        // Optionally update nom_complet/pays
+        await supabase
+          .from('equipes')
+          .update({
+            nom_complet: formData.nom_complet.trim(),
+            pays: formData.pays.trim() || null,
+          })
+          .eq('id', equipeId);
+      } else {
+        const { data: newEquipe, error: equipeError } = await supabase
+          .from('equipes')
+          .insert({
+            code_court: codeCourt,
+            nom_complet: formData.nom_complet.trim(),
+            pays: formData.pays.trim() || null,
+          })
+          .select()
+          .single();
+        if (equipeError) throw equipeError;
+        equipeId = newEquipe.id;
+      }
+
+      // Step 2: Check if equipes_saisons entry already exists
+      const { data: existingES } = await supabase
+        .from('equipes_saisons')
+        .select('id')
+        .eq('equipe_id', equipeId)
+        .eq('saison_id', formData.saison_id)
+        .maybeSingle();
+
+      if (existingES) {
+        throw new Error(`Cette équipe (${codeCourt}) est déjà associée à cette saison`);
+      }
+
       const { error: saisonError } = await supabase
         .from('equipes_saisons')
         .insert({
-          equipe_id: newEquipe.id,
+          equipe_id: equipeId,
           saison_id: formData.saison_id,
           nom_affiche: formData.nom_affiche.trim() || formData.nom_complet.trim(),
-          trigramme: formData.trigramme.toUpperCase().trim(),
+          trigramme: codeCourt,
           categorie: formData.categorie || null,
           actif: true,
         });
