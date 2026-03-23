@@ -159,10 +159,10 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
         <Accordion type="multiple" className="w-full">
           {groupedByCourse.map(({ courseId, courseName, items }) => (
             <AccordionItem key={courseId} value={courseId}>
-              <AccordionTrigger className="text-sm py-3">
-                <span className="flex items-center gap-2">
-                  {courseName}
-                  <Badge variant="secondary" className="text-xs">{items.length}</Badge>
+              <AccordionTrigger className="text-sm py-3 text-left">
+                <span className="flex items-center gap-2 text-left">
+                  <span className="text-left">{courseName}</span>
+                  <Badge variant="secondary" className="text-xs shrink-0">{items.length}</Badge>
                 </span>
               </AccordionTrigger>
               <AccordionContent>
