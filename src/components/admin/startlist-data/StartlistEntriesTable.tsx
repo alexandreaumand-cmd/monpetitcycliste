@@ -120,10 +120,19 @@ export const StartlistEntriesTable = ({ entries, saisonId, onUpdate }: Startlist
     
     setIsDeleting(true);
     try {
+      const ids = Array.from(selectedIds);
+
+      const { error: trackerError } = await supabase
+        .from('startlist_tracker_changes')
+        .delete()
+        .in('startlist_entry_id', ids);
+
+      if (trackerError) throw trackerError;
+
       const { error } = await supabase
         .from('startlist_entries')
         .delete()
-        .in('id', Array.from(selectedIds));
+        .in('id', ids);
 
       if (error) throw error;
 
