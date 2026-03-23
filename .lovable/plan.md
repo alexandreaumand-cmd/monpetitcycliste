@@ -1,16 +1,24 @@
 
 
-# Auto-marquer les notifications comme lues à l'ouverture du popover
+# Fix: Gestion des doublons de code_court dans CreateEquipeDialog
 
 ## Problème
-L'utilisateur doit cliquer sur chaque notification ou sur "Marquer tout comme lu" pour réinitialiser le compteur. Le simple fait d'ouvrir le popover (clic sur la cloche) devrait suffire.
+
+`CreateEquipeDialog.tsx` ligne 52-59 fait un `INSERT` dans `equipes` sans vérifier si le `code_court` existe déjà. Si l'équipe "TCC" existe déjà dans `equipes` (mais pas dans `equipes_saisons` pour cette saison), le flow échoue au lieu de réutiliser l'équipe existante.
 
 ## Solution
 
-**Fichier** : `src/components/layout/NotificationCenter.tsx`
+Modifier la mutation dans `CreateEquipeDialog.tsx` :
 
-Utiliser `onOpenChange` du `Popover` pour appeler `markAllAsRead()` quand le popover s'ouvre et qu'il y a des notifications non lues.
+1. **Avant l'INSERT**, faire un `SELECT` sur `equipes` filtré par `code_court`
+2. **Si l'équipe existe** → réutiliser son `id`, mettre à jour `nom_complet` et `pays` si besoin
+3. **Si elle n'existe pas** → `INSERT` comme aujourd'hui
+4. Ensuite créer l'entrée `equipes_saisons` normalement
+5. Ajouter aussi une vérification que l'entrée `equipes_saisons` n'existe pas déjà (même équipe + même saison)
 
-- Remplacer `<Popover>` par `<Popover onOpenChange={(open) => { if (open && unreadCount > 0) markAllAsRead(); }}>`
-- Supprimer le bouton "Marquer tout comme lu" qui devient inutile (ou le garder comme fallback — je propose de le supprimer pour simplifier l'UI)
+Appliquer la même logique dans `CreateTeamDialog.tsx` (utilisé lors de l'import startlist).
+
+### Fichiers modifiés
+- `src/components/admin/equipes/CreateEquipeDialog.tsx`
+- `src/components/admin/startlist-data/CreateTeamDialog.tsx`
 
