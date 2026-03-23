@@ -19,17 +19,18 @@ export default function TeamStartlistMovements() {
 
   // 1. Get coureur_ids from this manager's roster in the league
   const { data: rosterCoureurIds } = useQuery({
-    queryKey: ["roster-coureur-ids", managerId, leagueId],
+    queryKey: ["roster-coureur-ids", managerId, leagueId, phaseId],
     queryFn: async () => {
-      if (!managerId || !leagueId) return [];
+      if (!managerId || !leagueId || !phaseId) return [];
       const { data } = await supabase
         .from("rosters")
         .select("coureur_id")
         .eq("manager_id", managerId)
-        .eq("league_id", leagueId);
+        .eq("league_id", leagueId)
+        .eq("phase_id", phaseId);
       return (data || []).map((r) => r.coureur_id);
     },
-    enabled: !!managerId && !!leagueId,
+    enabled: !!managerId && !!leagueId && !!phaseId,
   });
 
   // 2. Get course_ids that belong to the selected phase
