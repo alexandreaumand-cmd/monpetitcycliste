@@ -1,0 +1,4 @@
+ALTER TABLE startlist_tracker_changes 
+DROP CONSTRAINT startlist_tracker_changes_startlist_entry_id_fkey,
+ADD CONSTRAINT startlist_tracker_changes_startlist_entry_id_fkey 
+FOREIGN KEY (startlist_entry_id) REFERENCES startlist_entries(id) ON DELETE CASCADE;
