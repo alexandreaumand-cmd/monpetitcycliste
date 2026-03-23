@@ -122,30 +122,30 @@ export const PronosticRaceCard = ({
     : (pronostic?.coureur_nom || null);
 
   return (
-    <Card className={`transition-all ${statusInfo.bg}`}>
-      <CardContent className="p-2.5 space-y-1">
-        {/* Line 1: Course name */}
-        <div className="flex items-center gap-1.5 min-w-0">
-          <h4 className="font-semibold text-sm truncate flex-1 min-w-0">
+    <Card className={`transition-all overflow-hidden ${statusInfo.bg}`}>
+      <CardContent className="p-2.5 space-y-1 overflow-hidden">
+        {/* Line 1: Course name + status */}
+        <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+          <h4 className="font-semibold text-xs leading-tight truncate flex-1 min-w-0">
             {deadline.courses?.nom || deadline.course_id}
           </h4>
           <div className={`flex items-center shrink-0 ${statusInfo.color}`}>
-            <StatusIcon className="h-4 w-4" />
+            <StatusIcon className="h-3.5 w-3.5" />
           </div>
         </div>
         {/* Line 2: Badges + deadline */}
-        <div className="flex flex-wrap items-center gap-1">
-          <Badge variant="outline" className="text-[10px] shrink-0 px-1.5 py-0">
+        <div className="flex items-center gap-1 overflow-hidden">
+          <Badge variant="outline" className="text-[10px] shrink-0 px-1.5 py-0 leading-tight">
             {typeLabel}
           </Badge>
           {deadline.courses?.categorie && (
-            <Badge variant="secondary" className="text-[10px] shrink truncate max-w-[80px] px-1.5 py-0">
+            <Badge variant="secondary" className="text-[10px] shrink-0 truncate max-w-[70px] px-1.5 py-0 leading-tight">
               {deadline.courses.categorie}
             </Badge>
           )}
           {shortDeadline && (
-            <div className="flex items-center gap-0.5 shrink-0 text-primary">
-              <Clock className="h-3 w-3" />
+            <div className="flex items-center gap-0.5 shrink-0 text-primary ml-auto">
+              <Clock className="h-2.5 w-2.5" />
               <span className="text-[10px] font-medium">{shortDeadline}</span>
             </div>
           )}
