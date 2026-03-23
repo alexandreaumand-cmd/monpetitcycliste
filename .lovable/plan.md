@@ -1,62 +1,34 @@
 
+Constat (cause probable de l’erreur en LIVE)
 
-# Fix: Recap quotidien ne fonctionne plus en LIVE
+- Le code actuel de `StartlistEntriesTable.tsx` supprime bien d’abord `startlist_tracker_changes`, puis `startlist_entries` (donc le correctif est présent dans la base de code).
+- En LIVE, la contrainte FK est toujours `ON DELETE NO ACTION` sur `startlist_tracker_changes.startlist_entry_id` → si la suppression enfant n’est pas effectivement exécutée (bundle ancien, cache PWA, ou course condition), la suppression parent échoue immédiatement avec l’erreur que vous voyez.
+- Le symptôme (“même message FK”) indique que le runtime LIVE n’applique pas un delete enfant effectif au moment de l’action.
 
-## Cause
+Plan de correction (robuste)
 
-Les cron jobs en LIVE appellent des fonctions **inexistantes** :
-- `arena-daily-recap` → **n'existe pas**
-- `arena-weekly-recap` → **n'existe pas**
+1) Vérifier la version réellement exécutée en LIVE
+- Contrôler que la version publiée contient bien la logique actuelle de `handleBulkDelete`.
+- Valider côté mobile/PWA (cache applicatif) avec un refresh forcé / rechargement propre pour éviter un ancien bundle.
 
-La vraie fonction s'appelle **`arena-recaps`** et attend un paramètre `type` dans le body (`"daily"` ou `"weekly"`).
+2) Rendre la suppression infaillible côté base
+- Migration SQL: passer la FK `startlist_tracker_changes_startlist_entry_id_fkey` en `ON DELETE CASCADE`.
+- Résultat: même si un client appelle seulement la suppression de `startlist_entries`, les lignes liées dans `startlist_tracker_changes` seront supprimées automatiquement.
 
-Les cron jobs ont probablement été créés avant la consolidation des deux fonctions en une seule (`arena-recaps`).
+3) Simplifier et sécuriser le front
+- Dans `StartlistEntriesTable.tsx`, conserver le delete explicite enfant (optionnel) mais considérer la cascade comme filet de sécurité.
+- Améliorer le message d’erreur pour distinguer:
+  - échec de permissions,
+  - échec FK,
+  - suppression partielle (0 ligne supprimée).
 
-## Solution
+4) Validation LIVE
+- Refaire le test exact (ex: Mercan’Tour, 5 entrées sélectionnées).
+- Vérifier: plus d’erreur FK, compteur et liste se rafraîchissent, comportement identique desktop/mobile.
 
-Mettre à jour les 2 cron jobs existants en LIVE pour pointer vers la bonne URL et passer le bon body.
+Détails techniques
 
-### Requêtes SQL à exécuter (via Cloud View > Run SQL > LIVE)
-
-```sql
--- Fix daily recap cron
-SELECT cron.unschedule('arena-daily-recap');
-
-SELECT cron.schedule(
-  'arena-daily-recap',
-  '0 20 * * *',
-  $$
-  SELECT net.http_post(
-    url := 'https://khahpetvqjoyrwambaqn.supabase.co/functions/v1/arena-recaps',
-    headers := '{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYWhwZXR2cWpveXJ3YW1iYXFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNzQwMjUsImV4cCI6MjA4NTk1MDAyNX0.fDW-OHQan6_rOr_cYVJNWhDF3BwZu8Vu6-qLKKRAHtM"}'::jsonb,
-    body := '{"type": "daily"}'::jsonb
-  ) AS request_id;
-  $$
-);
-
--- Fix weekly recap cron
-SELECT cron.unschedule('arena-weekly-recap');
-
-SELECT cron.schedule(
-  'arena-weekly-recap',
-  '15 20 * * 0',
-  $$
-  SELECT net.http_post(
-    url := 'https://khahpetvqjoyrwambaqn.supabase.co/functions/v1/arena-recaps',
-    headers := '{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtoYWhwZXR2cWpveXJ3YW1iYXFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNzQwMjUsImV4cCI6MjA4NTk1MDAyNX0.fDW-OHQan6_rOr_cYVJNWhDF3BwZu8Vu6-qLKKRAHtM"}'::jsonb,
-    body := '{"type": "weekly"}'::jsonb
-  ) AS request_id;
-  $$
-);
-```
-
-### Action requise de votre part
-
-Ces cron jobs sont des données LIVE, je ne peux pas les modifier directement. Vous devez :
-
-1. Ouvrir **Cloud View > Run SQL**
-2. Sélectionner **Live**
-3. Exécuter les 4 requêtes ci-dessus (unschedule + schedule pour chaque)
-
-Aucune modification de code n'est nécessaire — le problème est uniquement dans la configuration des cron jobs.
-
+- Fichiers ciblés:
+  - `src/components/admin/startlist-data/StartlistEntriesTable.tsx` (UX erreurs + robustesse appel)
+  - migration SQL (FK `startlist_tracker_changes_startlist_entry_id_fkey` en cascade)
+- Aucun changement d’UI métier nécessaire, uniquement robustesse de suppression.
