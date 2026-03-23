@@ -104,7 +104,7 @@ export const CreateTeamDialog = ({ sourceTeam, saisonId, onClose, onSuccess }: C
         description: `${formData.code_court} a été créée pour la saison`,
       });
 
-      onSuccess(newEquipe.id);
+      onSuccess(equipeId);
     } catch (error: any) {
       toast({
         variant: "destructive",

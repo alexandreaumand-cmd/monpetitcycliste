@@ -101,7 +101,7 @@ export const CreateEquipeDialog = ({ open, onOpenChange, defaultSaisonId }: Crea
 
       if (saisonError) throw saisonError;
 
-      return newEquipe;
+      return { id: equipeId, nom_complet: formData.nom_complet.trim() };
     },
     onSuccess: (newEquipe) => {
       queryClient.invalidateQueries({ queryKey: ['admin-equipes-saisons'] });
