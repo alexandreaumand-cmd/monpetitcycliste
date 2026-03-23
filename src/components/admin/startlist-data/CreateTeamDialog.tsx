@@ -38,25 +38,61 @@ export const CreateTeamDialog = ({ sourceTeam, saisonId, onClose, onSuccess }: C
     setIsLoading(true);
 
     try {
-      const { data: newEquipe, error: equipeError } = await supabase
-        .from('equipes')
-        .insert({
-          code_court: formData.code_court.toUpperCase(),
-          nom_complet: formData.nom_complet,
-          pays: formData.pays || null,
-        })
-        .select()
-        .single();
+      const codeCourt = formData.code_court.toUpperCase();
 
-      if (equipeError) throw equipeError;
+      // Check if team already exists
+      const { data: existing } = await supabase
+        .from('equipes')
+        .select('id')
+        .eq('code_court', codeCourt)
+        .maybeSingle();
+
+      let equipeId: string;
+
+      if (existing) {
+        equipeId = existing.id;
+        await supabase
+          .from('equipes')
+          .update({
+            nom_complet: formData.nom_complet,
+            pays: formData.pays || null,
+          })
+          .eq('id', equipeId);
+      } else {
+        const { data: newEquipe, error: equipeError } = await supabase
+          .from('equipes')
+          .insert({
+            code_court: codeCourt,
+            nom_complet: formData.nom_complet,
+            pays: formData.pays || null,
+          })
+          .select()
+          .single();
+        if (equipeError) throw equipeError;
+        equipeId = newEquipe.id;
+      }
+
+      // Check if already linked to this season
+      const { data: existingES } = await supabase
+        .from('equipes_saisons')
+        .select('id')
+        .eq('equipe_id', equipeId)
+        .eq('saison_id', saisonId)
+        .maybeSingle();
+
+      if (existingES) {
+        // Already exists, just reuse it
+        onSuccess(equipeId);
+        return;
+      }
 
       const { error: esError } = await supabase
         .from('equipes_saisons')
         .insert({
-          equipe_id: newEquipe.id,
+          equipe_id: equipeId,
           saison_id: saisonId,
           nom_affiche: formData.nom_complet,
-          trigramme: formData.code_court.toUpperCase(),
+          trigramme: codeCourt,
           categorie: formData.categorie,
           actif: true,
         });
@@ -68,7 +104,7 @@ export const CreateTeamDialog = ({ sourceTeam, saisonId, onClose, onSuccess }: C
         description: `${formData.code_court} a été créée pour la saison`,
       });
 
-      onSuccess(newEquipe.id);
+      onSuccess(equipeId);
     } catch (error: any) {
       toast({
         variant: "destructive",
