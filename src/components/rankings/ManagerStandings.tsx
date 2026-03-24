@@ -129,6 +129,17 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
     enabled: !phaseId && !!activePhase,
   });
 
+  const [sortBy, setSortBy] = useState<'points' | 'victories' | 'scorers'>('points');
+
+  const sortedStandings = useMemo(() => {
+    if (!standings) return [];
+    return [...standings].sort((a, b) => {
+      if (sortBy === 'victories') return (b.nb_victoires || 0) - (a.nb_victoires || 0);
+      if (sortBy === 'scorers') return (b.nb_scoreurs || 0) - (a.nb_scoreurs || 0);
+      return (b.total_points || 0) - (a.total_points || 0);
+    });
+  }, [standings, sortBy]);
+
   const maxPoints = standings?.[0]?.total_points || 1;
   const totalPoints = standings?.reduce((sum, s) => sum + s.total_points, 0) || 1;
 
