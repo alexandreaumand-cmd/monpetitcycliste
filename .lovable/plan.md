@@ -1,33 +1,43 @@
 
 
-# Fix: Inverser la logique du toggle "Sans manager"
+# Tri du classement managers par points, victoires ou scoreurs
 
 ## Problème
-
-Le toggle "Sans manager" est contre-intuitif : quand il est activé, il **masque** les coureurs sans manager. L'utilisateur s'attend à l'inverse — activer "Sans manager" pour **ne voir que** les coureurs sans manager.
+Le classement managers est toujours trié par points. L'utilisateur veut pouvoir trier par points, nombre de victoires ou nombre de scoreurs.
 
 ## Solution
 
-Inverser la logique du filtre dans les 2 fichiers concernés :
+### 1. Desktop — `src/components/rankings/ManagerStandings.tsx`
 
-### 1. `src/components/rankings/TopRiders.tsx` (desktop)
+- Ajouter un état `sortBy: 'points' | 'victories' | 'scorers'` (défaut: `points`)
+- Ajouter un `Select` compact dans le header de la Card (à côté du titre ou dans le header du tableau)
+- Trier les standings avec `useMemo` selon le critère choisi :
+  - `points` → `total_points` (actuel)
+  - `victories` → `nb_victoires`
+  - `scorers` → `nb_scoreurs`
+- Le rang affiché reflète le tri sélectionné
 
-- Renommer l'état `hideRidersWithoutManagers` → `showOnlyWithoutManagers`
-- Quand activé : filtrer pour ne garder **que** les coureurs **sans** manager (inverser la condition ~ligne 205-213)
-- Mettre à jour le label et le Switch
+### 2. Mobile — `src/pages/Rankings.mobile.tsx`
 
-### 2. `src/pages/Rankings.mobile.tsx` (mobile)
+- Ajouter le même état `standingsSortBy`
+- Ajouter un petit `Select` au-dessus de la liste des managers (dans le tab `standings`)
+- Trier les standings de la même façon avant le `.map()`
 
-- Même renommage et inversion de logique (~ligne 189-191)
+### 3. Traductions — `fr/rankings.json` et `en/rankings.json`
 
-### 3. Traductions
-
-Mettre à jour `fr/rankings.json` et `en/rankings.json` :
-- `hideWithoutManager` : "Sans manager" → "Sans manager" (le label reste le même, c'est la logique qui change)
-
-La sémantique devient : toggle OFF = tous les coureurs, toggle ON = uniquement les coureurs sans manager.
+Ajouter :
+```json
+"standings": {
+  "sortBy": "Trier par",
+  "sortByPoints": "Points",
+  "sortByVictories": "Victoires",
+  "sortByScorers": "Scoreurs"
+}
+```
 
 ### Fichiers modifiés
-- `src/components/rankings/TopRiders.tsx`
+- `src/components/rankings/ManagerStandings.tsx`
 - `src/pages/Rankings.mobile.tsx`
+- `src/i18n/locales/fr/rankings.json`
+- `src/i18n/locales/en/rankings.json`
 
