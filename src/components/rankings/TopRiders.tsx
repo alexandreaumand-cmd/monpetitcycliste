@@ -201,19 +201,19 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
       );
     }
     
-    // Filter out riders without managers
-    if (hideRidersWithoutManagers) {
+    // Filter to show only riders without managers
+    if (showOnlyWithoutManagers) {
       filtered = filtered.filter(rider => {
         if (phaseId) {
-          return rider.owners && rider.owners.length > 0;
+          return !rider.owners || rider.owners.length === 0;
         } else {
-          return rider.owners_all && rider.owners_all.length > 0;
+          return !rider.owners_all || rider.owners_all.length === 0;
         }
       });
     }
     
     return filtered;
-  }, [sortedRiders, riderSearchTerm, hideRidersWithoutManagers, phaseId]);
+  }, [sortedRiders, riderSearchTerm, showOnlyWithoutManagers, phaseId]);
 
   const hasMoreRiders = allRiders && allRiders.length > displayLimit;
 

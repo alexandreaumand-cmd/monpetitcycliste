@@ -186,10 +186,10 @@ export const RankingsMobile = () => {
       );
     }
     
-    if (hideRidersWithoutManagers) {
+    if (showOnlyWithoutManagers) {
       filtered = filtered.filter(rider => {
         const owners = selectedPhase ? rider.owners : rider.owners_all;
-        return owners && owners.length > 0;
+        return !owners || owners.length === 0;
       });
     }
     
