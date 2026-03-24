@@ -42,7 +42,7 @@ export const RankingsMobile = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [ridersDisplayLimit, setRidersDisplayLimit] = useState(20);
   const [riderSearchTerm, setRiderSearchTerm] = useState("");
-  const [hideRidersWithoutManagers, setHideRidersWithoutManagers] = useState(false);
+  const [showOnlyWithoutManagers, setShowOnlyWithoutManagers] = useState(false);
   const [riderSortBy, setRiderSortBy] = useState<'points' | 'ratio'>('points');
   const [selectedRider, setSelectedRider] = useState<{
     id: string;
@@ -186,10 +186,10 @@ export const RankingsMobile = () => {
       );
     }
     
-    if (hideRidersWithoutManagers) {
+    if (showOnlyWithoutManagers) {
       filtered = filtered.filter(rider => {
         const owners = selectedPhase ? rider.owners : rider.owners_all;
-        return owners && owners.length > 0;
+        return !owners || owners.length === 0;
       });
     }
     
@@ -206,7 +206,7 @@ export const RankingsMobile = () => {
     }
     
     return filtered;
-  }, [allTopRiders, riderSearchTerm, hideRidersWithoutManagers, selectedPhase, riderSortBy]);
+  }, [allTopRiders, riderSearchTerm, showOnlyWithoutManagers, selectedPhase, riderSortBy]);
 
   const topRiders = filteredTopRiders?.slice(0, ridersDisplayLimit);
 
@@ -482,8 +482,8 @@ export const RankingsMobile = () => {
                 <div className="flex items-center gap-2">
                   <Switch
                     id="hide-no-managers-mobile"
-                    checked={hideRidersWithoutManagers}
-                    onCheckedChange={setHideRidersWithoutManagers}
+                    checked={showOnlyWithoutManagers}
+                    onCheckedChange={setShowOnlyWithoutManagers}
                   />
                   <Label htmlFor="hide-no-managers-mobile" className="text-sm cursor-pointer">
                     {t('topRiders.hideWithoutManager')}

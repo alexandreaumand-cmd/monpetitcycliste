@@ -94,7 +94,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [riderSearchTerm, setRiderSearchTerm] = useState("");
-  const [hideRidersWithoutManagers, setHideRidersWithoutManagers] = useState(false);
+  const [showOnlyWithoutManagers, setShowOnlyWithoutManagers] = useState(false);
   const [sortColumn, setSortColumn] = useState<TopRidersSortColumn>("total_points");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [detailsSortColumn, setDetailsSortColumn] = useState<keyof RiderPointRow>("points");
@@ -201,19 +201,19 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
       );
     }
     
-    // Filter out riders without managers
-    if (hideRidersWithoutManagers) {
+    // Filter to show only riders without managers
+    if (showOnlyWithoutManagers) {
       filtered = filtered.filter(rider => {
         if (phaseId) {
-          return rider.owners && rider.owners.length > 0;
+          return !rider.owners || rider.owners.length === 0;
         } else {
-          return rider.owners_all && rider.owners_all.length > 0;
+          return !rider.owners_all || rider.owners_all.length === 0;
         }
       });
     }
     
     return filtered;
-  }, [sortedRiders, riderSearchTerm, hideRidersWithoutManagers, phaseId]);
+  }, [sortedRiders, riderSearchTerm, showOnlyWithoutManagers, phaseId]);
 
   const hasMoreRiders = allRiders && allRiders.length > displayLimit;
 
@@ -379,8 +379,8 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                 <div className="flex items-center gap-2 whitespace-nowrap">
                   <Switch
                     id="hide-no-managers"
-                    checked={hideRidersWithoutManagers}
-                    onCheckedChange={setHideRidersWithoutManagers}
+                    checked={showOnlyWithoutManagers}
+                    onCheckedChange={setShowOnlyWithoutManagers}
                   />
                   <Label htmlFor="hide-no-managers" className="cursor-pointer text-sm">
                     {t('topRiders.hideWithoutManager')}
