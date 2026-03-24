@@ -455,7 +455,7 @@ export const RankingsMobile = () => {
                           </div>
                           <div className="flex flex-col gap-1">
                             <span className="text-muted-foreground">{t('mobile.victories')}</span>
-                            <span className="font-semibold">{standing.nb_victoires ?? 0}</span>
+                            <span className="font-semibold">{(standing as any).nb_victoires ?? (standing as any).victories_count ?? 0}</span>
                           </div>
                         </div>
 
