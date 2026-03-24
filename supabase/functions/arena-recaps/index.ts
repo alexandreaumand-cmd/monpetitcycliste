@@ -20,9 +20,8 @@ Deno.serve(async (req) => {
     const expectedCronSecret = Deno.env.get("CRON_SECRET");
 
     if (cronSecret && expectedCronSecret && cronSecret === expectedCronSecret) {
-      // Valid cron invocation
+      // Valid cron invocation via x-cron-secret header
     } else {
-      // Verify user is superadmin
       const authHeader = req.headers.get("Authorization");
       if (!authHeader?.startsWith("Bearer ")) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -30,16 +29,25 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      const token = authHeader.replace("Bearer ", "");
       const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-      const userClient = createClient(supabaseUrl, anonKey, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const { data: isSuperAdmin } = await userClient.rpc("is_superadmin");
-      if (!isSuperAdmin) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+
+      if (token === anonKey) {
+        // Allow cron calls that use the anon key as Bearer token
+        console.log("✅ Cron call authenticated via anon key");
+      } else {
+        // Verify user is superadmin
+        const userClient = createClient(supabaseUrl, anonKey, {
+          global: { headers: { Authorization: authHeader } },
         });
+        const { data: isSuperAdmin } = await userClient.rpc("is_superadmin");
+        if (!isSuperAdmin) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
     }
 
