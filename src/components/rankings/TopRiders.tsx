@@ -94,7 +94,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [riderSearchTerm, setRiderSearchTerm] = useState("");
-  const [hideRidersWithoutManagers, setHideRidersWithoutManagers] = useState(false);
+  const [showOnlyWithoutManagers, setShowOnlyWithoutManagers] = useState(false);
   const [sortColumn, setSortColumn] = useState<TopRidersSortColumn>("total_points");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [detailsSortColumn, setDetailsSortColumn] = useState<keyof RiderPointRow>("points");
