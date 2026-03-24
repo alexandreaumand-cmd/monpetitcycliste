@@ -17,6 +17,7 @@ import { useLeague } from "@/contexts/LeagueContext";
 import { useLeagueStandingsBySeason, useLeagueStandingsByPhase } from "@/hooks/useLeagueStandings";
 import { useTranslation } from "react-i18next";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type StandingsProps = {
   phaseId?: string | null;
