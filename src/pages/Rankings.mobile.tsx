@@ -424,7 +424,20 @@ export const RankingsMobile = () => {
                     key={standing.manager_id}
                     title={<ManagerNameWithSponsor managerId={standing.manager_id} managerName={standing.manager_nom} />}
                     avatar={<RankBadge rank={rank} />}
-                    badge={<PointsBadge points={standing.total_points} />}
+                    badge={<PointsBadge 
+                      value={
+                        standingsSortBy === 'victories' 
+                          ? (standing.nb_victoires ?? standing.victories_count ?? 0)
+                          : standingsSortBy === 'scorers'
+                          ? (standing.nb_scoreurs ?? standing.scoreurs_count ?? 0)
+                          : standing.total_points
+                      }
+                      label={
+                        standingsSortBy === 'victories' ? 'vic.' 
+                        : standingsSortBy === 'scorers' ? 'scor.' 
+                        : 'pts'
+                      }
+                    />}
                     onClick={() => handleManagerClick(standing.manager_id)}
                     expanded={isExpanded}
                     expandedContent={
