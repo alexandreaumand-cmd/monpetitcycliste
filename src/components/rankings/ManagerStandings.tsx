@@ -180,6 +180,18 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
   return (
     <Card>
       <CardContent className="pt-6">
+        <div className="flex justify-end mb-3">
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="points">{t('standings.sortByPoints')}</SelectItem>
+              <SelectItem value="victories">{t('standings.sortByVictories')}</SelectItem>
+              <SelectItem value="scorers">{t('standings.sortByScorers')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <Table>
         <TableHeader>
           <TableRow className="border-b-2 border-bordure-gold">
