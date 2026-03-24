@@ -42,7 +42,7 @@ export const RankingsMobile = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [ridersDisplayLimit, setRidersDisplayLimit] = useState(20);
   const [riderSearchTerm, setRiderSearchTerm] = useState("");
-  const [hideRidersWithoutManagers, setHideRidersWithoutManagers] = useState(false);
+  const [showOnlyWithoutManagers, setShowOnlyWithoutManagers] = useState(false);
   const [riderSortBy, setRiderSortBy] = useState<'points' | 'ratio'>('points');
   const [selectedRider, setSelectedRider] = useState<{
     id: string;
