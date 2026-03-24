@@ -206,7 +206,7 @@ export const RankingsMobile = () => {
     }
     
     return filtered;
-  }, [allTopRiders, riderSearchTerm, hideRidersWithoutManagers, selectedPhase, riderSortBy]);
+  }, [allTopRiders, riderSearchTerm, showOnlyWithoutManagers, selectedPhase, riderSortBy]);
 
   const topRiders = filteredTopRiders?.slice(0, ridersDisplayLimit);
 
