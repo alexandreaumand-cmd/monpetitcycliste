@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
         .from('courses')
         .select('id, date_debut, date_fin')
         .eq('phase_id', effectivePhaseId)
-        .lt('date_fin', today);
+        .lte('date_debut', today);
       
       if (pastCourses && pastCourses.length > 0) {
         const courseIds = pastCourses.map(c => c.id);
@@ -183,10 +183,12 @@ Deno.serve(async (req) => {
             // Créer un map race_id -> jours
             const raceDaysPerCourse = new Map<string, number>();
             for (const course of pastCourses) {
-              if (course.date_debut && course.date_fin) {
+            if (course.date_debut && course.date_fin) {
                 const debut = new Date(course.date_debut);
                 const fin = new Date(course.date_fin);
-                const days = Math.round((fin.getTime() - debut.getTime()) / 86400000) + 1;
+                const todayDate = new Date(today);
+                const effectiveFin = fin <= todayDate ? fin : todayDate;
+                const days = Math.round((effectiveFin.getTime() - debut.getTime()) / 86400000) + 1;
                 raceDaysPerCourse.set(course.id, days);
               }
             }
