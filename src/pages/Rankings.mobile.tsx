@@ -482,8 +482,8 @@ export const RankingsMobile = () => {
                 <div className="flex items-center gap-2">
                   <Switch
                     id="hide-no-managers-mobile"
-                    checked={hideRidersWithoutManagers}
-                    onCheckedChange={setHideRidersWithoutManagers}
+                    checked={showOnlyWithoutManagers}
+                    onCheckedChange={setShowOnlyWithoutManagers}
                   />
                   <Label htmlFor="hide-no-managers-mobile" className="text-sm cursor-pointer">
                     {t('topRiders.hideWithoutManager')}

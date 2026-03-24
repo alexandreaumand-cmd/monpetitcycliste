@@ -379,8 +379,8 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
                 <div className="flex items-center gap-2 whitespace-nowrap">
                   <Switch
                     id="hide-no-managers"
-                    checked={hideRidersWithoutManagers}
-                    onCheckedChange={setHideRidersWithoutManagers}
+                    checked={showOnlyWithoutManagers}
+                    onCheckedChange={setShowOnlyWithoutManagers}
                   />
                   <Label htmlFor="hide-no-managers" className="cursor-pointer text-sm">
                     {t('topRiders.hideWithoutManager')}
