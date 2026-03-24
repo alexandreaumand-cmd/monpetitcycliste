@@ -206,7 +206,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
           </TableRow>
         </TableHeader>
           <TableBody>
-            {standings?.map((standing, idx) => {
+            {sortedStandings.map((standing, idx) => {
               const rank = idx + 1;
               const isBottomThree = standings && idx >= standings.length - 3;
               const gapToPrevious = idx > 0 ? standings[idx - 1].total_points - standing.total_points : 0;
