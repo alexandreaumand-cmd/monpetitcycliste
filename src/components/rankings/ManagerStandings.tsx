@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { BonusPointsDetailDialog } from "./BonusPointsDetailDialog";
-import { memo, useState } from "react";
+import { memo, useState, useMemo } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ManagerPrestigeIcons } from "./ManagerPrestigeIcons";
 import { useLeague } from "@/contexts/LeagueContext";
