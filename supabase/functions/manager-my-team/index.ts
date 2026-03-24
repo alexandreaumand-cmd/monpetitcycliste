@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
         .from('courses')
         .select('id, date_debut, date_fin')
         .eq('phase_id', effectivePhaseId)
-        .lt('date_fin', today);
+        .lte('date_debut', today);
       
       if (pastCourses && pastCourses.length > 0) {
         const courseIds = pastCourses.map(c => c.id);
