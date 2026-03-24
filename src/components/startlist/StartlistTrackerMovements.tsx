@@ -102,12 +102,13 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
 
   // 4. Get rosters for the league to map coureur_id -> manager name
   const { data: rosterMap } = useQuery({
-    queryKey: ["roster-manager-map", leagueId],
+    queryKey: ["roster-manager-map", leagueId, phaseId],
     queryFn: async () => {
       const { data } = await supabase
         .from("rosters")
         .select("coureur_id, manager_id, managers!inner(nom)")
-        .eq("league_id", leagueId);
+        .eq("league_id", leagueId)
+        .eq("phase_id", phaseId);
       
       const map = new Map<string, { name: string; managerId: string }>();
       (data || []).forEach((r: any) => {
