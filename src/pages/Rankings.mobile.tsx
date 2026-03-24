@@ -54,6 +54,7 @@ export const RankingsMobile = () => {
   } | null>(null);
   const [riderDetailsOpen, setRiderDetailsOpen] = useState(false);
   const [expandedManagerId, setExpandedManagerId] = useState<string | null>(null);
+  const [standingsSortBy, setStandingsSortBy] = useState<'points' | 'victories' | 'scorers'>('points');
   const [fullDetailsOpen, setFullDetailsOpen] = useState(false);
   const [fullDetailsManagerId, setFullDetailsManagerId] = useState<string | null>(null);
 
