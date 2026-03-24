@@ -21,6 +21,9 @@
     "gap": "Écart",
     "evolution": "Évolution",
     "noStandings": "Aucun classement disponible",
+    "sortByPoints": "Trier par points",
+    "sortByVictories": "Trier par victoires",
+    "sortByScorers": "Trier par scoreurs",
     "clickForDetails": "Cliquer pour voir le détail",
     "managerDetails": "Détails Manager",
     "pointsHistory": "Historique des points par course"

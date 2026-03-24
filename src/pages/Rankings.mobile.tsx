@@ -54,6 +54,7 @@ export const RankingsMobile = () => {
   } | null>(null);
   const [riderDetailsOpen, setRiderDetailsOpen] = useState(false);
   const [expandedManagerId, setExpandedManagerId] = useState<string | null>(null);
+  const [standingsSortBy, setStandingsSortBy] = useState<'points' | 'victories' | 'scorers'>('points');
   const [fullDetailsOpen, setFullDetailsOpen] = useState(false);
   const [fullDetailsManagerId, setFullDetailsManagerId] = useState<string | null>(null);
 
@@ -342,12 +343,30 @@ export const RankingsMobile = () => {
 
         {activeTab === "standings" && (
           <div className="space-y-3 pb-4">
+            <div className="flex justify-end">
+              <Select value={standingsSortBy} onValueChange={(v) => setStandingsSortBy(v as any)}>
+                <SelectTrigger className="w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="points">{t('standings.sortByPoints')}</SelectItem>
+                  <SelectItem value="victories">{t('standings.sortByVictories')}</SelectItem>
+                  <SelectItem value="scorers">{t('standings.sortByScorers')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {standingsLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-20 w-full rounded-2xl" />
               ))
             ) : standings && standings.length > 0 ? (
-              standings.map((standing, idx) => {
+              [...standings].sort((a, b) => {
+                const getVictories = (s: any) => s.nb_victoires ?? s.victories_count ?? 0;
+                const getScorers = (s: any) => s.nb_scoreurs ?? s.scoreurs_count ?? 0;
+                if (standingsSortBy === 'victories') return getVictories(b) - getVictories(a);
+                if (standingsSortBy === 'scorers') return getScorers(b) - getScorers(a);
+                return (b.total_points || 0) - (a.total_points || 0);
+              }).map((standing, idx) => {
                 const rank = idx + 1;
                 const totalPoints = standings.reduce((sum, s) => sum + s.total_points, 0) || 1;
                 const percentage = ((standing.total_points / totalPoints) * 100).toFixed(1);
@@ -432,11 +451,11 @@ export const RankingsMobile = () => {
                           </div>
                           <div className="flex flex-col gap-1">
                             <span className="text-muted-foreground">{t('mobile.scorers')}</span>
-                            <span className="font-semibold">{standing.nb_scoreurs ?? 0}</span>
+                            <span className="font-semibold">{(standing as any).nb_scoreurs ?? (standing as any).scoreurs_count ?? 0}</span>
                           </div>
                           <div className="flex flex-col gap-1">
                             <span className="text-muted-foreground">{t('mobile.victories')}</span>
-                            <span className="font-semibold">{standing.nb_victoires ?? 0}</span>
+                            <span className="font-semibold">{(standing as any).nb_victoires ?? (standing as any).victories_count ?? 0}</span>
                           </div>
                         </div>
 

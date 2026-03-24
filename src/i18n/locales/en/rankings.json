@@ -21,6 +21,9 @@
     "gap": "Gap",
     "evolution": "Evolution",
     "noStandings": "No standings available",
+    "sortByPoints": "Sort by points",
+    "sortByVictories": "Sort by wins",
+    "sortByScorers": "Sort by scorers",
     "clickForDetails": "Click for details",
     "managerDetails": "Manager Details",
     "pointsHistory": "Points history by race"

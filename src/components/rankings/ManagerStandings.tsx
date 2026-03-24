@@ -10,13 +10,14 @@ import { cn } from "@/lib/utils";
 import { useSeasonContext } from "@/contexts/SeasonContext";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { BonusPointsDetailDialog } from "./BonusPointsDetailDialog";
-import { memo, useState } from "react";
+import { memo, useState, useMemo } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ManagerPrestigeIcons } from "./ManagerPrestigeIcons";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useLeagueStandingsBySeason, useLeagueStandingsByPhase } from "@/hooks/useLeagueStandings";
 import { useTranslation } from "react-i18next";
 import { OptimizedImage } from "@/components/shared/OptimizedImage";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type StandingsProps = {
   phaseId?: string | null;
@@ -128,6 +129,17 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
     enabled: !phaseId && !!activePhase,
   });
 
+  const [sortBy, setSortBy] = useState<'points' | 'victories' | 'scorers'>('points');
+
+  const sortedStandings = useMemo(() => {
+    if (!standings) return [];
+    return [...standings].sort((a, b) => {
+      if (sortBy === 'victories') return (b.nb_victoires || 0) - (a.nb_victoires || 0);
+      if (sortBy === 'scorers') return (b.nb_scoreurs || 0) - (a.nb_scoreurs || 0);
+      return (b.total_points || 0) - (a.total_points || 0);
+    });
+  }, [standings, sortBy]);
+
   const maxPoints = standings?.[0]?.total_points || 1;
   const totalPoints = standings?.reduce((sum, s) => sum + s.total_points, 0) || 1;
 
@@ -168,6 +180,18 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
   return (
     <Card>
       <CardContent className="pt-6">
+        <div className="flex justify-end mb-3">
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="points">{t('standings.sortByPoints')}</SelectItem>
+              <SelectItem value="victories">{t('standings.sortByVictories')}</SelectItem>
+              <SelectItem value="scorers">{t('standings.sortByScorers')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <Table>
         <TableHeader>
           <TableRow className="border-b-2 border-bordure-gold">
@@ -182,10 +206,10 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
           </TableRow>
         </TableHeader>
           <TableBody>
-            {standings?.map((standing, idx) => {
+            {sortedStandings.map((standing, idx) => {
               const rank = idx + 1;
-              const isBottomThree = standings && idx >= standings.length - 3;
-              const gapToPrevious = idx > 0 ? standings[idx - 1].total_points - standing.total_points : 0;
+              const isBottomThree = sortedStandings && idx >= sortedStandings.length - 3;
+              const gapToPrevious = idx > 0 ? sortedStandings[idx - 1].total_points - standing.total_points : 0;
               const percentage = ((standing.total_points / totalPoints) * 100).toFixed(1);
               const bonusPoints = (standing.manager_bonus || 0) + (standing.rider_bonus || 0);
               
