@@ -1,36 +1,26 @@
 
 
-# Fix: "Jours de course" = 0 pour la phase 2
+# Afficher la valeur correspondante au tri sélectionné
 
-## Diagnostic
-
-Le code dans `manager-my-team/index.ts` (ligne 146) filtre les courses avec `.lt('date_fin', today)` — il ne prend que les courses **terminées**. Pour la phase 2 qui vient de commencer (22 mars 2026), aucune course n'a encore sa `date_fin` passée (la Volta a Catalunya se termine le 29 mars). Résultat : 0 courses → 0 jours.
-
-Les startlists existent bien en LIVE (ex: Volta a Catalunya a un import). Le problème n'est pas les données manquantes mais le filtre trop restrictif.
+## Problème
+Quand on trie par victoires ou scoreurs, le gros chiffre affiché reste `total_points`. Il devrait afficher la valeur du critère de tri sélectionné.
 
 ## Solution
 
-Modifier le filtre dans `supabase/functions/manager-my-team/index.ts` :
+### Mobile — `src/pages/Rankings.mobile.tsx`
 
-1. **Remplacer** `.lt('date_fin', today)` par `.lte('date_debut', today)` — inclure toute course dont le départ est passé ou aujourd'hui
-2. **Calculer les jours proportionnellement** : pour les courses en cours, compter `min(today, date_fin) - date_debut + 1` au lieu de `date_fin - date_debut + 1`
+1. Modifier `PointsBadge` pour accepter aussi le `sortBy` et les données du standing
+2. À la ligne 426, passer la bonne valeur selon `standingsSortBy` :
+   - `points` → `standing.total_points`
+   - `victories` → `standing.nb_victoires ?? standing.victories_count ?? 0`
+   - `scorers` → `standing.nb_scoreurs ?? standing.scoreurs_count ?? 0`
+3. Ajouter un petit label sous le chiffre (ex: "pts", "vic.", "scor.") pour contextualiser
 
-Cela permettra de compter les jours de course **déjà disputés** même si la course n'est pas encore terminée.
+### Desktop — `src/components/rankings/ManagerStandings.tsx`
 
-### Changement concret (ligne 146 + lignes 186-190)
+Le desktop affiche déjà toutes les colonnes (points, victoires, scoreurs) dans le tableau, donc pas de changement nécessaire — toutes les valeurs sont visibles. On peut optionnellement mettre en gras la colonne correspondant au tri actif.
 
-```typescript
-// Ligne 146: inclure courses démarrées (pas seulement terminées)
-.lte('date_debut', today)
-
-// Lignes 186-190: calculer jours effectifs (pas jours totaux)
-const debut = new Date(course.date_debut);
-const fin = new Date(course.date_fin);
-const todayDate = new Date(today);
-const effectiveFin = fin <= todayDate ? fin : todayDate;
-const days = Math.round((effectiveFin.getTime() - debut.getTime()) / 86400000) + 1;
-```
-
-### Fichier modifié
-- `supabase/functions/manager-my-team/index.ts`
+### Fichiers modifiés
+- `src/pages/Rankings.mobile.tsx` — adapter `PointsBadge` et son appel
+- `src/components/rankings/ManagerStandings.tsx` — highlight optionnel de la colonne triée
 
