@@ -427,9 +427,9 @@ export const RankingsMobile = () => {
                     badge={<PointsBadge 
                       value={
                         standingsSortBy === 'victories' 
-                          ? (standing.nb_victoires ?? standing.victories_count ?? 0)
+                          ? ((standing as any).nb_victoires ?? (standing as any).victories_count ?? 0)
                           : standingsSortBy === 'scorers'
-                          ? (standing.nb_scoreurs ?? standing.scoreurs_count ?? 0)
+                          ? ((standing as any).nb_scoreurs ?? (standing as any).scoreurs_count ?? 0)
                           : standing.total_points
                       }
                       label={
