@@ -209,7 +209,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
             {sortedStandings.map((standing, idx) => {
               const rank = idx + 1;
               const isBottomThree = sortedStandings && idx >= sortedStandings.length - 3;
-              const gapToPrevious = idx > 0 ? standings[idx - 1].total_points - standing.total_points : 0;
+              const gapToPrevious = idx > 0 ? sortedStandings[idx - 1].total_points - standing.total_points : 0;
               const percentage = ((standing.total_points / totalPoints) * 100).toFixed(1);
               const bonusPoints = (standing.manager_bonus || 0) + (standing.rider_bonus || 0);
               

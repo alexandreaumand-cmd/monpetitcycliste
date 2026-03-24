@@ -343,12 +343,28 @@ export const RankingsMobile = () => {
 
         {activeTab === "standings" && (
           <div className="space-y-3 pb-4">
+            <div className="flex justify-end">
+              <Select value={standingsSortBy} onValueChange={(v) => setStandingsSortBy(v as any)}>
+                <SelectTrigger className="w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="points">{t('standings.sortByPoints')}</SelectItem>
+                  <SelectItem value="victories">{t('standings.sortByVictories')}</SelectItem>
+                  <SelectItem value="scorers">{t('standings.sortByScorers')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {standingsLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-20 w-full rounded-2xl" />
               ))
             ) : standings && standings.length > 0 ? (
-              standings.map((standing, idx) => {
+              [...standings].sort((a, b) => {
+                if (standingsSortBy === 'victories') return (b.nb_victoires || 0) - (a.nb_victoires || 0);
+                if (standingsSortBy === 'scorers') return (b.nb_scoreurs || 0) - (a.nb_scoreurs || 0);
+                return (b.total_points || 0) - (a.total_points || 0);
+              }).map((standing, idx) => {
                 const rank = idx + 1;
                 const totalPoints = standings.reduce((sum, s) => sum + s.total_points, 0) || 1;
                 const percentage = ((standing.total_points / totalPoints) * 100).toFixed(1);
