@@ -197,10 +197,10 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
           <TableRow className="border-b-2 border-bordure-gold">
             <TableHead className="w-16 font-bold">{t('standings.rank')}</TableHead>
             <TableHead className="font-bold">{t('standings.manager')}</TableHead>
-            <TableHead className="text-right font-bold">{t('standings.points')}</TableHead>
+             <TableHead className={cn("text-right font-bold", sortBy === 'points' && "text-primary")}>{t('standings.points')}</TableHead>
             <TableHead className="text-right font-bold">{t('standings.bonus')}</TableHead>
-            <TableHead className="text-right font-bold">{t('standings.scorers')}</TableHead>
-            <TableHead className="text-right font-bold">{t('standings.victories')}</TableHead>
+            <TableHead className={cn("text-right font-bold", sortBy === 'scorers' && "text-primary")}>{t('standings.scorers')}</TableHead>
+            <TableHead className={cn("text-right font-bold", sortBy === 'victories' && "text-primary")}>{t('standings.victories')}</TableHead>
             <TableHead className="text-right font-bold">{t('standings.gap')}</TableHead>
             {previousGlobalStandings && <TableHead className="w-24 text-center font-bold">{t('standings.evolution')}</TableHead>}
           </TableRow>

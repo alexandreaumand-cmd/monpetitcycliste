@@ -297,10 +297,11 @@ export const RankingsMobile = () => {
     );
   };
 
-  const PointsBadge = ({ points }: { points: number }) => {
+  const PointsBadge = ({ value, label }: { value: number; label: string }) => {
     return (
       <div className="flex flex-col items-end">
-        <span className="text-lg font-bold">{Math.round(points)}</span>
+        <span className="text-lg font-bold">{Math.round(value)}</span>
+        <span className="text-[10px] text-muted-foreground leading-none">{label}</span>
       </div>
     );
   };
@@ -423,7 +424,20 @@ export const RankingsMobile = () => {
                     key={standing.manager_id}
                     title={<ManagerNameWithSponsor managerId={standing.manager_id} managerName={standing.manager_nom} />}
                     avatar={<RankBadge rank={rank} />}
-                    badge={<PointsBadge points={standing.total_points} />}
+                    badge={<PointsBadge 
+                      value={
+                        standingsSortBy === 'victories' 
+                          ? ((standing as any).nb_victoires ?? (standing as any).victories_count ?? 0)
+                          : standingsSortBy === 'scorers'
+                          ? ((standing as any).nb_scoreurs ?? (standing as any).scoreurs_count ?? 0)
+                          : standing.total_points
+                      }
+                      label={
+                        standingsSortBy === 'victories' ? 'vic.' 
+                        : standingsSortBy === 'scorers' ? 'scor.' 
+                        : 'pts'
+                      }
+                    />}
                     onClick={() => handleManagerClick(standing.manager_id)}
                     expanded={isExpanded}
                     expandedContent={
