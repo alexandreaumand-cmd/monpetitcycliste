@@ -31,6 +31,7 @@ export const BikeKnowledgeRanking = ({ saisonId }: BikeKnowledgeRankingProps) =>
   const { data, isLoading } = useKnowledgeRanking(saisonId, leagueId);
   const isMobile = useIsMobile();
   const [expandedManager, setExpandedManager] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
 
   if (isLoading) {
     return (
