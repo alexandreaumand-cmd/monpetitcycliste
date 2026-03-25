@@ -1,37 +1,18 @@
 
 
-## Add Detail View to Knowledge Ranking
+## Problem
 
-### What changes
+The standings views (`v_manager_standings_by_season_v2`, `v_manager_standings_by_phase_v2`, etc.) count points from ALL courses in phases where managers have roster entries, without filtering by when the league actually started. This means courses that took place before the league's auctions were complete are incorrectly counted in the rankings.
 
-**1. Edge Function: `supabase/functions/get-knowledge-ranking/index.ts`**
+The column `started_at_effective` exists on the `leagues` table but is never populated and never used in the scoring views.
 
-- Add pagination (same pattern as other functions) to avoid the 1000-row limit on `points_ledger`
-- Fetch rider names by joining `coureurs` table for each manager's roster
-- Return a `riders` array per manager containing: `{ nom, prix_signature, points, ratio, is_pepite }`
-- Sort riders by ratio descending so pépites appear prominently
+## Solution
 
-**2. Component: `src/components/rankings/BikeKnowledgeRanking.tsx`**
+Two changes:
 
-- Make each manager row clickable/expandable (toggle state with `useState`)
-- On expand, show a table/list of the manager's riders with columns: Rider name, Price, Points, Ratio, Pépite badge
-- Highlight pépites with a gem icon and distinct styling (e.g., gold/green badge)
-- On mobile: collapsible card with compact rider rows
-- Use ChevronDown/ChevronUp icon to indicate expandability
+### 1. Populate `started_at_effective` automatically
 
-### Data structure returned per manager
+When a league's first auction round closes (in the auction-close flow), set `started_at_effective` to the day after (`closed_at + 1 day`). This ensures scoring starts only after the initial roster is finalized.
 
-```typescript
-{
-  manager_id, manager_nom, rank, knowledge_score,
-  avg_ratio, pepites_count, wt_percentage,
-  riders: [
-    { nom: "Rider Name", prix_signature: 15, points: 120, ratio: 8.0, is_pepite: true },
-    ...
-  ]
-}
-```
-
-### Pépite criteria (unchanged)
-Price ≤ 20 AND ratio > 2.5
-
+- Identify where auction closing triggers happen (edge function or DB trigger)
+- Add logic: if `leagues.started_at_effective IS NULL` and this is the first round
