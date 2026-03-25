@@ -5,34 +5,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { TrendingUp, Activity } from "lucide-react";
+import { Activity } from "lucide-react";
 import { useState } from "react";
 import { useLeague } from "@/contexts/LeagueContext";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ConsistencyScoresProps {
   saisonId: string;
 }
 
-const getInterpretationColor = (interpretation: string) => {
-  switch (interpretation) {
-    case 'Excellent': return 'bg-green-500 text-white';
-    case 'Bon': return 'bg-lime-500 text-foreground';
-    case 'Moyen': return 'bg-bordure-gold text-foreground';
-    case 'Variable': return 'bg-orange-500 text-foreground';
-    case 'Très variable': return 'bg-red-500 text-white';
-    default: return 'bg-muted text-muted-foreground';
-  }
-};
-
-const getInterpretationIcon = (interpretation: string) => {
-  switch (interpretation) {
-    case 'Excellent': return '🌟';
-    case 'Bon': return '✅';
-    case 'Moyen': return '➖';
-    case 'Variable': return '⚠️';
-    case 'Très variable': return '📉';
-    default: return '•';
-  }
+const getLabel = (score: number) => {
+  if (score >= 90) return { text: '🌟 Très régulier', cls: 'bg-green-500 text-white' };
+  if (score >= 80) return { text: '✅ Régulier', cls: 'bg-lime-500 text-foreground' };
+  if (score >= 70) return { text: '➖ Moyen', cls: 'bg-bordure-gold text-foreground' };
+  if (score >= 60) return { text: '⚠️ Irrégulier', cls: 'bg-orange-500 text-foreground' };
+  return { text: '📉 Très irrégulier', cls: 'bg-red-500 text-white' };
 };
 
 const getGaugeColor = (score: number) => {
@@ -78,7 +65,7 @@ export const ConsistencyScores = ({ saisonId }: ConsistencyScoresProps) => {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Consistency Score</CardTitle>
+          <CardTitle>Régularité</CardTitle>
           <CardDescription>Aucune donnée disponible</CardDescription>
         </CardHeader>
       </Card>
@@ -97,10 +84,10 @@ export const ConsistencyScores = ({ saisonId }: ConsistencyScoresProps) => {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
-              Consistency Score
+              Régularité des managers
             </CardTitle>
             <CardDescription>
-              Métrique de régularité des managers basée sur leur % de points par phase (plus le score est élevé, plus le manager maintient sa part relative des points)
+              Qui performe de manière constante ? Score basé sur la répartition des points entre les phases
             </CardDescription>
           </div>
           <Select value={topN} onValueChange={setTopN}>
@@ -116,108 +103,91 @@ export const ConsistencyScores = ({ saisonId }: ConsistencyScoresProps) => {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {displayedScores.map((score: any, idx: number) => (
-            <div 
-              key={score.manager_id}
-              className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-            >
-              {/* Rang */}
-              <div className="flex-shrink-0 w-8 text-center font-bold text-muted-foreground">
-                #{idx + 1}
-              </div>
-
-              {/* Manager */}
-              <div className="flex-1 min-w-[150px]">
-                <p className="font-semibold">{score.manager_nom}</p>
-              </div>
-
-              {/* Consistency Score Gauge */}
-              <div className="flex-1 min-w-[200px]">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-muted rounded-full h-4 overflow-hidden">
-                    <div 
-                      className={cn(
-                        "h-full transition-all",
-                        getGaugeColor(score.consistency_score)
-                      )}
-                      style={{ width: `${score.consistency_score}%` }}
-                    />
+        <TooltipProvider>
+          <div className="space-y-3">
+            {displayedScores.map((score: any, idx: number) => {
+              const label = getLabel(score.consistency_score);
+              return (
+                <div
+                  key={score.manager_id}
+                  className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                >
+                  {/* Rank */}
+                  <div className="flex-shrink-0 w-8 text-center font-bold text-muted-foreground">
+                    #{idx + 1}
                   </div>
-                  <span className="text-sm font-bold w-12 text-right">
-                    {score.consistency_score}
-                  </span>
-                </div>
-              </div>
 
-              {/* Interprétation */}
-              <div className="flex-shrink-0">
-                <Badge className={cn(getInterpretationColor(score.interpretation))}>
-                  {getInterpretationIcon(score.interpretation)} {score.interpretation}
-                </Badge>
-              </div>
+                  {/* Manager */}
+                  <div className="w-[120px] min-w-[100px]">
+                    <p className="font-semibold truncate">{score.manager_nom}</p>
+                  </div>
 
-              {/* Stats */}
-              <div className="flex-1 min-w-[250px] grid grid-cols-3 gap-2 text-xs">
-                <div>
-                  <p className="text-muted-foreground">% Moyen</p>
-                  <p className="font-semibold">{score.stats.mean}%</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Écart-type</p>
-                  <p className="font-semibold">σ = {score.stats.std_dev}%</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Range</p>
-                  <p className="font-semibold">
-                    {score.stats.min}% - {score.stats.max}%
-                  </p>
-                </div>
-              </div>
+                  {/* Score gauge */}
+                  <div className="flex-1 min-w-[150px]">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
+                        <div
+                          className={cn("h-full transition-all rounded-full", getGaugeColor(score.consistency_score))}
+                          style={{ width: `${score.consistency_score}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-bold w-8 text-right">
+                        {score.consistency_score}
+                      </span>
+                    </div>
+                  </div>
 
-              {/* Sparkline */}
-              <div className="flex-shrink-0 w-32 h-8 flex items-end gap-0.5">
-                {score.points_by_phase.map((phase: any, i: number) => {
-                  const maxPoints = Math.max(...score.points_by_phase.map((p: any) => p.points));
-                  const height = (phase.points / maxPoints) * 100;
-                  return (
-                    <div
-                      key={i}
-                      className="flex-1 bg-primary rounded-t"
-                      style={{ height: `${height}%` }}
-                      title={`Phase ${phase.phase_index}: ${phase.points} pts (${phase.percentage}%)`}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
+                  {/* Label */}
+                  <div className="flex-shrink-0">
+                    <Badge className={cn(label.cls)}>{label.text}</Badge>
+                  </div>
+
+                  {/* Sparkline: points par phase */}
+                  <div className="flex-shrink-0 w-28 h-8 flex items-end gap-0.5">
+                    {score.points_by_phase?.map((phase: any, i: number) => {
+                      const maxPoints = Math.max(...score.points_by_phase.map((p: any) => p.points), 1);
+                      const height = Math.max((phase.points / maxPoints) * 100, 4);
+                      return (
+                        <Tooltip key={i}>
+                          <TooltipTrigger asChild>
+                            <div
+                              className={cn("flex-1 rounded-t cursor-pointer", getGaugeColor(score.consistency_score))}
+                              style={{ height: `${height}%` }}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs font-medium">Phase {phase.phase_index}</p>
+                            <p className="text-xs">{Math.round(phase.points)} pts ({phase.percentage}%)</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </TooltipProvider>
 
         {/* Summary */}
         <div className="mt-6 pt-6 border-t">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div className="grid grid-cols-3 gap-4 text-sm text-center">
             <div>
-              <p className="text-muted-foreground">Manager le plus régulier</p>
-              <p className="font-semibold">
-                {data.scores[0]?.manager_nom} ({data.scores[0]?.consistency_score})
-              </p>
+              <p className="text-muted-foreground">🏆 Le plus régulier</p>
+              <p className="font-semibold">{data.scores[0]?.manager_nom}</p>
+              <p className="text-xs text-muted-foreground">Score : {data.scores[0]?.consistency_score}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Manager le plus volatile</p>
-              <p className="font-semibold">
-                {data.scores[data.scores.length - 1]?.manager_nom} ({data.scores[data.scores.length - 1]?.consistency_score})
-              </p>
+              <p className="text-muted-foreground">🎢 Le plus irrégulier</p>
+              <p className="font-semibold">{data.scores[data.scores.length - 1]?.manager_nom}</p>
+              <p className="text-xs text-muted-foreground">Score : {data.scores[data.scores.length - 1]?.consistency_score}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Score moyen</p>
+              <p className="text-muted-foreground">Moyenne</p>
               <p className="font-semibold">
                 {Math.round(data.scores.reduce((sum: number, s: any) => sum + s.consistency_score, 0) / data.scores.length)}
               </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Managers analysés</p>
-              <p className="font-semibold">{data.scores.length}</p>
+              <p className="text-xs text-muted-foreground">{data.scores.length} managers</p>
             </div>
           </div>
         </div>
