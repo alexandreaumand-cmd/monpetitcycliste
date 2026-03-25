@@ -1,41 +1,41 @@
 
+Objectif: rétablir l’affichage des classements de la ligue **MPC 2026** (onglet Classement + cartes “Mes ligues”).
 
-## Corriger le classement manquant (MPC 2026)
+Constat confirmé:
+- Les données existent bien en base pour `MPC 2026` (10 lignes dans `v_manager_standings_by_season_v2`).
+- Le problème est donc côté **consommation front** (chargement/erreur silencieuse/cache), pas côté calcul de points.
 
-### Cause racine
-Deux bugs identifiés :
+Plan d’implémentation
 
-1. **Erreur SQL** : La fonction `get_previous_standings` déclare `total_points bigint` dans son type de retour, mais les `SUM()` internes retournent `numeric`. Cela provoque l'erreur `42804` visible dans la console, ce qui fait échouer silencieusement la requête d'évolution. Bien que ce ne soit pas directement la cause du tableau vide, cela pollue le rendu.
+1) Fiabiliser la récupération des stats des cartes de ligue  
+Fichier: `src/hooks/useLeagueCardsData.ts`
+- Ne plus conditionner le fetch de `v_manager_standings_by_season_v2` à `currentManagerId`.
+  - Aujourd’hui: si `currentManagerId` est null/indisponible, `allStandings` devient `[]` => “Aucune donnée disponible”.
+  - Correction: toujours charger les standings par ligue, puis calculer le rang perso seulement si manager courant disponible.
+- Ajouter une vraie gestion d’erreur par batch (standings/scopes/seasons/owners), avec fallback explicite, pour éviter les “vides silencieux”.
 
-2. **Bug d'opérateur JS (cause principale)** : Ligne 371 de `ManagerStandings.tsx` :
-   ```tsx
-   {!standings || standings.length === 0 && (...)}
-   ```
-   `&&` a une priorité plus élevée que `||`, donc l'expression est évaluée comme :
-   ```tsx
-   {!standings || (standings.length === 0 && (...))}
-   ```
-   Quand `standings` est un tableau non vide, `!standings` est `false`, et `standings.length === 0 && (...)` est `false`, donc le message "aucun classement" n'apparaît PAS — mais le vrai problème est que quand `standings` est un tableau vide `[]`, `!standings` est `false` (car `[]` est truthy), et `standings.length === 0 && (...)` affiche le message correctement. Cependant quand `standings` est `undefined` (avant le chargement), `!standings` est `true` et le message vide s'affiche — ce qui bloque visuellement le contenu.
+2) Rendre le composant classement robuste aux erreurs/résultats vides  
+Fichier: `src/components/rankings/ManagerStandings.tsx`
+- Ajouter `isError`/`error` sur la query standings et afficher un état d’erreur dédié (au lieu d’un tableau vide ambigu).
+- Conserver l’état vide uniquement pour “0 ligne réellement retournée”.
+- Forcer un refetch fiable sur changement de contexte ligue/saison (éviter de rester bloqué sur un cache vide initial).
 
-   **Attendez** — re-vérifions : `!undefined` = `true`, donc on voit le div vide, pas les données. Mais `isLoading` devrait couvrir ce cas... Sauf si le query est `enabled: !leagueLoading` et que `leagueLoading` est `false` avant que `selectedSeason` soit prêt → la query retourne `[]` (ligne 99), ce résultat est mis en cache, et quand `selectedSeason` arrive, le `staleTime: 5min` du QueryClient empêche un refetch.
+3) Aligner le comportement mobile/desktop  
+Fichier: `src/pages/Rankings.mobile.tsx`
+- Appliquer la même logique d’erreur/empty-state que desktop (sinon écarts de comportement selon device).
+- Vérifier que les conditions `enabled` attendent bien les bons identifiants sans figer un état vide.
 
-### Corrections
+4) Vérification backend minimale (si erreur de query détectée)  
+- Si la query front remonte une erreur d’accès au view, ajouter une migration corrective ciblée:
+  - recréer les vues de standings avec options explicites cohérentes,
+  - revalider les grants SELECT attendus.
+- Pas de refonte SQL des points tant qu’aucune erreur SQL n’est reproduite (les données sont déjà présentes).
 
-**1. Migration SQL** — Corriger le type de retour de `get_previous_standings` :
-- Caster `t.total_points::bigint` dans le `SELECT` final, ou changer le type de retour en `numeric`
+5) Validation fonctionnelle ciblée (TEST)
+- `/dashboard/classement?leagueId=MPC2026`: lignes managers visibles (plus seulement l’entête).
+- `/dashboard/home?leagueId=MPC2026`: carte MPC 2026 affiche au moins leader/rang/points au lieu de “Aucune donnée disponible”.
+- Vérifier que les ligues “à la course” restent correctes (pas de régression sur le filtrage par scope).
 
-**2. `ManagerStandings.tsx`** — Deux corrections :
-- Ligne 371 : Corriger la condition avec des parenthèses :
-  ```tsx
-  {(!standings || standings.length === 0) && (...)}
-  ```
-- Ligne 101 : Ajouter `selectedSeason` ou `phaseId` dans la condition `enabled` pour éviter qu'une requête vide ne soit mise en cache :
-  ```tsx
-  enabled: !leagueLoading && !!leagueId && (!!phaseId || !!selectedSeason),
-  ```
-
-### Résultat attendu
-- Le classement MPC 2026 s'affiche correctement
-- L'erreur console `42804` disparaît
-- Les ligues "à la course" ne sont pas impactées
-
+Détails techniques (résumé)
+- Cause la plus probable: logique front trop restrictive + erreurs silencieuses dans les hooks de batch.
+- Correctif clé: dissocier “chargement standings de ligue” et “résolution manager courant”, puis exposer explicitement les états `loading / error / empty / data`.
