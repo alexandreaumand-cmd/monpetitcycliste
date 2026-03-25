@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertCircle, Clock, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Link } from "react-router-dom";
-import mpcLogo from "@/assets/mpc-logo-horizontal.png";
 
 interface AuctionHeaderMobileProps {
   starting_budget: number;
@@ -27,7 +25,7 @@ interface AuctionHeaderMobileProps {
   deadline_at?: string;
   validated_count?: number;
   total_managers?: number;
-  phase_index?: number;
+  
   onSubmit?: () => void;
   isSubmitting?: boolean;
 }
@@ -45,7 +43,7 @@ export function AuctionHeaderMobile({
   deadline_at,
   validated_count = 0,
   total_managers = 0,
-  phase_index,
+  
   onSubmit,
   isSubmitting = false,
 }: AuctionHeaderMobileProps) {
@@ -89,23 +87,6 @@ export function AuctionHeaderMobile({
 
   return (
     <div className="sticky top-0 z-10 bg-background safe-top">
-      {/* Logo Header */}
-      <div className="flex flex-col items-center py-2 border-b border-border/50 bg-background/95 backdrop-blur gap-1">
-        <Link to="/dashboard/home" className="flex items-center">
-          <img 
-            src={mpcLogo} 
-            alt="Logo La Bordure" 
-            className="h-7 w-auto max-w-[180px]"
-          />
-        </Link>
-        {phase_index && (
-          <Badge variant="outline" className="text-[10px]">
-            Phase {phase_index}
-          </Badge>
-        )}
-      </div>
-      
-      {/* Existing Collapsible Header */}
       <Collapsible
         open={isExpanded}
         onOpenChange={setIsExpanded}
