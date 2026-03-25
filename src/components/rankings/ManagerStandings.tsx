@@ -98,7 +98,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
       
       return [];
     },
-    enabled: !leagueLoading,
+    enabled: !leagueLoading && !!leagueId && (!!phaseId || !!selectedSeason),
   });
 
 
@@ -368,7 +368,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
             })}
           </TableBody>
         </Table>
-        {!standings || standings.length === 0 && (
+        {(!standings || standings.length === 0) && (
           <div className="text-center py-8 text-muted-foreground">
             {t('standings.noStandings')}
           </div>
