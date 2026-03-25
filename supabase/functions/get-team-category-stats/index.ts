@@ -31,20 +31,54 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get all points for active phases
-    const { data: pointsData } = await supabase
-      .from('points_ledger')
-      .select('coureur_id, phase_id, points')
-      .in('phase_id', activePhaseIds);
+    // Get all points for active phases (paginated to avoid 1000-row limit)
+    let allPointsData: any[] = [];
+    {
+      const PAGE_SIZE = 1000;
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data: batch, error: batchError } = await supabase
+          .from('points_ledger')
+          .select('coureur_id, phase_id, points')
+          .in('phase_id', activePhaseIds)
+          .range(offset, offset + PAGE_SIZE - 1);
+        if (batchError) throw batchError;
+        if (batch && batch.length > 0) {
+          allPointsData = allPointsData.concat(batch);
+          offset += PAGE_SIZE;
+          hasMore = batch.length === PAGE_SIZE;
+        } else {
+          hasMore = false;
+        }
+      }
+    }
 
-    // Get coureurs_saisons to map rider -> team + category
-    const { data: coureursSaisons } = await supabase
-      .from('coureurs_saisons')
-      .select('coureur_id, equipe_id')
-      .eq('saison_id', saison_id);
+    // Get coureurs_saisons to map rider -> team + category (paginated)
+    let allCoureursSaisons: any[] = [];
+    {
+      const PAGE_SIZE = 1000;
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data: batch, error: batchError } = await supabase
+          .from('coureurs_saisons')
+          .select('coureur_id, equipe_id')
+          .eq('saison_id', saison_id)
+          .range(offset, offset + PAGE_SIZE - 1);
+        if (batchError) throw batchError;
+        if (batch && batch.length > 0) {
+          allCoureursSaisons = allCoureursSaisons.concat(batch);
+          offset += PAGE_SIZE;
+          hasMore = batch.length === PAGE_SIZE;
+        } else {
+          hasMore = false;
+        }
+      }
+    }
 
     const riderTeamMap = new Map<string, string>();
-    (coureursSaisons || []).forEach((cs: any) => riderTeamMap.set(cs.coureur_id, cs.equipe_id));
+    allCoureursSaisons.forEach((cs: any) => riderTeamMap.set(cs.coureur_id, cs.equipe_id));
 
     // Get equipes_saisons for team names and categories
     const { data: equipesSaisons } = await supabase
@@ -57,15 +91,24 @@ Deno.serve(async (req) => {
       teamInfoMap.set(es.equipe_id, { nom: es.nom_affiche, categorie: es.categorie || 'Unknown' });
     });
 
-    // Get rider names
-    const allRiderIds = [...new Set((pointsData || []).map((p: any) => p.coureur_id).filter(Boolean))];
-    const { data: ridersData } = await supabase
-      .from('coureurs')
-      .select('id, nom')
-      .in('id', allRiderIds.length > 0 ? allRiderIds : ['__none__']);
+    // Get rider names (paginated)
+    const allRiderIds = [...new Set(allPointsData.map((p: any) => p.coureur_id).filter(Boolean))];
+    let allRidersData: any[] = [];
+    {
+      const PAGE_SIZE = 1000;
+      for (let i = 0; i < allRiderIds.length; i += PAGE_SIZE) {
+        const chunk = allRiderIds.slice(i, i + PAGE_SIZE);
+        const { data: batch, error: batchError } = await supabase
+          .from('coureurs')
+          .select('id, nom')
+          .in('id', chunk);
+        if (batchError) throw batchError;
+        if (batch) allRidersData = allRidersData.concat(batch);
+      }
+    }
 
     const riderNameMap = new Map<string, string>();
-    (ridersData || []).forEach((r: any) => riderNameMap.set(r.id, r.nom));
+    allRidersData.forEach((r: any) => riderNameMap.set(r.id, r.nom));
 
     // Aggregate points by team and phase, and by rider
     const teamPhasePoints = new Map<string, Map<string, number>>(); // equipe_id -> phase_id -> points
@@ -73,7 +116,7 @@ Deno.serve(async (req) => {
     const categoryPhasePoints = new Map<string, Map<string, number>>(); // categorie -> phase_id -> points
     const categoryTotals = new Map<string, number>();
 
-    (pointsData || []).forEach((p: any) => {
+    allPointsData.forEach((p: any) => {
       if (!p.coureur_id) return;
       const equipeId = riderTeamMap.get(p.coureur_id);
       if (!equipeId) return;
