@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { RiderPointsDetail } from "./RiderPointsDetail";
 import { RiderRaceIcons } from "./RiderRaceIcons";
+import { useLeagueFilteredRaces } from "@/hooks/useLeagueFilteredRaces";
 import { LeagueBonusRidersDialog } from "./LeagueBonusRidersDialog";
 import { LeagueRostersOverviewDialog } from "./LeagueRostersOverviewDialog";
 import { useQuery } from "@tanstack/react-query";

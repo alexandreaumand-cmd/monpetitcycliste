@@ -9,6 +9,7 @@ import {
 import { useUserLeagues } from "@/hooks/useUserLeagues";
 import { RiderPointsDetail } from "./RiderPointsDetail";
 import { RiderRaceIcons } from "./RiderRaceIcons";
+import { useLeagueFilteredRaces } from "@/hooks/useLeagueFilteredRaces";
 import { LeagueBonusRidersDialog } from "./LeagueBonusRidersDialog";
 import { LeagueRostersOverviewDialog } from "./LeagueRostersOverviewDialog";
 
