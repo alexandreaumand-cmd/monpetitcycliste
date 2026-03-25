@@ -1,6 +1,28 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
+const PAGE_SIZE = 1000;
+
+async function fetchAllRows(
+  queryFn: (offset: number) => Promise<{ data: any[] | null; error: any }>
+): Promise<any[]> {
+  let all: any[] = [];
+  let offset = 0;
+  let hasMore = true;
+  while (hasMore) {
+    const { data, error } = await queryFn(offset);
+    if (error) throw error;
+    if (data && data.length > 0) {
+      all = all.concat(data);
+      offset += PAGE_SIZE;
+      hasMore = data.length === PAGE_SIZE;
+    } else {
+      hasMore = false;
+    }
+  }
+  return all;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -45,16 +67,26 @@ Deno.serve(async (req) => {
 
     const phaseIds = phases.map(p => p.id);
 
+    // Fetch all coureurs names in one go
+    const { data: allCoureurs, error: coureursError } = await supabase
+      .from('coureurs')
+      .select('id, nom');
+    if (coureursError) throw coureursError;
+    const coureurNameMap = new Map((allCoureurs || []).map(c => [c.id, c.nom]));
+
     // Calculate scores for each manager
     const rankings = await Promise.all(
       managers.map(async (manager) => {
-        // Get roster with prices
-        const { data: roster } = await supabase
-          .from('rosters')
-          .select('coureur_id, prix_signature')
-          .in('phase_id', phaseIds)
-          .eq('manager_id', manager.id)
-          .eq('league_id', league_id);
+        // Get roster with prices (paginated)
+        const roster = await fetchAllRows((offset) =>
+          supabase
+            .from('rosters')
+            .select('coureur_id, prix_signature')
+            .in('phase_id', phaseIds)
+            .eq('manager_id', manager.id)
+            .eq('league_id', league_id)
+            .range(offset, offset + PAGE_SIZE - 1)
+        );
 
         if (!roster || roster.length === 0) {
           return {
@@ -65,17 +97,21 @@ Deno.serve(async (req) => {
             avg_ratio: 0,
             pepites_count: 0,
             wt_percentage: 0,
+            riders: [],
           };
         }
 
-        const coureurIds = roster.map(r => r.coureur_id);
+        const coureurIds = [...new Set(roster.map(r => r.coureur_id))];
 
-        // Get points for these riders (NO filter by manager_id or league_id!)
-        const { data: points } = await supabase
-          .from('points_ledger')
-          .select('coureur_id, points, course_id')
-          .in('phase_id', phaseIds)
-          .in('coureur_id', coureurIds);
+        // Get points for these riders (paginated)
+        const points = await fetchAllRows((offset) =>
+          supabase
+            .from('points_ledger')
+            .select('coureur_id, points, course_id')
+            .in('phase_id', phaseIds)
+            .in('coureur_id', coureurIds)
+            .range(offset, offset + PAGE_SIZE - 1)
+        );
 
         // Get course categories for WT percentage
         const courseIds = [...new Set((points || []).map(p => p.course_id))];
@@ -94,39 +130,60 @@ Deno.serve(async (req) => {
         (points || []).forEach(p => {
           riderPoints.set(p.coureur_id, (riderPoints.get(p.coureur_id) || 0) + p.points);
           totalPoints += p.points;
-          
+
           const tier = courseMap.get(p.course_id);
           if (tier === 'WT' || tier === 'GT') {
             wtPoints += p.points;
           }
         });
 
-        // Calculate ratios
-        const ratios: number[] = [];
-        let pepitesCount = 0;
-
+        // Deduplicate roster by coureur_id (keep highest prix_signature)
+        const rosterMap = new Map<string, number>();
         roster.forEach(r => {
-          const pts = riderPoints.get(r.coureur_id) || 0;
-          const ratio = pts / (r.prix_signature || 1);
-          ratios.push(ratio);
-
-          // Pépite: prix ≤ 20 and ratio > 2.5
-          if (r.prix_signature <= 20 && ratio > 2.5) {
-            pepitesCount++;
+          const existing = rosterMap.get(r.coureur_id) || 0;
+          if (r.prix_signature > existing) {
+            rosterMap.set(r.coureur_id, r.prix_signature);
           }
         });
 
-        const avgRatio = ratios.length > 0 
-          ? ratios.reduce((sum, r) => sum + r, 0) / ratios.length 
+        // Build riders array and calculate ratios
+        const ratios: number[] = [];
+        let pepitesCount = 0;
+        const riders: any[] = [];
+
+        rosterMap.forEach((prix, coureurId) => {
+          const pts = riderPoints.get(coureurId) || 0;
+          const ratio = pts / (prix || 1);
+          const roundedRatio = Math.round(ratio * 100) / 100;
+          ratios.push(ratio);
+
+          const isPepite = prix <= 20 && ratio > 2.5;
+          if (isPepite) pepitesCount++;
+
+          riders.push({
+            nom: coureurNameMap.get(coureurId) || coureurId,
+            prix_signature: prix,
+            points: pts,
+            ratio: roundedRatio,
+            is_pepite: isPepite,
+          });
+        });
+
+        // Sort riders: pépites first, then by ratio desc
+        riders.sort((a, b) => {
+          if (a.is_pepite !== b.is_pepite) return a.is_pepite ? -1 : 1;
+          return b.ratio - a.ratio;
+        });
+
+        const avgRatio = ratios.length > 0
+          ? ratios.reduce((sum, r) => sum + r, 0) / ratios.length
           : 0;
 
         const wtPercentage = totalPoints > 0 ? (wtPoints / totalPoints) * 100 : 0;
 
-        // Calculate knowledge score (0-100)
-        // 50% avg ratio (normalized), 30% pepites, 20% WT percentage
-        const normalizedRatio = Math.min(avgRatio * 20, 50); // Max 50 points
-        const pepitesScore = Math.min(pepitesCount * 3, 30); // Max 30 points
-        const wtScore = Math.min(wtPercentage / 5, 20); // Max 20 points
+        const normalizedRatio = Math.min(avgRatio * 20, 50);
+        const pepitesScore = Math.min(pepitesCount * 3, 30);
+        const wtScore = Math.min(wtPercentage / 5, 20);
 
         const knowledgeScore = Math.round(normalizedRatio + pepitesScore + wtScore);
 
@@ -138,11 +195,11 @@ Deno.serve(async (req) => {
           avg_ratio: Math.round(avgRatio * 100) / 100,
           pepites_count: pepitesCount,
           wt_percentage: Math.round(wtPercentage * 10) / 10,
+          riders,
         };
       })
     );
 
-    // Sort by score and assign ranks
     rankings.sort((a, b) => b.knowledge_score - a.knowledge_score);
     rankings.forEach((r, idx) => {
       r.rank = idx + 1;
