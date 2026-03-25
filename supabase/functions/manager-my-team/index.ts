@@ -132,21 +132,50 @@ Deno.serve(async (req) => {
     // Filtrer les coureurs pour masquer ceux non annoncés
     const visibleCoureurs = coureurs?.filter((c: any) => !hiddenRiderIds.includes(c.coureur_id)) || [];
 
+    // Fetch league course scope (used for race_days AND wins)
+    let allowedCourseIds: string[] | null = null;
+    let leagueStartDate: string | null = null;
+    
+    if (league_id) {
+      const { data: leagueCourses } = await supabase.rpc('get_league_course_ids', { p_league_id: league_id });
+      if (leagueCourses) {
+        allowedCourseIds = leagueCourses.map((c: any) => c.course_id);
+      }
+      const { data: leagueData } = await supabase
+        .from('leagues')
+        .select('started_at_effective')
+        .eq('id', league_id)
+        .single();
+      if (leagueData?.started_at_effective) {
+        leagueStartDate = leagueData.started_at_effective.split('T')[0];
+      }
+    }
+
     // Calculer les jours de course par coureur
     const raceDaysMap = new Map<string, number>();
     const effectivePhaseId = phase_id || phaseIdForAnnonces;
     if (effectivePhaseId && visibleCoureurs.length > 0) {
       const today = new Date().toISOString().split('T')[0];
       
-      // 1. Récupérer les courses passées de la phase
-      const { data: pastCourses } = await supabase
+      let coursesQuery = supabase
         .from('courses')
         .select('id, date_debut, date_fin')
         .eq('phase_id', effectivePhaseId)
         .lte('date_debut', today);
       
-      if (pastCourses && pastCourses.length > 0) {
-        const courseIds = pastCourses.map(c => c.id);
+      const { data: pastCourses } = await coursesQuery;
+      
+      // Filter courses by league scope
+      let filteredCourses = pastCourses || [];
+      if (allowedCourseIds) {
+        filteredCourses = filteredCourses.filter(c => allowedCourseIds!.includes(c.id));
+      }
+      if (leagueStartDate) {
+        filteredCourses = filteredCourses.filter(c => c.date_debut && c.date_debut >= leagueStartDate!);
+      }
+      
+      if (filteredCourses.length > 0) {
+        const courseIds = filteredCourses.map(c => c.id);
         const coureurIds = visibleCoureurs.map((c: any) => c.coureur_id);
         
         // 2. Pour chaque course, trouver le dernier startlist_imports
@@ -182,7 +211,7 @@ Deno.serve(async (req) => {
             
             // Créer un map race_id -> jours
             const raceDaysPerCourse = new Map<string, number>();
-            for (const course of pastCourses) {
+            for (const course of filteredCourses) {
             if (course.date_debut && course.date_fin) {
                 const debut = new Date(course.date_debut);
                 const fin = new Date(course.date_fin);
@@ -284,14 +313,27 @@ Deno.serve(async (req) => {
       // Extraire les IDs des coureurs visibles du manager
       const coureurIds = visibleCoureurs.map((c: any) => c.coureur_id);
       
-      // Récupérer les IDs des courses de la phase
-      const { data: courses } = await supabase
+      // Récupérer les IDs des courses de la phase (filtrées par league scope)
+      let winsCoursesQuery = supabase
         .from('courses')
-        .select('id')
+        .select('id, date_debut')
         .eq('phase_id', phaseId);
 
+      const { data: courses } = await winsCoursesQuery;
+      
+      let winsCourseIds: string[] = [];
       if (courses && courses.length > 0) {
-        const courseIds = courses.map(c => c.id);
+        let filtered = courses;
+        if (allowedCourseIds) {
+          filtered = filtered.filter(c => allowedCourseIds!.includes(c.id));
+        }
+        if (leagueStartDate) {
+          filtered = filtered.filter(c => c.date_debut && c.date_debut >= leagueStartDate!);
+        }
+        winsCourseIds = filtered.map(c => c.id);
+      }
+
+      if (winsCourseIds.length > 0) {
         
         // Compter les victoires (position 1) des coureurs du manager
         const { count } = await supabase
@@ -300,7 +342,7 @@ Deno.serve(async (req) => {
           .in('coureur_id', coureurIds)
           .eq('position', 1)
           .in('type_classement', ['General', 'Etape'])
-          .in('course_id', courseIds);
+          .in('course_id', winsCourseIds);
         
         winsCount = count || 0;
       }

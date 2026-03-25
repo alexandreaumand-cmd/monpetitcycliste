@@ -266,18 +266,30 @@ export const MyTeamDesktop = () => {
         const client: any = supabase;
         const { data: standing } = await client
           .from('v_manager_standings_by_phase_v2')
-          .select('total_points, bonus_points')
+          .select('total_points, manager_bonus, rider_bonus')
           .eq('phase_id', selectedPhaseId)
           .eq('manager_id', targetManagerId)
           .eq('league_id', leagueId)
           .maybeSingle();
         
         if (standing) {
+          const managerBonus = Number(standing.manager_bonus) || 0;
+          const riderBonus = Number(standing.rider_bonus) || 0;
           setKpis(prev => ({
             ...prev,
             total_points: Number(standing.total_points) || 0,
-            bonus_points: Number(standing.bonus_points) || 0,
+            bonus_points: managerBonus,
+            bonus_rider_points: riderBonus,
             total_with_bonus: Number(standing.total_points) || 0,
+          }));
+        } else {
+          // No standings row = 0 points for this league scope
+          setKpis(prev => ({
+            ...prev,
+            total_points: 0,
+            bonus_points: 0,
+            bonus_rider_points: 0,
+            total_with_bonus: 0,
           }));
         }
       }
