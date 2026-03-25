@@ -597,7 +597,7 @@ export const MyTeamDesktop = () => {
               </Select>
             )}
             
-            {phases.length > 0 && (
+            {!isPerCourse && phases.length > 0 && (
               <Select value={selectedPhaseId || ''} onValueChange={setSelectedPhaseId}>
             <SelectTrigger className="flex-1">
               <SelectValue placeholder={t('phase')} />
