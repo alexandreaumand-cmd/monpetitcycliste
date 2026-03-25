@@ -1565,6 +1565,7 @@ export type Database = {
           bonus_type: string
           commentaire: string | null
           coureur_id: string | null
+          course_id: string | null
           created_at: string
           created_by: string
           id: string
@@ -1579,6 +1580,7 @@ export type Database = {
           bonus_type: string
           commentaire?: string | null
           coureur_id?: string | null
+          course_id?: string | null
           created_at?: string
           created_by: string
           id?: string
@@ -1593,6 +1595,7 @@ export type Database = {
           bonus_type?: string
           commentaire?: string | null
           coureur_id?: string | null
+          course_id?: string | null
           created_at?: string
           created_by?: string
           id?: string

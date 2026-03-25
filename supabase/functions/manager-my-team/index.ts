@@ -143,11 +143,14 @@ Deno.serve(async (req) => {
       }
       const { data: leagueData } = await supabase
         .from('leagues')
-        .select('started_at_effective')
+        .select('started_at_effective, created_at')
         .eq('id', league_id)
         .single();
-      if (leagueData?.started_at_effective) {
-        leagueStartDate = leagueData.started_at_effective.split('T')[0];
+      if (leagueData) {
+        const effectiveDate = leagueData.started_at_effective || leagueData.created_at;
+        if (effectiveDate) {
+          leagueStartDate = effectiveDate.split('T')[0];
+        }
       }
     }
 
@@ -291,6 +294,12 @@ Deno.serve(async (req) => {
         .eq('bonus_type', 'coureur_bonuse');
       
       if (league_id) riderBonusQuery = riderBonusQuery.eq('league_id', league_id);
+      
+      // Filter rider bonus by league course scope
+      if (allowedCourseIds) {
+        riderBonusQuery = riderBonusQuery.in('course_id', allowedCourseIds);
+      }
+      
       const { data: riderBonus } = await riderBonusQuery;
       
       // Calculer les totaux

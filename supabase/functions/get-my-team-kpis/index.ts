@@ -117,11 +117,14 @@ Deno.serve(async (req) => {
       }
       const { data: leagueData } = await supabaseClient
         .from('leagues')
-        .select('started_at_effective')
+        .select('started_at_effective, created_at')
         .eq('id', league_id)
         .single();
-      if (leagueData?.started_at_effective) {
-        leagueStartDate = leagueData.started_at_effective.split('T')[0];
+      if (leagueData) {
+        const effectiveDate = leagueData.started_at_effective || leagueData.created_at;
+        if (effectiveDate) {
+          leagueStartDate = effectiveDate.split('T')[0];
+        }
       }
     }
 
@@ -235,6 +238,10 @@ Deno.serve(async (req) => {
     
     if (league_id) {
       riderBonusQuery = riderBonusQuery.eq('league_id', league_id);
+    }
+    
+    if (courseFilter) {
+      riderBonusQuery = riderBonusQuery.in('course_id', courseFilter);
     }
     
     const { data: riderBonus } = await riderBonusQuery;
