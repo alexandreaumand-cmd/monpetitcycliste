@@ -265,6 +265,24 @@ Deno.serve(async (req) => {
 
     console.log(`Round closed, ${annonces.length} annonces created`);
 
+    // Set started_at_effective on first auction close (J+1)
+    const { data: leagueRow } = await supabase
+      .from('leagues')
+      .select('started_at_effective')
+      .eq('id', league_id)
+      .single();
+
+    if (leagueRow && !leagueRow.started_at_effective) {
+      const closedDate = new Date();
+      closedDate.setDate(closedDate.getDate() + 1);
+      const effectiveDate = closedDate.toISOString().split('T')[0];
+      console.log(`Setting started_at_effective for league ${league_id} to ${effectiveDate}`);
+      await supabase
+        .from('leagues')
+        .update({ started_at_effective: effectiveDate })
+        .eq('id', league_id);
+    }
+
     // Fetch league name for notification context
     const { data: leagueData } = await supabase
       .from('leagues')
