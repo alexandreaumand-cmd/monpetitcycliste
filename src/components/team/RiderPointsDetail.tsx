@@ -46,15 +46,17 @@ export const RiderPointsDetail = ({
   riderRound,
   phaseId,
   saisonId,
+  leagueId,
 }: RiderPointsDetailProps) => {
   const { data: riderPointsTable, isLoading } = useQuery({
-    queryKey: ['rider-points-table', riderId, phaseId, saisonId],
+    queryKey: ['rider-points-table', riderId, phaseId, saisonId, leagueId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-rider-points-table', {
         body: { 
           rider_id: riderId,
           phase_id: phaseId,
-          saison_id: saisonId
+          saison_id: saisonId,
+          league_id: leagueId || undefined
         }
       });
       
