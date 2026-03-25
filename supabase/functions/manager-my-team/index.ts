@@ -167,8 +167,17 @@ Deno.serve(async (req) => {
       
       const { data: pastCourses } = await coursesQuery;
       
-      if (pastCourses && pastCourses.length > 0) {
-        const courseIds = pastCourses.map(c => c.id);
+      // Filter courses by league scope
+      let filteredCourses = pastCourses || [];
+      if (allowedCourseIds) {
+        filteredCourses = filteredCourses.filter(c => allowedCourseIds!.includes(c.id));
+      }
+      if (leagueStartDate) {
+        filteredCourses = filteredCourses.filter(c => c.date_debut && c.date_debut >= leagueStartDate!);
+      }
+      
+      if (filteredCourses.length > 0) {
+        const courseIds = filteredCourses.map(c => c.id);
         const coureurIds = visibleCoureurs.map((c: any) => c.coureur_id);
         
         // 2. Pour chaque course, trouver le dernier startlist_imports
