@@ -27,13 +27,13 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { rider_id, saison_id, phase_id } = await req.json();
+    const { rider_id, saison_id, phase_id, league_id } = await req.json();
 
     if (!rider_id) {
       throw new Error('rider_id is required');
     }
 
-    console.log('Fetching rider points table:', { rider_id, saison_id, phase_id });
+    console.log('Fetching rider points table:', { rider_id, saison_id, phase_id, league_id });
 
     // Get rider info
     const { data: riderData, error: riderError } = await supabase
@@ -58,33 +58,63 @@ Deno.serve(async (req) => {
       targetSaisonId = phaseData?.saison_id;
     }
 
-    // Get team for the season from equipes_saisons
+    // Get team for the season from equipes_saisons (corrected lookup)
     let equipe = 'N/A';
     if (targetSaisonId) {
-      const { data: seasonData } = await supabase
+      const { data: csData } = await supabase
         .from('coureurs_saisons')
-        .select(`
-          equipe_id,
-          equipes_saisons!inner(nom_affiche)
-        `)
+        .select('equipe_id')
         .eq('coureur_id', rider_id)
         .eq('saison_id', targetSaisonId)
-        .eq('equipes_saisons.saison_id', targetSaisonId)
         .maybeSingle();
-      equipe = (seasonData as any)?.equipes_saisons?.nom_affiche || 'N/A';
+      
+      if (csData?.equipe_id) {
+        const { data: esData } = await supabase
+          .from('equipes_saisons')
+          .select('nom_affiche')
+          .eq('equipe_id', csData.equipe_id)
+          .eq('saison_id', targetSaisonId)
+          .maybeSingle();
+        equipe = esData?.nom_affiche || 'N/A';
+      }
     }
 
-    // Build query for points WITHOUT joins (to avoid SQL alias issues)
+    // --- League scope filtering ---
+    let leagueCourseIds: string[] | null = null;
+    let leagueDateFloor: string | null = null;
+
+    if (league_id) {
+      // Get allowed course IDs
+      const { data: scopeData } = await supabase.rpc('get_league_course_ids', { p_league_id: league_id });
+      if (scopeData && scopeData.length > 0) {
+        leagueCourseIds = scopeData.map((r: any) => r.course_id);
+      }
+
+      // Get league date floor
+      const { data: leagueData } = await supabase
+        .from('leagues')
+        .select('started_at_effective, created_at')
+        .eq('id', league_id)
+        .single();
+      
+      if (leagueData) {
+        const effectiveDate = leagueData.started_at_effective || leagueData.created_at;
+        if (effectiveDate) {
+          leagueDateFloor = effectiveDate.substring(0, 10); // YYYY-MM-DD
+        }
+      }
+    }
+
+    // Build query for points
     let query = supabase
       .from('points_ledger')
       .select('points, phase_id, course_id, type_classement, etape_numero')
       .eq('coureur_id', rider_id);
 
-    // Apply filters
+    // Apply phase/season filters
     if (phase_id) {
       query = query.eq('phase_id', phase_id);
     } else if (saison_id) {
-      // Filter by saison through phase
       const { data: phases } = await supabase
         .from('phases')
         .select('id')
@@ -96,6 +126,11 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Apply league course filter
+    if (leagueCourseIds) {
+      query = query.in('course_id', leagueCourseIds);
+    }
+
     const { data: pointsData, error: pointsError } = await query.limit(500);
 
     if (pointsError) {
@@ -103,22 +138,36 @@ Deno.serve(async (req) => {
       throw pointsError;
     }
 
-    console.log(`Successfully fetched ${pointsData?.length || 0} point entries for rider ${rider_id}`);
+    // Filter by league date floor if applicable
+    let filteredPointsData = pointsData || [];
 
     // Fetch courses separately (including phase_id)
-    const courseIds = [...new Set(pointsData?.map(p => p.course_id).filter(Boolean) || [])];
+    const courseIds = [...new Set(filteredPointsData.map(p => p.course_id).filter(Boolean))];
     const { data: coursesData } = await supabase
       .from('courses')
       .select('id, nom, categorie, date_debut, date_fin, phase_id')
-      .in('id', courseIds);
+      .in('id', courseIds.length > 0 ? courseIds : ['__none__']);
     
     const coursesMap = new Map(coursesData?.map(c => [c.id, c]) || []);
 
+    // Apply date floor filter after fetching courses
+    if (leagueDateFloor) {
+      const validCourseIds = new Set(
+        (coursesData || [])
+          .filter(c => c.date_debut && c.date_debut >= leagueDateFloor!)
+          .map(c => c.id)
+      );
+      filteredPointsData = filteredPointsData.filter(p => p.course_id && validCourseIds.has(p.course_id));
+    }
+
+    console.log(`Successfully fetched ${filteredPointsData.length} point entries for rider ${rider_id}`);
+
     // Fetch race_result_sets to determine TTT status
+    const finalCourseIds = [...new Set(filteredPointsData.map(p => p.course_id).filter(Boolean))];
     const { data: resultSetsData } = await supabase
       .from('race_result_sets')
       .select('course_id, type_classement, etape_numero, is_ttt')
-      .in('course_id', courseIds)
+      .in('course_id', finalCourseIds.length > 0 ? finalCourseIds : ['__none__'])
       .eq('is_ttt', true);
     
     // Build TTT lookup map
@@ -128,15 +177,15 @@ Deno.serve(async (req) => {
       tttMap.set(key, true);
     });
 
-    // Fetch phases separately - consolidate phase IDs from points and courses
-    const phaseIdsFromPoints = [...new Set(pointsData?.map(p => p.phase_id).filter(Boolean) || [])];
+    // Fetch phases separately
+    const phaseIdsFromPoints = [...new Set(filteredPointsData.map(p => p.phase_id).filter(Boolean))];
     const phaseIdsFromCourses = [...new Set(coursesData?.map(c => c.phase_id).filter(Boolean) || [])];
     const allPhaseIds = [...new Set([...phaseIdsFromPoints, ...phaseIdsFromCourses])];
     
     const { data: phasesData } = await supabase
       .from('phases')
       .select('id, index_dans_saison, saison_id')
-      .in('id', allPhaseIds);
+      .in('id', allPhaseIds.length > 0 ? allPhaseIds : ['__none__']);
     
     const phasesMap = new Map(phasesData?.map(p => [p.id, p]) || []);
 
@@ -145,7 +194,7 @@ Deno.serve(async (req) => {
       .from('race_results')
       .select('course_id, type_classement, etape_numero, position')
       .eq('coureur_id', rider_id)
-      .in('course_id', courseIds);
+      .in('course_id', finalCourseIds.length > 0 ? finalCourseIds : ['__none__']);
 
     if (resultsError) {
       console.error('Error fetching results:', resultsError);
@@ -158,10 +207,10 @@ Deno.serve(async (req) => {
       resultsMap.set(key, result.position);
     });
 
-    // Get bonus points WITHOUT joins
+    // Get bonus points
     let bonusQuery = supabase
       .from('bonus_points')
-      .select('points, bonus_type, commentaire, created_at, phase_id')
+      .select('points, bonus_type, commentaire, created_at, phase_id, course_id')
       .eq('coureur_id', rider_id);
 
     if (phase_id) {
@@ -178,20 +227,34 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Apply league course filter to bonuses
+    if (leagueCourseIds) {
+      bonusQuery = bonusQuery.in('course_id', leagueCourseIds);
+    }
+
     const { data: bonusData, error: bonusError } = await bonusQuery;
 
     if (bonusError) {
       console.error('Error fetching bonus points:', bonusError);
     }
 
-    // Build rows for race points using the Maps
-    const raceRows = pointsData?.map((point: any) => {
+    // Filter bonuses by date floor
+    let filteredBonusData = bonusData || [];
+    if (leagueDateFloor) {
+      filteredBonusData = filteredBonusData.filter(b => {
+        if (!b.course_id) return false; // Exclude bonuses without course_id in league mode
+        const course = coursesMap.get(b.course_id);
+        return course && course.date_debut && course.date_debut >= leagueDateFloor!;
+      });
+    }
+
+    // Build rows for race points
+    const raceRows = filteredPointsData.map((point: any) => {
       const key = `${point.course_id}_${point.type_classement}_${point.etape_numero || 'null'}`;
       const position = resultsMap.get(key) || null;
       const course = coursesMap.get(point.course_id);
       const isTtt = tttMap.get(key) || false;
       
-      // Determine effective phase_id from point or course
       const effectivePhaseId = point.phase_id || course?.phase_id || null;
       const phase = effectivePhaseId ? phasesMap.get(effectivePhaseId) : undefined;
       const phaseIndex = phase?.index_dans_saison || 0;
@@ -210,10 +273,10 @@ Deno.serve(async (req) => {
         is_bonus: false,
         is_ttt: isTtt,
       };
-    }) || [];
+    });
 
-    // Build rows for bonus points using the phasesMap
-    const bonusRows = bonusData?.map((bonus: any) => {
+    // Build rows for bonus points
+    const bonusRows = filteredBonusData.map((bonus: any) => {
       const phase = bonus.phase_id ? phasesMap.get(bonus.phase_id) : undefined;
       const phaseIndex = phase?.index_dans_saison || 0;
       
@@ -229,16 +292,14 @@ Deno.serve(async (req) => {
         is_bonus: true,
         is_ttt: false,
       };
-    }) || [];
+    });
 
     // Combine and sort
     const allRows = [...raceRows, ...bonusRows];
     allRows.sort((a, b) => {
-      // First by phase
       const phaseCompare = a.phase_index - b.phase_index;
       if (phaseCompare !== 0) return phaseCompare;
 
-      // Then by course date (only for race rows)
       const aDate = 'course_date' in a ? a.course_date : null;
       const bDate = 'course_date' in b ? b.course_date : null;
       
