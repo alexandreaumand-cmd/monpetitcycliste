@@ -142,7 +142,7 @@ export const BikeKnowledgeRanking = ({ saisonId }: BikeKnowledgeRankingProps) =>
       <CardContent className={cn("space-y-3 md:space-y-4", isMobile && "pt-0")}>
         {rankings.map((manager: any, idx: number) => {
           const isExpanded = expandedManager === manager.manager_id;
-          const riders: Rider[] = manager.riders || [];
+          const riders: Rider[] = filterRiders(manager.riders || []);
 
           return (
             <div
