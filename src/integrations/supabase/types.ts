@@ -1182,6 +1182,48 @@ export type Database = {
           },
         ]
       }
+      arena_recap_runs: {
+        Row: {
+          auth_method: string | null
+          created_at: string
+          details: Json | null
+          error_message: string | null
+          id: string
+          leagues_processed: number
+          leagues_sent: number
+          project_ref: string | null
+          run_type: string
+          status: string
+          target_date: string
+        }
+        Insert: {
+          auth_method?: string | null
+          created_at?: string
+          details?: Json | null
+          error_message?: string | null
+          id?: string
+          leagues_processed?: number
+          leagues_sent?: number
+          project_ref?: string | null
+          run_type: string
+          status?: string
+          target_date: string
+        }
+        Update: {
+          auth_method?: string | null
+          created_at?: string
+          details?: Json | null
+          error_message?: string | null
+          id?: string
+          leagues_processed?: number
+          leagues_sent?: number
+          project_ref?: string | null
+          run_type?: string
+          status?: string
+          target_date?: string
+        }
+        Relationships: []
+      }
       auctions: {
         Row: {
           announcements_paused: boolean
