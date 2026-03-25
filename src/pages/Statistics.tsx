@@ -10,6 +10,8 @@ import { PointsDistribution } from "@/components/rankings/PointsDistribution";
 import { ManagerPredictions } from "@/components/rankings/ManagerPredictions";
 import { BikeKnowledgeRanking } from "@/components/rankings/BikeKnowledgeRanking";
 import { LuckRanking } from "@/components/rankings/LuckRanking";
+import { TeamPointsBreakdown } from "@/components/rankings/TeamPointsBreakdown";
+import { CategoryWeight } from "@/components/rankings/CategoryWeight";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useTranslation } from "react-i18next";
@@ -69,13 +71,15 @@ const Statistics = () => {
       />
 
       <Tabs defaultValue="heatmap" className="w-full">
-        <TabsList className="grid w-full max-w-4xl grid-cols-6">
+        <TabsList className="flex w-full max-w-5xl flex-wrap">
           <TabsTrigger value="heatmap">{t('tabs.heatmap')}</TabsTrigger>
           <TabsTrigger value="consistency">{t('tabs.consistency')}</TabsTrigger>
           <TabsTrigger value="distribution">{t('tabs.distribution')}</TabsTrigger>
           <TabsTrigger value="predictions">{t('tabs.predictions')}</TabsTrigger>
           <TabsTrigger value="knowledge">{t('tabs.knowledge')}</TabsTrigger>
           <TabsTrigger value="luck">{t('tabs.luck')}</TabsTrigger>
+          <TabsTrigger value="teams">{t('tabs.teams')}</TabsTrigger>
+          <TabsTrigger value="categories">{t('tabs.categories')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="heatmap" className="mt-6">
@@ -100,6 +104,14 @@ const Statistics = () => {
 
         <TabsContent value="luck" className="mt-6">
           <LuckRanking saisonId={selectedSeason.id} />
+        </TabsContent>
+
+        <TabsContent value="teams" className="mt-6">
+          <TeamPointsBreakdown saisonId={selectedSeason.id} />
+        </TabsContent>
+
+        <TabsContent value="categories" className="mt-6">
+          <CategoryWeight saisonId={selectedSeason.id} />
         </TabsContent>
       </Tabs>
     </PageContainer>
