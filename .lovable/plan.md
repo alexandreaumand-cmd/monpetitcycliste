@@ -1,56 +1,41 @@
 
 
-## Filtrer les points des courses antérieures à la création de la ligue
+## Filtrer les onglets Hebdo et Chrono par scope de la ligue
 
 ### Problème
-
-La ligue « Ligue Publique WT sans bonus » a été créée le 25 mars 2026 mais `started_at_effective` est NULL (pas encore d'enchère terminée). Partout dans le code SQL, la condition est :
-
-```sql
-WHERE (l.started_at_effective IS NULL OR c.date_debut >= l.started_at_effective)
-```
-
-Quand `started_at_effective` est NULL, **aucun filtre de date** n'est appliqué → toutes les courses WT de la saison comptent, y compris celles antérieures à la création.
-
-Ce problème touche :
-- `get_top_riders_optimized` (onglet Top Coureurs — visible sur la capture)
-- `v_manager_standings_by_phase_v2` (classement par phase)
-- `v_manager_standings_by_season_v2` (classement saison)
-- `manager_team_by_id` (Mon Équipe)
+Les onglets "Hebdo" (`get_weekly_points_heatmap`) et "Chrono" (`get-cumulative-points-series`) ne filtrent pas les points par les courses autorisées de la ligue ni par la date de démarrage effective. Ils agrègent **tous** les points de la saison/phase, ce qui affiche des points fantômes dans les ligues "à la course" comme "Flandriennes 2026".
 
 ### Solution
 
-**Une seule migration SQL** qui modifie la logique de fallback partout : quand `started_at_effective` est NULL, utiliser `leagues.created_at::date` comme date plancher.
+**1. Migration SQL — `get_weekly_points_heatmap`**
 
-#### Changements dans la migration :
+Ajouter le filtrage par `get_league_course_ids` et par date plancher `COALESCE(started_at_effective, created_at)` dans la CTE `race_week_points` :
 
-1. **`get_top_riders_optimized`** — Remplacer :
-   ```sql
-   v_started_at_effective := l.started_at_effective
-   ```
-   par :
-   ```sql
-   v_started_at_effective := COALESCE(l.started_at_effective, l.created_at)
-   ```
-   Cela supprime la condition `IS NULL` qui court-circuitait le filtre.
+```sql
+JOIN courses c ON c.id = pl.course_id
+JOIN leagues l ON l.id = p_league_id
+WHERE p.saison_id = p_saison_id
+  AND c.date_debut >= COALESCE(l.started_at_effective, l.created_at)::date
+  AND pl.course_id IN (SELECT glc.course_id FROM get_league_course_ids(p_league_id) glc)
+```
 
-2. **`v_manager_standings_by_phase_v2`** et **`v_manager_standings_by_season_v2`** — Dans toutes les CTEs (`race_pts`, `scoreurs`, `victories`), remplacer :
-   ```sql
-   (l.started_at_effective IS NULL OR c.date_debut >= l.started_at_effective)
-   ```
-   par :
-   ```sql
-   c.date_debut >= COALESCE(l.started_at_effective, l.created_at)::date
-   ```
+Même filtre dans la CTE `manager_bonus_weekly` (points de bonus liés aux courses hors scope).
 
-3. **`manager_team_by_id`** — Même correction si `started_at_effective IS NULL` y est utilisé.
+**2. Edge function — `get-cumulative-points-series`**
+
+Fichier : `supabase/functions/get-cumulative-points-series/index.ts`
+
+Après chargement de `pointsData`, filtrer les `course_id` par le scope de la ligue :
+- Appeler `get_league_course_ids(league_id)` via `supabase.rpc()` pour obtenir la liste des courses autorisées
+- Charger `started_at_effective` et `created_at` depuis `leagues` pour la date plancher
+- Filtrer `pointsData` pour ne garder que les points dont le `course_id` est dans la liste autorisée et dont la date de la course est ≥ date plancher
+- Appliquer le même filtre aux bonus (`bonusManagerData`, `bonusRiderData`) si leurs phases contiennent des courses hors scope
 
 ### Résultat attendu
-- « Ligue Publique WT sans bonus » : 0 points partout (aucune course WT n'a débuté le 25 mars ou après avec des résultats)
-- Ligues avec `started_at_effective` renseigné : aucun changement
-- Ligues anciennes (créées en début de saison) : comportement identique car `created_at` est antérieur aux premières courses
+- "Flandriennes 2026" : 0 points dans Hebdo et Chrono (aucune course sélectionnée n'a encore de résultats)
+- Ligues "5 Phases" classiques : comportement inchangé
 
 ### Fichiers impactés
-- 1 nouvelle migration SQL (recréation des vues + fonction)
-- Aucun changement frontend
+- 1 nouvelle migration SQL (recréation de `get_weekly_points_heatmap`)
+- `supabase/functions/get-cumulative-points-series/index.ts`
 
