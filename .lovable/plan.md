@@ -2,26 +2,46 @@
 
 ## Problem
 
-The Statistics page ("Statistiques") is accessible from the desktop sidebar but is missing from the mobile navigation drawer (`MobileDrawer.tsx`). The mobile drawer defines its nav items as hardcoded arrays and the Statistics entry was never added.
+The `get-team-category-stats` Edge Function fetches points from `points_ledger` without specifying a row limit. Supabase defaults to **1000 rows**, so the data is silently truncated — resulting in incorrect point totals for riders and teams (e.g., Evenepoel showing 514 instead of 1093).
 
-## Plan
+## Solution
 
-**File: `src/components/mobile/MobileDrawer.tsx`**
+Paginate the `points_ledger` query to fetch ALL rows, not just the first 1000.
 
-Add the Statistics entry to the "Courses" section (logical grouping with results and race data):
+## Technical Details
+
+**File: `supabase/functions/get-team-category-stats/index.ts`**
+
+Replace the single query (lines 35-38) with a paginated loop:
 
 ```typescript
-{
-  title: "Courses",
-  items: [
-    { label: "Courses", path: "/dashboard/courses", icon: Calendar },
-    { label: "Résultats", path: "/dashboard/resultats", icon: BarChart3 },
-    { label: "Statistiques", path: "/dashboard/statistiques", icon: LineChart },
-  ],
-},
+// Fetch ALL points_ledger rows using pagination (default limit is 1000)
+let allPointsData: any[] = [];
+const PAGE_SIZE = 1000;
+let offset = 0;
+let hasMore = true;
+
+while (hasMore) {
+  const { data: batch, error: batchError } = await supabase
+    .from('points_ledger')
+    .select('coureur_id, phase_id, points')
+    .in('phase_id', activePhaseIds)
+    .range(offset, offset + PAGE_SIZE - 1);
+
+  if (batchError) throw batchError;
+  if (batch && batch.length > 0) {
+    allPointsData = allPointsData.concat(batch);
+    offset += PAGE_SIZE;
+    hasMore = batch.length === PAGE_SIZE;
+  } else {
+    hasMore = false;
+  }
+}
 ```
 
-Also add the `LineChart` import from `lucide-react` (already used in the desktop sidebar).
+Then use `allPointsData` instead of `pointsData` in the aggregation loop (line 76).
 
-This is a single-line addition -- no other files need changes since the route and page already exist.
+Also apply the same pagination fix to the `coureurs_saisons` and `coureurs` queries if they could exceed 1000 rows — same pattern.
+
+This is a backend-only fix; no UI changes needed.
 
