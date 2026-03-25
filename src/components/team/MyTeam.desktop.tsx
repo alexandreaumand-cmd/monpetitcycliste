@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLeague } from "@/contexts/LeagueContext";
+import { useUserLeagues } from "@/hooks/useUserLeagues";
 import {
   Select,
   SelectContent,
@@ -82,6 +83,9 @@ export const MyTeamDesktop = () => {
   const navigate = useNavigate();
   const { phases, activePhase, selectedSeason } = useSeasonContext();
   const { leagueId, isLoading: leagueLoading } = useLeague();
+  const { leagues } = useUserLeagues();
+  const currentLeague = leagues.find(l => l.id === leagueId);
+  const isPerCourse = currentLeague?.game_mode === 'per_course';
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>('points');
@@ -596,7 +600,7 @@ export const MyTeamDesktop = () => {
               </Select>
             )}
             
-            {phases.length > 0 && (
+            {!isPerCourse && phases.length > 0 && (
               <Select value={selectedPhaseId || ''} onValueChange={setSelectedPhaseId}>
             <SelectTrigger className="flex-1">
               <SelectValue placeholder={t('phase')} />

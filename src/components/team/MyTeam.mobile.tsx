@@ -6,6 +6,7 @@ import {
   MobileCard,
   MobileEmptyState,
 } from "@/components/mobile";
+import { useUserLeagues } from "@/hooks/useUserLeagues";
 import { RiderPointsDetail } from "./RiderPointsDetail";
 import { RiderRaceIcons } from "./RiderRaceIcons";
 import { LeagueBonusRidersDialog } from "./LeagueBonusRidersDialog";
@@ -77,6 +78,9 @@ export const MyTeamMobile = () => {
   const navigate = useNavigate();
   const { phases, activePhase, selectedSeason } = useSeasonContext();
   const { leagueId, isLoading: leagueLoading } = useLeague();
+  const { leagues } = useUserLeagues();
+  const currentLeague = leagues.find(l => l.id === leagueId);
+  const isPerCourse = currentLeague?.game_mode === 'per_course';
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>("points");
@@ -405,7 +409,7 @@ export const MyTeamMobile = () => {
             </Select>
           )}
           
-          {phases.length > 0 && (
+          {!isPerCourse && phases.length > 0 && (
             <Select value={selectedPhaseId || ""} onValueChange={setSelectedPhaseId}>
               <SelectTrigger className="flex-1">
                 <SelectValue placeholder={t('phase')} />
