@@ -18,6 +18,7 @@ interface Rider {
   is_pepite: boolean;
   phase_points: number[];
   phases_active: boolean[];
+  equipe_categorie: string | null;
 }
 
 interface BikeKnowledgeRankingProps {
