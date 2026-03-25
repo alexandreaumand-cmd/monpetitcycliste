@@ -65,6 +65,7 @@ export const MobileDrawer = ({
       items: [
         { label: "Courses", path: "/dashboard/courses", icon: Calendar },
         { label: "Résultats", path: "/dashboard/resultats", icon: BarChart3 },
+        { label: "Statistiques", path: "/dashboard/statistiques", icon: LineChart },
       ],
     },
     {
