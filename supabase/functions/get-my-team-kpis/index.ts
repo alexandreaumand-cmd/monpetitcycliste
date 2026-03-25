@@ -237,6 +237,10 @@ Deno.serve(async (req) => {
       riderBonusQuery = riderBonusQuery.eq('league_id', league_id);
     }
     
+    if (courseFilter) {
+      riderBonusQuery = riderBonusQuery.in('course_id', courseFilter);
+    }
+    
     const { data: riderBonus } = await riderBonusQuery;
 
     const riderBonusTotal = riderBonus?.reduce((sum, b) => sum + (b.points || 0), 0) || 0;

@@ -294,6 +294,12 @@ Deno.serve(async (req) => {
         .eq('bonus_type', 'coureur_bonuse');
       
       if (league_id) riderBonusQuery = riderBonusQuery.eq('league_id', league_id);
+      
+      // Filter rider bonus by league course scope
+      if (allowedCourseIds) {
+        riderBonusQuery = riderBonusQuery.in('course_id', allowedCourseIds);
+      }
+      
       const { data: riderBonus } = await riderBonusQuery;
       
       // Calculer les totaux
