@@ -260,11 +260,17 @@ Deno.serve(async (req) => {
     const total_points = race_points + managerBonusTotal + riderBonusTotal + receivedBonusTotal;
 
     // KPI #2: Get top rider for this manager in scope
-    const { data: pointsByRider, error: riderPointsError } = await supabaseClient
+    let topRiderQuery = supabaseClient
       .from('points_ledger')
       .select('coureur_id, points')
       .in('phase_id', phaseIds)
       .in('coureur_id', coureurIds);
+    
+    if (courseFilter) {
+      topRiderQuery = topRiderQuery.in('course_id', courseFilter);
+    }
+
+    const { data: pointsByRider, error: riderPointsError } = await topRiderQuery;
 
     if (riderPointsError) throw riderPointsError;
 
