@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { TabGroup } from "@/components/mobile/TabGroup";
@@ -344,17 +345,21 @@ export const RankingsMobile = () => {
 
         {activeTab === "standings" && (
           <div className="space-y-3 pb-4">
-            <div className="flex justify-end">
-              <Select value={standingsSortBy} onValueChange={(v) => setStandingsSortBy(v as any)}>
-                <SelectTrigger className="w-44">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="points">{t('standings.sortByPoints')}</SelectItem>
-                  <SelectItem value="victories">{t('standings.sortByVictories')}</SelectItem>
-                  <SelectItem value="scorers">{t('standings.sortByScorers')}</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex justify-center gap-1">
+              {(['points', 'victories', 'scorers'] as const).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setStandingsSortBy(key)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                    standingsSortBy === key
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted/40 text-muted-foreground hover:bg-muted/60"
+                  )}
+                >
+                  {key === 'points' ? t('standings.sortByPoints') : key === 'victories' ? t('standings.sortByVictories') : t('standings.sortByScorers')}
+                </button>
+              ))}
             </div>
             {standingsLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
