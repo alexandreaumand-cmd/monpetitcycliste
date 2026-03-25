@@ -71,46 +71,48 @@ const Statistics = () => {
       />
 
       <Tabs defaultValue="heatmap" className="w-full">
-        <TabsList className="flex w-full max-w-5xl flex-wrap">
-          <TabsTrigger value="heatmap">{t('tabs.heatmap')}</TabsTrigger>
-          <TabsTrigger value="consistency">{t('tabs.consistency')}</TabsTrigger>
-          <TabsTrigger value="distribution">{t('tabs.distribution')}</TabsTrigger>
-          <TabsTrigger value="predictions">{t('tabs.predictions')}</TabsTrigger>
-          <TabsTrigger value="knowledge">{t('tabs.knowledge')}</TabsTrigger>
-          <TabsTrigger value="luck">{t('tabs.luck')}</TabsTrigger>
-          <TabsTrigger value="teams">{t('tabs.teams')}</TabsTrigger>
-          <TabsTrigger value="categories">{t('tabs.categories')}</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 pb-2 md:mx-0 md:px-0">
+          <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:max-w-5xl md:grid-cols-8">
+            <TabsTrigger value="heatmap" className="text-xs md:text-sm whitespace-nowrap">{t('tabs.heatmap')}</TabsTrigger>
+            <TabsTrigger value="consistency" className="text-xs md:text-sm whitespace-nowrap">{t('tabs.consistency')}</TabsTrigger>
+            <TabsTrigger value="distribution" className="text-xs md:text-sm whitespace-nowrap">{t('tabs.distribution')}</TabsTrigger>
+            <TabsTrigger value="predictions" className="text-xs md:text-sm whitespace-nowrap">{t('tabs.predictions')}</TabsTrigger>
+            <TabsTrigger value="knowledge" className="text-xs md:text-sm whitespace-nowrap">{t('tabs.knowledge')}</TabsTrigger>
+            <TabsTrigger value="luck" className="text-xs md:text-sm whitespace-nowrap">{t('tabs.luck')}</TabsTrigger>
+            <TabsTrigger value="teams" className="text-xs md:text-sm whitespace-nowrap">{t('tabs.teams')}</TabsTrigger>
+            <TabsTrigger value="categories" className="text-xs md:text-sm whitespace-nowrap">{t('tabs.categories')}</TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="heatmap" className="mt-6">
+        <TabsContent value="heatmap" className="mt-4 md:mt-6">
           <PerformanceHeatmap saisonId={selectedSeason.id} />
         </TabsContent>
 
-        <TabsContent value="consistency" className="mt-6">
+        <TabsContent value="consistency" className="mt-4 md:mt-6">
           <ConsistencyScores saisonId={selectedSeason.id} />
         </TabsContent>
 
-        <TabsContent value="distribution" className="mt-6">
+        <TabsContent value="distribution" className="mt-4 md:mt-6">
           <PointsDistribution saisonId={selectedSeason.id} />
         </TabsContent>
 
-        <TabsContent value="predictions" className="mt-6">
+        <TabsContent value="predictions" className="mt-4 md:mt-6">
           <ManagerPredictions saisonId={selectedSeason.id} />
         </TabsContent>
 
-        <TabsContent value="knowledge" className="mt-6">
+        <TabsContent value="knowledge" className="mt-4 md:mt-6">
           <BikeKnowledgeRanking saisonId={selectedSeason.id} />
         </TabsContent>
 
-        <TabsContent value="luck" className="mt-6">
+        <TabsContent value="luck" className="mt-4 md:mt-6">
           <LuckRanking saisonId={selectedSeason.id} />
         </TabsContent>
 
-        <TabsContent value="teams" className="mt-6">
+        <TabsContent value="teams" className="mt-4 md:mt-6">
           <TeamPointsBreakdown saisonId={selectedSeason.id} />
         </TabsContent>
 
-        <TabsContent value="categories" className="mt-6">
+        <TabsContent value="categories" className="mt-4 md:mt-6">
           <CategoryWeight saisonId={selectedSeason.id} />
         </TabsContent>
       </Tabs>
