@@ -11,3 +11,5 @@ project_id = "khahpetvqjoyrwambaqn"
     verify_jwt = false
   [functions.scrape-pcs-results]
     verify_jwt = false
+  [functions.arena-recap-watchdog]
+    verify_jwt = false
