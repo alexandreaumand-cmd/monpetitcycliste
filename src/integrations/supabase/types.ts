@@ -6591,6 +6591,7 @@ export type Database = {
       }
       auto_close_ghost_auctions: { Args: never; Returns: undefined }
       auto_open_scheduled_auctions: { Args: never; Returns: undefined }
+      auto_update_phase_statuts: { Args: never; Returns: undefined }
       course_points_summary: {
         Args: { p_course_id: string; p_manager_id?: string }
         Returns: Json
