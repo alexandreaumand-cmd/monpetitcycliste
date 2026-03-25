@@ -10,7 +10,9 @@
     "distribution": "Distribution",
     "predictions": "Predictions",
     "knowledge": "🧠 Knowledge",
-    "luck": "🍀 Luck"
+    "luck": "🍀 Luck",
+    "teams": "🏢 Teams",
+    "categories": "📊 Categories"
   },
   "knowledge": {
     "title": "Cycling Knowledge Ranking",
@@ -42,5 +44,19 @@
     "actualPoints": "Actual points",
     "bigWinsDetail": "Big wins",
     "topCourses": "Top races (detail)"
+  },
+  "teams": {
+    "title": "Points by real team",
+    "description": "Points scored by each professional team, broken down by phase",
+    "noData": "No data available",
+    "team": "Team",
+    "total": "Total"
+  },
+  "categoryWeight": {
+    "title": "Category weight",
+    "description": "Proportion of points scored by riders based on their team category (WorldTour, ProTeam, Continental)",
+    "noData": "No data available",
+    "category": "Category",
+    "total": "Total"
   }
 }

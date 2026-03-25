@@ -6,11 +6,13 @@
   "season": "Saison",
   "tabs": {
     "heatmap": "Heatmap",
-    "consistency": "Consistency",
+    "consistency": "Régularité",
     "distribution": "Distribution",
     "predictions": "Prédictions",
     "knowledge": "🧠 Connaissance",
-    "luck": "🍀 La Chatte"
+    "luck": "🍀 La Chatte",
+    "teams": "🏢 Équipes",
+    "categories": "📊 Catégories"
   },
   "knowledge": {
     "title": "Classement Connaissance Vélo",
@@ -42,5 +44,19 @@
     "actualPoints": "Points réels",
     "bigWinsDetail": "Gros coups",
     "topCourses": "Top courses (détail)"
+  },
+  "teams": {
+    "title": "Points par équipe réelle",
+    "description": "Répartition des points marqués par chaque équipe professionnelle, par phase",
+    "noData": "Aucune donnée disponible",
+    "team": "Équipe",
+    "total": "Total"
+  },
+  "categoryWeight": {
+    "title": "Poids des catégories",
+    "description": "Proportion des points inscrits par les coureurs selon leur catégorie d'équipe (WorldTour, ProTeam, Continental)",
+    "noData": "Aucune donnée disponible",
+    "category": "Catégorie",
+    "total": "Total"
   }
 }
