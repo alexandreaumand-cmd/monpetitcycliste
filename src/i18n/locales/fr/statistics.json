@@ -37,6 +37,10 @@
     "avgGap": "Écart moyen",
     "managers": "managers",
     "luckiestBadge": "🍀 Le plus chanceux",
-    "unluckiestBadge": "💩 Le plus malchanceux"
+    "unluckiestBadge": "💩 Le plus malchanceux",
+    "expectedPoints": "Points attendus",
+    "actualPoints": "Points réels",
+    "bigWinsDetail": "Gros coups",
+    "topCourses": "Top courses (détail)"
   }
 }

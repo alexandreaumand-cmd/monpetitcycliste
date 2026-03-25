@@ -37,6 +37,10 @@
     "avgGap": "Avg. gap",
     "managers": "managers",
     "luckiestBadge": "🍀 Luckiest",
-    "unluckiestBadge": "💩 Unluckiest"
+    "unluckiestBadge": "💩 Unluckiest",
+    "expectedPoints": "Expected points",
+    "actualPoints": "Actual points",
+    "bigWinsDetail": "Big wins",
+    "topCourses": "Top races (detail)"
   }
 }
