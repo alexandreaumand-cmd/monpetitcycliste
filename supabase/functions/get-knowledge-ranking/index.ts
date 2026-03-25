@@ -77,6 +77,24 @@ Deno.serve(async (req) => {
     if (coureursError) throw coureursError;
     const coureurNameMap = new Map((allCoureurs || []).map(c => [c.id, c.nom]));
 
+    // Fetch equipes_saisons for team category mapping
+    const { data: equipesSaisons, error: eqSaisonsError } = await supabase
+      .from('equipes_saisons')
+      .select('equipe_id, categorie')
+      .eq('saison_id', saison_id);
+    if (eqSaisonsError) throw eqSaisonsError;
+    const equipeCategorieMap = new Map((equipesSaisons || []).map(es => [es.equipe_id, es.categorie]));
+
+    // Fetch coureurs_saisons to map coureur_id -> equipe_id for this season
+    const coureursSaisons = await fetchAllRows((offset) =>
+      supabase
+        .from('coureurs_saisons')
+        .select('coureur_id, equipe_id')
+        .eq('saison_id', saison_id)
+        .range(offset, offset + PAGE_SIZE - 1)
+    );
+    const coureurEquipeMap = new Map((coureursSaisons || []).map(cs => [cs.coureur_id, cs.equipe_id]));
+
     // Calculate scores for each manager
     const rankings = await Promise.all(
       managers.map(async (manager) => {
