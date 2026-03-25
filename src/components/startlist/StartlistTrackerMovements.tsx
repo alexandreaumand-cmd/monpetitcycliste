@@ -19,20 +19,41 @@ interface StartlistTrackerMovementsProps {
 export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTrackerMovementsProps) {
   const { selectedSeason } = useSeasonContext();
   const { data: currentManager } = useCurrentManager();
+
+  // 0. Get league scope to filter by selected_course_ids if applicable
+  const { data: leagueSelectedCourseIds } = useQuery({
+    queryKey: ["league-scope-courses", leagueId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("league_scopes")
+        .select("selected_course_ids")
+        .eq("league_id", leagueId)
+        .single();
+      const ids = data?.selected_course_ids as string[] | null;
+      return ids?.length ? ids : null;
+    },
+    enabled: !!leagueId,
+  });
+
   // 1. Get upcoming courses for the current phase (with dates for sorting)
   const { data: phaseCourses } = useQuery({
-    queryKey: ["phase-courses-for-movements", phaseId],
+    queryKey: ["phase-courses-for-movements", phaseId, leagueSelectedCourseIds],
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
-      const { data } = await supabase
+      let query = supabase
         .from("courses")
-        .select("id, date_debut")
-        .eq("phase_id", phaseId)
+        .select("id, date_debut");
+      if (leagueSelectedCourseIds) {
+        query = query.in("id", leagueSelectedCourseIds);
+      } else {
+        query = query.eq("phase_id", phaseId);
+      }
+      const { data } = await query
         .gte("date_fin", today)
         .order("date_debut", { ascending: true });
       return data || [];
     },
-    enabled: !!phaseId,
+    enabled: !!phaseId && leagueSelectedCourseIds !== undefined,
   });
 
   const phaseCourseIds = useMemo(() => phaseCourses?.map(c => c.id) || [], [phaseCourses]);
