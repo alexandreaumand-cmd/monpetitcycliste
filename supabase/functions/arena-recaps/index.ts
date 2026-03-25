@@ -124,9 +124,10 @@ async function sendDailyRecap(
   league: { id: string; name: string },
   channelId: string,
   supabaseUrl: string,
-  serviceKey: string
+  serviceKey: string,
+  dateOverride?: string
 ): Promise<boolean> {
-  const today = new Date();
+  const today = dateOverride ? new Date(dateOverride + "T20:00:00Z") : new Date();
   const startOfDay = new Date(today);
   startOfDay.setUTCHours(0, 0, 0, 0);
   const endOfDay = new Date(today);
