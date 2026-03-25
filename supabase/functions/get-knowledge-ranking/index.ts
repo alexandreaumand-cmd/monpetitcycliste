@@ -57,15 +57,18 @@ Deno.serve(async (req) => {
     const { data: managers, error: managersError } = await managersQuery;
     if (managersError) throw managersError;
 
-    // Get phases for this season
+    // Get phases for this season (with numero for labeling)
     const { data: phases, error: phasesError } = await supabase
       .from('phases')
-      .select('id')
-      .eq('saison_id', saison_id);
+      .select('id, numero')
+      .eq('saison_id', saison_id)
+      .order('numero', { ascending: true });
 
     if (phasesError) throw phasesError;
 
     const phaseIds = phases.map(p => p.id);
+    const phaseLabels = phases.map(p => `P${p.numero}`);
+    const phaseIdToIndex = new Map(phases.map((p, i) => [p.id, i]));
 
     // Fetch all coureurs names in one go
     const { data: allCoureurs, error: coureursError } = await supabase
@@ -77,11 +80,11 @@ Deno.serve(async (req) => {
     // Calculate scores for each manager
     const rankings = await Promise.all(
       managers.map(async (manager) => {
-        // Get roster with prices (paginated)
+        // Get roster with prices and phase_id (paginated)
         const roster = await fetchAllRows((offset) =>
           supabase
             .from('rosters')
-            .select('coureur_id, prix_signature')
+            .select('coureur_id, prix_signature, phase_id')
             .in('phase_id', phaseIds)
             .eq('manager_id', manager.id)
             .eq('league_id', league_id)
@@ -101,13 +104,20 @@ Deno.serve(async (req) => {
           };
         }
 
+        // Track which phases each rider belongs to
+        const riderPhases = new Map<string, Set<string>>();
+        roster.forEach(r => {
+          if (!riderPhases.has(r.coureur_id)) riderPhases.set(r.coureur_id, new Set());
+          riderPhases.get(r.coureur_id)!.add(r.phase_id);
+        });
+
         const coureurIds = [...new Set(roster.map(r => r.coureur_id))];
 
-        // Get points for these riders (paginated)
+        // Get points for these riders WITH phase_id (paginated)
         const points = await fetchAllRows((offset) =>
           supabase
             .from('points_ledger')
-            .select('coureur_id, points, course_id')
+            .select('coureur_id, points, course_id, phase_id')
             .in('phase_id', phaseIds)
             .in('coureur_id', coureurIds)
             .range(offset, offset + PAGE_SIZE - 1)
@@ -122,18 +132,32 @@ Deno.serve(async (req) => {
 
         const courseMap = new Map(courses?.map(c => [c.id, c.wt_tier]) || []);
 
-        // Calculate total points per rider
+        // Calculate total points per rider AND per rider+phase
         const riderPoints = new Map<string, number>();
+        const riderPhasePoints = new Map<string, number[]>(); // coureur_id -> points per phase index
         let wtPoints = 0;
         let totalPoints = 0;
 
         (points || []).forEach(p => {
+          // Only count points for phases where this rider is in the roster
+          const riderPhaseSet = riderPhases.get(p.coureur_id);
+          if (!riderPhaseSet || !riderPhaseSet.has(p.phase_id)) return;
+
           riderPoints.set(p.coureur_id, (riderPoints.get(p.coureur_id) || 0) + p.points);
           totalPoints += p.points;
 
           const tier = courseMap.get(p.course_id);
           if (tier === 'WT' || tier === 'GT') {
             wtPoints += p.points;
+          }
+
+          // Track per-phase points
+          if (!riderPhasePoints.has(p.coureur_id)) {
+            riderPhasePoints.set(p.coureur_id, new Array(phases.length).fill(0));
+          }
+          const phaseIdx = phaseIdToIndex.get(p.phase_id);
+          if (phaseIdx !== undefined) {
+            riderPhasePoints.get(p.coureur_id)![phaseIdx] += p.points;
           }
         });
 
@@ -160,12 +184,19 @@ Deno.serve(async (req) => {
           const isPepite = prix <= 20 && ratio > 2.5;
           if (isPepite) pepitesCount++;
 
+          const phasePointsArr = riderPhasePoints.get(coureurId) || new Array(phases.length).fill(0);
+          // Determine which phases this rider was active in
+          const riderActivePhases = riderPhases.get(coureurId) || new Set();
+          const phases_active = phases.map(p => riderActivePhases.has(p.id));
+
           riders.push({
             nom: coureurNameMap.get(coureurId) || coureurId,
             prix_signature: prix,
-            points: pts,
+            points: Math.round(pts),
             ratio: roundedRatio,
             is_pepite: isPepite,
+            phase_points: phasePointsArr.map(v => Math.round(v)),
+            phases_active,
           });
         });
 
@@ -208,7 +239,7 @@ Deno.serve(async (req) => {
     console.log(`Knowledge ranking calculated for ${rankings.length} managers`);
 
     return new Response(
-      JSON.stringify({ rankings }),
+      JSON.stringify({ rankings, phase_labels: phaseLabels }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

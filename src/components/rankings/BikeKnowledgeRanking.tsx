@@ -8,6 +8,7 @@ import { useLeague } from "@/contexts/LeagueContext";
 import { useTranslation } from "react-i18next";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface Rider {
   nom: string;
@@ -15,6 +16,8 @@ interface Rider {
   points: number;
   ratio: number;
   is_pepite: boolean;
+  phase_points: number[];
+  phases_active: boolean[];
 }
 
 interface BikeKnowledgeRankingProps {
@@ -38,11 +41,79 @@ export const BikeKnowledgeRanking = ({ saisonId }: BikeKnowledgeRankingProps) =>
   }
 
   const rankings = data?.rankings || [];
+  const phaseLabels: string[] = data?.phase_labels || [];
   const avgScore = rankings.length > 0 ? Math.round(rankings.reduce((sum: number, r: any) => sum + r.knowledge_score, 0) / rankings.length) : 0;
   const totalPepites = rankings.reduce((sum: number, r: any) => sum + r.pepites_count, 0);
 
   const toggleExpand = (managerId: string) => {
     setExpandedManager(prev => prev === managerId ? null : managerId);
+  };
+
+  const RiderDetailTable = ({ riders }: { riders: Rider[] }) => {
+    const phaseColWidth = isMobile ? "50px" : "60px";
+    const gridCols = isMobile
+      ? `1fr 40px ${phaseLabels.map(() => phaseColWidth).join(' ')} 50px 45px`
+      : `1fr 60px ${phaseLabels.map(() => phaseColWidth).join(' ')} 70px 70px 80px`;
+
+    return (
+      <ScrollArea className="w-full">
+        <div className={cn("min-w-fit", isMobile ? "text-[10px]" : "text-sm")}>
+          {/* Header */}
+          <div
+            className="grid bg-muted/50 font-medium text-muted-foreground border-b gap-1 px-2 py-1.5 md:px-3 md:py-2"
+            style={{ gridTemplateColumns: gridCols }}
+          >
+            <span>Coureur</span>
+            <span className="text-right">Prix</span>
+            {phaseLabels.map((label) => (
+              <span key={label} className="text-right">{label}</span>
+            ))}
+            <span className="text-right">Total</span>
+            <span className="text-right">Ratio</span>
+            {!isMobile && <span className="text-center">Statut</span>}
+          </div>
+          {/* Rows */}
+          {riders.map((rider, rIdx) => (
+            <div
+              key={rIdx}
+              className={cn(
+                "grid items-center border-b last:border-b-0 transition-colors gap-1 px-2 py-1.5 md:px-3 md:py-2",
+                rider.is_pepite ? "bg-yellow-500/5" : "hover:bg-accent/30",
+              )}
+              style={{ gridTemplateColumns: gridCols }}
+            >
+              <span className={cn("truncate flex items-center gap-1", rider.is_pepite && "font-semibold")}>
+                {rider.is_pepite && <Gem className="h-3 w-3 text-yellow-500 shrink-0" />}
+                {rider.nom}
+              </span>
+              <span className="text-right text-muted-foreground">{rider.prix_signature}</span>
+              {rider.phase_points.map((pts, pIdx) => (
+                <span key={pIdx} className="text-right text-muted-foreground">
+                  {rider.phases_active[pIdx] ? (pts > 0 ? pts : '0') : '—'}
+                </span>
+              ))}
+              <span className="text-right font-medium">{rider.points}</span>
+              <span className={cn(
+                "text-right font-semibold",
+                rider.ratio > 2.5 ? "text-green-600 dark:text-green-400" : ""
+              )}>
+                {rider.ratio}
+              </span>
+              {!isMobile && (
+                <span className="text-center">
+                  {rider.is_pepite && (
+                    <Badge variant="secondary" className="bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30 text-[10px] px-1.5">
+                      Pépite
+                    </Badge>
+                  )}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
+    );
   };
 
   return (
@@ -62,10 +133,7 @@ export const BikeKnowledgeRanking = ({ saisonId }: BikeKnowledgeRankingProps) =>
           return (
             <div
               key={manager.manager_id}
-              className={cn(
-                "border rounded-lg bg-card transition-colors",
-                isMobile ? "" : ""
-              )}
+              className="border rounded-lg bg-card transition-colors"
             >
               {/* Header row - clickable */}
               <div
@@ -133,56 +201,9 @@ export const BikeKnowledgeRanking = ({ saisonId }: BikeKnowledgeRankingProps) =>
 
               {/* Expandable rider details */}
               {isExpanded && riders.length > 0 && (
-                <div className={cn("border-t", isMobile ? "p-2.5 pt-2" : "p-4 pt-3")}>
-                  <div className={cn(
-                    "rounded-md border overflow-hidden",
-                    isMobile ? "text-xs" : "text-sm"
-                  )}>
-                    {/* Table header */}
-                    <div className={cn(
-                      "grid bg-muted/50 font-medium text-muted-foreground border-b",
-                      isMobile
-                        ? "grid-cols-[1fr_40px_45px_45px] gap-1 px-2 py-1.5 text-[10px]"
-                        : "grid-cols-[1fr_80px_80px_80px_80px] gap-2 px-3 py-2"
-                    )}>
-                      <span>Coureur</span>
-                      <span className="text-right">Prix</span>
-                      <span className="text-right">Pts</span>
-                      <span className="text-right">Ratio</span>
-                      {!isMobile && <span className="text-center">Statut</span>}
-                    </div>
-                    {/* Rider rows */}
-                    {riders.map((rider: Rider, rIdx: number) => (
-                      <div
-                        key={rIdx}
-                        className={cn(
-                          "grid items-center border-b last:border-b-0 transition-colors",
-                          rider.is_pepite ? "bg-yellow-500/5" : "hover:bg-accent/30",
-                          isMobile
-                            ? "grid-cols-[1fr_40px_45px_45px] gap-1 px-2 py-1.5 text-[11px]"
-                            : "grid-cols-[1fr_80px_80px_80px_80px] gap-2 px-3 py-2"
-                        )}
-                      >
-                        <span className={cn("truncate flex items-center gap-1", rider.is_pepite && "font-semibold")}>
-                          {rider.is_pepite && <Gem className="h-3 w-3 text-yellow-500 shrink-0" />}
-                          {rider.nom}
-                        </span>
-                        <span className="text-right text-muted-foreground">{rider.prix_signature}</span>
-                        <span className="text-right font-medium">{rider.points}</span>
-                        <span className={cn("text-right font-semibold", rider.ratio > 2.5 ? "text-green-600 dark:text-green-400" : "")}>
-                          {rider.ratio}
-                        </span>
-                        {!isMobile && (
-                          <span className="text-center">
-                            {rider.is_pepite && (
-                              <Badge variant="secondary" className="bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30 text-[10px] px-1.5">
-                                Pépite
-                              </Badge>
-                            )}
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                <div className={cn("border-t", isMobile ? "p-2 pt-2" : "p-4 pt-3")}>
+                  <div className="rounded-md border overflow-hidden">
+                    <RiderDetailTable riders={riders} />
                   </div>
                 </div>
               )}
