@@ -800,8 +800,8 @@ export const MyTeamDesktop = () => {
                         )}
                         {coureur.nom}
                         <RiderRaceIcons 
-                          currentRaces={riderRacesData?.races_by_rider?.[coureur.coureur_id]?.current_races}
-                          upcomingRaces={riderRacesData?.races_by_rider?.[coureur.coureur_id]?.upcoming_races}
+                          currentRaces={filteredRacesData?.races_by_rider?.[coureur.coureur_id]?.current_races}
+                          upcomingRaces={filteredRacesData?.races_by_rider?.[coureur.coureur_id]?.upcoming_races}
                         />
                       </div>
                     </TableCell>
