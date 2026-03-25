@@ -70,6 +70,36 @@ Deno.serve(async (req) => {
 
     console.log('get-cumulative-points-series called with:', { view_mode, phase_id, saison_id, topN, manager_ids, league_id });
 
+    // Fetch league scope: allowed course IDs and date floor
+    let allowedCourseIds: Set<string> | null = null;
+    let leagueDateFloor: string | null = null;
+
+    if (league_id) {
+      // Get allowed courses
+      const { data: scopeCourses } = await supabaseClient.rpc('get_league_course_ids', { p_league_id: league_id });
+      if (scopeCourses && scopeCourses.length > 0) {
+        allowedCourseIds = new Set(scopeCourses.map((r: any) => r.course_id));
+        console.log(`League scope: ${allowedCourseIds.size} allowed courses`);
+      }
+
+      // Get date floor
+      const { data: leagueData } = await supabaseClient
+        .from('leagues')
+        .select('started_at_effective, created_at')
+        .eq('id', league_id)
+        .single();
+      if (leagueData) {
+        const effectiveDate = leagueData.started_at_effective || leagueData.created_at;
+        leagueDateFloor = new Date(effectiveDate).toISOString().split('T')[0];
+        console.log(`League date floor: ${leagueDateFloor}`);
+      }
+
+      // Pre-fetch course dates for filtering
+      if (allowedCourseIds || leagueDateFloor) {
+        // We'll filter after loading courses dates below
+      }
+    }
+
     // Determine date range based on view_mode
     let startDate: Date;
     let endDate: Date = new Date();
@@ -194,15 +224,46 @@ Deno.serve(async (req) => {
       }
     }
 
-    const pointsData = await fetchAllRows<any>(query);
+    let filteredPointsData = pointsData || [];
 
-    console.log(`✅ Loaded ${pointsData?.length || 0} points_ledger entries (paginated)`);
+    // Filter points by league scope (allowed courses + date floor)
+    if (league_id && (allowedCourseIds || leagueDateFloor)) {
+      // Fetch course dates for date floor filtering
+      const courseIdsToCheck = Array.from(new Set(filteredPointsData.map(p => p.course_id)));
+      let courseDateMap = new Map<string, string>();
+      
+      if (courseIdsToCheck.length > 0 && leagueDateFloor) {
+        const courseDatesQuery = supabaseClient
+          .from('courses')
+          .select('id, date_debut')
+          .in('id', courseIdsToCheck);
+        const courseDatesData = await fetchAllRows<any>(courseDatesQuery);
+        courseDatesData?.forEach((c: any) => {
+          courseDateMap.set(c.id, c.date_debut);
+        });
+      }
+
+      const beforeCount = filteredPointsData.length;
+      filteredPointsData = filteredPointsData.filter((row: any) => {
+        // Filter by allowed courses
+        if (allowedCourseIds && !allowedCourseIds.has(row.course_id)) return false;
+        // Filter by date floor
+        if (leagueDateFloor && courseDateMap.size > 0) {
+          const courseDate = courseDateMap.get(row.course_id);
+          if (courseDate && courseDate < leagueDateFloor) return false;
+        }
+        return true;
+      });
+      console.log(`League scope filter: ${beforeCount} → ${filteredPointsData.length} points`);
+    }
+
+    console.log(`✅ Final ${filteredPointsData.length} points_ledger entries after filtering`);
 
     // -------------------------
     // STEP 5: Fetch race_results pour obtenir les dates de classement
     // -------------------------
     // Extraire les course_ids uniques
-    const uniqueCourseIds = Array.from(new Set(pointsData?.map(p => p.course_id) || []));
+    const uniqueCourseIds = Array.from(new Set(filteredPointsData.map(p => p.course_id)));
     
     console.log(`Fetching race_results for ${uniqueCourseIds.length} courses`);
 
@@ -248,7 +309,7 @@ Deno.serve(async (req) => {
     let pointsAggregated = 0;
     let pointsSkipped = 0;
 
-    pointsData?.forEach((row: any) => {
+    filteredPointsData?.forEach((row: any) => {
       // Récupérer la date depuis l'index
       const key = `${row.course_id}:${row.type_classement}:${row.etape_numero || 'null'}:${row.coureur_id}`;
       const classementDate = dateIndex.get(key);
