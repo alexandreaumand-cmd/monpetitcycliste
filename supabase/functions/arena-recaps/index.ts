@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const recapType: string = body.type || "daily";
+    const dateOverride: string | undefined = body.date; // optional "YYYY-MM-DD"
 
     console.log(`🔄 Starting ${recapType} recap...`);
 
