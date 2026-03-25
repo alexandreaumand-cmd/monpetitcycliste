@@ -344,7 +344,7 @@ Deno.serve(async (req) => {
           .in('coureur_id', coureurIds)
           .eq('position', 1)
           .in('type_classement', ['General', 'Etape'])
-          .in('course_id', courseIds);
+          .in('course_id', winsCourseIds);
         
         winsCount = count || 0;
       }
