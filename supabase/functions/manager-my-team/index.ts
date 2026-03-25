@@ -315,14 +315,27 @@ Deno.serve(async (req) => {
       // Extraire les IDs des coureurs visibles du manager
       const coureurIds = visibleCoureurs.map((c: any) => c.coureur_id);
       
-      // Récupérer les IDs des courses de la phase
-      const { data: courses } = await supabase
+      // Récupérer les IDs des courses de la phase (filtrées par league scope)
+      let winsCoursesQuery = supabase
         .from('courses')
-        .select('id')
+        .select('id, date_debut')
         .eq('phase_id', phaseId);
 
+      const { data: courses } = await winsCoursesQuery;
+      
+      let winsCourseIds: string[] = [];
       if (courses && courses.length > 0) {
-        const courseIds = courses.map(c => c.id);
+        let filtered = courses;
+        if (allowedCourseIds) {
+          filtered = filtered.filter(c => allowedCourseIds!.includes(c.id));
+        }
+        if (leagueStartDate) {
+          filtered = filtered.filter(c => c.date_debut && c.date_debut >= leagueStartDate!);
+        }
+        winsCourseIds = filtered.map(c => c.id);
+      }
+
+      if (winsCourseIds.length > 0) {
         
         // Compter les victoires (position 1) des coureurs du manager
         const { count } = await supabase
