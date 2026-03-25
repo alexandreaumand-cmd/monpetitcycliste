@@ -1,39 +1,48 @@
 
 
-## Problème
+## Filtrer les mouvements startlists par courses de la ligue
 
-La fonction SQL `get_top_riders_optimized` (utilisée par l'onglet "Top Coureurs") ne filtre pas les points par les courses autorisées de la ligue. Elle additionne **tous** les points de la phase/saison depuis `points_ledger`, sans tenir compte de `selected_course_ids` ni de `started_at_effective`.
+### Problème
+Le composant `StartlistTrackerMovements` charge **toutes les courses de la phase** pour afficher les mouvements. Pour une ligue "à la course" comme "Flandriennes 2026", cela inclut des courses non sélectionnées (Volta a Catalunya, Settimana Coppi, Paris-Camembert, etc.).
 
-C'est exactement le même problème que celui corrigé pour "Mon Équipe" : la ligue "Flandriennes 2026" a un scope "à la course" avec 5 courses sélectionnées et un démarrage effectif au 26/03, mais les points de la Volta a Catalunya (23/03) apparaissent quand même.
+### Solution
+Filtrer la liste des courses affichées par les `selected_course_ids` de la ligue quand le mode est "à la course".
 
-## Solution
+### Fichier à modifier
 
-Modifier la fonction `get_top_riders_optimized` pour appliquer les mêmes filtres de ligue que les vues de classement corrigées.
+**`src/components/startlist/StartlistTrackerMovements.tsx`**
 
-### Migration SQL
+1. Ajouter une requête pour récupérer le `league_scopes` de la ligue courante (champ `selected_course_ids`)
+2. Dans le query `phase-courses-for-movements`, si `selected_course_ids` est non vide, filtrer les courses avec `.in("id", selectedCourseIds)` au lieu de charger toute la phase
+3. Conserver le comportement actuel (toutes les courses de la phase) pour les ligues sans `selected_course_ids`
 
-**Mise à jour de `get_top_riders_optimized`** :
-- Récupérer `started_at_effective` de la ligue quand `p_league_id` est fourni
-- Filtrer `points_ledger` par `get_league_course_ids(p_league_id)` (si la ligue a un scope "à la course")
-- Exclure les courses dont `date_debut < started_at_effective`
-- Conserver le comportement actuel quand `p_league_id IS NULL`
+### Logique clé
+```tsx
+// Fetch league scope
+const { data: leagueScope } = useQuery({
+  queryKey: ["league-scope-courses", leagueId],
+  queryFn: async () => {
+    const { data } = await supabase
+      .from("league_scopes")
+      .select("selected_course_ids")
+      .eq("league_id", leagueId)
+      .single();
+    return data?.selected_course_ids || [];
+  },
+  enabled: !!leagueId,
+});
 
-Logique de filtrage ajoutée dans les deux branches (par phase et par saison) :
-```sql
--- Ajouter dans le JOIN points_ledger :
-AND (p_league_id IS NULL OR pl.course_id IN (
-  SELECT course_id FROM get_league_course_ids(p_league_id)
-))
-AND (p_league_id IS NULL OR pl.course_id IN (
-  SELECT co.id FROM courses co
-  WHERE co.date_debut >= (
-    SELECT COALESCE(l.started_at_effective, '1900-01-01')
-    FROM leagues l WHERE l.id = p_league_id
-  )
-))
+// In phase courses query, apply filter:
+let query = supabase.from("courses").select("id, date_debut");
+if (leagueScope?.length) {
+  query = query.in("id", leagueScope);
+} else {
+  query = query.eq("phase_id", phaseId);
+}
+query = query.gte("date_fin", today).order("date_debut", { ascending: true });
 ```
 
 ### Résultat attendu
-- Ligue "Flandriennes 2026" : 0 points pour tous les coureurs tant qu'aucune course sélectionnée n'a de résultats
-- Ligues "5 Phases" classiques : comportement inchangé (pas de `selected_course_ids`, pas de filtre supplémentaire)
+- Ligue "Flandriennes 2026" : seuls les mouvements des 5 courses sélectionnées apparaissent
+- Ligues "5 Phases" : comportement inchangé (toutes les courses de la phase)
 
