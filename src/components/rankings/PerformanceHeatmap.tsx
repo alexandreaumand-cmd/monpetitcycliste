@@ -207,7 +207,7 @@ export const PerformanceHeatmap = ({ saisonId }: PerformanceHeatmapProps) => {
                       </td>
                     ))}
                     <td className="p-2 text-right font-semibold">
-                      {manager.total_points.toLocaleString()} pts
+                      {Math.round(manager.total_points).toLocaleString()} pts
                     </td>
                   </tr>
                 ))}
