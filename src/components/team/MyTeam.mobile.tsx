@@ -9,6 +9,7 @@ import {
 import { useUserLeagues } from "@/hooks/useUserLeagues";
 import { RiderPointsDetail } from "./RiderPointsDetail";
 import { RiderRaceIcons } from "./RiderRaceIcons";
+import { useLeagueFilteredRaces } from "@/hooks/useLeagueFilteredRaces";
 import { LeagueBonusRidersDialog } from "./LeagueBonusRidersDialog";
 import { LeagueRostersOverviewDialog } from "./LeagueRostersOverviewDialog";
 
@@ -138,6 +139,8 @@ export const MyTeamMobile = () => {
     enabled: riderIds.length > 0,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
+
+  const filteredRacesData = useLeagueFilteredRaces(leagueId, riderRacesData);
 
   // Set active phase when available
   useEffect(() => {
@@ -513,8 +516,8 @@ export const MyTeamMobile = () => {
                   )}
                   <span className="truncate">{coureur.nom}</span>
                   <RiderRaceIcons 
-                    currentRaces={riderRacesData?.races_by_rider?.[coureur.coureur_id]?.current_races}
-                    upcomingRaces={riderRacesData?.races_by_rider?.[coureur.coureur_id]?.upcoming_races}
+                    currentRaces={filteredRacesData?.races_by_rider?.[coureur.coureur_id]?.current_races}
+                    upcomingRaces={filteredRacesData?.races_by_rider?.[coureur.coureur_id]?.upcoming_races}
                   />
                 </div>
               }

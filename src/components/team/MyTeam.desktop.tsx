@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { RiderPointsDetail } from "./RiderPointsDetail";
 import { RiderRaceIcons } from "./RiderRaceIcons";
+import { useLeagueFilteredRaces } from "@/hooks/useLeagueFilteredRaces";
 import { LeagueBonusRidersDialog } from "./LeagueBonusRidersDialog";
 import { LeagueRostersOverviewDialog } from "./LeagueRostersOverviewDialog";
 import { useQuery } from "@tanstack/react-query";
@@ -141,7 +142,8 @@ export const MyTeamDesktop = () => {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  // Desktop version
+  const filteredRacesData = useLeagueFilteredRaces(leagueId, riderRacesData);
+
 
   useEffect(() => {
     loadCurrentUser();
@@ -798,8 +800,8 @@ export const MyTeamDesktop = () => {
                         )}
                         {coureur.nom}
                         <RiderRaceIcons 
-                          currentRaces={riderRacesData?.races_by_rider?.[coureur.coureur_id]?.current_races}
-                          upcomingRaces={riderRacesData?.races_by_rider?.[coureur.coureur_id]?.upcoming_races}
+                          currentRaces={filteredRacesData?.races_by_rider?.[coureur.coureur_id]?.current_races}
+                          upcomingRaces={filteredRacesData?.races_by_rider?.[coureur.coureur_id]?.upcoming_races}
                         />
                       </div>
                     </TableCell>
