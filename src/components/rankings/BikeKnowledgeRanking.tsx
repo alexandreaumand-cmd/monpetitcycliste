@@ -51,6 +51,18 @@ export const BikeKnowledgeRanking = ({ saisonId }: BikeKnowledgeRankingProps) =>
     setExpandedManager(prev => prev === managerId ? null : managerId);
   };
 
+  const categoryChips = [
+    { label: "Tous", value: "ALL" },
+    { label: "WT", value: "WT" },
+    { label: "PT", value: "PT" },
+    { label: "CT", value: "CT" },
+  ];
+
+  const filterRiders = (riders: Rider[]) => {
+    if (categoryFilter === "ALL") return riders;
+    return riders.filter(r => r.equipe_categorie === categoryFilter);
+  };
+
   const RiderDetailTable = ({ riders }: { riders: Rider[] }) => {
     const phaseColWidth = isMobile ? "50px" : "60px";
     const gridCols = isMobile
