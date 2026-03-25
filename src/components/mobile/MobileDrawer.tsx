@@ -20,6 +20,7 @@ import {
   User,
   Swords,
   Radio,
+  LineChart,
 } from "lucide-react";
 import { useManagerSponsor } from "@/hooks/useManagerSponsor";
 import { useSeasonContext } from "@/contexts/SeasonContext";
