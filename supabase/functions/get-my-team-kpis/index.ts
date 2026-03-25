@@ -106,6 +106,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Get league course scope and start date filters
+    let allowedCourseIds: string[] | null = null;
+    let leagueStartDate: string | null = null;
+    
+    if (league_id) {
+      const { data: leagueCourses } = await supabaseClient.rpc('get_league_course_ids', { p_league_id: league_id });
+      if (leagueCourses) {
+        allowedCourseIds = leagueCourses.map((c: any) => c.course_id);
+      }
+      const { data: leagueData } = await supabaseClient
+        .from('leagues')
+        .select('started_at_effective')
+        .eq('id', league_id)
+        .single();
+      if (leagueData?.started_at_effective) {
+        leagueStartDate = leagueData.started_at_effective.split('T')[0];
+      }
+    }
+
+    // Helper: filter course_id by league scope
+    const isAllowedCourse = (courseId: string, courseDate?: string): boolean => {
+      if (!league_id) return true;
+      if (allowedCourseIds && !allowedCourseIds.includes(courseId)) return false;
+      // started_at_effective filter is applied on points_ledger via course date lookup below
+      return true;
+    };
+
     // Get coureur_ids for this manager's roster
     let rostersQuery = supabaseClient
       .from('rosters')
@@ -135,12 +162,47 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Build list of allowed course IDs with date filtering
+    let courseFilter: string[] | null = null;
+    if (league_id && (allowedCourseIds || leagueStartDate)) {
+      // Get courses with dates to apply started_at_effective filter
+      let validIds = allowedCourseIds || [];
+      if (leagueStartDate) {
+        const { data: coursesWithDates } = await supabaseClient
+          .from('courses')
+          .select('id, date_debut')
+          .in('phase_id', phaseIds);
+        
+        if (coursesWithDates) {
+          const afterStart = coursesWithDates
+            .filter(c => c.date_debut && c.date_debut >= leagueStartDate!)
+            .map(c => c.id);
+          
+          if (allowedCourseIds) {
+            courseFilter = allowedCourseIds.filter(id => afterStart.includes(id));
+          } else {
+            courseFilter = afterStart;
+          }
+        } else {
+          courseFilter = allowedCourseIds;
+        }
+      } else {
+        courseFilter = allowedCourseIds;
+      }
+    }
+
     // KPI #1: Get total points for these coureurs in scope
-    const { data: myPoints, error: myPointsError } = await supabaseClient
+    let myPointsQuery = supabaseClient
       .from('points_ledger')
-      .select('points')
+      .select('points, course_id')
       .in('phase_id', phaseIds)
       .in('coureur_id', coureurIds);
+    
+    if (courseFilter) {
+      myPointsQuery = myPointsQuery.in('course_id', courseFilter);
+    }
+
+    const { data: myPoints, error: myPointsError } = await myPointsQuery;
 
     if (myPointsError) throw myPointsError;
 
