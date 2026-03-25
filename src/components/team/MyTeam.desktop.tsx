@@ -951,6 +951,7 @@ export const MyTeamDesktop = () => {
         riderCote={selectedRider?.cote || 0}
         riderRound={selectedRider?.round}
         phaseId={selectedPhaseId || ''}
+        leagueId={leagueId}
       />
 
       {/* League Bonus Riders Dialog */}

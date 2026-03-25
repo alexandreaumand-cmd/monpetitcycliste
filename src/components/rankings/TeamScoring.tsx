@@ -69,7 +69,7 @@ export const TeamScoring = ({ phaseId, saisonId }: TeamScoringProps) => {
   });
 
   const { data: riderDetails } = useQuery({
-    queryKey: ["rider-points-detail", selectedRider?.id, phaseId, saisonId],
+    queryKey: ["rider-points-detail", selectedRider?.id, phaseId, saisonId, leagueId],
     queryFn: async () => {
       if (!selectedRider) return null;
       
@@ -77,7 +77,8 @@ export const TeamScoring = ({ phaseId, saisonId }: TeamScoringProps) => {
         body: {
           rider_id: selectedRider.id,
           phase_id: phaseId,
-          saison_id: saisonId
+          saison_id: saisonId,
+          league_id: leagueId || undefined
         }
       });
       
