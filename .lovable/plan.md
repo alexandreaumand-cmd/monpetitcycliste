@@ -1,48 +1,41 @@
 
 
-## Filtrer les mouvements startlists par courses de la ligue
+## Corriger le classement manquant (MPC 2026)
 
-### Problème
-Le composant `StartlistTrackerMovements` charge **toutes les courses de la phase** pour afficher les mouvements. Pour une ligue "à la course" comme "Flandriennes 2026", cela inclut des courses non sélectionnées (Volta a Catalunya, Settimana Coppi, Paris-Camembert, etc.).
+### Cause racine
+Deux bugs identifiés :
 
-### Solution
-Filtrer la liste des courses affichées par les `selected_course_ids` de la ligue quand le mode est "à la course".
+1. **Erreur SQL** : La fonction `get_previous_standings` déclare `total_points bigint` dans son type de retour, mais les `SUM()` internes retournent `numeric`. Cela provoque l'erreur `42804` visible dans la console, ce qui fait échouer silencieusement la requête d'évolution. Bien que ce ne soit pas directement la cause du tableau vide, cela pollue le rendu.
 
-### Fichier à modifier
+2. **Bug d'opérateur JS (cause principale)** : Ligne 371 de `ManagerStandings.tsx` :
+   ```tsx
+   {!standings || standings.length === 0 && (...)}
+   ```
+   `&&` a une priorité plus élevée que `||`, donc l'expression est évaluée comme :
+   ```tsx
+   {!standings || (standings.length === 0 && (...))}
+   ```
+   Quand `standings` est un tableau non vide, `!standings` est `false`, et `standings.length === 0 && (...)` est `false`, donc le message "aucun classement" n'apparaît PAS — mais le vrai problème est que quand `standings` est un tableau vide `[]`, `!standings` est `false` (car `[]` est truthy), et `standings.length === 0 && (...)` affiche le message correctement. Cependant quand `standings` est `undefined` (avant le chargement), `!standings` est `true` et le message vide s'affiche — ce qui bloque visuellement le contenu.
 
-**`src/components/startlist/StartlistTrackerMovements.tsx`**
+   **Attendez** — re-vérifions : `!undefined` = `true`, donc on voit le div vide, pas les données. Mais `isLoading` devrait couvrir ce cas... Sauf si le query est `enabled: !leagueLoading` et que `leagueLoading` est `false` avant que `selectedSeason` soit prêt → la query retourne `[]` (ligne 99), ce résultat est mis en cache, et quand `selectedSeason` arrive, le `staleTime: 5min` du QueryClient empêche un refetch.
 
-1. Ajouter une requête pour récupérer le `league_scopes` de la ligue courante (champ `selected_course_ids`)
-2. Dans le query `phase-courses-for-movements`, si `selected_course_ids` est non vide, filtrer les courses avec `.in("id", selectedCourseIds)` au lieu de charger toute la phase
-3. Conserver le comportement actuel (toutes les courses de la phase) pour les ligues sans `selected_course_ids`
+### Corrections
 
-### Logique clé
-```tsx
-// Fetch league scope
-const { data: leagueScope } = useQuery({
-  queryKey: ["league-scope-courses", leagueId],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from("league_scopes")
-      .select("selected_course_ids")
-      .eq("league_id", leagueId)
-      .single();
-    return data?.selected_course_ids || [];
-  },
-  enabled: !!leagueId,
-});
+**1. Migration SQL** — Corriger le type de retour de `get_previous_standings` :
+- Caster `t.total_points::bigint` dans le `SELECT` final, ou changer le type de retour en `numeric`
 
-// In phase courses query, apply filter:
-let query = supabase.from("courses").select("id, date_debut");
-if (leagueScope?.length) {
-  query = query.in("id", leagueScope);
-} else {
-  query = query.eq("phase_id", phaseId);
-}
-query = query.gte("date_fin", today).order("date_debut", { ascending: true });
-```
+**2. `ManagerStandings.tsx`** — Deux corrections :
+- Ligne 371 : Corriger la condition avec des parenthèses :
+  ```tsx
+  {(!standings || standings.length === 0) && (...)}
+  ```
+- Ligne 101 : Ajouter `selectedSeason` ou `phaseId` dans la condition `enabled` pour éviter qu'une requête vide ne soit mise en cache :
+  ```tsx
+  enabled: !leagueLoading && !!leagueId && (!!phaseId || !!selectedSeason),
+  ```
 
 ### Résultat attendu
-- Ligue "Flandriennes 2026" : seuls les mouvements des 5 courses sélectionnées apparaissent
-- Ligues "5 Phases" : comportement inchangé (toutes les courses de la phase)
+- Le classement MPC 2026 s'affiche correctement
+- L'erreur console `42804` disparaît
+- Les ligues "à la course" ne sont pas impactées
 
