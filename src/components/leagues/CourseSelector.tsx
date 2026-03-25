@@ -66,7 +66,11 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
   );
 
   const filteredCourses = useMemo(() => {
-    let filtered = courses;
+    const today = new Date().toISOString().slice(0, 10);
+    let filtered = courses.filter(c => {
+      const endDate = c.date_fin || c.date_debut;
+      return !endDate || endDate >= today;
+    });
     if (search) {
       const q = search.toLowerCase();
       filtered = filtered.filter(c => c.nom.toLowerCase().includes(q));
