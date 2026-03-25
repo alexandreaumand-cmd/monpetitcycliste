@@ -119,13 +119,11 @@ export function useLeagueCardsData(leagues: LeagueInfo[]) {
 
       const seasonsMap = new Map((allSeasons || []).map(s => [s.id, s]));
 
-      // BATCH 5: Fetch all standings for current user
-      const { data: allStandings } = currentManagerId
-        ? await supabase
-            .from('v_manager_standings_by_season_v2')
-            .select('*')
-            .in('league_id', leagueIds)
-        : { data: [] };
+      // BATCH 5: Fetch all standings (always, regardless of currentManagerId)
+      const { data: allStandings } = await supabase
+        .from('v_manager_standings_by_season_v2')
+        .select('*')
+        .in('league_id', leagueIds);
 
       // BATCH 6: Fetch phases for active leagues (needed for auction status)
       const seasonIds = [...new Set((allScopes || []).map(s => s.season_id).filter(Boolean))];
