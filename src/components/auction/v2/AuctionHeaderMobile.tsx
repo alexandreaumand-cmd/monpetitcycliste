@@ -25,7 +25,7 @@ interface AuctionHeaderMobileProps {
   deadline_at?: string;
   validated_count?: number;
   total_managers?: number;
-  phase_index?: number;
+  
   onSubmit?: () => void;
   isSubmitting?: boolean;
 }
