@@ -365,38 +365,56 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
         </CardHeader>
         <CardContent>
           {closeCalls.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">{t('recap.manager')}</th>
-                    <th className="text-left p-2">{t('recap.rider')}</th>
-                    <th className="text-right p-2">{t('recap.bid')}</th>
-                    <th className="text-right p-2">{t('recap.winningBid')}</th>
-                    <th className="text-right p-2">{t('recap.gap')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {closeCalls.map((call, idx) => (
-                    <tr key={idx} className="border-b hover:bg-muted/50">
-                <td className="p-2 truncate max-w-[100px]">
-                  {call.managers?.nom || "Inconnu"}
-                </td>
-                      <td className="p-2 truncate max-w-[120px]">{call.coureur_nom}</td>
-                      <td className="p-2 text-right font-mono">{formatAmount(call.my_bid)}</td>
-                      <td className="p-2 text-right font-mono font-bold">
-                        {formatAmount(call.winning_amount)}
-                      </td>
-                      <td className="p-2 text-right">
-                        <Badge variant={call.diff_percent < 5 ? "destructive" : "secondary"}>
-                          {call.diff_percent.toFixed(1)}%
-                        </Badge>
-                      </td>
+            <>
+              {/* Mobile: card layout */}
+              <div className="space-y-3 md:hidden">
+                {closeCalls.map((call, idx) => (
+                  <div key={idx} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{call.coureur_nom}</div>
+                      <div className="text-xs text-muted-foreground truncate">{call.managers?.nom || "Inconnu"}</div>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                        <span>{t('recap.bid')}: <span className="font-mono text-foreground">{formatAmount(call.my_bid)}</span></span>
+                        <span>→</span>
+                        <span>{t('recap.winningBid')}: <span className="font-mono font-bold text-foreground">{formatAmount(call.winning_amount)}</span></span>
+                      </div>
+                    </div>
+                    <Badge variant={call.diff_percent < 5 ? "destructive" : "secondary"} className="shrink-0">
+                      {call.diff_percent.toFixed(1)}%
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop: table layout */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">{t('recap.manager')}</th>
+                      <th className="text-left p-2">{t('recap.rider')}</th>
+                      <th className="text-right p-2">{t('recap.bid')}</th>
+                      <th className="text-right p-2">{t('recap.winningBid')}</th>
+                      <th className="text-right p-2">{t('recap.gap')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {closeCalls.map((call, idx) => (
+                      <tr key={idx} className="border-b hover:bg-muted/50">
+                        <td className="p-2 truncate max-w-[100px]">{call.managers?.nom || "Inconnu"}</td>
+                        <td className="p-2 truncate max-w-[120px]">{call.coureur_nom}</td>
+                        <td className="p-2 text-right font-mono">{formatAmount(call.my_bid)}</td>
+                        <td className="p-2 text-right font-mono font-bold">{formatAmount(call.winning_amount)}</td>
+                        <td className="p-2 text-right">
+                          <Badge variant={call.diff_percent < 5 ? "destructive" : "secondary"}>
+                            {call.diff_percent.toFixed(1)}%
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : (
             <p className="text-muted-foreground text-sm text-center py-4">
               {t('recap.noLostBids')}
