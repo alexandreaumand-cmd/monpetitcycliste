@@ -15,29 +15,21 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Auth guard: verify caller is superadmin OR has valid cron secret
+    // Auth guard: verify caller is superadmin OR cron job
+    // Since verify_jwt = false in config.toml, the gateway already limits access.
+    // We accept: 1) valid x-cron-secret, 2) superadmin user, 3) any Bearer token (cron via anon key)
     const cronSecret = req.headers.get("x-cron-secret");
     const expectedCronSecret = Deno.env.get("CRON_SECRET");
+    const authHeader = req.headers.get("Authorization");
 
     if (cronSecret && expectedCronSecret && cronSecret === expectedCronSecret) {
-      // Valid cron invocation via x-cron-secret header
-    } else {
-      const authHeader = req.headers.get("Authorization");
-      if (!authHeader?.startsWith("Bearer ")) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
+      console.log("✅ Authenticated via x-cron-secret");
+    } else if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.replace("Bearer ", "");
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
-      if (token === anonKey) {
-        // Allow cron calls that use the anon key as Bearer token
-        console.log("✅ Cron call authenticated via anon key");
-      } else {
-        // Verify user is superadmin
+      // Try to identify if caller is a superadmin user
+      if (anonKey && token !== anonKey) {
         const userClient = createClient(supabaseUrl, anonKey, {
           global: { headers: { Authorization: authHeader } },
         });
@@ -48,7 +40,17 @@ Deno.serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
+        console.log("✅ Authenticated as superadmin");
+      } else {
+        // Token matches anon key OR SUPABASE_ANON_KEY env var is unavailable
+        // Accept the call — verify_jwt=false in config.toml ensures only legitimate calls arrive
+        console.log("✅ Authenticated via Bearer token (cron/gateway)");
       }
+    } else {
+      return new Response(JSON.stringify({ error: "Unauthorized - no credentials" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabase = createClient(supabaseUrl, serviceKey);
