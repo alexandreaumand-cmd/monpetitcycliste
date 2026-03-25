@@ -207,6 +207,9 @@ Deno.serve(async (req) => {
           const riderActivePhases = riderPhases.get(coureurId) || new Set();
           const phases_active = phases.map(p => riderActivePhases.has(p.id));
 
+          const equipeId = coureurEquipeMap.get(coureurId);
+          const categorie = equipeId ? (equipeCategorieMap.get(equipeId) || null) : null;
+
           riders.push({
             nom: coureurNameMap.get(coureurId) || coureurId,
             prix_signature: prix,
@@ -215,6 +218,7 @@ Deno.serve(async (req) => {
             is_pepite: isPepite,
             phase_points: phasePointsArr.map(v => Math.round(v)),
             phases_active,
+            equipe_categorie: categorie,
           });
         });
 
