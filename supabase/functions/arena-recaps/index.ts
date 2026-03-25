@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const recapType: string = body.type || "daily";
+    const dateOverride: string | undefined = body.date; // optional "YYYY-MM-DD"
 
     console.log(`🔄 Starting ${recapType} recap...`);
 
@@ -90,10 +91,10 @@ Deno.serve(async (req) => {
         }
 
         if (recapType === "weekly") {
-          await sendWeeklyRecap(supabase, league, channel.id, supabaseUrl, serviceKey);
+          await sendWeeklyRecap(supabase, league, channel.id, supabaseUrl, serviceKey, dateOverride);
           results.push({ league: league.name, sent: true, type: "weekly" });
         } else {
-          const sent = await sendDailyRecap(supabase, league, channel.id, supabaseUrl, serviceKey);
+          const sent = await sendDailyRecap(supabase, league, channel.id, supabaseUrl, serviceKey, dateOverride);
           results.push({ league: league.name, sent, type: "daily" });
         }
       } catch (err) {
@@ -123,9 +124,10 @@ async function sendDailyRecap(
   league: { id: string; name: string },
   channelId: string,
   supabaseUrl: string,
-  serviceKey: string
+  serviceKey: string,
+  dateOverride?: string
 ): Promise<boolean> {
-  const today = new Date();
+  const today = dateOverride ? new Date(dateOverride + "T20:00:00Z") : new Date();
   const startOfDay = new Date(today);
   startOfDay.setUTCHours(0, 0, 0, 0);
   const endOfDay = new Date(today);
@@ -426,9 +428,10 @@ async function sendWeeklyRecap(
   league: { id: string; name: string },
   channelId: string,
   supabaseUrl: string,
-  serviceKey: string
+  serviceKey: string,
+  dateOverride?: string
 ) {
-  const now = new Date();
+  const now = dateOverride ? new Date(dateOverride + "T20:00:00Z") : new Date();
 
   // Calculate Monday 00:00 UTC of the current week
   // getUTCDay(): 0=Sunday, 1=Monday, ..., 6=Saturday
