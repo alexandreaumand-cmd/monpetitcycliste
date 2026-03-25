@@ -309,7 +309,7 @@ Deno.serve(async (req) => {
     let pointsAggregated = 0;
     let pointsSkipped = 0;
 
-    pointsData?.forEach((row: any) => {
+    filteredPointsData?.forEach((row: any) => {
       // Récupérer la date depuis l'index
       const key = `${row.course_id}:${row.type_classement}:${row.etape_numero || 'null'}:${row.coureur_id}`;
       const classementDate = dateIndex.get(key);
