@@ -2,46 +2,39 @@
 
 ## Problem
 
-The `get-team-category-stats` Edge Function fetches points from `points_ledger` without specifying a row limit. Supabase defaults to **1000 rows**, so the data is silently truncated — resulting in incorrect point totals for riders and teams (e.g., Evenepoel showing 514 instead of 1093).
+The "Points attendus" and "Points réels" values in the Luck ranking (La Chatte) are incorrect for two reasons:
+
+1. **actual_points**: The query fetches points from `points_ledger` filtered by rider IDs from the roster, but does NOT filter by league. Since `points_ledger` has no `league_id` column, it sums points for those riders across ALL contexts — overcounting significantly.
+
+2. **expected_points**: Uses an arbitrary formula `(avgPrice / 20) * avgLeaguePoints * 0.8` that has no real meaning and produces confusing numbers.
+
+3. **1000-row limit**: The `allPoints` query (line 49-52) and per-manager points queries have no pagination, truncating results.
 
 ## Solution
 
-Paginate the `points_ledger` query to fetch ALL rows, not just the first 1000.
+Rewrite the `get-luck-ranking` Edge Function to compute meaningful, league-scoped metrics:
 
-## Technical Details
+### File: `supabase/functions/get-luck-ranking/index.ts`
 
-**File: `supabase/functions/get-team-category-stats/index.ts`**
+**1. Compute actual_points correctly** — Use the manager's real league total by joining roster → coureur_id → points_ledger, scoped to the manager's roster entries for that specific league. Add pagination to all queries exceeding 1000 rows.
 
-Replace the single query (lines 35-38) with a paginated loop:
+**2. Replace expected_points with a meaningful metric** — Use the league average total points per manager as the "expected" baseline. This makes the comparison intuitive: "How did this manager perform vs. the league average?"
 
-```typescript
-// Fetch ALL points_ledger rows using pagination (default limit is 1000)
-let allPointsData: any[] = [];
-const PAGE_SIZE = 1000;
-let offset = 0;
-let hasMore = true;
+**3. Add pagination** to `allPoints` and per-manager points queries using the same `while/range` pattern already used in `get-team-category-stats`.
 
-while (hasMore) {
-  const { data: batch, error: batchError } = await supabase
-    .from('points_ledger')
-    .select('coureur_id, phase_id, points')
-    .in('phase_id', activePhaseIds)
-    .range(offset, offset + PAGE_SIZE - 1);
+**4. Fix the per-manager points query** (line 95-99): Add `.eq('league_id', league_id)` filter... but `points_ledger` doesn't have `league_id`. Instead, the correct approach is to only sum points for riders that are in this manager's roster for this league, AND only for courses that belong to phases of this season. The current approach already filters by `phase_id` and `coureur_id`, but it overcounts because the same rider may appear in multiple managers' rosters — the points are rider-level, not manager-level.
 
-  if (batchError) throw batchError;
-  if (batch && batch.length > 0) {
-    allPointsData = allPointsData.concat(batch);
-    offset += PAGE_SIZE;
-    hasMore = batch.length === PAGE_SIZE;
-  } else {
-    hasMore = false;
-  }
-}
-```
+Actually, the real issue is simpler: `points_ledger` stores per-rider points, not per-manager. The same rider's points are correctly attributed to any manager who owns that rider. The overcounting happens because the `allPoints` query (line 49-52) fetches ALL points in the season without scoping, and the 1000-row limit truncates it.
 
-Then use `allPointsData` instead of `pointsData` in the aggregation loop (line 76).
+**Revised approach:**
+- Paginate all queries
+- Compute `actual_points` per manager = sum of points for their roster riders (paginated, already league-scoped via roster filter)
+- Compute `expected_points` = league average (total points across all managers / number of managers)
+- This gives a clear "your actual vs league average" comparison
 
-Also apply the same pagination fix to the `coureurs_saisons` and `coureurs` queries if they could exceed 1000 rows — same pattern.
+### Summary of changes
 
-This is a backend-only fix; no UI changes needed.
+- Add pagination loops (while/range pattern) to: `allPoints` query, per-manager `points` query
+- Replace `expectedPoints` formula with `avgPointsPerManager` (total league points / manager count)
+- No UI changes needed — labels "Points attendus" / "Points réels" remain valid with correct data
 
