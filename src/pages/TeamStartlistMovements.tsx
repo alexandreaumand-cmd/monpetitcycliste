@@ -33,18 +33,37 @@ export default function TeamStartlistMovements() {
     enabled: !!managerId && !!leagueId && !!phaseId,
   });
 
-  // 2. Get course_ids that belong to the selected phase
+  // 1b. Get league scope to filter by selected_course_ids if applicable
+  const { data: leagueSelectedCourseIds } = useQuery({
+    queryKey: ["league-scope-courses", leagueId],
+    queryFn: async () => {
+      if (!leagueId) return null;
+      const { data } = await supabase
+        .from("league_scopes")
+        .select("selected_course_ids")
+        .eq("league_id", leagueId)
+        .single();
+      const ids = data?.selected_course_ids as string[] | null;
+      return ids?.length ? ids : null;
+    },
+    enabled: !!leagueId,
+  });
+
+  // 2. Get course_ids that belong to the selected phase (filtered by league scope)
   const { data: phaseCourseIds } = useQuery({
-    queryKey: ["phase-course-ids", phaseId],
+    queryKey: ["phase-course-ids", phaseId, leagueSelectedCourseIds],
     queryFn: async () => {
       if (!phaseId) return [];
-      const { data } = await supabase
-        .from("courses")
-        .select("id")
-        .eq("phase_id", phaseId);
+      let query = supabase.from("courses").select("id");
+      if (leagueSelectedCourseIds) {
+        query = query.in("id", leagueSelectedCourseIds);
+      } else {
+        query = query.eq("phase_id", phaseId);
+      }
+      const { data } = await query;
       return (data || []).map((c) => c.id);
     },
-    enabled: !!phaseId,
+    enabled: !!phaseId && leagueSelectedCourseIds !== undefined,
   });
 
   // 3. Get startlist changes for these coureurs + courses
