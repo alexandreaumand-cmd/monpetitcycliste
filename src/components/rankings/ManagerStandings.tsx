@@ -180,27 +180,31 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="flex justify-end mb-3">
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-            <SelectTrigger className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="points">{t('standings.sortByPoints')}</SelectItem>
-              <SelectItem value="victories">{t('standings.sortByVictories')}</SelectItem>
-              <SelectItem value="scorers">{t('standings.sortByScorers')}</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex justify-center gap-1 mb-3">
+          {(['points', 'victories', 'scorers'] as const).map((key) => (
+            <button
+              key={key}
+              onClick={() => setSortBy(key)}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                sortBy === key
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/40 text-muted-foreground hover:bg-muted/60"
+              )}
+            >
+              {key === 'points' ? t('standings.sortByPoints') : key === 'victories' ? t('standings.sortByVictories') : t('standings.sortByScorers')}
+            </button>
+          ))}
         </div>
         <Table>
         <TableHeader>
           <TableRow className="border-b-2 border-bordure-gold">
             <TableHead className="w-16 font-bold">{t('standings.rank')}</TableHead>
             <TableHead className="font-bold">{t('standings.manager')}</TableHead>
-             <TableHead className={cn("text-right font-bold", sortBy === 'points' && "text-primary")}>{t('standings.points')}</TableHead>
+             <TableHead className={cn("text-right font-bold cursor-pointer hover:text-primary", sortBy === 'points' && "text-primary")} onClick={() => setSortBy('points')}>{t('standings.points')}</TableHead>
             <TableHead className="text-right font-bold">{t('standings.bonus')}</TableHead>
-            <TableHead className={cn("text-right font-bold", sortBy === 'scorers' && "text-primary")}>{t('standings.scorers')}</TableHead>
-            <TableHead className={cn("text-right font-bold", sortBy === 'victories' && "text-primary")}>{t('standings.victories')}</TableHead>
+            <TableHead className={cn("text-right font-bold cursor-pointer hover:text-primary", sortBy === 'scorers' && "text-primary")} onClick={() => setSortBy('scorers')}>{t('standings.scorers')}</TableHead>
+            <TableHead className={cn("text-right font-bold cursor-pointer hover:text-primary", sortBy === 'victories' && "text-primary")} onClick={() => setSortBy('victories')}>{t('standings.victories')}</TableHead>
             <TableHead className="text-right font-bold">{t('standings.gap')}</TableHead>
             {previousGlobalStandings && <TableHead className="w-24 text-center font-bold">{t('standings.evolution')}</TableHead>}
           </TableRow>
