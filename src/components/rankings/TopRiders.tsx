@@ -122,7 +122,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
   const riders = allRiders?.slice(0, displayLimit);
 
   const { data: riderPointsData, isLoading: isLoadingDetails } = useQuery({
-    queryKey: ["rider-points-table", selectedRider?.rider_id, phaseId, saisonId],
+    queryKey: ["rider-points-table", selectedRider?.rider_id, phaseId, saisonId, leagueId],
     queryFn: async () => {
       if (!selectedRider) return null;
 
@@ -131,6 +131,7 @@ export const TopRiders = ({ phaseId, saisonId, limit = 20 }: TopRidersProps) => 
           rider_id: selectedRider.rider_id,
           phase_id: phaseId,
           saison_id: saisonId,
+          league_id: leagueId || undefined,
         },
       });
 
