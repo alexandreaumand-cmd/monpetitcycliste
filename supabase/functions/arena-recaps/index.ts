@@ -454,7 +454,7 @@ async function sendDailyRecap(
 
   // Send push notification for daily recap
   try {
-    const topManagerName = managerMap[entries[0].managerId] || "?";
+    const topManagerName = entries.length > 0 ? (managerMap[entries[0].managerId] || "?") : null;
 
     const { data: leagueMembers } = await supabase
       .from("league_members")
@@ -463,6 +463,9 @@ async function sendDailyRecap(
 
     if (leagueMembers && leagueMembers.length > 0) {
       const userIds = leagueMembers.map((m: any) => m.user_id);
+      const pushMessage = topManagerName
+        ? `Bravo à ${topManagerName}, manager du jour !`
+        : `Le récap du jour est disponible !`;
 
       await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
         method: "POST",
@@ -473,7 +476,7 @@ async function sendDailyRecap(
         body: JSON.stringify({
           user_ids: userIds,
           title: `📊 Récap du jour — ${league.name}`,
-          message: `Bravo à ${topManagerName}, manager du jour !`,
+          message: pushMessage,
           type: "arena_daily_recap",
           metadata: { league_id: league.id },
         }),
