@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { useLuckRanking } from "@/hooks/useLuckRanking";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Clover, TrendingUp, Zap, Target } from "lucide-react";
+import { Clover, TrendingUp, Zap, Target, ChevronDown, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLeague } from "@/contexts/LeagueContext";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface LuckRankingProps {
   saisonId: string;
@@ -14,6 +17,7 @@ export const LuckRanking = ({ saisonId }: LuckRankingProps) => {
   const { t } = useTranslation('statistics');
   const { leagueId } = useLeague();
   const { data, isLoading } = useLuckRanking(saisonId, leagueId);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -35,7 +39,7 @@ export const LuckRanking = ({ saisonId }: LuckRankingProps) => {
 
   const rankings = data?.rankings || [];
   const avgGap = rankings.length > 0
-    ? Math.round(rankings.reduce((sum, r) => sum + r.performance_gap, 0) / rankings.length * 10) / 10
+    ? Math.round(rankings.reduce((sum: number, r: any) => sum + r.performance_gap, 0) / rankings.length * 10) / 10
     : 0;
 
   return (
@@ -50,77 +54,148 @@ export const LuckRanking = ({ saisonId }: LuckRankingProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {rankings.map((manager, idx) => (
-          <div
-            key={manager.manager_id}
-            className="flex items-center gap-4 p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors relative"
-          >
-            {/* Special badges */}
-            {idx === 0 && (
-              <Badge className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-emerald-500">
-                {t('luck.luckiestBadge')}
-              </Badge>
-            )}
-            {idx === rankings.length - 1 && rankings.length > 1 && (
-              <Badge variant="destructive" className="absolute -top-2 -right-2">
-                {t('luck.unluckiestBadge')}
-              </Badge>
-            )}
+        {rankings.map((manager: any, idx: number) => {
+          const isExpanded = expandedId === manager.manager_id;
 
-            {/* Rank */}
-            <div className="w-12 text-center">
-              <div className="font-bold text-2xl text-muted-foreground">
-                #{idx + 1}
-              </div>
-            </div>
-
-            {/* Manager name */}
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-lg truncate">{manager.manager_nom}</div>
-            </div>
-
-            {/* Score gauge */}
-            <div className="flex-1 space-y-1">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{t('luck.luckScore')}</span>
-                <span className="font-bold text-foreground">{manager.luck_score}</span>
-              </div>
-              <div className="bg-muted rounded-full h-3 overflow-hidden">
+          return (
+            <Collapsible
+              key={manager.manager_id}
+              open={isExpanded}
+              onOpenChange={(open) => setExpandedId(open ? manager.manager_id : null)}
+            >
+              <CollapsibleTrigger asChild>
                 <div
-                  className="h-full bg-gradient-to-r from-green-500 to-bordure-gold transition-all duration-500"
-                  style={{ width: `${manager.luck_score}%` }}
-                />
-              </div>
-            </div>
+                  className="flex items-center gap-4 p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors relative cursor-pointer"
+                >
+                  {/* Special badges */}
+                  {idx === 0 && (
+                    <Badge className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-emerald-500">
+                      {t('luck.luckiestBadge')}
+                    </Badge>
+                  )}
+                  {idx === rankings.length - 1 && rankings.length > 1 && (
+                    <Badge variant="destructive" className="absolute -top-2 -right-2">
+                      {t('luck.unluckiestBadge')}
+                    </Badge>
+                  )}
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="space-y-1">
-                <div className="flex items-center justify-center gap-1 text-muted-foreground">
-                  <TrendingUp className="h-3 w-3" />
-                  <span className="text-xs">{t('luck.perfGap')}</span>
+                  {/* Rank */}
+                  <div className="w-12 text-center">
+                    <div className="font-bold text-2xl text-muted-foreground">
+                      #{idx + 1}
+                    </div>
+                  </div>
+
+                  {/* Manager name */}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-lg truncate">{manager.manager_nom}</div>
+                  </div>
+
+                  {/* Score gauge */}
+                  <div className="flex-1 space-y-1">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{t('luck.luckScore')}</span>
+                      <span className="font-bold text-foreground">{manager.luck_score}</span>
+                    </div>
+                    <div className="bg-muted rounded-full h-3 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-green-500 to-bordure-gold transition-all duration-500"
+                        style={{ width: `${manager.luck_score}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-center gap-1 text-muted-foreground">
+                        <TrendingUp className="h-3 w-3" />
+                        <span className="text-xs">{t('luck.perfGap')}</span>
+                      </div>
+                      <div className={`font-semibold text-sm ${manager.performance_gap > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {manager.performance_gap > 0 ? '+' : ''}{manager.performance_gap}%
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-center gap-1 text-muted-foreground">
+                        <Zap className="h-3 w-3" />
+                        <span className="text-xs">{t('luck.variance')}</span>
+                      </div>
+                      <div className="font-semibold text-sm">{manager.variance}</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-center gap-1 text-muted-foreground">
+                        <Target className="h-3 w-3" />
+                        <span className="text-xs">{t('luck.bigWins')}</span>
+                      </div>
+                      <div className="font-semibold text-sm">{manager.big_wins_ratio}%</div>
+                    </div>
+                  </div>
+
+                  {/* Chevron */}
+                  <ChevronDown className={cn(
+                    "h-5 w-5 text-muted-foreground transition-transform",
+                    isExpanded && "rotate-180"
+                  )} />
                 </div>
-                <div className={`font-semibold text-sm ${manager.performance_gap > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {manager.performance_gap > 0 ? '+' : ''}{manager.performance_gap}%
+              </CollapsibleTrigger>
+
+              <CollapsibleContent>
+                <div className="ml-12 mr-4 mt-2 mb-2 p-4 border rounded-lg bg-muted/30 space-y-4">
+                  {/* Points summary */}
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">{t('luck.expectedPoints')}</span>
+                      <span className="ml-2 font-semibold">{manager.expected_points?.toLocaleString()} pts</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">{t('luck.actualPoints')}</span>
+                      <span className="ml-2 font-semibold">{manager.actual_points?.toLocaleString()} pts</span>
+                    </div>
+                  </div>
+
+                  {/* Big wins detail */}
+                  {manager.big_wins_details && manager.big_wins_details.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold flex items-center gap-1 mb-2">
+                        <Trophy className="h-4 w-4 text-bordure-gold" />
+                        {t('luck.bigWinsDetail')} ({manager.big_wins_details.length})
+                      </h4>
+                      <div className="space-y-1">
+                        {manager.big_wins_details.map((bw: any) => (
+                          <div key={bw.course_id} className="flex justify-between items-center text-sm py-1 px-2 rounded bg-green-500/10">
+                            <span>{bw.course_nom}</span>
+                            <span className="font-semibold text-green-500">{bw.points} pts</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Top courses */}
+                  {manager.course_breakdown && manager.course_breakdown.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">{t('luck.topCourses')}</h4>
+                      <div className="space-y-1">
+                        {manager.course_breakdown.map((cb: any) => (
+                          <div key={cb.course_id} className="flex justify-between items-center text-sm py-1 px-2 rounded hover:bg-muted/50">
+                            <span className="flex items-center gap-1">
+                              {cb.is_big_win && <Target className="h-3 w-3 text-green-500" />}
+                              {cb.course_nom}
+                            </span>
+                            <span className={cn("font-medium", cb.is_big_win && "text-green-500")}>
+                              {cb.points} pts
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center justify-center gap-1 text-muted-foreground">
-                  <Zap className="h-3 w-3" />
-                  <span className="text-xs">{t('luck.variance')}</span>
-                </div>
-                <div className="font-semibold text-sm">{manager.variance}</div>
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center justify-center gap-1 text-muted-foreground">
-                  <Target className="h-3 w-3" />
-                  <span className="text-xs">{t('luck.bigWins')}</span>
-                </div>
-                <div className="font-semibold text-sm">{manager.big_wins_ratio}%</div>
-              </div>
-            </div>
-          </div>
-        ))}
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        })}
 
         {/* Summary */}
         <div className="mt-6 pt-6 border-t">

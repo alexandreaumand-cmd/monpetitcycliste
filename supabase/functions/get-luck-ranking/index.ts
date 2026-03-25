@@ -54,6 +54,14 @@ Deno.serve(async (req) => {
     const totalLeaguePoints = (allPoints || []).reduce((sum, p) => sum + p.points, 0);
     const avgLeaguePoints = managers.length > 0 ? totalLeaguePoints / managers.length : 0;
 
+    // Fetch all courses for name lookup
+    const { data: coursesData } = await supabase
+      .from('courses')
+      .select('id, nom');
+    
+    const courseNameMap = new Map<string, string>();
+    (coursesData || []).forEach(c => courseNameMap.set(c.id, c.nom));
+
     // Calculate scores for each manager
     const rankings = await Promise.all(
       managers.map(async (manager) => {
@@ -76,6 +84,8 @@ Deno.serve(async (req) => {
             performance_gap: 0,
             variance: 0,
             big_wins_ratio: 0,
+            big_wins_details: [],
+            course_breakdown: [],
           };
         }
 
@@ -105,26 +115,45 @@ Deno.serve(async (req) => {
           pointsByCourse.set(p.course_id, (pointsByCourse.get(p.course_id) || 0) + p.points);
         });
 
-        const coursePoints = Array.from(pointsByCourse.values());
-        const avgPointsPerCourse = coursePoints.length > 0 
-          ? coursePoints.reduce((sum, p) => sum + p, 0) / coursePoints.length 
+        const coursePoints = Array.from(pointsByCourse.entries());
+        const coursePointValues = coursePoints.map(([, pts]) => pts);
+        const avgPointsPerCourse = coursePointValues.length > 0 
+          ? coursePointValues.reduce((sum, p) => sum + p, 0) / coursePointValues.length 
           : 0;
 
-        const variance = coursePoints.length > 0
+        const variance = coursePointValues.length > 0
           ? Math.sqrt(
-              coursePoints.reduce((sum, p) => sum + Math.pow(p - avgPointsPerCourse, 2), 0) / coursePoints.length
+              coursePointValues.reduce((sum, p) => sum + Math.pow(p - avgPointsPerCourse, 2), 0) / coursePointValues.length
             )
           : 0;
 
-        // Big wins ratio (top 3 positions give more points)
-        // Approximate: courses with > avgPointsPerCourse * 1.5 are "big wins"
-        const bigWins = coursePoints.filter(p => p > avgPointsPerCourse * 1.5).length;
-        const bigWinsRatio = coursePoints.length > 0 ? (bigWins / coursePoints.length) * 100 : 0;
+        // Big wins: courses with > avgPointsPerCourse * 1.5
+        const bigWinThreshold = avgPointsPerCourse * 1.5;
+        const bigWinsDetails = coursePoints
+          .filter(([, pts]) => pts > bigWinThreshold)
+          .map(([courseId, pts]) => ({
+            course_id: courseId,
+            course_nom: courseNameMap.get(courseId) || 'Course inconnue',
+            points: Math.round(pts),
+          }))
+          .sort((a, b) => b.points - a.points);
+
+        const bigWinsRatio = coursePointValues.length > 0 ? (bigWinsDetails.length / coursePointValues.length) * 100 : 0;
+
+        // Course breakdown (top courses for detail view)
+        const courseBreakdown = coursePoints
+          .map(([courseId, pts]) => ({
+            course_id: courseId,
+            course_nom: courseNameMap.get(courseId) || 'Course inconnue',
+            points: Math.round(pts),
+            is_big_win: pts > bigWinThreshold,
+          }))
+          .sort((a, b) => b.points - a.points)
+          .slice(0, 10);
 
         // Calculate luck score (0-100)
-        // 40% performance gap (positive = lucky), 30% variance, 30% big wins
         const gapScore = Math.max(0, Math.min(performanceGap, 100)) * 0.4;
-        const varianceScore = Math.min(variance / 10, 30); // Higher variance = more luck
+        const varianceScore = Math.min(variance / 10, 30);
         const bigWinsScore = bigWinsRatio * 0.3;
 
         const luckScore = Math.round(gapScore + varianceScore + bigWinsScore);
@@ -135,10 +164,12 @@ Deno.serve(async (req) => {
           rank: 0,
           luck_score: luckScore,
           expected_points: Math.round(expectedPoints),
-          actual_points: actualPoints,
+          actual_points: Math.round(actualPoints),
           performance_gap: Math.round(performanceGap * 10) / 10,
           variance: Math.round(variance * 10) / 10,
           big_wins_ratio: Math.round(bigWinsRatio * 10) / 10,
+          big_wins_details: bigWinsDetails,
+          course_breakdown: courseBreakdown,
         };
       })
     );
