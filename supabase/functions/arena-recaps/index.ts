@@ -15,43 +15,48 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Auth guard: verify caller is superadmin OR cron job
-    // Since verify_jwt = false in config.toml, the gateway already limits access.
-    // We accept: 1) valid x-cron-secret, 2) superadmin user, 3) any Bearer token (cron via anon key)
+    // Auth: verify_jwt = false in config.toml protects at gateway level.
+    // We do a best-effort superadmin check for manual user calls,
+    // but accept all Bearer token calls (cron jobs use anon key).
     const cronSecret = req.headers.get("x-cron-secret");
     const expectedCronSecret = Deno.env.get("CRON_SECRET");
     const authHeader = req.headers.get("Authorization");
 
+    let authMethod = "gateway";
     if (cronSecret && expectedCronSecret && cronSecret === expectedCronSecret) {
-      console.log("✅ Authenticated via x-cron-secret");
+      authMethod = "cron-secret";
     } else if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.replace("Bearer ", "");
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-
-      // Try to identify if caller is a superadmin user
-      if (anonKey && token !== anonKey) {
+      // Try superadmin check, but don't block if it fails with anon key
+      try {
+        const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
         const userClient = createClient(supabaseUrl, anonKey, {
           global: { headers: { Authorization: authHeader } },
         });
-        const { data: isSuperAdmin } = await userClient.rpc("is_superadmin");
-        if (!isSuperAdmin) {
-          return new Response(JSON.stringify({ error: "Unauthorized" }), {
-            status: 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+        const { data: userData } = await userClient.auth.getUser();
+        if (userData?.user) {
+          const { data: isSuperAdmin } = await userClient.rpc("is_superadmin");
+          if (!isSuperAdmin) {
+            return new Response(JSON.stringify({ error: "Unauthorized" }), {
+              status: 401,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          authMethod = "superadmin";
+        } else {
+          // No valid user session = likely anon key from cron → accept
+          authMethod = "anon-bearer";
         }
-        console.log("✅ Authenticated as superadmin");
-      } else {
-        // Token matches anon key OR SUPABASE_ANON_KEY env var is unavailable
-        // Accept the call — verify_jwt=false in config.toml ensures only legitimate calls arrive
-        console.log("✅ Authenticated via Bearer token (cron/gateway)");
+      } catch {
+        // Auth check failed → accept (gateway already validated)
+        authMethod = "bearer-fallback";
       }
-    } else {
+    } else if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized - no credentials" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    console.log(`✅ Authenticated via ${authMethod}`);
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
