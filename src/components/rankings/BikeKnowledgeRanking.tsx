@@ -18,6 +18,7 @@ interface Rider {
   is_pepite: boolean;
   phase_points: number[];
   phases_active: boolean[];
+  equipe_categorie: string | null;
 }
 
 interface BikeKnowledgeRankingProps {
@@ -30,6 +31,7 @@ export const BikeKnowledgeRanking = ({ saisonId }: BikeKnowledgeRankingProps) =>
   const { data, isLoading } = useKnowledgeRanking(saisonId, leagueId);
   const isMobile = useIsMobile();
   const [expandedManager, setExpandedManager] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
 
   if (isLoading) {
     return (
@@ -47,6 +49,18 @@ export const BikeKnowledgeRanking = ({ saisonId }: BikeKnowledgeRankingProps) =>
 
   const toggleExpand = (managerId: string) => {
     setExpandedManager(prev => prev === managerId ? null : managerId);
+  };
+
+  const categoryChips = [
+    { label: "Tous", value: "ALL" },
+    { label: "WT", value: "WT" },
+    { label: "PT", value: "PT" },
+    { label: "CT", value: "CT" },
+  ];
+
+  const filterRiders = (riders: Rider[]) => {
+    if (categoryFilter === "ALL") return riders;
+    return riders.filter(r => r.equipe_categorie === categoryFilter);
   };
 
   const RiderDetailTable = ({ riders }: { riders: Rider[] }) => {
@@ -128,7 +142,7 @@ export const BikeKnowledgeRanking = ({ saisonId }: BikeKnowledgeRankingProps) =>
       <CardContent className={cn("space-y-3 md:space-y-4", isMobile && "pt-0")}>
         {rankings.map((manager: any, idx: number) => {
           const isExpanded = expandedManager === manager.manager_id;
-          const riders: Rider[] = manager.riders || [];
+          const riders: Rider[] = filterRiders(manager.riders || []);
 
           return (
             <div
@@ -200,11 +214,31 @@ export const BikeKnowledgeRanking = ({ saisonId }: BikeKnowledgeRankingProps) =>
               </div>
 
               {/* Expandable rider details */}
-              {isExpanded && riders.length > 0 && (
+              {isExpanded && (
                 <div className={cn("border-t", isMobile ? "p-2 pt-2" : "p-4 pt-3")}>
-                  <div className="rounded-md border overflow-hidden">
-                    <RiderDetailTable riders={riders} />
+                  <div className="flex gap-1.5 mb-2 flex-wrap">
+                    {categoryChips.map(chip => (
+                      <Badge
+                        key={chip.value}
+                        variant={categoryFilter === chip.value ? "default" : "outline"}
+                        className={cn(
+                          "cursor-pointer text-[10px] md:text-xs px-2 py-0.5",
+                          "active:scale-95 transition-all",
+                          categoryFilter === chip.value && "shadow-sm"
+                        )}
+                        onClick={(e) => { e.stopPropagation(); setCategoryFilter(chip.value); }}
+                      >
+                        {chip.label}
+                      </Badge>
+                    ))}
                   </div>
+                  {riders.length > 0 ? (
+                    <div className="rounded-md border overflow-hidden">
+                      <RiderDetailTable riders={riders} />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-3">Aucun coureur dans cette catégorie</p>
+                  )}
                 </div>
               )}
             </div>
