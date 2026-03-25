@@ -1,17 +1,49 @@
 
+Objectif
+- Corriger l’affichage des points dans « Ligue Flandriennes 2026 » pour que seules les courses autorisées de la ligue (et après démarrage effectif) comptent partout, y compris sur l’écran Équipe.
 
-## Problem
+Diagnostic confirmé
+- La ligue a bien un scope “à la course” (5 courses sélectionnées) et `started_at_effective = 2026-03-26`.
+- Les points affichés viennent de **Volta Ciclista a Catalunya (2026-03-23)**, donc :
+  - hors `selected_course_ids`
+  - avant `started_at_effective`
+- Les vues de classement corrigées (`v_manager_standings_*`) renvoient déjà 0 pour cette ligue.
+- Le problème vient surtout de la RPC `manager_team_by_id` (utilisée par `manager-my-team`) qui additionne encore les points de toute la phase.
 
-The auction header on mobile (`AuctionHeaderMobile.tsx`) displays a logo and a "Phase X" badge that take up too much vertical space, reducing the area available for the actual auction content.
+Plan d’implémentation
+1) Corriger la source des points “Mon Équipe” côté SQL (migration)
+- Mettre à jour `public.manager_team_by_id(...)` pour filtrer les points par :
+  - `get_league_course_ids(p_league_id)` quand une ligue est fournie
+  - `courses.date_debut >= leagues.started_at_effective` (si non null)
+- Appliquer ce filtre dans :
+  - CTE `points` (points course)
+  - CTE `rider_bonus` si besoin de cohérence par course (quand `coureur_id` + course liée)
+- Conserver le fallback legacy quand `p_league_id IS NULL`.
 
-## Solution
+2) Aligner les KPIs de `manager-my-team` avec les mêmes règles
+- Dans `supabase/functions/manager-my-team/index.ts`, appliquer le même périmètre de courses autorisées pour :
+  - `total_race_days`
+  - `wins_count`
+- Ne plus laisser des métriques “phase complète” fuiter dans les ligues “à la course”.
 
-Remove the logo header block (lines 93-106) that contains the La Bordure logo and the "Phase X" badge. The league context is already visible in the main app header, so this is redundant.
+3) Sécuriser l’affichage frontend pour éviter les incohérences
+- `src/components/team/MyTeam.desktop.tsx` :
+  - corriger la requête standings (`bonus_points` n’existe pas sur `v_manager_standings_by_phase_v2`; utiliser `manager_bonus` + `rider_bonus`)
+  - fallback explicite à 0 si aucune ligne standings.
+- Vérifier que mobile/desktop affichent la même logique.
 
-### File to modify
+4) Vérification ciblée sur « Ligue Flandriennes 2026 »
+- SQL de contrôle :
+  - comparer sorties `manager_team_by_id` avant/après
+  - vérifier qu’aucun point ne provient d’une course hors `selected_course_ids`
+  - vérifier exclusion des courses `< started_at_effective`
+- UI :
+  - Dashboard Home + Mon Équipe (desktop/mobile) : points/jours/victoires à 0 avant la 1re course sélectionnée
+  - Après arrivée de résultats sur une course sélectionnée : les points apparaissent normalement.
 
-**`src/components/auction/v2/AuctionHeaderMobile.tsx`**
-- Remove the entire logo/phase block (lines 93-106): the `<div>` containing the logo `<Link>` and the `Phase {phase_index}` badge
-- Remove the unused `mpcLogo` import (line 8) and the `Link` import (line 7) since they won't be needed anymore
-- The `phase_index` prop can also be removed from the interface and destructuring since it's no longer used
-
+Détails techniques
+- Fichiers impactés :
+  - nouvelle migration SQL (update `manager_team_by_id`)
+  - `supabase/functions/manager-my-team/index.ts`
+  - `src/components/team/MyTeam.desktop.tsx`
+- Aucun backfill nécessaire : calculs dynamiques à la lecture, donc correction immédiate après déploiement.
