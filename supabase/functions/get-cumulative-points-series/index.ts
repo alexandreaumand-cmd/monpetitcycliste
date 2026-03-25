@@ -224,15 +224,46 @@ Deno.serve(async (req) => {
       }
     }
 
-    const pointsData = await fetchAllRows<any>(query);
+    let filteredPointsData = pointsData || [];
 
-    console.log(`✅ Loaded ${pointsData?.length || 0} points_ledger entries (paginated)`);
+    // Filter points by league scope (allowed courses + date floor)
+    if (league_id && (allowedCourseIds || leagueDateFloor)) {
+      // Fetch course dates for date floor filtering
+      const courseIdsToCheck = Array.from(new Set(filteredPointsData.map(p => p.course_id)));
+      let courseDateMap = new Map<string, string>();
+      
+      if (courseIdsToCheck.length > 0 && leagueDateFloor) {
+        const courseDatesQuery = supabaseClient
+          .from('courses')
+          .select('id, date_debut')
+          .in('id', courseIdsToCheck);
+        const courseDatesData = await fetchAllRows<any>(courseDatesQuery);
+        courseDatesData?.forEach((c: any) => {
+          courseDateMap.set(c.id, c.date_debut);
+        });
+      }
+
+      const beforeCount = filteredPointsData.length;
+      filteredPointsData = filteredPointsData.filter((row: any) => {
+        // Filter by allowed courses
+        if (allowedCourseIds && !allowedCourseIds.has(row.course_id)) return false;
+        // Filter by date floor
+        if (leagueDateFloor && courseDateMap.size > 0) {
+          const courseDate = courseDateMap.get(row.course_id);
+          if (courseDate && courseDate < leagueDateFloor) return false;
+        }
+        return true;
+      });
+      console.log(`League scope filter: ${beforeCount} → ${filteredPointsData.length} points`);
+    }
+
+    console.log(`✅ Final ${filteredPointsData.length} points_ledger entries after filtering`);
 
     // -------------------------
     // STEP 5: Fetch race_results pour obtenir les dates de classement
     // -------------------------
     // Extraire les course_ids uniques
-    const uniqueCourseIds = Array.from(new Set(pointsData?.map(p => p.course_id) || []));
+    const uniqueCourseIds = Array.from(new Set(filteredPointsData.map(p => p.course_id)));
     
     console.log(`Fetching race_results for ${uniqueCourseIds.length} courses`);
 
