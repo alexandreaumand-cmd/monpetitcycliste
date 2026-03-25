@@ -91,10 +91,10 @@ Deno.serve(async (req) => {
         }
 
         if (recapType === "weekly") {
-          await sendWeeklyRecap(supabase, league, channel.id, supabaseUrl, serviceKey);
+          await sendWeeklyRecap(supabase, league, channel.id, supabaseUrl, serviceKey, dateOverride);
           results.push({ league: league.name, sent: true, type: "weekly" });
         } else {
-          const sent = await sendDailyRecap(supabase, league, channel.id, supabaseUrl, serviceKey);
+          const sent = await sendDailyRecap(supabase, league, channel.id, supabaseUrl, serviceKey, dateOverride);
           results.push({ league: league.name, sent, type: "daily" });
         }
       } catch (err) {
