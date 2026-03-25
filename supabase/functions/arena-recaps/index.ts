@@ -59,12 +59,14 @@ Deno.serve(async (req) => {
     console.log(`✅ Authenticated via ${authMethod}`);
 
     const supabase = createClient(supabaseUrl, serviceKey);
+    const projectRef = supabaseUrl.replace("https://", "").split(".")[0];
 
     const body = await req.json().catch(() => ({}));
     const recapType: string = body.type || "daily";
     const dateOverride: string | undefined = body.date; // optional "YYYY-MM-DD"
 
-    console.log(`🔄 Starting ${recapType} recap...`);
+    const targetDate = dateOverride || new Date().toISOString().split("T")[0];
+    console.log(`🔄 Starting ${recapType} recap for date=${targetDate}, project=${projectRef}, auth=${authMethod}`);
 
     // 1. Get all active leagues
     const { data: leagues, error: leaguesErr } = await supabase
@@ -74,7 +76,13 @@ Deno.serve(async (req) => {
 
     if (leaguesErr) throw leaguesErr;
     if (!leagues || leagues.length === 0) {
-      return new Response(JSON.stringify({ message: "No active leagues" }), {
+      // Log audit: no leagues
+      await logRecapRun(supabase, {
+        run_type: recapType, target_date: targetDate, project_ref: projectRef,
+        leagues_processed: 0, leagues_sent: 0, status: "no_data",
+        auth_method: authMethod, error_message: "No active leagues",
+      });
+      return new Response(JSON.stringify({ message: "No active leagues", project_ref: projectRef }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -110,19 +118,71 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`✅ Recap complete:`, results);
+    const leaguesSent = results.filter((r) => r.sent).length;
+    const status = leaguesSent === 0 ? "no_data" : leaguesSent === leagues.length ? "success" : "partial";
 
-    return new Response(JSON.stringify({ results }), {
+    // Log audit
+    await logRecapRun(supabase, {
+      run_type: recapType, target_date: targetDate, project_ref: projectRef,
+      leagues_processed: leagues.length, leagues_sent: leaguesSent, status,
+      auth_method: authMethod, details: { results },
+    });
+
+    console.log(`✅ Recap complete: ${leaguesSent}/${leagues.length} leagues`, results);
+
+    return new Response(JSON.stringify({
+      results, project_ref: projectRef, target_date: targetDate,
+      auth_method: authMethod, timestamp: new Date().toISOString(),
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("Recap error:", error);
+
+    // Try to log audit even on error
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, serviceKey);
+      await logRecapRun(supabase, {
+        run_type: "unknown", target_date: new Date().toISOString().split("T")[0],
+        project_ref: supabaseUrl.replace("https://", "").split(".")[0],
+        leagues_processed: 0, leagues_sent: 0, status: "error",
+        error_message: error.message, auth_method: "unknown",
+      });
+    } catch { /* ignore audit error */ }
+
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
+
+// ─── Audit Logger ─────────────────────────────────────────────
+
+async function logRecapRun(supabase: any, data: {
+  run_type: string; target_date: string; project_ref?: string;
+  leagues_processed: number; leagues_sent: number; status: string;
+  error_message?: string; auth_method?: string; details?: any;
+}) {
+  try {
+    await supabase.from("arena_recap_runs").insert({
+      run_type: data.run_type,
+      target_date: data.target_date,
+      project_ref: data.project_ref || null,
+      leagues_processed: data.leagues_processed,
+      leagues_sent: data.leagues_sent,
+      status: data.status,
+      error_message: data.error_message || null,
+      auth_method: data.auth_method || null,
+      details: data.details || null,
+    });
+    console.log(`📝 Audit logged: ${data.run_type} ${data.target_date} → ${data.status}`);
+  } catch (err) {
+    console.error("Failed to log audit:", err);
+  }
+}
 
 // ─── Daily Recap ───────────────────────────────────────────────
 
