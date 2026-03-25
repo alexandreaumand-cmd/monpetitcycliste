@@ -32,6 +32,7 @@ interface RiderPointsDetailProps {
   riderRound?: number;
   phaseId: string;
   saisonId?: string;
+  leagueId?: string | null;
 }
 
 export const RiderPointsDetail = ({
