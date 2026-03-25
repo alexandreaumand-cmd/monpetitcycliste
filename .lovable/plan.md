@@ -1,41 +1,56 @@
 
-Objectif: rétablir l’affichage des classements de la ligue **MPC 2026** (onglet Classement + cartes “Mes ligues”).
 
-Constat confirmé:
-- Les données existent bien en base pour `MPC 2026` (10 lignes dans `v_manager_standings_by_season_v2`).
-- Le problème est donc côté **consommation front** (chargement/erreur silencieuse/cache), pas côté calcul de points.
+## Filtrer les points des courses antérieures à la création de la ligue
 
-Plan d’implémentation
+### Problème
 
-1) Fiabiliser la récupération des stats des cartes de ligue  
-Fichier: `src/hooks/useLeagueCardsData.ts`
-- Ne plus conditionner le fetch de `v_manager_standings_by_season_v2` à `currentManagerId`.
-  - Aujourd’hui: si `currentManagerId` est null/indisponible, `allStandings` devient `[]` => “Aucune donnée disponible”.
-  - Correction: toujours charger les standings par ligue, puis calculer le rang perso seulement si manager courant disponible.
-- Ajouter une vraie gestion d’erreur par batch (standings/scopes/seasons/owners), avec fallback explicite, pour éviter les “vides silencieux”.
+La ligue « Ligue Publique WT sans bonus » a été créée le 25 mars 2026 mais `started_at_effective` est NULL (pas encore d'enchère terminée). Partout dans le code SQL, la condition est :
 
-2) Rendre le composant classement robuste aux erreurs/résultats vides  
-Fichier: `src/components/rankings/ManagerStandings.tsx`
-- Ajouter `isError`/`error` sur la query standings et afficher un état d’erreur dédié (au lieu d’un tableau vide ambigu).
-- Conserver l’état vide uniquement pour “0 ligne réellement retournée”.
-- Forcer un refetch fiable sur changement de contexte ligue/saison (éviter de rester bloqué sur un cache vide initial).
+```sql
+WHERE (l.started_at_effective IS NULL OR c.date_debut >= l.started_at_effective)
+```
 
-3) Aligner le comportement mobile/desktop  
-Fichier: `src/pages/Rankings.mobile.tsx`
-- Appliquer la même logique d’erreur/empty-state que desktop (sinon écarts de comportement selon device).
-- Vérifier que les conditions `enabled` attendent bien les bons identifiants sans figer un état vide.
+Quand `started_at_effective` est NULL, **aucun filtre de date** n'est appliqué → toutes les courses WT de la saison comptent, y compris celles antérieures à la création.
 
-4) Vérification backend minimale (si erreur de query détectée)  
-- Si la query front remonte une erreur d’accès au view, ajouter une migration corrective ciblée:
-  - recréer les vues de standings avec options explicites cohérentes,
-  - revalider les grants SELECT attendus.
-- Pas de refonte SQL des points tant qu’aucune erreur SQL n’est reproduite (les données sont déjà présentes).
+Ce problème touche :
+- `get_top_riders_optimized` (onglet Top Coureurs — visible sur la capture)
+- `v_manager_standings_by_phase_v2` (classement par phase)
+- `v_manager_standings_by_season_v2` (classement saison)
+- `manager_team_by_id` (Mon Équipe)
 
-5) Validation fonctionnelle ciblée (TEST)
-- `/dashboard/classement?leagueId=MPC2026`: lignes managers visibles (plus seulement l’entête).
-- `/dashboard/home?leagueId=MPC2026`: carte MPC 2026 affiche au moins leader/rang/points au lieu de “Aucune donnée disponible”.
-- Vérifier que les ligues “à la course” restent correctes (pas de régression sur le filtrage par scope).
+### Solution
 
-Détails techniques (résumé)
-- Cause la plus probable: logique front trop restrictive + erreurs silencieuses dans les hooks de batch.
-- Correctif clé: dissocier “chargement standings de ligue” et “résolution manager courant”, puis exposer explicitement les états `loading / error / empty / data`.
+**Une seule migration SQL** qui modifie la logique de fallback partout : quand `started_at_effective` est NULL, utiliser `leagues.created_at::date` comme date plancher.
+
+#### Changements dans la migration :
+
+1. **`get_top_riders_optimized`** — Remplacer :
+   ```sql
+   v_started_at_effective := l.started_at_effective
+   ```
+   par :
+   ```sql
+   v_started_at_effective := COALESCE(l.started_at_effective, l.created_at)
+   ```
+   Cela supprime la condition `IS NULL` qui court-circuitait le filtre.
+
+2. **`v_manager_standings_by_phase_v2`** et **`v_manager_standings_by_season_v2`** — Dans toutes les CTEs (`race_pts`, `scoreurs`, `victories`), remplacer :
+   ```sql
+   (l.started_at_effective IS NULL OR c.date_debut >= l.started_at_effective)
+   ```
+   par :
+   ```sql
+   c.date_debut >= COALESCE(l.started_at_effective, l.created_at)::date
+   ```
+
+3. **`manager_team_by_id`** — Même correction si `started_at_effective IS NULL` y est utilisé.
+
+### Résultat attendu
+- « Ligue Publique WT sans bonus » : 0 points partout (aucune course WT n'a débuté le 25 mars ou après avec des résultats)
+- Ligues avec `started_at_effective` renseigné : aucun changement
+- Ligues anciennes (créées en début de saison) : comportement identique car `created_at` est antérieur aux premières courses
+
+### Fichiers impactés
+- 1 nouvelle migration SQL (recréation des vues + fonction)
+- Aucun changement frontend
+
