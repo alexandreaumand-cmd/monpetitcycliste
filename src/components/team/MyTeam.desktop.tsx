@@ -142,7 +142,8 @@ export const MyTeamDesktop = () => {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  // Desktop version
+  const filteredRacesData = useLeagueFilteredRaces(leagueId, riderRacesData);
+
 
   useEffect(() => {
     loadCurrentUser();

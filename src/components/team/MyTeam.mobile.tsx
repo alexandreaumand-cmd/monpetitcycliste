@@ -140,6 +140,8 @@ export const MyTeamMobile = () => {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
+  const filteredRacesData = useLeagueFilteredRaces(leagueId, riderRacesData);
+
   // Set active phase when available
   useEffect(() => {
     if (activePhase) {
