@@ -132,32 +132,30 @@ Deno.serve(async (req) => {
     // Filtrer les coureurs pour masquer ceux non annoncés
     const visibleCoureurs = coureurs?.filter((c: any) => !hiddenRiderIds.includes(c.coureur_id)) || [];
 
+    // Fetch league course scope (used for race_days AND wins)
+    let allowedCourseIds: string[] | null = null;
+    let leagueStartDate: string | null = null;
+    
+    if (league_id) {
+      const { data: leagueCourses } = await supabase.rpc('get_league_course_ids', { p_league_id: league_id });
+      if (leagueCourses) {
+        allowedCourseIds = leagueCourses.map((c: any) => c.course_id);
+      }
+      const { data: leagueData } = await supabase
+        .from('leagues')
+        .select('started_at_effective')
+        .eq('id', league_id)
+        .single();
+      if (leagueData?.started_at_effective) {
+        leagueStartDate = leagueData.started_at_effective.split('T')[0];
+      }
+    }
+
     // Calculer les jours de course par coureur
     const raceDaysMap = new Map<string, number>();
     const effectivePhaseId = phase_id || phaseIdForAnnonces;
     if (effectivePhaseId && visibleCoureurs.length > 0) {
       const today = new Date().toISOString().split('T')[0];
-      
-      // 1. Récupérer les courses passées de la phase (filtrées par league scope si applicable)
-      let allowedCourseIds: string[] | null = null;
-      let leagueStartDate: string | null = null;
-      
-      if (league_id) {
-        // Get allowed course IDs for this league
-        const { data: leagueCourses } = await supabase.rpc('get_league_course_ids', { p_league_id: league_id });
-        if (leagueCourses) {
-          allowedCourseIds = leagueCourses.map((c: any) => c.course_id);
-        }
-        // Get started_at_effective
-        const { data: leagueData } = await supabase
-          .from('leagues')
-          .select('started_at_effective')
-          .eq('id', league_id)
-          .single();
-        if (leagueData?.started_at_effective) {
-          leagueStartDate = leagueData.started_at_effective.split('T')[0];
-        }
-      }
       
       let coursesQuery = supabase
         .from('courses')
