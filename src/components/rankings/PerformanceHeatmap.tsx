@@ -175,15 +175,24 @@ export const PerformanceHeatmap = ({ saisonId }: PerformanceHeatmapProps) => {
                       <td key={phase.phase_id} className="p-1 text-center">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div
-                              className={cn(
-                                "rounded px-2 py-1 text-xs font-medium cursor-pointer transition-colors",
-                                getColorForPercentile(phase.percentile)
-                              )}
-                            >
-                              {phase.rank}
-                              <sup>e</sup>
-                            </div>
+                            {(() => {
+                              const phaseInfo = data.phases.find((p: any) => p.id === phase.phase_id);
+                              const isFuture = phaseInfo && phaseInfo.statut !== 'active' && phaseInfo.statut !== 'completed';
+                              if (isFuture || phase.points === 0) {
+                                return <div className="rounded px-2 py-1 text-xs text-muted-foreground">—</div>;
+                              }
+                              return (
+                                <div
+                                  className={cn(
+                                    "rounded px-2 py-1 text-xs font-medium cursor-pointer transition-colors",
+                                    getColorForPercentile(phase.percentile)
+                                  )}
+                                >
+                                  {phase.rank}
+                                  <sup>e</sup>
+                                </div>
+                              );
+                            })()}
                           </TooltipTrigger>
                           <TooltipContent>
                             <div className="text-xs space-y-1">
@@ -198,7 +207,7 @@ export const PerformanceHeatmap = ({ saisonId }: PerformanceHeatmapProps) => {
                       </td>
                     ))}
                     <td className="p-2 text-right font-semibold">
-                      {manager.total_points.toLocaleString()} pts
+                      {Math.round(manager.total_points).toLocaleString()} pts
                     </td>
                   </tr>
                 ))}
