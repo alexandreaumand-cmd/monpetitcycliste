@@ -428,9 +428,10 @@ async function sendWeeklyRecap(
   league: { id: string; name: string },
   channelId: string,
   supabaseUrl: string,
-  serviceKey: string
+  serviceKey: string,
+  dateOverride?: string
 ) {
-  const now = new Date();
+  const now = dateOverride ? new Date(dateOverride + "T20:00:00Z") : new Date();
 
   // Calculate Monday 00:00 UTC of the current week
   // getUTCDay(): 0=Sunday, 1=Monday, ..., 6=Saturday
