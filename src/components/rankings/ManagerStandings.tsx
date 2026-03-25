@@ -98,7 +98,7 @@ export const ManagerStandings = ({ phaseId, onManagerClick }: StandingsProps) =>
       
       return [];
     },
-    enabled: !leagueLoading,
+    enabled: !leagueLoading && !!leagueId && (!!phaseId || !!selectedSeason),
   });
 
 
