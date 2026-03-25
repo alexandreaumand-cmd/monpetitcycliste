@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
     const categoryPhasePoints = new Map<string, Map<string, number>>(); // categorie -> phase_id -> points
     const categoryTotals = new Map<string, number>();
 
-    (pointsData || []).forEach((p: any) => {
+    allPointsData.forEach((p: any) => {
       if (!p.coureur_id) return;
       const equipeId = riderTeamMap.get(p.coureur_id);
       if (!equipeId) return;
