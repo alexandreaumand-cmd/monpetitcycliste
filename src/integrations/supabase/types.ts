@@ -6078,6 +6078,7 @@ export type Database = {
       }
       v_manager_standings_by_phase_v2: {
         Row: {
+          avatar_url: string | null
           league_id: string | null
           manager_bonus: number | null
           manager_id: string | null
@@ -6093,6 +6094,7 @@ export type Database = {
       }
       v_manager_standings_by_season_v2: {
         Row: {
+          avatar_url: string | null
           league_id: string | null
           manager_bonus: number | null
           manager_id: string | null
