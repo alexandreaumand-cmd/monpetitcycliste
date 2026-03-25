@@ -43,7 +43,7 @@ export function AuctionHeaderMobile({
   deadline_at,
   validated_count = 0,
   total_managers = 0,
-  phase_index,
+  
   onSubmit,
   isSubmitting = false,
 }: AuctionHeaderMobileProps) {
