@@ -303,6 +303,13 @@ export const MyTeamMobile = () => {
             bonus_points: totalBonus,
             total_with_bonus: Number(standing.total_points) || 0,
           }));
+        } else {
+          setKpis(prev => ({
+            ...prev,
+            total_points: 0,
+            bonus_points: 0,
+            total_with_bonus: 0,
+          }));
         }
       }
 
