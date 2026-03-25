@@ -70,6 +70,36 @@ Deno.serve(async (req) => {
 
     console.log('get-cumulative-points-series called with:', { view_mode, phase_id, saison_id, topN, manager_ids, league_id });
 
+    // Fetch league scope: allowed course IDs and date floor
+    let allowedCourseIds: Set<string> | null = null;
+    let leagueDateFloor: string | null = null;
+
+    if (league_id) {
+      // Get allowed courses
+      const { data: scopeCourses } = await supabaseClient.rpc('get_league_course_ids', { p_league_id: league_id });
+      if (scopeCourses && scopeCourses.length > 0) {
+        allowedCourseIds = new Set(scopeCourses.map((r: any) => r.course_id));
+        console.log(`League scope: ${allowedCourseIds.size} allowed courses`);
+      }
+
+      // Get date floor
+      const { data: leagueData } = await supabaseClient
+        .from('leagues')
+        .select('started_at_effective, created_at')
+        .eq('id', league_id)
+        .single();
+      if (leagueData) {
+        const effectiveDate = leagueData.started_at_effective || leagueData.created_at;
+        leagueDateFloor = new Date(effectiveDate).toISOString().split('T')[0];
+        console.log(`League date floor: ${leagueDateFloor}`);
+      }
+
+      // Pre-fetch course dates for filtering
+      if (allowedCourseIds || leagueDateFloor) {
+        // We'll filter after loading courses dates below
+      }
+    }
+
     // Determine date range based on view_mode
     let startDate: Date;
     let endDate: Date = new Date();
