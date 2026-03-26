@@ -1,50 +1,36 @@
 
 
-## Fix décimales et points incorrects dans la Comparaison des Managers (Desktop)
+## Filtrer les courses par `started_at_effective` dans la page Courses
 
-### Problèmes
+### Problème
+La page "Toutes les courses de la saison" affiche toutes les courses de la ligue, y compris celles antérieures au `started_at_effective` (27/03/2026). Or seules les courses à partir de cette date comptent pour les points.
 
-1. **Décimales partout** : Les tableaux "Points par catégorie" et "Points par barème" affichent les valeurs brutes (3493.58, 5089.28999...) sans arrondi
-2. **Total Points avec décimales** : Malgré le fix précédent ajoutant `Math.round()` sur les totaux, les valeurs dans la capture montrent encore des décimales — probablement car le déploiement LIVE n'a pas encore la dernière version, mais les tableaux de catégories n'ont jamais eu d'arrondi
-3. **Points potentiellement incorrects** : La comparaison calcule les points en sommant manuellement `points_ledger` + `bonus_points` + `manager_bonus_points`, ce qui peut diverger du classement officiel (vue SQL `v_manager_standings`)
+La fonction SQL `get_league_courses_with_points` ne filtre pas par `started_at_effective` — elle retourne toutes les courses dans le scope de la ligue.
 
 ### Solution
 
-**`src/components/rankings/ManagerComparison.tsx`** :
+**Filtrer côté frontend** dans `UpcomingCourses.desktop.tsx` et `UpcomingCourses.mobile.tsx` :
 
-1. **Arrondir les valeurs dans `pointsByCategory`** (lignes 643-648) — appliquer `Math.round()` sur `points_a`, `points_b` et `delta` :
-```typescript
-return {
-  category: cat.label,
-  points_a: Math.round(ptsA),
-  points_b: Math.round(ptsB),
-  delta: Math.round(ptsA - ptsB),
-};
+1. **Récupérer `started_at_effective`** depuis la table `leagues` (une seule requête supplémentaire, ou utiliser le contexte de ligue s'il est déjà disponible)
+2. **Filtrer les courses** dont `date_debut >= started_at_effective` avant affichage
+
+Concrètement :
+- Ajouter une requête pour récupérer `started_at_effective` de la ligue courante
+- Dans le filtre `filteredCourses`, exclure les courses dont `date_debut < started_at_effective`
+
+### Alternative (plus propre)
+Ajouter le filtre directement dans la fonction SQL `get_league_courses_with_points` en récupérant `started_at_effective` depuis la table `leagues` :
+
+```sql
+AND vcp.date_debut >= COALESCE(
+  (SELECT started_at_effective FROM leagues WHERE id = p_league_id),
+  '1900-01-01'
+)
 ```
 
-2. **Arrondir les valeurs dans `pointsByBaremeType`** (lignes 593-598) — même traitement :
-```typescript
-return {
-  category: bareme.label,
-  points_a: Math.round(ptsA),
-  points_b: Math.round(ptsB),
-  delta: Math.round(ptsA - ptsB),
-};
-```
-
-3. **Vérifier l'arrondi sur `totalPointsA/B`** — déjà fait dans le code (lignes 845/852), mais s'assurer que c'est bien déployé
-
-**`src/components/rankings/ManagerComparison.mobile.tsx`** :
-
-4. **Ajouter filtre `league_id`** sur les requêtes `points_ledger` (lignes 87-98) et `bonus_points` (lignes 113-126) — même fix que la version desktop, actuellement absent de la version mobile :
-```typescript
-// points_ledger: ajouter .eq("league_id", leagueId!)
-// bonus_points: ajouter .eq("league_id", leagueId!)
-```
-
-5. **Arrondir `pointsByCategory` mobile** (lignes 309-322) — appliquer `Math.round()` sur `managerA` et `managerB`
+Cette approche est préférable car elle filtre à la source et impacte tous les consommateurs.
 
 ### Fichiers impactés
-- `src/components/rankings/ManagerComparison.tsx` — arrondi catégories + barèmes
-- `src/components/rankings/ManagerComparison.mobile.tsx` — filtre `league_id` + arrondi
+- 1 migration SQL — modification de `get_league_courses_with_points`
+- Aucun changement frontend nécessaire si le filtre est en SQL
 
