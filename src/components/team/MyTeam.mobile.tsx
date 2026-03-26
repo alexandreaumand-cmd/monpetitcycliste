@@ -623,12 +623,14 @@ export const MyTeamMobile = () => {
       />
 
       {/* League Bonus Riders Dialog */}
-      <LeagueBonusRidersDialog
-        open={showLeagueBonusDialog}
-        onOpenChange={setShowLeagueBonusDialog}
-        leagueId={leagueId}
-        phaseId={selectedPhaseId}
-      />
+      {bonusesEnabled && (
+        <LeagueBonusRidersDialog
+          open={showLeagueBonusDialog}
+          onOpenChange={setShowLeagueBonusDialog}
+          leagueId={leagueId}
+          phaseId={selectedPhaseId}
+        />
+      )}
 
       {/* League Rosters Overview Dialog */}
       {selectedPhaseId && leagueId && (
