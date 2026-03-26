@@ -1,49 +1,32 @@
 
 
-## Sécuriser les enchères : vérification d'appartenance à la ligue
+## Nettoyer les données orphelines d'Alex dans la ligue TEST
 
-### Problème
-L'Edge Function `auction-upsert-bid` ne vérifie pas que le manager est membre de la ligue. Avec le `SERVICE_ROLE_KEY`, les RLS sont bypassées. Résultat : n'importe quel utilisateur authentifié peut enchérir dans n'importe quelle ligue.
+### Contexte
+- **Alex** (manager `2a0740db`) n'est **pas membre** de la ligue mais possède 18 roster entries + 30 bids
+- Les 3 vrais membres (Ludo, Alex le Desk, LudoTEST10) ont déjà 30/30 coureurs chacun
 
-### Solution — 2 niveaux de protection
+### Actions (données uniquement, pas de code)
 
-**1. Edge Function `auction-upsert-bid/index.ts`**
-Ajouter après la résolution du `manager_id` (ligne ~65) une vérification `league_members` :
-
-```typescript
-// Check manager is a member of this league
-const { data: membership } = await supabase
-  .from('league_members')
-  .select('id')
-  .eq('league_id', league_id)
-  .eq('user_id', user.id)
-  .maybeSingle();
-
-if (!membership) {
-  return new Response(
-    JSON.stringify({ error: 'Vous devez être membre de cette ligue pour enchérir' }),
-    { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
-}
-```
-
-**2. RLS policy sur `bids` (INSERT) — défense en profondeur**
-Renforcer la policy existante pour vérifier l'appartenance :
-
+**1. Supprimer les 18 roster entries d'Alex**
 ```sql
-DROP POLICY "Users can create their own bids" ON public.bids;
-CREATE POLICY "Users can create their own bids" ON public.bids
-FOR INSERT TO public
-WITH CHECK (
-  manager_id IN (SELECT id FROM managers WHERE user_id = auth.uid())
-  AND is_league_member(league_id)
-);
+DELETE FROM rosters 
+WHERE manager_id = '2a0740db-b240-4278-b801-5b0525c282e8' 
+AND league_id = 'edb66d34-826e-435b-b033-b70ee36972aa';
 ```
 
-### Nettoyage des données TEST
-Supprimer les bids orphelins d'Alex dans la ligue "test saison entière 3 managers" (déjà identifiés précédemment).
+**2. Supprimer les 30 bids d'Alex**
+```sql
+DELETE FROM bids 
+WHERE manager_id = '2a0740db-b240-4278-b801-5b0525c282e8' 
+AND league_id = 'edb66d34-826e-435b-b033-b70ee36972aa';
+```
 
-### Fichiers impactés
-- `supabase/functions/auction-upsert-bid/index.ts` — ajout check membership
-- 1 migration SQL — renforcement RLS sur `bids`
+**3. Supprimer les annonces liées aux bids d'Alex** (si existantes)
+Vérifier et nettoyer les annonces associées.
+
+### Résultat attendu
+- Alex disparaît complètement de la ligue
+- Les 3 membres restants (Ludo, Alex le Desk, LudoTEST10) gardent leurs 30/30 coureurs
+- Aucun changement de code nécessaire
 
