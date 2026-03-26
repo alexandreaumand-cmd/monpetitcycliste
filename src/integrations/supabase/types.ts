@@ -2952,6 +2952,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_manager_bonus_points_league"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "manager_bonus_points_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
