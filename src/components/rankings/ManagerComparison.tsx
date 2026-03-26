@@ -214,7 +214,8 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       let query = supabase
         .from("bonus_points")
         .select("points, phase_id")
-        .or(`target_manager_id.eq.${managerA},manager_id.eq.${managerA}`);
+        .or(`target_manager_id.eq.${managerA},manager_id.eq.${managerA}`)
+        .eq("league_id", leagueId!);
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -234,7 +235,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       if (error) throw error;
       return data;
     },
-    enabled: !!managerA,
+    enabled: !!managerA && !!leagueId,
   });
 
   // Fetch bonus_points for manager B
