@@ -245,7 +245,7 @@ Deno.serve(async (req) => {
     let filteredBonusData = bonusData || [];
     if (leagueDateFloor) {
       filteredBonusData = filteredBonusData.filter(b => {
-        if (!b.course_id) return false; // Exclude bonuses without course_id in league mode
+        if (!b.course_id) return true; // Global bonus (e.g. rider bonus), already filtered by phase
         const course = coursesMap.get(b.course_id);
         return course && course.date_debut && course.date_debut >= leagueDateFloor!;
       });
