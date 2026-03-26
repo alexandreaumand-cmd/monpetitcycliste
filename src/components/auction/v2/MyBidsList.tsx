@@ -97,7 +97,7 @@ export function MyBidsList({
     } else if (sortBy === 'amount') {
       newBids.sort((a, b) => b.amount - a.amount);
     }
-    return [...existingBids, ...newBids];
+    return [...newBids, ...existingBids];
   }, [bids, sortBy]);
 
   const cycleSortBy = () => {
