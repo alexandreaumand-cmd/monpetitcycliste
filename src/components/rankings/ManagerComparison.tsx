@@ -707,8 +707,8 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
    const roiA = Math.round(totalPointsA / budgetA).toString();
    const roiB = Math.round(totalPointsB / budgetB).toString();
 
-  const victoiresA = victoriesA?.length || 0;
-  const victoiresB = victoriesB?.length || 0;
+  const victoiresA = victoriesCountA || 0;
+  const victoiresB = victoriesCountB || 0;
 
   const managerAData = selectedManagers?.find(m => m.id === managerA);
   const managerBData = selectedManagers?.find(m => m.id === managerB);

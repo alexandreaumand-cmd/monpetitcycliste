@@ -257,8 +257,8 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
 
   const roiA = budgetA > 0 ? totalPointsA / budgetA : 0;
   const roiB = budgetB > 0 ? totalPointsB / budgetB : 0;
-  const victoiresA = victoriesA?.length || 0;
-  const victoiresB = victoriesB?.length || 0;
+  const victoiresA = victoriesCountA || 0;
+  const victoiresB = victoriesCountB || 0;
 
   const coursesMap = useMemo(() => {
     if (!courses) return new Map();
