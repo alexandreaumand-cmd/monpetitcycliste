@@ -798,7 +798,7 @@ export const MyTeamDesktop = () => {
                   >
                     <TableCell className="font-medium py-2">
                       <div className="flex items-center gap-2">
-                        {bonusRiderSelection?.coureur_id === coureur.coureur_id && (
+                        {bonusesEnabled && bonusRiderSelection?.coureur_id === coureur.coureur_id && (
                           <Star className="h-4 w-4 text-bordure-gold fill-bordure-gold" />
                         )}
                         {coureur.nom}
