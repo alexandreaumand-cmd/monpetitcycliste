@@ -116,7 +116,8 @@ Deno.serve(async (req) => {
         .from('rosters')
         .select('manager_id')
         .eq('coureur_id', result.coureur_id)
-        .eq('phase_id', course.phase_id);
+        .eq('phase_id', course.phase_id)
+        .eq('league_id', league_id);
 
       if (ownersError) {
         console.error('Error fetching owners:', ownersError);
