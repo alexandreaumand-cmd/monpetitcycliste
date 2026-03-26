@@ -904,44 +904,46 @@ export const MyTeamDesktop = () => {
       )}
 
       {/* Bonus Rider Selection Dialog */}
-      <Dialog open={showBonusRiderDialog} onOpenChange={setShowBonusRiderDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('bonusRider.selectTitle')}</DialogTitle>
-              <DialogDescription>
-                {t('bonusRider.description')}
-                <br />⚠️ {t('bonusRider.warning')}
-              </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {coureurs
-              .filter(c => c.cote_initiale === 10 || c.cote_initiale === 20)
-              .map((coureur) => (
-                <Button
-                  key={coureur.coureur_id}
-                  variant="outline"
-                  className="w-full justify-start gap-3 h-auto py-3"
-                  onClick={() => handleSelectBonusRider(coureur.coureur_id, coureur.nom)}
-                >
-                  <Star className="h-5 w-5 text-amber-500" />
-                  <div className="text-left">
-                    <div className="font-semibold">{coureur.nom}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {coureur.equipe} • {t('rating')}: {coureur.cote_initiale} • {coureur.points_total} pts
-                    </div>
-                  </div>
-                </Button>
-              ))}
+      {bonusesEnabled && (
+        <Dialog open={showBonusRiderDialog} onOpenChange={setShowBonusRiderDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('bonusRider.selectTitle')}</DialogTitle>
+                <DialogDescription>
+                  {t('bonusRider.description')}
+                  <br />⚠️ {t('bonusRider.warning')}
+                </DialogDescription>
+            </DialogHeader>
             
-            {coureurs.filter(c => c.cote_initiale === 10 || c.cote_initiale === 20).length === 0 && (
-              <p className="text-center text-muted-foreground py-4">
-                {t('bonusRider.noEligible')}
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {coureurs
+                .filter(c => c.cote_initiale === 10 || c.cote_initiale === 20)
+                .map((coureur) => (
+                  <Button
+                    key={coureur.coureur_id}
+                    variant="outline"
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    onClick={() => handleSelectBonusRider(coureur.coureur_id, coureur.nom)}
+                  >
+                    <Star className="h-5 w-5 text-amber-500" />
+                    <div className="text-left">
+                      <div className="font-semibold">{coureur.nom}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {coureur.equipe} • {t('rating')}: {coureur.cote_initiale} • {coureur.points_total} pts
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+              
+              {coureurs.filter(c => c.cote_initiale === 10 || c.cote_initiale === 20).length === 0 && (
+                <p className="text-center text-muted-foreground py-4">
+                  {t('bonusRider.noEligible')}
+                </p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Rider Points Detail */}
       <RiderPointsDetail
