@@ -144,10 +144,11 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
       const coureurIds = rostersA.map(r => r.coureur_id);
 
-    let query = supabase
+    let query = (supabase
       .from("points_ledger")
       .select("coureur_id, points, type_classement, course_id, phase_id")
-      .in("coureur_id", coureurIds);
+      .in("coureur_id", coureurIds) as any)
+      .eq("league_id", leagueId!);
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -162,13 +163,12 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
           query = query.in("phase_id", phaseIds);
         }
       }
-      // ELSE: No filter = all phases (global standings)
 
       const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!managerA && !!rostersA,
+    enabled: !!managerA && !!rostersA && !!leagueId,
   });
 
   const { data: pointsB } = useQuery({
@@ -178,10 +178,11 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
       const coureurIds = rostersB.map(r => r.coureur_id);
 
-    let query = supabase
+    let query = (supabase
       .from("points_ledger")
       .select("coureur_id, points, type_classement, course_id, phase_id")
-      .in("coureur_id", coureurIds);
+      .in("coureur_id", coureurIds) as any)
+      .eq("league_id", leagueId!);
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -196,13 +197,12 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
           query = query.in("phase_id", phaseIds);
         }
       }
-      // ELSE: No filter = all phases (global standings)
 
       const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!managerB && !!rostersB,
+    enabled: !!managerB && !!rostersB && !!leagueId,
   });
 
   // Fetch bonus_points for manager A
@@ -214,7 +214,8 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       let query = supabase
         .from("bonus_points")
         .select("points, phase_id")
-        .or(`target_manager_id.eq.${managerA},manager_id.eq.${managerA}`);
+        .or(`target_manager_id.eq.${managerA},manager_id.eq.${managerA}`)
+        .eq("league_id", leagueId!);
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -234,7 +235,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       if (error) throw error;
       return data;
     },
-    enabled: !!managerA,
+    enabled: !!managerA && !!leagueId,
   });
 
   // Fetch bonus_points for manager B
@@ -246,7 +247,8 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       let query = supabase
         .from("bonus_points")
         .select("points, phase_id")
-        .or(`target_manager_id.eq.${managerB},manager_id.eq.${managerB}`);
+        .or(`target_manager_id.eq.${managerB},manager_id.eq.${managerB}`)
+        .eq("league_id", leagueId!);
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -266,7 +268,7 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       if (error) throw error;
       return data;
     },
-    enabled: !!managerB,
+    enabled: !!managerB && !!leagueId,
   });
 
   // Fetch manager_bonus_points for manager A
@@ -838,19 +840,19 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
                     <span className={cn(
                       "font-mono font-bold text-lg",
                       totalPointsA > totalPointsB && "text-green-600"
-                    )}>{totalPointsA}</span>
+                    )}>{Math.round(totalPointsA)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{managerBName}</span>
                     <span className={cn(
                       "font-mono font-bold text-lg",
                       totalPointsB > totalPointsA && "text-green-600"
-                    )}>{totalPointsB}</span>
+                    )}>{Math.round(totalPointsB)}</span>
                   </div>
                   <div className="pt-2 border-t flex justify-between items-center">
                     <span className="text-sm font-medium">Écart</span>
                     <Badge variant={totalPointsA > totalPointsB ? "default" : "destructive"}>
-                      {totalPointsA > totalPointsB ? "+" : ""}{totalPointsA - totalPointsB}
+                      {totalPointsA > totalPointsB ? "+" : ""}{Math.round(totalPointsA - totalPointsB)}
                     </Badge>
                   </div>
                 </div>
