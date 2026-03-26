@@ -620,7 +620,7 @@ export const MyTeamDesktop = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {!hasSelectedBonusRider && !selectedManagerId && (
+            {bonusesEnabled && !hasSelectedBonusRider && !selectedManagerId && (
               <Button
                 onClick={() => setShowBonusRiderDialog(true)}
                 variant="secondary"
@@ -630,14 +630,16 @@ export const MyTeamDesktop = () => {
                 <Star className="h-4 w-4" />
               </Button>
             )}
-            <Button
-              onClick={() => setShowLeagueBonusDialog(true)}
-              variant="outline"
-              size="sm"
-              title={t('bonusRider.viewOthers')}
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
+            {bonusesEnabled && (
+              <Button
+                onClick={() => setShowLeagueBonusDialog(true)}
+                variant="outline"
+                size="sm"
+                title={t('bonusRider.viewOthers')}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               onClick={() => setShowRostersOverviewDialog(true)}
               variant="outline"
