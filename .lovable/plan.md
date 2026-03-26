@@ -1,32 +1,25 @@
 
 
-## Nettoyer les données orphelines d'Alex dans la ligue TEST
+## Fermer le round 4 de la ligue "test saison entière 3 managers"
 
-### Contexte
-- **Alex** (manager `2a0740db`) n'est **pas membre** de la ligue mais possède 18 roster entries + 30 bids
-- Les 3 vrais membres (Ludo, Alex le Desk, LudoTEST10) ont déjà 30/30 coureurs chacun
+### Constat
+- Le round 4 (auction `7302ff6e-5b96-4ebf-ab5f-ba983ae940b8`) est `open` mais **aucun bid n'a été posé**
+- Les 3 managers ont déjà 30/30 coureurs — le round est vide
+- L'edge function `clore-round` nécessite une authentification (tu n'es pas connecté sur le preview)
 
-### Actions (données uniquement, pas de code)
+### Solution : migration SQL pour fermer le round
 
-**1. Supprimer les 18 roster entries d'Alex**
 ```sql
-DELETE FROM rosters 
-WHERE manager_id = '2a0740db-b240-4278-b801-5b0525c282e8' 
-AND league_id = 'edb66d34-826e-435b-b033-b70ee36972aa';
+UPDATE auctions
+SET statut = 'closed',
+    closed_at = NOW()
+WHERE id = '7302ff6e-5b96-4ebf-ab5f-ba983ae940b8'
+  AND statut = 'open';
 ```
 
-**2. Supprimer les 30 bids d'Alex**
-```sql
-DELETE FROM bids 
-WHERE manager_id = '2a0740db-b240-4278-b801-5b0525c282e8' 
-AND league_id = 'edb66d34-826e-435b-b033-b70ee36972aa';
-```
+### Alternative
+Te connecter sur le preview en tant qu'admin de cette ligue et cliquer sur "Clôturer le round" depuis l'interface.
 
-**3. Supprimer les annonces liées aux bids d'Alex** (si existantes)
-Vérifier et nettoyer les annonces associées.
-
-### Résultat attendu
-- Alex disparaît complètement de la ligue
-- Les 3 membres restants (Ludo, Alex le Desk, LudoTEST10) gardent leurs 30/30 coureurs
-- Aucun changement de code nécessaire
+### Fichier impacté
+- 1 migration SQL uniquement
 
