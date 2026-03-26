@@ -592,9 +592,9 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
       return {
         category: bareme.label,
-        points_a: ptsA,
-        points_b: ptsB,
-        delta: ptsA - ptsB,
+        points_a: Math.round(ptsA),
+        points_b: Math.round(ptsB),
+        delta: Math.round(ptsA - ptsB),
       };
     });
   }, [pointsA, pointsB, courses]);
