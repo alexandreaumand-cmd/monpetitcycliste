@@ -181,7 +181,8 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     let query = supabase
       .from("points_ledger")
       .select("coureur_id, points, type_classement, course_id, phase_id")
-      .in("coureur_id", coureurIds);
+      .in("coureur_id", coureurIds)
+      .eq("league_id", leagueId!);
 
       if (phaseId) {
         query = query.eq("phase_id", phaseId);
@@ -196,13 +197,12 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
           query = query.in("phase_id", phaseIds);
         }
       }
-      // ELSE: No filter = all phases (global standings)
 
       const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!managerB && !!rostersB,
+    enabled: !!managerB && !!rostersB && !!leagueId,
   });
 
   // Fetch bonus_points for manager A
