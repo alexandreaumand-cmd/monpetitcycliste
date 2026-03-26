@@ -182,72 +182,73 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     },
   });
 
-  // Fetch victories excluding ties
+  // Fetch victories excluding ties — strict league filtering
   const fetchVictories = async (managerId: string) => {
-    if (!managerId) return null;
+    if (!managerId || !leagueId) return null;
     const pIds = await getPhaseIds();
+    if (pIds.length === 0) return [];
 
-    // Fetch ALL position=1 results
-    const { data: allWins, error } = await supabase
+    // 1. Get courseIds scoped to these phases
+    const { data: courses } = await supabase
+      .from("courses")
+      .select("id")
+      .in("phase_id", pIds);
+    const courseIds = courses?.map(c => c.id) || [];
+    if (courseIds.length === 0) return [];
+
+    // 2. Get manager's roster coureurIds for this league
+    const { data: rostersData } = await supabase
+      .from("rosters")
+      .select("coureur_id")
+      .eq("manager_id", managerId)
+      .eq("league_id", leagueId);
+    const coureurIds = [...new Set(rostersData?.map(r => r.coureur_id) || [])];
+    if (coureurIds.length === 0) return [];
+
+    // 3. Query race_results with direct filters
+    const { data: allWins, error } = await (supabase
       .from("race_results")
-      .select(`
-        id, coureur_id, course_id, type_classement, etape_numero,
-        courses!inner(phase_id)
-      `)
+      .select("id, coureur_id, course_id, type_classement, etape_numero") as any)
       .eq("position", 1)
       .eq("statut", "finished")
-      .in("type_classement", ["Etape", "General"]);
-
+      .in("type_classement", ["Etape", "General"])
+      .in("course_id", courseIds)
+      .in("coureur_id", coureurIds);
     if (error) throw error;
 
-    // Exclude ties
+    // 4. Exclude ties
+    const { data: allPos1 } = await (supabase
+      .from("race_results")
+      .select("id, coureur_id, course_id, type_classement, etape_numero") as any)
+      .eq("position", 1)
+      .eq("statut", "finished")
+      .in("type_classement", ["Etape", "General"])
+      .in("course_id", courseIds);
+
     const groupKey = (v: any) => `${v.course_id}|${v.type_classement}|${v.etape_numero ?? 'null'}`;
     const groups = new Map<string, any[]>();
-    allWins?.forEach(v => {
+    allPos1?.forEach((v: any) => {
       const key = groupKey(v);
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(v);
     });
-    const uniqueWins = Array.from(groups.values())
-      .filter(g => g.length === 1)
+
+    const coureurIdSet = new Set(coureurIds);
+    return Array.from(groups.values())
+      .filter(g => g.length === 1 && coureurIdSet.has(g[0].coureur_id))
       .map(g => g[0]);
-
-    // Get manager's rosters (league-scoped)
-    let rostersQuery = leagueClient
-      .from("rosters")
-      .select("coureur_id, phase_id")
-      .eq("manager_id", managerId);
-    if (pIds.length > 0) rostersQuery = rostersQuery.in("phase_id", pIds);
-
-    const { data: rostersData, error: re } = await rostersQuery;
-    if (re) throw re;
-
-    const rostersByRider = new Map<string, Set<string>>();
-    rostersData?.forEach(r => {
-      if (!rostersByRider.has(r.coureur_id)) rostersByRider.set(r.coureur_id, new Set());
-      rostersByRider.get(r.coureur_id)!.add(r.phase_id);
-    });
-
-    return uniqueWins.filter(v => {
-      const coursePhaseId = v.courses?.phase_id;
-      if (!coursePhaseId) return false;
-      const riderPhases = rostersByRider.get(v.coureur_id);
-      if (!riderPhases) return false;
-      return riderPhases.has(coursePhaseId) &&
-        (pIds.length === 0 || pIds.includes(coursePhaseId));
-    });
   };
 
   const { data: victoriesA } = useQuery({
     queryKey: ["victories-a", managerA, phaseId, saisonId, leagueId],
     queryFn: () => fetchVictories(managerA),
-    enabled: !!managerA,
+    enabled: !!managerA && !!leagueId,
   });
 
   const { data: victoriesB } = useQuery({
     queryKey: ["victories-b", managerB, phaseId, saisonId, leagueId],
     queryFn: () => fetchVictories(managerB),
-    enabled: !!managerB,
+    enabled: !!managerB && !!leagueId,
   });
 
   // Metrics
