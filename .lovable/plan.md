@@ -1,37 +1,28 @@
 
 
-## Corriger le filtrage league dans `get-rider-points-table`
+## Dédupliquer les coureurs dans "Les plus gros loupés"
 
-### Cause racine
-La fonction edge `get-rider-points-table` crée son client Supabase **sans le header Authorization** de l'utilisateur (ligne 14). Le client est donc "anonyme".
+### Problème
+Quand plusieurs managers perdent une enchère sur le même coureur, chaque enchère perdante apparaît comme une entrée distincte. Mads Pedersen apparaît donc 2 fois (Ludo et Alex ont tous les deux perdu).
 
-Quand il appelle `supabase.rpc('get_league_course_ids', ...)`, la fonction SQL (qui est `SECURITY INVOKER`) exécute une requête sur `league_scopes`, mais les politiques RLS de cette table exigent soit `is_league_member()` soit une ligue publique. Un client anonyme échoue silencieusement → la liste de courses retournée est **vide** → `leagueCourseIds` reste `null` → **aucun filtre n'est appliqué** → tous les points sont renvoyés.
-
-En comparaison, `manager-my-team` passe bien le header Authorization au client, ce qui permet à RLS de fonctionner.
-
-### Correction
-**Fichier** : `supabase/functions/get-rider-points-table/index.ts`
-
-Modifier la création du client Supabase (ligne 14) pour inclure le header Authorization, exactement comme dans `manager-my-team` :
-
-```typescript
-// Avant (ligne 14)
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// Après
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  global: {
-    headers: { Authorization: authHeader },
-  },
-});
-```
-
-Et déplacer la récupération de `authHeader` **avant** la création du client (actuellement aux lignes 17-18, la déplacer avant la ligne 14).
-
-### Résultat attendu
-- Noa Isidore dans "Flandriennes 2026" : **0 point** (la Volta est correctement exclue)
-- Aucune régression pour les autres ligues ou le mode sans ligue
+### Solution
+Après le calcul de `closeCalls` (ligne 203-210), dédupliquer par `coureur_id` en ne gardant que l'enchère la plus proche (plus petit `diff_percent`) pour chaque coureur.
 
 ### Fichier impacté
-- `supabase/functions/get-rider-points-table/index.ts` (une seule modification)
+- `src/components/auction/v2/PhaseRecapTab.tsx` — lignes 203-210
+
+### Détail technique
+```typescript
+// Après le .slice(0, 10) existant, ajouter un dédoublonnage par coureur_id :
+const closeCallsMap = new Map();
+closeCalls.forEach(c => {
+  const key = c.coureur_id;
+  if (!closeCallsMap.has(key) || c.diff_percent < closeCallsMap.get(key).diff_percent) {
+    closeCallsMap.set(key, c);
+  }
+});
+const deduped = [...closeCallsMap.values()].sort((a, b) => a.diff_percent - b.diff_percent).slice(0, 10);
+```
+
+Remplacer l'usage de `closeCalls` dans le rendu par `deduped`.
 
