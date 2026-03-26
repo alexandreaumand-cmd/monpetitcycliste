@@ -260,7 +260,12 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline justify-between gap-2">
-                          <span className="font-medium text-sm truncate">{item.rider_name}</span>
+                          <span className="font-medium text-sm truncate flex items-center gap-1">
+                            {(item as any).startlist_entries?.team_confirmed && (
+                              <CheckCircle2 className="h-3 w-3 text-green-600 shrink-0" />
+                            )}
+                            {item.rider_name}
+                          </span>
                           <span className="text-xs text-muted-foreground whitespace-nowrap">
                             {format(new Date(item.detected_at), "dd MMM HH:mm", { locale: fr })}
                           </span>

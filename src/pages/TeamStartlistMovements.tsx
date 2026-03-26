@@ -125,7 +125,12 @@ export default function TeamStartlistMovements() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{m.rider_name}</div>
+                <div className="font-medium truncate flex items-center gap-1">
+                  {(m as any).startlist_entries?.team_confirmed && (
+                    <CheckCircle2 className="h-3 w-3 text-green-600 shrink-0" />
+                  )}
+                  {m.rider_name}
+                </div>
                 <div className="text-sm text-muted-foreground truncate">
                   {m.course_name}
                 </div>
