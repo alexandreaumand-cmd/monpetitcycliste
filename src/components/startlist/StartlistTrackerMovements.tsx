@@ -5,7 +5,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowDownUp, Plus, Minus } from "lucide-react";
+import { ArrowDownUp, Plus, Minus, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useSeasonContext } from "@/contexts/SeasonContext";
@@ -70,7 +70,7 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
       if (!phaseCourseIds.length) return [];
       const { data } = await supabase
         .from("startlist_tracker_changes")
-        .select("id, change_type, rider_name, team_name, course_name, course_id, coureur_id, detected_at")
+        .select("id, change_type, rider_name, team_name, course_name, course_id, coureur_id, detected_at, startlist_entries!startlist_tracker_changes_startlist_entry_id_fkey(team_confirmed)")
         .in("course_id", phaseCourseIds)
         .order("detected_at", { ascending: false })
         .limit(200);
@@ -220,7 +220,14 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="font-medium">{item.rider_name}</TableCell>
+                          <TableCell className="font-medium">
+                            <span className="flex items-center gap-1">
+                              {(item as any).startlist_entries?.team_confirmed && (
+                                <CheckCircle2 className="h-3 w-3 text-green-600 shrink-0" />
+                              )}
+                              {item.rider_name}
+                            </span>
+                          </TableCell>
                           <TableCell className="text-muted-foreground">{getTeamName(item)}</TableCell>
                           <TableCell className="text-muted-foreground">
                             {rosterMap?.get(item.coureur_id || "")?.name || "-"}
@@ -253,7 +260,12 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline justify-between gap-2">
-                          <span className="font-medium text-sm truncate">{item.rider_name}</span>
+                          <span className="font-medium text-sm truncate flex items-center gap-1">
+                            {(item as any).startlist_entries?.team_confirmed && (
+                              <CheckCircle2 className="h-3 w-3 text-green-600 shrink-0" />
+                            )}
+                            {item.rider_name}
+                          </span>
                           <span className="text-xs text-muted-foreground whitespace-nowrap">
                             {format(new Date(item.detected_at), "dd MMM HH:mm", { locale: fr })}
                           </span>

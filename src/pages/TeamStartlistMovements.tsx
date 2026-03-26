@@ -2,7 +2,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Minus } from "lucide-react";
+import { ArrowLeft, Plus, Minus, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -73,7 +73,7 @@ export default function TeamStartlistMovements() {
       if (!rosterCoureurIds?.length || !phaseCourseIds?.length) return [];
       const { data } = await supabase
         .from("startlist_tracker_changes")
-        .select("id, coureur_id, rider_name, course_name, change_type, detected_at, course_id")
+        .select("id, coureur_id, rider_name, course_name, change_type, detected_at, course_id, startlist_entries!startlist_tracker_changes_startlist_entry_id_fkey(team_confirmed)")
         .in("coureur_id", rosterCoureurIds)
         .in("course_id", phaseCourseIds)
         .order("detected_at", { ascending: false });
@@ -125,7 +125,12 @@ export default function TeamStartlistMovements() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{m.rider_name}</div>
+                <div className="font-medium truncate flex items-center gap-1">
+                  {(m as any).startlist_entries?.team_confirmed && (
+                    <CheckCircle2 className="h-3 w-3 text-green-600 shrink-0" />
+                  )}
+                  {m.rider_name}
+                </div>
                 <div className="text-sm text-muted-foreground truncate">
                   {m.course_name}
                 </div>
