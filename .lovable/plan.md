@@ -1,32 +1,37 @@
 
 
-## Masquer le bouton coureur bonusé quand les bonus sont désactivés
+## Ajouter un indicateur bonus activé/désactivé sur les cartes de ligue
 
 ### Problème
-Le bouton "Choisir coureur bonus" et les fonctionnalités associées (étoile, dialog de sélection, dialog des coureurs bonusés de la ligue) s'affichent dans **toutes** les ligues, y compris celles où `bonuses_enabled = false` comme "Ligue Publique WT sans bonus".
+Aucune indication visuelle ne permet de savoir si les bonus sont activés ou non dans une ligue depuis la page d'accueil.
 
 ### Solution
-Conditionner l'affichage de tous les éléments liés au coureur bonusé sur `bonuses_enabled` de la ligue courante.
+Ajouter un `Badge` conditionnel dans la ligne 2 du `CardHeader` (à côté des badges game mode et saison), qui affiche :
+- **Bonus activés** : icône `Star` + texte "Bonus" (style doré/accent)
+- **Bonus désactivés** : icône `StarOff` + texte "Sans bonus" (style muted)
 
-### Fichiers impactés
+### Fichier impacté
+- `src/components/dashboard/LeagueCard.tsx` — ajouter un badge après le badge saison (~ligne 118)
 
-**1. `src/components/team/MyTeam.desktop.tsx`**
-- Récupérer `bonuses_enabled` depuis le contexte de la ligue (ou depuis les données de ligue déjà chargées)
-- Envelopper dans `bonuses_enabled &&` :
-  - Le bouton "Choisir coureur bonus" (~ligne 622)
-  - Le bouton "Voir les coureurs bonusés" (~ligne 633)
-  - L'étoile à côté du nom du coureur bonusé (~ligne 798)
-  - Le dialog de sélection (~ligne 903)
-  - Le dialog des coureurs bonusés de la ligue (~ligne 958)
-- Sauter la requête `bonus_rider_selections` si `!bonuses_enabled`
+### Détail
+```tsx
+import { Star, StarOff } from "lucide-react";
 
-**2. `src/components/team/MyTeam.mobile.tsx`** (même logique)
-- Mêmes conditions sur les éléments bonus rider mobile
-
-**3. Accès à `bonuses_enabled`**
-- Vérifier si le `LeagueContext` expose déjà `bonuses_enabled` ; sinon, l'ajouter depuis la requête ligue existante
+// Après le badge saison (ligne ~118), ajouter :
+<Badge 
+  variant="outline" 
+  className={`gap-1 text-xs shrink-0 font-inter ${
+    league.bonuses_enabled 
+      ? "text-amber-600 border-amber-300" 
+      : "text-muted-foreground border-muted-foreground/30"
+  }`}
+>
+  {league.bonuses_enabled ? <Star className="h-3 w-3" /> : <StarOff className="h-3 w-3" />}
+  {league.bonuses_enabled ? "Bonus" : "Sans bonus"}
+</Badge>
+```
 
 ### Résultat attendu
-- "Ligue Publique WT sans bonus" : aucun bouton bonus, aucune étoile, aucun dialog
-- Ligues avec bonus activés : comportement inchangé
+- "Ligue Publique WT sans bonus" → badge gris "Sans bonus" avec icône `StarOff`
+- Toutes les autres ligues → badge doré "Bonus" avec icône `Star`
 
