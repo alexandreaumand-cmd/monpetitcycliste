@@ -488,10 +488,12 @@ export const MyTeamMobile = () => {
         <Button variant="ghost" size="icon" onClick={() => setShowRostersOverviewDialog(true)}>
           <Users className="h-5 w-5" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={() => setShowLeagueBonusDialog(true)}>
-          <Eye className="h-5 w-5" />
-        </Button>
-        {!hasSelectedBonusRider && !selectedManagerId && (
+        {bonusesEnabled && (
+          <Button variant="ghost" size="icon" onClick={() => setShowLeagueBonusDialog(true)}>
+            <Eye className="h-5 w-5" />
+          </Button>
+        )}
+        {bonusesEnabled && !hasSelectedBonusRider && !selectedManagerId && (
           <Button variant="ghost" size="icon" onClick={() => setShowBonusRiderDialog(true)}>
             <Star className="h-5 w-5" />
           </Button>
