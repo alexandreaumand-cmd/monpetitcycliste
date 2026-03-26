@@ -446,14 +446,16 @@ export const MyTeamMobile = () => {
           <span className="text-muted-foreground">pts</span>
         </div>
         
-        <div 
-          className="flex items-center gap-1 cursor-pointer" 
-          onClick={() => setBonusDetailsOpen(true)}
-        >
-          <Star className="h-4 w-4 text-amber-500" />
-          <span className="font-semibold">{kpis.bonus_points}</span>
-          <span className="text-muted-foreground">bonus</span>
-        </div>
+        {bonusesEnabled && (
+          <div 
+            className="flex items-center gap-1 cursor-pointer" 
+            onClick={() => setBonusDetailsOpen(true)}
+          >
+            <Star className="h-4 w-4 text-amber-500" />
+            <span className="font-semibold">{kpis.bonus_points}</span>
+            <span className="text-muted-foreground">bonus</span>
+          </div>
+        )}
         
         <div className="flex items-center gap-1 text-muted-foreground">
           <TrendingUp className="h-4 w-4" />
