@@ -17,11 +17,18 @@ interface RouteImageGalleryProps {
   onImageClick?: (imageUrl: string) => void;
   className?: string;
   compact?: boolean;
+  defaultStageNumber?: number;
 }
 
-export function RouteImageGallery({ images, fallbackUrl, onImageClick, className, compact = false }: RouteImageGalleryProps) {
+function computeDefaultIndex(images: RouteImage[], defaultStageNumber?: number): number {
+  if (defaultStageNumber == null || images.length === 0) return 0;
+  const idx = images.findIndex(img => img.etape_numero === defaultStageNumber);
+  return idx >= 0 ? idx : 0;
+}
+
+export function RouteImageGallery({ images, fallbackUrl, onImageClick, className, compact = false, defaultStageNumber }: RouteImageGalleryProps) {
   const allImages = images.length > 0 ? images : (fallbackUrl ? [{ etape_numero: null, image_url: fallbackUrl, label: 'Parcours', sort_order: 0 }] : []);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(() => computeDefaultIndex(allImages, defaultStageNumber));
 
   if (allImages.length === 0) return null;
 
