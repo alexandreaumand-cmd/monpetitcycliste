@@ -414,86 +414,40 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     },
   });
 
-  // Helper: fetch victories for a manager, excluding ties — strict league filtering
-  const fetchVictories = async (managerId: string) => {
-    if (!leagueId) return [];
-    
-    // 1. Get phaseIds for the league
-    let phaseIds: string[] = [];
+  // 6. Récupérer les victoires depuis la vue standings (filtrage correct par league scope + date)
+  const fetchVictoriesFromStandings = async (managerId: string): Promise<number> => {
+    if (!leagueId) return 0;
+
     if (phaseId) {
-      phaseIds = [phaseId];
+      const { data } = await supabase
+        .from("v_manager_standings_by_phase_v2")
+        .select("nb_victoires")
+        .eq("manager_id", managerId)
+        .eq("league_id", leagueId)
+        .eq("phase_id", phaseId)
+        .maybeSingle();
+      return data?.nb_victoires || 0;
     } else if (saisonId) {
-      const { data: phases } = await supabase
-        .from("phases")
-        .select("id")
-        .eq("saison_id", saisonId);
-      phaseIds = phases?.map(p => p.id) || [];
+      const { data } = await supabase
+        .from("v_manager_standings_by_season_v2")
+        .select("nb_victoires")
+        .eq("manager_id", managerId)
+        .eq("league_id", leagueId)
+        .maybeSingle();
+      return data?.nb_victoires || 0;
     }
-    if (phaseIds.length === 0) return [];
-
-    // 2. Get courseIds scoped to these phases
-    const { data: courses } = await supabase
-      .from("courses")
-      .select("id")
-      .in("phase_id", phaseIds);
-    const courseIds = courses?.map(c => c.id) || [];
-    if (courseIds.length === 0) return [];
-
-    // 3. Get manager's roster coureurIds for this league
-    const { data: rostersData } = await supabase
-      .from("rosters")
-      .select("coureur_id")
-      .eq("manager_id", managerId)
-      .eq("league_id", leagueId);
-    const coureurIds = [...new Set(rostersData?.map(r => r.coureur_id) || [])];
-    if (coureurIds.length === 0) return [];
-
-    // 4. Query race_results with direct filters (no embed filtering)
-    const { data: allWins, error } = await (supabase
-      .from("race_results")
-      .select("id, coureur_id, course_id, type_classement, etape_numero") as any)
-      .eq("position", 1)
-      .eq("statut", "finished")
-      .in("type_classement", ["Etape", "General"])
-      .in("course_id", courseIds)
-      .in("coureur_id", coureurIds);
-    if (error) throw error;
-
-    // 5. Exclude ties: group by (course_id, type_classement, etape_numero)
-    // Re-query full group to detect ties (other riders at same position)
-    const { data: allPos1 } = await (supabase
-      .from("race_results")
-      .select("id, coureur_id, course_id, type_classement, etape_numero") as any)
-      .eq("position", 1)
-      .eq("statut", "finished")
-      .in("type_classement", ["Etape", "General"])
-      .in("course_id", courseIds);
-
-    const groupKey = (v: any) => `${v.course_id}|${v.type_classement}|${v.etape_numero ?? 'null'}`;
-    const groups = new Map<string, any[]>();
-    allPos1?.forEach((v: any) => {
-      const key = groupKey(v);
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(v);
-    });
-
-    // Keep only wins where there's exactly 1 rider at position 1 AND it's our manager's rider
-    const coureurIdSet = new Set(coureurIds);
-    return Array.from(groups.values())
-      .filter(g => g.length === 1 && coureurIdSet.has(g[0].coureur_id))
-      .map(g => g[0]);
+    return 0;
   };
 
-  // 6. Récupérer les victoires (position = 1) - excluant les ex-aequo
-  const { data: victoriesA } = useQuery({
+  const { data: victoriesCountA } = useQuery({
     queryKey: ["victories-manager-a", managerA, phaseId, saisonId, leagueId],
-    queryFn: () => fetchVictories(managerA!),
+    queryFn: () => fetchVictoriesFromStandings(managerA!),
     enabled: !!managerA && !!leagueId,
   });
 
-  const { data: victoriesB } = useQuery({
+  const { data: victoriesCountB } = useQuery({
     queryKey: ["victories-manager-b", managerB, phaseId, saisonId, leagueId],
-    queryFn: () => fetchVictories(managerB!),
+    queryFn: () => fetchVictoriesFromStandings(managerB!),
     enabled: !!managerB && !!leagueId,
   });
 
@@ -753,8 +707,8 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
    const roiA = Math.round(totalPointsA / budgetA).toString();
    const roiB = Math.round(totalPointsB / budgetB).toString();
 
-  const victoiresA = victoriesA?.length || 0;
-  const victoiresB = victoriesB?.length || 0;
+  const victoiresA = victoriesCountA || 0;
+  const victoiresB = victoriesCountB || 0;
 
   const managerAData = selectedManagers?.find(m => m.id === managerA);
   const managerBData = selectedManagers?.find(m => m.id === managerB);
