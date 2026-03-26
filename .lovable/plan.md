@@ -1,60 +1,36 @@
 
 
-## Correction de l'affichage des bonus coureurs dans le classement
+## Corriger l'attribution des icônes prestige par ligue
 
-### Problème identifié
-La colonne "Bonus" affiche 0 pour tous les managers (sauf Manou qui a un bonus manager de 200 pts scoreurs) car les **bonus coureurs** (`rider_bonus`) sont filtrés par la vue.
+### Problème
+La fonction `get-manager-prestige-wins` cherche les propriétaires d'un coureur vainqueur dans `rosters` en filtrant uniquement par `coureur_id` + `phase_id`, **sans filtrer par `league_id`**. Résultat : si Matt B possède le même coureur qu'Obi dans une autre ligue, il hérite de l'icône Monument à tort.
 
 ### Cause racine
-La vue `v_manager_standings_by_phase_v2` (et `_by_season_v2`) déployée en production contient ce filtre dans le CTE `rider_bonus_pts` :
-
-```sql
-WHERE bp.course_id IS NOT NULL
-  AND bp.course_id IN (SELECT ... FROM get_league_course_ids(...))
+```typescript
+// Ligne 111-115 — PAS de filtre league_id
+const { data: owners } = await supabase
+  .from('rosters')
+  .select('manager_id')
+  .eq('coureur_id', result.coureur_id)
+  .eq('phase_id', course.phase_id);
 ```
 
-Or **100% des 27 entrées `bonus_points`** de MPC 2026 ont `course_id = NULL`. Le trigger `trigger_calculate_bonus_rider` n'a pas rempli cette colonne pour les données existantes. Résultat : `rider_bonus = 0` pour tous les managers.
+### Solution
 
-### Données vérifiées
-- `bonus_points` table : 27 entrées, 425 pts au total, **toutes avec `course_id = NULL`**
-- Types concernés : `coureur_bonuse` (25 entrées) et `first_win` (2 entrées)
-- Le slug de la course est présent dans le champ `commentaire` mais pas dans `course_id`
+**1. Ajouter `league_id` en paramètre d'entrée** de la fonction edge `get-manager-prestige-wins`
 
-### Solution — 2 actions
-
-**1. Migration SQL : backfill `course_id`**
-
-Extraire le slug de la course depuis le champ `commentaire` et mettre à jour `course_id` pour les entrées existantes :
-```sql
-UPDATE bonus_points bp
-SET course_id = c.id
-FROM courses c
-WHERE bp.course_id IS NULL
-  AND bp.commentaire LIKE '%- ' || c.id || ' -%';
-```
-Pour les `first_win` et les entrées manuelles dont le format de commentaire est différent, un mapping manuel sera nécessaire.
-
-**2. Migration SQL : rendre la vue tolérante aux `course_id` NULL**
-
-Modifier le CTE `rider_bonus_pts` dans les 3 vues (`_by_phase_v2`, `_by_season_v2`, `_total`) pour inclure les bonus sans `course_id` :
-
-```sql
--- Au lieu de :
-WHERE bp.course_id IS NOT NULL AND bp.course_id IN (...)
-
--- Utiliser :
-WHERE (bp.course_id IS NULL OR bp.course_id IN (...))
+**2. Filtrer les rosters par `league_id`** dans la requête (ligne 115) :
+```typescript
+.eq('league_id', league_id)
 ```
 
-Cela permet d'afficher les bonus existants (sans course_id) tout en maintenant le filtrage par ligue pour les nouveaux bonus qui ont un course_id.
+**3. Mettre à jour le hook `useManagerPrestigeWins`** pour passer le `league_id` depuis le contexte de ligue.
 
-### Résultat attendu
-- Matt B : +117 pts bonus (au lieu de 0)
-- Manou : +337 pts bonus (200 manager + 137 rider)  
-- JP : +50 pts bonus
-- Max : +59 pts bonus
-- Etc.
+**4. Mettre à jour les appels** dans `ManagerPrestigeIcons` et ses parents pour transmettre le `league_id`.
 
-### Fichier impacté
-- 1 migration SQL (recréation des 3 vues)
+### Fichiers impactés
+- `supabase/functions/get-manager-prestige-wins/index.ts` — ajout filtre `league_id`
+- `src/hooks/useManagerPrestigeWins.tsx` — ajout param `league_id`
+- `src/components/rankings/ManagerPrestigeIcons.tsx` — passage du `league_id`
+- Parents qui utilisent `ManagerPrestigeIcons` (classement) — transmission du `league_id`
 
