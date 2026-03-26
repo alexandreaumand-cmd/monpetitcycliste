@@ -73,7 +73,7 @@ export default function TeamStartlistMovements() {
       if (!rosterCoureurIds?.length || !phaseCourseIds?.length) return [];
       const { data } = await supabase
         .from("startlist_tracker_changes")
-        .select("id, coureur_id, rider_name, course_name, change_type, detected_at, course_id")
+        .select("id, coureur_id, rider_name, course_name, change_type, detected_at, course_id, startlist_entries!startlist_tracker_changes_startlist_entry_id_fkey(team_confirmed)")
         .in("coureur_id", rosterCoureurIds)
         .in("course_id", phaseCourseIds)
         .order("detected_at", { ascending: false });
