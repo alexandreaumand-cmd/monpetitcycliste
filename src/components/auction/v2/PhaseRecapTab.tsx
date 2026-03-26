@@ -199,13 +199,24 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
   const highestBid = Math.max(...allBids.map((b) => b.winning_amount || 0), 0);
   const highestBidDetails = allBids.find((b) => b.winning_amount === highestBid);
 
-  // 3. Top 10 gains serrés
-  const closeCalls = allBids
+  // 3. Top 10 gains serrés (dédupliqué par coureur)
+  const closeCallsRaw = allBids
     .filter((b) => b.outcome === "lost" && b.my_bid && b.winning_amount)
     .map((b) => ({
       ...b,
       diff_percent: ((Number(b.winning_amount) - Number(b.my_bid)) / Number(b.winning_amount)) * 100,
     }))
+    .sort((a, b) => a.diff_percent - b.diff_percent);
+
+  // Dédupliquer par coureur_id : garder uniquement l'enchère la plus proche
+  const closeCallsMap = new Map<string, (typeof closeCallsRaw)[number]>();
+  closeCallsRaw.forEach((c) => {
+    const key = c.coureur_id;
+    if (key && (!closeCallsMap.has(key) || c.diff_percent < closeCallsMap.get(key)!.diff_percent)) {
+      closeCallsMap.set(key, c);
+    }
+  });
+  const closeCalls = [...closeCallsMap.values()]
     .sort((a, b) => a.diff_percent - b.diff_percent)
     .slice(0, 10);
 
