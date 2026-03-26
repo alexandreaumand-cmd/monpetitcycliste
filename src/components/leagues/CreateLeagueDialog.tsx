@@ -81,6 +81,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
       const { data, error } = await supabase
         .from('saisons')
         .select('id, annee')
+        .gte('annee', new Date().getFullYear())
         .order('annee', { ascending: false });
       if (error) throw error;
       return data;
