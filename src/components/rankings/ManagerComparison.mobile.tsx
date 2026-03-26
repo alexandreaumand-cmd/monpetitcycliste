@@ -184,72 +184,40 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     },
   });
 
-  // Fetch victories excluding ties — strict league filtering
-  const fetchVictories = async (managerId: string) => {
-    if (!managerId || !leagueId) return null;
-    const pIds = await getPhaseIds();
-    if (pIds.length === 0) return [];
+  // Fetch victories from standings view (correct league scope + date filtering)
+  const fetchVictoriesFromStandings = async (managerId: string): Promise<number> => {
+    if (!managerId || !leagueId) return 0;
 
-    // 1. Get courseIds scoped to these phases
-    const { data: courses } = await supabase
-      .from("courses")
-      .select("id")
-      .in("phase_id", pIds);
-    const courseIds = courses?.map(c => c.id) || [];
-    if (courseIds.length === 0) return [];
-
-    // 2. Get manager's roster coureurIds for this league
-    const { data: rostersData } = await supabase
-      .from("rosters")
-      .select("coureur_id")
-      .eq("manager_id", managerId)
-      .eq("league_id", leagueId);
-    const coureurIds = [...new Set(rostersData?.map(r => r.coureur_id) || [])];
-    if (coureurIds.length === 0) return [];
-
-    // 3. Query race_results with direct filters
-    const { data: allWins, error } = await (supabase
-      .from("race_results")
-      .select("id, coureur_id, course_id, type_classement, etape_numero") as any)
-      .eq("position", 1)
-      .eq("statut", "finished")
-      .in("type_classement", ["Etape", "General"])
-      .in("course_id", courseIds)
-      .in("coureur_id", coureurIds);
-    if (error) throw error;
-
-    // 4. Exclude ties
-    const { data: allPos1 } = await (supabase
-      .from("race_results")
-      .select("id, coureur_id, course_id, type_classement, etape_numero") as any)
-      .eq("position", 1)
-      .eq("statut", "finished")
-      .in("type_classement", ["Etape", "General"])
-      .in("course_id", courseIds);
-
-    const groupKey = (v: any) => `${v.course_id}|${v.type_classement}|${v.etape_numero ?? 'null'}`;
-    const groups = new Map<string, any[]>();
-    allPos1?.forEach((v: any) => {
-      const key = groupKey(v);
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(v);
-    });
-
-    const coureurIdSet = new Set(coureurIds);
-    return Array.from(groups.values())
-      .filter(g => g.length === 1 && coureurIdSet.has(g[0].coureur_id))
-      .map(g => g[0]);
+    if (phaseId) {
+      const { data } = await supabase
+        .from("v_manager_standings_by_phase_v2")
+        .select("nb_victoires")
+        .eq("manager_id", managerId)
+        .eq("league_id", leagueId)
+        .eq("phase_id", phaseId)
+        .maybeSingle();
+      return data?.nb_victoires || 0;
+    } else if (saisonId) {
+      const { data } = await supabase
+        .from("v_manager_standings_by_season_v2")
+        .select("nb_victoires")
+        .eq("manager_id", managerId)
+        .eq("league_id", leagueId)
+        .maybeSingle();
+      return data?.nb_victoires || 0;
+    }
+    return 0;
   };
 
-  const { data: victoriesA } = useQuery({
+  const { data: victoriesCountA } = useQuery({
     queryKey: ["victories-a", managerA, phaseId, saisonId, leagueId],
-    queryFn: () => fetchVictories(managerA),
+    queryFn: () => fetchVictoriesFromStandings(managerA!),
     enabled: !!managerA && !!leagueId,
   });
 
-  const { data: victoriesB } = useQuery({
+  const { data: victoriesCountB } = useQuery({
     queryKey: ["victories-b", managerB, phaseId, saisonId, leagueId],
-    queryFn: () => fetchVictories(managerB),
+    queryFn: () => fetchVictoriesFromStandings(managerB!),
     enabled: !!managerB && !!leagueId,
   });
 
