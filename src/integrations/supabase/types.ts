@@ -6645,28 +6645,34 @@ export type Database = {
       get_league_courses_with_points: {
         Args: { p_league_id: string; p_season_id?: string }
         Returns: {
-          categorie: string
-          categorie_for_points: string
-          course_id: string
-          date_debut: string
-          date_fin: string
-          is_uwt: boolean
-          nb_etapes_estimees: number
-          nb_jours: number
-          nom: string
-          phase_id: string
-          phase_index: number
-          points_etapes: number
-          points_etapes_unitaire: number
-          points_gc: number
-          points_jeune: number
-          points_mont: number
-          points_pts: number
-          points_total: number
-          saison_id: string
-          type_course: string
-          wt_tier: string
+          categorie: string | null
+          categorie_for_points: string | null
+          course_id: string | null
+          date_debut: string | null
+          date_fin: string | null
+          is_uwt: boolean | null
+          nb_etapes_estimees: number | null
+          nb_jours: number | null
+          nom: string | null
+          phase_id: string | null
+          phase_index: number | null
+          points_etapes: number | null
+          points_etapes_unitaire: number | null
+          points_gc: number | null
+          points_jeune: number | null
+          points_mont: number | null
+          points_pts: number | null
+          points_total: number | null
+          saison_id: string | null
+          type_course: string | null
+          wt_tier: Database["public"]["Enums"]["wt_tier_type"] | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "v_course_points_theoriques"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_league_standings_for_recap: {
         Args: { p_league_id: string }
