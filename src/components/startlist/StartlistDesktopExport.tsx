@@ -121,6 +121,12 @@ export const StartlistDesktopExport = forwardRef<HTMLDivElement, StartlistDeskto
                     fallbackUrl={startlistData.route_image_url}
                     onImageClick={onRouteImageClick}
                     compact
+                    defaultStageNumber={(() => {
+                      const d = startlistData.race?.date_debut;
+                      if (!d) return undefined;
+                      const diff = Math.floor((new Date().getTime() - new Date(d).getTime()) / 86400000);
+                      return diff >= 0 ? diff + 1 : undefined;
+                    })()}
                   />
                 </Card>
               )}

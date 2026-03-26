@@ -613,6 +613,12 @@ export const StartlistMobile = () => {
           <RouteImageGallery
             images={startlistViewData.route_images || []}
             fallbackUrl={startlistViewData.route_image_url}
+            defaultStageNumber={(() => {
+              const d = startlistViewData.race?.date_debut;
+              if (!d) return undefined;
+              const diff = Math.floor((new Date().getTime() - new Date(d).getTime()) / 86400000);
+              return diff >= 0 ? diff + 1 : undefined;
+            })()}
           />
         </MobileBottomSheet>
       </div>;
