@@ -416,6 +416,8 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
   // Helper: fetch victories for a manager, excluding ties
   const fetchVictories = async (managerId: string) => {
+    if (!leagueId) return [];
+    
     let phaseIds: string[] = [];
     if (phaseId) {
       phaseIds = [phaseId];
@@ -427,8 +429,8 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       phaseIds = phases?.map(p => p.id) || [];
     }
 
-    // Fetch ALL position=1 results to detect ties
-    const { data: allWins, error } = await supabase
+    // Build race_results query filtered by league phases
+    let winsQuery = supabase
       .from("race_results")
       .select(`
         id, coureur_id, course_id, type_classement, etape_numero,
@@ -438,6 +440,12 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
       .eq("statut", "finished")
       .in("type_classement", ["Etape", "General"]);
 
+    // Filter by phase to scope to the league
+    if (phaseIds.length > 0) {
+      winsQuery = winsQuery.in("courses.phase_id", phaseIds);
+    }
+
+    const { data: allWins, error } = await winsQuery;
     if (error) throw error;
 
     // Exclude ties: group by (course_id, type_classement, etape_numero)
