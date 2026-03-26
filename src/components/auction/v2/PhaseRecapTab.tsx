@@ -383,7 +383,9 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
                   <div key={idx} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate">{call.coureur_nom}</div>
-                      <div className="text-xs text-muted-foreground truncate">{call.managers?.nom || "Inconnu"}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {call.managers?.nom || "Inconnu"} → <span className="font-semibold text-foreground">{call.winning_manager || "Inconnu"}</span>
+                      </div>
                       <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                         <span>{t('recap.bid')}: <span className="font-mono text-foreground">{formatAmount(call.my_bid)}</span></span>
                         <span>→</span>
@@ -403,6 +405,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
                     <tr className="border-b">
                       <th className="text-left p-2">{t('recap.manager')}</th>
                       <th className="text-left p-2">{t('recap.rider')}</th>
+                      <th className="text-left p-2">Gagnant</th>
                       <th className="text-right p-2">{t('recap.bid')}</th>
                       <th className="text-right p-2">{t('recap.winningBid')}</th>
                       <th className="text-right p-2">{t('recap.gap')}</th>
@@ -413,6 +416,7 @@ export function PhaseRecapTab({ phaseId, leagueId }: PhaseRecapTabProps) {
                       <tr key={idx} className="border-b hover:bg-muted/50">
                         <td className="p-2 truncate max-w-[100px]">{call.managers?.nom || "Inconnu"}</td>
                         <td className="p-2 truncate max-w-[120px]">{call.coureur_nom}</td>
+                        <td className="p-2 truncate max-w-[100px] font-semibold">{call.winning_manager || "Inconnu"}</td>
                         <td className="p-2 text-right font-mono">{formatAmount(call.my_bid)}</td>
                         <td className="p-2 text-right font-mono font-bold">{formatAmount(call.winning_amount)}</td>
                         <td className="p-2 text-right">
