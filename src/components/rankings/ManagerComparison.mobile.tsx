@@ -87,7 +87,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     let query = supabase
       .from("points_ledger")
       .select("coureur_id, points, type_classement, course_id, phase_id")
-      .in("coureur_id", coureurIds);
+      .in("coureur_id", coureurIds) as any;
 
     if (leagueId) query = query.eq("league_id", leagueId);
     const pIds = await getPhaseIds();
