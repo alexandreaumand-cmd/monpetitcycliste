@@ -144,10 +144,10 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
 
       const coureurIds = rostersA.map(r => r.coureur_id);
 
-    let query = supabase
+    let query = (supabase
       .from("points_ledger")
       .select("coureur_id, points, type_classement, course_id, phase_id")
-      .in("coureur_id", coureurIds)
+      .in("coureur_id", coureurIds) as any)
       .eq("league_id", leagueId!);
 
       if (phaseId) {
