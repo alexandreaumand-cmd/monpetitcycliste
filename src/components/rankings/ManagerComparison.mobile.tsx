@@ -89,6 +89,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
       .select("coureur_id, points, type_classement, course_id, phase_id")
       .in("coureur_id", coureurIds);
 
+    if (leagueId) query = query.eq("league_id", leagueId);
     const pIds = await getPhaseIds();
     if (pIds.length > 0) query = query.in("phase_id", pIds);
 
