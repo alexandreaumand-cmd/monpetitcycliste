@@ -13,14 +13,16 @@ export type ManagerPrestige = {
   };
 };
 
-export const useManagerPrestigeWins = (phaseId?: string | null, saisonId?: string | null) => {
+export const useManagerPrestigeWins = (phaseId?: string | null, saisonId?: string | null, leagueId?: string | null) => {
   return useQuery({
-    queryKey: ["manager-prestige-wins", phaseId, saisonId],
+    queryKey: ["manager-prestige-wins", phaseId, saisonId, leagueId],
+    enabled: !!leagueId,
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-manager-prestige-wins', {
         body: {
           phase_id: phaseId || null,
           saison_id: saisonId || null,
+          league_id: leagueId,
         },
       });
 

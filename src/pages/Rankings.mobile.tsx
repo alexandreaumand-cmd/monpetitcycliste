@@ -453,6 +453,7 @@ export const RankingsMobile = () => {
                             managerId={standing.manager_id} 
                             phaseId={selectedPhase}
                             saisonId={selectedSeason?.id}
+                            leagueId={leagueId}
                             isMobile
                           />
                           {rank === 10 && <span className="text-lg">🤡</span>}

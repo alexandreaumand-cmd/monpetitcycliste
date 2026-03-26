@@ -26,9 +26,13 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { phase_id, saison_id } = await req.json();
+    const { phase_id, saison_id, league_id } = await req.json();
 
-    console.log('Fetching prestige wins with filters:', { phase_id, saison_id });
+    console.log('Fetching prestige wins with filters:', { phase_id, saison_id, league_id });
+
+    if (!league_id) {
+      throw new Error('league_id is required');
+    }
 
     // Determine which phases to consider
     let targetPhaseIds: string[] = [];
@@ -112,7 +116,8 @@ Deno.serve(async (req) => {
         .from('rosters')
         .select('manager_id')
         .eq('coureur_id', result.coureur_id)
-        .eq('phase_id', course.phase_id);
+        .eq('phase_id', course.phase_id)
+        .eq('league_id', league_id);
 
       if (ownersError) {
         console.error('Error fetching owners:', ownersError);

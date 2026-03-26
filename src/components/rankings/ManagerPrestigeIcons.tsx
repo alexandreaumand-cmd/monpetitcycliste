@@ -7,11 +7,12 @@ interface ManagerPrestigeIconsProps {
   managerId: string;
   phaseId?: string | null;
   saisonId?: string | null;
+  leagueId?: string | null;
   isMobile?: boolean;
 }
 
-export const ManagerPrestigeIcons = ({ managerId, phaseId, saisonId, isMobile = false }: ManagerPrestigeIconsProps) => {
-  const { data: prestigeData } = useManagerPrestigeWins(phaseId, saisonId);
+export const ManagerPrestigeIcons = ({ managerId, phaseId, saisonId, leagueId, isMobile = false }: ManagerPrestigeIconsProps) => {
+  const { data: prestigeData } = useManagerPrestigeWins(phaseId, saisonId, leagueId);
   const [dialogOpen, setDialogOpen] = useState(false);
   
   const prestige = prestigeData?.[managerId];

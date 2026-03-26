@@ -258,6 +258,7 @@ const getRankIcon = (rank: number, isBottomThree: boolean) => {
                         managerId={standing.manager_id}
                         phaseId={phaseId}
                         saisonId={selectedSeason?.id}
+                        leagueId={leagueId}
                       />
                       {rank === 10 && <span className="text-xl">🤡</span>}
                     </div>
