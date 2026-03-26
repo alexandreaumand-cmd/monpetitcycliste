@@ -1,24 +1,33 @@
 
 
-## Fix "Nombre de victoires" — filtrage par ligue
+## Afficher les points bonus du coureur dans le panneau de détail
 
-### Problème
-`fetchVictories` récupère TOUTES les victoires globales (`race_results` position=1) puis tente de filtrer via `courses.phase_id` en embed Supabase, ce qui ne fonctionne pas de façon fiable. Résultat : des victoires d'autres ligues apparaissent (3 et 9 au lieu de 0).
+### Probleme
+Le panneau de détail d'un coureur (RiderPointsDetail) n'affiche pas les bonus coureur (+25%) car l'edge function `get-rider-points-table` les filtre :
+1. **Ligne 236-238** : `.in('course_id', leagueCourseIds)` exclut les bonus sans `course_id` (les bonus `coureur_bonuse` n'ont pas de `course_id`)
+2. **Ligne 249-253** : le filtre date floor exclut explicitement les bonus sans `course_id` (`if (!b.course_id) return false`)
 
-### Solution — `src/components/rankings/ManagerComparison.tsx`
+### Solution
 
-Réécrire `fetchVictories` avec une approche en 3 étapes explicites :
+**`supabase/functions/get-rider-points-table/index.ts`** :
 
-1. **Récupérer les `courseIds`** de la ligue : `courses.id` filtrés par `phase_id IN phaseIds`
-2. **Récupérer les `coureurIds`** du manager : depuis `rosters` filtrés par `league_id` + `manager_id`
-3. **Requêter `race_results`** avec `.in("course_id", courseIds)` et `.in("coureur_id", coureurIds)` — filtrage direct, pas d'embed
+1. **Ligne 236-238** — Ne pas filtrer les bonus par `course_id` quand ils n'en ont pas. Remplacer le filtre league course par une logique qui inclut les bonus sans `course_id` :
+```typescript
+// Avant: bonusQuery = bonusQuery.in('course_id', leagueCourseIds);
+// Après: ne pas appliquer ce filtre — les bonus sans course_id sont globaux
+```
+Concrètement, supprimer le filtre `.in('course_id', leagueCourseIds)` sur la bonusQuery (le filtrage par phase est déjà appliqué et suffisant).
 
-Ajouter `leagueId` au `queryKey` des deux requêtes et `enabled: !!managerA && !!leagueId`.
+2. **Ligne 249-253** — Autoriser les bonus sans `course_id` dans le filtre date floor :
+```typescript
+// Avant: if (!b.course_id) return false;
+// Après: if (!b.course_id) return true; // Bonus global, déjà filtré par phase
+```
 
-### Même fix sur `ManagerComparison.mobile.tsx`
-Appliquer la même logique à `fetchVictories` dans la version mobile.
+### Résultat attendu
+- Luca Mozzato (bonus rider de Matt B) affichera ses points bonus (+25%) dans la section "Détails par course" sous une entrée "Bonus"
+- Les 6 KPI en haut (Points, Prix, Round, Victoires, Cote, Ratio) incluront les bonus dans le total
 
-### Fichiers impactés
-- `src/components/rankings/ManagerComparison.tsx`
-- `src/components/rankings/ManagerComparison.mobile.tsx`
+### Fichier impacte
+- `supabase/functions/get-rider-points-table/index.ts` uniquement
 
