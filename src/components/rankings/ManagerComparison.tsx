@@ -840,19 +840,19 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
                     <span className={cn(
                       "font-mono font-bold text-lg",
                       totalPointsA > totalPointsB && "text-green-600"
-                    )}>{totalPointsA}</span>
+                    )}>{Math.round(totalPointsA)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{managerBName}</span>
                     <span className={cn(
                       "font-mono font-bold text-lg",
                       totalPointsB > totalPointsA && "text-green-600"
-                    )}>{totalPointsB}</span>
+                    )}>{Math.round(totalPointsB)}</span>
                   </div>
                   <div className="pt-2 border-t flex justify-between items-center">
                     <span className="text-sm font-medium">Écart</span>
                     <Badge variant={totalPointsA > totalPointsB ? "default" : "destructive"}>
-                      {totalPointsA > totalPointsB ? "+" : ""}{totalPointsA - totalPointsB}
+                      {totalPointsA > totalPointsB ? "+" : ""}{Math.round(totalPointsA - totalPointsB)}
                     </Badge>
                   </div>
                 </div>
