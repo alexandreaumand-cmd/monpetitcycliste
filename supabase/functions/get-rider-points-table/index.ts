@@ -232,10 +232,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Apply league course filter to bonuses
-    if (leagueCourseIds) {
-      bonusQuery = bonusQuery.in('course_id', leagueCourseIds);
-    }
+    // No league course filter on bonuses — phase filtering is sufficient
+    // Bonus entries without course_id are global (e.g. rider bonus +25%)
 
     const { data: bonusData, error: bonusError } = await bonusQuery;
 
@@ -247,7 +245,7 @@ Deno.serve(async (req) => {
     let filteredBonusData = bonusData || [];
     if (leagueDateFloor) {
       filteredBonusData = filteredBonusData.filter(b => {
-        if (!b.course_id) return false; // Exclude bonuses without course_id in league mode
+        if (!b.course_id) return true; // Global bonus (e.g. rider bonus), already filtered by phase
         const course = coursesMap.get(b.course_id);
         return course && course.date_debut && course.date_debut >= leagueDateFloor!;
       });
