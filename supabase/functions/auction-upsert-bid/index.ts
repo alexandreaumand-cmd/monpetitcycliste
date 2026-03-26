@@ -66,6 +66,24 @@ Deno.serve(async (req) => {
     const manager_id = manager.id;
     console.log('👤 Resolved manager:', { manager_id, manager_nom: manager.nom });
 
+    // Check manager is a member of this league
+    const { data: membership, error: membershipError } = await supabase
+      .from('league_members')
+      .select('id')
+      .eq('league_id', league_id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (membershipError || !membership) {
+      console.error('❌ User is not a member of league:', { user_id: user.id, league_id });
+      return new Response(
+        JSON.stringify({ error: 'Vous devez être membre de cette ligue pour enchérir' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('✅ League membership verified:', { user_id: user.id, league_id });
+
     // Get active auction for this league
     const { data: auction, error: auctionError } = await supabase
       .from('auctions')
