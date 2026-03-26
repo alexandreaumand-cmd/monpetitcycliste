@@ -87,6 +87,7 @@ export const MyTeamDesktop = () => {
   const { leagues } = useUserLeagues();
   const currentLeague = leagues.find(l => l.id === leagueId);
   const isPerCourse = currentLeague?.game_mode === 'per_course';
+  const bonusesEnabled = currentLeague?.bonuses_enabled !== false;
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>('points');
@@ -619,7 +620,7 @@ export const MyTeamDesktop = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {!hasSelectedBonusRider && !selectedManagerId && (
+            {bonusesEnabled && !hasSelectedBonusRider && !selectedManagerId && (
               <Button
                 onClick={() => setShowBonusRiderDialog(true)}
                 variant="secondary"
@@ -629,14 +630,16 @@ export const MyTeamDesktop = () => {
                 <Star className="h-4 w-4" />
               </Button>
             )}
-            <Button
-              onClick={() => setShowLeagueBonusDialog(true)}
-              variant="outline"
-              size="sm"
-              title={t('bonusRider.viewOthers')}
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
+            {bonusesEnabled && (
+              <Button
+                onClick={() => setShowLeagueBonusDialog(true)}
+                variant="outline"
+                size="sm"
+                title={t('bonusRider.viewOthers')}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               onClick={() => setShowRostersOverviewDialog(true)}
               variant="outline"
@@ -795,7 +798,7 @@ export const MyTeamDesktop = () => {
                   >
                     <TableCell className="font-medium py-2">
                       <div className="flex items-center gap-2">
-                        {bonusRiderSelection?.coureur_id === coureur.coureur_id && (
+                        {bonusesEnabled && bonusRiderSelection?.coureur_id === coureur.coureur_id && (
                           <Star className="h-4 w-4 text-bordure-gold fill-bordure-gold" />
                         )}
                         {coureur.nom}
@@ -901,44 +904,46 @@ export const MyTeamDesktop = () => {
       )}
 
       {/* Bonus Rider Selection Dialog */}
-      <Dialog open={showBonusRiderDialog} onOpenChange={setShowBonusRiderDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('bonusRider.selectTitle')}</DialogTitle>
-              <DialogDescription>
-                {t('bonusRider.description')}
-                <br />⚠️ {t('bonusRider.warning')}
-              </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {coureurs
-              .filter(c => c.cote_initiale === 10 || c.cote_initiale === 20)
-              .map((coureur) => (
-                <Button
-                  key={coureur.coureur_id}
-                  variant="outline"
-                  className="w-full justify-start gap-3 h-auto py-3"
-                  onClick={() => handleSelectBonusRider(coureur.coureur_id, coureur.nom)}
-                >
-                  <Star className="h-5 w-5 text-amber-500" />
-                  <div className="text-left">
-                    <div className="font-semibold">{coureur.nom}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {coureur.equipe} • {t('rating')}: {coureur.cote_initiale} • {coureur.points_total} pts
-                    </div>
-                  </div>
-                </Button>
-              ))}
+      {bonusesEnabled && (
+        <Dialog open={showBonusRiderDialog} onOpenChange={setShowBonusRiderDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('bonusRider.selectTitle')}</DialogTitle>
+                <DialogDescription>
+                  {t('bonusRider.description')}
+                  <br />⚠️ {t('bonusRider.warning')}
+                </DialogDescription>
+            </DialogHeader>
             
-            {coureurs.filter(c => c.cote_initiale === 10 || c.cote_initiale === 20).length === 0 && (
-              <p className="text-center text-muted-foreground py-4">
-                {t('bonusRider.noEligible')}
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {coureurs
+                .filter(c => c.cote_initiale === 10 || c.cote_initiale === 20)
+                .map((coureur) => (
+                  <Button
+                    key={coureur.coureur_id}
+                    variant="outline"
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    onClick={() => handleSelectBonusRider(coureur.coureur_id, coureur.nom)}
+                  >
+                    <Star className="h-5 w-5 text-amber-500" />
+                    <div className="text-left">
+                      <div className="font-semibold">{coureur.nom}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {coureur.equipe} • {t('rating')}: {coureur.cote_initiale} • {coureur.points_total} pts
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+              
+              {coureurs.filter(c => c.cote_initiale === 10 || c.cote_initiale === 20).length === 0 && (
+                <p className="text-center text-muted-foreground py-4">
+                  {t('bonusRider.noEligible')}
+                </p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Rider Points Detail */}
       <RiderPointsDetail
@@ -955,12 +960,14 @@ export const MyTeamDesktop = () => {
       />
 
       {/* League Bonus Riders Dialog */}
-      <LeagueBonusRidersDialog
-        open={showLeagueBonusDialog}
-        onOpenChange={setShowLeagueBonusDialog}
-        leagueId={leagueId}
-        phaseId={selectedPhaseId}
-      />
+      {bonusesEnabled && (
+        <LeagueBonusRidersDialog
+          open={showLeagueBonusDialog}
+          onOpenChange={setShowLeagueBonusDialog}
+          leagueId={leagueId}
+          phaseId={selectedPhaseId}
+        />
+      )}
 
       {/* League Rosters Overview Dialog */}
       {selectedPhaseId && leagueId && (

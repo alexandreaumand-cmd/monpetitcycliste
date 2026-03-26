@@ -82,6 +82,7 @@ export const MyTeamMobile = () => {
   const { leagues } = useUserLeagues();
   const currentLeague = leagues.find(l => l.id === leagueId);
   const isPerCourse = currentLeague?.game_mode === 'per_course';
+  const bonusesEnabled = currentLeague?.bonuses_enabled !== false;
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>("points");
@@ -445,14 +446,16 @@ export const MyTeamMobile = () => {
           <span className="text-muted-foreground">pts</span>
         </div>
         
-        <div 
-          className="flex items-center gap-1 cursor-pointer" 
-          onClick={() => setBonusDetailsOpen(true)}
-        >
-          <Star className="h-4 w-4 text-amber-500" />
-          <span className="font-semibold">{kpis.bonus_points}</span>
-          <span className="text-muted-foreground">bonus</span>
-        </div>
+        {bonusesEnabled && (
+          <div 
+            className="flex items-center gap-1 cursor-pointer" 
+            onClick={() => setBonusDetailsOpen(true)}
+          >
+            <Star className="h-4 w-4 text-amber-500" />
+            <span className="font-semibold">{kpis.bonus_points}</span>
+            <span className="text-muted-foreground">bonus</span>
+          </div>
+        )}
         
         <div className="flex items-center gap-1 text-muted-foreground">
           <TrendingUp className="h-4 w-4" />
@@ -485,10 +488,12 @@ export const MyTeamMobile = () => {
         <Button variant="ghost" size="icon" onClick={() => setShowRostersOverviewDialog(true)}>
           <Users className="h-5 w-5" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={() => setShowLeagueBonusDialog(true)}>
-          <Eye className="h-5 w-5" />
-        </Button>
-        {!hasSelectedBonusRider && !selectedManagerId && (
+        {bonusesEnabled && (
+          <Button variant="ghost" size="icon" onClick={() => setShowLeagueBonusDialog(true)}>
+            <Eye className="h-5 w-5" />
+          </Button>
+        )}
+        {bonusesEnabled && !hasSelectedBonusRider && !selectedManagerId && (
           <Button variant="ghost" size="icon" onClick={() => setShowBonusRiderDialog(true)}>
             <Star className="h-5 w-5" />
           </Button>
@@ -518,7 +523,7 @@ export const MyTeamMobile = () => {
               key={coureur.coureur_id}
               title={
                 <div className="flex items-center gap-1.5">
-                  {bonusRiderSelection?.coureur_id === coureur.coureur_id && (
+                  {bonusesEnabled && bonusRiderSelection?.coureur_id === coureur.coureur_id && (
                     <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
                   )}
                   <span className="truncate">{coureur.nom}</span>
@@ -548,44 +553,46 @@ export const MyTeamMobile = () => {
       )}
 
       {/* Bonus Rider Selection Dialog */}
-      <Dialog open={showBonusRiderDialog} onOpenChange={setShowBonusRiderDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('bonusRider.selectTitle')}</DialogTitle>
-          <DialogDescription>
-            {t('bonusRider.description')}
-            <br />⚠️ {t('bonusRider.warning')}
-          </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {coureurs
-              .filter(c => c.cote_initiale === 10 || c.cote_initiale === 20)
-              .map((coureur) => (
-                <Button
-                  key={coureur.coureur_id}
-                  variant="outline"
-                  className="w-full justify-start gap-3 h-auto py-3"
-                  onClick={() => handleSelectBonusRider(coureur.coureur_id, coureur.nom)}
-                >
-                  <Star className="h-5 w-5 text-amber-500" />
-                  <div className="text-left">
-                    <div className="font-semibold">{coureur.nom}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {coureur.equipe} • {t('rating')}: {coureur.cote_initiale} • {coureur.points_total} pts
-                    </div>
-                  </div>
-                </Button>
-              ))}
+      {bonusesEnabled && (
+        <Dialog open={showBonusRiderDialog} onOpenChange={setShowBonusRiderDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('bonusRider.selectTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('bonusRider.description')}
+              <br />⚠️ {t('bonusRider.warning')}
+            </DialogDescription>
+            </DialogHeader>
             
-            {coureurs.filter(c => c.cote_initiale === 10 || c.cote_initiale === 20).length === 0 && (
-              <p className="text-center text-muted-foreground py-4">
-                {t('bonusRider.noEligible')}
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {coureurs
+                .filter(c => c.cote_initiale === 10 || c.cote_initiale === 20)
+                .map((coureur) => (
+                  <Button
+                    key={coureur.coureur_id}
+                    variant="outline"
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    onClick={() => handleSelectBonusRider(coureur.coureur_id, coureur.nom)}
+                  >
+                    <Star className="h-5 w-5 text-amber-500" />
+                    <div className="text-left">
+                      <div className="font-semibold">{coureur.nom}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {coureur.equipe} • {t('rating')}: {coureur.cote_initiale} • {coureur.points_total} pts
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+              
+              {coureurs.filter(c => c.cote_initiale === 10 || c.cote_initiale === 20).length === 0 && (
+                <p className="text-center text-muted-foreground py-4">
+                  {t('bonusRider.noEligible')}
+                </p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Bonus Details Dialog */}
       <BonusPointsDetailDialog
@@ -616,12 +623,14 @@ export const MyTeamMobile = () => {
       />
 
       {/* League Bonus Riders Dialog */}
-      <LeagueBonusRidersDialog
-        open={showLeagueBonusDialog}
-        onOpenChange={setShowLeagueBonusDialog}
-        leagueId={leagueId}
-        phaseId={selectedPhaseId}
-      />
+      {bonusesEnabled && (
+        <LeagueBonusRidersDialog
+          open={showLeagueBonusDialog}
+          onOpenChange={setShowLeagueBonusDialog}
+          leagueId={leagueId}
+          phaseId={selectedPhaseId}
+        />
+      )}
 
       {/* League Rosters Overview Dialog */}
       {selectedPhaseId && leagueId && (
