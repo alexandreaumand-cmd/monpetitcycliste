@@ -116,6 +116,17 @@ export function LeagueCard({ league, cardData, isLoadingCardData, onViewDetails,
                 {leagueSeason.season.annee}
               </Badge>
             ) : null}
+            <Badge 
+              variant="outline" 
+              className={`gap-1 text-xs shrink-0 font-inter ${
+                league.bonuses_enabled 
+                  ? "text-amber-600 border-amber-300" 
+                  : "text-muted-foreground border-muted-foreground/30"
+              }`}
+            >
+              {league.bonuses_enabled ? <Star className="h-3 w-3" /> : <StarOff className="h-3 w-3" />}
+              {league.bonuses_enabled ? "Bonus" : "Sans bonus"}
+            </Badge>
           </div>
           <div className="ml-auto shrink-0">
             <LeagueParticipantsHover
