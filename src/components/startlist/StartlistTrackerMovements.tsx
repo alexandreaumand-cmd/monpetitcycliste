@@ -220,7 +220,14 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="font-medium">{item.rider_name}</TableCell>
+                          <TableCell className="font-medium">
+                            <span className="flex items-center gap-1">
+                              {(item as any).startlist_entries?.team_confirmed && (
+                                <CheckCircle2 className="h-3 w-3 text-green-600 shrink-0" />
+                              )}
+                              {item.rider_name}
+                            </span>
+                          </TableCell>
                           <TableCell className="text-muted-foreground">{getTeamName(item)}</TableCell>
                           <TableCell className="text-muted-foreground">
                             {rosterMap?.get(item.coureur_id || "")?.name || "-"}
