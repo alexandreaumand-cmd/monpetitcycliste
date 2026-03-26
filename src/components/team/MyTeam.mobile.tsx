@@ -523,7 +523,7 @@ export const MyTeamMobile = () => {
               key={coureur.coureur_id}
               title={
                 <div className="flex items-center gap-1.5">
-                  {bonusRiderSelection?.coureur_id === coureur.coureur_id && (
+                  {bonusesEnabled && bonusRiderSelection?.coureur_id === coureur.coureur_id && (
                     <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
                   )}
                   <span className="truncate">{coureur.nom}</span>
