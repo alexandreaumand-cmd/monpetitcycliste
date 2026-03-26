@@ -87,8 +87,9 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
     let query = supabase
       .from("points_ledger")
       .select("coureur_id, points, type_classement, course_id, phase_id")
-      .in("coureur_id", coureurIds);
+      .in("coureur_id", coureurIds) as any;
 
+    if (leagueId) query = query.eq("league_id", leagueId);
     const pIds = await getPhaseIds();
     if (pIds.length > 0) query = query.in("phase_id", pIds);
 
@@ -117,6 +118,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
       .select("points")
       .or(`target_manager_id.eq.${managerId},manager_id.eq.${managerId}`);
 
+    if (leagueId) query = query.eq("league_id", leagueId);
     const pIds = await getPhaseIds();
     if (pIds.length > 0) query = query.in("phase_id", pIds);
 
@@ -317,7 +319,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
         ptsA = pointsA.filter(p => cat.filterType!(p.type_classement)).reduce((s, p) => s + (p.points || 0), 0);
         ptsB = pointsB.filter(p => cat.filterType!(p.type_classement)).reduce((s, p) => s + (p.points || 0), 0);
       }
-      return { category: cat.label, managerA: ptsA, managerB: ptsB };
+      return { category: cat.label, managerA: Math.round(ptsA), managerB: Math.round(ptsB) };
     });
   }, [pointsA, pointsB, courses, coursesMap]);
 
