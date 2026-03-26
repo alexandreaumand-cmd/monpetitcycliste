@@ -1,32 +1,24 @@
 
 
-## Fix Comparaison des Managers : décimales et données cross-league
+## Fix "Nombre de victoires" — filtrage par ligue
 
-### Problèmes identifiés
+### Problème
+`fetchVictories` récupère TOUTES les victoires globales (`race_results` position=1) puis tente de filtrer via `courses.phase_id` en embed Supabase, ce qui ne fonctionne pas de façon fiable. Résultat : des victoires d'autres ligues apparaissent (3 et 9 au lieu de 0).
 
-1. **Décimales** : `totalPointsA/B` affiche des valeurs brutes comme `4888.13999999999` au lieu d'entiers arrondis
-2. **Données cross-league** : les requêtes `points_ledger` et `bonus_points` ne filtrent PAS par `league_id`. Résultat : des points d'AUTRES ligues apparaissent dans la comparaison (la ligue TEST n'a aucun résultat saisi, donc tout devrait être à 0)
+### Solution — `src/components/rankings/ManagerComparison.tsx`
 
-### Cause racine
+Réécrire `fetchVictories` avec une approche en 3 étapes explicites :
 
-Dans `ManagerComparison.tsx` :
-- Lignes 147-169 / 181-204 : `points_ledger` filtré par `coureur_id` + `phase_id` mais **pas par `league_id`**
-- Lignes 214-236 / 246-268 : `bonus_points` idem, pas de filtre `league_id`
-- Lignes 841/848/853 : `totalPointsA/B` affiché sans `Math.round()`
+1. **Récupérer les `courseIds`** de la ligue : `courses.id` filtrés par `phase_id IN phaseIds`
+2. **Récupérer les `coureurIds`** du manager : depuis `rosters` filtrés par `league_id` + `manager_id`
+3. **Requêter `race_results`** avec `.in("course_id", courseIds)` et `.in("coureur_id", coureurIds)` — filtrage direct, pas d'embed
 
-### Solution
+Ajouter `leagueId` au `queryKey` des deux requêtes et `enabled: !!managerA && !!leagueId`.
 
-**`src/components/rankings/ManagerComparison.tsx`** :
+### Même fix sur `ManagerComparison.mobile.tsx`
+Appliquer la même logique à `fetchVictories` dans la version mobile.
 
-1. **Ajouter `.eq('league_id', leagueId)`** aux 2 requêtes `points_ledger` (lignes ~148 et ~182)
-2. **Ajouter `.eq('league_id', leagueId)`** aux 2 requêtes `bonus_points` (lignes ~215 et ~247)
-3. **Appliquer `Math.round()`** sur tous les affichages de points : `totalPointsA`, `totalPointsB`, écarts, et dans les cartes KPI (lignes 841, 848, 853)
-4. Désactiver les requêtes quand `!leagueId` (`enabled: !!managerA && !!leagueId`)
-
-### Résultat attendu
-- Ligue TEST : tous les compteurs à 0 (aucun résultat saisi)
-- Ligue LIVE : valeurs correctes, arrondies, sans décimales
-
-### Fichier impacté
-- `src/components/rankings/ManagerComparison.tsx` uniquement
+### Fichiers impactés
+- `src/components/rankings/ManagerComparison.tsx`
+- `src/components/rankings/ManagerComparison.mobile.tsx`
 
