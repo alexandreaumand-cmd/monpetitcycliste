@@ -70,7 +70,7 @@ export function StartlistTrackerMovements({ phaseId, leagueId }: StartlistTracke
       if (!phaseCourseIds.length) return [];
       const { data } = await supabase
         .from("startlist_tracker_changes")
-        .select("id, change_type, rider_name, team_name, course_name, course_id, coureur_id, detected_at")
+        .select("id, change_type, rider_name, team_name, course_name, course_id, coureur_id, detected_at, startlist_entries!startlist_tracker_changes_startlist_entry_id_fkey(team_confirmed)")
         .in("course_id", phaseCourseIds)
         .order("detected_at", { ascending: false })
         .limit(200);
