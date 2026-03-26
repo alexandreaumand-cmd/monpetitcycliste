@@ -469,6 +469,10 @@ export const RankingsMobile = () => {
                             <span className="font-semibold">{percentage}%</span>
                           </div>
                           <div className="flex flex-col gap-1">
+                            <span className="text-muted-foreground">{t('standings.bonus')}</span>
+                            <span className="font-semibold">{Math.round(((standing as any).manager_bonus || 0) + ((standing as any).rider_bonus || 0))}</span>
+                          </div>
+                          <div className="flex flex-col gap-1">
                             <span className="text-muted-foreground">{t('mobile.scorers')}</span>
                             <span className="font-semibold">{(standing as any).nb_scoreurs ?? (standing as any).scoreurs_count ?? 0}</span>
                           </div>
