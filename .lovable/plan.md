@@ -1,44 +1,26 @@
 
 
-## Enrichir l'étape de sélection des courses
+## Afficher l'info "équipe confirmée" dans les mouvements startlist
 
 ### Problème
-Le sélecteur de courses n'offre qu'un filtre par type (Étapes/1 jour) et un tri chronologique. Il manque :
-- Un filtre par catégorie (WT, .Pro, .1, Autres)
-- Le nombre de points à gagner par course
-- Un tri par points décroissants (en plus du tri chronologique)
+Quand un coureur est ajouté à une startlist et que son équipe est officiellement confirmée sur PCS (tick vert), cette info n'apparaît pas dans la vue des mouvements.
 
-### Source de données
-La vue `v_course_points_theoriques` contient `course_id`, `points_total`, `categorie`, `saison_id`. On fera une jointure côté client avec les courses chargées.
+### Solution
+Pour les mouvements de type "added", le champ `startlist_entry_id` pointe vers l'entrée dans `startlist_entries` qui contient `team_confirmed`. On peut joindre cette table pour récupérer l'info et afficher une icône CheckCircle2 verte (comme dans les autres vues startlist).
 
-### Modifications — `src/components/leagues/CourseSelector.tsx`
+### Modifications
 
-**1. Fetch des points théoriques**
-Ajouter une requête sur `v_course_points_theoriques` filtrée par `saison_id` pour récupérer `course_id` et `points_total`. Créer un `Map<courseId, points_total>` pour enrichir l'affichage.
+**1. `src/components/startlist/StartlistTrackerMovements.tsx`**
+- Modifier la requête (ligne 72) pour inclure le join : `startlist_entries!startlist_tracker_changes_startlist_entry_id_fkey(team_confirmed)`
+- Afficher une icône `CheckCircle2` verte à côté du nom du coureur quand `team_confirmed === true`
+- Desktop : dans la cellule "Coureur" (TableCell)
+- Mobile : à côté du nom dans le card
 
-**2. Filtre par catégorie**
-Ajouter un state `categoryFilter` avec les groupes : `WT`, `.Pro`, `.1`, `Autres`. Logique de groupement :
-- `WT` : categorie contient "WT", "GT" ou "Monument"
-- `.Pro` : categorie contient ".pro" (insensible à la casse)
-- `.1` : categorie contient ".1"
-- `Autres` : tout le reste
+**2. `src/pages/TeamStartlistMovements.tsx`**
+- Même logique : joindre `startlist_entries` via `startlist_entry_id` pour récupérer `team_confirmed`
+- Afficher l'icône CheckCircle2 à côté du rider_name
 
-Afficher comme badges cliquables à côté des filtres type existants (sur une ligne séparée pour ne pas surcharger le mobile).
-
-**3. Tri (sort)**
-Ajouter un state `sortMode: 'date' | 'points'` (défaut : `date`). Deux boutons de tri :
-- 📅 Date (chronologique ascendant — comportement actuel)
-- 🏆 Points (décroissant)
-
-**4. Affichage des points**
-Dans chaque ligne de course, ajouter un badge doré affichant le nombre de points théoriques total (ex: `3 775 pts`).
-
-### Résultat attendu
-- Filtre catégorie fonctionnel (WT / .Pro / .1 / Autres)
-- Tri par date ou par points
-- Points affichés sur chaque course
-- Rendu mobile propre (badges sur 2 lignes si nécessaire)
-
-### Fichier impacté
-- `src/components/leagues/CourseSelector.tsx` uniquement
+### Rendu visuel
+- Icône `CheckCircle2` h-3 w-3 text-green-600, placée juste avant le nom du coureur (cohérent avec les startlists existantes)
+- Uniquement visible pour les ajouts dont l'équipe est confirmée
 
