@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, X } from "lucide-react";
+import { Search, X, Calendar, Trophy } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { computePerCourseSettings } from "@/lib/leagues/templates";
 
@@ -25,15 +25,25 @@ type CourseSelectorProps = {
   onSelectionChange: (ids: string[]) => void;
 };
 
+function getCategoryGroup(categorie: string | null): string {
+  if (!categorie) return 'Autres';
+  const lower = categorie.toLowerCase();
+  if (lower.includes('wt') || lower.includes('gt') || lower.includes('monument')) return 'WT';
+  if (lower.includes('.pro')) return '.Pro';
+  if (lower.includes('.1')) return '.1';
+  return 'Autres';
+}
+
 export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange }: CourseSelectorProps) {
   const { t } = useTranslation('leagues');
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [sortMode, setSortMode] = useState<'date' | 'points'>('date');
 
   const { data: courses = [], isLoading } = useQuery({
     queryKey: ['courses-for-league', seasonId],
     queryFn: async () => {
-      // Get phase IDs for this season
       const { data: phases } = await supabase
         .from('phases')
         .select('id')
@@ -51,6 +61,24 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
 
       if (error) throw error;
       return (data || []) as Course[];
+    },
+    enabled: !!seasonId,
+  });
+
+  const { data: pointsMap = new Map() } = useQuery({
+    queryKey: ['course-points-theoriques', seasonId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('v_course_points_theoriques')
+        .select('course_id, points_total')
+        .eq('saison_id', seasonId);
+
+      if (error) throw error;
+      const map = new Map<string, number>();
+      (data || []).forEach((row: any) => {
+        map.set(row.course_id, Number(row.points_total) || 0);
+      });
+      return map;
     },
     enabled: !!seasonId,
   });
@@ -78,8 +106,27 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
     if (typeFilter) {
       filtered = filtered.filter(c => c.type_course === typeFilter);
     }
+    if (categoryFilter) {
+      filtered = filtered.filter(c => getCategoryGroup(c.categorie) === categoryFilter);
+    }
+
+    // Sort
+    if (sortMode === 'points') {
+      filtered = [...filtered].sort((a, b) => {
+        const pa = pointsMap.get(a.id) || 0;
+        const pb = pointsMap.get(b.id) || 0;
+        return pb - pa;
+      });
+    } else {
+      filtered = [...filtered].sort((a, b) => {
+        const da = a.date_debut || '';
+        const db = b.date_debut || '';
+        return da.localeCompare(db);
+      });
+    }
+
     return filtered;
-  }, [courses, search, typeFilter]);
+  }, [courses, search, typeFilter, categoryFilter, sortMode, pointsMap]);
 
   const toggleCourse = (courseId: string) => {
     if (selectedCourseIds.includes(courseId)) {
@@ -94,12 +141,18 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
     return Array.from(set) as string[];
   }, [courses]);
 
+  const categories = useMemo(() => {
+    const set = new Set(courses.map(c => getCategoryGroup(c.categorie)));
+    const order = ['WT', '.Pro', '.1', 'Autres'];
+    return order.filter(cat => set.has(cat));
+  }, [courses]);
+
   if (isLoading) {
     return <div className="text-sm text-muted-foreground py-4">{t('join.loadingLeagues', 'Chargement...')}</div>;
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Selected courses summary */}
       {selectedCourseIds.length > 0 && (
         <div className="space-y-2">
@@ -120,36 +173,65 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
         </div>
       )}
 
-      {/* Search + filter */}
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t('settings.searchCourses', 'Rechercher une course...')}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <div className="flex gap-1">
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder={t('settings.searchCourses', 'Rechercher une course...')}
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {/* Filters row 1: Type */}
+      <div className="flex flex-wrap gap-1.5">
+        <Badge
+          variant={typeFilter === null ? "default" : "outline"}
+          className="cursor-pointer text-[11px]"
+          onClick={() => setTypeFilter(null)}
+        >
+          {t('settings.all', 'Tous')}
+        </Badge>
+        {types.map(type => (
           <Badge
-            variant={typeFilter === null ? "default" : "outline"}
-            className="cursor-pointer"
-            onClick={() => setTypeFilter(null)}
+            key={type}
+            variant={typeFilter === type ? "default" : "outline"}
+            className="cursor-pointer text-[11px]"
+            onClick={() => setTypeFilter(typeFilter === type ? null : type)}
           >
-            {t('settings.all', 'Tous')}
+            {type === 'stage_race' ? t('settings.stageRace', 'Étapes') : t('settings.oneDay', '1 jour')}
           </Badge>
-          {types.map(type => (
-            <Badge
-              key={type}
-              variant={typeFilter === type ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => setTypeFilter(typeFilter === type ? null : type)}
-            >
-              {type === 'stage_race' ? t('settings.stageRace', 'Étapes') : t('settings.oneDay', '1 jour')}
-            </Badge>
-          ))}
-        </div>
+        ))}
+        <span className="w-px bg-border mx-0.5" />
+        {categories.map(cat => (
+          <Badge
+            key={cat}
+            variant={categoryFilter === cat ? "default" : "outline"}
+            className="cursor-pointer text-[11px]"
+            onClick={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
+          >
+            {cat}
+          </Badge>
+        ))}
+      </div>
+
+      {/* Sort row */}
+      <div className="flex gap-1.5">
+        <Badge
+          variant={sortMode === 'date' ? "default" : "outline"}
+          className="cursor-pointer text-[11px] gap-1"
+          onClick={() => setSortMode('date')}
+        >
+          <Calendar className="h-3 w-3" /> Date
+        </Badge>
+        <Badge
+          variant={sortMode === 'points' ? "default" : "outline"}
+          className="cursor-pointer text-[11px] gap-1"
+          onClick={() => setSortMode('points')}
+        >
+          <Trophy className="h-3 w-3" /> Points
+        </Badge>
       </div>
 
       {/* Course list */}
@@ -157,6 +239,7 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
         <div className="p-2 space-y-1">
           {filteredCourses.map(course => {
             const isSelected = selectedCourseIds.includes(course.id);
+            const pts = pointsMap.get(course.id);
             return (
               <div
                 key={course.id}
@@ -178,6 +261,11 @@ export function CourseSelector({ seasonId, selectedCourseIds, onSelectionChange 
                     )}
                   </div>
                 </div>
+                {pts !== undefined && pts > 0 && (
+                  <Badge className="shrink-0 text-[10px] px-1.5 py-0 bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700">
+                    {Math.round(pts).toLocaleString()} pts
+                  </Badge>
+                )}
               </div>
             );
           })}
