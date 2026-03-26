@@ -82,6 +82,7 @@ export const MyTeamMobile = () => {
   const { leagues } = useUserLeagues();
   const currentLeague = leagues.find(l => l.id === leagueId);
   const isPerCourse = currentLeague?.game_mode === 'per_course';
+  const bonusesEnabled = currentLeague?.bonuses_enabled !== false;
   const [coureurs, setCoureurs] = useState<Coureur[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>("points");
