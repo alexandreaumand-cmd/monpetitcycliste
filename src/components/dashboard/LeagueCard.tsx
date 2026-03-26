@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus, CheckCircle, Lock, Globe, Gavel, CheckCircle2, Clock, PartyPopper, Megaphone } from "lucide-react";
+import { Users, Trophy, TrendingUp, Crown, Calendar, Zap, UserPlus, CheckCircle, Lock, Globe, Gavel, CheckCircle2, Clock, PartyPopper, Megaphone, Star, StarOff } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
