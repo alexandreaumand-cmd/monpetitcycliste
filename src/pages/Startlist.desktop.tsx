@@ -506,19 +506,8 @@ const StartlistDesktop = () => {
                     <div className="flex justify-between items-start gap-2 mb-2">
                       <CardTitle className="text-lg line-clamp-2">{course.nom}</CardTitle>
                       <div className="flex gap-1.5 shrink-0">
-                        {isOngoing && (
-                          <Badge className="bg-destructive text-destructive-foreground animate-pulse">
-                            EN COURS
-                          </Badge>
-                        )}
-                        {hasStartlist(course.id) && (
-                          <Badge variant="outline" className="bg-accent text-accent-foreground">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Startlist
-                          </Badge>
-                        )}
                         {isPcsValidated(course.id) && (
-                          <Badge variant="default" className="bg-primary text-primary-foreground">
+                          <Badge variant="default" className="bg-green-600 text-white border-green-600">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             SL officielle
                           </Badge>
@@ -533,11 +522,6 @@ const StartlistDesktop = () => {
                       )}
                       {course.categorie && (
                         <Badge variant="outline">{course.categorie}</Badge>
-                      )}
-                      {course.type_course && (
-                        <Badge variant="outline" className="capitalize">
-                          {course.type_course}
-                        </Badge>
                       )}
                     </div>
                   </CardHeader>
