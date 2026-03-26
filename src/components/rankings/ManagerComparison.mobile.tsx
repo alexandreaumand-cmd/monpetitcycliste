@@ -319,7 +319,7 @@ export const ManagerComparisonMobile = ({ phaseId, saisonId }: ManagerComparison
         ptsA = pointsA.filter(p => cat.filterType!(p.type_classement)).reduce((s, p) => s + (p.points || 0), 0);
         ptsB = pointsB.filter(p => cat.filterType!(p.type_classement)).reduce((s, p) => s + (p.points || 0), 0);
       }
-      return { category: cat.label, managerA: ptsA, managerB: ptsB };
+      return { category: cat.label, managerA: Math.round(ptsA), managerB: Math.round(ptsB) };
     });
   }, [pointsA, pointsB, courses, coursesMap]);
 
