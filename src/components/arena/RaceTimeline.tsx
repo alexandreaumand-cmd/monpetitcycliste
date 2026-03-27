@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 export interface TimelineEvent {
   time: string;
   type: string;
+  title?: string;
   text: string;
   riders: string[];
 }
