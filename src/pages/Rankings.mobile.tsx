@@ -310,24 +310,26 @@ export const RankingsMobile = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="p-4 pb-0">
-        <Select 
-          value={selectedPhase || "null"} 
-          onValueChange={(value) => setSelectedPhase(value === "null" ? null : value)}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={t('phase.global')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="null">{t('phase.global')}</SelectItem>
-            {phases?.map((phase) => (
-              <SelectItem key={phase.id} value={phase.id}>
-                Phase {phase.index_dans_saison}{phase.statut === 'active' ? ` ${t('phase.active')}` : ''}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {!isPerCourse && (
+        <div className="p-4 pb-0">
+          <Select 
+            value={selectedPhase || "null"} 
+            onValueChange={(value) => setSelectedPhase(value === "null" ? null : value)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t('phase.global')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="null">{t('phase.global')}</SelectItem>
+              {phases?.map((phase) => (
+                <SelectItem key={phase.id} value={phase.id}>
+                  Phase {phase.index_dans_saison}{phase.statut === 'active' ? ` ${t('phase.active')}` : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="sticky top-14 z-10 bg-background/95 backdrop-blur-sm border-b">
         <div className="py-2 px-4">

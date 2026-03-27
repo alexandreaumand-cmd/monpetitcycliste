@@ -61,22 +61,24 @@ export default function Rankings() {
               <TabsTrigger value="mountain">{t('tabs.mountain', '🏔️ Montagne')}</TabsTrigger>
             </TabsList>
             
-            <Select 
-              value={selectedPhase || "all"} 
-              onValueChange={(v) => setSelectedPhase(v === "all" ? null : v)}
-            >
-              <SelectTrigger className="w-40 shrink-0">
-                <SelectValue placeholder={t('phase.global')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('phase.global')}</SelectItem>
-                {phases?.map((phase) => (
-                  <SelectItem key={phase.id} value={phase.id}>
-                    P{phase.index_dans_saison}{phase.statut === 'active' ? ` ${t('phase.active')}` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!isPerCourse && (
+              <Select 
+                value={selectedPhase || "all"} 
+                onValueChange={(v) => setSelectedPhase(v === "all" ? null : v)}
+              >
+                <SelectTrigger className="w-40 shrink-0">
+                  <SelectValue placeholder={t('phase.global')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('phase.global')}</SelectItem>
+                  {phases?.map((phase) => (
+                    <SelectItem key={phase.id} value={phase.id}>
+                      P{phase.index_dans_saison}{phase.statut === 'active' ? ` ${t('phase.active')}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <TabsContent value="standings" className="space-y-4">
