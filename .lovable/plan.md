@@ -1,26 +1,27 @@
 
 
-## Différencier le visuel "phase en cours" du tick "sélectionné"
+## Supprimer le scroll horizontal sur mobile — Base de données des Enchères
 
 ### Problème
-Dans le sélecteur de phase (Rankings), la phase active affiche `✓` (via `t('phase.active')`) qui ressemble au checkmark de sélection du composant `Select`. Résultat : quand "Global" est sélectionné, on voit deux ticks — un pour la sélection et un pour la phase en cours.
+Le composant `AuctionDatabaseTab` utilise un `<Table>` HTML avec 7 colonnes, ce qui déborde sur mobile (393px) et force un scroll horizontal.
 
 ### Solution
+Détecter mobile via `useIsMobile()` et afficher des **cartes compactes** au lieu du tableau :
 
-**`src/pages/Rankings.tsx`** (ligne 71) — Remplacer le `✓` par un indicateur visuel différent, par exemple un petit point coloré ou le texte "(en cours)" :
+**`src/components/auction/v2/AuctionDatabaseTab.tsx`** :
 
-```typescript
-// Avant :
-P{phase.index_dans_saison}{phase.statut === 'active' ? ` ${t('phase.active')}` : ''}
+1. **Header** : rendre le titre + stats responsive (stack vertical sur mobile au lieu de `flex items-center justify-between`)
 
-// Après :
-P{phase.index_dans_saison}{phase.statut === 'active' ? ' 🟢' : ''}
-```
+2. **Filtres** : déjà en `grid sm:grid-cols-2` → OK, rien à changer
 
-Un petit cercle vert `🟢` est immédiatement distinct du checkmark de sélection et indique clairement "phase en cours".
+3. **Contenu principal** — sur mobile, remplacer le `<Table>` par une liste de cartes :
+   - Chaque carte affiche : nom du coureur, équipe, prix d'achat, manager (badge), round (badge)
+   - Cote et nombre de battus en ligne secondaire
+   - Tap pour expand les concurrents battus (même logique `expandedRows`)
+   - Boutons de tri simplifiés en barre horizontale au-dessus des cartes (tri par Prix, Round, Manager)
 
-**`src/i18n/locales/fr/rankings.json`** et **`src/i18n/locales/en/rankings.json`** — Optionnel : mettre à jour `phase.active` de `"✓"` à `"🟢"` si on veut garder la logique via i18n (ou supprimer cette clé puisqu'on utilise directement l'emoji dans le code).
+4. **Desktop** : garder le tableau existant inchangé
 
-### Fichiers impactés
-- `src/pages/Rankings.tsx` — changement du visuel d'indicateur de phase active
+### Fichier impacté
+- `src/components/auction/v2/AuctionDatabaseTab.tsx`
 
