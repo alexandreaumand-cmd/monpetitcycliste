@@ -193,7 +193,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3. Audit log
+    // 3. Refresh materialized views
+    console.log('Refreshing standings materialized views...');
+    const { error: refreshError } = await supabase.rpc('refresh_standings_views');
+    if (refreshError) {
+      console.error('Error refreshing standings views:', refreshError);
+    } else {
+      console.log('Standings views refreshed successfully');
+    }
+
+    // 4. Audit log
     await supabase.from('audits').insert({
       actor_manager_id: currentManager.id,
       action: 'recalculate_rider_bonuses',
