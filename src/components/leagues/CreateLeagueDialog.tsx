@@ -74,6 +74,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
   const [firstAuctionDate, setFirstAuctionDate] = useState<Date | null>(null);
   const [variant, setVariant] = useState<FivePhasesVariant>('full_season');
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+  const [startingPhaseIndex, setStartingPhaseIndex] = useState<number>(0);
 
   const { data: seasons = [] } = useQuery({
     queryKey: ['seasons'],
