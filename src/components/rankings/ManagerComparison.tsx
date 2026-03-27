@@ -490,34 +490,21 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     );
   };
 
-  // Calculer les métriques globales - CORRIGÉ: ajouter bonus
-  const totalPointsA =
-    (pointsA?.reduce((sum, p) => sum + (p.points || 0), 0) || 0) +
-    (bonusPointsA?.reduce((sum, b) => sum + (b.points || 0), 0) || 0) +
-    (managerBonusA?.reduce((sum, mb) => 
-      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) + 
-      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) + 
-      (mb.bonus_scoreurs || 0), 0) || 0);
-
-  const totalPointsB = 
-    (pointsB?.reduce((sum, p) => sum + (p.points || 0), 0) || 0) +
-    (bonusPointsB?.reduce((sum, b) => sum + (b.points || 0), 0) || 0) +
-    (managerBonusB?.reduce((sum, mb) => 
-      sum + (mb.bonus_itt || 0) + (mb.bonus_ttt || 0) + 
-      (mb.bonus_first_win || 0) + (mb.bonus_coureurs || 0) + 
-      (mb.bonus_scoreurs || 0), 0) || 0);
-
-  const scoreursA = new Set(pointsA?.filter(p => (p.points || 0) > 0).map(p => `${p.coureur_id}|${p.phase_id}`)).size || 0;
-  const scoreursB = new Set(pointsB?.filter(p => (p.points || 0) > 0).map(p => `${p.coureur_id}|${p.phase_id}`)).size || 0;
+  // KPIs from standings views
+  const standA = standingsData?.find(s => s.manager_id === managerA);
+  const standB = standingsData?.find(s => s.manager_id === managerB);
+  const totalPointsA = Math.round(standA?.total_points || 0);
+  const totalPointsB = Math.round(standB?.total_points || 0);
+  const scoreursA = standA?.nb_scoreurs || 0;
+  const scoreursB = standB?.nb_scoreurs || 0;
+  const victoiresA = standA?.nb_victoires || 0;
+  const victoiresB = standB?.nb_victoires || 0;
 
   const budgetA = rostersA?.reduce((sum, r) => sum + (r.prix_signature || 0), 0) || 1;
   const budgetB = rostersB?.reduce((sum, r) => sum + (r.prix_signature || 0), 0) || 1;
 
    const roiA = Math.round(totalPointsA / budgetA).toString();
    const roiB = Math.round(totalPointsB / budgetB).toString();
-
-  const victoiresA = victoriesCountA || 0;
-  const victoiresB = victoriesCountB || 0;
 
   const managerAData = selectedManagers?.find(m => m.id === managerA);
   const managerBData = selectedManagers?.find(m => m.id === managerB);
