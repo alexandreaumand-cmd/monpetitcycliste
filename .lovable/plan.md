@@ -1,74 +1,40 @@
 
 
-## Fix auto-scrape qui ne fonctionne pas (Live Broadcast)
+## Fix du parser L'Équipe pour capturer tous les groupes de course
 
-### Probleme identifie
-Le `setInterval` de l'auto-scrape capture une **closure perimee** de `handleScrape` et `isScraping` car :
-1. `handleScrape` n'est pas dans le tableau de dependances du `useEffect`
-2. `handleScrape` n'est pas memoize (`useCallback`) — il est recree a chaque render
-3. `isScraping` dans la closure du `doAutoScrape` reste figee a la valeur au moment de la creation de l'intervalle
+### Problème
+Le parser L'Équipe dans `scrape-live-race` ne détecte que 2 types de groupes : `"Groupe de tête"` et `"Peloton"` (ligne 198). Or L'Équipe utilise des noms variés comme :
+- **Échappée** (breakaway)
+- **Poursuivants** (chasers avec gap)
+- **Noms de coureurs individuels** (ex: "Garcia Cortina" avec gap)
+- **Contre**, **Maillot jaune**, etc.
 
-Resultat : l'intervalle tourne mais appelle une version perimee de `handleScrape`, ou `isScraping` reste `true` dans la closure, bloquant chaque execution.
+La regex `/(Groupe\s+de\s+t[êe]te|Peloton)\s*/` est trop restrictive et ignore tous ces groupes.
 
-Les logs de production confirment : **0 appel** a `scrape-live-race` — le scrape ne se declenche jamais.
+### Solution — `supabase/functions/scrape-live-race/index.ts`
 
-### Solution — `src/pages/admin/SuperAdminLiveBroadcastPage.tsx`
+Refactorer la détection des groupes dans `parseLEquipeLive` :
 
-1. **Utiliser des refs** pour `isScraping` et `handleScrape` afin d'eviter les problemes de closure :
+1. **Élargir la regex des groupes** pour capturer les patterns L'Équipe courants :
+   - `Échappée`, `Poursuivants`, `Contre`, `Peloton`, `Groupe de tête`, `Groupe de chasse`, `Maillot jaune/vert/etc.`
+   - Pattern individuel : nom de coureur suivi d'un gap (`Garcia Cortina | +02'16"`)
 
+2. **Nouvelle approche** : Au lieu de matcher uniquement des mots-clés fixes, détecter les sections structurées du HTML L'Équipe. L'Équipe structure ses groupes avec un pattern :
+   - Nom du groupe (texte bold/header)
+   - Optionnel : `|` ou séparateur + gap
+   - Liste de coureurs avec drapeaux et équipes
+
+3. **Concrètement**, remplacer le `groupHeaderPattern` par une regex plus large :
 ```typescript
-const isScrapingRef = useRef(false);
-const handleScrapeRef = useRef(handleScrape);
-
-// Garder la ref a jour
-useEffect(() => {
-  handleScrapeRef.current = handleScrape;
-});
+// Capture: Échappée, Poursuivants, Peloton, Groupe de X, Contre,
+// ou un nom propre (ex: "Garcia Cortina") suivi d'un gap
+const groupHeaderPattern = /(Échapp[ée]e|Poursuivants?|Peloton|Groupe\s+de\s+\w+|Contre|Maillot\s+\w+|[A-ZÀ-Ü][a-zà-ü]+(?:\s+[A-ZÀ-Ü][a-zà-ü]+)*)\s*(?:[|·\s]*(?:[àa]\s*)?(?:\+?\s*)(\d{1,3})\s*[':′''min]\s*(\d{1,2})\s*[":″''s]?\s*[":″''s]?)?/gi;
 ```
 
-2. **Mettre a jour `handleScrape`** pour synchroniser `isScrapingRef` avec `isScraping` :
+4. **Filtrer les faux positifs** : exclure les matches qui ressemblent à des noms de coureurs dans la liste (trop courts, pas suivis d'un gap, etc.) en vérifiant que chaque header est soit un mot-clé connu, soit un nom suivi d'un gap structuré.
 
-```typescript
-const handleScrape = async (isAuto = false) => {
-  if (!scrapeUrl || !activeCourseId) return;
-  if (isScrapingRef.current) return; // Guard via ref
-  setIsScraping(true);
-  isScrapingRef.current = true;
-  // ... existing logic ...
-  finally {
-    setIsScraping(false);
-    isScrapingRef.current = false;
-    setLastAutoScrapeAt(new Date());
-  }
-};
-```
+5. **Garder la logique existante** intacte pour l'extraction des coureurs dans chaque section et l'enrichissement avec riderIds.
 
-3. **Corriger le `useEffect` de l'intervalle** pour utiliser les refs :
-
-```typescript
-useEffect(() => {
-  if (autoScrapeRef.current) {
-    clearInterval(autoScrapeRef.current);
-    autoScrapeRef.current = null;
-  }
-  if (!autoScrapeEnabled || !scrapeUrl || !activeCourseId) return;
-
-  const doAutoScrape = () => {
-    if (isScrapingRef.current) return;
-    handleScrapeRef.current(true);
-  };
-
-  // Fire immediately on enable, then every 60s
-  doAutoScrape();
-  autoScrapeRef.current = setInterval(doAutoScrape, 60_000);
-  return () => {
-    if (autoScrapeRef.current) clearInterval(autoScrapeRef.current);
-  };
-}, [autoScrapeEnabled, scrapeUrl, activeCourseId]);
-```
-
-4. **Bonus** : declencher immediatement un premier scrape quand on active l'auto-scrape (au lieu d'attendre 60s).
-
-### Fichier impacte
-- `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` uniquement
+### Fichier impacté
+- `supabase/functions/scrape-live-race/index.ts` — refactoring du `groupHeaderPattern` dans `parseLEquipeLive`
 
