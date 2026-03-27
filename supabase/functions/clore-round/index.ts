@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
 
         // Create roster entry with error handling
         const { error: rosterError } = await supabase.from('rosters').insert({
-          phase_id: auction.phase_id,
+          phase_id: effectivePhaseId,
           manager_id: winner.manager_id,
           coureur_id,
           prix_signature: maxAmount,
