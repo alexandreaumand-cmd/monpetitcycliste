@@ -313,9 +313,27 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
               </div>
             </RadioGroup>
 
-            <p className="text-sm text-muted-foreground italic">
-              {t('settings.startingPhaseAuto')}
-            </p>
+            <div className="space-y-2">
+              <Label>{t('settings.startingPhase')}</Label>
+              <Select
+                value={startingPhaseIndex.toString()}
+                onValueChange={(v) => setStartingPhaseIndex(parseInt(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[0, 1, 2, 3, 4].map((idx) => (
+                    <SelectItem key={idx} value={idx.toString()}>
+                      {idx === 0 ? t('settings.startingPhaseDefault') : t('settings.startingPhaseOption', { num: idx + 1 })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {t('settings.startingPhaseAuto')}
+              </p>
+            </div>
           </div>
         );
 
