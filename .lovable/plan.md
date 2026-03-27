@@ -1,67 +1,77 @@
 
 
-## Fix comparaison managers : utiliser les vues standings officielles
+## Fix : les enchères assignent les rosters à la mauvaise phase
 
 ### Problème
-Le composant `ManagerComparison` recalcule manuellement les totaux (points, scoreurs) à partir de requêtes brutes sur `points_ledger`, `bonus_points` et `manager_bonus_points`. Ces calculs sont incorrects (Ludo affiche 63 pts au lieu de 880, Alex 0 scoreurs au lieu de 1). La vue matérialisée `v_manager_standings_by_season_v2` contient les bonnes valeurs.
 
-### Cause
-Multiples sources d'erreur dans le calcul manuel :
-- Requêtes potentiellement tronquées (limite 1000 rows)
-- Scoping incorrect des points par ligue/saison pour les ligues `per_course`
-- Comptage scoreurs par `coureur_id|phase_id` au lieu de `coureur_id` seul
+Dans "TEST Saison entière 3 managers", les 4 rounds d'enchères sont liés à la **phase 1** (terminée le 21 mars), mais ont été clôturés les 25-26 mars — donc **pendant la phase 2** (22 mars - 8 mai). Résultat : les 90 rosters créés ont `phase_id` = phase 1 au lieu de phase 2.
 
-### Solution
-Remplacer les 4 KPI cards (Total Points, Scoreurs, ROI, Victoires) par des données issues directement de la vue standings officielle, qui est déjà pré-calculée et correcte.
+### Cause racine
 
-#### Modification — `src/components/rankings/ManagerComparison.tsx`
+Quand une ligue est créée (`leagues-create/index.ts` ligne 231-252), l'enchère est associée à `firstPhaseId`. Quand `clore-round` ferme un round et ouvre le suivant, le nouveau round hérite du même `phase_id` (celui de l'enchère précédente). Il n'y a **aucun mécanisme** pour basculer vers la phase courante quand la phase initiale est terminée.
 
-1. **Ajouter une requête standings** pour les deux managers en une seule requête :
+### Solution en 2 parties
+
+#### 1. Fix des données existantes (one-shot)
+
+Mettre à jour les 90 rosters et les 4 auctions pour pointer vers la phase 2 (`8b939cb8-...`), qui est la phase active au moment où les enchères ont réellement eu lieu.
+
+#### 2. Fix du code — `clore-round/index.ts`
+
+Quand `clore-round` crée une entrée roster (ligne 168), au lieu d'utiliser `auction.phase_id` directement, **déterminer la phase active** à la date courante :
+
 ```typescript
-const { data: standingsData } = useQuery({
-  queryKey: ["standings-comparison", managerA, managerB, phaseId, saisonId, leagueId],
-  queryFn: async () => {
-    const ids = [managerA, managerB].filter(Boolean) as string[];
-    if (phaseId) {
-      const { data } = await supabase
-        .from("v_manager_standings_by_phase_v2")
-        .select("manager_id, total_points, nb_scoreurs, nb_victoires")
-        .eq("league_id", leagueId!)
-        .eq("phase_id", phaseId)
-        .in("manager_id", ids);
-      return data;
-    } else if (saisonId) {
-      const { data } = await supabase
-        .from("v_manager_standings_by_season_v2")
-        .select("manager_id, total_points, nb_scoreurs, nb_victoires")
-        .eq("league_id", leagueId!)
-        .eq("saison_id", saisonId)
-        .in("manager_id", ids);
-      return data;
-    }
-    return [];
-  },
-  enabled: !!(managerA || managerB) && !!leagueId,
+// Determine the correct phase: use the currently active phase if auction's phase is completed
+let effectivePhaseId = auction.phase_id;
+
+const { data: auctionPhase } = await supabase
+  .from('phases')
+  .select('statut, saison_id')
+  .eq('id', auction.phase_id)
+  .single();
+
+if (auctionPhase?.statut === 'completed') {
+  const { data: activePhase } = await supabase
+    .from('phases')
+    .select('id')
+    .eq('saison_id', auctionPhase.saison_id)
+    .eq('statut', 'active')
+    .single();
+  
+  if (activePhase) {
+    effectivePhaseId = activePhase.id;
+  }
+}
+
+// Use effectivePhaseId for roster insert
+await supabase.from('rosters').insert({
+  phase_id: effectivePhaseId,
+  ...
 });
 ```
 
-2. **Remplacer les calculs manuels** (lignes 685-711) par des lookups dans `standingsData` :
-```typescript
-const standA = standingsData?.find(s => s.manager_id === managerA);
-const standB = standingsData?.find(s => s.manager_id === managerB);
-const totalPointsA = Math.round(standA?.total_points || 0);
-const totalPointsB = Math.round(standB?.total_points || 0);
-const scoreursA = standA?.nb_scoreurs || 0;
-const scoreursB = standB?.nb_scoreurs || 0;
-const victoiresA = standA?.nb_victoires || 0;
-const victoiresB = standB?.nb_victoires || 0;
+De même, quand un **nouveau round** est ouvert après clôture (vers la fin de `clore-round`), utiliser `effectivePhaseId` pour la nouvelle enchère.
+
+#### 3. Fix des données — migration SQL
+
+```sql
+-- Move rosters from phase 1 to phase 2 for this league
+UPDATE rosters 
+SET phase_id = '8b939cb8-7079-4938-ba00-920603813092'
+WHERE phase_id = '73e540d2-d008-4d13-ac93-72aec3d5d986'
+  AND league_id = (SELECT id FROM leagues WHERE name ILIKE '%TEST Saison%3%' LIMIT 1);
+
+-- Update auctions too
+UPDATE auctions
+SET phase_id = '8b939cb8-7079-4938-ba00-920603813092'
+WHERE phase_id = '73e540d2-d008-4d13-ac93-72aec3d5d986'
+  AND league_id = (SELECT id FROM leagues WHERE name ILIKE '%TEST Saison%3%' LIMIT 1);
 ```
 
-3. **Supprimer les requêtes devenues inutiles** pour les KPIs : `bonusPointsA/B`, `managerBonusA/B`, `victoriesCountA/B` (les requêtes `pointsA/B` restent nécessaires pour les tableaux de répartition par catégorie et les radars).
-
-4. **Appliquer le même fix** dans `ManagerComparison.mobile.tsx`.
+Puis rafraîchir les vues matérialisées standings.
 
 ### Fichiers impactés
-- `src/components/rankings/ManagerComparison.tsx` — standings query + suppression calculs manuels
-- `src/components/rankings/ManagerComparison.mobile.tsx` — même logique
+- `supabase/functions/clore-round/index.ts` — détection phase active pour roster + nouveau round
+- Data fix via l'outil insert (rosters + auctions de la ligue TEST)
+- Refresh standings views après le fix data
 
