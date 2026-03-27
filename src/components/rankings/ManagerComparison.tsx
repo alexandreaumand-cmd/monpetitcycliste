@@ -235,7 +235,32 @@ export function ManagerComparison({ phaseId, saisonId }: ManagerComparisonProps)
     enabled: !!(managerA || managerB) && !!leagueId,
   });
 
-  // Calculer les points par type de barème (9 catégories détaillées)
+  // 5. Récupérer les infos des courses pour catégoriser les points
+  const { data: courses } = useQuery({
+    queryKey: ["courses-for-comparison", phaseId, saisonId],
+    queryFn: async () => {
+      let query = supabase
+        .from("courses")
+        .select("id, type_course, categorie");
+
+      if (phaseId) {
+        query = query.eq("phase_id", phaseId);
+      } else if (saisonId) {
+        const { data: phases } = await supabase
+          .from("phases")
+          .select("id")
+          .eq("saison_id", saisonId);
+        if (phases) {
+          query = query.in("phase_id", phases.map(p => p.id));
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const pointsByBaremeType = useMemo(() => {
     if (!pointsA || !pointsB || !courses) return null;
 
