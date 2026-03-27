@@ -381,7 +381,7 @@ function parseLEquipeLive(doc: any, html: string): {
     now.setMinutes(now.getMinutes() - minutesAgo);
     const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-    events.push({ time: timeStr, type, text: text.substring(0, 300), riders: riderNames });
+    events.push({ time: timeStr, type, title, text: body.substring(0, 300), riders: riderNames });
   }
 
   console.log(`[L'Équipe] Parsed ${events.length} events, ${riders.length} riders, ${situationGroups.length} groups, km: ${kmCovered}/${totalKm}, speed: ${speed}`);

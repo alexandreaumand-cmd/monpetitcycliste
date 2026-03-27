@@ -91,7 +91,12 @@ export const RaceTimeline = ({ events, onBroadcast, disabled, matchedRiders }: R
                   }}
                 />
               ) : (
-                <p className="text-xs leading-relaxed">{event.text}</p>
+                <div>
+                  {event.title && (
+                    <p className="text-xs font-semibold leading-snug">{event.title}</p>
+                  )}
+                  <p className="text-xs leading-relaxed text-muted-foreground">{event.text}</p>
+                </div>
               )}
               {event.riders.length > 0 && !isEditing && (
                 <div className="flex flex-wrap gap-1 mt-1">
