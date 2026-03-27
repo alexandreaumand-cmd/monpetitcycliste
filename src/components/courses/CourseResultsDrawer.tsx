@@ -617,15 +617,7 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                   ) : (
                     // Regular results table - optimized for mobile with 4 columns
                     <div className="border rounded-lg overflow-hidden">
-                      <Table className="text-[11px] table-fixed w-full">
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-7 px-1 text-center">#</TableHead>
-                            <TableHead className="px-1">Coureur</TableHead>
-                            <TableHead className="text-right px-1 w-8">Pts</TableHead>
-                            <TableHead className="px-1 w-16 text-right">Manager</TableHead>
-                          </TableRow>
-                        </TableHeader>
+                      <Table className="text-[10px] table-fixed w-full">
                         <TableBody>
                           {displayedResults.map((row) => {
                             const isFinished = row.statut === 'finished' && row.row_position !== null;
@@ -642,38 +634,35 @@ export const CourseResultsDrawer = ({ open, onOpenChange, courseId }: CourseResu
                                     : ""
                                 }
                               >
-                                <TableCell className="font-medium px-1 py-1 text-center">
+                                <TableCell className="font-medium px-1 py-0 text-center w-6 leading-none">
                                   {isFinished ? (
                                     displayPosition <= 3 ? (
-                                      <span className="flex items-center justify-center gap-0.5">
-                                        <span className="text-xs">
-                                          {displayPosition === 1 ? "🥇" : 
-                                           displayPosition === 2 ? "🥈" : "🥉"}
-                                        </span>
+                                      <span className={`font-bold ${displayPosition === 1 ? "text-yellow-500" : displayPosition === 2 ? "text-gray-400" : "text-amber-600"}`}>
+                                        {displayPosition}
                                       </span>
                                     ) : (
                                       <span className="text-muted-foreground">{displayPosition}</span>
                                     )
                                   ) : statutBadge ? (
-                                    <Badge variant={statutBadge.variant} className="text-[8px] px-0.5 py-0">
+                                    <Badge variant={statutBadge.variant} className="text-[7px] px-0.5 py-0">
                                       {statutBadge.label.slice(0, 3)}
                                     </Badge>
                                   ) : (
                                     "—"
                                   )}
                                 </TableCell>
-                                <TableCell className="px-1 py-1">
-                                  <div className="flex flex-col">
-                                    <span className="font-semibold leading-tight truncate">{row.coureur_nom}</span>
-                                    <span className="text-[9px] text-muted-foreground truncate">{row.equipe}</span>
+                                <TableCell className="px-1 py-0 leading-none">
+                                  <div className="flex items-baseline gap-1 min-w-0">
+                                    <span className="font-semibold truncate">{row.coureur_nom}</span>
+                                    <span className="text-[8px] text-muted-foreground truncate flex-shrink-0">— {row.equipe}</span>
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-right font-bold px-1 py-1 tabular-nums">
+                                <TableCell className="text-right font-bold px-1 py-0 tabular-nums w-7 leading-none">
                                   {points > 0 ? points : "—"}
                                 </TableCell>
-                                <TableCell className="px-1 py-1 text-right">
+                                <TableCell className="px-1 py-0 text-right w-14 leading-none">
                                   {row.manager_nom && (
-                                    <span className="text-[9px] text-muted-foreground truncate block">
+                                    <span className="text-[8px] text-muted-foreground truncate block">
                                       {row.manager_nom}
                                     </span>
                                   )}
