@@ -187,7 +187,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
           maxPlayers: playerCount,
           bonusesEnabled,
           firstAuctionStartsAt: firstAuctionDate.toISOString(),
-          ...(selectedMode === 'five_phases' && { variant }),
+          ...(selectedMode === 'five_phases' && { variant, startingPhaseIndex }),
           ...(selectedMode === 'per_course' && { selectedCourseIds }),
         },
       });
