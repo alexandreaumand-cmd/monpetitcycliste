@@ -256,100 +256,15 @@ export const SuperAdminLiveBroadcastPage = () => {
       });
 
       // Auto-broadcast all timeline events (reversed so oldest first)
-      // Build a lookup: various name forms → manager name
-      // Normalize accents for matching: é→e, č→c, etc.
-      const stripAccents = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-      const riderToManager: Record<string, string> = {};
-      for (const [, info] of Object.entries(matched)) {
-        const m = info as any;
-        if (m.manager_name) {
-          const addVariants = (name: string) => {
-            const lc = name.toLowerCase();
-            riderToManager[lc] = m.manager_name;
-            // Also add accent-stripped version
-            const stripped = stripAccents(lc);
-            if (stripped !== lc) riderToManager[stripped] = m.manager_name;
-          };
-          if (m.scraped_name) addVariants(m.scraped_name);
-          if (m.rider_nom) {
-            addVariants(m.rider_nom);
-            const parts = m.rider_nom.split(/\s+/);
-            if (parts.length >= 2) {
-              // Reversed order: "Tadej Pogacar" from "POGACAR Tadej"
-              addVariants([...parts].reverse().join(" "));
-              addVariants(parts.join(" "));
-              // Last name only
-              const lastName = parts[0].toLowerCase();
-              if (lastName.length >= 4) {
-                riderToManager[lastName] = m.manager_name;
-                const strippedLast = stripAccents(lastName);
-                if (strippedLast !== lastName) riderToManager[strippedLast] = m.manager_name;
-              }
-              // Initial + lastname variants: "J. Alaphilippe", "T. Pogacar"
-              // rider_nom is typically "LASTNAME Firstname"
-              const lastNamePart = parts.slice(0, -1).join(" ");
-              const firstName = parts[parts.length - 1];
-              if (firstName) {
-                const initial = firstName[0];
-                const variant = `${initial}. ${lastNamePart}`.toLowerCase();
-                riderToManager[variant] = m.manager_name;
-                riderToManager[stripAccents(variant)] = m.manager_name;
-                // Also reversed: "FIRSTNAME LASTNAME" → initial from first
-                const reversedParts = [...parts].reverse();
-                const revInitial = reversedParts[0][0];
-                const revLast = reversedParts.slice(1).join(" ");
-                const revVariant = `${revInitial}. ${revLast}`.toLowerCase();
-                riderToManager[revVariant] = m.manager_name;
-                riderToManager[stripAccents(revVariant)] = m.manager_name;
-              }
-            }
-          }
-        }
-      }
-
-      // Replace rider names in text with "rider (manager)" and clean formatting
-      // Sort entries by name length DESC so longer names match first (avoids partial matches)
-      const sortedEntries = Object.entries(riderToManager)
-        .filter(([name]) => name.length >= 4)
-        .sort((a, b) => b[0].length - a[0].length);
-
-      const enrichText = (text: string): string => {
-        let result = text
+      const cleanText = (text: string): string => {
+        return text
           .replace(/;/g, ', ')
           .replace(/\s{2,}/g, ' ')
           .replace(/,\s*,/g, ',')
           .trim();
-        // Also try matching on accent-stripped version of the text
-        const resultStripped = stripAccents(result.toLowerCase());
-        const alreadyAnnotated = new Set<string>();
-        for (const [name, mgr] of sortedEntries) {
-          if (alreadyAnnotated.has(mgr + name)) continue;
-          const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          // Try direct match first
-          const regex = new RegExp(`(?<!\\()\\b${escaped}\\b(?!\\s*\\()`, 'gi');
-          if (regex.test(result)) {
-            result = result.replace(regex, (match) => `${match} (${mgr})`);
-            alreadyAnnotated.add(mgr + name);
-          } else {
-            // Try accent-stripped match: find position in stripped text, replace in original
-            const strippedEscaped = stripAccents(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const strippedRegex = new RegExp(`(?<!\\()\\b${strippedEscaped}\\b(?!\\s*\\()`, 'gi');
-            const strippedMatch = strippedRegex.exec(resultStripped);
-            if (strippedMatch) {
-              const idx = strippedMatch.index;
-              const len = strippedMatch[0].length;
-              const originalSlice = result.substring(idx, idx + len);
-              result = result.substring(0, idx + len) + ` (${mgr})` + result.substring(idx + len);
-              alreadyAnnotated.add(mgr + name);
-            }
-          }
-        }
-        return result;
       };
 
       const eventKey = (evt: TimelineEvent) => `${evt.time}|${(evt.title||'').substring(0,30)}|${evt.text.substring(0,50)}`;
-
       if (events.length > 0 && managerId) {
         const reversedEvents = [...events].reverse();
         const newEvents = reversedEvents.filter(evt => !sentEventsRef.current.has(eventKey(evt)));
@@ -357,8 +272,8 @@ export const SuperAdminLiveBroadcastPage = () => {
           let sent = 0;
           for (const evt of newEvents) {
             const typeEmoji = evt.type === "crash" ? "💥" : evt.type === "breakaway" ? "🚴" : evt.type === "gap" ? "⏱️" : evt.type === "dropped" ? "📉" : evt.type === "intermediate" ? "🏁" : evt.type === "abandon" ? "🚑" : "📢";
-            const titlePart = evt.title ? `**${enrichText(evt.title)}**\n` : "";
-            const content = `${typeEmoji} ${evt.time} — ${titlePart}${enrichText(evt.text)}`;
+            const titlePart = evt.title ? `**${cleanText(evt.title)}**\n` : "";
+            const content = `${typeEmoji} ${evt.time} — ${titlePart}${cleanText(evt.text)}`;
             try {
               await new Promise<void>((resolve, reject) => {
                 broadcastMessage.mutate(
