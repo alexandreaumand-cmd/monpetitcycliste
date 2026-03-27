@@ -69,6 +69,8 @@ export const SuperAdminLiveBroadcastPage = () => {
   useEffect(() => {
     if (!activeCourseId) return;
     setAutoScrapeEnabled(false);
+    sentEventsRef.current = new Set();
+    lastSituationRef.current = "";
     supabase
       .from("arena_live_courses")
       .select("live_scrape_url")
