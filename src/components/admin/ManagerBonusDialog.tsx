@@ -144,9 +144,16 @@ export const ManagerBonusDialog = ({ open, onOpenChange, phaseId }: ManagerBonus
 
       if (error) throw error;
 
+      // Refresh materialized standings views
+      await supabase.rpc("refresh_standings_views").then(({ error: refreshErr }) => {
+        if (refreshErr) console.error('Failed to refresh standings views:', refreshErr);
+      });
+
       toast.success(`${changedBonuses.length} bonus enregistré(s)`);
       queryClient.invalidateQueries({ queryKey: ['managers-bonus'] });
       queryClient.invalidateQueries({ queryKey: ['manager-standings'] });
+      queryClient.invalidateQueries({ queryKey: ['league-standings-season'] });
+      queryClient.invalidateQueries({ queryKey: ['league-standings-phase'] });
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving bonuses:', error);

@@ -6878,6 +6878,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      refresh_standings_views: { Args: never; Returns: undefined }
       results_course_meta: {
         Args: { p_course_id: string }
         Returns: {

@@ -970,6 +970,11 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
 
       if (pointsError) throw pointsError;
 
+      // Refresh materialized standings views
+      await supabase.rpc("refresh_standings_views").then(({ error }) => {
+        if (error) console.error('Failed to refresh standings views:', error);
+      });
+
       // Verification check
       const { data: verifyData } = await supabase.rpc("verify_course_save", {
         p_course_id: course.course_id,
@@ -1080,6 +1085,11 @@ export const ResultsEntryStudio = ({ course, mode, onClose }: StudioProps) => {
       }
       
       await query3;
+
+      // Refresh materialized standings views
+      await supabase.rpc("refresh_standings_views").then(({ error }) => {
+        if (error) console.error('Failed to refresh standings views:', error);
+      });
 
       return { success: true };
     },
