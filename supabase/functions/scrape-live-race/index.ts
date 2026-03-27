@@ -195,7 +195,8 @@ function parseLEquipeLive(doc: any, html: string): {
     const afterKmh = textContent.substring(kmhIdx);
     // Look for first group indicator to start the zone
     const groupIndicator = afterKmh.search(/(?:Échapp[ée]e|Peloton|Gr\.\s|Groupe\s+de|Poursuivants?|Favoris|T[eê]te\s+de\s+course)/i);
-    const zoneStart = groupIndicator >= 0 ? kmhIdx + groupIndicator : kmhIdx;
+    // Back up ~200 chars before the first group keyword to capture the leader name
+    const zoneStart = groupIndicator >= 0 ? kmhIdx + Math.max(0, groupIndicator - 200) : kmhIdx;
     // End at timeline or limit
     const zoneEnd = firstEventIdx > zoneStart ? firstEventIdx : zoneStart + 3000;
     situationZone = textContent.substring(zoneStart, zoneEnd);
@@ -273,14 +274,23 @@ function parseLEquipeLive(doc: any, html: string): {
     // Pass 4: Leader detection — if no group has gap "0:00", look for a rider name before the first group
     if (uniqueHeaders.length > 0 && !uniqueHeaders.some(h => h.gap === "0:00")) {
       const firstGroupIdx = uniqueHeaders[0].index;
-      const beforeFirst = situationZone.substring(0, firstGroupIdx).trim();
-      // Look for a rider name pattern: "M. Van der Poel" or "Van der Poel" (possibly with team in parentheses)
-      const leaderRx = /([A-ZÀ-Ü][a-zà-ü]*\.?\s+(?:(?:de|van|von|el|di|du|le|la|ter|den|der|dos|da)\s+)*[A-ZÀ-Ü][a-zà-ü'-]+(?:\s+[A-Za-zÀ-ü'-]+)*)/i;
-      const leaderMatch = beforeFirst.match(leaderRx);
-      if (leaderMatch && leaderMatch[1].length >= 4 && leaderMatch[1].length <= 40) {
-        const leaderName = leaderMatch[1].trim();
+      // Search in a wider window: up to 300 chars before the first group
+      const searchStart = Math.max(0, firstGroupIdx - 300);
+      const beforeFirst = situationZone.substring(searchStart, firstGroupIdx).trim();
+      console.log(`[L'Équipe] Pass 4 — beforeFirst (${beforeFirst.length} chars): "${beforeFirst.substring(Math.max(0, beforeFirst.length - 200))}"`);
+      
+      // Look for a rider name pattern: "M. Van der Poel" or "Van der Poel" (possibly with flag emoji)
+      // Search for the LAST plausible name match (closest to the first group)
+      const leaderRx = /(?:[\u{1F1E0}-\u{1F1FF}]{2}\s*)?([A-ZÀ-Ü][a-zà-ü]*\.?\s+(?:(?:de|van|von|el|di|du|le|la|ter|den|der|dos|da)\s+)*[A-ZÀ-Ü][a-zà-ü'-]+(?:\s+[A-Za-zÀ-ü'-]+)*)/giu;
+      let leaderMatch;
+      let lastLeaderMatch: RegExpExecArray | null = null;
+      while ((leaderMatch = leaderRx.exec(beforeFirst)) !== null) {
+        lastLeaderMatch = leaderMatch;
+      }
+      if (lastLeaderMatch && lastLeaderMatch[1].length >= 4 && lastLeaderMatch[1].length <= 40) {
+        const leaderName = lastLeaderMatch[1].trim();
         const lc = leaderName.toLowerCase();
-        const badWords = ['il ', 'elle ', 'ils ', ' est ', ' sont ', ' a ', ' ont ', ' va ', ' fait '];
+        const badWords = ['il ', 'elle ', 'ils ', ' est ', ' sont ', ' a ', ' ont ', ' va ', ' fait ', 'afficher', 'masquer', 'détail', 'course', 'étape'];
         if (!badWords.some(w => lc.includes(w))) {
           console.log(`[L'Équipe] Leader detected before first group: "${leaderName}"`);
           uniqueHeaders.unshift({ name: leaderName, gap: "0:00", index: 0 });
