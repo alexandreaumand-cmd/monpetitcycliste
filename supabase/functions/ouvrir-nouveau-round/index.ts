@@ -110,6 +110,7 @@ Deno.serve(async (req) => {
         .update({
           deadline_at,
           statut: 'open',
+          ...(effective_phase_id && { effective_phase_id }),
         })
         .eq('id', scheduledAuction.id)
         .select()
