@@ -37,8 +37,10 @@ export const SuperAdminLiveBroadcastPage = () => {
   const [selectedEtape, setSelectedEtape] = useState<number | null>(null);
   const [scrapeUrl, setScrapeUrl] = useState("");
   const [isScraping, setIsScraping] = useState(false);
+  const isScrapingRef = useRef(false);
   const [autoScrapeEnabled, setAutoScrapeEnabled] = useState(false);
   const autoScrapeRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const handleScrapeRef = useRef<(isAuto?: boolean) => Promise<void>>();
   const [lastAutoScrapeAt, setLastAutoScrapeAt] = useState<Date | null>(null);
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [importedSituation, setImportedSituation] = useState<RaceSituation | null>(null);
@@ -78,6 +80,11 @@ export const SuperAdminLiveBroadcastPage = () => {
       });
   }, [activeCourseId]);
 
+  // Keep handleScrapeRef in sync
+  useEffect(() => {
+    handleScrapeRef.current = handleScrape;
+  });
+
   // Auto-scrape every 60s when enabled
   useEffect(() => {
     if (autoScrapeRef.current) {
@@ -87,10 +94,12 @@ export const SuperAdminLiveBroadcastPage = () => {
     if (!autoScrapeEnabled || !scrapeUrl || !activeCourseId) return;
 
     const doAutoScrape = () => {
-      if (isScraping) return;
-      handleScrape(true);
+      if (isScrapingRef.current) return;
+      handleScrapeRef.current?.(true);
     };
 
+    // Fire immediately, then every 60s
+    doAutoScrape();
     autoScrapeRef.current = setInterval(doAutoScrape, 60_000);
     return () => {
       if (autoScrapeRef.current) clearInterval(autoScrapeRef.current);
@@ -189,7 +198,9 @@ export const SuperAdminLiveBroadcastPage = () => {
 
   const handleScrape = async (isAuto = false) => {
     if (!scrapeUrl || !activeCourseId) return;
+    if (isScrapingRef.current) return;
     setIsScraping(true);
+    isScrapingRef.current = true;
 
     // Persist URL to DB
     if (!isAuto) {
@@ -389,6 +400,7 @@ export const SuperAdminLiveBroadcastPage = () => {
       toast.error(err.message || "Erreur lors de l'import");
     } finally {
       setIsScraping(false);
+      isScrapingRef.current = false;
       setLastAutoScrapeAt(new Date());
     }
   };
