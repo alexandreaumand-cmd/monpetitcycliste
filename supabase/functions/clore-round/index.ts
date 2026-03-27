@@ -102,6 +102,31 @@ Deno.serve(async (req) => {
 
     console.log('Auction verified:', { id: auction.id, league_id: auction.league_id, round: auction.round_number });
 
+    // Determine the correct phase: use the currently active phase if auction's phase is completed
+    let effectivePhaseId = auction.phase_id;
+
+    const { data: auctionPhase } = await supabase
+      .from('phases')
+      .select('statut, saison_id')
+      .eq('id', auction.phase_id)
+      .single();
+
+    if (auctionPhase?.statut === 'completed') {
+      const { data: activePhase } = await supabase
+        .from('phases')
+        .select('id')
+        .eq('saison_id', auctionPhase.saison_id)
+        .eq('statut', 'active')
+        .single();
+
+      if (activePhase) {
+        console.log(`⚠️ Auction phase ${auction.phase_id} is completed, switching to active phase ${activePhase.id}`);
+        effectivePhaseId = activePhase.id;
+      } else {
+        console.log(`⚠️ Auction phase ${auction.phase_id} is completed but no active phase found, keeping original`);
+      }
+    }
+
     // Close the auction
     await supabase
       .from('auctions')
