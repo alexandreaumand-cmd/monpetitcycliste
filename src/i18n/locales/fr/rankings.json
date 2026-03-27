@@ -9,7 +9,7 @@
   "phase": {
     "global": "Global",
     "phase": "Phase {{index}}",
-    "active": "✓"
+    "active": "🟢"
   },
   "standings": {
     "rank": "Rang",
