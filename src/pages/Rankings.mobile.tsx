@@ -37,6 +37,9 @@ export const RankingsMobile = () => {
   const { t } = useTranslation('rankings');
   const { selectedSeason, phases, activePhase } = useSeasonContext();
   const { leagueId } = useLeague();
+  const { leagues } = useUserLeagues();
+  const currentLeague = leagues.find(l => l.id === leagueId);
+  const isPerCourse = currentLeague?.game_mode === 'per_course';
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabView>("standings");
   const [selectedPhase, setSelectedPhase] = useState<string | null>(null);
