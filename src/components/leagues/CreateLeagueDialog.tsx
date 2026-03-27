@@ -74,6 +74,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
   const [firstAuctionDate, setFirstAuctionDate] = useState<Date | null>(null);
   const [variant, setVariant] = useState<FivePhasesVariant>('full_season');
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+  const [startingPhaseIndex, setStartingPhaseIndex] = useState<number>(0);
 
   const { data: seasons = [] } = useQuery({
     queryKey: ['seasons'],
@@ -130,6 +131,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
     setFirstAuctionDate(null);
     setVariant('full_season');
     setSelectedCourseIds([]);
+    setStartingPhaseIndex(0);
     onOpenChange(false);
   };
 
@@ -185,7 +187,7 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
           maxPlayers: playerCount,
           bonusesEnabled,
           firstAuctionStartsAt: firstAuctionDate.toISOString(),
-          ...(selectedMode === 'five_phases' && { variant }),
+          ...(selectedMode === 'five_phases' && { variant, startingPhaseIndex }),
           ...(selectedMode === 'per_course' && { selectedCourseIds }),
         },
       });
@@ -311,9 +313,27 @@ export function CreateLeagueDialog({ open, onOpenChange }: CreateLeagueDialogPro
               </div>
             </RadioGroup>
 
-            <p className="text-sm text-muted-foreground italic">
-              {t('settings.startingPhaseAuto')}
-            </p>
+            <div className="space-y-2">
+              <Label>{t('settings.startingPhase')}</Label>
+              <Select
+                value={startingPhaseIndex.toString()}
+                onValueChange={(v) => setStartingPhaseIndex(parseInt(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[0, 1, 2, 3, 4].map((idx) => (
+                    <SelectItem key={idx} value={idx.toString()}>
+                      {idx === 0 ? t('settings.startingPhaseDefault') : t('settings.startingPhaseOption', { num: idx + 1 })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {t('settings.startingPhaseAuto')}
+              </p>
+            </div>
           </div>
         );
 

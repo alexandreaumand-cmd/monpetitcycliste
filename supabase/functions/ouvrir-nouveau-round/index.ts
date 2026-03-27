@@ -18,8 +18,8 @@ Deno.serve(async (req) => {
 
     let supabase;
 
-    const { phase_id, deadline_at, league_id, auto_launched } = await req.json();
-    console.log('Opening new round for phase:', phase_id, 'league:', league_id, 'auto_launched:', auto_launched);
+    const { phase_id, deadline_at, league_id, auto_launched, effective_phase_id } = await req.json();
+    console.log('Opening new round for phase:', phase_id, 'effective_phase:', effective_phase_id, 'league:', league_id, 'auto_launched:', auto_launched);
 
     // Validation stricte du phase_id
     if (!phase_id) {
@@ -110,6 +110,7 @@ Deno.serve(async (req) => {
         .update({
           deadline_at,
           statut: 'open',
+          ...(effective_phase_id && { effective_phase_id }),
         })
         .eq('id', scheduledAuction.id)
         .select()
@@ -168,6 +169,7 @@ Deno.serve(async (req) => {
       .from('auctions')
       .insert({
         phase_id,
+        effective_phase_id: effective_phase_id || phase_id,
         league_id,
         round_number: newRoundNumber,
         deadline_at,

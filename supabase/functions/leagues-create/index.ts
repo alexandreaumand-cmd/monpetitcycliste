@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
       firstAuctionStartsAt,
       // five_phases specific
       variant,        // 'full_season' | 'wt_only'
+      startingPhaseIndex,  // number (0-based) - optional, for five_phases
       
       // per_course specific
       selectedCourseIds, // string[]
@@ -91,6 +92,7 @@ Deno.serve(async (req) => {
       byPhase = true;
       wtOnly = variant === 'wt_only';
       gtOnly = false;
+      leagueStartingPhaseIndex = typeof startingPhaseIndex === 'number' ? startingPhaseIndex : null;
       leagueStartingPhaseIndex = null;
 
       // Get all phases (starting phase determined after auctions)
@@ -214,9 +216,16 @@ Deno.serve(async (req) => {
 
     // Create auction(s)
     const deadlineAt = new Date(firstAuctionDate.getTime() + 24 * 60 * 60 * 1000);
-    const firstPhaseId = phaseUuids[0];
+    
+    // For five_phases with startingPhaseIndex, use the selected phase
+    let auctionPhaseId: string;
+    if (gameMode === 'five_phases' && typeof startingPhaseIndex === 'number' && startingPhaseIndex >= 0 && startingPhaseIndex < phaseUuids.length) {
+      auctionPhaseId = phaseUuids[startingPhaseIndex];
+    } else {
+      auctionPhaseId = phaseUuids[0];
+    }
 
-    if (!firstPhaseId) {
+    if (!auctionPhaseId) {
       await supabase.from('league_members').delete().eq('league_id', league.id);
       await supabase.from('league_scopes').delete().eq('league_id', league.id);
       await supabase.from('leagues').delete().eq('id', league.id);
@@ -225,46 +234,25 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (gameMode === 'per_course') {
-      // Single auction
-      const { error: auctionError } = await supabase.from('auctions').insert({
-        phase_id: firstPhaseId,
-        league_id: league.id,
-        round_number: 1,
-        statut: 'scheduled',
-        opens_at: firstAuctionStartsAt,
-        deadline_at: deadlineAt.toISOString(),
-      });
+    // Create first auction with effective_phase_id locked
+    const { error: auctionError } = await supabase.from('auctions').insert({
+      phase_id: auctionPhaseId,
+      effective_phase_id: auctionPhaseId,
+      league_id: league.id,
+      round_number: 1,
+      statut: 'scheduled',
+      opens_at: firstAuctionStartsAt,
+      deadline_at: deadlineAt.toISOString(),
+    });
 
-      if (auctionError) {
-        console.error('Auction error:', auctionError);
-        await supabase.from('league_members').delete().eq('league_id', league.id);
-        await supabase.from('league_scopes').delete().eq('league_id', league.id);
-        await supabase.from('leagues').delete().eq('id', league.id);
-        return new Response(JSON.stringify({ error: 'Erreur création enchère' }), {
-          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    } else {
-      // per_phase: create auction for first phase only, others will be scheduled by super-admin via phase_auction_schedule
-      const { error: auctionError } = await supabase.from('auctions').insert({
-        phase_id: firstPhaseId,
-        league_id: league.id,
-        round_number: 1,
-        statut: 'scheduled',
-        opens_at: firstAuctionStartsAt,
-        deadline_at: deadlineAt.toISOString(),
+    if (auctionError) {
+      console.error('Auction error:', auctionError);
+      await supabase.from('league_members').delete().eq('league_id', league.id);
+      await supabase.from('league_scopes').delete().eq('league_id', league.id);
+      await supabase.from('leagues').delete().eq('id', league.id);
+      return new Response(JSON.stringify({ error: 'Erreur création enchère' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-
-      if (auctionError) {
-        console.error('Auction error:', auctionError);
-        await supabase.from('league_members').delete().eq('league_id', league.id);
-        await supabase.from('league_scopes').delete().eq('league_id', league.id);
-        await supabase.from('leagues').delete().eq('id', league.id);
-        return new Response(JSON.stringify({ error: 'Erreur création enchère' }), {
-          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
     }
 
     console.log('League created:', league.id, 'mode:', gameMode);

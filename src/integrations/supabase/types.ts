@@ -1231,6 +1231,7 @@ export type Database = {
           closed_at: string | null
           created_at: string | null
           deadline_at: string
+          effective_phase_id: string | null
           id: string
           league_id: string
           opens_at: string | null
@@ -1244,6 +1245,7 @@ export type Database = {
           closed_at?: string | null
           created_at?: string | null
           deadline_at: string
+          effective_phase_id?: string | null
           id?: string
           league_id: string
           opens_at?: string | null
@@ -1257,6 +1259,7 @@ export type Database = {
           closed_at?: string | null
           created_at?: string | null
           deadline_at?: string
+          effective_phase_id?: string | null
           id?: string
           league_id?: string
           opens_at?: string | null
@@ -1305,6 +1308,34 @@ export type Database = {
             columns: ["announcements_paused_by"]
             isOneToOne: false
             referencedRelation: "v_managers_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auctions_effective_phase_id_fkey"
+            columns: ["effective_phase_id"]
+            isOneToOne: false
+            referencedRelation: "coureurs_disponibilite"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_effective_phase_id_fkey"
+            columns: ["effective_phase_id"]
+            isOneToOne: false
+            referencedRelation: "manager_phase_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_effective_phase_id_fkey"
+            columns: ["effective_phase_id"]
+            isOneToOne: false
+            referencedRelation: "managers_rosters_status"
+            referencedColumns: ["phase_id"]
+          },
+          {
+            foreignKeyName: "auctions_effective_phase_id_fkey"
+            columns: ["effective_phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
             referencedColumns: ["id"]
           },
           {
