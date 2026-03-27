@@ -1,38 +1,66 @@
 
 
-## Fix du scraper L'Équipe — parsing complet de la situation de course
+## Ajouter un titre séparé aux événements de la timeline (style L'Équipe)
 
 ### Problème
-Le parser `parseLEquipeLive` produit un résultat erroné (screenshot 2) : un seul groupe "peloton" avec 45 entrées mélangeant des vrais coureurs, du texte de commentaire ("Il s'agissait de Bjorn Koerdt", "Tom Boonen l'a remporté cinq fois...") et des noms de lieux ("Berg Ten Houte", "Oude Kruisberg"). La situation attendue (screenshot 1) contient 4 groupes distincts avec des écarts structurés.
+L'Équipe affiche chaque événement avec un **titre en gras** puis un texte descriptif en dessous. Actuellement, le scraper fusionne tout dans un seul champ `text`, et l'affichage (superadmin + ligues) montre un bloc de texte uniforme sans distinction titre/corps.
 
-**Causes racines :**
-1. La zone "situation" (`situationZone`) est mal délimitée — elle capture du texte de commentaire
-2. Le format des groupes L'Équipe n'est pas reconnu : `"Gr. Van Dijke | +01'18""`, `"Van der Poel | +00'31""` — le préfixe `Gr.` et le format d'écart `+00'31"` ne matchent pas les regex
-3. L'extraction des coureurs (`riderPattern`) est trop permissive et ramasse n'importe quel texte de type "Mot (parenthèse)"
+### Solution
 
-### Solution — Refonte du parser situation dans l'edge function
+#### 1. Scraper — Extraire le titre séparé
+**`supabase/functions/scrape-live-race/index.ts`** (section timeline ~ligne 325-369)
 
-**`supabase/functions/scrape-live-race/index.ts`** — modifier `parseLEquipeLive` :
+Dans le texte capturé par événement, la première phrase (avant le premier `.` suivi d'un espace et d'une majuscule, ou avant un retour à la ligne) correspond au titre L'Équipe. Séparer :
 
-#### 1. Améliorer la détection de la zone situation
-Utiliser le DOM (pas juste le texte brut) pour trouver le bloc "situation de course" de L'Équipe. L'Équipe structure cette info dans un bloc spécifique. En fallback, affiner la zone texte en cherchant les patterns typiques de groupes (Échappée, Gr., Peloton) comme bornes.
+```typescript
+// Après nettoyage du text brut
+let title = "";
+let body = text;
+const splitMatch = text.match(/^([^.]{10,120}\.)\s+([A-ZÀ-Ü])/);
+if (splitMatch) {
+  title = splitMatch[1];
+  body = text.substring(splitMatch[1].length).trim();
+} else if (text.length > 80) {
+  // Fallback: première phrase courte
+  const dotIdx = text.indexOf('.');
+  if (dotIdx > 10 && dotIdx < 120) {
+    title = text.substring(0, dotIdx + 1);
+    body = text.substring(dotIdx + 1).trim();
+  }
+}
 
-#### 2. Élargir les regex de groupes
-- Ajouter `Gr\.?\s+` comme préfixe de groupe (ex: "Gr. Van Dijke", "Gr. Vermeersch")
-- Supporter le format d'écart `+00'31"` et `+01'18"` : `/\+?\s*(\d{1,2})\s*['′']\s*(\d{1,2})\s*["″"']?/`
-- Un nom propre seul suivi d'un écart = un groupe (ex: "Van der Poel | +00'31"")
+events.push({ time: timeStr, type, title, text: body, riders: riderNames });
+```
 
-#### 3. Filtrer les faux positifs dans l'extraction des coureurs
-- Exiger que le nom ait un format "Initial. Nom" (ex: "L. Durbridge") ou "Nom Prénom" avec initiale majuscule
-- Rejeter les textes qui contiennent des mots courants français (articles, verbes, conjonctions)
-- Rejeter les noms de lieux connus (collines, routes)
+#### 2. Interface TypeScript — Ajouter `title`
+**`src/components/arena/RaceTimeline.tsx`** — Ajouter `title?: string` à `TimelineEvent`
 
-#### 4. Fallback robuste
-Si le parser DOM/texte ne trouve pas de groupes structurés, ne PAS créer un faux groupe "peloton" avec tout le contenu. Retourner un résultat vide plutôt que des données corrompues.
+#### 3. Affichage SuperAdmin — Titre en gras
+**`src/components/arena/RaceTimeline.tsx`** — Dans le rendu de chaque événement (ligne 93), afficher le titre en gras au-dessus du body :
 
-### Côté affichage — aucun changement nécessaire
-Le `RaceSituationDisplay` (côté ligue) et le `RaceSituationEditor` (côté SuperAdmin) fonctionnent déjà correctement. Le problème est 100% dans le scraper.
+```tsx
+{event.title && (
+  <p className="text-xs font-semibold leading-snug">{event.title}</p>
+)}
+<p className="text-xs leading-relaxed text-muted-foreground">{event.text}</p>
+```
 
-### Fichier impacté
-- `supabase/functions/scrape-live-race/index.ts` — refonte de la section "Extract race situation" dans `parseLEquipeLive`
+#### 4. Broadcast vers les ligues — Inclure le titre
+**`src/pages/admin/SuperAdminLiveBroadcastPage.tsx`** (ligne 352) — Modifier le format du broadcast pour inclure le titre en gras :
+
+```typescript
+// Avant: `${typeEmoji} **${evt.time}** — ${enrichText(evt.text)}`
+// Après:
+const titlePart = evt.title ? `**${enrichText(evt.title)}**\n` : "";
+const content = `${typeEmoji} ${evt.time} — ${titlePart}${enrichText(evt.text)}`;
+```
+
+#### 5. Affichage côté ligue — Rendre le markdown bold
+**`src/components/arena/MessageBubble.tsx`** — Le contenu utilise déjà `**text**` pour le gras (via le split regex existant ligne 60). Vérifier que le pattern `**...**` est rendu en `<strong>`. Si ce n'est pas le cas, ajouter la détection du pattern `**text**` dans le rendu.
+
+### Fichiers impactés
+- `supabase/functions/scrape-live-race/index.ts` — extraction titre/body
+- `src/components/arena/RaceTimeline.tsx` — interface + affichage titre
+- `src/pages/admin/SuperAdminLiveBroadcastPage.tsx` — format broadcast
+- `src/components/arena/MessageBubble.tsx` — rendu markdown (vérification)
 
