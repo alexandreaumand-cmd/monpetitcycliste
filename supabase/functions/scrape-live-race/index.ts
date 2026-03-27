@@ -275,7 +275,7 @@ function parseLEquipeLive(doc: any, html: string): {
       const firstGroupIdx = uniqueHeaders[0].index;
       const beforeFirst = situationZone.substring(0, firstGroupIdx).trim();
       // Look for a rider name pattern: "M. Van der Poel" or "Van der Poel" (possibly with team in parentheses)
-      const leaderRx = /([A-ZÀ-Ü][a-zà-ü]*\.?\s+(?:(?:de|van|von|el|di|du|le|la|ter|den|der|dos|da)\s+)*[A-ZÀ-Ü][a-zà-ü'-]+(?:\s+[A-Za-zÀ-ü'-]+)*)/;
+      const leaderRx = /([A-ZÀ-Ü][a-zà-ü]*\.?\s+(?:(?:de|van|von|el|di|du|le|la|ter|den|der|dos|da)\s+)*[A-ZÀ-Ü][a-zà-ü'-]+(?:\s+[A-Za-zÀ-ü'-]+)*)/i;
       const leaderMatch = beforeFirst.match(leaderRx);
       if (leaderMatch && leaderMatch[1].length >= 4 && leaderMatch[1].length <= 40) {
         const leaderName = leaderMatch[1].trim();
