@@ -1,24 +1,34 @@
 
 
-## Fix : exclure E3 Saxo Classic des classements et résultats
+## Le sélecteur de phase est présent mais peu visible
 
-### Problème
+### Diagnostic
 
-Le fix précédent a changé `>=` en `>` uniquement dans `get_league_courses_with_points` (onglet Courses). Mais deux autres endroits utilisent encore `>=` :
+Le sélecteur "Phase de départ" **existe bien** dans l'étape 3 "Variante" du wizard (lignes 316-336 de `CreateLeagueDialog.tsx`). Il est situé **en bas** de cette étape, après le bloc explicatif des 5 phases et les radio buttons de variante. Sur un écran de taille réduite, il peut nécessiter un scroll pour être visible.
 
-1. **`results_courses_with_entries`** (onglet Résultats) — ligne 48 : `c.date_debut >= COALESCE(...)` → la course E3 Saxo Classic (même date que `started_at_effective`) apparaît encore
-2. **`v_manager_standings_by_phase_v2`** et **`v_manager_standings_by_season_v2`** (classements) — 10 occurrences de `>= COALESCE(l.started_at_effective...)` → les points de E3 Saxo Classic comptent dans les standings
+De plus, le **récapitulatif** (étape 8/8, visible sur votre screenshot) **n'affiche pas** la phase de départ sélectionnée — il ne montre que la variante. Cela donne l'impression que le sélecteur n'existe pas.
 
-### Solution
+### Corrections proposées
 
-Une seule migration SQL qui recrée ces 3 objets en remplaçant **tous** les `>=` par `>` sur le filtre `started_at_effective` :
+1. **Ajouter la phase de départ dans le récapitulatif** — une ligne `RecapRow` affichant "Phase de départ: Phase X" quand `startingPhaseIndex > 0` (ou "Automatique" si 0).
 
-- `results_courses_with_entries` : ligne 48, `>=` → `>`
-- `v_manager_standings_by_phase_v2` : 5 CTEs (race_pts, rider_bonus_pts, scoreurs, victories × `>=`) → `>`
-- `v_manager_standings_by_season_v2` : 5 CTEs identiques → `>`
+2. **Optionnel** : remonter le sélecteur de phase avant le bloc explicatif pour qu'il soit plus visible, ou le mettre dans sa propre étape.
 
-Après le déploiement, rafraîchir les standings matérialisées.
+### Détails techniques
 
-### Fichier impacté
-- **Migration SQL** — recréation de `results_courses_with_entries`, `v_manager_standings_by_phase_v2`, `v_manager_standings_by_season_v2` avec `>` au lieu de `>=`
+Dans `CreateLeagueDialog.tsx`, au niveau du `case 'recap'` (après la ligne RecapRow pour la variante, ~ligne 543), ajouter :
+
+```tsx
+{selectedMode === 'five_phases' && (
+  <RecapRow icon={<Flag className="h-4 w-4" />} label={t('wizard.recapStartingPhase')}
+    value={startingPhaseIndex === 0 ? t('settings.startingPhaseDefault') : t('settings.startingPhaseOption', { num: startingPhaseIndex + 1 })} />
+)}
+```
+
+Et ajouter les traductions `wizard.recapStartingPhase` ("Phase de départ" / "Starting phase") dans les fichiers i18n.
+
+### Fichiers impactés
+- `src/components/leagues/CreateLeagueDialog.tsx` — ajout RecapRow pour la phase de départ
+- `src/i18n/locales/fr/leagues.json` — ajout clé `wizard.recapStartingPhase`
+- `src/i18n/locales/en/leagues.json` — idem
 
